@@ -157,7 +157,7 @@ class GraphEngine:
 
     def __init__(self, cache_ttl_seconds: float = 300.0) -> None:
         self._graph: Any = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._cache_ttl = cache_ttl_seconds
         self._last_build: float = 0.0
         self._previous_snapshot: CentralitySnapshot | None = None
@@ -241,7 +241,7 @@ class GraphWalker:
     """Multi-hop weighted graph traversal engine."""
 
     def __init__(self, **kwargs: Any) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_walks = 0
         self._total_nodes_visited = 0
         self._pagerank_cache: dict[str, float] = {}

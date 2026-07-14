@@ -35,7 +35,7 @@ from whitemagic.core.acceleration.polyglot_numpy_bridge import (
 logger = logging.getLogger(__name__)
 
 _lib = None
-_lib_lock = threading.Lock()
+_lib_lock = threading.RLock()
 _HAS_ZIG = False
 
 
@@ -48,7 +48,7 @@ class TopKResult(ctypes.Structure):
 
 # Pre-allocated buffer pool to avoid repeated allocations
 _buffer_pool: dict[int, Any] = {}  # size -> ctypes array
-_pool_lock = threading.Lock()
+_pool_lock = threading.RLock()
 
 
 def _get_buffer(size: int) -> Any:

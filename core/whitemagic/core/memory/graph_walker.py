@@ -128,7 +128,7 @@ class GraphWalker:
         self._max_paths = max_paths_per_hop
         self._min_strength = min_edge_strength
         self._gravity_weights = gravity_weights  # (galactic, neuro_score, pagerank)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_walks = 0
         self._total_nodes_visited = 0
         self._pagerank_cache: dict[str, float] = {}
@@ -839,7 +839,7 @@ class GraphWalker:
 
 
 _walker: GraphWalker | None = None
-_walker_lock = threading.Lock()
+_walker_lock = threading.RLock()
 
 
 def get_graph_walker(**kwargs: Any) -> GraphWalker:

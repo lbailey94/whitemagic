@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 # ── Ed25519 Key Management ─────────────────────────────────────────────
 
 _KEY_CACHE: dict[str, tuple[bytes, bytes]] = {}  # node_id → (private_key, public_key)
-_KEY_LOCK = threading.Lock()
+_KEY_LOCK = threading.RLock()
 
 
 def _get_or_create_keypair(node_id: str) -> tuple[bytes, bytes]:
@@ -170,7 +170,7 @@ class PulseVerifier:
     """
 
     _instance: PulseVerifier | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self) -> None:
         self._node_id = os.environ.get("WM_MESH_NODE_ID", f"node_{os.getpid()}")

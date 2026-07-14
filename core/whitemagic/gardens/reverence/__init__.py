@@ -55,7 +55,7 @@ class ReverenceGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.swarm_tasks: dict[str, dict[str, Any]] = {}
         self.workers: dict[str, dict[str, Any]] = {}
         self.votes: dict[str, list[dict[str, Any]]] = {}

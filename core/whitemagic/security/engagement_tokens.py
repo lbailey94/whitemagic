@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 # Secret key for HMAC — generated once per process, or loaded from disk
 _HMAC_KEY: bytes | None = None
-_HMAC_LOCK = threading.Lock()
+_HMAC_LOCK = threading.RLock()
 
 
 def _get_hmac_key() -> bytes:
@@ -203,7 +203,7 @@ class EngagementTokenManager:
     """Manages scope-of-engagement tokens for Edgerunner Violet operations."""
 
     def __init__(self, storage_dir: Path | None = None):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._tokens: dict[str, EngagementToken] = {}
         self._storage_dir = storage_dir
         self._audit_log: list[dict[str, Any]] = []
@@ -560,7 +560,7 @@ class EngagementTokenManager:
 
 
 _manager: EngagementTokenManager | None = None
-_manager_lock = threading.Lock()
+_manager_lock = threading.RLock()
 
 
 def get_token_manager() -> EngagementTokenManager:

@@ -88,7 +88,7 @@ class AnomalyDetector:
         self._window_size = window_size
         self._warning_z = warning_threshold
         self._critical_z = critical_threshold
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         # Per-dimension sliding windows
         self._windows: dict[str, deque] = {
@@ -245,7 +245,7 @@ class AnomalyDetector:
 
 
 _detector: AnomalyDetector | None = None
-_det_lock = threading.Lock()
+_det_lock = threading.RLock()
 
 
 def get_anomaly_detector() -> AnomalyDetector:

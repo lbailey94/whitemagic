@@ -50,7 +50,7 @@ class PatienceGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.evaluation_history: deque[dict[str, Any]] = deque(maxlen=200)
         self.boundary_checks: deque[dict[str, Any]] = deque(maxlen=200)
         self.consent_log: deque[dict[str, Any]] = deque(maxlen=100)

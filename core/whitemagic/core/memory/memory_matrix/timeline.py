@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from threading import Lock
+from threading import Lock, RLock
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
@@ -27,7 +27,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 from whitemagic.utils.fileio import atomic_write, file_lock
 
 _timeline_instance: ChronologicalTimeline | None = None
-_timeline_lock = Lock()
+_timeline_lock = RLock()
 
 
 @dataclass

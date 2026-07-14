@@ -316,7 +316,7 @@ class KokaProcess:
         self.binary_path = KOKA_DIR / binary_name
         self.pool_id = pool_id
         self._proc: subprocess.Popen | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._healthy = True
         self._call_count = 0
         self._last_error: str | None = None
@@ -500,7 +500,7 @@ class KokaProcessPool:
         self._processes: list[KokaProcess] = []
         self._executor = ThreadPoolExecutor(max_workers=pool_size)
         self._current_idx = 0
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def start(self) -> None:
         """Start all processes in pool."""

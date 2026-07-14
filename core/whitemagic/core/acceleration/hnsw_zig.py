@@ -28,7 +28,7 @@ from whitemagic.core.acceleration.polyglot_numpy_bridge import to_ptr
 logger = logging.getLogger(__name__)
 
 _lib = None
-_lib_lock = threading.Lock()
+_lib_lock = threading.RLock()
 _HAS_HNSW = False
 
 

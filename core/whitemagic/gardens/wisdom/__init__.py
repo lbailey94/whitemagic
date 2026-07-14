@@ -54,7 +54,7 @@ class WisdomGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.query_log: deque[dict[str, Any]] = deque(maxlen=200)
         self.wisdom_insights: deque[dict[str, Any]] = deque(maxlen=100)
         self.recall_quality_scores: deque[float] = deque(maxlen=50)

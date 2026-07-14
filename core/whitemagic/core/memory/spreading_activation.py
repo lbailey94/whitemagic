@@ -121,7 +121,7 @@ class SpreadingActivation:
         self._min_activation = min_activation
         self._max_nodes = max_nodes
         self._max_hops = max_hops
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_spreads = 0
         self._total_nodes_activated = 0
         self._total_cross_galaxy = 0
@@ -404,7 +404,7 @@ class SpreadingActivation:
 
 # Singleton
 _instance: SpreadingActivation | None = None
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 
 def get_spreading_activation() -> SpreadingActivation:

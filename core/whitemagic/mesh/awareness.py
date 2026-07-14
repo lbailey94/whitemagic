@@ -34,7 +34,7 @@ class MeshAwareness:
 
     def __init__(self) -> None:
         self._peers: dict[str, dict[str, Any]] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._mesh_events: list[dict[str, Any]] = []
         self._max_events = 200
         self._listening = False
@@ -160,7 +160,7 @@ class MeshAwareness:
 
 # Singleton
 _awareness: MeshAwareness | None = None
-_awareness_lock = threading.Lock()
+_awareness_lock = threading.RLock()
 
 
 def get_mesh_awareness() -> MeshAwareness:

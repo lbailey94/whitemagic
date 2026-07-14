@@ -170,7 +170,7 @@ class UnifiedMemory:
         # Thread-safe lazy loading
         if self._holographic_lock is None:
             import threading
-            self._holographic_lock = threading.Lock()  # type: ignore[assignment]
+            self._holographic_lock = threading.RLock()  # type: ignore[assignment]
 
         with self._holographic_lock:
             if self._holographic_loaded:
@@ -1700,7 +1700,7 @@ class UnifiedMemory:
 
 # Namespace-keyed singleton instances (Phase 2 §9)
 _unified_memory_instances: dict[str, UnifiedMemory] = {}
-_unified_memory_lock = threading.Lock()
+_unified_memory_lock = threading.RLock()
 
 
 def reset_singleton() -> None:

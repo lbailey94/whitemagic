@@ -21,7 +21,7 @@ from whitemagic.config.paths import DB_PATH, MEMORY_DIR
 
 logger = logging.getLogger(__name__)
 _sbert_model = None
-_sbert_lock = threading.Lock()
+_sbert_lock = threading.RLock()
 _sbert_init_attempted = False
 _sbert_error: str | None = None
 _sbert_class: Any | None = None
@@ -127,7 +127,7 @@ class VSearchResult:
 class VectorSearch:
     """VectorSearch: vector search."""
     def __init__(self, db_path: str | None = None) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._db = db_path or str(MEMORY_DIR / "embeddings.db")
         self._tfidf = TFIDFEmbedder()
         self._cache: dict[str,list[float]] = {}
@@ -334,7 +334,7 @@ class VectorSearch:
         }
 
 _vs=None
-_vs_lock=threading.Lock()
+_vs_lock=threading.RLock()
 def get_vector_status() -> dict[str, Any]:
     """
     Get the vector status.

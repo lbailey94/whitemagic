@@ -92,7 +92,7 @@ class LibraryLoader:
         self.setup_function = setup_function
 
         self._lib: Any | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._available = False
 
     def _find_library(self) -> str | None:

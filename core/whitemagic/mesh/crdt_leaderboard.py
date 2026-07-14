@@ -99,7 +99,7 @@ class CRDTLeaderboard:
     """
 
     _instance: CRDTLeaderboard | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self, node_id: str = "local") -> None:
         self._node_id = node_id

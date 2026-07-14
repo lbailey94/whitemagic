@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 _rust_lib = None
 _zig_lib = None
-_lock = threading.Lock()
+_lock = threading.RLock()
 _rust_available = False
 _zig_available = False
 

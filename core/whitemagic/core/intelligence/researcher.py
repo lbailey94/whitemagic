@@ -117,7 +117,7 @@ class JITResearcher:
         self._max_rounds = max_rounds
         self._evidence_per_question = evidence_per_question
         self._saturation_threshold = saturation_threshold
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_sessions = 0
         self._total_evidence_found = 0
 
@@ -558,7 +558,7 @@ class JITResearcher:
 
 
 _researcher: JITResearcher | None = None
-_researcher_lock = threading.Lock()
+_researcher_lock = threading.RLock()
 
 
 def get_researcher(**kwargs: Any) -> JITResearcher:

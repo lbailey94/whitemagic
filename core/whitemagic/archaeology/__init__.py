@@ -14,7 +14,7 @@ from .dig import ChariotArchaeologist, Ganas, Grimoire
 logger = logging.getLogger("Chariot")
 
 _archaeologist: Optional["ChariotArchaeologist"] = None
-_arch_lock = threading.Lock()
+_arch_lock = threading.RLock()
 
 
 def get_archaeologist() -> "ChariotArchaeologist":

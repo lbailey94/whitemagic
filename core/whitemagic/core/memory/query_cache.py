@@ -157,7 +157,7 @@ class QueryCache:
 
 # Global cache instance
 _query_cache: QueryCache | None = None
-_cache_lock = threading.Lock()
+_cache_lock = threading.RLock()
 
 
 def get_query_cache() -> QueryCache:

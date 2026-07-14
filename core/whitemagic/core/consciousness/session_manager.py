@@ -82,7 +82,7 @@ class SessionManager:
     """Manages session lifecycle and continuity."""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._active_sessions: dict[str, Session] = {}
         self._current_session: Session | None = None
 
@@ -265,7 +265,7 @@ class SessionManager:
 
 
 _sm: SessionManager | None = None
-_sm_lock = threading.Lock()
+_sm_lock = threading.RLock()
 
 
 def get_session_manager() -> SessionManager:

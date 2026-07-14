@@ -333,7 +333,7 @@ class ShelterManager:
 
     def __init__(self) -> None:
         self._shelters: dict[str, Shelter] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._available_tiers = _detect_available_tiers()
         self._max_concurrent = int(os.environ.get("WM_SHELTER_MAX_CONCURRENT", "4"))
         self._default_timeout = int(os.environ.get("WM_SHELTER_TIMEOUT_S", "300"))
@@ -680,7 +680,7 @@ class ShelterManager:
 
 
 _manager: ShelterManager | None = None
-_manager_lock = threading.Lock()
+_manager_lock = threading.RLock()
 
 
 # ── MandalaOS Phase B: Shelter Templates ───────────────────────────────

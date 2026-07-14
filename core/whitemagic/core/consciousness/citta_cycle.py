@@ -466,7 +466,7 @@ class CittaAlwaysOn:
         self._running = False
         self._heartbeat_count = 0
         self._last_activity = time.time()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def start(self) -> None:
         """Start the heartbeat thread."""
@@ -518,7 +518,7 @@ class CittaAlwaysOn:
 
 # Singleton
 _always_on: CittaAlwaysOn | None = None
-_always_on_lock = threading.Lock()
+_always_on_lock = threading.RLock()
 
 
 def get_always_on() -> CittaAlwaysOn:
@@ -533,7 +533,7 @@ def get_always_on() -> CittaAlwaysOn:
 
 # Singleton
 _cycle: CittaCycle | None = None
-_cycle_lock = threading.Lock()
+_cycle_lock = threading.RLock()
 
 
 def get_citta_cycle() -> CittaCycle:

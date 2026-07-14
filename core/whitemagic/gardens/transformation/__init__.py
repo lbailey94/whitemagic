@@ -55,7 +55,7 @@ class TransformationGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.dig_sites: deque[dict[str, Any]] = deque(maxlen=100)
         self.navigation_history: deque[dict[str, Any]] = deque(maxlen=500)
         self.refactor_suggestions: deque[dict[str, Any]] = deque(maxlen=100)

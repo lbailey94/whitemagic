@@ -149,7 +149,7 @@ class ResonanceEngine:
 
     def __init__(self, db_path: str | None = None):
         self._db_path = db_path
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._tree: Any = None
         self._coord_map: dict[str, tuple[float, ...]] = {}
         self._memory_ids: list[str] = []
@@ -805,7 +805,7 @@ class ResonanceEngine:
 
 
 _engine: ResonanceEngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_resonance_engine(db_path: str | None = None) -> ResonanceEngine:

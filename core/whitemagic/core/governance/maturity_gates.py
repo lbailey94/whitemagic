@@ -387,7 +387,7 @@ class MaturityEngine:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._last_report: MaturityReport | None = None
         self._assessment_count: int = 0
 
@@ -481,7 +481,7 @@ class MaturityEngine:
 
 
 _engine_instance: MaturityEngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_maturity_engine() -> MaturityEngine:

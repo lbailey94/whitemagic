@@ -59,7 +59,7 @@ class SharedMemoryBridge:
         self.name = name
         self._shm: shared_memory.SharedMemory | None = None
         self._header: SharedMemoryHeader | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._is_owner = create
 
         if create:

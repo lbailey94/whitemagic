@@ -117,7 +117,7 @@ class RetrievalIndexCache:
 
 # Singleton
 _instance: RetrievalIndexCache | None = None
-_instance_lock = threading.Lock()
+_instance_lock = threading.RLock()
 
 
 def get_retrieval_cache() -> RetrievalIndexCache:

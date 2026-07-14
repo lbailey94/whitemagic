@@ -82,7 +82,7 @@ class OTelExporter:
         self._service_name = os.environ.get("OTEL_SERVICE_NAME", "whitemagic")
         self._tracer: Any | None = None
         self._meter: Any | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         # In-memory fallback
         self._buffer: list[SpanRecord] = []
@@ -266,7 +266,7 @@ class OTelExporter:
 
 
 _otel: OTelExporter | None = None
-_otel_lock = threading.Lock()
+_otel_lock = threading.RLock()
 
 
 def get_otel() -> OTelExporter:

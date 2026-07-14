@@ -243,7 +243,7 @@ class ToolDependencyGraph:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         # adjacency: source -> list of edges
         self._outgoing: dict[str, list[ToolEdge]] = defaultdict(list)
         # reverse adjacency: target -> list of edges
@@ -347,7 +347,7 @@ class ToolDependencyGraph:
 
 
 _graph: ToolDependencyGraph | None = None
-_graph_lock = threading.Lock()
+_graph_lock = threading.RLock()
 
 
 def get_tool_graph() -> ToolDependencyGraph:

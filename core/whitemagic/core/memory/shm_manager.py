@@ -22,7 +22,7 @@ class SharedMemoryManager:
 
     def __init__(self, name: str = "/whitemagic_embed_bridge_real"):
         self.name = name
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._map_file: Any | None = None
         self._shm: Any | None = None
         self._id_to_uuid: dict[int, str] = {}

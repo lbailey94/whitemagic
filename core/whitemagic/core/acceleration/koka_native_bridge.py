@@ -343,7 +343,7 @@ class KokaNativeBridge:
 
 # Global bridge instance
 _bridge: KokaNativeBridge | None = None
-_bridge_lock = threading.Lock()
+_bridge_lock = threading.RLock()
 
 
 def get_koka_bridge() -> KokaNativeBridge:
@@ -492,7 +492,7 @@ class KokaCircuitDispatch:
     """
 
     _instance: KokaCircuitDispatch | None = None
-    _init_lock = threading.Lock()
+    _init_lock = threading.RLock()
 
     def __init__(self) -> None:
         self._supervisor: ProcessSupervisor | None = None

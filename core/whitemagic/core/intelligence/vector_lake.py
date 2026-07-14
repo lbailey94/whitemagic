@@ -10,13 +10,13 @@ singleton.
 from __future__ import annotations
 
 import logging
-from threading import Lock
+from threading import Lock, RLock
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 _lake_instance: VectorLake | None = None
-_lake_lock = Lock()
+_lake_lock = RLock()
 
 
 class VectorLake:

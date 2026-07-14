@@ -64,7 +64,7 @@ class DurableArchive:
     """
 
     _instance: DurableArchive | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self) -> None:
         self._dag = get_research_dag()

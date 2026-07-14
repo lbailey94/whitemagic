@@ -506,7 +506,7 @@ class MetaGalaxy:
 # ── Singleton ───────────────────────────────────────────────────────
 
 _meta_galaxy: MetaGalaxy | None = None
-_mg_lock = threading.Lock()
+_mg_lock = threading.RLock()
 
 
 def get_meta_galaxy() -> MetaGalaxy:

@@ -70,7 +70,7 @@ class BridgeSynthesizer:
 
     def __init__(self, persist_insights: bool = True) -> None:
         self._persist = persist_insights
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_insights = 0
 
     def synthesize_from_bridges(
@@ -295,7 +295,7 @@ class BridgeSynthesizer:
 
 
 _synthesizer: BridgeSynthesizer | None = None
-_synth_lock = threading.Lock()
+_synth_lock = threading.RLock()
 
 
 def get_bridge_synthesizer(**kwargs: Any) -> BridgeSynthesizer:

@@ -129,7 +129,7 @@ class ResearchDAG:
     """
 
     _instance: ResearchDAG | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self) -> None:
         self._initialized = False

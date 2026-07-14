@@ -187,7 +187,7 @@ class GalaxyGating:
     def __init__(self) -> None:
         self._masks: dict[str, ContextMask] = dict(_DEFAULT_MASKS)
         self._current_context: str = "default"
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def get_mask(self, context: str | None = None) -> ContextMask:
         """Get the activation mask for a context.
@@ -315,7 +315,7 @@ class GalaxyGating:
 
 # Singleton
 _instance: GalaxyGating | None = None
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 
 def get_galaxy_gating() -> GalaxyGating:

@@ -128,7 +128,7 @@ class CampaignVictoryTracker:
             }
             for vc in victory_conditions
         }
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.start_time = time.time()
 
     def mark_vc_met(self, vc_id: str, clone_id: int) -> bool:

@@ -168,7 +168,7 @@ class MarketplaceBridge:
     def __init__(self) -> None:
         self._listings: dict[str, ServiceListing] = {}
         self._negotiations: dict[str, Negotiation] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._persist_path: Path | None = None
 
     def _get_persist_path(self) -> Path:
@@ -467,7 +467,7 @@ class MarketplaceBridge:
 
 
 _marketplace: MarketplaceBridge | None = None
-_marketplace_lock = threading.Lock()
+_marketplace_lock = threading.RLock()
 
 
 def get_marketplace() -> MarketplaceBridge:

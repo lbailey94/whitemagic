@@ -110,7 +110,7 @@ class UMAPProjector:
     """Projects memory embeddings into low-dimensional space for visualization."""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._umap_available: bool | None = None
         self._cached_projection: ProjectionResult | None = None
         self._cached_vec_count: int = 0
@@ -308,7 +308,7 @@ class UMAPProjector:
 
 
 _projector_instance: UMAPProjector | None = None
-_projector_lock = threading.Lock()
+_projector_lock = threading.RLock()
 
 
 def get_umap_projector() -> UMAPProjector:

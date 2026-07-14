@@ -109,7 +109,7 @@ class CrossDomainCollisionDetector:
         from whitemagic.config.paths import DB_PATH
 
         self.db_path = db_path or str(DB_PATH)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_collisions = 0
         self._total_schemas = 0
 
@@ -418,7 +418,7 @@ class CrossDomainCollisionDetector:
 
 
 _detector: CrossDomainCollisionDetector | None = None
-_detector_lock = threading.Lock()
+_detector_lock = threading.RLock()
 
 
 def get_cross_domain_detector(

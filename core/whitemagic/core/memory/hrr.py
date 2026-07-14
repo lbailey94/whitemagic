@@ -57,7 +57,7 @@ class HRREngine:
     def __init__(self, dim: int = 384) -> None:
         self._dim = dim
         self._rng = np.random.default_rng(seed=42)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         # Pre-computed relation vectors (deterministic from seed)
         self._relation_vectors: dict[str, np.ndarray] = {}
@@ -270,7 +270,7 @@ class HRREngine:
 
 
 _engine: HRREngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_hrr_engine(dim: int = 384, **kwargs: Any) -> HRREngine:

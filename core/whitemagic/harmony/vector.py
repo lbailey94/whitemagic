@@ -115,7 +115,7 @@ class _RollingWindow:
     """Thread-safe rolling window of ToolEvents."""
 
     def __init__(self, window_seconds: float = 300.0, max_events: int = 2000):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._events: deque[_ToolEvent] = deque(maxlen=max_events)
         self._window = window_seconds
 
@@ -222,7 +222,7 @@ class HarmonyVector:
 
         # Accumulated karma debt (persists beyond window)
         self._karma_debt_total: float = 0.0
-        self._karma_debt_lock = threading.Lock()
+        self._karma_debt_lock = threading.RLock()
 
         # Latest snapshot (cheap reads)
         self._latest: HarmonySnapshot = HarmonySnapshot(
@@ -478,7 +478,7 @@ class HarmonyVector:
 
 
 _harmony_vector: HarmonyVector | None = None
-_hv_lock = threading.Lock()
+_hv_lock = threading.RLock()
 
 
 def get_harmony_vector() -> HarmonyVector:

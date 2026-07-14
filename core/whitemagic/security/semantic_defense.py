@@ -292,16 +292,16 @@ _attack_embeddings: np.ndarray | None = None  # (N_attack, D) matrix
 _benign_embeddings: np.ndarray | None = None  # (N_benign, D) matrix
 _attack_norms: np.ndarray | None = None  # Pre-computed L2 norms for attack rows
 _benign_norms: np.ndarray | None = None  # Pre-computed L2 norms for benign rows
-_embedding_lock = threading.Lock()
+_embedding_lock = threading.RLock()
 _embedding_init_attempted = False
 
 # Cached embedder singleton — avoids reloading ONNX model on every call
 _embedder_instance = None
-_embedder_lock = threading.Lock()
+_embedder_lock = threading.RLock()
 
 # Embedding cache: text hash → vector (avoids re-embedding same text)
 _embedding_cache: dict[str, np.ndarray] = {}
-_embedding_cache_lock = threading.Lock()
+_embedding_cache_lock = threading.RLock()
 _EMBEDDING_CACHE_MAX = 2000  # Max cached embeddings
 
 # Thresholds

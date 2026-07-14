@@ -54,7 +54,7 @@ class StillnessGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.defrag_history: deque[dict[str, Any]] = deque(maxlen=50)
         self.moments_of_stillness: list[dict[str, Any]] = []
         self.stillness_level: float = 0.5

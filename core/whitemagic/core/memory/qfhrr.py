@@ -52,7 +52,7 @@ class QuantizedHRREngine:
         self._dim = dim
         self._bits = bits
         self._K = 1 << bits  # Number of quantization levels (16 for 4 bits)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._relation_vectors: dict[str, np.ndarray] = {}
         self._init_relation_vectors()
 
@@ -264,7 +264,7 @@ class QuantizedHRREngine:
 
 
 _q_engine: QuantizedHRREngine | None = None
-_q_engine_lock = threading.Lock()
+_q_engine_lock = threading.RLock()
 
 
 def get_quantized_hrr_engine(dim: int = 384, bits: int = 4) -> QuantizedHRREngine:
@@ -286,7 +286,7 @@ _TIER_BITS_MAP = {
 }
 
 _adaptive_engines: dict[int, QuantizedHRREngine] = {}
-_adaptive_lock = threading.Lock()
+_adaptive_lock = threading.RLock()
 
 
 def get_adaptive_qfhrr_engine(tier: int, dim: int = 384) -> QuantizedHRREngine:
@@ -323,7 +323,7 @@ _GALACTIC_ZONE_BITS_MAP: dict[str, int] = {
 }
 
 _galactic_engines: dict[int, QuantizedHRREngine] = {}
-_galactic_lock = threading.Lock()
+_galactic_lock = threading.RLock()
 
 
 def get_galactic_qfhrr_bits(zone: str) -> int:

@@ -173,7 +173,7 @@ class DreamArtifactWriter:
 
     def __init__(self) -> None:
         self._listening = False
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def start_listening(self) -> None:
         """Idempotently register on the Gan Ying bus."""

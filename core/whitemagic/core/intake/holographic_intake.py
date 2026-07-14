@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 # Singleton
 _intake_instance: HolographicIntake | None = None
-_intake_lock = threading.Lock()
+_intake_lock = threading.RLock()
 
 
 class IntakeStatus(Enum):

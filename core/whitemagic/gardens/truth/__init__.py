@@ -56,7 +56,7 @@ class TruthGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.truths_discovered: list[dict[str, Any]] = []
         self.health_history: deque[dict[str, Any]] = deque(maxlen=100)
         self._accelerator_cache: dict[str, bool] = {}

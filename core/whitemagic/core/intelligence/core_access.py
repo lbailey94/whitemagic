@@ -193,12 +193,12 @@ class CoreAccessLayer:
     def __init__(self) -> None:
         self._conn: sqlite3.Connection | None = None
         self._conn_injected: bool = False
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         # HRR pre-filter cache
         self._hrr_cache_ids: list[str] | None = None
         self._hrr_cache_vecs: Any | None = None  # (N, dim) quantized uint8
         self._hrr_cache_count: int = 0
-        self._hrr_cache_lock = threading.Lock()
+        self._hrr_cache_lock = threading.RLock()
 
     def _get_conn(self) -> sqlite3.Connection:
         """Lazy-init a read-only SQLite connection to the hot DB."""
@@ -1249,7 +1249,7 @@ class CoreAccessLayer:
 
 
 _instance: CoreAccessLayer | None = None
-_instance_lock = threading.Lock()
+_instance_lock = threading.RLock()
 
 
 def get_core_access() -> CoreAccessLayer:

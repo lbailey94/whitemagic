@@ -188,7 +188,7 @@ class VibeParser:
     """Lightweight natural-language intent parser for the God-Kit."""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._custom_map: dict[str, str] = {}
 
     def parse(self, text: str) -> dict[str, Any]:
@@ -291,7 +291,7 @@ class VibeParser:
 
 
 _parser: VibeParser | None = None
-_parser_lock = threading.Lock()
+_parser_lock = threading.RLock()
 
 
 def get_vibe_parser() -> VibeParser:

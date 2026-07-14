@@ -198,7 +198,7 @@ class ConnectionPool:
         self.db_path = db_path
         self.max_connections = max_connections
         self._pool: queue.Queue[sqlite3.Connection] = queue.Queue(maxsize=max_connections)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._connections_created = 0
 
     def _create_connection(self) -> sqlite3.Connection:
@@ -337,7 +337,7 @@ class ConnectionPool:
 
 # Registry of pools by db_path
 _pools: dict[str, ConnectionPool] = {}
-_registry_lock = threading.Lock()
+_registry_lock = threading.RLock()
 
 # Async registry lock for PSR-013
 _async_registry_lock = asyncio.Lock()
@@ -361,7 +361,7 @@ async def get_db_pool_async(db_path: str, max_connections: int = 10) -> Connecti
 
 # Global connection pool for the default database
 _default_pool: ConnectionPool | None = None
-_default_pool_lock = threading.Lock()
+_default_pool_lock = threading.RLock()
 
 
 async def get_default_pool_async() -> ConnectionPool | None:
@@ -377,7 +377,7 @@ async def get_default_pool_async() -> ConnectionPool | None:
 # ── Integrity monitoring ─────────────────────────────────────────────────
 _last_integrity_check: float = 0.0
 _integrity_check_interval: float = 300.0  # 5 minutes
-_integrity_lock = threading.Lock()
+_integrity_lock = threading.RLock()
 
 
 def check_db_integrity(db_path: str | None = None) -> str:

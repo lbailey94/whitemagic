@@ -140,7 +140,7 @@ class EntropyScorer:
     """Computes entropy and abstraction scores for memory content."""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_scored: int = 0
 
     def score(self, text: str) -> EntropyResult:
@@ -309,7 +309,7 @@ class EntropyScorer:
 
 
 _scorer_instance: EntropyScorer | None = None
-_scorer_lock = threading.Lock()
+_scorer_lock = threading.RLock()
 
 
 def get_entropy_scorer() -> EntropyScorer:

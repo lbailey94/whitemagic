@@ -588,7 +588,7 @@ class ModelMeshPublisher:
 # ── Singletons ───────────────────────────────────────────────────────────
 
 _mesh_client: ModelMeshClient | None = None
-_mesh_lock = threading.Lock()
+_mesh_lock = threading.RLock()
 
 
 def get_mesh_client() -> ModelMeshClient:

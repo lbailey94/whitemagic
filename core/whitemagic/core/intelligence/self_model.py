@@ -108,7 +108,7 @@ class SelfModel:
         window_size: int = _DEFAULT_WINDOW,
         forecast_steps: int = _DEFAULT_FORECAST_STEPS,
     ):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._window_size = window_size
         self._forecast_steps = forecast_steps
         self._series: dict[
@@ -314,7 +314,7 @@ class SelfModel:
 
 
 _instance: SelfModel | None = None
-_instance_lock = threading.Lock()
+_instance_lock = threading.RLock()
 
 
 def get_self_model() -> SelfModel:

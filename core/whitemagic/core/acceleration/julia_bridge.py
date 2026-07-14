@@ -33,7 +33,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 _julia_bin: str | None = None
-_julia_lock = threading.Lock()
+_julia_lock = threading.RLock()
 _HAS_JULIA = False
 _JULIA_DIR: Path | None = None
 

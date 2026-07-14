@@ -38,7 +38,7 @@ class PresenceGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.presence_level: float = 0.5
         init_listeners(self)
         self.emit(EventType.SYSTEM_STARTED, {"garden": "Presence", "mansion": 12})

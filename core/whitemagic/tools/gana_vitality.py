@@ -116,7 +116,7 @@ class GanaVitalityMonitor:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._reputations: dict[str, GanaReputation] = {}
 
     def _get_or_create(self, gana_name: str) -> GanaReputation:
@@ -241,7 +241,7 @@ class GanaVitalityMonitor:
 
 # Singleton
 _monitor: GanaVitalityMonitor | None = None
-_monitor_lock = threading.Lock()
+_monitor_lock = threading.RLock()
 
 
 def get_vitality_monitor() -> GanaVitalityMonitor:

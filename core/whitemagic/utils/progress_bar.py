@@ -61,7 +61,7 @@ class ProgressBar:
         self.start_time = time.monotonic()
         self.stream = stream or sys.stderr
         self._bar_width = bar_width
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._timer: threading.Timer | None = None
         self._stopped = False
         self._last_label = ""

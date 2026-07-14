@@ -170,7 +170,7 @@ class KarmaLedger:
     """
 
     def __init__(self, storage_dir: Path | None = None):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._storage_dir = storage_dir
         self._entries: list[KarmaEntry] = []
         self._total_debt: float = 0.0
@@ -694,7 +694,7 @@ class KarmaLedger:
 
 
 _ledger: KarmaLedger | None = None
-_ledger_lock = threading.Lock()
+_ledger_lock = threading.RLock()
 
 
 def get_karma_ledger() -> KarmaLedger:

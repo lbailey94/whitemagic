@@ -51,7 +51,7 @@ class SessionStartupOrchestrator:
     def __init__(self) -> None:
         self.systems: dict[str, SystemStatus] = {}
         self._started = False
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def _safe_activate(self, name: str, activate_fn: Callable) -> SystemStatus:
         """Safely activate a system, catching any errors."""

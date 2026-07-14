@@ -366,7 +366,7 @@ class ToolBandit:
 
 
 _bandit: ToolBandit | None = None
-_bandit_lock = threading.Lock()
+_bandit_lock = threading.RLock()
 
 
 def get_tool_bandit() -> ToolBandit:

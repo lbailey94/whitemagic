@@ -28,7 +28,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _lib = None
-_lib_lock = threading.Lock()
+_lib_lock = threading.RLock()
 _HAS_ZIG = False
 
 

@@ -108,7 +108,7 @@ class GreenScore:
     }
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._edge_calls = 0
         self._local_llm_calls = 0
         self._local_net_calls = 0
@@ -300,7 +300,7 @@ class GreenScore:
 
 
 _green_score: GreenScore | None = None
-_gs_lock = threading.Lock()
+_gs_lock = threading.RLock()
 
 
 def get_green_score() -> GreenScore:

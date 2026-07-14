@@ -49,7 +49,7 @@ class CourageGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.sessions: dict[str, dict[str, Any]] = {}
         self.session_history: list[dict[str, Any]] = []
         self.brave_acts: list[dict[str, Any]] = []

@@ -69,7 +69,7 @@ class _SignalWindow:
     """Thread-safe rolling window for signal history."""
 
     def __init__(self, window_seconds: float = 300.0, max_events: int = 2000):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._events: deque[tuple[float, float]] = deque(
             maxlen=max_events
         )  # (timestamp, value)
@@ -147,7 +147,7 @@ class NeurotransmitterVector:
         self._caution_count = 0
         self._creative_bridge_count = 0
         self._error_count = 0
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         self._latest = NeurotransmitterSnapshot(
             timestamp=datetime.now().isoformat(),
@@ -309,7 +309,7 @@ class NeurotransmitterVector:
 
 # Singleton
 _nt_vector: NeurotransmitterVector | None = None
-_nt_lock = threading.Lock()
+_nt_lock = threading.RLock()
 
 
 def get_neurotransmitter_vector() -> NeurotransmitterVector:

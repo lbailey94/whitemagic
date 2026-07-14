@@ -226,7 +226,7 @@ class ParcaePool:
     def __init__(self, max_workers: int = _DEFAULT_MAX_WORKERS) -> None:
         self._workers: dict[str, ParcaeWorker] = {}
         self._max_workers = max_workers
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def register(self, worker_id: str, compute_capacity: float = 1.0) -> bool:
         """Register a new worker. Returns False if pool is full."""
@@ -307,7 +307,7 @@ class DiLoCoCoordinator:
         self._pool = ParcaePool(max_workers=max_workers)
         self._local_step = 0
         self._sync_count = 0
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._param_hash: str = ""
 
     def init_params(self, params: dict[str, Any]) -> None:
@@ -456,7 +456,7 @@ class DiLoCoCoordinator:
 # ── Singleton ────────────────────────────────────────────────────────────
 
 _coordinator: DiLoCoCoordinator | None = None
-_coordinator_lock = threading.Lock()
+_coordinator_lock = threading.RLock()
 
 
 def get_dilo_co() -> DiLoCoCoordinator:

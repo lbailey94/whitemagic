@@ -219,7 +219,7 @@ class ChariotArchaeologist:
                 pass
 
         self.stats_data = {"scanned": 0, "found": 0, "errors": 0, "skipped": 0}
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         # Patterns to hunt for - REFINED
         self.patterns = {

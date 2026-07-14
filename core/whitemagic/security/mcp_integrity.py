@@ -64,7 +64,7 @@ class McpIntegrity:
     """
 
     def __init__(self, storage_dir: Path | None = None):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._baseline: dict[str, ToolFingerprint] = {}
         self._snapshot_time: float = 0.0
         self._storage_dir = storage_dir
@@ -259,7 +259,7 @@ class McpIntegrity:
 
 
 _instance: McpIntegrity | None = None
-_instance_lock = threading.Lock()
+_instance_lock = threading.RLock()
 
 
 def get_mcp_integrity() -> McpIntegrity:

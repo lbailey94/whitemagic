@@ -21,7 +21,7 @@ import logging
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from threading import Lock
+from threading import Lock, RLock
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # Singleton instance
 _registry_instance: SeenRegistry | None = None
-_registry_lock = Lock()
+_registry_lock = RLock()
 
 
 @dataclass

@@ -90,7 +90,7 @@ class MeshClient:
         self._node_id = node_id or os.environ.get(
             "WM_MESH_NODE_ID", f"node_{os.getpid()}"
         )
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._connected = False
         self._channel: Any | None = None
         self._stub: Any | None = None
@@ -282,7 +282,7 @@ class MeshClient:
 
 
 _client: MeshClient | None = None
-_client_lock = threading.Lock()
+_client_lock = threading.RLock()
 
 
 def get_mesh_client() -> MeshClient:

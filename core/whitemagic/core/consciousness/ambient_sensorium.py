@@ -275,7 +275,7 @@ class AmbientSensorium:
     def __init__(self) -> None:
         self._sources: list[SensorSource] = []
         self._latest_state: AmbientState | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
         self._running = False
         self._interval = float(os.environ.get("WM_AMBIENT_INTERVAL", "30"))

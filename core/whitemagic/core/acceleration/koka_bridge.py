@@ -263,7 +263,7 @@ async def koka_health_check() -> dict:
 
 
 _koka_runtime = None
-_koka_lock = threading.Lock()
+_koka_lock = threading.RLock()
 
 
 def get_koka_runtime() -> KokaRuntime:

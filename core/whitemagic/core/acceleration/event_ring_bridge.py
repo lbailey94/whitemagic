@@ -88,7 +88,7 @@ class _FallbackRing:
 
     def __init__(self, size: int = 65536) -> None:
         self._ring: collections.deque[_FallbackSlot] = collections.deque(maxlen=size)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._sequence = 0
         self._consumer_cursors: dict[int, int] = {}
         self._next_consumer_id = 0

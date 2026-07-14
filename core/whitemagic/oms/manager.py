@@ -107,7 +107,7 @@ class OMSManager:
     """Manages OMS .mem package export, import, and verification."""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_exports = 0
         self._total_imports = 0
 
@@ -649,7 +649,7 @@ class OMSManager:
 
 
 _manager: OMSManager | None = None
-_manager_lock = threading.Lock()
+_manager_lock = threading.RLock()
 
 
 def get_oms_manager() -> OMSManager:

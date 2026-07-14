@@ -69,7 +69,7 @@ class WasmVerifier:
 
     def __init__(self) -> None:
         self._checksum_cache: dict[str, str] = {}  # tool:hash(inputs) → hash(outputs)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._verify_dir = WM_ROOT / "verification"
         self._verify_dir.mkdir(parents=True, exist_ok=True)
         self._worker_script = self._verify_dir / "verify_worker.js"

@@ -50,7 +50,7 @@ class GeneseedVault:
 
         self._engine = get_codegenome_engine()
         self._parser = get_vibe_parser()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._usage_stats: dict[str, dict[str, Any]] = {}
         self._stats_file: Path | None = None
         self._load_usage_stats()
@@ -488,7 +488,7 @@ class GeneseedVault:
 
 
 _vault: GeneseedVault | None = None
-_vault_lock = threading.Lock()
+_vault_lock = threading.RLock()
 
 
 def get_geneseed_vault() -> GeneseedVault:

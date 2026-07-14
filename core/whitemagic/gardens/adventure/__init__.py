@@ -54,7 +54,7 @@ class AdventureGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.export_log: deque[dict[str, Any]] = deque(maxlen=100)
         self.import_log: deque[dict[str, Any]] = deque(maxlen=100)
         self.deploy_checks: deque[dict[str, Any]] = deque(maxlen=50)

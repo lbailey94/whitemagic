@@ -125,7 +125,7 @@ class DriveCore:
     """
 
     def __init__(self, decay_rate: float = 0.995):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._decay_rate = decay_rate
 
         # Current drive levels (0.0 to 1.0)
@@ -319,7 +319,7 @@ class DriveCore:
 
 
 _instance: DriveCore | None = None
-_instance_lock = threading.Lock()
+_instance_lock = threading.RLock()
 
 
 def get_drive_core() -> DriveCore:

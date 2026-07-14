@@ -397,7 +397,7 @@ class ConsciousnessLoop:
         self._last_cache_warm = 0.0
         self._dream_started = False
         self._homeostatic_attached = False
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         # Cached references (lazy-loaded)
         self._self_directed: Any = None
         self._apotheosis: Any = None
@@ -1422,7 +1422,7 @@ class ConsciousnessLoop:
 # ── Singleton ─────────────────────────────────────────────────────────
 
 _loop: ConsciousnessLoop | None = None
-_loop_lock = threading.Lock()
+_loop_lock = threading.RLock()
 
 
 def get_consciousness_loop(config: LoopConfig | None = None) -> ConsciousnessLoop:

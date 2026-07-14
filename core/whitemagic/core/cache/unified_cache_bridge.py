@@ -412,7 +412,7 @@ class UnifiedCacheBridge:
 
 
 _unified_cache: UnifiedCacheBridge | None = None
-_cache_lock = threading.Lock()
+_cache_lock = threading.RLock()
 
 
 def get_unified_cache() -> UnifiedCacheBridge:

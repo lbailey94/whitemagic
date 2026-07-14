@@ -111,7 +111,7 @@ class PhylogeneticTracker:
     """
 
     _instance: PhylogeneticTracker | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self) -> None:
         self._initialized = False

@@ -108,7 +108,7 @@ class KnowledgeGraphV2:
     """
 
     _instance: KnowledgeGraphV2 | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
     _initialized: bool = False
 
     def __new__(cls, *args, **kwargs) -> KnowledgeGraphV2:

@@ -116,7 +116,7 @@ class AssociationMiner:
         self._min_overlap = min_overlap
         self._max_proposals = max_proposals_per_run
         self._persist = persist
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_runs = 0
         self._total_links_created = 0
 
@@ -717,7 +717,7 @@ class AssociationMiner:
 
 
 _miner_instance: AssociationMiner | None = None
-_miner_lock = threading.Lock()
+_miner_lock = threading.RLock()
 
 
 def get_association_miner(

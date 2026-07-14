@@ -77,7 +77,7 @@ class AuditSigner:
             cls._instance._key_id: str = ""  # type: ignore[misc,has-type]
             import threading
 
-            cls._lock = threading.Lock()
+            cls._lock = threading.RLock()
         return cls._instance
 
     def _ensure_key(self) -> bool:

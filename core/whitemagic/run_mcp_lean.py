@@ -139,7 +139,7 @@ server = _LazyServer()
 # ══════════════════════════════════════════════════════════════════════
 
 _INITIALISED = False
-_INIT_LOCK = threading.Lock()
+_INIT_LOCK = threading.RLock()
 
 
 def _ensure_init() -> None:

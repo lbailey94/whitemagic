@@ -136,7 +136,7 @@ class EntityExtractor:
         self._model = model
         self._timeout = timeout
         self._llama_available: bool | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_extractions = 0
         self._total_entities = 0
         self._total_relations = 0
@@ -375,7 +375,7 @@ class EntityExtractor:
 
 
 _extractor: EntityExtractor | None = None
-_extractor_lock = threading.Lock()
+_extractor_lock = threading.RLock()
 
 
 def get_entity_extractor(**kwargs: Any) -> EntityExtractor:

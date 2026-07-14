@@ -91,7 +91,7 @@ class ModelSigningRegistry:
     """
 
     def __init__(self, storage_dir: Path | None = None):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._manifests: dict[str, ModelManifest] = {}
         self._storage_dir = storage_dir
         self._verification_log: list[dict[str, Any]] = []
@@ -305,7 +305,7 @@ class ModelSigningRegistry:
 
 
 _registry: ModelSigningRegistry | None = None
-_registry_lock = threading.Lock()
+_registry_lock = threading.RLock()
 
 
 def get_model_registry() -> ModelSigningRegistry:

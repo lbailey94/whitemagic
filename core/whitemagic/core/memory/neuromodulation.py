@@ -59,7 +59,7 @@ class _JuliaBridge:
 
     def __init__(self):
         self._proc: subprocess.Popen | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._available = False
 
     def _ensure(self) -> bool:

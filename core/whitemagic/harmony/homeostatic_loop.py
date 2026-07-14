@@ -126,7 +126,7 @@ class HomeostaticLoop:
 
     def __init__(self, config: HomeostaticConfig | None = None):
         self._config = config or HomeostaticConfig()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._actions: list[HomeostaticAction] = []
         self._total_checks: int = 0
         self._total_actions: int = 0
@@ -1121,7 +1121,7 @@ class HomeostaticLoop:
 
 
 _loop: HomeostaticLoop | None = None
-_loop_lock = threading.Lock()
+_loop_lock = threading.RLock()
 
 
 def get_homeostatic_loop(

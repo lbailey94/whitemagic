@@ -243,7 +243,7 @@ class PratResonanceState:
     """
 
     def __init__(self, max_history: int = 50):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._last_snapshot: ResonanceSnapshot | None = None
         self._history: deque = deque(maxlen=max_history)
         self._gana_counts: dict[str, int] = {}
@@ -296,7 +296,7 @@ class PratResonanceState:
 
 # Singleton
 _state: PratResonanceState | None = None
-_state_lock = threading.Lock()
+_state_lock = threading.RLock()
 
 
 def get_resonance_state() -> PratResonanceState:

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 _GLOBAL_ASYNC_QUEUE: queue.Queue = queue.Queue(maxsize=2000)
 _GLOBAL_WORKER_THREAD: threading.Thread | None = None
-_GLOBAL_WORKER_LOCK = threading.Lock()
+_GLOBAL_WORKER_LOCK = threading.RLock()
 
 # Rust lock-free event bus primitives (optional)
 _RUST_EVENT_BUS = False
@@ -423,7 +423,7 @@ class GanYingBus:
         self._listeners: dict[EventType, list[Callable]] = {}
         self._all_listeners: list[Callable] = []
         self._history: list[ResonanceEvent] = []
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._cascade_triggers: list[CascadeTrigger] = []
         self._cascade_stats: dict[str, int] = {
             "total_cascades": 0,

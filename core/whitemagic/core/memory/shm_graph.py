@@ -31,7 +31,7 @@ class SHMGraphTopology:
     """SHMGraphTopology: shm graph topology."""
     def __init__(self, name: str = "/whitemagic_graph_bridge"):
         self.name = name
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._map_file: mmap.mmap | None = None
         self._shm: posix_ipc.SharedMemory | None = None
         self._count = 0

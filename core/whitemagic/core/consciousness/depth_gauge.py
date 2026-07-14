@@ -141,7 +141,7 @@ class ConsciousnessDepthGauge:
 
         self.current_layer = ConsciousnessLayer.SURFACE
         self.readings: list[DepthReading] = []
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._transitions = 0
 
         self.task_start_objective: float | None = None
@@ -384,7 +384,7 @@ def sync_with_time_master() -> dict[str, Any]:
 DepthGauge = ConsciousnessDepthGauge
 
 _gauge: ConsciousnessDepthGauge | None = None
-_gauge_lock = threading.Lock()
+_gauge_lock = threading.RLock()
 
 
 def get_depth_gauge() -> ConsciousnessDepthGauge:

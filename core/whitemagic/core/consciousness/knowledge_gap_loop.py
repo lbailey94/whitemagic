@@ -364,7 +364,7 @@ class KnowledgeGapActionLoop:
 # ── Singleton ───────────────────────────────────────────────────────
 
 _kg_loop: KnowledgeGapActionLoop | None = None
-_kg_lock = threading.Lock()
+_kg_lock = threading.RLock()
 
 
 def get_knowledge_gap_loop() -> KnowledgeGapActionLoop:

@@ -73,7 +73,7 @@ class NetworkGuard:
 
     def __init__(self, mode: str = "local_only") -> None:
         self._mode = mode
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_bytes_egress = 0
         self._records: list[EgressRecord] = []
         self._audit_file = AUDIT_DIR / "network.jsonl"
@@ -193,7 +193,7 @@ class NetworkGuard:
 
 
 _guard: NetworkGuard | None = None
-_guard_lock = threading.Lock()
+_guard_lock = threading.RLock()
 
 
 def get_network_guard() -> NetworkGuard:

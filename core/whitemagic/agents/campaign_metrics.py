@@ -378,7 +378,7 @@ class CampaignTracker:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._armies: dict[ArmyTier, ArmyMetrics] = {
             ArmyTier.ALPHA: ArmyMetrics(tier=ArmyTier.ALPHA),
             ArmyTier.BETA: ArmyMetrics(tier=ArmyTier.BETA),
@@ -685,7 +685,7 @@ class CampaignTracker:
 
 
 _tracker: CampaignTracker | None = None
-_tracker_lock = threading.Lock()
+_tracker_lock = threading.RLock()
 
 
 def get_tracker() -> CampaignTracker:

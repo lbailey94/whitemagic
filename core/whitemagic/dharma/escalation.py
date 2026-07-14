@@ -183,7 +183,7 @@ class EscalationPipeline:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._review_queue: list[dict[str, Any]] = []
         self._review_counter = 0
         self._embedding_engine: Any = None
@@ -630,7 +630,7 @@ class EscalationPipeline:
 # --- Global instance ---
 
 _pipeline: EscalationPipeline | None = None
-_pipeline_lock = threading.Lock()
+_pipeline_lock = threading.RLock()
 
 
 def get_escalation_pipeline() -> EscalationPipeline:

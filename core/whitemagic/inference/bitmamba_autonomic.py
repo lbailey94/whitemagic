@@ -160,7 +160,7 @@ class BitMambaAutonomic:
             self._daemon_bin = str(Path(self._bitmamba_bin).parent / "bitmamba-daemon")
         self._use_daemon = use_daemon
         self._daemon_proc: subprocess.Popen | None = None
-        self._daemon_lock = threading.Lock()
+        self._daemon_lock = threading.RLock()
         self._state = AutonomicState()
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
@@ -570,7 +570,7 @@ class BitMambaAutonomic:
 # ── Singleton ────────────────────────────────────────────────────────────
 
 _autonomic: BitMambaAutonomic | None = None
-_autonomic_lock = threading.Lock()
+_autonomic_lock = threading.RLock()
 
 
 def get_autonomic() -> BitMambaAutonomic:

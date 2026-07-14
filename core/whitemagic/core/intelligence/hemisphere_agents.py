@@ -30,7 +30,7 @@ class HemisphereAgent:
     def __init__(self, name: str) -> None:
         self.name = name
         self._listening = False
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def start_listening(self) -> None:
         """

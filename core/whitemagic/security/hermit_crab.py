@@ -608,7 +608,7 @@ class HermitCrab:
 
 
 _hermit_crab: HermitCrab | None = None
-_hc_lock = threading.Lock()
+_hc_lock = threading.RLock()
 
 
 def get_hermit_crab(**kwargs: Any) -> HermitCrab:

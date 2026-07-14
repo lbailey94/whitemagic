@@ -77,7 +77,7 @@ class ClaimLog:
 
     def __init__(self, max_age_minutes: int = 60) -> None:
         self._claims: list[ClaimEntry] = []
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._max_age = timedelta(minutes=max_age_minutes)
 
     def register(
@@ -238,7 +238,7 @@ class VoiceAuditScanner:
 
 
 _scanner_instance: VoiceAuditScanner | None = None
-_scanner_lock = threading.Lock()
+_scanner_lock = threading.RLock()
 
 
 def get_voice_audit_scanner() -> VoiceAuditScanner:

@@ -127,7 +127,7 @@ class ThermalAnomalyDetector:
     def __init__(self) -> None:
         self._history: list[tuple[float, float]] = []  # (timestamp, temp)
         self._max_history = 120  # 10 min at 5s intervals
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def check(self, temp: float) -> ThermalAnomaly | None:
         if temp is None:
@@ -273,7 +273,7 @@ class PhysicalMetricsSource:
         self._cache: PhysicalMetrics | None = None
         self._cache_time: float = 0.0
         self._cache_ttl: float = 5.0  # 5 second cache
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._thermal_detector = ThermalAnomalyDetector()
         self._temp_history: list[tuple[float, float]] = []
         self._targets = AdaptiveTargets()
@@ -550,7 +550,7 @@ class PhysicalMetricsSource:
 
 
 _physical_source: PhysicalMetricsSource | None = None
-_source_lock = threading.Lock()
+_source_lock = threading.RLock()
 
 
 def get_physical_metrics_source() -> PhysicalMetricsSource:

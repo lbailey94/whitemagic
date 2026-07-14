@@ -192,7 +192,7 @@ class WebSocketBridge:
 
 
 _bridge: WebSocketBridge | None = None
-_bridge_lock = threading.Lock()
+_bridge_lock = threading.RLock()
 
 
 def get_ws_bridge() -> WebSocketBridge:

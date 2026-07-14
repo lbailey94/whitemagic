@@ -36,7 +36,7 @@ class TransitionTracker:
     """Tracks Gana→Gana transition frequencies for prediction."""
 
     def __init__(self, state_path: Path | None = None) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._state_path = state_path or _DEFAULT_TRANSITIONS_PATH
         # transitions[from_gana][to_gana] = count
         self._transitions: dict[str, dict[str, int]] = defaultdict(
@@ -151,7 +151,7 @@ class PrefetchCache:
     """TTL-based cache for prefetched tool results."""
 
     def __init__(self, ttl_seconds: float = 5.0) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._cache: dict[str, tuple[Any, float]] = {}  # key -> (result, expire_time)
         self._hits = 0
         self._misses = 0
@@ -517,7 +517,7 @@ class SpeculativePrefetcher:
 
 
 _prefetcher: SpeculativePrefetcher | None = None
-_prefetcher_lock = threading.Lock()
+_prefetcher_lock = threading.RLock()
 
 
 def get_prefetcher() -> SpeculativePrefetcher:

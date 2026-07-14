@@ -84,7 +84,7 @@ class EntityExtractor:
     ):
         self._llama_url = llama_url
         self._model = model
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_extractions = 0
         self._total_entities = 0
         self._total_relations = 0

@@ -87,7 +87,7 @@ class _SlidingWindow:
     def __init__(self, window_seconds: float = 60.0):
         self._window = window_seconds
         self._timestamps: list[float] = []
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def record(self) -> int:
         """Record a call and return current count within window."""
@@ -127,7 +127,7 @@ class RateLimiter:
         )
         self._total_blocked = 0
         self._total_checked = 0
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def check(self, agent_id: str, tool_name: str) -> dict[str, Any] | None:
         """Check if the call should be rate-limited.
@@ -286,7 +286,7 @@ class RateLimiter:
 
 
 _instance: RateLimiter | None = None
-_instance_lock = threading.Lock()
+_instance_lock = threading.RLock()
 
 
 def get_rate_limiter() -> RateLimiter:

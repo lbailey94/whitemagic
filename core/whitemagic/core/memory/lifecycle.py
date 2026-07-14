@@ -89,7 +89,7 @@ class MemoryLifecycleManager:
 
     def __init__(self, config: LifecycleConfig | None = None) -> None:
         self._config = config or LifecycleConfig()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._stats = LifecycleStats()
         self._flush_count = 0
         self._attached = False
@@ -469,7 +469,7 @@ class MemoryLifecycleManager:
 
 
 _manager: MemoryLifecycleManager | None = None
-_manager_lock = threading.Lock()
+_manager_lock = threading.RLock()
 
 
 def get_lifecycle_manager(

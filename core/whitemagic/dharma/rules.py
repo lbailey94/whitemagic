@@ -44,7 +44,7 @@ import yaml
 logger = logging.getLogger(__name__)
 
 _haskell_bridge = None
-_haskell_lock = threading.Lock()
+_haskell_lock = threading.RLock()
 _haskell_available = None  # None = not checked, True/False = cached
 
 
@@ -457,7 +457,7 @@ class DharmaRulesEngine:
         rules_dir: Path | None = None,
         active_profile: str = "default",
     ) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._rules: list[DharmaRule] = []
         self._active_profile = active_profile
         self._rules_path = rules_path
@@ -1104,7 +1104,7 @@ class DharmaRulesEngine:
 
 
 _engine: DharmaRulesEngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_rules_engine(rules_path: Path | None = None) -> DharmaRulesEngine:

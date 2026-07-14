@@ -34,7 +34,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 _lib: ctypes.CDLL | None = None
-_lib_lock = threading.Lock()
+_lib_lock = threading.RLock()
 _HAS_ZIG_GRAPH = False
 _LIB_PATH: str | None = None
 

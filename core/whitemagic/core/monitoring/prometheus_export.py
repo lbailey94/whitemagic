@@ -45,7 +45,7 @@ class PrometheusMetrics:
     def __init__(self) -> None:
         self._enabled = os.environ.get("WM_PROMETHEUS_ENABLED", "0") == "1"
         self._port = int(os.environ.get("WM_PROMETHEUS_PORT", "9090"))
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._server_started = False
 
         # Metrics (initialized if prometheus available)
@@ -213,7 +213,7 @@ class PrometheusMetrics:
 
 
 _prom: PrometheusMetrics | None = None
-_prom_lock = threading.Lock()
+_prom_lock = threading.RLock()
 
 
 def get_prometheus() -> PrometheusMetrics:

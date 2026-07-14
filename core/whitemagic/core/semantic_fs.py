@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 # Singleton instance
 _watcher_instance: SemanticFileWatcher | None = None
-_watcher_lock = threading.Lock()
+_watcher_lock = threading.RLock()
 
 
 class FileEventType(Enum):

@@ -241,7 +241,7 @@ class CrossSessionLearner:
 
 
 _learner: CrossSessionLearner | None = None
-_learner_lock = threading.Lock()
+_learner_lock = threading.RLock()
 
 
 def get_session_learner() -> CrossSessionLearner:

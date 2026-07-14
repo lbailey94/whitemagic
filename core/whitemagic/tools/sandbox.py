@@ -111,7 +111,7 @@ class ToolSandbox:
 
     def __init__(self, enabled: bool = True) -> None:
         self._enabled = enabled and os.environ.get("WM_SANDBOX_ENABLED", "1") != "0"
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="wm-sandbox")
         self._tool_limits: dict[str, ResourceLimits] = {}
         self._stats: dict[str, dict[str, Any]] = {}  # tool -> {calls, timeouts, errors}
@@ -249,7 +249,7 @@ class ToolSandbox:
 
 # Singleton
 _sandbox: ToolSandbox | None = None
-_sandbox_lock = threading.Lock()
+_sandbox_lock = threading.RLock()
 
 
 def get_sandbox() -> ToolSandbox:

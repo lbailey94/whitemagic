@@ -158,7 +158,7 @@ class _CircuitBreaker:
         self._reset_timeout = reset_timeout
         self._last_failure_time = 0.0
         self._state = CapabilityState.HEALTHY
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     @property
     def state(self) -> CapabilityState:
@@ -837,7 +837,7 @@ class ProcessSupervisor:
 
 # ── Global Registry for Shutdown ──────────────────────────────────
 
-_registry_lock = threading.Lock()
+_registry_lock = threading.RLock()
 _registry: list[ProcessSupervisor] = []
 _atexit_registered = False
 

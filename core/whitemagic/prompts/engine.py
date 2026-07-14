@@ -201,7 +201,7 @@ class PromptEngine:
 
     def __init__(self, prompts_dir: str | None = None) -> None:
         self._templates: dict[str, PromptTemplate] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         for t in _BUILTIN_TEMPLATES:
             self._templates[t.name] = t
@@ -294,7 +294,7 @@ class PromptEngine:
 
 
 _engine: PromptEngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_prompt_engine() -> PromptEngine:

@@ -54,7 +54,7 @@ class SanctuaryGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.sandbox_limits: dict[str, Any] = {
             "max_memory_mb": 512,
             "max_file_ops": 1000,

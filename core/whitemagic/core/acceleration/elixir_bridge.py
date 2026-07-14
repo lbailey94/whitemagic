@@ -33,7 +33,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 _redis_client: Any | None = None
-_redis_lock = threading.Lock()
+_redis_lock = threading.RLock()
 has_elixir = False
 _ELIXIR_CHANNEL = "whitemagic_elixir"
 _RESPONSE_TIMEOUT = 5.0

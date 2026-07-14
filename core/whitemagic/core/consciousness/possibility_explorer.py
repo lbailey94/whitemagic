@@ -647,7 +647,7 @@ class PossibilitySpaceExplorer:
 # ── Singleton ───────────────────────────────────────────────────────
 
 _explorer: PossibilitySpaceExplorer | None = None
-_exp_lock = threading.Lock()
+_exp_lock = threading.RLock()
 
 
 def get_possibility_explorer() -> PossibilitySpaceExplorer:

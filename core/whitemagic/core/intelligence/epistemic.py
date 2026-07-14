@@ -244,7 +244,7 @@ class EpistemicTagger:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._registry: dict[str, CanonEntry] = {}  # url → entry
         self._review_queue: list[dict[str, Any]] = []
 
@@ -528,7 +528,7 @@ class EpistemicTagger:
 # --- Global instance ---
 
 _tagger: EpistemicTagger | None = None
-_tagger_lock = threading.Lock()
+_tagger_lock = threading.RLock()
 
 
 def get_epistemic_tagger() -> EpistemicTagger:

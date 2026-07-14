@@ -150,7 +150,7 @@ class AgentSwarm:
     """Multi-agent coordination with decomposition, routing, and consensus."""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._plans: dict[str, SwarmPlan] = {}
         self._votes: dict[str, list[Vote]] = {}  # topic_id -> votes
         self._max_plans = 100
@@ -756,7 +756,7 @@ class AgentSwarm:
 
 # Singleton
 _swarm: AgentSwarm | None = None
-_swarm_lock = threading.Lock()
+_swarm_lock = threading.RLock()
 
 
 def get_swarm() -> AgentSwarm:

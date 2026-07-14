@@ -36,7 +36,7 @@ class MultiAgentCoordinator:
         self.active_agents: set[str] = set()
         self.locks: dict[str, ResourceLock] = {}
         self.lock_timeout = lock_timeout
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def register_agent(self, agent_id: str) -> bool:
         """Register a new agent."""
@@ -183,7 +183,7 @@ class MultiAgentCoordinator:
 
 # Singleton instance
 _coordinator = None
-_coordinator_lock = threading.Lock()
+_coordinator_lock = threading.RLock()
 
 
 def get_coordinator() -> MultiAgentCoordinator:

@@ -120,7 +120,7 @@ class NarrativeCompressor:
         self._max_cluster = max_cluster_size
         self._tag_overlap = tag_overlap_threshold
         self._demotion_factor = demotion_factor
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_compressions = 0
         self._total_narratives = 0
 
@@ -499,7 +499,7 @@ class NarrativeCompressor:
 
 
 _compressor: NarrativeCompressor | None = None
-_compressor_lock = threading.Lock()
+_compressor_lock = threading.RLock()
 
 
 def get_narrative_compressor(**kwargs: Any) -> NarrativeCompressor:

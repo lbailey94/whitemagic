@@ -82,7 +82,7 @@ class EmbeddingEngine:
 
     def __init__(self) -> None:
         self._model: Any | None = None
-        self._model_lock = threading.Lock()
+        self._model_lock = threading.RLock()
         self._available: bool | None = None  # None = unchecked
         self._db_conn: sqlite3.Connection | None = None
         self._cold_db_conn: sqlite3.Connection | None = None
@@ -92,7 +92,7 @@ class EmbeddingEngine:
         # Pre-normalized at load time: each row is unit-length, so dot product == cosine
         self._vec_cache_ids: list[str] | None = None
         self._vec_cache_vecs: Any | None = None  # shape (N, EMBEDDING_DIM), PRE-NORMALIZED
-        self._vec_cache_lock = threading.Lock()
+        self._vec_cache_lock = threading.RLock()
         self._vec_cache_count: int = 0  # DB count at cache time
         # HNSW index (optional, O(log N) search)
         self._hnsw_index: Any | None = None
@@ -106,7 +106,7 @@ class EmbeddingEngine:
         # Separate vector cache for cold DB
         self._cold_vec_cache_ids: list[str] | None = None
         self._cold_vec_cache_vecs: Any | None = None  # shape (N, EMBEDDING_DIM)
-        self._cold_vec_cache_lock = threading.Lock()
+        self._cold_vec_cache_lock = threading.RLock()
         self._cold_vec_cache_count: int = 0
         # HNSW disk persistence paths
         from whitemagic.config.paths import MEMORY_DIR
@@ -1335,7 +1335,7 @@ class EmbeddingEngine:
     # ── Manifold-Aware Search ──
 
     _manifold_cache: dict[str, str] = {}
-    _manifold_cache_lock = threading.Lock()
+    _manifold_cache_lock = threading.RLock()
 
     def detect_manifold(self, galaxy: str | None = None) -> str:
         """Detect the best manifold type for a galaxy's embeddings.
@@ -1454,7 +1454,7 @@ class EmbeddingEngine:
         return results[:limit]
 
 _engine_instances: dict[str, EmbeddingEngine] = {}
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def reset_embedding_engine() -> None:

@@ -71,7 +71,7 @@ class DisinhibitionModel:
 
     def __init__(self) -> None:
         self._state = WAKE
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._proc: subprocess.Popen | None = None
         self._backend = "python"
         self._total_transitions = 0
@@ -192,7 +192,7 @@ class DisinhibitionModel:
 
 # Singleton
 _instance: DisinhibitionModel | None = None
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 
 def get_disinhibition() -> DisinhibitionModel:

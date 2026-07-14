@@ -60,7 +60,7 @@ class KnowledgeGraph:
     """Unified Knowledge Graph with batch extraction and typed edge storage."""
 
     _instance: KnowledgeGraph | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __new__(cls) -> KnowledgeGraph:
         with cls._lock:

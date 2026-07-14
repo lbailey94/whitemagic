@@ -50,7 +50,7 @@ class GalaxyAwareBackend:
         self._default_backend: SQLiteBackend | None = None
         # Cache keys are now "user_id/galaxy_name" for namespace isolation
         self._galaxy_backends: dict[str, SQLiteBackend] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._galaxies_dir = self._resolve_galaxies_dir()
 
     def _resolve_galaxies_dir(self) -> Path:

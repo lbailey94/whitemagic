@@ -130,7 +130,7 @@ class CausalMiner:
         self._min_causal_strength = min_causal_strength
         self._max_edges = max_edges_per_run
         self._persist = persist
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_runs: int = 0
         self._total_edges_created: int = 0
 
@@ -456,7 +456,7 @@ class CausalMiner:
 
 
 _miner_instance: CausalMiner | None = None
-_miner_lock = threading.Lock()
+_miner_lock = threading.RLock()
 
 
 def get_causal_miner(

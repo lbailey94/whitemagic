@@ -144,7 +144,7 @@ class ConstellationDetector:
         self._bins = bins_per_axis
         self._min_size = min_cluster_size
         self._max_constellations = max_constellations
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._last_report: DetectionReport | None = None
         # TTL cache: avoid re-running detect() on every query
         self._cache_ttl = cache_ttl_seconds
@@ -934,7 +934,7 @@ class ConstellationDetector:
 
 
 _detector_instance: ConstellationDetector | None = None
-_detector_lock = threading.Lock()
+_detector_lock = threading.RLock()
 
 
 def get_constellation_detector(

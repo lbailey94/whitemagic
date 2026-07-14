@@ -55,7 +55,7 @@ class HealingGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.sweep_history: deque[dict[str, Any]] = deque(maxlen=50)
         self.consolidation_log: deque[dict[str, Any]] = deque(maxlen=100)
         self.archive_log: deque[dict[str, Any]] = deque(maxlen=100)

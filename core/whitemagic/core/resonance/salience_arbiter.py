@@ -56,7 +56,7 @@ class SalienceArbiter:
         self._max_history = max_history
         self._decay_half_life = decay_half_life
         self._entries: deque[SpotlightEntry] = deque(maxlen=max_history)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._listener_registered = False
         self._stats: dict[str, Any] = {
             "total_scored": 0,
@@ -151,7 +151,7 @@ class SalienceArbiter:
 
 # Singleton instance
 _arbiter: SalienceArbiter | None = None
-_arbiter_lock = threading.Lock()
+_arbiter_lock = threading.RLock()
 
 
 def get_salience_arbiter() -> SalienceArbiter:

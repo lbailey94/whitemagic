@@ -154,13 +154,13 @@ class InferenceRouter:
     """
 
     _instance: InferenceRouter | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self, strategy: str = _DEFAULT_STRATEGY) -> None:
         self._strategy = RoutingStrategy(strategy)
         self._nodes: dict[str, NodeInfo] = {}
         self._round_robin_idx = 0
-        self._data_lock = threading.Lock()
+        self._data_lock = threading.RLock()
         self._request_history: deque[dict[str, Any]] = deque(maxlen=_MAX_HISTORY)
         self._stats = {
             "total_requests": 0,

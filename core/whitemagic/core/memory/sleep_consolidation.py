@@ -115,7 +115,7 @@ class SleepConsolidation:
         self._prune_threshold = prune_threshold
         self._strengthen_threshold = strengthen_threshold
         self._max_transfers = max_transfers_per_cycle
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_cycles = 0
         self._total_transfers = 0
         self._total_pruned = 0
@@ -499,7 +499,7 @@ class SleepConsolidation:
 
 # Singleton
 _instance: SleepConsolidation | None = None
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 
 def get_sleep_consolidation() -> SleepConsolidation:

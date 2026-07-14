@@ -75,7 +75,7 @@ class CircuitBreaker:
     def __init__(self, tool_name: str, config: BreakerConfig | None = None):
         self.tool_name = tool_name
         self.config = config or BreakerConfig()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._state = BreakerState.CLOSED
         self._failure_timestamps: list[float] = []
         self._opened_at: float = 0.0
@@ -410,7 +410,7 @@ class BreakerRegistry:
     """Registry of circuit breakers, one per tool."""
 
     def __init__(self, default_config: BreakerConfig | None = None):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._breakers: dict[str, CircuitBreaker] = {}
         self._default_config = default_config or BreakerConfig()
 
@@ -530,7 +530,7 @@ class BreakerRegistry:
 
 
 _registry: BreakerRegistry | None = None
-_reg_lock = threading.Lock()
+_reg_lock = threading.RLock()
 
 
 def get_breaker_registry() -> BreakerRegistry:
@@ -553,7 +553,7 @@ def get_breaker_registry() -> BreakerRegistry:
 
 
 _koka_circuit: Any = None
-_koka_lock = threading.Lock()
+_koka_lock = threading.RLock()
 
 
 def get_koka_circuit_dispatch():

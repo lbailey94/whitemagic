@@ -27,7 +27,7 @@ class LRUCache:
         self.max_size = max_size
         self.ttl_seconds = ttl_seconds
         self.cache: OrderedDict[str, tuple[Any, float]] = OrderedDict()
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.hits = 0
         self.misses = 0
 
@@ -199,7 +199,7 @@ class HybridRecallCache:
 
 # Global cache instance
 _cache_instance: HybridRecallCache | None = None
-_cache_lock = threading.Lock()
+_cache_lock = threading.RLock()
 
 
 def get_hybrid_cache() -> HybridRecallCache:

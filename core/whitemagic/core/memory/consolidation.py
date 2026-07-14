@@ -153,7 +153,7 @@ class MemoryConsolidator:
         self._tag_overlap_threshold = tag_overlap_threshold
         self._importance_boost = importance_boost
         self._max_memories = max_memories
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_consolidations = 0
         self._total_strategies = 0
         self._total_promotions = 0
@@ -1019,7 +1019,7 @@ class MemoryConsolidator:
 
 
 _consolidator: MemoryConsolidator | None = None
-_consolidator_lock = threading.Lock()
+_consolidator_lock = threading.RLock()
 
 
 def get_consolidator() -> MemoryConsolidator:
@@ -1123,7 +1123,7 @@ class ConsolidationDaemon:
 
 
 _consolidation_daemon: ConsolidationDaemon | None = None
-_consolidation_daemon_lock = threading.Lock()
+_consolidation_daemon_lock = threading.RLock()
 
 
 def get_consolidation_daemon() -> ConsolidationDaemon:

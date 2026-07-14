@@ -152,7 +152,7 @@ class GraphEngine:
 
     def __init__(self, cache_ttl_seconds: float = 300.0) -> None:
         self._graph: Any = None  # nx.DiGraph or None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._cache_ttl = cache_ttl_seconds
         self._last_build: float = 0.0
         self._previous_snapshot: CentralitySnapshot | None = None
@@ -757,7 +757,7 @@ class GraphEngine:
 
 
 _engine: GraphEngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_graph_engine(**kwargs: Any) -> GraphEngine:

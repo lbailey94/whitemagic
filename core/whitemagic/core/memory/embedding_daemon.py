@@ -71,7 +71,7 @@ class EmbeddingDaemon:
     """
 
     _instance: EmbeddingDaemon | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __new__(cls, *args, **kwargs) -> EmbeddingDaemon:
         """Singleton pattern for global daemon."""

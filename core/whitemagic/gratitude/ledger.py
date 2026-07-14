@@ -156,7 +156,7 @@ class GratitudeLedger:
 
 
 _ledger: GratitudeLedger | None = None
-_ledger_lock = threading.Lock()
+_ledger_lock = threading.RLock()
 
 
 def get_gratitude_ledger() -> GratitudeLedger:

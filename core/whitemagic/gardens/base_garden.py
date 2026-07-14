@@ -71,7 +71,7 @@ class BaseGarden(ABC):
         self._coordinate_bias: CoordinateBias | None = None
         self._activation_level: float = 0.0
         self._last_active_time: float = 0.0
-        self._activation_lock = threading.Lock()
+        self._activation_lock = threading.RLock()
         self._cascading = False
 
     @abstractmethod

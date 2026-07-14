@@ -108,7 +108,7 @@ class DreamCycle:
 
         self._running = False
         self._thread: threading.Thread | None = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         self._last_activity = time.time()
         self._dreaming = False
@@ -1651,7 +1651,7 @@ class DreamCycle:
 
 
 _dream_cycle: DreamCycle | None = None
-_dc_lock = threading.Lock()
+_dc_lock = threading.RLock()
 
 
 def get_dream_cycle() -> DreamCycle:

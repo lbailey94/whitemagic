@@ -57,7 +57,7 @@ class QuarantineManager:
 
     def __init__(self, auto_expire_hours: int = 168) -> None:
         self._entries: dict[str, QuarantineEntry] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._auto_expire = timedelta(hours=auto_expire_hours)
 
     def quarantine_session(
@@ -157,7 +157,7 @@ class QuarantineManager:
 
 
 _qm_instance: QuarantineManager | None = None
-_qm_lock = threading.Lock()
+_qm_lock = threading.RLock()
 
 
 def get_quarantine_manager() -> QuarantineManager:

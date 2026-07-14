@@ -156,7 +156,7 @@ class ILPManager:
     def __init__(self) -> None:
         self._config = ILPConfig()
         self._payments: dict[str, PaymentRecord] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._history_path: Path | None = None
         self._load_env_config()
 
@@ -417,7 +417,7 @@ class ILPManager:
 
 
 _manager: ILPManager | None = None
-_manager_lock = threading.Lock()
+_manager_lock = threading.RLock()
 
 
 def get_ilp_manager() -> ILPManager:

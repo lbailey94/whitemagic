@@ -54,7 +54,7 @@ class AweGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.prat_mode: bool = False
         self.prat_config: dict[str, Any] = {"threshold": 0.5, "max_resonance_depth": 3}
         self.strategy_suggestions: deque[dict[str, Any]] = deque(maxlen=100)

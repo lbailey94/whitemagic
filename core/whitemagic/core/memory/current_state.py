@@ -191,11 +191,11 @@ class CurrentStateTracker:
     """
 
     _instance: CurrentStateTracker | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self) -> None:
         self._state = CurrentState()
-        self._state_lock = threading.Lock()
+        self._state_lock = threading.RLock()
         self._load()
 
     @classmethod

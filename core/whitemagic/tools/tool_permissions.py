@@ -98,7 +98,7 @@ class AgentRoleRegistry:
 
     def __init__(self) -> None:
         self._agent_roles: dict[str, list[str]] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._default_roles = ["coordinator"]
         self._load()
 
@@ -185,7 +185,7 @@ class AgentRoleRegistry:
 
 
 _registry_instance: AgentRoleRegistry | None = None
-_registry_lock = threading.Lock()
+_registry_lock = threading.RLock()
 
 
 def get_agent_role_registry() -> AgentRoleRegistry:

@@ -1594,7 +1594,7 @@ class CodeGenomeEngine:
 
     def __init__(self, codegenome_dir: str | None = None) -> None:
         self._templates: dict[str, CodeTemplate] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         for t in _BUILTIN_TEMPLATES:
             self._templates[t.name] = t
@@ -1762,7 +1762,7 @@ class CodeGenomeEngine:
 
 
 _engine: CodeGenomeEngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_codegenome_engine() -> CodeGenomeEngine:

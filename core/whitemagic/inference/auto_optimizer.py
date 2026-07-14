@@ -450,7 +450,7 @@ class BackgroundOptimizer:
 
 _optimizer: ModelAutoOptimizer | None = None
 _bg_optimizer: BackgroundOptimizer | None = None
-_bg_lock = threading.Lock()
+_bg_lock = threading.RLock()
 
 
 def get_auto_optimizer() -> ModelAutoOptimizer:

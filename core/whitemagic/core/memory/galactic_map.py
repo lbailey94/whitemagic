@@ -115,7 +115,7 @@ class GalacticMap:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_sweeps = 0
 
     def compute_distance(self, mem: Memory, retention_score: float | None = None) -> float:

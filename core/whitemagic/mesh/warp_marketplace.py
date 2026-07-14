@@ -108,12 +108,12 @@ class WarpMarketplace:
     """
 
     _instance: WarpMarketplace | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self) -> None:
         self._listings: dict[str, WarpListing] = {}
         self._downloads: dict[str, dict[str, Any]] = {}  # download_id -> metadata
-        self._data_lock = threading.Lock()
+        self._data_lock = threading.RLock()
         self._stats = {
             "total_published": 0,
             "total_downloaded": 0,

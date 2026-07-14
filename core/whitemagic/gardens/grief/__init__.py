@@ -62,7 +62,7 @@ class GriefGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.losses: list[dict[str, Any]] = []
         self.shadow_log: deque[dict[str, Any]] = deque(maxlen=500)
         self.introspection_snapshots: deque[dict[str, Any]] = deque(maxlen=100)

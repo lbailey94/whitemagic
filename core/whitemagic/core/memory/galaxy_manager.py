@@ -94,7 +94,7 @@ class GalaxyManager:
     """
 
     _instance: GalaxyManager | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self) -> None:
         self._galaxies: dict[str, GalaxyInfo] = {}

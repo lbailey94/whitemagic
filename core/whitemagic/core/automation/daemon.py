@@ -119,7 +119,7 @@ class AutomationDaemon:
     """
 
     _instance: AutomationDaemon | None = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
     _initialized: bool = False
 
     def __new__(cls) -> AutomationDaemon:

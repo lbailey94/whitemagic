@@ -359,7 +359,7 @@ class GunaBalanceMetric:
 # ── Singleton ───────────────────────────────────────────────────────
 
 _guna_balance: GunaBalanceMetric | None = None
-_gb_lock = threading.Lock()
+_gb_lock = threading.RLock()
 
 
 def get_guna_balance() -> GunaBalanceMetric:

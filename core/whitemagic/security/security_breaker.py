@@ -128,7 +128,7 @@ class SecurityMonitor:
         lateral_window_s: float = 10.0,
         escalation_window_s: float = 30.0,
     ):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         # Relax thresholds in benchmark mode to avoid log spam
         import os
@@ -392,7 +392,7 @@ class SecurityMonitor:
 
 
 _monitor: SecurityMonitor | None = None
-_monitor_lock = threading.Lock()
+_monitor_lock = threading.RLock()
 
 
 def get_security_monitor() -> SecurityMonitor:

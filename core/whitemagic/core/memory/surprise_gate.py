@@ -139,7 +139,7 @@ class SurpriseGate:
         self._low_threshold = low_threshold
         self._importance_boost = importance_boost
         self._reinforcement_strength = reinforcement_strength
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._total_evaluations = 0
         self._total_novel = 0
         self._total_redundant = 0
@@ -387,7 +387,7 @@ class SurpriseGate:
 
 
 _gate: SurpriseGate | None = None
-_gate_lock = threading.Lock()
+_gate_lock = threading.RLock()
 
 
 def get_surprise_gate(**kwargs: Any) -> SurpriseGate:

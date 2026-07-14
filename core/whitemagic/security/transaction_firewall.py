@@ -161,7 +161,7 @@ class TransactionFirewall:
         self._daily_spent: dict[str, float] = {}  # agent_id -> amount today
         self._daily_date: dict[str, str] = {}  # agent_id -> date string
         self._rate_log: dict[str, list[float]] = {}  # agent_id -> timestamps
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._spend_log_path = ECONOMY_DIR / "transaction_log.jsonl"
         self._security_log_path = ECONOMY_DIR / "security_events.jsonl"
         self._spend_log_path.parent.mkdir(parents=True, exist_ok=True)

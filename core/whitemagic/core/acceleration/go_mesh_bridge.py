@@ -31,7 +31,7 @@ from whitemagic.utils.fast_json import loads as _json_loads
 logger = logging.getLogger(__name__)
 
 _redis_client: Any | None = None
-_redis_lock = threading.Lock()
+_redis_lock = threading.RLock()
 _HAS_GO_MESH = False
 _MESH_CHANNEL = "whitemagic_mesh"
 
@@ -200,7 +200,7 @@ def go_mesh_status() -> dict[str, Any]:
 
 
 _go_prefetch_bin: str | None = None
-_go_prefetch_lock = threading.Lock()
+_go_prefetch_lock = threading.RLock()
 _go_prefetch_checked = False
 
 

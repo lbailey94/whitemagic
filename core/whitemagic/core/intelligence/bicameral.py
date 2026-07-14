@@ -855,7 +855,7 @@ class BicameralReasoner:
 
 
 _reasoner_instance: BicameralReasoner | None = None
-_reasoner_lock = threading.Lock()
+_reasoner_lock = threading.RLock()
 
 
 def get_bicameral_reasoner(

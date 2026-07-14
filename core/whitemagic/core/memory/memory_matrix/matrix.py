@@ -18,7 +18,7 @@ import json
 from dataclasses import dataclass, fields
 from datetime import UTC, datetime
 from pathlib import Path
-from threading import Lock
+from threading import Lock, RLock
 from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
@@ -31,7 +31,7 @@ from .seen_registry import get_seen_registry
 from .timeline import get_timeline
 
 _matrix_instance: MemoryMatrix | None = None
-_matrix_lock = Lock()
+_matrix_lock = RLock()
 
 
 @dataclass

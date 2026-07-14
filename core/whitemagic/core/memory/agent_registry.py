@@ -188,7 +188,7 @@ class AgentRegistry:
 
 # Singleton
 _registry: AgentRegistry | None = None
-_singleton_lock = threading.Lock()
+_singleton_lock = threading.RLock()
 
 
 def get_agent_registry() -> AgentRegistry:

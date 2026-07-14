@@ -39,7 +39,7 @@ class WonderGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.wonder_moments: deque[dict[str, Any]] = deque(maxlen=200)
         self.curiosity_sparks: deque[dict[str, Any]] = deque(maxlen=100)
         self.explorations_triggered: int = 0

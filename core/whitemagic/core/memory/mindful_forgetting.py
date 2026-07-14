@@ -216,7 +216,7 @@ class RetentionEngine:
         self._retain_threshold = retain_threshold
         self._archive_threshold = archive_threshold
         self._evaluators = evaluators or list(DEFAULT_EVALUATORS)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
         # Stats
         self._total_evaluations: int = 0
@@ -468,7 +468,7 @@ class RetentionEngine:
 
 
 _engine_instance: RetentionEngine | None = None
-_engine_lock = threading.Lock()
+_engine_lock = threading.RLock()
 
 
 def get_retention_engine(

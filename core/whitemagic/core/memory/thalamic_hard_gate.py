@@ -68,7 +68,7 @@ class ThalamicHardGate:
 
     def __init__(self) -> None:
         self._context = "default"
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._proc: subprocess.Popen | None = None
         self._backend = "python"
         self._total_checks = 0
@@ -180,7 +180,7 @@ class ThalamicHardGate:
 
 # Singleton
 _instance: ThalamicHardGate | None = None
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 
 def get_thalamic_hard_gate() -> ThalamicHardGate:

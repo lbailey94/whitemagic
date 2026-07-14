@@ -54,7 +54,7 @@ class MysteryGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.detected_patterns: deque[dict[str, Any]] = deque(maxlen=200)
         self.association_results: deque[dict[str, Any]] = deque(maxlen=100)
         self.constellations_found: deque[dict[str, Any]] = deque(maxlen=50)

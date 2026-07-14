@@ -1275,7 +1275,7 @@ def _semantic_cache_lookup(tool_name: str, prompt: str, base_key: str) -> str | 
     global _embedding_cache_lock
     if _embedding_cache_lock is None:
         import threading
-        _embedding_cache_lock = threading.Lock()
+        _embedding_cache_lock = threading.RLock()
 
     try:
         from whitemagic.core.intelligence.embeddings import get_embedding_engine

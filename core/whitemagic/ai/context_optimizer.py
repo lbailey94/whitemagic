@@ -296,7 +296,7 @@ class ContextOptimizer:
 
 
 _optimizer: ContextOptimizer | None = None
-_opt_lock = threading.Lock()
+_opt_lock = threading.RLock()
 
 
 def get_context_optimizer() -> ContextOptimizer:

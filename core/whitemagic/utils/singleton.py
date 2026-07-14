@@ -26,7 +26,7 @@ def threadsafe_singleton(cls: type[T]) -> type[T]:
 
     Replaces the boilerplate:
         _instance = None
-        _lock = threading.Lock()
+        _lock = threading.RLock()
         def __new__(cls):
             with cls._lock:
                 if cls._instance is None:
@@ -36,7 +36,7 @@ def threadsafe_singleton(cls: type[T]) -> type[T]:
     """
     original_new = cls.__new__
     original_init = cls.__init__
-    cls._lock = threading.Lock()
+    cls._lock = threading.RLock()
     cls._instance = None  # type: ignore[attr-defined]
 
     def _new(newcls: Any, *args: Any, **kwargs: Any) -> Any:

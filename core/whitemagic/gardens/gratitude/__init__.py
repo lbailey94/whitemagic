@@ -54,7 +54,7 @@ class GratitudeGarden(BaseGarden, GanYingMixin):
 
     def __init__(self) -> None:
         BaseGarden.__init__(self)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self.metrics: dict[str, deque[dict[str, Any]]] = defaultdict(
             lambda: deque(maxlen=1000)
         )

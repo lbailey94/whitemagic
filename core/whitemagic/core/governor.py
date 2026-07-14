@@ -19,12 +19,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
-from threading import Lock
+from threading import Lock, RLock
 from typing import Any
 
 # Singleton instance
 _governor_instance: Governor | None = None
-_governor_lock = Lock()
+_governor_lock = RLock()
 
 
 class RiskLevel(Enum):

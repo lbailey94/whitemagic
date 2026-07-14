@@ -222,7 +222,7 @@ class CognitiveModes:
     """
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._mode = CognitiveMode.BALANCED
         self._manual_override: CognitiveMode | None = None
         self._safety_override: CognitiveMode | None = None
@@ -446,7 +446,7 @@ class CognitiveModes:
 
 
 _cognitive_modes: CognitiveModes | None = None
-_cm_lock = threading.Lock()
+_cm_lock = threading.RLock()
 
 
 def get_cognitive_modes() -> CognitiveModes:
