@@ -15,8 +15,6 @@ It delegates to `prat_router.route_prat_call()` which handles:
 
 from typing import Any
 
-from whitemagic.tools.prat_router import route_prat_call
-
 
 def gana_invoke(
     tool_name: str, args: dict[str, Any] | None = None, **kwargs: Any
@@ -31,6 +29,8 @@ def gana_invoke(
     Returns:
         A normalized result dict with _resonance metadata.
     """
+    from whitemagic.tools.prat_router import route_prat_call
+
     _args = args or {}
 
     # The PRAT router expects the sub-tool name in `tool=` and its args in `args=`

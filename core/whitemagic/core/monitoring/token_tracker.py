@@ -27,9 +27,20 @@ import time
 from typing import Any
 
 from whitemagic.core.monitoring.green_score import InferenceLocality, get_green_score
-from whitemagic.tools.middleware import DispatchContext, NextFn
 
 logger = logging.getLogger(__name__)
+
+# Deferred import to avoid circular dependency (tools.middleware imports core modules)
+DispatchContext = None
+NextFn = None
+
+
+def _ensure_types():
+    global DispatchContext, NextFn
+    if DispatchContext is None:
+        from whitemagic.tools.middleware import DispatchContext as _DC, NextFn as _NF
+        DispatchContext = _DC
+        NextFn = _NF
 
 
 def _estimate_tokens(text: Any) -> int:

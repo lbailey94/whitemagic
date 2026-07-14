@@ -35,9 +35,14 @@ from whitemagic.core.evolution.autodidactic_loop import (
 )
 from whitemagic.core.memory.probabilistic import CountMinSketch, HyperLogLog
 from whitemagic.forecasting.mc_integration import MCForecastEnhancer
-from whitemagic.tools.handlers.tool_bandit import get_tool_bandit
 
 logger = logging.getLogger(__name__)
+
+
+def _get_tool_bandit():
+    """Deferred import to avoid circular dependency."""
+    from whitemagic.tools.handlers.tool_bandit import get_tool_bandit
+    return get_tool_bandit()
 
 
 @dataclass
@@ -106,7 +111,7 @@ class RecursiveImprovementLoop:
 
     def __init__(self) -> None:
         self._mc_enhancer = MCForecastEnhancer()
-        self._bandit = get_tool_bandit()
+        self._bandit = _get_tool_bandit()
         self._autodidactic = AutodidacticLoop()
         self._hll = HyperLogLog(precision=14)  # Track distinct improvements
         self._cms = CountMinSketch(width=4096, depth=5)  # Track improvement frequency
