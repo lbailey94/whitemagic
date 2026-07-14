@@ -116,11 +116,12 @@ class TestH1_VersionDrift:
         assert content == "24.3.1"
 
     def test_pyproject_version(self):
-        """core/pyproject.toml should have version 24.3.1."""
+        """core/pyproject.toml should reference version 24.3.1 (dynamic or static)."""
         pyproject_path = os.path.join(REPO_ROOT, "core", "pyproject.toml")
         with open(pyproject_path) as f:
             content = f.read()
-        assert 'version = "24.3.1"' in content
+        # pyproject.toml uses dynamic version from VERSION file
+        assert 'dynamic = ["version"]' in content or 'version = "24.3.1"' in content
 
     def test_core_readme_version(self):
         """core/README.md should reference v24.3.1."""
