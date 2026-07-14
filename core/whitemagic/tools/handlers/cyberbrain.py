@@ -4,6 +4,9 @@
 from typing import Any
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def handle_salience_spotlight(**kwargs: Any) -> dict[str, Any]:
     """Return the current attention spotlight — top-N most salient events."""
     from whitemagic.core.resonance.salience_arbiter import get_salience_arbiter
@@ -67,7 +70,7 @@ def handle_bicameral_reason(**kwargs: Any) -> dict[str, Any]:
             rust_facts = related if isinstance(related, list) else [related]
             context.setdefault("rust_inferred_facts", rust_facts)
     except Exception:
-        pass  # Rust reasoning optional — continue with Python
+        logger.debug("Ignored Exception in cyberbrain.py:72")
 
     try:
         import asyncio

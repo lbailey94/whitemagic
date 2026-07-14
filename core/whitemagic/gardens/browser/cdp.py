@@ -276,7 +276,7 @@ class CDPConnection:
                     await self._dispatch_event(event)
 
         except asyncio.CancelledError:
-            pass  # Task cancellation is expected
+            logger.debug("Ignored Exception in cdp.py:278")
         except Exception as e:
             logger.warning("CDP connection error: %s", e, exc_info=True)
             self._connected = False

@@ -2,7 +2,7 @@
 
 Start with the canonical introduction: [Prologue](00_PROLOGUE.md)
 
-**Version**: 24.3.1 "Cognitive Operating System"
+**Version**: 25.0.0 "Cognitive Operating System"
 **Structure**: 28 Chapters (Lunar Mansions) + Super-Coherence Core
 **Flow**: Cyclical (28 → 1 → 2 → ... → 28 → 1)
 **Tools**: 28 PRAT Gana meta-tools + 462 dispatch entries

@@ -284,7 +284,7 @@ def handle_cast_oracle(**kwargs: Any) -> dict[str, Any]:
                 auto_embed=False,
             )
         except Exception:
-            pass  # Non-critical — oracle result is still returned
+            logger.debug("Ignored Exception in misc.py:286")
 
         return result
     except Exception as e:

@@ -247,7 +247,7 @@ const AGENTS: Record<string, AgentDef> = {
     element: "wood",
     archetype: "Predictive intelligence",
     description:
-      "Forecasting and serendipity. The Dipper Gana is the lab's prediction engine — 21 validated forecasts, Brier score 0.0958, plus an active serendipity surface.",
+      "Forecasting and serendipity. The Dipper Gana is the lab's prediction engine — 30 validated forecasts, Brier score 0.0958, plus an active serendipity surface.",
     functionNames: [],
     capabilities: [
       "intelligence_briefing",

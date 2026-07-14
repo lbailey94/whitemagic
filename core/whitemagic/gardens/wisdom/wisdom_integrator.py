@@ -2,6 +2,9 @@
 """Wisdom Integrator - Combine all wisdom systems"""
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class WisdomIntegrator:
     """Integrate Wu Xing, I Ching, and Strategy
 
@@ -25,7 +28,7 @@ class WisdomIntegrator:
             self.i_ching = get_i_ching()
             self.strategy = StrategicThinking()
         except Exception:
-            pass
+            logger.debug("Ignored Exception in wisdom_integrator.py:30")
 
     def get_comprehensive_guidance(
         self, task: str, task_type: str = "implementation"

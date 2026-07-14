@@ -1,0 +1,11 @@
+{
+  "cascadeId": "eb414c04-0e59-42db-8de0-130b95da85e4",
+  "title": "Fixing Flaky Tests",
+  "stepCount": 3235,
+  "numTotalSteps": 3235,
+  "transcriptLength": 199360,
+  "createdTime": "2026-07-10T13:48:23.004834940Z",
+  "lastModifiedTime": "2026-07-11T02:46:55.319785732Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 33
+}

@@ -1,0 +1,11 @@
+{
+  "cascadeId": "902713d3-3700-4b9c-b2d5-7997a16966d1",
+  "title": "Phase 5 Benchmark Update",
+  "stepCount": 837,
+  "numTotalSteps": 837,
+  "transcriptLength": 89497,
+  "createdTime": "2026-07-13T21:06:01.852215502Z",
+  "lastModifiedTime": "2026-07-14T01:17:17.570034492Z",
+  "status": "CASCADE_RUN_STATUS_RUNNING",
+  "userInputCount": 10
+}

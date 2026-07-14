@@ -174,7 +174,7 @@ const PERFORMANCE_CMP: CompareRow[] = [
 
 const COGNITIVE_CMP_TAB: CompareRow[] = [
   { capability: "Consciousness primitives", whitemagic: "Citta stream, coherence metrics (8 dimensions), Smarana practice, presence quality", mem0: "No", letta: "Agent identity within harness", rag: "No" },
-  { capability: "Self-calibrating forecasts", whitemagic: "Brier-scored predictions, 21 validated prescience claims, 523 points", mem0: "No", letta: "No", rag: "No" },
+  { capability: "Self-calibrating forecasts", whitemagic: "Brier-scored predictions, 30 validated prescience claims, 672 points", mem0: "No", letta: "No", rag: "No" },
   { capability: "Tool selection learning", whitemagic: "Thompson sampling bandit - Beta posteriors converge with use, no retraining", mem0: "No", letta: "No", rag: "No" },
   { capability: "Metacognitive awareness", whitemagic: "Cardinality-velocity surprise gate - modulates learning rate by novelty", mem0: "No", letta: "No", rag: "No" },
   { capability: "Session continuity", whitemagic: "Session recorder with progressive recall, selective replay, FTS5 search", mem0: "No", letta: "Agent state persistence", rag: "No" },

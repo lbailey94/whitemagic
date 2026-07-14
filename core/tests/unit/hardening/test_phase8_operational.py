@@ -281,7 +281,7 @@ class TestMigrationCLI:
         conn.execute("CREATE TABLE memories (id TEXT, content TEXT, tags TEXT, importance REAL)")
         conn.execute("INSERT INTO memories VALUES ('1', 'test', 'tag1', 0.5)")
         conn.execute("CREATE TABLE schema_meta (key TEXT, value TEXT)")
-        conn.execute("INSERT INTO schema_meta VALUES ('version', '24.3.1')")
+        conn.execute("INSERT INTO schema_meta VALUES ('version', '25.0.0')")
         conn.commit()
         conn.close()
 
@@ -291,7 +291,7 @@ class TestMigrationCLI:
         assert results[0].name == "universal"
         assert results[0].memory_count == 1
         assert results[0].integrity_ok
-        assert results[0].schema_version == "24.3.1"
+        assert results[0].schema_version == "25.0.0"
 
     def test_validate_all_galaxies(self, tmp_path):
         from whitemagic.ops.migration_cli import MigrationCLI
@@ -413,7 +413,7 @@ class TestHealthSurface:
         assert report["status"] in ("healthy", "degraded", "critical")
         assert "components" in report
         assert "summary" in report
-        assert report["summary"]["total_components"] == 6
+        assert report["summary"]["total_components"] == 7
 
     def test_components_present(self):
         from whitemagic.ops.health_surface import HealthSurface
@@ -424,6 +424,7 @@ class TestHealthSurface:
         expected = {
             "middleware_latency", "memory_backends", "cache_isolation",
             "native_bridges", "degraded_capabilities", "pending_migrations",
+            "apotheosis_health",
         }
         assert expected == set(report["components"].keys())
 
@@ -532,7 +533,7 @@ class TestPropertyBasedFuzz:
         surface = HealthSurface()
         for _ in range(10):
             report = surface.collect()
-            assert report["summary"]["total_components"] == 6
+            assert report["summary"]["total_components"] == 7
 
     def test_extension_point_register_unregister(self):
         """Extension points handle register/unregister correctly."""

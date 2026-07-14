@@ -21,6 +21,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from ..automation.consolidation import consolidate_memories
     from ..harmony.documentation_harmony import DocumentationHarmony
@@ -222,7 +225,7 @@ class ContinuousAudit:
                 results["systems_checked"].append("memory_consolidation")
                 results["actions_taken"].append("Consolidated memories")
             except Exception:
-                pass
+                logger.debug("Ignored Exception in continuous_audit.py:227")
 
         # Update metrics
         self.last_audit = audit_start

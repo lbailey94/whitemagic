@@ -5,6 +5,9 @@ from typing import Any, TypeVar
 
 from whitemagic.utils.async_bridge import run_async as _run_async
 
+import logging
+logger = logging.getLogger(__name__)
+
 T = TypeVar("T")
 
 
@@ -659,7 +662,7 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
 
         raw_html = _run_async(_fetch_raw()) or fetch_result.content
     except Exception:
-        pass
+        logger.debug("Ignored Exception in web_research.py:664")
 
     enhanced = process_content(
         html=raw_html,

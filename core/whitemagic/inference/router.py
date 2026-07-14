@@ -334,7 +334,7 @@ class InferenceRouter:
                                 }
                             )
                 except Exception:
-                    pass  # No context available — GHRR will skip
+                    logger.debug("Ignored Exception in router.py:336")
 
                 if context_items:
                     ghrr_result = ghrr.preprocess_prompt(prompt, context_items)

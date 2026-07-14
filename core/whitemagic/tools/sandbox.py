@@ -175,7 +175,7 @@ class ToolSandbox:
                     mem_bytes = limits.max_memory_mb * 1024 * 1024
                     resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
                 except (ValueError, OSError):
-                    pass  # Not all limits supported everywhere
+                    logger.debug("Ignored ValueError, OSError in sandbox.py:177")
             return handler(**kwargs)
 
         try:

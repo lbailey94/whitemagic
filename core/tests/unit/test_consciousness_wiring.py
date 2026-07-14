@@ -238,23 +238,20 @@ class TestAriaAwakensWiring:
         assert "recent_memories" in ctx
 
 
-class TestContinuousAwarenessWiring:
-    """Test continuous awareness connects to parallel cognition."""
+class TestLifecycleWiring:
+    """Test lifecycle module wiring (replaces deleted continuous_awareness.py)."""
 
-    def test_has_parallel_cog_flag(self):
-        from whitemagic.core.consciousness import continuous_awareness
+    def test_lifecycle_module_importable(self):
+        from whitemagic.core.consciousness import lifecycle
 
-        assert hasattr(continuous_awareness, "_HAS_PARALLEL_COG")
+        assert hasattr(lifecycle, "SleepScheduler")
+        assert hasattr(lifecycle, "WakeOnBoot")
 
-    def test_self_report_includes_cognition_connected(self):
-        from whitemagic.core.consciousness.continuous_awareness import (
-            ContinuousSelfAwareness,
-        )
+    def test_sleep_scheduler_singleton(self):
+        from whitemagic.core.consciousness.lifecycle import get_sleep_scheduler
 
-        csa = ContinuousSelfAwareness()
-        report = csa.get_self_report()
-        assert "cognition_connected" in report
-        assert isinstance(report["cognition_connected"], bool)
+        scheduler = get_sleep_scheduler()
+        assert scheduler is not None
 
 
 class TestGardenSubmodules:

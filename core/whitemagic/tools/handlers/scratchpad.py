@@ -344,6 +344,6 @@ def handle_scratchpad_finalize(**kwargs: Any) -> dict[str, Any]:
                 "latency_ms": round(vsa_result.latency_ms, 2),
             }
     except Exception:
-        pass  # VSA compression is best-effort
+        logger.debug("Ignored Exception in scratchpad.py:346")
 
     return result

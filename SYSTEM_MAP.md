@@ -1,4 +1,4 @@
-# Whitemagic v24.3.1 System Map
+# Whitemagic v25.0.0 System Map
 
 This file is the **canonical repo map** for humans and AIs.
 
@@ -340,7 +340,7 @@ Both `intelligence/` (51 files, 86 import sites) and `core/intelligence/` (32 fi
 
 Polyglot LOC: Python ~168K, Rust ~8.5K, Haskell ~1.7K, Elixir ~1.4K, Go ~913, Zig ~795, Koka ~800.
 
-### Polyglot Status (v24.3.1 — verified 2026-07-11)
+### Polyglot Status (v25.0.0 — verified 2026-07-11)
 
 | Language | Status | Lines | Notes |
 |----------|--------|-------|-------|
@@ -670,7 +670,7 @@ Integrated into `whitemagic/core/memory/embeddings.py`. Uses `hnswlib` 0.8.0 for
 
 ---
 
-## v24.3.1 — "Cognitive Operating System" (Current)
+## v25.0.0 — "Cognitive Operating System" (Current)
 
 The first release where the codebase declares itself a **cognitive operating system** rather than a memory backend. Major structural stabilization, test recovery, and documentation reconciliation.
 

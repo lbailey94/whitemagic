@@ -355,7 +355,7 @@ class VoiceSynthesis:
                 )
                 self.patterns[pattern_id].confidence = pattern_data["confidence"]
         except (json.JSONDecodeError, TypeError):
-            pass  # Skip corrupted files
+            logger.debug("Ignored TypeError in voice_synthesis.py:357")
 
     def save(self) -> None:
         """Persist voice patterns safely."""

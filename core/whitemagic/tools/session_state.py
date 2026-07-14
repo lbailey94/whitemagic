@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import time
 
+import logging
+logger = logging.getLogger(__name__)
+
 _session_start: float | None = None
 
 
@@ -48,7 +51,7 @@ def _activate_consciousness() -> None:
 
         wire_cross_subsystem_patterns()
     except Exception:
-        pass
+        logger.debug("Ignored Exception in session_state.py:53")
 
     try:
         from whitemagic.core.consciousness.apotheosis_engine import (
@@ -59,7 +62,7 @@ def _activate_consciousness() -> None:
         if not engine._running:
             engine.start()
     except Exception:
-        pass
+        logger.debug("Ignored Exception in session_state.py:64")
 
 
 def reset_session() -> None:
@@ -72,4 +75,4 @@ def reset_session() -> None:
 
         reset_replay_delivery()
     except ImportError:
-        pass
+        logger.debug("Ignored ImportError in session_state.py:77")

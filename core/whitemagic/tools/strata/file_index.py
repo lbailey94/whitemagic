@@ -4,6 +4,9 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 
+import logging
+logger = logging.getLogger(__name__)
+
 __all__ = ["FileIndex"]
 
 
@@ -82,7 +85,7 @@ class FileIndex:
                     {"hashes": self._new_hashes, "_meta": self._meta_cache}, f, indent=2
                 )
         except OSError:
-            pass
+            logger.debug("Ignored OSError in file_index.py:87")
 
     @staticmethod
     def _hash_content(text: str) -> str:
@@ -145,7 +148,7 @@ class FileIndex:
             self._ext_index = index
             return index
         except (ImportError, AttributeError, Exception):
-            pass
+            logger.debug("Ignored ImportError, AttributeError, Exception in file_index.py:150")
 
         # Fallback: Python rglob
         for p in self.project_path.rglob("*"):

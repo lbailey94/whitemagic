@@ -252,7 +252,7 @@ def _sign_template(template: CodeTemplate) -> CodeTemplate:
             if sig:
                 template.signature_key = sig.get("signature", "")
     except Exception:
-        pass  # Graceful degradation — unsigned but functional
+        logger.debug("Ignored Exception in engine.py:254")
 
     return template
 

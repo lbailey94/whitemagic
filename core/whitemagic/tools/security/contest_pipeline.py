@@ -21,6 +21,7 @@ class ContestFinding:
     mitigation: str
     finding_id: str = ""
     dedup_hash: str = ""
+    fix_status: str = "none"  # none, pending, applied, pr_created, merged
 
     def __post_init__(self) -> None:
         if not self.finding_id:
@@ -183,6 +184,45 @@ class ContestPipeline:
                 unique.append(f)
         return unique
 
+    def link_fix(self, finding_id: str, fix: Any) -> bool:
+        """Link a FixSuggestion to a contest finding, updating fix_status."""
+        for f in self._findings:
+            if f.finding_id == finding_id:
+                f.fix_status = "applied"
+                logger.info("Linked fix to finding %s", finding_id)
+                return True
+        logger.debug("Finding %s not found for fix linking", finding_id)
+        return False
+
+    def link_pr(self, finding_id: str, pr_url: str) -> bool:
+        """Link a PR URL to a contest finding, updating fix_status to pr_created."""
+        for f in self._findings:
+            if f.finding_id == finding_id:
+                f.fix_status = "pr_created"
+                logger.info("Linked PR %s to finding %s", pr_url, finding_id)
+                return True
+        logger.debug("Finding %s not found for PR linking", finding_id)
+        return False
+
+    def fix_coverage_report(self) -> dict[str, Any]:
+        """Report which findings have fixes and which don't."""
+        by_status: dict[str, int] = {}
+        unfixed: list[dict[str, str]] = []
+        for f in self._findings:
+            by_status[f.fix_status] = by_status.get(f.fix_status, 0) + 1
+            if f.fix_status == "none":
+                unfixed.append({"finding_id": f.finding_id, "title": f.title, "file": f.file, "severity": f.severity})
+        total = len(self._findings)
+        fixed = total - by_status.get("none", 0)
+        return {
+            "total_findings": total,
+            "fixed_or_in_progress": fixed,
+            "unfixed": len(unfixed),
+            "by_fix_status": by_status,
+            "unfixed_findings": unfixed,
+            "coverage_pct": round(fixed / total * 100, 1) if total else 0.0,
+        }
+
     def status(self) -> dict[str, Any]:
         return {
             "total_findings": len(self._findings),
@@ -191,6 +231,7 @@ class ContestPipeline:
                 sev: sum(1 for f in self._findings if f.severity == sev)
                 for sev in set(f.severity for f in self._findings)
             },
+            "fix_coverage": self.fix_coverage_report(),
             "platforms": list(self.PLATFORMS.keys()),
         }
 

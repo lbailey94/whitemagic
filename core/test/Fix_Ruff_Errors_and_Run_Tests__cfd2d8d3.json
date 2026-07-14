@@ -1,0 +1,11 @@
+{
+  "cascadeId": "cfd2d8d3-171f-48d5-9121-a3ed29290b89",
+  "title": "Fix Ruff Errors and Run Tests",
+  "stepCount": 1162,
+  "numTotalSteps": 1162,
+  "transcriptLength": 129388,
+  "createdTime": "2026-07-11T19:32:25.651938683Z",
+  "lastModifiedTime": "2026-07-11T22:06:22.603016683Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 21
+}

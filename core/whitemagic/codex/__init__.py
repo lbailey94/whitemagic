@@ -19,6 +19,9 @@ from pathlib import Path
 from typing import Any
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 @dataclass
 class CodexConfig:
     """Configuration for a CODEX pipeline run."""
@@ -83,7 +86,7 @@ class CodexPipeline:
                         continue
             return docs
         except (ImportError, AttributeError, Exception):
-            pass
+            logger.debug("Ignored ImportError, AttributeError, Exception in __init__.py:88")
 
         # Python fallback
         for path in src.rglob("*"):

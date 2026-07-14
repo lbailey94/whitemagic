@@ -1,0 +1,11 @@
+{
+  "cascadeId": "81cd4682-0e57-46f5-9b53-4d72a0286967",
+  "title": "GGUF Dual-Mode & CodeGen",
+  "stepCount": 933,
+  "numTotalSteps": 933,
+  "transcriptLength": 110832,
+  "createdTime": "2026-07-09T00:22:50.423792536Z",
+  "lastModifiedTime": "2026-07-09T02:31:23.034681593Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 9
+}

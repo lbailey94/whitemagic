@@ -16,7 +16,10 @@ from pathlib import Path
 
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.core import parse_datetime
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 class StillnessDepth(Enum):
     """Levels of stillness depth."""
@@ -131,7 +134,7 @@ class StillnessTracker:
                             )
                         )
             except OSError:
-                pass
+                logger.debug("Ignored OSError in stillness_metrics.py:136")
 
     def _save_history(self) -> None:
         """Save readings to file."""

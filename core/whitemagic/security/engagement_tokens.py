@@ -275,7 +275,7 @@ class EngagementTokenManager:
                 metadata={"token_id": token_id, "issuer": issuer, "scope": scope, "tools": tools},
             )
         except Exception:
-            pass
+            logger.debug("Ignored Exception in engagement_tokens.py:277")
 
         logger.info(
             "Engagement token issued: %s by %s (scope=%s, tools=%s, expires=%.1fm)",
@@ -394,7 +394,7 @@ class EngagementTokenManager:
                 metadata={"token_id": token_id, "tool": tool, "target": target},
             )
         except Exception:
-            pass
+            logger.debug("Ignored Exception in engagement_tokens.py:396")
 
         return {
             "status": "success",
@@ -427,7 +427,7 @@ class EngagementTokenManager:
                 metadata={"token_id": token_id},
             )
         except Exception:
-            pass
+            logger.debug("Ignored Exception in engagement_tokens.py:429")
 
         logger.info("Engagement token revoked: %s", token_id)
         return {
@@ -459,7 +459,7 @@ class EngagementTokenManager:
                     metadata={"count": count, "reason": reason},
                 )
             except Exception:
-                pass
+                logger.debug("Ignored Exception in engagement_tokens.py:461")
             logger.warning("Bulk revoked %d engagement tokens: %s", count, reason)
         return count
 

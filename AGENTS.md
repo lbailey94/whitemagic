@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 24.3.1 (AGENTS.md revision 24.3.1)
-**Last Updated**: 2026-07-12
+**Version**: 25.0.0 (AGENTS.md revision 25.0.0)
+**Last Updated**: 2026-07-14
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---

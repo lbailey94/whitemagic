@@ -5,6 +5,9 @@ from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Files where Path.home() / .expanduser() is allowed per AGENTS.md
 _ALLOWED_PATH_FILES = {
     "config/paths.py",
@@ -75,7 +78,7 @@ def check_hardcoded_paths(
                 if 0 < line_num <= len(lines) and _is_comment_line(lines[line_num - 1]):
                     continue
             except (OSError, IndexError):
-                pass
+                logger.debug("Ignored OSError, IndexError in hardcoded_paths.py:80")
             desc = descriptions[pat_idx]
             category = (
                 "hardcoded_path_pattern"
@@ -99,7 +102,7 @@ def check_hardcoded_paths(
             )
         return
     except (ImportError, AttributeError, Exception):
-        pass
+        logger.debug("Ignored ImportError, AttributeError, Exception in hardcoded_paths.py:104")
 
     # Fallback: Python sequential scan
     for py_file in file_index.python_files():

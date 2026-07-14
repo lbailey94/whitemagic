@@ -295,7 +295,7 @@ class KokaBatchClient:
 
 # Global client instance
 _client: KokaBatchClient | None = None
-_client_lock = __import__("threading").Lock()
+_client_lock = __import__("threading").RLock()
 
 
 def get_batch_client() -> KokaBatchClient:

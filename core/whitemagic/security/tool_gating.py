@@ -391,7 +391,7 @@ class ToolGate:
                 except OSError:
                     continue
         except OSError:
-            pass  # DNS resolution failed, allow through
+            logger.debug("Ignored OSError in tool_gating.py:393")
 
         return True
 

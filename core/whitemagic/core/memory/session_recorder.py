@@ -577,7 +577,7 @@ def _humanize_duration(seconds: float) -> str:
 
 # ── Singleton ──────────────────────────────────────────────────────────────
 _recorder: SessionRecorder | None = None
-_recorder_lock = __import__("threading").Lock()
+_recorder_lock = __import__("threading").RLock()
 
 
 def get_session_recorder(session_id: str | None = None) -> SessionRecorder:

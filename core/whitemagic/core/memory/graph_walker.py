@@ -288,7 +288,7 @@ class GraphWalker:
                     projected = hrr.project(query_embedding, neighbor.relation_type)
                     effective_query = projected.tolist()
                 except Exception:
-                    pass  # HRR unavailable — use raw query embedding
+                    logger.debug("Ignored Exception in graph_walker.py:290")
             raw_sim = self._cosine_similarity(effective_query, neighbor_embedding)
             # Map from [-1, 1] to [0.1, 2.0] — never zero, reward alignment
             semantic_sim = max(0.1, 0.5 + raw_sim * 1.5)
@@ -531,7 +531,7 @@ class GraphWalker:
             if engine.available():
                 query_embedding = engine.encode(query)
         except Exception:
-            pass  # Graceful degradation: walk without semantic steering
+            logger.debug("Ignored Exception in graph_walker.py:533")
 
         anchor_ids = [m.id for m in anchors]
 
@@ -817,7 +817,7 @@ class GraphWalker:
                     (datetime.now().isoformat(), source_id, target_id),
                 )
         except Exception:
-            pass  # non-critical
+            logger.debug("Ignored Exception in graph_walker.py:819")
 
     def get_stats(self) -> dict[str, Any]:
         with self._lock:

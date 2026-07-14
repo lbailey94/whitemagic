@@ -412,7 +412,7 @@ class CorpusCallosumBus:
 
 
 _bus_instance: CorpusCallosumBus | None = None
-_bus_lock = __import__("threading").Lock()
+_bus_lock = __import__("threading").RLock()
 
 
 def get_corpus_callosum_bus() -> CorpusCallosumBus:

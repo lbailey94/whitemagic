@@ -102,6 +102,10 @@ pub mod inference;
 #[cfg(feature = "python")]
 pub mod inference_pymodule;
 
+// Code Structure Graph (tree-sitter AST extraction)
+#[cfg(feature = "python")]
+pub mod codegraph;
+
 // WASM-specific module
 #[cfg(feature = "wasm")]
 mod wasm;
@@ -280,6 +284,11 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
         pipeline::code_writing_clone::benchmark_code_writing,
         m
     )?)?;
+
+    // Code Structure Graph sub-module
+    let codegraph_module = PyModule::new_bound(_py, "codegraph")?;
+    codegraph::codegraph(_py, &codegraph_module)?;
+    m.add_submodule(&codegraph_module)?;
 
     // Add convergence Detector — functions wired via convergence_bridge.py
     m.add_function(wrap_pyfunction!(search::convergence_detector::detect_convergence, m)?)?;

@@ -17,6 +17,9 @@ import click
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def _get_json_output(ctx, json_flag: bool) -> bool:
     """Merge local --json flag with global ctx.obj["json_output"]."""
     return json_flag or (
@@ -104,7 +107,7 @@ def reflect(ctx, json_flag: bool) -> None:
             sm.get("details", sm) if isinstance(sm, dict) else sm
         )
     except Exception:
-        pass
+        logger.debug("Ignored Exception in cognitive_commands.py:109")
 
     # Coherence
     try:
@@ -113,7 +116,7 @@ def reflect(ctx, json_flag: bool) -> None:
             coh.get("details", coh) if isinstance(coh, dict) else coh
         )
     except Exception:
-        pass
+        logger.debug("Ignored Exception in cognitive_commands.py:118")
 
     # Cognitive mode
     try:
@@ -122,7 +125,7 @@ def reflect(ctx, json_flag: bool) -> None:
             cm.get("details", cm) if isinstance(cm, dict) else cm
         )
     except Exception:
-        pass
+        logger.debug("Ignored Exception in cognitive_commands.py:127")
 
     # Galactic distribution
     try:
@@ -131,7 +134,7 @@ def reflect(ctx, json_flag: bool) -> None:
             gal.get("details", gal) if isinstance(gal, dict) else gal
         )
     except Exception:
-        pass
+        logger.debug("Ignored Exception in cognitive_commands.py:136")
 
     # Gnosis (unified introspection)
     try:
@@ -140,7 +143,7 @@ def reflect(ctx, json_flag: bool) -> None:
             gn.get("details", gn) if isinstance(gn, dict) else gn
         )
     except Exception:
-        pass
+        logger.debug("Ignored Exception in cognitive_commands.py:145")
 
     if json_output:
         click.echo(_json_dumps(snapshot, indent=2, default=str))
@@ -219,7 +222,7 @@ def dream(ctx, auto: bool, cycles: int, json_flag: bool) -> None:
                     try:
                         call_tool("dream.promote", artifact_id=artifact["id"])
                     except Exception:
-                        pass
+                        logger.debug("Ignored Exception in cognitive_commands.py:224")
 
     if json_output:
         click.echo(
@@ -273,7 +276,7 @@ def evolve(ctx, cycles: int, record: bool, json_flag: bool) -> None:
                     details=data,
                 )
             except Exception:
-                pass
+                logger.debug("Ignored Exception in cognitive_commands.py:278")
 
     if json_output:
         click.echo(

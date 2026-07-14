@@ -145,22 +145,22 @@ def safe_connect(
                     try:
                         conn.execute(pragma)
                     except sqlite3.OperationalError:
-                        pass
+                        logger.debug("Ignored Exception in db_manager.py:147")
                 for pragma, in _SECURITY_PRAGMAS:
                     try:
                         conn.execute(pragma)
                     except (sqlite3.OperationalError, sqlite3.NotSupportedError):
-                        pass
+                        logger.debug("Ignored  in db_manager.py:152")
             else:
                 try:
                     conn.execute(f"PRAGMA busy_timeout={int(timeout * 1000)}")
                 except sqlite3.OperationalError:
-                    pass
+                    logger.debug("Ignored Exception in db_manager.py:157")
                 for pragma, in _SECURITY_PRAGMAS:
                     try:
                         conn.execute(pragma)
                     except (sqlite3.OperationalError, sqlite3.NotSupportedError):
-                        pass
+                        logger.debug("Ignored  in db_manager.py:162")
             return conn
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
             if _is_transient_error(e) and attempt < retries:

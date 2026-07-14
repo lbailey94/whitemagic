@@ -22,6 +22,7 @@ from whitemagic.core.memory.db_manager import get_db_pool
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
 
+import logging
 @dataclass
 class ZodiacEntry:
     """ZodiacEntry: zodiac entry.
@@ -92,7 +93,7 @@ class ZodiacLedger:
         self._genesis_hash = hashlib.sha256(b"WHITEMAGIC_GENESIS_v16").hexdigest()
         self._current_tail = self._genesis_hash
         self._db = db_manager  # Hook for SQLite persistence
-        self._lock = __import__("threading").Lock()
+        self._lock = __import__("threading").RLock()
         self._signer = None  # Lazy-loaded AuditSigner
         self._event_bus_subscribed = False
 
@@ -104,7 +105,7 @@ class ZodiacLedger:
 
                 self._signer = get_audit_signer()
             except Exception:
-                pass
+                logger.debug("Ignored Exception in ledger.py:106")
         return self._signer
 
     def _sign_entry(self, entry: ZodiacEntry) -> None:
@@ -292,7 +293,7 @@ class ZodiacLedger:
                 context_id=event.event_id,
             )
         except Exception:
-            pass  # Never let event recording crash the bus
+            logger.debug("Ignored Exception in ledger.py:295")
 
 
 # Global singleton accessor

@@ -20,7 +20,10 @@ from typing import Any, Optional
 from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.core import parse_datetime
 from whitemagic.utils.fileio import file_lock
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 class WuXingPhase(Enum):
     """Five Element Phases mapped to seasons/times."""
@@ -171,7 +174,7 @@ class TemporalContextManager:
                 if state.get("phase_start"):
                     self._phase_start = parse_datetime(state["phase_start"])
             except (json.JSONDecodeError, KeyError):
-                pass
+                logger.debug("Ignored KeyError in temporal_context.py:176")
 
     def _save_state(self) -> None:
         """Persist state."""
@@ -254,7 +257,7 @@ class TemporalContextManager:
 
                 memories_since = state.get("memories_since_last", 0)
         except (json.JSONDecodeError, KeyError, FileNotFoundError):
-            pass
+            logger.debug("Ignored KeyError, FileNotFoundError in temporal_context.py:259")
 
         return last_consolidation, memories_since, consolidation_due
 

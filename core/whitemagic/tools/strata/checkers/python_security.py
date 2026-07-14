@@ -7,8 +7,9 @@ from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 _SECRET_PATTERNS = [
-    (r"(?:api[_-]?key|apikey)\s*[=:]\s*['\"]([A-Za-z0-9_\-]{20,})['\"]", "API key"),
+    (r"(?:api[_\-.]?key|apikey)\s*[=:]\s*['\"]([A-Za-z0-9_\-]{20,})['\"]", "API key"),
     (r"(?:secret|secret[_-]?key)\s*[=:]\s*['\"]([A-Za-z0-9_\-]{20,})['\"]", "Secret key"),
+    (r"(?:token|auth[_-]?token)\s*[=:]\s*['\"]([A-Za-z0-9_\-]{20,})['\"]", "Token"),
     (r"(?:access[_-]?key|access[_-]?token)\s*[=:]\s*['\"]([A-Za-z0-9_\-]{20,})['\"]", "Access key"),
     (r"(?:aws[_-]?secret|aws[_-]?access)\s*[=:]\s*['\"]([A-Za-z0-9/+=]{40})['\"]", "AWS credential"),
     (r"(?:private[_-]?key)\s*[=:]\s*['\"]([A-Za-z0-9_\-]{30,})['\"]", "Private key"),
@@ -17,23 +18,41 @@ _SECRET_PATTERNS = [
     (r"sk-[A-Za-z0-9]{20,}", "OpenAI API key"),
     (r"xox[baprs]-[A-Za-z0-9-]{10,}", "Slack token"),
     (r"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]*", "JWT token"),
+    (r"sk_live_[A-Za-z0-9]{24}", "Stripe key"),
+    (r"SK[0-9a-fA-F]{32}", "Twilio key"),
+    (r"SG\.[A-Za-z0-9_\-]{22}\.[A-Za-z0-9_\-]{43}", "SendGrid key"),
+    (r"Bearer [A-Za-z0-9_\-\.]{20,}", "Bearer token"),
+    (r"v1\.0-[A-Za-z0-9_\-]{40,}", "Cloudflare key"),
 ]
+
+_UNQUOTED_SECRET_PATTERN = re.compile(
+    r"^(?:export\s+)?([A-Z_][A-Z0-9_]*)=(?!['\"])([A-Za-z0-9+/=_\-]{20,})$",
+    re.MULTILINE,
+)
+_UNQUOTED_SKIP = re.compile(
+    r"getenv|environ|os\.getenv|config\(|\.env|placeholder|example|dummy|fake|test|xxxx|sample|default|your_|REPLACE|INSERT",
+    re.IGNORECASE,
+)
 
 
 @register
-def check_python_secrets(
+def check_hardcoded_secrets(
     project_path: Path, file_index: FileIndex, findings: list[Finding]
 ):
-    """Detect hardcoded secrets, API keys, and credentials."""
+    """Detect hardcoded secrets, API keys, and credentials across file types."""
     skip_dirs = {".git", "__pycache__", ".venv", "node_modules", ".env"}
-    for py_file in file_index.files_by_extension(".py", ".js", ".ts", ".tsx", ".jsx", ".yaml", ".yml", ".env", ".json", ".toml", ".cfg", ".ini"):
+    for py_file in file_index.files_by_extension(
+        ".py", ".js", ".ts", ".tsx", ".jsx", ".yaml", ".yml", ".env",
+        ".json", ".toml", ".cfg", ".ini", ".properties", ".xml", ".sh", ".bash", ".zsh",
+    ):
         try:
             content = file_index.read_text(py_file)
         except (OSError, UnicodeDecodeError):
             continue
-        rel = str(py_file.relative_to(project_path))
-        if any(skip in rel for skip in skip_dirs):
+        parts = py_file.relative_to(project_path).parts
+        if any(part in skip_dirs for part in parts):
             continue
+        rel = "/".join(parts)
         lines = content.splitlines()
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
@@ -46,7 +65,7 @@ def check_python_secrets(
                     findings.append(
                         Finding(
                             severity=FindingSeverity.ERROR,
-                            category="py_hardcoded_secret",
+                            category="hardcoded_secret",
                             file=rel,
                             line=i,
                             message=f"Hardcoded {secret_type} detected.",
@@ -54,6 +73,24 @@ def check_python_secrets(
                         )
                     )
                     break
+            else:
+                if _UNQUOTED_SECRET_PATTERN.search(line):
+                    if _UNQUOTED_SKIP.search(line):
+                        continue
+                    findings.append(
+                        Finding(
+                            severity=FindingSeverity.ERROR,
+                            category="hardcoded_secret",
+                            file=rel,
+                            line=i,
+                            message="Hardcoded unquoted secret detected.",
+                            suggestion="Use environment variables or a secrets manager. Never commit credentials.",
+                        )
+                    )
+
+
+# Backward-compatible alias
+check_python_secrets = check_hardcoded_secrets
 
 
 @register

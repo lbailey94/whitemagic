@@ -57,10 +57,10 @@ class TestSentienceCLI:
     def test_wake_command(self, cli_runner, cli_main):
         """wm wake should produce a greeting."""
         with patch("whitemagic.core.consciousness.citta_stream.get_continuity_context", return_value={}), \
-             patch("whitemagic.core.consciousness.sentience.WakeOnBoot._dream_outputs", return_value=[]), \
-             patch("whitemagic.core.consciousness.sentience.WakeOnBoot._agent_messages", return_value=[]), \
-             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_dream_outputs", return_value=[]), \
-             patch("whitemagic.core.consciousness.sentience.ProactiveGreeting._gather_agent_messages", return_value=[]), \
+             patch("whitemagic.core.consciousness.lifecycle.WakeOnBoot._dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.lifecycle.WakeOnBoot._agent_messages", return_value=[]), \
+             patch("whitemagic.core.consciousness.lifecycle.ProactiveGreeting._gather_dream_outputs", return_value=[]), \
+             patch("whitemagic.core.consciousness.lifecycle.ProactiveGreeting._gather_agent_messages", return_value=[]), \
              patch("whitemagic.core.consciousness.coherence.get_coherence_metric", return_value=MagicMock(overall_score=MagicMock(return_value=0.0))), \
              patch("whitemagic.core.dreaming.dream_cycle.get_dream_cycle", return_value=MagicMock(start=MagicMock(), status=MagicMock(return_value={"history": []}))):
             result = cli_runner.invoke(cli_main, ["wake"])

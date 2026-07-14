@@ -7,6 +7,9 @@ and 8 new tools for export, ingest, sync, mining, categorization, and search.
 from typing import Any
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def _get_miner() -> Any:
     """Get a SessionMiner instance (cached per-call for simplicity)."""
     from whitemagic.archaeology.session_miner import SessionMiner
@@ -35,7 +38,7 @@ def handle_windsurf_list_conversations(**kwargs: Any) -> dict[str, Any]:
                 })
             return {"status": "success", "conversations": conversations, "method": "api"}
         except Exception as e:
-            pass  # Fall through to .pb method
+            logger.debug("Ignored Exception in windsurf_conv.py:40")
 
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
     reader = WindsurfConversationReader()
@@ -65,7 +68,7 @@ def handle_windsurf_read_conversation(**kwargs: Any) -> dict[str, Any]:
                     "method": "api",
                 }
             except Exception:
-                pass  # Fall through to .pb method
+                logger.debug("Ignored Exception in windsurf_conv.py:70")
 
     # Fallback: .pb file reading
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
@@ -115,7 +118,7 @@ def handle_windsurf_search_conversations(**kwargs: Any) -> dict[str, Any]:
         if results:
             return {"status": "success", "results": results, "method": "fts5"}
     except Exception:
-        pass
+        logger.debug("Ignored Exception in windsurf_conv.py:120")
 
     # Fallback to in-memory keyword search
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
@@ -248,7 +251,7 @@ def handle_windsurf_semantic_search(**kwargs: Any) -> dict[str, Any]:
         if results:
             return {"status": "success", "results": results, "method": "galaxy_semantic"}
     except Exception:
-        pass
+        logger.debug("Ignored Exception in windsurf_conv.py:253")
 
     # Fallback to keyword search on .pb files
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader

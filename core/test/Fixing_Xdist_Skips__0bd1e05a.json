@@ -1,0 +1,11 @@
+{
+  "cascadeId": "0bd1e05a-0a9f-4c71-8a03-1b672d222ee2",
+  "title": "Fixing Xdist Skips",
+  "stepCount": 884,
+  "numTotalSteps": 884,
+  "transcriptLength": 139719,
+  "createdTime": "2026-07-12T19:04:35.209274114Z",
+  "lastModifiedTime": "2026-07-13T00:31:23.493293738Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 19
+}

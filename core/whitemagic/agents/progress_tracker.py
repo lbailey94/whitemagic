@@ -394,7 +394,7 @@ class ProgressTracker:
             with open(self.log_file, "a") as f:
                 f.write(_json_dumps(record) + "\n")
         except (OSError, FileNotFoundError, PermissionError):
-            pass  # Never crash on logging
+            logger.debug("Ignored OSError, FileNotFoundError, PermissionError in progress_tracker.py:396")
 
 
 class CampaignProgressTracker:

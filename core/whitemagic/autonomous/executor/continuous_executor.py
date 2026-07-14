@@ -452,7 +452,7 @@ class ContinuousExecutor:
             if isinstance(candidate, dict):
                 patch = candidate
         except (ValueError, TypeError):
-            pass  # Fall through to append
+            logger.debug("Ignored ValueError, TypeError in continuous_executor.py:454")
 
         if patch is not None:
             text = path_obj.read_text(encoding="utf-8")

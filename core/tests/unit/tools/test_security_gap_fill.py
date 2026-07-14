@@ -457,3 +457,338 @@ class TestContestPipelinePlatforms:
         result = pipeline.format_for_platform("bugcrowd")
         assert "Test SQLi" in result
         assert "critical" in result.lower() or "P1" in result
+
+
+class TestFixContestIntegration:
+    """G10: Test FixGenerator → ContestPipeline integration."""
+
+    def test_finding_default_fix_status_none(self):
+        from whitemagic.tools.security.contest_pipeline import ContestFinding
+        f = ContestFinding("T", "high", "xss", "a.js", 1, "d", "i", "p", "m")
+        assert f.fix_status == "none"
+
+    def test_link_fix_updates_status(self):
+        from whitemagic.tools.security.contest_pipeline import ContestPipeline
+        from whitemagic.tools.security.fix_generator import FixSuggestion
+        pipeline = ContestPipeline()
+        pipeline._findings = []
+        pipeline._seen_hashes = set()
+        finding = pipeline.add_finding("T", "high", "xss", "a.js", 1, "d", "i", "p", "m")
+        assert finding is not None
+        fix = FixSuggestion("a.js", 1, "old", "new", "xss", "desc")
+        ok = pipeline.link_fix(finding.finding_id, fix)
+        assert ok
+        assert finding.fix_status == "applied"
+
+    def test_link_fix_unknown_finding(self):
+        from whitemagic.tools.security.contest_pipeline import ContestPipeline
+        from whitemagic.tools.security.fix_generator import FixSuggestion
+        pipeline = ContestPipeline()
+        fix = FixSuggestion("a.js", 1, "old", "new", "xss", "desc")
+        assert pipeline.link_fix("WM-9999", fix) is False
+
+    def test_link_pr_updates_status(self):
+        from whitemagic.tools.security.contest_pipeline import ContestPipeline
+        pipeline = ContestPipeline()
+        pipeline._findings = []
+        pipeline._seen_hashes = set()
+        finding = pipeline.add_finding("T", "high", "xss", "a.js", 1, "d", "i", "p", "m")
+        assert finding is not None
+        ok = pipeline.link_pr(finding.finding_id, "https://github.com/repo/pull/1")
+        assert ok
+        assert finding.fix_status == "pr_created"
+
+    def test_link_pr_unknown_finding(self):
+        from whitemagic.tools.security.contest_pipeline import ContestPipeline
+        pipeline = ContestPipeline()
+        assert pipeline.link_pr("WM-9999", "https://github.com/repo/pull/1") is False
+
+    def test_fix_coverage_report_empty(self):
+        from whitemagic.tools.security.contest_pipeline import ContestPipeline
+        pipeline = ContestPipeline()
+        report = pipeline.fix_coverage_report()
+        assert report["total_findings"] == 0
+        assert report["coverage_pct"] == 0.0
+
+    def test_fix_coverage_report_mixed(self):
+        from whitemagic.tools.security.contest_pipeline import ContestPipeline
+        from whitemagic.tools.security.fix_generator import FixSuggestion
+        pipeline = ContestPipeline()
+        pipeline._findings = []
+        pipeline._seen_hashes = set()
+        f1 = pipeline.add_finding("T1", "high", "xss", "a.js", 1, "d", "i", "p", "m")
+        f2 = pipeline.add_finding("T2", "medium", "sqli", "b.py", 2, "d", "i", "p", "m")
+        f3 = pipeline.add_finding("T3", "low", "xss", "c.js", 3, "d", "i", "p", "m")
+        fix = FixSuggestion("a.js", 1, "old", "new", "xss", "desc")
+        pipeline.link_fix(f1.finding_id, fix)
+        pipeline.link_pr(f2.finding_id, "https://github.com/repo/pull/1")
+        report = pipeline.fix_coverage_report()
+        assert report["total_findings"] == 3
+        assert report["fixed_or_in_progress"] == 2
+        assert report["unfixed"] == 1
+        assert report["by_fix_status"]["applied"] == 1
+        assert report["by_fix_status"]["pr_created"] == 1
+        assert report["by_fix_status"]["none"] == 1
+        assert len(report["unfixed_findings"]) == 1
+        assert report["unfixed_findings"][0]["finding_id"] == f3.finding_id
+        assert round(report["coverage_pct"]) == 67
+
+    def test_status_includes_fix_coverage(self):
+        from whitemagic.tools.security.contest_pipeline import ContestPipeline
+        pipeline = ContestPipeline()
+        status = pipeline.status()
+        assert "fix_coverage" in status
+        assert status["fix_coverage"]["total_findings"] == 0
+
+    def test_handle_fix_apply_links_to_contest(self, tmp_path):
+        from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
+        from whitemagic.tools.handlers.security_tools import handle_fix_apply
+        pipeline = get_contest_pipeline()
+        pipeline._findings = []
+        pipeline._seen_hashes = set()
+        finding = pipeline.add_finding("T", "high", "xss", "a.js", 1, "d", "i", "p", "m")
+        f = tmp_path / "a.js"
+        f.write_text("old\nnew\n")
+        result = handle_fix_apply(
+            file=str(f),
+            line=1,
+            original="old",
+            fixed="new",
+            fix_type="xss",
+            description="desc",
+            dry_run=True,
+            finding_id=finding.finding_id,
+        )
+        assert result["success"]
+        assert finding.fix_status == "applied"
+
+    def test_handle_pr_create_links_to_contest(self):
+        from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
+        from whitemagic.tools.handlers.security_tools import handle_pr_create
+        pipeline = get_contest_pipeline()
+        pipeline._findings = []
+        pipeline._seen_hashes = set()
+        finding = pipeline.add_finding("T", "high", "xss", "a.js", 1, "d", "i", "p", "m")
+        with patch("subprocess.run") as mock_run:
+            push_ok = MagicMock()
+            push_ok.returncode = 0
+            push_ok.stderr = ""
+            pr_ok = MagicMock()
+            pr_ok.returncode = 0
+            pr_ok.stdout = "https://github.com/repo/pull/1"
+            mock_run.side_effect = [push_ok, push_ok, push_ok, push_ok, pr_ok]
+            result = handle_pr_create(
+                repo_dir="/tmp",
+                branch_name="fix",
+                title="Fix",
+                body="",
+                finding_id=finding.finding_id,
+            )
+        assert result["success"]
+        assert finding.fix_status == "pr_created"
+
+
+class TestReportScraperPoliteness:
+    """G11: Test rate limiting, robots.txt, caching, and batch scraping."""
+
+    def test_rate_limiter_basic(self):
+        from whitemagic.tools.security.report_scraper import RateLimiter
+        rl = RateLimiter(interval=0.05)
+        rl.wait()
+        rl.wait()
+        assert rl._last_request > 0
+
+    def test_rate_limiter_per_domain(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01)
+        rl1 = scraper._get_rate_limiter("code4rena.com")
+        rl2 = scraper._get_rate_limiter("code4rena.com")
+        assert rl1 is rl2
+        rl3 = scraper._get_rate_limiter("sherlock.xyz")
+        assert rl3 is not rl1
+
+    def test_cache_hit_skips_fetch(self, tmp_path):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(cache_ttl=3600)
+        url = "https://code4rena.com/reports/test-contest"
+        scraper._set_cached(url, "## [H] Test Finding\n\nDescription here")
+        report = scraper.scrape_url(url, "code4rena")
+        assert report is not None
+        assert report.contest_name is not None
+        assert len(report.findings) >= 1
+
+    def test_cache_miss_fetches(self, tmp_path):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01, cache_ttl=3600)
+        url = "https://example.com/reports/test"
+        cache_file = scraper._cache_path(url)
+        if cache_file.exists():
+            cache_file.unlink()
+        with patch("requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.text = "## [H] Cached Finding\n\nDesc"
+            mock_get.return_value = mock_resp
+            report = scraper.scrape_url(url, "code4rena")
+        assert report is not None
+        assert len(report.findings) >= 1
+        assert scraper._total_scraped == 1
+
+    def test_robots_txt_disallows(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01)
+        with patch("requests.get") as mock_get:
+            robots_resp = MagicMock()
+            robots_resp.status_code = 200
+            robots_resp.text = "User-agent: *\nDisallow: /private/"
+            mock_get.return_value = robots_resp
+            allowed = scraper._check_robots("https://code4rena.com/private/secret")
+        assert allowed is False
+
+    def test_robots_txt_allows(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01)
+        with patch("requests.get") as mock_get:
+            robots_resp = MagicMock()
+            robots_resp.status_code = 200
+            robots_resp.text = "User-agent: *\nDisallow: /private/"
+            mock_get.return_value = robots_resp
+            allowed = scraper._check_robots("https://code4rena.com/reports/public")
+        assert allowed is True
+
+    def test_robots_txt_unavailable_allows(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01)
+        with patch("requests.get") as mock_get:
+            robots_resp = MagicMock()
+            robots_resp.status_code = 404
+            mock_get.return_value = robots_resp
+            allowed = scraper._check_robots("https://code4rena.com/reports/test")
+        assert allowed is True
+
+    def test_robots_txt_cached(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01)
+        with patch("requests.get") as mock_get:
+            robots_resp = MagicMock()
+            robots_resp.status_code = 200
+            robots_resp.text = "User-agent: *\nDisallow: /private/"
+            mock_get.return_value = robots_resp
+            scraper._check_robots("https://code4rena.com/reports/public")
+            call_count = mock_get.call_count
+            scraper._check_robots("https://code4rena.com/reports/other")
+            assert mock_get.call_count == call_count
+
+    def test_backoff_on_429(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01, cache_ttl=3600)
+        url = "https://example.com/reports/test-429"
+        cache_file = scraper._cache_path(url)
+        if cache_file.exists():
+            cache_file.unlink()
+        with patch("requests.get") as mock_get:
+            resp_429 = MagicMock()
+            resp_429.status_code = 429
+            resp_200 = MagicMock()
+            resp_200.status_code = 200
+            resp_200.text = "## [H] Backoff Finding\n\nDesc"
+            mock_get.side_effect = [resp_429, resp_200]
+            with patch("time.sleep"):
+                report = scraper.scrape_url(url, "code4rena")
+        assert report is not None
+        assert len(report.findings) >= 1
+
+    def test_scrape_batch(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=0.01, cache_ttl=3600)
+        urls = ["https://a.com/r1", "https://a.com/r2"]
+        for u in urls:
+            scraper._set_cached(u, "## [H] Batch Finding\n\nDesc")
+        results = scraper.scrape_batch(urls, "code4rena")
+        assert len(results) == 2
+
+    def test_status_includes_rate_info(self):
+        from whitemagic.tools.security.report_scraper import ReportScraper
+        scraper = ReportScraper(rate_interval=3.0, cache_ttl=7200)
+        status = scraper.status()
+        assert status["rate_interval"] == 3.0
+        assert status["cache_ttl"] == 7200
+
+
+class TestExpandedSecretsScanning:
+    """G12: Test expanded STRATA secrets scanning checker."""
+
+    def _run_checker(self, tmp_path, filename, content):
+        from whitemagic.tools.strata.checkers.python_security import check_hardcoded_secrets
+        from whitemagic.tools.strata.checkers.solidity import FileIndex
+        f = tmp_path / filename
+        f.write_text(content)
+        fi = FileIndex(tmp_path)
+        findings = []
+        check_hardcoded_secrets(tmp_path, fi, findings)
+        return findings
+
+    def test_rename_alias_exists(self):
+        from whitemagic.tools.strata.checkers.python_security import check_hardcoded_secrets, check_python_secrets
+        assert check_hardcoded_secrets is check_python_secrets
+
+    def test_stripe_key_detected(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'STRIPE_KEY = "sk_live_' + 'abcdefghijklmnopqrstuvwxyz0123456789"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_twilio_key_detected(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'TWILIO = "SK' + '1234567890abcdef1234567890abcdef"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_sendgrid_key_detected(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'SG_KEY = "SG.abcdefghijklmnopqrstuv.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcde"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_bearer_token_detected(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'AUTH = "Bearer abcdefghijklmnopqrstuvwxyz1234567890"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_cloudflare_key_detected(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'CF_KEY = "v1.0-abcdefghijklmnopqrstuvwxyz1234567890ABCDE"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_unquoted_secret_in_env_file(self, tmp_path):
+        findings = self._run_checker(tmp_path, "config.env", "API_KEY=abcdefghijklmnopqrstuvwxyz1234567890")
+        assert any(f.category == "hardcoded_secret" and "unquoted" in f.message.lower() for f in findings)
+
+    def test_unquoted_secret_in_shell_file(self, tmp_path):
+        findings = self._run_checker(tmp_path, "setup.sh", "export SECRET_KEY=abcdefghijklmnopqrstuvwxyz1234567890")
+        assert any(f.category == "hardcoded_secret" and "unquoted" in f.message.lower() for f in findings)
+
+    def test_unquoted_secret_skips_examples(self, tmp_path):
+        findings = self._run_checker(tmp_path, "config.env", "API_KEY=your_api_key_here_replace_me")
+        assert not any("unquoted" in f.message.lower() for f in findings)
+
+    def test_properties_file_scanned(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.properties", 'api.key = "abcdefghijklmnopqrstuvwxyz1234567890"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_xml_file_scanned(self, tmp_path):
+        findings = self._run_checker(tmp_path, "config.xml", '<value>sk_live_' + 'abcdefghijklmnopqrstuvwxyz0123456789</value>')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_bash_file_scanned(self, tmp_path):
+        findings = self._run_checker(tmp_path, "deploy.bash", 'TOKEN="abcdefghijklmnopqrstuvwxyz1234567890"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_zsh_file_scanned(self, tmp_path):
+        findings = self._run_checker(tmp_path, "env.zsh", 'SECRET="abcdefghijklmnopqrstuvwxyz1234567890"')
+        assert any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_getenv_not_flagged(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'key = os.getenv("API_KEY")')
+        assert not any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_example_not_flagged(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'api_key = "example_placeholder_key_for_testing"')
+        assert not any(f.category == "hardcoded_secret" for f in findings)
+
+    def test_category_renamed(self, tmp_path):
+        findings = self._run_checker(tmp_path, "app.py", 'sk = "sk_live_' + 'abcdefghijklmnopqrstuvwxyz0123456789"')
+        assert all(f.category == "hardcoded_secret" for f in findings)
+        assert not any(f.category == "py_hardcoded_secret" for f in findings)

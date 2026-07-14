@@ -155,7 +155,7 @@ class MemoryLifecycleManager:
                 self._sweep_queue.put_nowait(self._config.persist_scores)
             except queue.Full:
                 # Sweep already in progress or queued, skip this one
-                pass
+                logger.debug("Ignored Exception in lifecycle.py:156")
 
     def run_sweep(self, persist: bool | None = None) -> dict[str, Any]:
         """Run a full retention sweep + galactic rotation.

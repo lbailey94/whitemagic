@@ -337,7 +337,7 @@ class SpeculativeDecoder:
 # ── Singleton ────────────────────────────────────────────────────────────
 
 _decoder: SpeculativeDecoder | None = None
-_decoder_lock = __import__("threading").Lock()
+_decoder_lock = __import__("threading").RLock()
 
 
 def get_speculative_decoder() -> SpeculativeDecoder:

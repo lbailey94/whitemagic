@@ -152,7 +152,7 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
                     "layer": accel["layer"],
                 }
         except Exception:
-            pass  # Fall through to Python
+            logger.debug("Ignored Exception in living_graph.py:154")
 
     # Rust PyO3 BM25 fast path
     try:
@@ -212,7 +212,7 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
                         "engine": "rust_bm25",
                     }
     except Exception:
-        pass  # Fall through to Python
+        logger.debug("Ignored Exception in living_graph.py:214")
 
     try:
         from whitemagic.core.intelligence.core_access import get_core_access

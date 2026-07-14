@@ -3,6 +3,9 @@
 from typing import Any
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def handle_vector_search(**kwargs: Any) -> dict[str, Any]:
     """Search memories by semantic similarity using embeddings.
 
@@ -30,7 +33,7 @@ def handle_vector_search(**kwargs: Any) -> dict[str, Any]:
                     "layer": accel["layer"],
                 }
         except Exception:
-            pass  # Fall through to Python vector search
+            logger.debug("Ignored Exception in vector_search.py:35")
 
     from whitemagic.core.memory.vector_search import get_vector_search
 

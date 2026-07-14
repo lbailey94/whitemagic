@@ -1,0 +1,167 @@
+name: Security CI
+
+on:
+  pull_request:
+    paths:
+      - 'core/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'requirements-lock.txt'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'core/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+
+jobs:
+  strata-security:
+    name: STRATA Security Checkers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -e core/ -q
+      - name: Run STRATA Solidity checkers
+        run: |
+          python -m whitemagic.tools.strata --checkers solidity,solidity_security --path core/ --format json --output strata_solidity.json
+        continue-on-error: true
+      - name: Run STRATA Python security checkers
+        run: |
+          python -m whitemagic.tools.strata --checkers python_security --path core/whitemagic/ --format json --output strata_python.json
+        continue-on-error: true
+      - name: Run STRATA web security checkers
+        run: |
+          python -m whitemagic.tools.strata --checkers web_security --path app/ components/ lib/ --format json --output strata_web.json
+        continue-on-error: true
+      - name: Upload STRATA results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strata-security-results
+          path: strata_*.json
+
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install detect-secrets
+        run: pip install detect-secrets
+      - name: Scan for secrets
+        run: |
+          detect-secrets scan --all-files --exclude-files '.git/.*' --exclude-files 'node_modules/.*' --exclude-files '.venv/.*' --exclude-files 'core/.venv/.*' --output secrets-baseline.json
+      - name: Audit secrets baseline
+        run: |
+          detect-secrets audit secrets-baseline.json --report --fail-on-unaudited || true
+      - name: Upload secrets baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secrets-baseline
+          path: secrets-baseline.json
+
+  dependency-vulns:
+    name: Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Check Python dependencies
+        run: |
+          pip-audit -r core/requirements-lock.txt --format json -o pip-audit.json || true
+      - name: Check Node dependencies
+        run: |
+          npm audit --json > npm-audit.json || true
+        continue-on-error: true
+      - name: Upload audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit
+          path: |
+            pip-audit.json
+            npm-audit.json
+
+  mcp-integrity:
+    name: MCP Integrity Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -e core/ -q
+      - name: Verify MCP integrity
+        run: |
+          python -c "
+          from whitemagic.security.mcp_integrity import get_mcp_integrity
+          mi = get_mcp_integrity()
+          status = mi.status()
+          print(f'MCP Integrity: {status}')
+          if not status.get('verified', True):
+              print('WARNING: MCP integrity check failed — tool definitions may have drifted')
+          "
+        continue-on-error: true
+
+  audit-key-check:
+    name: Audit Signer Key Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -e core/ -q
+      - name: Check AuditSigner key
+        run: |
+          python -c "
+          from whitemagic.security.audit_signing import get_audit_signer
+          signer = get_audit_signer()
+          if signer.is_available():
+              print(f'AuditSigner: available (key_id={signer._key_id})')
+              pem = signer.public_key_pem()
+              if pem:
+                  print(f'Public key: {pem[:60]}...')
+          else:
+              print('AuditSigner: not available (cryptography library missing or key not generated)')
+          "
+        continue-on-error: true
+
+  security-tests:
+    name: Security Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -e core/ -q
+          pip install pytest pytest-timeout pytest-xdist -q
+      - name: Run security assessment tests
+        run: |
+          cd core && python -m pytest tests/unit/test_security_assessment_phase*.py tests/unit/test_violet_gaps.py --timeout=30 -q
+      - name: Run violet security tests
+        run: |
+          cd core && python -m pytest tests/unit/integration_adhoc/test_violet_security.py --timeout=30 -q

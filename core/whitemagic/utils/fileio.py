@@ -10,6 +10,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, cast
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:  # POSIX platforms
     import fcntl as _fcntl  # type: ignore[attr-defined]
 
@@ -108,5 +111,5 @@ def atomic_write(filepath: str | Path, content: str) -> None:
         try:
             os.unlink(temp_path)
         except OSError:
-            pass
+            logger.debug("Ignored OSError in fileio.py:113")
         raise

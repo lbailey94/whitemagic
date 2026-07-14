@@ -18,7 +18,7 @@ WhiteMagic is an open-source **cognitive operating system for AI agents** — me
 - Those are governance toolkits. WhiteMagic is governance + memory + consciousness + dreaming — the whole cognitive stack, not just the policy layer.
 - WhiteMagic is local-first, non-Azure, non-patent-encumbered, MIT-licensed. No vendor lock-in.
 
-Built continuously over 2025–2026 by a solo developer with no tech background, $30/month in AI credits, and a constellation of AI assistants. 4,190+ passing tests. 49K+ memories across 10 galaxies. 21 validated prescience claims (Brier score 0.0958 — superforecaster territory). Shipped governance, memory, and consciousness primitives weeks to months before corporate labs shipped subsets of the same ideas.
+Built continuously over 2025–2026 by a solo developer with no tech background, $30/month in AI credits, and a constellation of AI assistants. 5,697+ passing tests. 49K+ memories across 10 galaxies. 30 validated prescience claims (Brier score 0.0958 — superforecaster territory). Shipped governance, memory, and consciousness primitives weeks to months before corporate labs shipped subsets of the same ideas.
 
 ---
 
@@ -117,10 +117,10 @@ The pipeline is the single most important architectural decision. It means: even
 
 WhiteMagic maintains a public, machine-readable forecast track record. As of June 2026:
 
-- **21 validated claims** against public events
-- **2 pending claims**
+- **30 validated claims** against public events
+- **3 pending claims**
 - **1 expired claim**
-- **523 total lead-time points**
+- **666 total lead-time points**
 - **25-week average lead time**
 - **Brier score 0.0958** (superforecaster territory; reference 0.25 = uninformed)
 
@@ -464,7 +464,7 @@ skills; a per-category skill tree and a 12-Gana directory extend it.
 - `GET /.well-known/ai-agent-policy` — machine-readable ToS for agents.
 - `GET /api/manifest.json` — canonical tool manifest (614 tools, 28 Ganas).
 - `GET /api/mcp-bridge` — the 143-function public bridge surface.
-- `GET /api/prescience.json` — 21 validated forecast claims.
+- `GET /api/prescience.json` — 30 validated forecast claims.
 - `GET /api/zodiac.json` — 12 cores + cross-core workflows.
 - `GET /api/sangha.json` — collective memory + pattern federation.
 - `GET /llms.txt` — short LLM context (this file is a sibling).

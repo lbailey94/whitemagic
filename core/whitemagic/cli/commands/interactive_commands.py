@@ -16,6 +16,9 @@ import click
 
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 
+import logging
+logger = logging.getLogger(__name__)
+
 # wm repl — Interactive REPL
 
 
@@ -289,7 +292,7 @@ def stream(
                     prev_phase = current_phase
                 asyncio.run(asyncio.sleep(interval))
         except KeyboardInterrupt:
-            pass
+            logger.debug("Ignored KeyboardInterrupt in interactive_commands.py:294")
 
     elif source == "observe":
         try:
@@ -326,7 +329,7 @@ def stream(
 
             asyncio.run(stream_events())
         except KeyboardInterrupt:
-            pass
+            logger.debug("Ignored KeyboardInterrupt in interactive_commands.py:331")
         except ImportError as e:
             click.echo(
                 _json_dumps(
@@ -354,7 +357,7 @@ def stream(
 
                 time.sleep(interval)
         except KeyboardInterrupt:
-            pass
+            logger.debug("Ignored KeyboardInterrupt in interactive_commands.py:359")
 
     elif source == "coherence":
         try:
@@ -375,7 +378,7 @@ def stream(
 
                     time.sleep(interval)
             except KeyboardInterrupt:
-                pass
+                logger.debug("Ignored KeyboardInterrupt in interactive_commands.py:380")
         except ImportError as e:
             click.echo(
                 _json_dumps(
@@ -422,7 +425,7 @@ def stream(
 
             asyncio.run(stream_all())
         except KeyboardInterrupt:
-            pass
+            logger.debug("Ignored KeyboardInterrupt in interactive_commands.py:427")
         except ImportError as e:
             click.echo(
                 _json_dumps({"type": "error", "error": f"Event bus not available: {e}"})

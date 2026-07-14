@@ -39,7 +39,7 @@ KNOWN_BACKEND_CONSUMERS: list[str] = [
     "whitemagic.core.memory.graph_engine",
     "whitemagic.core.memory.lifecycle",
     "whitemagic.core.consciousness.possibility_explorer",
-    "whitemagic.core.consciousness.sentience",
+    "whitemagic.core.consciousness.lifecycle",
     "whitemagic.core.evolution.research_dag",
     "whitemagic.core.memory.akashic",
     "whitemagic.core.memory.core",

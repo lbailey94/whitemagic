@@ -72,7 +72,7 @@
     },
     {
       "name": "system-introspection",
-      "description": "Unified read-only introspection: gnosis snapshot, capability matrix, telemetry, self-model forecast, prescience track record (21 validated claims, Brier 0.0958)",
+      "description": "Unified read-only introspection: gnosis snapshot, capability matrix, telemetry, self-model forecast, prescience track record (30 validated claims, Brier 0.0958)",
       "tools": ["gnosis", "capability.matrix", "telemetry", "selfmodel.forecast", "prescience"]
     },
     {

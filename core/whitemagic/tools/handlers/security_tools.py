@@ -425,12 +425,16 @@ def handle_fix_apply(**kwargs: Any) -> dict[str, Any]:
         fix_type=kwargs.get("fix_type", ""),
         description=kwargs.get("description", ""),
     )
-    return apply_fix(fix, dry_run=kwargs.get("dry_run", True))
+    result = apply_fix(fix, dry_run=kwargs.get("dry_run", True))
+    finding_id = kwargs.get("finding_id", "")
+    if finding_id and result.get("success"):
+        get_contest_pipeline().link_fix(finding_id, fix)
+    return result
 
 
 def handle_pr_create(**kwargs: Any) -> dict[str, Any]:
     from whitemagic.tools.security.fix_generator import create_pr
-    return create_pr(
+    result = create_pr(
         kwargs.get("repo_dir", ""),
         kwargs.get("branch_name", "security-fix"),
         kwargs.get("title", "Security fix"),
@@ -438,6 +442,10 @@ def handle_pr_create(**kwargs: Any) -> dict[str, Any]:
         labels=kwargs.get("labels"),
         bounty_ref=kwargs.get("bounty_ref"),
     )
+    finding_id = kwargs.get("finding_id", "")
+    if finding_id and result.get("success") and result.get("pr_url"):
+        get_contest_pipeline().link_pr(finding_id, result["pr_url"])
+    return result
 
 
 def handle_bounty_track(**kwargs: Any) -> dict[str, Any]:

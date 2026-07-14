@@ -454,7 +454,7 @@ class SQLiteBackend:
                 try:
                     content = json.loads(content)
                 except Exception:
-                    pass # Fallback to raw string if not valid JSON
+                    logger.debug("Ignored Exception in sqlite_backend.py:456")
 
             return Memory(
                 id=row["id"],
@@ -947,7 +947,7 @@ class SQLiteBackend:
             for r in flag_rows:
                 tags_map[r["memory_id"]].add(r["tag"])
         except sqlite3.OperationalError:
-            pass # Tables might not be fully ready in some edge cases
+            logger.debug("Ignored Exception in sqlite_backend.py:949")
 
         # 2. Bulk Fetch Associations
         assoc_map: dict[str, dict[str, float]] = {id: {} for id in ids}
@@ -1386,7 +1386,7 @@ class SQLiteBackend:
                         (datetime.now().isoformat(), source_id, target_id),
                     )
         except Exception:
-            pass  # Non-critical
+            logger.debug("Ignored Exception in sqlite_backend.py:1388")
 
     def log_dharma_audit(
         self,

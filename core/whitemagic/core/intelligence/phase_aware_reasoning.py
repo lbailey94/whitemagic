@@ -13,6 +13,9 @@ from enum import Enum
 from typing import Any
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class PhaseGuidance(Enum):
     """Reasoning guidance based on phase"""
 
@@ -45,7 +48,7 @@ class PhaseAwareReasoner:
 
             self.procession = get_procession()
         except ImportError:
-            pass
+            logger.debug("Ignored ImportError in phase_aware_reasoning.py:50")
 
     def get_phase_context(self) -> PhaseContext | None:
         """Get current phase context"""

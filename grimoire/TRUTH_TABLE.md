@@ -33,7 +33,7 @@ If any document, registry, or code file disagrees with this table, **this table 
 | 3 | **Root** (氐 Di) | `healing` | Wood | `health_report`, `rust_status`, `rust_similarity`, `ship.check`, `state.paths`, `state.summary` | System health & foundations |
 | 4 | **Room** (房 Fang) | `sanctuary` | Wood | `sangha_lock`, `sandbox.set_limits`, `sandbox.status`, `sandbox.violations`, `mcp_integrity.snapshot`, `mcp_integrity.verify`, `security.alerts` | Resource locks, privacy, security |
 | 5 | **Heart** (心 Xin) | `love` | Fire | `scratchpad`, `session.handoff`, `context.pack`, `context.status`, `working_memory.attend` | Session context, pulse, connection |
-| 6 | **Tail** (尾 Wei) | `courage` | Fire | `simd.cosine`, `simd.batch`, `simd.status`, `execute_cascade`, `list_cascade_patterns` | Performance, acceleration, speed |
+| 6 | **Tail** (尾 Wei) | `wonder` | Fire | `simd.cosine`, `simd.batch`, `simd.status`, `execute_cascade`, `list_cascade_patterns` | Performance, acceleration, speed |
 | 7 | **Winnowing Basket** (箕 Ji) | `wisdom` | Fire | `search_memories`, `vector.search`, `hybrid_recall`, `graph_walk`, `read_memory`, `list_memories`, `fragment.search`, `fragment.index`, `fragment.status`, `fragment.query` | Search, recall, filtering, wisdom retrieval, codebase search acceleration |
 
 ---
@@ -307,7 +307,7 @@ Each Gana is paired with a **Garden** — a thematic consciousness domain that p
 | 3 | Root | healing | Love | Stillness | Wood | heal, fix, repair, restore |
 | 4 | Room | sanctuary | Stillness | Love | Wood | safe, home, refuge, protect |
 | 5 | Heart | love | Love | — | Fire | love, care, connect, compassion |
-| 6 | Tail | courage | Courage | — | Fire | brave, push, accelerate, dare |
+| 6 | Tail | wonder | Wonder | — | Fire | fast, accelerate, push, discover, marvel |
 | 7 | Winnowing Basket | wisdom | Wisdom | Truth | Fire | wisdom, discern, filter, judge |
 | 8 | Ghost | grief | Stillness | Love | Water | grief, loss, mourn, honor |
 | 9 | Willow | humor | Joy | Wisdom | Water | humor, laugh, flexible, resilient |
@@ -361,6 +361,67 @@ Every Grimoire chapter must contain these six sections:
 
 ---
 
+## Sub-Engine Map (v25.0.0)
+
+The 28 canonical engines absorb or affiliate with 44 sub-engines — smaller engine classes
+that exist in the codebase but are mapped to a parent slot for circuit-breaker routing,
+Gana assignment, and Grimoire chapter alignment.
+
+**Registry source**: `core/engines/registry.py` — `EngineEntry.absorbs` and `EngineEntry.affiliated_engines`
+
+### Absorbed Sub-Engines (39)
+
+Absorbed engines are fully fused into their parent slot. They may still exist as
+standalone classes (backward-compat shims, lazy accessors, or inline code), but
+their canonical home is the parent engine.
+
+| Slot | Parent Engine | Absorbed Sub-Engines |
+|------|--------------|---------------------|
+| 0 | SessionEngine | CycleEngine, WuXingEngine |
+| 1 | ConsolidationEngine | ReconsolidationEngine, _PyReplayEngine |
+| 4 | NurturingEngine | HeartEngine |
+| 5 | AccelerationEngine | QuantumEngine, QuantumGraphEngine |
+| 7 | IntrospectionEngine | ForecastEngine, CapabilityDiscoveryEngine |
+| 8 | ResilienceEngine | GrimoireEngine |
+| 10 | AssociationEngine | GraphEngine, GraphEngineNeural, GraphEngineCached |
+| 11 | ExportEngine | CodeGenomeEngine, PromptEngine, PolymorphismEngine |
+| 13 | ResonanceEngine | ResonanceTransferEngine, JuliaResonanceEngine |
+| 15 | EmbeddingEngine | HRREngine, QuantizedHRREngine, HRRCompositionEngine |
+| 16 | LifecycleEngine | DGAEngine |
+| 17 | KaizenEngine | ContinuousEvolutionEngine, MetaLearningEngine, ApotheosisEngine |
+| 18 | PatternEngine | EnhancedPatternEngine, SubClusteringEngine, HolographicPatternEngine |
+| 19 | NarrativeEngine | NarrativeEngineStory |
+| 20 | EthicsEngine | ArtOfWarEngine, MaturityEngine |
+| 21 | PredictiveEngine | ForesightEngine, PredictiveMaintenanceEngine, GreatYearEngine |
+| 22 | GalacticEngine | GalacticTelepathyEngine |
+| 23 | CloneArmyEngine | LocalReasoningEngine, CPUInferenceEngine, RuleEngine |
+| 24 | ForgettingEngine | NeuroScoreEngine |
+
+### Affiliated Engines (5)
+
+Affiliated engines have a soft relationship to their parent slot — they share a
+cognitive domain but maintain independent operation. Use `get_parent_engine()` to
+resolve either absorbed or affiliated relationships.
+
+| Slot | Parent Engine | Affiliated Engine | Relationship |
+|------|--------------|-------------------|-------------|
+| 6 | SerendipityEngine | SymbolicEngine | Bilingual symbolic reasoning feeds serendipity surface |
+| 15 | EmbeddingEngine | HologramEngine | Hologram rendering extends HRR vector space |
+| 23 | CloneArmyEngine | PersonaEngine | Cognitive personas are specialized clones |
+| 24 | ForgettingEngine | MetaplasticityEngine | Plasticity thresholds modulate retention signals |
+| 26 | SwarmEngine | InteractionEngine | Simulated multi-agent interaction complements real swarm |
+
+### Totals
+
+| Category | Count |
+|-----------|-------|
+| Canonical engines | 28 |
+| Absorbed sub-engines | 39 |
+| Affiliated engines | 5 |
+| **Total engine classes in mandala** | **72** |
+
+---
+
 ## Maintenance
 
 **When to update this table:**
@@ -373,4 +434,4 @@ Every Grimoire chapter must contain these six sections:
 
 ---
 
-*This table is a living document. Last verified against `prat_mappings.py` and `garden_gana_registry.py` on 2026-06-25.*
+*This table is a living document. Last verified against `prat_mappings.py`, `garden_gana_registry.py`, and `engines/registry.py` on 2026-07-13.*

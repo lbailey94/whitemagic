@@ -17,7 +17,7 @@ from whitemagic.core.consciousness.emotional_steering import (
     EmotionalSteering,
     get_emotional_steering,
 )
-from whitemagic.core.consciousness.self_directed_attention import (
+from whitemagic.core.consciousness.self_initiation import (
     SelfDirectedAttention,
     SelfInitiatedTurn,
     get_self_directed_attention,
@@ -173,7 +173,7 @@ class TestSelfDirectedAttention:
     def test_observe_blocked_goals(self, tmp_path, monkeypatch):
         import whitemagic.core.consciousness.goal_graph as gg_mod
         import whitemagic.core.consciousness.emotional_steering as es_mod
-        import whitemagic.core.consciousness.self_directed_attention as sda_mod
+        import whitemagic.core.consciousness.self_initiation as sda_mod
         test_graph = GoalGraph(persist_path=tmp_path / "goals.json")
         test_graph.add_goal("g1", "Blocked goal", GoalType.BUILD)
         test_graph.update_status("g1", GoalStatus.BLOCKED)
@@ -192,7 +192,7 @@ class TestSelfDirectedAttention:
     def test_observe_proposed_goals(self, tmp_path, monkeypatch):
         import whitemagic.core.consciousness.goal_graph as gg_mod
         import whitemagic.core.consciousness.emotional_steering as es_mod
-        import whitemagic.core.consciousness.self_directed_attention as sda_mod
+        import whitemagic.core.consciousness.self_initiation as sda_mod
         test_graph = GoalGraph(persist_path=tmp_path / "goals.json")
         test_graph.add_goal("g1", "Proposed goal", GoalType.BUILD)
         monkeypatch.setattr(gg_mod, "get_goal_graph", lambda: test_graph)

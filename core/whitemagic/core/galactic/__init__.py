@@ -293,11 +293,11 @@ def galaxy_stats() -> GalaxyStats:
                     try:
                         total_associations += gcur.execute("SELECT COUNT(*) FROM associations").fetchone()[0]
                     except sqlite3.OperationalError:
-                        pass
+                        logger.debug("Ignored Exception in __init__.py:295")
                     try:
                         total_embeddings += gcur.execute("SELECT COUNT(*) FROM memory_embeddings").fetchone()[0]
                     except sqlite3.OperationalError:
-                        pass
+                        logger.debug("Ignored Exception in __init__.py:299")
                     for row in gcur.execute(
                         "SELECT galactic_distance FROM memories WHERE galactic_distance IS NOT NULL"
                     ):
@@ -725,19 +725,19 @@ def substrate_health() -> dict[str, Any]:
                                 "SELECT COUNT(*) FROM associations"
                             ).fetchone()[0]
                         except sqlite3.OperationalError:
-                            pass
+                            logger.debug("Ignored Exception in __init__.py:727")
                         try:
                             out["total_embeddings"] += gconn.execute(
                                 "SELECT COUNT(*) FROM memory_embeddings"
                             ).fetchone()[0]
                         except sqlite3.OperationalError:
-                            pass
+                            logger.debug("Ignored Exception in __init__.py:733")
                         try:
                             out["total_dharma_audits"] += gconn.execute(
                                 "SELECT COUNT(*) FROM dharma_audit"
                             ).fetchone()[0]
                         except sqlite3.OperationalError:
-                            pass
+                            logger.debug("Ignored Exception in __init__.py:739")
                         gconn.close()
                     except Exception:
                         continue

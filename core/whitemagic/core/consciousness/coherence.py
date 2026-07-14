@@ -17,6 +17,9 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fileio import atomic_write, file_lock
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class CoherenceMetric:
     """Measures consciousness coherence across dimensions."""
 
@@ -85,7 +88,7 @@ class CoherenceMetric:
                 else:
                     self.weights[d] = equal_w / total
         except Exception:
-            pass
+            logger.debug("Ignored Exception in coherence.py:90")
 
     def _load_drift_history(self) -> None:
         """Load persisted coherence history for cross-session drift tracking."""
@@ -97,7 +100,7 @@ class CoherenceMetric:
                             entry = __import__("json").loads(line)
                             self.history.append(entry)
         except Exception:
-            pass
+            logger.debug("Ignored Exception in coherence.py:102")
 
     def _persist_measurement(self, overall: float) -> None:
         """Persist a coherence measurement for cross-session drift tracking."""
@@ -114,7 +117,7 @@ class CoherenceMetric:
             with open(self._drift_file, "a") as f:
                 f.write(json.dumps(entry) + "\n")
         except Exception:
-            pass
+            logger.debug("Ignored Exception in coherence.py:119")
 
     def measure(
         self,

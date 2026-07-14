@@ -3,6 +3,9 @@
 from typing import Any
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def handle_anomaly(**kwargs: Any) -> dict[str, Any]:
     """Unified anomaly handler — routes by action parameter."""
     action = kwargs.get("action", "check")
@@ -56,7 +59,7 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
                 )
                 break
     except Exception:
-        pass
+        logger.debug("Ignored Exception in anomaly.py:61")
 
     # Enrich with thermal anomalies from laptop-optimizer
     thermal_anomalies: list[dict[str, Any]] = []
@@ -77,7 +80,7 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
                 }
             )
     except Exception:
-        pass
+        logger.debug("Ignored Exception in anomaly.py:82")
 
     all_alerts = alerts + strata_anomalies + thermal_anomalies
     return {

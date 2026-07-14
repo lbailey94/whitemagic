@@ -1893,7 +1893,7 @@ def mw_citta_consciousness(
 
         dharma.set_coherence(avg_coherence)
     except Exception:
-        pass  # Best-effort
+        logger.debug("Ignored Exception in middleware.py:1895")
 
     # WI 1: Predecessor context injection — make the recursive stream actually recursive
     try:
@@ -2485,7 +2485,7 @@ def mw_code_nudge(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | Non
                         result["_nudges"] = nudges
                     return result
             except Exception:
-                pass  # Never block on nudge failures
+                logger.debug("Ignored Exception in middleware.py:2487")
 
     # Post-processing: enrich results with code context for file-related tools
     result = next_fn(ctx)

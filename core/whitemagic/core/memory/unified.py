@@ -277,7 +277,7 @@ class UnifiedMemory:
                 if routed and routed != "universal":
                     galaxy = routed
             except Exception:
-                pass  # Graceful degradation: fall back to universal
+                logger.debug("Ignored Exception in unified.py:279")
 
         enable_surprise_gate = bool(kwargs.pop("enable_surprise_gate", True))
         enable_entity_extraction = bool(kwargs.pop("enable_entity_extraction", True))

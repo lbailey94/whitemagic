@@ -125,7 +125,7 @@ class JoyArchaeology:
                         }
                     )
             except Exception:
-                pass  # Skip problematic files
+                logger.debug("Ignored Exception in joy_archaeology.py:127")
 
         return joy_moments
 

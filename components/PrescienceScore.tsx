@@ -11,7 +11,7 @@ interface FirmRow {
 }
 
 const FIRMS: FirmRow[] = [
-  { name: "WhiteMagic Labs (solo, $0 budget)", avgLead: "~24.9 wks", resources: "Personal hardware + free AI APIs", crossDomain: true, score: "523", highlight: true },
+  { name: "WhiteMagic Labs (solo, $0 budget)", avgLead: "~22.5 wks", resources: "Personal hardware + free AI APIs", crossDomain: true, score: "672", highlight: true },
   { name: "Gartner Hype Cycle", avgLead: "12–52 wks", resources: "$5B+/yr, 2,000+ analysts", crossDomain: false, score: "~200 est." },
   { name: "RAND Corporation", avgLead: "4–12 wks", resources: "$350M+/yr, 1,900+ analysts", crossDomain: false, score: "~120 est." },
   { name: "Good Judgment Superforecasters", avgLead: "1–6 wks", resources: "IARPA funding, trained teams", crossDomain: false, score: "~50 est." },
@@ -19,10 +19,10 @@ const FIRMS: FirmRow[] = [
 ];
 
 const STATS = [
-  { icon: Award, label: "Prescience score", value: "523", sub: "1 point per validated week of lead time" },
-  { icon: Clock, label: "Avg lead time", value: "24.9 wks", sub: "per validated claim" },
-  { icon: TrendingUp, label: "Validated claims", value: "21", sub: "with independently verifiable sources" },
-  { icon: Users, label: "Pending ceiling", value: "656+", sub: "if all remaining claims validate" },
+  { icon: Award, label: "Prescience score", value: "672", sub: "1 point per validated week of lead time" },
+  { icon: Clock, label: "Avg lead time", value: "22.5 wks", sub: "per validated claim" },
+  { icon: TrendingUp, label: "Validated claims", value: "30", sub: "with independently verifiable sources" },
+  { icon: Users, label: "Pending ceiling", value: "700+", sub: "if all remaining claims validate" },
 ];
 
 export function PrescienceScore() {

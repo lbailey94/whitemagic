@@ -224,12 +224,12 @@ def ensure_paths() -> Any:
     try:
         WM_ROOT.chmod(0o700)
     except OSError:
-        pass  # Best-effort; some filesystems don't support chmod
+        logger.debug("Ignored OSError in paths.py:226")
     # DB path may be overridden (e.g., containers); ensure its parent exists.
     try:
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         log.debug("Operation failed: %s", e)
-        pass
+        logger.debug("Ignored OSError in paths.py:226")
     if not os.getenv("WM_SILENT_INIT"):
         log.info("Paths verified.")

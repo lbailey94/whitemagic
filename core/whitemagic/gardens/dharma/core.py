@@ -10,6 +10,9 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class DharmaCore:
     """Core ethical reasoning system."""
 
@@ -87,7 +90,7 @@ class DharmaCore:
                 )
             )
         except ImportError:
-            pass  # Gan Ying not available
+            logger.debug("Ignored ImportError in core.py:92")
 
 
 def get_dharma_core(data_dir: str | None = None) -> DharmaCore:

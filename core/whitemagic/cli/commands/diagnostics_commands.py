@@ -8,6 +8,9 @@ import sqlite3
 
 import click
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from rich.console import Console
     from rich.panel import Panel
@@ -268,7 +271,7 @@ def _doctor_fix() -> None:
                     conn.execute(idx_sql)
                     indexes_created += 1
                 except (sqlite3.Error, sqlite3.OperationalError):
-                    pass
+                    logger.debug("Ignored Exception in diagnostics_commands.py:273")
             click.echo(f"   ✅ {indexes_created} indexes verified")
     except Exception as exc:
         click.echo(f"   ❌ Index check failed: {exc}")

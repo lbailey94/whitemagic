@@ -6,6 +6,9 @@ from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 @register
 def check_todo_vs_fixme(
     project_path: Path, file_index: FileIndex, findings: list[Finding]
@@ -36,7 +39,7 @@ def check_todo_vs_fixme(
             )
         return
     except (ImportError, AttributeError, Exception):
-        pass
+        logger.debug("Ignored ImportError, AttributeError, Exception in todo_style.py:41")
 
     # Fallback: Python sequential scan
     for py_file in file_index.python_files():

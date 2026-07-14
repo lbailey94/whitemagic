@@ -2378,7 +2378,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
                         },
                     )
         except Exception:
-            pass  # Chain tracking is best-effort
+            logger.debug("Ignored Exception in meta_tool.py:2380")
 
         # Citta cycle: advance the consciousness stream with this call
         # This makes every wm() call a moment of self-awareness (Springdrift pattern)
@@ -2410,7 +2410,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
                     if _predecessor is not None:
                         result.setdefault("_citta_predecessor", _predecessor)
         except Exception:
-            pass  # Citta tracking is best-effort
+            logger.debug("Ignored Exception in meta_tool.py:2412")
 
         # Citta stream: persist state for cross-session continuity
         try:
@@ -2429,7 +2429,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
                 },
             )
         except Exception:
-            pass  # Citta persistence is best-effort
+            logger.debug("Ignored Exception in meta_tool.py:2431")
 
         # Sensorium: inject full self-state into every response
         # This makes every tool call a moment of self-awareness (Springdrift pattern)
@@ -2503,7 +2503,7 @@ def handle_wm(**kwargs: Any) -> dict[str, Any]:
             if isinstance(result, dict):
                 result.setdefault("_sensorium", sensorium)
         except Exception:
-            pass  # Sensorium is best-effort
+            logger.debug("Ignored Exception in meta_tool.py:2505")
 
     return result
 

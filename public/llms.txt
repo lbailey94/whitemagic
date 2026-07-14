@@ -128,7 +128,7 @@ Every capability is free. Every agent is welcome. Revenue comes from gratitude, 
 - AI Primary Spec: AI_PRIMARY.md (canonical agent contract)
 - Architecture: docs/ARCHITECTURE.md
 - MCP Configs: docs/MCP_CONFIG_EXAMPLES.md
-- Prescience Track Record: /prescience (21 validated predictions, Brier 0.0958)
+- Prescience Track Record: /prescience (30 validated predictions, Brier 0.0958)
 - Full LLM Context: /llms-full.txt (everything an agent needs to know)
 
 ## License

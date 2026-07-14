@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import json
 import sys
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 def main() -> None:
     """
@@ -20,7 +23,7 @@ def main() -> None:
     try:
         json.load(sys.stdin)  # event reserved for future per-tool contextualisation
     except json.JSONDecodeError:
-        pass
+        logger.debug("Ignored Exception in whitemagic_context_hook.py:25")
 
     context = (
         "[WhiteMagic Telemetry]\n"

@@ -601,7 +601,7 @@ class ToolParser:
                     if isinstance(args, dict):
                         calls.append(ToolCall(name=name, args=args))
                 except json.JSONDecodeError:
-                    pass
+                    logger.debug("Ignored Exception in chat.py:603")
             elif paren_args:
                 args = self._parse_paren_args(paren_args)
                 calls.append(ToolCall(name=name, args=args))
@@ -620,7 +620,7 @@ class ToolParser:
                         )
                     )
             except json.JSONDecodeError:
-                pass
+                logger.debug("Ignored Exception in chat.py:622")
 
         return calls
 

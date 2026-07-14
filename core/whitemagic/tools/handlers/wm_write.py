@@ -128,7 +128,7 @@ def handle_wm_write(**kwargs: Any) -> dict[str, Any]:
                 if not daemon._started:
                     daemon.start()
             except Exception:
-                pass  # Consolidation daemon unavailable
+                logger.debug("Ignored Exception in wm_write.py:130")
 
         return result
     except Exception as exc:

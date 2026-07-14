@@ -120,7 +120,7 @@ export default function WorkshopsPage() {
             Every workshop is grounded in what I&apos;ve built and validated in
             the open-source WhiteMagic project —{" "}
             <strong className="text-fg">2,503 passing tests</strong>,{" "}
-            <strong className="text-fg">21 prescience-validated claims</strong>,
+            <strong className="text-fg">30 prescience-validated claims</strong>,
             and a year of living inside this technology full-time. You get a
             guide who has already made the expensive mistakes on his own time.
           </p>

@@ -98,7 +98,7 @@ const KB_CRITIQUE = [
   {
     point: "LLM knowledge bases lack verification",
     response:
-      "WhiteMagic has a Karma Ledger — an append-only, hash-chained audit trail that tracks declared-vs-actual side effects for every tool call. When the system writes a memory, the write is audited. When the system makes a claim, the claim is tracked. The prescience track record (21 validated claims, Brier score 0.0861) is not LLM-generated assertion — it's empirical validation with timestamps.",
+      "WhiteMagic has a Karma Ledger — an append-only, hash-chained audit trail that tracks declared-vs-actual side effects for every tool call. When the system writes a memory, the write is audited. When the system makes a claim, the claim is tracked. The prescience track record (30 validated claims, Brier score 0.0861) is not LLM-generated assertion — it's empirical validation with timestamps.",
   },
   {
     point: "LLM knowledge bases are opaque",

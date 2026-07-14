@@ -25,6 +25,9 @@ from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 @dataclass
 class MemoryExport:
     """Memory data structure for export."""
@@ -406,7 +409,7 @@ class ExportImportManager:
                     result.add_error(i, exc, item_id=memory.id)
             result.rollback_state = "committed"
         except ImportError:
-            pass  # MemoryManager not available, return validation-only result
+            logger.debug("Ignored ImportError in manager.py:411")
 
         status, error_code, retryable = result.to_envelope_status()
         out = {

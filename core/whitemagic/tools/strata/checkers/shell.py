@@ -4,7 +4,10 @@ from pathlib import Path
 from whitemagic.tools.strata.checkers import register
 from whitemagic.tools.strata.file_index import FileIndex
 from whitemagic.tools.strata.models import Finding, FindingSeverity
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 @register
 def check_shell_scripts(
@@ -26,7 +29,7 @@ def check_shell_scripts(
                         ):
                             _check_shell_file(project_path, f, findings)
                     except (OSError, UnicodeDecodeError):
-                        pass
+                        logger.debug("Ignored OSError, UnicodeDecodeError in shell.py:31")
 
 
 def _check_shell_file(project_path: Path, sh_file: Path, findings: list[Finding]):

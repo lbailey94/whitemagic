@@ -12,6 +12,9 @@ from whitemagic.config.paths import USER_PROFILE_PATH
 from whitemagic.utils.fast_json import loads as _json_loads
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 @dataclass
 class UserProfile:
     """UserProfile: user profile.
@@ -40,7 +43,7 @@ class UserManager:
                 data = _json_loads(self.profile_path.read_text())
                 return UserProfile(**data)
             except (OSError, FileNotFoundError, PermissionError):
-                pass
+                logger.debug("Ignored OSError, FileNotFoundError, PermissionError in user.py:45")
         return UserProfile()
 
     def save_profile(self) -> Any:

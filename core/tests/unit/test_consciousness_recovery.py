@@ -198,10 +198,10 @@ class TestCrossSubsystemPatterns:
 
 
 class TestConsciousnessExports:
-    def test_continuous_self_awareness_export(self):
-        from whitemagic.core.consciousness import ContinuousSelfAwareness
+    def test_lifecycle_export(self):
+        from whitemagic.core.consciousness import SleepScheduler
 
-        assert ContinuousSelfAwareness is not None
+        assert SleepScheduler is not None
 
     def test_time_dilation_master_export(self):
         from whitemagic.core.consciousness import TimeDilationMaster
@@ -231,7 +231,8 @@ class TestConsciousnessExports:
     def test_all_list_updated(self):
         import whitemagic.core.consciousness as consciousness
 
-        assert "ContinuousSelfAwareness" in consciousness.__all__
+        assert "SleepScheduler" in consciousness.__all__
+        assert "SelfInitiationQueue" in consciousness.__all__
         assert "TimeDilationMaster" in consciousness.__all__
         assert "ApotheosisEngine" in consciousness.__all__
         assert "CrossSubsystemPatterns" in consciousness.__all__

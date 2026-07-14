@@ -205,7 +205,7 @@ class PatternEngine:
 
 # Singleton
 _pattern_engine: PatternEngine | None = None
-_pattern_engine_lock = __import__("threading").Lock()
+_pattern_engine_lock = __import__("threading").RLock()
 
 
 def get_pattern_engine(**kwargs: Any) -> PatternEngine:

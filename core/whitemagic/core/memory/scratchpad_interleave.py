@@ -12,7 +12,10 @@ from whitemagic.config.paths import WM_ROOT
 from whitemagic.utils.fast_json import dumps_str as _json_dumps
 from whitemagic.utils.fast_json import loads as _json_loads
 from whitemagic.utils.fileio import atomic_write, file_lock
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 class Scratchpad:
     """A single working memory scratchpad with chain-of-thought state tracking.
@@ -159,7 +162,7 @@ class ScratchpadManager:
                 }))
                 self.scratchpads[data["name"]] = pad
             except (ValueError, OSError):
-                pass
+                logger.debug("Ignored ValueError, OSError in scratchpad_interleave.py:164")
 
     def _save_scratchpad(self, name: str) -> None:
         """Save a scratchpad."""

@@ -1550,7 +1550,7 @@ class DreamCycle:
                             importance=0.6,
                         )
                 except Exception:
-                    pass  # Never fail dream on persistence issues
+                    logger.debug("Ignored Exception in dream_cycle.py:1552")
 
         except (ImportError, ModuleNotFoundError) as e:
             result["reason"] = str(e)

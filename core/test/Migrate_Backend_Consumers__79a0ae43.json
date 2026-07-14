@@ -1,0 +1,11 @@
+{
+  "cascadeId": "79a0ae43-4c34-42b4-87fa-eeb25ed8b636",
+  "title": "Migrate Backend Consumers",
+  "stepCount": 521,
+  "numTotalSteps": 521,
+  "transcriptLength": 84280,
+  "createdTime": "2026-07-13T01:53:21.233846971Z",
+  "lastModifiedTime": "2026-07-13T02:37:48.220072555Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 3
+}

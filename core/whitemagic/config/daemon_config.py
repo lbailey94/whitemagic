@@ -19,6 +19,9 @@ from typing import Any
 
 from whitemagic.config.paths import WM_ROOT
 
+import logging
+logger = logging.getLogger(__name__)
+
 CONFIG_FILE = WM_ROOT / "config.yaml"
 
 
@@ -179,7 +182,7 @@ def load_config() -> DaemonConfig:
                 if "model" in inf:
                     config.inference_model = inf["model"]
         except Exception:
-            pass  # Fall back to defaults
+            logger.debug("Ignored Exception in daemon_config.py:184")
 
     return config
 

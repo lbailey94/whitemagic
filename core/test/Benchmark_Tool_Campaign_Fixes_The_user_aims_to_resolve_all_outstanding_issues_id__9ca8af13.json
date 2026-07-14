@@ -1,0 +1,11 @@
+{
+  "cascadeId": "9ca8af13-7387-4482-88b5-e0a7ca81948f",
+  "title": "Benchmark Tool Campaign Fixes The user aims to resolve all outstanding issues identified in the WhiteMagic MCP tool benchmark campaign to achieve a 100% adjusted success rate. Their immediate focus is on fixing the 43 \"not found\" errors, 25 \"missing required arg\" errors, and other miscellaneous expected failures by updating TOOL_CUSTOM_ARGS, creating benchmark fixtures, and bypassing maturity and permission gates in benchmark mode. The user is currently facing a long-running benchmark step and is seeking analysis to diagnose and unblock the process without taking further actions yet.",
+  "stepCount": 518,
+  "numTotalSteps": 518,
+  "transcriptLength": 74901,
+  "createdTime": "2026-07-13T15:25:31.678127877Z",
+  "lastModifiedTime": "2026-07-13T19:44:20.474567110Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 13
+}

@@ -1,0 +1,11 @@
+{
+  "cascadeId": "eb264020-ff45-41f1-afd6-e46f019e6525",
+  "title": "Fixing Test Suite Order Dependency",
+  "stepCount": 1613,
+  "numTotalSteps": 1613,
+  "transcriptLength": 198662,
+  "createdTime": "2026-07-07T01:54:21.191724402Z",
+  "lastModifiedTime": "2026-07-07T21:00:10.995011323Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 23
+}

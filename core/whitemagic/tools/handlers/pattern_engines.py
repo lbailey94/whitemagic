@@ -96,7 +96,7 @@ def handle_emergence_scan(**kwargs: Any) -> dict[str, Any]:
                     }
                 )
         except Exception:
-            pass  # No observations to feed — still run detection on existing data
+            logger.debug("Ignored Exception in pattern_engines.py:98")
 
         patterns = detector.detect_patterns()
         phase_transitions = detector.detect_phase_transitions()
@@ -120,7 +120,7 @@ def handle_emergence_scan(**kwargs: Any) -> dict[str, Any]:
             "engine": "rust_py_emergence",
         }
     except Exception:
-        pass  # Fall through to Python
+        logger.debug("Ignored Exception in pattern_engines.py:122")
 
     try:
         from whitemagic.core.intelligence.emergence import EmergenceDetector
@@ -317,7 +317,7 @@ def handle_constellation_detect(**kwargs: Any) -> dict[str, Any]:
             "engine": "rust_py_constellation",
         }
     except Exception:
-        pass  # Fall through to Python
+        logger.debug("Ignored Exception in pattern_engines.py:319")
 
     try:
         from whitemagic.core.memory.constellations import ConstellationDetector

@@ -11,6 +11,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+import logging
+logger = logging.getLogger(__name__)
+
 _get_bus: Any = None
 _ResonanceEvent: Any = None
 _EventType: Any = None
@@ -26,7 +29,7 @@ try:
         get_bus as _get_bus_imported,
     )
 except ImportError:
-    pass
+    logger.debug("Ignored ImportError in zodiac_cores.py:31")
 else:
     _EventType = _event_type_imported
     _ResonanceEvent = _resonance_event_imported

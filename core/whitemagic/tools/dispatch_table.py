@@ -582,7 +582,7 @@ def _ensure_fast_path_registry() -> None:
                         td.name, td.safety, td.fast_path_safety,
                     )
     except Exception:
-        pass  # Registry not available yet — fall back to explicit set
+        logger.debug("Ignored Exception in dispatch_table.py:584")
 
 
 def _is_fast_path(tool_name: str) -> bool:

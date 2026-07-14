@@ -3,6 +3,9 @@
 from typing import Any, cast
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def _load_rust() -> tuple[Any, Any]:
     from whitemagic.tools.unified_api import _load_rust
 
@@ -43,7 +46,7 @@ def handle_rust_audit(**kwargs: Any) -> dict[str, Any]:
                             "summary": "",
                         })
                     except OSError:
-                        pass
+                        logger.debug("Ignored OSError in rust_bridge.py:48")
                     if len(files) >= 1000:
                         break
         file_summaries = files[:100]

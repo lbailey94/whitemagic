@@ -5,6 +5,9 @@ from typing import Any, cast
 from whitemagic.core.bridge.utils import ensure_string
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def memory_create(
     title: str,
     content: str,
@@ -115,7 +118,7 @@ def memory_search(
                     "method": "rust_simd",
                 }
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Ignored ImportError, AttributeError in memory.py:120")
 
     # Fallback to standard search
     # Filter kwargs to only pass what MemoryManager accepts
@@ -324,7 +327,7 @@ def parallel_search(
             )
             return cast(dict[str, Any], result)
     except (ImportError, Exception):
-        pass
+        logger.debug("Ignored ImportError, Exception in memory.py:329")
 
     # Fallback to memory search if no path specified
     if not path:

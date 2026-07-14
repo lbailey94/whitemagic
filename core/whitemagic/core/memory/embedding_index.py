@@ -19,6 +19,9 @@ from whitemagic.utils.fast_json import loads as _json_loads
 from whitemagic.utils.fileio import atomic_write, file_lock
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class SimpleEmbedding:
     """Simple TF-IDF-like embedding for semantic similarity.
 
@@ -135,7 +138,7 @@ class EmbeddingIndex:
                 self.embedder.idf = data.get("idf", {})
                 self.embedder.doc_count = data.get("doc_count", 0)
             except (ValueError, OSError):
-                pass
+                logger.debug("Ignored ValueError, OSError in embedding_index.py:140")
 
     def _save_index(self) -> None:
         """Persist index to disk."""

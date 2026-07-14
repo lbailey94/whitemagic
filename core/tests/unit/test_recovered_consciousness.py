@@ -78,43 +78,41 @@ class TestDepthGauge:
             assert "message" in cal or cal["closed"] == 0
 
 
-class TestSelfReflection:
-    """Test SelfReflectionLoop recovered from v17."""
+class TestLifecycleModule:
+    """Test lifecycle module (replaces deleted self_reflection.py)."""
 
     def test_import(self):
-        from whitemagic.core.consciousness.self_reflection import (
-            SelfReflectionLoop,
-            ConsciousnessState,
+        from whitemagic.core.consciousness.lifecycle import (
+            SleepScheduler,
+            WakeOnBoot,
+            ProactiveGreeting,
         )
 
-        assert len(SelfReflectionLoop.REFLECTION_PROMPTS) == 10
+        assert SleepScheduler is not None
+        assert WakeOnBoot is not None
+        assert ProactiveGreeting is not None
 
-    def test_reflect(self, tmp_path):
-        from whitemagic.core.consciousness.self_reflection import SelfReflectionLoop
+    def test_sleep_config_defaults(self):
+        from whitemagic.core.consciousness.lifecycle import SleepConfig
 
-        loop = SelfReflectionLoop(reflection_dir=tmp_path)
-        entry = loop.reflect(
-            "What did I learn?", "That tests matter", "Write more tests"
-        )
-        assert entry.insight == "That tests matter"
-        assert len(loop.reflections) == 1
+        config = SleepConfig()
+        assert config.sleep_time == "23:00"
+        assert config.wake_time == "07:00"
+        assert config.enabled is True
 
-    def test_get_prompt(self, tmp_path):
-        from whitemagic.core.consciousness.self_reflection import SelfReflectionLoop
+    def test_proactive_greeting_static(self):
+        from whitemagic.core.consciousness.lifecycle import ProactiveGreeting
 
-        loop = SelfReflectionLoop(reflection_dir=tmp_path)
-        prompt = loop.get_prompt()
-        assert prompt in SelfReflectionLoop.REFLECTION_PROMPTS
+        greeting = ProactiveGreeting.generate({})
+        assert isinstance(greeting, str)
+        assert len(greeting) > 0
 
-    def test_consciousness_state(self):
-        from whitemagic.core.consciousness.self_reflection import ConsciousnessState
+    def test_consciousness_state_enum(self):
+        from whitemagic.core.consciousness.lifecycle import ConsciousnessState
 
-        state = ConsciousnessState()
-        state.set_state("focused", "testing")
-        assert state.current_state == "focused"
-        info = state.get_state()
-        assert "state" in info
-        assert "energy" in info
+        assert ConsciousnessState.AWAKE.value == "awake"
+        assert ConsciousnessState.ASLEEP.value == "asleep"
+        assert ConsciousnessState.DREAMING.value == "dreaming"
 
 
 class TestTokenEconomy:

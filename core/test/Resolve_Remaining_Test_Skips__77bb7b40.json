@@ -1,0 +1,11 @@
+{
+  "cascadeId": "77bb7b40-a4b9-426d-a071-e982aa072700",
+  "title": "Resolve Remaining Test Skips",
+  "stepCount": 1849,
+  "numTotalSteps": 1849,
+  "transcriptLength": 199240,
+  "createdTime": "2026-07-11T22:10:02.164347875Z",
+  "lastModifiedTime": "2026-07-12T17:26:19.601667989Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 26
+}

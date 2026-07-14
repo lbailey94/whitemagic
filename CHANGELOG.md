@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [25.0.0] - 2026-07-14
+
+### Added — v25 Major Release
+
+#### Windsurf Session Sync
+- 14 new/changed sessions ingested into sessions galaxy (3,441 turns recorded)
+- Total ingested sessions now includes Jul 13-14 sessions: Codebase Graph Comparison, Codebase Hardening Phase 3, Consciousness Subsystem Synthesis Review, Documenting Deferred Objectives, Finalizing Security Gap Fixes, Fixing Code Graph Tests, Hardening Deferred Items, Oracle-Quantum Integration Strategy, Phase 5 Benchmark Update, Security Capabilities Assessment, Sub-Engine Integration Analysis, Verify Oracle Quantum Integration, Windsurf Sync and Version Bump
+
+#### Version Bump to v25.0.0
+- All canonical version files updated: VERSION, core/VERSION, package.json, Cargo.toml, AGENTS.md, server.json, mcp-registry.json, agent.json, lib/facts.ts, README, STATUS, INDEX, SYSTEM_MAP, prescience route, ai-agent.json
+- Regression test assertions updated to expect v25.0.0
+
 ### Added — Phase 6: Retrieval and Search Query Planning
 
 #### SearchQueryPlanner — Explicit Staged Retrieval Pipeline

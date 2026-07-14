@@ -38,6 +38,9 @@ from .tool_gating import (
     get_tool_gate,
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 __all__ = [
     # Tool gating
     "ToolRisk",
@@ -100,4 +103,4 @@ try:
         ]
     )
 except ImportError:
-    pass  # CSP requires FastAPI
+    logger.debug("Ignored ImportError in __init__.py:105")

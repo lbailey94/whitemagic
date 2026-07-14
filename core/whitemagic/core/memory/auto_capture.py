@@ -16,7 +16,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Action:
@@ -129,7 +132,7 @@ class MemoryCapture:
                     if len(parts) >= 4 and parts[2] == 'action':
                         counts.append(int(parts[3]))
                 except Exception:
-                    pass
+                    logger.debug("Ignored Exception in auto_capture.py:134")
 
             if counts:
                 self.action_count = max(counts)

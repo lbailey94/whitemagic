@@ -6,6 +6,7 @@ const ROUTES = [
   { path: "/", priority: 1.0, changeFrequency: "weekly" as const },
   { path: "/app", priority: 0.9, changeFrequency: "weekly" as const },
   { path: "/mandala", priority: 0.8, changeFrequency: "daily" as const },
+  { path: "/security", priority: 0.8, changeFrequency: "daily" as const },
   { path: "/galaxy", priority: 0.7, changeFrequency: "weekly" as const },
   { path: "/zodiac", priority: 0.7, changeFrequency: "weekly" as const },
   { path: "/ganas", priority: 0.7, changeFrequency: "weekly" as const },

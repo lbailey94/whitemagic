@@ -202,7 +202,7 @@ def handle_wm_read(**kwargs: Any) -> dict[str, Any]:
                             tags=["wm_read", mode],
                         )
             except Exception:
-                pass  # WorkingMemory unavailable
+                logger.debug("Ignored Exception in wm_read.py:204")
 
         return result
     except Exception as exc:
@@ -275,7 +275,7 @@ def _read_hybrid(
                 results = cold_results
                 cold_fallback_used = True
         except Exception:
-            pass  # Cold storage unavailable, continue with hot results
+            logger.debug("Ignored Exception in wm_read.py:277")
 
     # Hydrate full memory data for each result
     hydrated = []

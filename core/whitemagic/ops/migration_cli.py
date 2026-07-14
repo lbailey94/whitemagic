@@ -153,7 +153,7 @@ class MigrationCLI:
                 row = conn.execute("SELECT COUNT(*) as c FROM memories").fetchone()
                 info.memory_count = row["c"] if row else 0
             except sqlite3.Error:
-                pass
+                logger.debug("Ignored Exception in migration_cli.py:155")
 
             # Integrity check
             try:
@@ -173,7 +173,7 @@ class MigrationCLI:
                 info.has_hnsw_index = any("hnsw" in t.lower() for t in tables)
                 info.has_fts5_index = any("fts" in t.lower() for t in tables)
             except sqlite3.Error:
-                pass
+                logger.debug("Ignored Exception in migration_cli.py:175")
 
             # Schema version
             try:

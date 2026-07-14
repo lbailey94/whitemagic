@@ -9,6 +9,7 @@ from whitemagic.core.engines.registry import (
     get_engine_stats,
     get_engines_by_quadrant,
     get_engines_by_status,
+    get_parent_engine,
 )
 
 
@@ -34,7 +35,7 @@ class TestEngineRegistryStructure:
             "healing",
             "sanctuary",
             "love",
-            "courage",
+            "wonder",
             "wisdom",
             "grief",
             "humor",
@@ -240,3 +241,158 @@ class TestKnownEngines:
         assert e.mansion_chinese == "氐"
         assert e.garden == "healing"
         assert e.quadrant == Quadrant.EAST
+
+
+class TestSubEngineAbsorption:
+    """Verify the 39 absorbed sub-engines are correctly mapped."""
+
+    def test_total_absorbed_count(self):
+        total = sum(len(e.absorbs) for e in ENGINE_REGISTRY)
+        assert total == 39
+
+    def test_all_absorbed_names_unique(self):
+        all_absorbed = []
+        for e in ENGINE_REGISTRY:
+            all_absorbed.extend(e.absorbs)
+        assert len(all_absorbed) == len(set(all_absorbed)), (
+            f"Duplicate absorbed names: {[n for n in all_absorbed if all_absorbed.count(n) > 1]}"
+        )
+
+    def test_known_absorbed_engines(self):
+        """Spot-check specific Tier 1 absorptions."""
+        # QuantumGraphEngine absorbed by AccelerationEngine (slot 5)
+        e = get_parent_engine("QuantumGraphEngine")
+        assert e is not None
+        assert e.engine_name == "AccelerationEngine"
+
+        # HolographicPatternEngine absorbed by PatternEngine (slot 18)
+        e = get_parent_engine("HolographicPatternEngine")
+        assert e is not None
+        assert e.engine_name == "PatternEngine"
+
+        # GreatYearEngine absorbed by PredictiveEngine (slot 21)
+        e = get_parent_engine("GreatYearEngine")
+        assert e is not None
+        assert e.engine_name == "PredictiveEngine"
+
+        # RuleEngine absorbed by CloneArmyEngine (slot 23)
+        e = get_parent_engine("RuleEngine")
+        assert e is not None
+        assert e.engine_name == "CloneArmyEngine"
+
+        # PolymorphismEngine absorbed by ExportEngine (slot 11)
+        e = get_parent_engine("PolymorphismEngine")
+        assert e is not None
+        assert e.engine_name == "ExportEngine"
+
+        # _PyReplayEngine absorbed by ConsolidationEngine (slot 1)
+        e = get_parent_engine("_PyReplayEngine")
+        assert e is not None
+        assert e.engine_name == "ConsolidationEngine"
+
+    def test_pre_existing_absorbed_still_present(self):
+        """Ensure the original 33 absorbed sub-engines are still mapped."""
+        for name in (
+            "CycleEngine",
+            "WuXingEngine",
+            "ReconsolidationEngine",
+            "HeartEngine",
+            "QuantumEngine",
+            "ForecastEngine",
+            "CapabilityDiscoveryEngine",
+            "GrimoireEngine",
+            "GraphEngine",
+            "GraphEngineNeural",
+            "GraphEngineCached",
+            "CodeGenomeEngine",
+            "PromptEngine",
+            "ResonanceTransferEngine",
+            "JuliaResonanceEngine",
+            "HRREngine",
+            "QuantizedHRREngine",
+            "HRRCompositionEngine",
+            "DGAEngine",
+            "ContinuousEvolutionEngine",
+            "MetaLearningEngine",
+            "ApotheosisEngine",
+            "EnhancedPatternEngine",
+            "SubClusteringEngine",
+            "NarrativeEngineStory",
+            "ArtOfWarEngine",
+            "MaturityEngine",
+            "ForesightEngine",
+            "PredictiveMaintenanceEngine",
+            "GalacticTelepathyEngine",
+            "LocalReasoningEngine",
+            "CPUInferenceEngine",
+            "NeuroScoreEngine",
+        ):
+            assert get_parent_engine(name) is not None, f"{name} has no parent engine"
+
+
+class TestAffiliatedEngines:
+    """Verify the 5 affiliated engines are correctly mapped."""
+
+    def test_total_affiliated_count(self):
+        total = sum(len(e.affiliated_engines) for e in ENGINE_REGISTRY)
+        assert total == 5
+
+    def test_all_affiliated_names_unique(self):
+        all_aff = []
+        for e in ENGINE_REGISTRY:
+            all_aff.extend(e.affiliated_engines)
+        assert len(all_aff) == len(set(all_aff))
+
+    def test_known_affiliated_engines(self):
+        cases = [
+            ("MetaplasticityEngine", "ForgettingEngine"),
+            ("HologramEngine", "EmbeddingEngine"),
+            ("PersonaEngine", "CloneArmyEngine"),
+            ("InteractionEngine", "SwarmEngine"),
+            ("SymbolicEngine", "SerendipityEngine"),
+        ]
+        for sub_name, parent_name in cases:
+            e = get_parent_engine(sub_name)
+            assert e is not None, f"{sub_name} has no parent"
+            assert e.engine_name == parent_name, (
+                f"{sub_name} parent is {e.engine_name}, expected {parent_name}"
+            )
+
+    def test_affiliated_not_in_absorbs(self):
+        """Affiliated engines should not also appear in absorbs."""
+        all_absorbed = set()
+        for e in ENGINE_REGISTRY:
+            all_absorbed.update(e.absorbs)
+        for e in ENGINE_REGISTRY:
+            for aff in e.affiliated_engines:
+                assert aff not in all_absorbed, (
+                    f"{aff} is in both absorbs and affiliated_engines"
+                )
+
+
+class TestParentEngineLookup:
+    def test_lookup_unknown_sub_engine(self):
+        assert get_parent_engine("NonexistentEngine") is None
+
+    def test_lookup_returns_engine_entry(self):
+        e = get_parent_engine("QuantumEngine")
+        assert isinstance(e, EngineEntry)
+
+    def test_canonical_engines_have_no_parent(self):
+        """Canonical engines should not appear as sub-engines of other slots."""
+        canonical_names = {e.engine_name for e in ENGINE_REGISTRY}
+        all_sub = set()
+        for e in ENGINE_REGISTRY:
+            all_sub.update(e.absorbs)
+            all_sub.update(e.affiliated_engines)
+        overlap = canonical_names & all_sub
+        assert not overlap, f"Canonical engines also listed as sub-engines: {overlap}"
+
+
+class TestEngineStatsWithSubEngines:
+    def test_stats_include_sub_engine_counts(self):
+        stats = get_engine_stats()
+        assert stats["total_engines"] == 28
+        assert stats["total_absorbed_sub_engines"] == 39
+        assert stats["total_affiliated_engines"] == 5
+        assert stats["total_all_engines"] == 72

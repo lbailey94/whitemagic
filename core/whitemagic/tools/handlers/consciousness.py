@@ -105,7 +105,7 @@ def handle_consciousness_reflect(**kwargs: Any) -> dict[str, Any]:
                     galaxy="citta",
                 )
             except Exception:
-                pass
+                logger.debug("Ignored Exception in consciousness.py:107")
             return {
                 "status": "success",
                 "reflection": {

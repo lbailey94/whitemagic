@@ -27,6 +27,9 @@ from textual.widgets import (  # type: ignore[import-not-found]
 
 from whitemagic import __version__
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from whitemagic.core.memory.unified import get_unified_memory
 
@@ -133,7 +136,7 @@ class TelemetryPanel(Static):
                 for zone, count in data.get("zone_counts", {}).items():
                     lines.append(f"  {zone}: {count}")
         except Exception:
-            pass
+            logger.debug("Ignored Exception in tui.py:138")
 
         self.update("\n".join(lines))
 
@@ -214,7 +217,7 @@ class DreamPanel(Static):
                             f"  - [{a.get('type', '?')}] {str(a.get('title', ''))[:50]}"
                         )
         except Exception:
-            pass
+            logger.debug("Ignored Exception in tui.py:219")
 
         self.update("\n".join(lines) if lines else "[dim]Dream cycle not available[/]")
 
@@ -349,7 +352,7 @@ class CognitiveCockpit(App):
                 w = self.query_one(f"#{widget_id}")
                 w.remove()
             except Exception:
-                pass
+                logger.debug("Ignored Exception in tui.py:354")
 
         if mode == "galaxy":
             galaxy = GalaxyMap(id="galaxy_view")
@@ -382,19 +385,19 @@ class CognitiveCockpit(App):
                 panel = self.query_one("#telemetry_view", TelemetryPanel)
                 panel.render_telemetry()
             except Exception:
-                pass
+                logger.debug("Ignored Exception in tui.py:387")
         elif mode == "tools":
             try:
                 panel = self.query_one("#tools_view", ToolsPanel)
                 panel.render_tools()
             except Exception:
-                pass
+                logger.debug("Ignored Exception in tui.py:393")
         elif mode == "dream":
             try:
                 panel = self.query_one("#dream_view", DreamPanel)
                 panel.render_dream()
             except Exception:
-                pass
+                logger.debug("Ignored Exception in tui.py:399")
 
     def _refresh_galaxy(self) -> None:
         """Refresh galaxy mode data."""
@@ -417,7 +420,7 @@ class CognitiveCockpit(App):
             try:
                 self.query_one(GalaxyMap).update_map(raw_results)
             except Exception:
-                pass
+                logger.debug("Ignored Exception in tui.py:422")
 
             try:
                 table = self.query_one(DataTable)
@@ -431,7 +434,7 @@ class CognitiveCockpit(App):
                     w = f"{m.get('w', 0):.2f}"
                     table.add_row(mid, title, x, y, w)
             except Exception:
-                pass
+                logger.debug("Ignored Exception in tui.py:436")
 
             self.notify(f"Synchronized {len(raw_results)} stars")
         except Exception as e:

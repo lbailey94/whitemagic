@@ -361,7 +361,7 @@ class QuantumIChing:
                             probabilities[pair_a] *= max(0.01, abs(interference_val))
                             probabilities[pair_b] *= max(0.01, abs(interference_val))
             except Exception:
-                pass  # Interference is optional enhancement
+                logger.debug("Ignored Exception in quantum_iching.py:363")
 
         # Renormalize
         total = sum(probabilities.values())
@@ -380,7 +380,7 @@ class QuantumIChing:
                 selected = result["index"] + 1  # 0-indexed → 1-indexed
                 return selected if selected in self.db.hexagrams else 1
         except Exception:
-            pass  # Fall through to numpy/weighted-random
+            logger.debug("Ignored Exception in quantum_iching.py:382")
 
         # Fallback: existing numpy/weighted-random collapse
         if NUMPY_AVAILABLE:

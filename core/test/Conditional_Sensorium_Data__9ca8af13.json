@@ -1,0 +1,11 @@
+{
+  "cascadeId": "9ca8af13-7387-4482-88b5-e0a7ca81948f",
+  "title": "Conditional Sensorium Data",
+  "stepCount": 346,
+  "numTotalSteps": 346,
+  "transcriptLength": 55860,
+  "createdTime": "2026-07-13T15:25:31.678127877Z",
+  "lastModifiedTime": "2026-07-13T19:23:19.157172054Z",
+  "status": "CASCADE_RUN_STATUS_RUNNING",
+  "userInputCount": 12
+}

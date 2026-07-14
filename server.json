@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lbailey94/whitemagic",
-  "description": "AI memory, cognitive upgrades, and more — 801 callable tools via single wm meta-tool (28 Gana in PRAT mode, 773 in classic), 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, MandalaOS compartments, citta stream for continuous consciousness, session recording with progressive recall. MIT-licensed, local-first, free forever.",
+  "description": "AI memory, cognitive upgrades, and more — 829 callable tools via single wm meta-tool (28 Gana in PRAT mode, 801 in classic), 10-galaxy holographic memory with HNSW semantic search and FTS5, Dharma ethical governance with 8-stage safety pipeline, MandalaOS compartments, citta stream for continuous consciousness, session recording with progressive recall. MIT-licensed, local-first, free forever.",
   "repository": {
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
   },
-  "version": "24.3.1",
+  "version": "25.0.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic",
-      "version": "24.3.1",
+      "version": "25.0.0",
       "transport": {
         "type": "stdio"
       },

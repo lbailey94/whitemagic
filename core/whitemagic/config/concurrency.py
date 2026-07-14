@@ -8,6 +8,9 @@ import os
 from typing import Any
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def get_safe_cpu_count() -> int:
     """
     Get the safe cpu count.
@@ -63,7 +66,7 @@ def get_max_workers() -> Any:
         try:
             return int(env_workers)
         except ValueError:
-            pass
+            logger.debug("Ignored ValueError in concurrency.py:68")
 
     # Safe default based on CPU count
     cpu_count = get_safe_cpu_count()

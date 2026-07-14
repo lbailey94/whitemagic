@@ -261,7 +261,12 @@ _SECRET_PATTERNS = [
     ("api_key", re.compile(r"(?:api[_-]?key|apikey)\s*[=:]\s*['\"]([A-Za-z0-9]{20,})['\"]", re.I)),
     ("password", re.compile(r"password\s*[=:]\s*['\"]([^'\"]{8,})['\"]", re.I)),
     ("token", re.compile(r"(?:token|secret)\s*[=:]\s*['\"]([A-Za-z0-9]{20,})['\"]", re.I)),
-    ("private_key", re.compile(r"-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----")),
+    ("private_key", re.compile(r"-----BEGIN\s+(?:RSA\s+|EC\s+)?PRIVATE\s+KEY-----")),
+    ("stripe_key", re.compile(r"sk_live_[A-Za-z0-9]{24}")),
+    ("twilio_key", re.compile(r"SK[0-9a-fA-F]{32}")),
+    ("sendgrid_key", re.compile(r"SG\.[A-Za-z0-9_\-]{22}\.[A-Za-z0-9_\-]{43}")),
+    ("bearer_token", re.compile(r"Bearer [A-Za-z0-9_\-\.]{20,}")),
+    ("cloudflare_key", re.compile(r"v1\.0-[A-Za-z0-9_\-]{40,}")),
 ]
 
 

@@ -18,7 +18,10 @@ from pathlib import Path
 from typing import Any
 
 from whitemagic.config import paths as paths_mod
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 class GoalStatus(Enum):
     """Lifecycle states for a goal."""
@@ -116,7 +119,7 @@ class GoalGraph:
                     goal = Goal.from_dict(goal_data)
                     self._goals[goal.id] = goal
             except (json.JSONDecodeError, OSError, KeyError):
-                pass
+                logger.debug("Ignored OSError, KeyError in goal_graph.py:121")
 
     def _save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)

@@ -305,7 +305,7 @@ class TransactionFirewall:
                             },
                         )
                     except Exception:
-                        pass
+                        logger.debug("Ignored Exception in transaction_firewall.py:307")
                     return v
                 if dharma_result is None:
                     # Dharma unavailable — fail-closed or permissive
@@ -385,7 +385,7 @@ class TransactionFirewall:
             # Unknown action — use score
             return decision.score >= threshold
         except ImportError:
-            pass
+            logger.debug("Ignored ImportError in transaction_firewall.py:387")
         except Exception as e:
             logger.debug("DharmaRulesEngine check failed: %s", e)
 

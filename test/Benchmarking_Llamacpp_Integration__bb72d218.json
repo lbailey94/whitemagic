@@ -1,0 +1,11 @@
+{
+  "cascadeId": "bb72d218-0740-49c5-97e6-e602bbedf7a6",
+  "title": "Benchmarking Llama.cpp Integration",
+  "stepCount": 683,
+  "numTotalSteps": 683,
+  "transcriptLength": 87324,
+  "createdTime": "2026-07-08T20:25:03.736514084Z",
+  "lastModifiedTime": "2026-07-09T03:13:25.080239320Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 7
+}

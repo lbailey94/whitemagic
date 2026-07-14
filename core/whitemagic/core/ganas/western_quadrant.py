@@ -10,6 +10,9 @@ from typing import Any
 from .base import BaseGana, GanaCall, LunarMansion
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class StraddlingLegsGana(BaseGana):
     """Straddling Legs (奎 Kui) - Balance.
 
@@ -49,7 +52,7 @@ Balance is active, not passive.
                 "status": "balanced",
             }
         except ImportError:
-            pass
+            logger.debug("Ignored ImportError in western_quadrant.py:54")
 
         return {
             "mansion": self.mansion.name,
@@ -109,7 +112,7 @@ Gratitude multiplies abundance.
             return result
 
         except ImportError:
-            pass
+            logger.debug("Ignored ImportError in western_quadrant.py:114")
 
         return {
             "mansion": self.mansion.name,
@@ -160,7 +163,7 @@ Digestion turns matter into energy.
                 "status": "nourishing",
             }
         except ImportError:
-            pass
+            logger.debug("Ignored ImportError in western_quadrant.py:165")
 
         return {
             "mansion": self.mansion.name,
@@ -427,7 +430,7 @@ Cast your net wide, catch what matters.
                         stats = await loop.run_in_executor(None, api.get_stats)
                         captured["global_stats"] = stats
                 except ImportError:
-                    pass
+                    logger.debug("Ignored ImportError in western_quadrant.py:432")
 
         return captured
 
@@ -507,7 +510,7 @@ Words have power when precise.
                         "status": "precise",
                     }
             except ImportError:
-                pass
+                logger.debug("Ignored ImportError in western_quadrant.py:512")
 
         from whitemagic.core.governor import validate_command
 

@@ -1012,9 +1012,9 @@ def call_tool(tool_name: str, **kwargs: Any) -> dict[str, Any]:
                                 tag="dispatch_sync",
                             )
                     except Exception:
-                        pass  # Scratchpad sync is best-effort
+                        logger.debug("Ignored Exception in unified_api.py:1014")
             except Exception:
-                pass  # Working memory attendance is best-effort
+                logger.debug("Ignored Exception in unified_api.py:1016")
 
         return _finish(out)
 

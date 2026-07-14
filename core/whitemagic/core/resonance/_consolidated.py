@@ -1147,7 +1147,7 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
                 # Ensure coroutine is closed to prevent 'never awaited' warnings
                 coro.close()
         except Exception:
-            pass  # Broker forwarding is best-effort
+            logger.debug("Ignored Exception in _consolidated.py:1149")
 
     bus.listen_all(_forward_to_broker)
 

@@ -1,4 +1,4 @@
-# Polyglot Build Status — WhiteMagic v24.3.1
+# Polyglot Build Status — WhiteMagic v25.0.0
 
 **Last verified**: 2026-07-10  
 **Method**: Direct compilation + JSON stdio bridge wiring + `wm polyglot` CLI

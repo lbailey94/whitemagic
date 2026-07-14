@@ -9,6 +9,9 @@ from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, TypeVar
 
+import logging
+logger = logging.getLogger(__name__)
+
 T = TypeVar("T")
 
 
@@ -146,7 +149,7 @@ class AsyncContext:
                 try:
                     await task
                 except asyncio.CancelledError:
-                    pass
+                    logger.debug("Ignored Exception in async_layer.py:151")
 
     def add_task(self, coro: Coroutine) -> asyncio.Task:
         """Add task to be managed by this context."""

@@ -9,6 +9,9 @@ from openai import AsyncOpenAI, OpenAIError
 from .base import EmbeddingProvider
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class OpenAIEmbeddings(EmbeddingProvider):
     """OpenAI embeddings provider using text-embedding models."""
 
@@ -73,7 +76,7 @@ class OpenAIEmbeddings(EmbeddingProvider):
                     f"openai_embed:{self.model}", token_count
                 )
             except (ImportError, AttributeError, RuntimeError):
-                pass
+                logger.debug("Ignored ImportError, AttributeError, RuntimeError in openai_provider.py:78")
             return response.data[0].embedding
         except OpenAIError as e:
             raise RuntimeError(f"OpenAI embedding failed: {str(e)}") from e
@@ -131,7 +134,7 @@ class OpenAIEmbeddings(EmbeddingProvider):
                     f"openai_embed_batch:{self.model}", token_count
                 )
             except (ImportError, AttributeError, RuntimeError):
-                pass
+                logger.debug("Ignored ImportError, AttributeError, RuntimeError in openai_provider.py:136")
             return [item.embedding for item in response.data]
         except OpenAIError as e:
             raise RuntimeError(f"OpenAI batch embedding failed: {str(e)}") from e
