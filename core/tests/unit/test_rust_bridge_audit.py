@@ -2,7 +2,7 @@
 """Regression tests for Rust bridge type mismatch fixes (3A)."""
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class TestPolyglotAcceleratorRustBridge(unittest.TestCase):
@@ -115,10 +115,10 @@ class TestRustSearchTypeAnnotations(unittest.TestCase):
 
     def test_search_build_index_return_type(self):
         """Test that search_build_index is annotated as tuple[int, int] | None."""
-        from whitemagic.optimization.rust_search import search_build_index
-
         # Check the return annotation
         import typing
+
+        from whitemagic.optimization.rust_search import search_build_index
 
         hints = typing.get_type_hints(search_build_index)
         # The return type should not be str
@@ -132,8 +132,9 @@ class TestRustAcceleratorsTypeAnnotations(unittest.TestCase):
 
     def test_search_build_index_return_type(self):
         """Test that search_build_index is annotated as tuple[int, int] | None."""
-        from whitemagic.optimization.rust_accelerators import search_build_index
         import typing
+
+        from whitemagic.optimization.rust_accelerators import search_build_index
 
         hints = typing.get_type_hints(search_build_index)
         return_hint = str(hints.get("return", ""))

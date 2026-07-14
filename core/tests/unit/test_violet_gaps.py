@@ -12,8 +12,6 @@ Covers:
 import os
 import tempfile
 
-import pytest
-
 # Set WM_STATE_ROOT to temp dir to avoid loading production DB
 _tmp = tempfile.mkdtemp(prefix="wm_test_violet_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
@@ -222,7 +220,7 @@ class TestEngagementTokenMiddleware:
                 called.append(True)
                 return {"status": "success"}
 
-            result = mw_engagement_token(ctx, next_fn)
+            mw_engagement_token(ctx, next_fn)
             assert called == [True]
         finally:
             engine.set_profile(original_profile)
@@ -489,7 +487,7 @@ class TestModelSigningEnforcement:
                 called.append(True)
                 return {"status": "success"}
 
-            result = mw_model_signing(ctx, next_fn)
+            mw_model_signing(ctx, next_fn)
             assert called == [True]
         finally:
             engine.set_profile(original_profile)
@@ -512,7 +510,7 @@ class TestModelSigningEnforcement:
                 called.append(True)
                 return {"status": "success"}
 
-            result = mw_model_signing(ctx, next_fn)
+            mw_model_signing(ctx, next_fn)
             assert called == [True]
         finally:
             engine.set_profile(original_profile)
@@ -569,7 +567,7 @@ class TestModelSigningEnforcement:
                 called.append(True)
                 return {"status": "success"}
 
-            result = mw_model_signing(ctx, next_fn)
+            mw_model_signing(ctx, next_fn)
             assert called == [True]
         finally:
             engine.set_profile(original_profile)

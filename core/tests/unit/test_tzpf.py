@@ -12,7 +12,6 @@ from whitemagic.forecasting.tzpf import (
     temporal_acceleration_ratio,
 )
 
-
 SAMPLE_CLAIMS = [
     {
         "claim": "AI governance framework — cryptographic audit trail",

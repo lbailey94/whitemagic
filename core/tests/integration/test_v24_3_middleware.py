@@ -10,21 +10,15 @@ inserted, verifying that:
 """
 from __future__ import annotations
 
-import os
-import time
-
 import pytest
 
+from whitemagic.security.transaction_firewall import (
+    TransactionPolicy,
+)
 from whitemagic.tools.middleware import (
     DispatchContext,
     DispatchPipeline,
     mw_transaction_firewall,
-)
-from whitemagic.security.transaction_firewall import (
-    ECONOMIC_TOOLS,
-    TransactionPolicy,
-    TransactionRequest,
-    get_transaction_firewall,
 )
 
 
@@ -33,6 +27,7 @@ def fresh_firewall(tmp_path, monkeypatch):
     """Reset firewall singleton with temp state."""
     monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
     import importlib
+
     import whitemagic.config.paths as paths_mod
     importlib.reload(paths_mod)
     import whitemagic.security.transaction_firewall as fw_mod

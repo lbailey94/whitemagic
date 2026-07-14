@@ -11,8 +11,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_sec_enh2_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -247,8 +245,8 @@ class TestCapabilityMatcher:
 
     def test_match_solidity_bounty(self):
         from whitemagic.tools.security.capability_matcher import (
-            CapabilityMatcher,
             BountyRequirement,
+            CapabilityMatcher,
         )
 
         matcher = CapabilityMatcher()
@@ -267,8 +265,8 @@ class TestCapabilityMatcher:
 
     def test_match_with_gap(self):
         from whitemagic.tools.security.capability_matcher import (
-            CapabilityMatcher,
             BountyRequirement,
+            CapabilityMatcher,
         )
 
         matcher = CapabilityMatcher()
@@ -285,7 +283,6 @@ class TestCapabilityMatcher:
     def test_match_no_requirements(self):
         from whitemagic.tools.security.capability_matcher import (
             CapabilityMatcher,
-            BountyRequirement,
         )
 
         matcher = CapabilityMatcher()
@@ -296,8 +293,8 @@ class TestCapabilityMatcher:
 
     def test_match_reentrancy_specific(self):
         from whitemagic.tools.security.capability_matcher import (
-            CapabilityMatcher,
             BountyRequirement,
+            CapabilityMatcher,
         )
 
         matcher = CapabilityMatcher()
@@ -309,8 +306,8 @@ class TestCapabilityMatcher:
 
     def test_match_defi_bounty(self):
         from whitemagic.tools.security.capability_matcher import (
-            CapabilityMatcher,
             BountyRequirement,
+            CapabilityMatcher,
         )
 
         matcher = CapabilityMatcher()
@@ -336,8 +333,8 @@ class TestCapabilityMatcher:
 
     def test_match_web_bounty(self):
         from whitemagic.tools.security.capability_matcher import (
-            CapabilityMatcher,
             BountyRequirement,
+            CapabilityMatcher,
         )
 
         matcher = CapabilityMatcher()
@@ -354,8 +351,8 @@ class TestCapabilityMatcher:
 
     def test_match_low_score_not_recommended(self):
         from whitemagic.tools.security.capability_matcher import (
-            CapabilityMatcher,
             BountyRequirement,
+            CapabilityMatcher,
         )
 
         matcher = CapabilityMatcher()
@@ -372,6 +369,8 @@ class TestCapabilityMatcher:
     def test_singleton(self):
         from whitemagic.tools.security.capability_matcher import (
             get_capability_matcher,
+        )
+        from whitemagic.tools.security.capability_matcher import (
             get_capability_matcher as gcm2,
         )
 

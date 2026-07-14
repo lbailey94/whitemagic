@@ -8,10 +8,10 @@ Benchmarks performance across:
 - FFI overhead
 """
 
-import time
 import statistics
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass

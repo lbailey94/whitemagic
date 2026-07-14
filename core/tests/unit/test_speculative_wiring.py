@@ -6,12 +6,11 @@ from unittest.mock import MagicMock, patch
 
 from whitemagic.inference.speculative_wiring import (
     _bitmamba_draft_handler,
-    _llamacpp_verify_handler,
     _bitnetcpp_verify_handler,
-    wire_speculative_decoder,
+    _llamacpp_verify_handler,
     is_speculative_ready,
+    wire_speculative_decoder,
 )
-from whitemagic.inference.speculative_decoder import get_speculative_decoder
 
 
 class TestBitmambaDraftHandler:

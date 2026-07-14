@@ -1,7 +1,7 @@
 """Tests for whitemagic.config.paths — WM_STATE_ROOT fallback chain, path resolution."""
 
-import os
 import importlib
+import os
 
 import pytest
 
@@ -81,7 +81,7 @@ def test_ensure_paths_creates_dirs(tmp_path):
 
 def test_scripts_dir_is_pathlib():
     """SCRIPTS_DIR should be a Path object under PROJECT_ROOT."""
-    from whitemagic.config.paths import SCRIPTS_DIR, PROJECT_ROOT
+    from whitemagic.config.paths import PROJECT_ROOT, SCRIPTS_DIR
 
     assert SCRIPTS_DIR == PROJECT_ROOT / "scripts"
 
@@ -94,6 +94,7 @@ def test_no_repo_local_fallback(tmp_path, monkeypatch):
     Even if that file exists, the resolved root must not be PROJECT_ROOT.
     """
     import importlib
+
     import whitemagic.config.paths as paths_mod
 
     project_root = paths_mod.PROJECT_ROOT
@@ -128,6 +129,7 @@ def test_default_root_is_home_dotwhitemagic(monkeypatch):
     """When no env vars are set, WM_ROOT should default to ~/.whitemagic, not repo-relative."""
     import importlib
     from pathlib import Path
+
     import whitemagic.config.paths as paths_mod
 
     monkeypatch.delenv("WM_STATE_ROOT", raising=False)

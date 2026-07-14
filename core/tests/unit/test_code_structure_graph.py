@@ -9,7 +9,6 @@ Tests cover:
 - Export/import JSON
 - Singleton accessor
 """
-import ast
 import json
 import os
 import tempfile
@@ -27,7 +26,6 @@ from whitemagic.core.intelligence.code_structure_graph import (
     _make_node_id,
     get_code_structure_graph,
 )
-
 
 # ── Fixtures ────────────────────────────────────────────────────
 
@@ -379,7 +377,7 @@ class TestBuildAndPersistence:
         assert result["parser"] == "python-ast-regex"
 
     def test_build_skips_node_modules(self, graph, sample_project):
-        result = graph.build(sample_project, incremental=False)
+        graph.build(sample_project, incremental=False)
         # node_modules/skip.js should be skipped
         node_files = {n.file_path for n in graph._nodes.values()}
         assert not any("node_modules" in f for f in node_files)
@@ -425,7 +423,7 @@ class TestBuildAndPersistence:
         assert stats["project_root"] != ""
 
     def test_db_schema_created(self, tmp_db):
-        graph = CodeStructureGraph(db_path=tmp_db)
+        CodeStructureGraph(db_path=tmp_db)
         import sqlite3
         with sqlite3.connect(tmp_db) as conn:
             tables = {r[0] for r in conn.execute(
@@ -668,7 +666,7 @@ class TestCodeNudgeMiddleware:
         import os
         os.environ["WM_CODE_NUDGE"] = "0"
         try:
-            from whitemagic.tools.middleware import mw_code_nudge, DispatchContext
+            from whitemagic.tools.middleware import DispatchContext, mw_code_nudge
 
             called = [False]
             def next_fn(ctx):
@@ -687,7 +685,7 @@ class TestCodeNudgeMiddleware:
         import os
         os.environ.setdefault("WM_CODE_NUDGE", "1")
         try:
-            from whitemagic.tools.middleware import mw_code_nudge, DispatchContext
+            from whitemagic.tools.middleware import DispatchContext, mw_code_nudge
 
             called = [False]
             def next_fn(ctx):
@@ -704,14 +702,18 @@ class TestCodeNudgeMiddleware:
     def test_nudge_adds_suggestion_for_stale_graph(self):
         """Test that nudge adds a suggestion when code graph is stale."""
         import os
+
         # Reset singleton to ensure stale graph
         import whitemagic.core.intelligence.code_structure_graph as mod
         mod._graph = None
         os.environ["WM_CODE_GRAPH_DB"] = tempfile.mktemp(suffix=".db")
         os.environ["WM_CODE_NUDGE"] = "1"
         try:
-            from whitemagic.tools.middleware import mw_code_nudge, DispatchContext, _last_nudge_time
             import whitemagic.tools.middleware as mw_mod
+            from whitemagic.tools.middleware import (
+                DispatchContext,
+                mw_code_nudge,
+            )
             mw_mod._last_nudge_time = 0.0  # Reset cooldown
 
             def next_fn(ctx):
@@ -758,8 +760,9 @@ class TestContextEnricherUpgrade:
         """Test that ContextEnricher uses code graph when available."""
         import os
         import tempfile
-        from whitemagic.tools.strata.context import ContextEnricher
+
         import whitemagic.core.intelligence.code_structure_graph as mod
+        from whitemagic.tools.strata.context import ContextEnricher
 
         # Create a Python file
         py_file = tmp_path / "test.py"
@@ -777,7 +780,9 @@ class TestContextEnricherUpgrade:
         os.environ["WM_CODE_GRAPH_DB"] = db_path
         mod._graph = None
         try:
-            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+            from whitemagic.core.intelligence.code_structure_graph import (
+                get_code_structure_graph,
+            )
             g = get_code_structure_graph()
             g.build(tmp_path, incremental=False)
 
@@ -819,6 +824,7 @@ class TestDreamCycleCodeGraph:
         """Test that dream code_graph phase analyzes a built graph."""
         import os
         import tempfile
+
         import whitemagic.core.intelligence.code_structure_graph as mod
 
         # Create a project with some code
@@ -839,7 +845,9 @@ class TestDreamCycleCodeGraph:
         os.environ["WM_CODE_GRAPH_DB"] = db_path
         mod._graph = None
         try:
-            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+            from whitemagic.core.intelligence.code_structure_graph import (
+                get_code_structure_graph,
+            )
             g = get_code_structure_graph()
             g.build(tmp_path, incremental=False)
 
@@ -1037,7 +1045,8 @@ class TestAffectedBy:
     def _setup_graph(self, project_path):
         import whitemagic.core.intelligence.code_structure_graph as mod
         mod._graph = None
-        import tempfile, os
+        import os
+        import tempfile
         db_path = tempfile.mktemp(suffix=".db")
         os.environ["WM_CODE_GRAPH_DB"] = db_path
         g = mod.get_code_structure_graph()
@@ -1045,8 +1054,9 @@ class TestAffectedBy:
         return g, db_path
 
     def _teardown_graph(self, db_path):
-        import whitemagic.core.intelligence.code_structure_graph as mod
         import os
+
+        import whitemagic.core.intelligence.code_structure_graph as mod
         mod._graph = None
         os.environ.pop("WM_CODE_GRAPH_DB", None)
         if os.path.exists(db_path):
@@ -1094,7 +1104,8 @@ class TestCorrelateMemories:
     def _setup_graph(self, project_path):
         import whitemagic.core.intelligence.code_structure_graph as mod
         mod._graph = None
-        import tempfile, os
+        import os
+        import tempfile
         db_path = tempfile.mktemp(suffix=".db")
         os.environ["WM_CODE_GRAPH_DB"] = db_path
         g = mod.get_code_structure_graph()
@@ -1102,8 +1113,9 @@ class TestCorrelateMemories:
         return g, db_path
 
     def _teardown_graph(self, db_path):
-        import whitemagic.core.intelligence.code_structure_graph as mod
         import os
+
+        import whitemagic.core.intelligence.code_structure_graph as mod
         mod._graph = None
         os.environ.pop("WM_CODE_GRAPH_DB", None)
         if os.path.exists(db_path):
@@ -1177,7 +1189,8 @@ class TestGraphAnomalyChecker:
         """Build code graph and set as singleton for checker access."""
         import whitemagic.core.intelligence.code_structure_graph as mod
         mod._graph = None
-        import tempfile, os
+        import os
+        import tempfile
         db_path = tempfile.mktemp(suffix=".db")
         os.environ["WM_CODE_GRAPH_DB"] = db_path
         g = mod.get_code_structure_graph()
@@ -1185,8 +1198,9 @@ class TestGraphAnomalyChecker:
         return g, db_path
 
     def _teardown_graph(self, db_path):
-        import whitemagic.core.intelligence.code_structure_graph as mod
         import os
+
+        import whitemagic.core.intelligence.code_structure_graph as mod
         mod._graph = None
         os.environ.pop("WM_CODE_GRAPH_DB", None)
         if os.path.exists(db_path):
@@ -1211,7 +1225,9 @@ class TestGraphAnomalyChecker:
         """Test that circular dependency checker runs without errors."""
         g, db_path = self._setup_graph(sample_project)
         try:
-            from whitemagic.tools.strata.checkers.graph_anomaly import check_circular_dependencies
+            from whitemagic.tools.strata.checkers.graph_anomaly import (
+                check_circular_dependencies,
+            )
             from whitemagic.tools.strata.file_index import FileIndex
             from whitemagic.tools.strata.models import Finding
 
@@ -1241,7 +1257,9 @@ class TestGraphAnomalyChecker:
         """Test that bridge module checker runs without errors."""
         g, db_path = self._setup_graph(sample_project)
         try:
-            from whitemagic.tools.strata.checkers.graph_anomaly import check_bridge_modules
+            from whitemagic.tools.strata.checkers.graph_anomaly import (
+                check_bridge_modules,
+            )
             from whitemagic.tools.strata.file_index import FileIndex
             from whitemagic.tools.strata.models import Finding
 
@@ -1276,7 +1294,9 @@ class TestGraphAnomalyChecker:
 class TestDataFlowTaintChecker:
     def test_taint_checker_runs(self, tmp_path):
         """Test that data flow taint checker runs without errors."""
-        from whitemagic.tools.strata.checkers.data_flow_taint import check_data_flow_taint
+        from whitemagic.tools.strata.checkers.data_flow_taint import (
+            check_data_flow_taint,
+        )
         from whitemagic.tools.strata.file_index import FileIndex
         from whitemagic.tools.strata.models import Finding
 
@@ -1294,7 +1314,9 @@ class TestDataFlowTaintChecker:
 
     def test_taint_detects_unsanitized_sql(self, tmp_path):
         """Test that taint checker detects unsanitized SQL injection."""
-        from whitemagic.tools.strata.checkers.data_flow_taint import check_data_flow_taint
+        from whitemagic.tools.strata.checkers.data_flow_taint import (
+            check_data_flow_taint,
+        )
         from whitemagic.tools.strata.file_index import FileIndex
         from whitemagic.tools.strata.models import Finding
 
@@ -1343,8 +1365,10 @@ class TestKGIntegration:
 
     def test_ingest_code_symbols_with_graph(self, sample_project):
         """Test KG ingest with a built code graph."""
+        import os
+        import tempfile
+
         import whitemagic.core.intelligence.code_structure_graph as mod
-        import tempfile, os
         mod._graph = None
         db_path = tempfile.mktemp(suffix=".db")
         os.environ["WM_CODE_GRAPH_DB"] = db_path
@@ -1366,8 +1390,8 @@ class TestKGIntegration:
 class TestNLURouting:
     def test_nlu_routes_code_graph_build(self):
         """Test NLU routing for 'build code graph'."""
+
         from whitemagic.tools.handlers.meta_tool import _ROUTING_PATTERNS
-        import re as re_mod
         for pattern, gana, tool in _ROUTING_PATTERNS:
             if tool == "code.graph":
                 assert pattern.search("build code graph for this project")

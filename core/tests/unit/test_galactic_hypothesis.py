@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from whitemagic.core.evolution.galactic_hypothesis import (
+    ZONE_ORDER,
     HypothesisGalacticMap,
     HypothesisState,
     HypothesisZone,
-    ZONE_ORDER,
 )
 
 

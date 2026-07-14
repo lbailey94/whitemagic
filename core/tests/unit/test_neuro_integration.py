@@ -23,12 +23,12 @@ def test_full_cognitive_cycle():
     novelty = pc.novelty_score(surprise)
     assert 0.0 <= novelty <= 1.0
 
-    from whitemagic.core.memory.neuromodulation import compute, modulate, reset
+    from whitemagic.core.memory.neuromodulation import compute, reset
     reset()
     neuro = compute(novelty=novelty, reward=0.7, stability=0.6, coherence=0.8, focus=0.9, activity_level=0.5)
     assert 0 <= neuro["da"] <= 1.0
 
-    from whitemagic.core.memory.ripple_tagging import tag_ripple, get_tags
+    from whitemagic.core.memory.ripple_tagging import tag_ripple
     ripple_result = tag_ripple(["mem-1", "mem-2", "mem-3"], emotional_weight=1.5)
     assert ripple_result["tagged"] is True
 
@@ -83,10 +83,10 @@ def test_full_cognitive_cycle():
 
 
 def test_neuro_sensorium_reflects_activity():
+    from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
     from whitemagic.core.memory.neuro_hotpath import get_thalamic_gating
     from whitemagic.core.memory.neuromodulation import compute, reset
     from whitemagic.core.memory.ripple_tagging import tag_ripple
-    from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
 
     tg = get_thalamic_gating()
     tg.set_context("introspection")

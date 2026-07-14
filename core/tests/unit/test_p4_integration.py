@@ -12,7 +12,6 @@ import os
 import tempfile
 
 import numpy as np
-import pytest
 
 _tmpdir = tempfile.mkdtemp(prefix="wm_p4_")
 os.environ.setdefault("WM_STATE_ROOT", _tmpdir)
@@ -417,8 +416,8 @@ class TestP4CrossModule:
 
     def test_warp_marketplace_with_inference_tier(self):
         """Publish a warp with an inference tier, then route to that tier."""
-        from whitemagic.mesh.warp_marketplace import get_warp_marketplace
         from whitemagic.mesh.inference_router import get_inference_router
+        from whitemagic.mesh.warp_marketplace import get_warp_marketplace
 
         # Publish warp with local_small tier
         mp = get_warp_marketplace()

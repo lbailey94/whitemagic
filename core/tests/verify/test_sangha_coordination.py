@@ -7,9 +7,11 @@ import pytest
 
 rich = pytest.importorskip("rich")
 
-from whitemagic.gardens.sangha.resources import get_resources
-from rich.console import Console
 import time
+
+from rich.console import Console
+
+from whitemagic.gardens.sangha.resources import get_resources
 
 console = Console()
 

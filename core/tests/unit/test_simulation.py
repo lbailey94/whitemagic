@@ -2,42 +2,11 @@
 
 import pytest
 
-from whitemagic.core.simulation.persona_engine import (
-    CognitiveProfile,
-    Persona,
-    PersonaEngine,
-    get_persona_engine,
-)
-from whitemagic.core.simulation.world_model import (
-    WorldEntity,
-    WorldModel,
-    WorldModelBuilder,
-    get_world_model_builder,
-)
-from whitemagic.core.simulation.interaction_engine import (
-    InteractionEngine,
-    InteractionEvent,
-    InteractionLog,
-    get_interaction_engine,
-)
-from whitemagic.core.simulation.scenario_runner import (
-    ScenarioConfig,
-    ScenarioRunner,
-    TrialResult,
-    get_scenario_runner,
-)
-from whitemagic.core.simulation.trajectory_search import (
-    TrajectoryNode,
-    TrajectoryTreeSearch,
-    get_trajectory_search,
-)
 from whitemagic.core.simulation.calibration_bridge import (
-    Prediction,
     PredictionCalibrationBridge,
     get_calibration_bridge,
 )
 from whitemagic.core.simulation.dream_integration import (
-    ConsolidationReport,
     DreamCycleIntegration,
     get_dream_integration,
 )
@@ -45,6 +14,31 @@ from whitemagic.core.simulation.insight_synthesizer import (
     Insight,
     InsightSynthesizer,
     get_insight_synthesizer,
+)
+from whitemagic.core.simulation.interaction_engine import (
+    InteractionEngine,
+    InteractionEvent,
+    InteractionLog,
+    get_interaction_engine,
+)
+from whitemagic.core.simulation.persona_engine import (
+    CognitiveProfile,
+    PersonaEngine,
+    get_persona_engine,
+)
+from whitemagic.core.simulation.scenario_runner import (
+    ScenarioConfig,
+    ScenarioRunner,
+    get_scenario_runner,
+)
+from whitemagic.core.simulation.trajectory_search import (
+    TrajectoryNode,
+    TrajectoryTreeSearch,
+    get_trajectory_search,
+)
+from whitemagic.core.simulation.world_model import (
+    WorldModelBuilder,
+    get_world_model_builder,
 )
 
 
@@ -87,7 +81,7 @@ class TestPersonaEngine:
     def test_get_and_list(self):
         engine = PersonaEngine()
         p1 = engine.create_persona("a1")
-        p2 = engine.create_persona("a2")
+        engine.create_persona("a2")
         assert engine.get_persona(p1.id) is p1
         assert len(engine.list_personas()) == 2
 
@@ -152,7 +146,7 @@ class TestWorldModelBuilder:
     def test_get_and_list(self):
         builder = WorldModelBuilder()
         w1 = builder.create_world("w1")
-        w2 = builder.create_world("w2")
+        builder.create_world("w2")
         assert builder.get_world(w1.id) is w1
         assert len(builder.list_worlds()) == 2
 
@@ -546,9 +540,11 @@ class TestSimulationHandlers:
         assert result["status"] == "success"
 
     def test_handle_simulation_analyze(self):
-        from whitemagic.tools.handlers.simulation import handle_simulation_analyze
         # First run a scenario
-        from whitemagic.tools.handlers.simulation import handle_simulation_run
+        from whitemagic.tools.handlers.simulation import (
+            handle_simulation_analyze,
+            handle_simulation_run,
+        )
         handle_simulation_run(
             scenario_name="analyze_test",
             num_personas=2,
@@ -560,7 +556,10 @@ class TestSimulationHandlers:
         assert "analysis" in result
 
     def test_handle_simulation_synthesize(self):
-        from whitemagic.tools.handlers.simulation import handle_simulation_run, handle_simulation_synthesize
+        from whitemagic.tools.handlers.simulation import (
+            handle_simulation_run,
+            handle_simulation_synthesize,
+        )
         handle_simulation_run(
             scenario_name="synth_test",
             num_personas=2,

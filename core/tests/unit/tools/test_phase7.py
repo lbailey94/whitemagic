@@ -1,5 +1,4 @@
 """Tests for Phase 7 advanced security capabilities."""
-import pytest
 from pathlib import Path
 
 
@@ -10,7 +9,11 @@ class TestVulnerabilityGraph:
         assert g.status()["nodes"] == 0
 
     def test_add_nodes_and_edges(self):
-        from whitemagic.tools.security.vuln_graph import VulnerabilityGraph, GraphNode, GraphEdge
+        from whitemagic.tools.security.vuln_graph import (
+            GraphEdge,
+            GraphNode,
+            VulnerabilityGraph,
+        )
         g = VulnerabilityGraph()
         g.add_node(GraphNode("v1", "vulnerability", "Reentrancy"))
         g.add_node(GraphNode("e1", "exploit", "Drain funds"))
@@ -19,7 +22,11 @@ class TestVulnerabilityGraph:
         assert g.status()["edges"] == 1
 
     def test_find_exploit_chains(self):
-        from whitemagic.tools.security.vuln_graph import VulnerabilityGraph, GraphNode, GraphEdge
+        from whitemagic.tools.security.vuln_graph import (
+            GraphEdge,
+            GraphNode,
+            VulnerabilityGraph,
+        )
         g = VulnerabilityGraph()
         g.add_node(GraphNode("v1", "vulnerability", "V1"))
         g.add_node(GraphNode("v2", "vulnerability", "V2"))
@@ -31,7 +38,11 @@ class TestVulnerabilityGraph:
         assert chains[0][0] == "v1"
 
     def test_predict_severity(self):
-        from whitemagic.tools.security.vuln_graph import VulnerabilityGraph, GraphNode, GraphEdge
+        from whitemagic.tools.security.vuln_graph import (
+            GraphEdge,
+            GraphNode,
+            VulnerabilityGraph,
+        )
         g = VulnerabilityGraph()
         g.add_node(GraphNode("v1", "vulnerability", "V1"))
         g.add_edge(GraphEdge("v1", "e1", "enables", 0.9))
@@ -73,7 +84,7 @@ class TestSecuritySwarm:
         assert s.status()["registered_agents"] == 0
 
     def test_register_agent(self):
-        from whitemagic.tools.security.multi_agent import SecuritySwarm, AgentRole
+        from whitemagic.tools.security.multi_agent import AgentRole, SecuritySwarm
         s = SecuritySwarm()
         s.register_agent("test-1", AgentRole.SOLIDITY_AUDITOR)
         assert s.status()["registered_agents"] == 1

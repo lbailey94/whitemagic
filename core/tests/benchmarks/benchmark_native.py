@@ -1,6 +1,6 @@
-import time
-import sys
 import os
+import sys
+import time
 
 # Ensure we can import the rust module
 sys.path.append(os.getcwd())

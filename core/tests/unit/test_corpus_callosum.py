@@ -158,7 +158,7 @@ class TestCorpusCallosumBus:
         mock_get_br.return_value = MagicMock()
         mock_br_cls.return_value = MagicMock()
         bus = CorpusCallosumBus()
-        result = bus.debate("Topic E")
+        bus.debate("Topic E")
         # All 3 rounds should call asyncio.run (real reasoner path)
         assert mock_run.call_count == 3
 

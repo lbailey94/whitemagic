@@ -7,8 +7,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ["WM_STATE_ROOT"] = _tmp
 os.environ["WM_SILENT_INIT"] = "1"

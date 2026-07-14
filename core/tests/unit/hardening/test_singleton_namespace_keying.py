@@ -50,7 +50,7 @@ class TestUnifiedMemoryNamespaceKeying:
         from whitemagic.core.memory.unified import get_unified_memory, reset_singleton
         reset_singleton()
         um1 = get_unified_memory("alice")
-        um2 = get_unified_memory("bob")
+        get_unified_memory("bob")
         reset_singleton()
         um1_after = get_unified_memory("alice")
         assert um1 is not um1_after
@@ -102,7 +102,7 @@ class TestEmbeddingEngineNamespaceKeying:
         emb_mod._engine_instances.clear()
         try:
             e1 = emb_mod.EmbeddingEngine()
-            e2 = emb_mod.EmbeddingEngine()
+            emb_mod.EmbeddingEngine()
             # We test the dict-based caching directly
             emb_mod._engine_instances["alice"] = e1
             assert emb_mod._engine_instances["alice"] is e1
@@ -123,6 +123,7 @@ class TestEmbeddingEngineNamespaceKeying:
 
     def test_different_users_have_different_hnsw_paths(self):
         from pathlib import Path
+
         import whitemagic.core.memory.embeddings as emb_mod
         emb_mod._engine_instances.clear()
         try:
@@ -157,9 +158,9 @@ class TestGalaxyAwareBackendNamespaceKeying:
         # The cache key format is "user_id/galaxy_name"
         # Verify by calling _get_galaxy_backend and checking the cache key
         import unittest.mock as mock
-        safe_name = "test_galaxy"
         with mock.patch.object(GalaxyAwareBackend, '_resolve_galaxies_dir') as mock_resolve:
-            import tempfile, pathlib
+            import pathlib
+            import tempfile
             tmpdir = tempfile.mkdtemp()
             mock_resolve.return_value = pathlib.Path(tmpdir)
             with mock.patch('whitemagic.core.memory.backends.galaxy_router.SQLiteBackend'):

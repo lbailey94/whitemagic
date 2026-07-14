@@ -4,10 +4,10 @@ import ast
 from pathlib import Path
 
 from whitemagic.tools.strata.checkers.broken_optional_import import (
-    check_broken_optional_import,
     _try_body_has_import,
     _try_body_is_empty,
     _try_body_only_assignments,
+    check_broken_optional_import,
 )
 from whitemagic.tools.strata.models import Finding
 

@@ -7,7 +7,9 @@ Tests cover:
 """
 
 from __future__ import annotations
+
 import pytest
+
 pytestmark = pytest.mark.skip('Legacy architecture obsolete in V22')
 
 
@@ -259,43 +261,14 @@ class TestPreNormalizedEmbeddings:
     """Test pre-normalization in embedding vector cache."""
 
     def test_pre_normalized_cosine(self):
-        pytest.skip("_batch_cosine_similarity_numpy was refactored — update test to use public API")  # noqa
-
-        # Create pre-normalized vectors
-        rng = np.random.RandomState(42)
-        matrix = rng.randn(100, 384).astype(np.float32)
-        norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-        norms[norms == 0] = 1.0
-        matrix_normed = matrix / norms
-
-        query = rng.randn(384).astype(np.float32)
-
-        # Compare with and without pre_normalized flag
-        scores_normal = _batch_cosine_similarity_numpy(query, matrix)
-        scores_prenorm = _batch_cosine_similarity_numpy(query, matrix_normed, pre_normalized=True)
-
-        # Should be approximately equal
-        np.testing.assert_allclose(scores_normal, scores_prenorm, atol=1e-5)
+        pytest.skip("_batch_cosine_similarity_numpy was refactored — update test to use public API")
 
     def test_pre_normalized_is_faster_path(self):
         """Verify pre_normalized=True skips norm computation."""
-        pytest.skip("_batch_cosine_similarity_numpy was refactored — update test to use public API")  # noqa
-
-        matrix = np.eye(10, dtype=np.float32)
-        query = np.ones(10, dtype=np.float32)
-
-        # Pre-normalized path: should return matrix @ normalized_query directly
-        result = _batch_cosine_similarity_numpy(query, matrix, pre_normalized=True)
-        assert result.shape == (10,)
+        pytest.skip("_batch_cosine_similarity_numpy was refactored — update test to use public API")
 
     def test_zero_vector_handling(self):
-        pytest.skip("_batch_cosine_similarity_numpy was refactored — update test to use public API")  # noqa
-
-        matrix = np.eye(5, dtype=np.float32)
-        query = np.zeros(5, dtype=np.float32)
-
-        result = _batch_cosine_similarity_numpy(query, matrix, pre_normalized=True)
-        assert np.all(result == 0.0)
+        pytest.skip("_batch_cosine_similarity_numpy was refactored — update test to use public API")
 
 
 # -----------------------------------------------------------------------

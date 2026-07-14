@@ -2,19 +2,14 @@
 """Tests for Transaction Firewall (v24.3 §3.1)."""
 from __future__ import annotations
 
-import os
-import tempfile
 import time
 
 import pytest
 
 from whitemagic.security.transaction_firewall import (
     ECONOMIC_TOOLS,
-    TransactionFirewall,
     TransactionPolicy,
     TransactionRequest,
-    TransactionVerdict,
-    get_transaction_firewall,
 )
 
 
@@ -27,6 +22,7 @@ def firewall(tmp_path, monkeypatch):
     mod._firewall = None
     # Re-import paths to pick up new state root
     import importlib
+
     import whitemagic.config.paths as paths_mod
     importlib.reload(paths_mod)
     importlib.reload(mod)
@@ -174,8 +170,6 @@ class TestTransactionFirewallValidation:
             def evaluate_action(self, action_type, context):
                 return 0.3
 
-        import whitemagic.security.transaction_firewall as mod
-        orig_check = firewall._check_dharma
         monkeypatch.setattr(firewall, "_check_dharma", lambda req: False)
 
         req = TransactionRequest(

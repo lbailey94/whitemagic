@@ -192,7 +192,7 @@ class TestGHRRBenchmark(unittest.TestCase):
         unbound_q = hrr.unbind(bound_q, r_vec)
         ghrr_sim = float(np.dot(unbound_q, k))
 
-        print(f"\n  Structural relationship capture:")
+        print("\n  Structural relationship capture:")
         print(f"    Standard dot-product(Q_bound, K): {std_sim:.3f}")
         print(f"    GHRR unbind + dot-product:        {ghrr_sim:.3f}")
 

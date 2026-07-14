@@ -3,12 +3,8 @@
 
 from __future__ import annotations
 
-import json
 import os
 import tempfile
-import time
-
-import pytest
 
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ["WM_STATE_ROOT"] = _tmp

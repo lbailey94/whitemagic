@@ -8,7 +8,7 @@ from whitemagic.core.memory.galaxy_sharing import (
     receive_galaxy_package,
     verify_galaxy_package,
 )
-from whitemagic.core.memory.unified import reset_singleton, get_unified_memory
+from whitemagic.core.memory.unified import get_unified_memory, reset_singleton
 
 
 @pytest.fixture

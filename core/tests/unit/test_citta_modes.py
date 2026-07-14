@@ -3,10 +3,10 @@
 import pytest
 
 from whitemagic.core.consciousness.consciousness_loop import (
+    _MODE_PRESETS,
     CittaMode,
     ConsciousnessLoop,
     LoopConfig,
-    _MODE_PRESETS,
 )
 
 

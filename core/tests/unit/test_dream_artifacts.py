@@ -1,5 +1,6 @@
 """Tests for Dream Artifacts and Consolidator."""
 
+from datetime import UTC
 from pathlib import Path
 from unittest.mock import patch
 
@@ -274,12 +275,12 @@ class TestDreamConsolidator:
         # Patch created_at to be 60 days ago
         for path in tmp_dreams_dir.glob("*.yaml"):
             if art.dream_id in path.name:
-                with open(path, "r", encoding="utf-8") as fp:
+                with open(path, encoding="utf-8") as fp:
                     data = yaml.safe_load(fp)
-                from datetime import datetime, timedelta, timezone
+                from datetime import datetime, timedelta
 
                 data["created_at"] = (
-                    datetime.now(timezone.utc) - timedelta(days=60)
+                    datetime.now(UTC) - timedelta(days=60)
                 ).isoformat()
                 with open(path, "w", encoding="utf-8") as fp:
                     yaml.dump(

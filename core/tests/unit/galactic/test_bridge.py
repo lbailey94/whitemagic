@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pytest
 
-
 # The conftest.py in this directory provides a seeded temp DB via the
 # autouse `use_live_substrate` fixture. No fixture needed here — the
 # conftest handles WM_MEMORY_DB and WM_STATE_ROOT setup automatically.

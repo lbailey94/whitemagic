@@ -10,7 +10,6 @@ import math  # noqa: E402
 
 from whitemagic.core.consciousness.citta_vector import (  # noqa: E402
     COHERENCE_DIMS,
-    DEPTH_LAYERS,
     VECTOR_DIM,
     CittaTrajectory,
     CittaVector,

@@ -1,8 +1,9 @@
 """Integration tests for PSR-001 Memory Core"""
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parents[2]))

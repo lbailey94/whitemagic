@@ -2,8 +2,7 @@
 
 from uuid import uuid4
 
-
-from whitemagic.tools.idempotency import get_record, put_record, IdempotencyRecord
+from whitemagic.tools.idempotency import IdempotencyRecord, get_record, put_record
 
 
 def test_put_and_get_record():

@@ -7,13 +7,11 @@ import unittest
 import numpy as np
 
 from whitemagic.core.memory.qfhrr import (
-    QuantizedHRREngine,
     get_adaptive_qfhrr_engine,
-    get_tier_bits,
     get_galactic_qfhrr_bits,
     get_galactic_qfhrr_engine,
+    get_tier_bits,
     requantize_for_zone,
-    _TIER_BITS_MAP,
 )
 
 
@@ -70,7 +68,7 @@ class TestAdaptiveQFHRR(unittest.TestCase):
         self.assertLess(e_edge.bytes_per_vector, e_local.bytes_per_vector)
         self.assertLess(e_local.bytes_per_vector, e_cloud.bytes_per_vector)
 
-        print(f"\n  Adaptive qFHRR memory per vector (384 dims):")
+        print("\n  Adaptive qFHRR memory per vector (384 dims):")
         print(f"    Edge (4-bit):  {e_edge.bytes_per_vector} bytes")
         print(f"    Local (8-bit): {e_local.bytes_per_vector} bytes")
         print(f"    Cloud (16-bit): {e_cloud.bytes_per_vector} bytes")
@@ -116,7 +114,7 @@ class TestAdaptiveQFHRR(unittest.TestCase):
             gap = np.mean(related_sims) - np.mean(unrelated_sims)
             results[label] = (np.mean(related_sims), np.mean(unrelated_sims), gap)
 
-        print(f"\n  Discrimination by bit-width:")
+        print("\n  Discrimination by bit-width:")
         for label, (rel, unrel, gap) in results.items():
             print(
                 f"    {label:8s}: related={rel:.3f}, unrelated={unrel:.3f}, gap={gap:.3f}"

@@ -1,6 +1,10 @@
 """Tests for Post-Generation Code Validator (Phase 4)."""
 
-from whitemagic.codegenome.validator import CodeValidator, ValidationResult, get_validator
+from whitemagic.codegenome.validator import (
+    CodeValidator,
+    ValidationResult,
+    get_validator,
+)
 
 
 class TestCodeValidator:

@@ -10,6 +10,7 @@ Covers:
 """
 
 import os
+
 from whitemagic.tools.prat_compressor import (
     PratCompressor,
     get_prat_compressor,

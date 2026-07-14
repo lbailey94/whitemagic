@@ -6,8 +6,6 @@ from __future__ import annotations
 import os
 import tempfile
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ["WM_STATE_ROOT"] = _tmp
 os.environ["WM_SILENT_INIT"] = "1"
@@ -120,6 +118,7 @@ class TestDualModelManager:
 
     def test_get_dual_model_manager_returns_none_without_env(self):
         import os
+
         from whitemagic.inference import llama_cpp as _lc
         # Save and clear env
         old_bg = os.environ.pop("WM_LLAMA_BG_MODEL", None)
@@ -137,6 +136,7 @@ class TestDualModelManager:
 
     def test_get_dual_model_manager_with_env(self):
         import os
+
         from whitemagic.inference import llama_cpp as _lc
         old_bg = os.environ.get("WM_LLAMA_BG_MODEL", "")
         old_fg = os.environ.get("WM_LLAMA_FG_MODEL", "")
@@ -177,8 +177,8 @@ class TestRouterUpdate:
         assert router._llama_cpp_handler is None  # not registered yet
 
     def test_router_register_llama_cpp_handler(self):
-        from whitemagic.inference.router import InferenceRouter
         from whitemagic.inference.complexity import InferenceTier
+        from whitemagic.inference.router import InferenceRouter
         router = InferenceRouter()
         def custom_handler(prompt, **kwargs):
             return {"answer": "test", "confidence": 1.0, "metadata": {}}
@@ -186,8 +186,8 @@ class TestRouterUpdate:
         assert router._llama_cpp_handler is not None
 
     def test_router_get_llama_cpp_handler(self):
-        from whitemagic.inference.router import InferenceRouter
         from whitemagic.inference.complexity import InferenceTier
+        from whitemagic.inference.router import InferenceRouter
         router = InferenceRouter()
         def custom_handler(prompt, **kwargs):
             return {"answer": "test", "confidence": 1.0, "metadata": {}}

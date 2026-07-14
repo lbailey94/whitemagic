@@ -87,7 +87,10 @@ class TestReconsolidationEngine:
         assert "b" in ids
 
     def test_max_labile_eviction(self):
-        from whitemagic.core.intelligence.reconsolidation import ReconsolidationEngine, MAX_LABILE
+        from whitemagic.core.intelligence.reconsolidation import (
+            MAX_LABILE,
+            ReconsolidationEngine,
+        )
 
         engine = ReconsolidationEngine()
         for i in range(MAX_LABILE + 5):
@@ -104,7 +107,9 @@ class TestReconsolidationEngine:
         assert "total_marked" in status
 
     def test_singleton(self):
-        from whitemagic.core.intelligence.reconsolidation import get_reconsolidation_engine
+        from whitemagic.core.intelligence.reconsolidation import (
+            get_reconsolidation_engine,
+        )
 
         e1 = get_reconsolidation_engine()
         e2 = get_reconsolidation_engine()

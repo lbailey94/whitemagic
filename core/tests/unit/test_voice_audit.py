@@ -50,7 +50,6 @@ class TestVoiceAuditScanner:
                 self._lock = lock
 
             def record(self, **kwargs):
-                from unittest.mock import MagicMock
                 e = MagicMock()
                 e.to_dict.return_value = kwargs
                 entries.append(e)

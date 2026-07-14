@@ -8,10 +8,10 @@ post-galaxy-migration).
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import pytest
+
 from whitemagic.core.memory.db_manager import safe_connect
 
 

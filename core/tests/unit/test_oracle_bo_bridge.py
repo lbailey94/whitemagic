@@ -8,8 +8,7 @@ Tests verify:
 - Graceful degradation when oracle unavailable
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 from whitemagic.oracle.oracle_bo_bridge import OracleBOBridge, get_oracle_bo_bridge
 
@@ -116,7 +115,9 @@ class TestSimulationOracleIntegration:
     """Test that SimulationOrchestrator integrates with oracle."""
 
     def test_consult_oracle_for_bo_with_query(self):
-        from whitemagic.core.consciousness.simulation_orchestrator import SimulationOrchestrator
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            SimulationOrchestrator,
+        )
         orch = SimulationOrchestrator()
         # This should either return params or None (if oracle fails)
         params = orch._consult_oracle_for_bo("Should I invest in research?")
@@ -126,19 +127,25 @@ class TestSimulationOracleIntegration:
             assert "n_bo_iterations" in params
 
     def test_consult_oracle_for_bo_empty_query(self):
-        from whitemagic.core.consciousness.simulation_orchestrator import SimulationOrchestrator
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            SimulationOrchestrator,
+        )
         orch = SimulationOrchestrator()
         params = orch._consult_oracle_for_bo("")
         assert params is None
 
     def test_simulation_result_has_metadata(self):
-        from whitemagic.core.consciousness.simulation_orchestrator import SimulationResult
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            SimulationResult,
+        )
         result = SimulationResult(mode="external", subtype="sde")
         assert hasattr(result, "metadata")
         assert isinstance(result.metadata, dict)
 
     def test_simulation_result_to_dict_includes_metadata(self):
-        from whitemagic.core.consciousness.simulation_orchestrator import SimulationResult
+        from whitemagic.core.consciousness.simulation_orchestrator import (
+            SimulationResult,
+        )
         result = SimulationResult(mode="external", subtype="sde")
         d = result.to_dict()
         assert "metadata" in d

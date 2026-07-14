@@ -1,18 +1,18 @@
-import time
-import sys
 import os
 import random
 import string
+import sys
+import time
 
 # Ensure we can import the router and whitemagic_rs
 sys.path.append(os.getcwd())
 
 try:
-    from whitemagic.optimization.polyglot_router import (
-        get_router,
-        get_performance_stats,
-    )
     import whitemagic_rs
+    from whitemagic.optimization.polyglot_router import (
+        get_performance_stats,
+        get_router,
+    )
 
     print("✅ whitemagic_rs imported successfully")
 except ImportError as e:

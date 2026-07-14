@@ -8,9 +8,9 @@ Tests the "Parallel Magic" components:
 3. AdaptiveParallelExecutor (Python)
 """
 
-import time
 import asyncio
 import logging
+import time
 
 # Setup paths - rely on installed package
 # ROOT_DIR = Path(__file__).parent.parent.parent
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     # Add timeout to async execution
     try:
         asyncio.run(asyncio.wait_for(test_parallel_executor(), timeout=10.0))
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.error("❌ Parallel execution timed out!")
     except Exception as e:
         logger.error(f"❌ Execution failed: {e}")

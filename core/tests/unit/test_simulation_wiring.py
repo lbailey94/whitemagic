@@ -11,10 +11,9 @@ Verifies that:
 
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -24,7 +23,9 @@ import pytest
 @pytest.fixture(autouse=True)
 def _reset_orchestrator():
     """Reset SimulationOrchestrator singleton between tests."""
-    from whitemagic.core.consciousness.simulation_orchestrator import SimulationOrchestrator
+    from whitemagic.core.consciousness.simulation_orchestrator import (
+        SimulationOrchestrator,
+    )
     SimulationOrchestrator._instance = None
     yield
     SimulationOrchestrator._instance = None

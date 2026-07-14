@@ -297,6 +297,7 @@ class TestHNSWManifold:
 
     def test_distance_euclidean(self):
         import numpy as np
+
         from whitemagic.core.memory.hnsw_index import HNSWIndex
         idx = HNSWIndex(dim=2, manifold="euclidean")
         a = np.array([1.0, 0.0])
@@ -310,7 +311,9 @@ class TestHNSWManifold:
 
 class TestNaturalGradientOptimize:
     def test_returns_valid_result(self):
-        from whitemagic.core.consciousness.possibility_explorer import PossibilitySpaceExplorer
+        from whitemagic.core.consciousness.possibility_explorer import (
+            PossibilitySpaceExplorer,
+        )
         explorer = PossibilitySpaceExplorer()
         result = explorer.natural_gradient_optimize("guna_balance", n_steps=3)
         assert "best_fitness" in result
@@ -319,13 +322,17 @@ class TestNaturalGradientOptimize:
         assert len(result["history"]) == 3
 
     def test_unknown_space_returns_error(self):
-        from whitemagic.core.consciousness.possibility_explorer import PossibilitySpaceExplorer
+        from whitemagic.core.consciousness.possibility_explorer import (
+            PossibilitySpaceExplorer,
+        )
         explorer = PossibilitySpaceExplorer()
         result = explorer.natural_gradient_optimize("nonexistent_space")
         assert "error" in result
 
     def test_optimization_improves_fitness(self):
-        from whitemagic.core.consciousness.possibility_explorer import PossibilitySpaceExplorer
+        from whitemagic.core.consciousness.possibility_explorer import (
+            PossibilitySpaceExplorer,
+        )
         explorer = PossibilitySpaceExplorer()
         result = explorer.natural_gradient_optimize("coherence_optimization", n_steps=10)
         if len(result["history"]) >= 2:
@@ -556,6 +563,7 @@ class TestMCPToolWiring:
 
     def test_topological_berry_phase_handler_dispatch(self):
         import math
+
         from whitemagic.tools.handlers.quantum import handle_topological_berry_phase
         states = [[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0], [0.0, -1.0]]
         params = [0.0, math.pi / 2, math.pi, 3 * math.pi / 2]
@@ -564,7 +572,10 @@ class TestMCPToolWiring:
         assert "phase" in result
 
     def test_topological_encode_decode_handler_roundtrip(self):
-        from whitemagic.tools.handlers.quantum import handle_topological_encode, handle_topological_decode
+        from whitemagic.tools.handlers.quantum import (
+            handle_topological_decode,
+            handle_topological_encode,
+        )
         data = [1.0, -2.0, 3.0, -4.0]
         enc = handle_topological_encode(data=data, n_redundant=3)
         assert enc["status"] == "ok"

@@ -10,7 +10,6 @@ os.environ.setdefault("WM_SILENT_INIT", "1")
 import pytest
 
 from whitemagic.core.evolution.autoswarm import (
-    AutoswarmStats,
     CampaignConfig,
     CampaignResult,
     EvolutionaryAutoswarm,
@@ -100,7 +99,7 @@ class TestEvolutionaryAutoswarm:
             share_results=False,
             dream_integration=False,
         )
-        result = autoswarm.run_campaign(config)
+        autoswarm.run_campaign(config)
 
         # Check that experiments were recorded in the DAG
         from whitemagic.core.evolution.research_dag import get_research_dag

@@ -9,10 +9,9 @@ from whitemagic.gardens.browser.content_intelligence import (
     ContentChunker,
     ContentSummarizer,
     OutlineBuilder,
-    process_content,
     enhanced_to_dict,
+    process_content,
 )
-
 
 # ---------------------------------------------------------------------------
 # OutlineBuilder tests
@@ -145,7 +144,7 @@ class TestContentChunker:
         if len(chunks) > 1:
             # The end of chunk 0 should appear at the start of chunk 1 (overlap)
             # Check that some content from end of chunk 0 is in chunk 1
-            chunk0_end = chunks[0].text[-80:]
+            chunks[0].text[-80:]
             chunk1_start = chunks[1].text[:120]
             # There should be some overlap content
             # (exact match depends on paragraph boundaries)

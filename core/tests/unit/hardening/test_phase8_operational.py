@@ -16,12 +16,10 @@ import os
 import random
 import sqlite3
 import tempfile
-import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # -- WI 1: Deterministic Replay --
 
@@ -29,7 +27,7 @@ class TestReplayRecorder:
     """Tests for ReplayRecorder and ReplayPlayer."""
 
     def test_record_and_replay_basic(self):
-        from whitemagic.ops.replay import ExecutionTrace, ReplayPlayer, ReplayRecorder
+        from whitemagic.ops.replay import ReplayPlayer, ReplayRecorder
 
         recorder = ReplayRecorder()
         with recorder.record("gnosis", query="test", user_id="alice"):
@@ -194,7 +192,9 @@ class TestFaultInjection:
         injector = FaultInjector()
         try:
             injector.inject(FaultType.NATIVE_BRIDGE_CRASH)
-            from whitemagic.core.acceleration.process_supervisor import ProcessSupervisor
+            from whitemagic.core.acceleration.process_supervisor import (
+                ProcessSupervisor,
+            )
 
             sup = ProcessSupervisor(name="test", cmd=["echo"])
             result = sup.call({"method": "ping"})
@@ -556,7 +556,12 @@ class TestPropertyBasedFuzz:
 
     def test_plugin_registry_lifecycle(self):
         """Plugin registry tracks state transitions."""
-        from whitemagic.core.plugin import PluginInfo, PluginState, get_registry, reset_registry
+        from whitemagic.core.plugin import (
+            PluginInfo,
+            PluginState,
+            get_registry,
+            reset_registry,
+        )
 
         reset_registry()
         registry = get_registry()
@@ -651,7 +656,7 @@ class TestPluginBoundary:
 
         clear_extension_points()
         tools_ep = get_extension_point(EP_TOOLS)
-        handlers_ep = get_extension_point(EP_HANDLERS)
+        get_extension_point(EP_HANDLERS)
 
         cb1 = MagicMock()
         cb2 = MagicMock()
@@ -761,7 +766,7 @@ class TestPluginBoundary:
         reset_registry()
 
     def test_plugin_discovery_scans_directory(self, tmp_path):
-        from whitemagic.core.plugin import PluginDiscovery, clear_extension_points
+        from whitemagic.core.plugin import PluginDiscovery
 
         # Create a fake plugin file
         plugin_file = tmp_path / "my_plugin.py"
@@ -802,12 +807,12 @@ def create_plugin():
             EP_RETRIEVAL_STAGES,
             EP_TOOLS,
             clear_extension_points,
-            get_extension_point,
         )
 
         clear_extension_points()
         # Re-import to trigger initialization
         import importlib
+
         import whitemagic.core.plugin.extension_point as ep_mod
         importlib.reload(ep_mod)
 

@@ -8,7 +8,6 @@ os.environ.setdefault("WM_SILENT_INIT", "1")
 
 from whitemagic.core.consciousness.global_workspace import (  # noqa: E402
     GlobalWorkspace,
-    WorkspaceBroadcast,
     get_global_workspace,
 )
 

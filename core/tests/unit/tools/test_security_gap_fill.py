@@ -5,8 +5,6 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 class TestNewPoCTemplates:
     """Test 7 new PoC templates."""
@@ -93,8 +91,10 @@ class TestIntegerOverflowChecker:
     """Test the integer overflow Solidity checker."""
 
     def test_pre_08_without_safemath(self, tmp_path):
-        from whitemagic.tools.strata.checkers.solidity_security import check_solidity_integer_overflow
         from whitemagic.tools.strata.checkers.solidity import FileIndex
+        from whitemagic.tools.strata.checkers.solidity_security import (
+            check_solidity_integer_overflow,
+        )
         sol = tmp_path / "Vuln.sol"
         sol.write_text(
             "pragma solidity ^0.7.0;\n"
@@ -111,8 +111,10 @@ class TestIntegerOverflowChecker:
         assert any(f.category == "sol_integer_overflow_pre08" for f in findings)
 
     def test_pre_08_with_safemath_no_finding(self, tmp_path):
-        from whitemagic.tools.strata.checkers.solidity_security import check_solidity_integer_overflow
         from whitemagic.tools.strata.checkers.solidity import FileIndex
+        from whitemagic.tools.strata.checkers.solidity_security import (
+            check_solidity_integer_overflow,
+        )
         sol = tmp_path / "Safe.sol"
         sol.write_text(
             "pragma solidity ^0.7.0;\n"
@@ -131,8 +133,10 @@ class TestIntegerOverflowChecker:
         assert not any(f.category == "sol_integer_overflow_pre08" for f in findings)
 
     def test_unchecked_block(self, tmp_path):
-        from whitemagic.tools.strata.checkers.solidity_security import check_solidity_integer_overflow
         from whitemagic.tools.strata.checkers.solidity import FileIndex
+        from whitemagic.tools.strata.checkers.solidity_security import (
+            check_solidity_integer_overflow,
+        )
         sol = tmp_path / "Unchecked.sol"
         sol.write_text(
             "pragma solidity ^0.8.0;\n"
@@ -151,8 +155,10 @@ class TestIntegerOverflowChecker:
         assert any(f.category == "sol_unchecked_block" for f in findings)
 
     def test_08_with_auto_checks_no_finding(self, tmp_path):
-        from whitemagic.tools.strata.checkers.solidity_security import check_solidity_integer_overflow
         from whitemagic.tools.strata.checkers.solidity import FileIndex
+        from whitemagic.tools.strata.checkers.solidity_security import (
+            check_solidity_integer_overflow,
+        )
         sol = tmp_path / "Safe08.sol"
         sol.write_text(
             "pragma solidity ^0.8.20;\n"
@@ -225,7 +231,11 @@ class TestMemoryAugmentedChecker:
 
     def test_check_memory_patterns_escalates(self, tmp_path):
         from whitemagic.tools.security.memory_checker import check_memory_patterns
-        from whitemagic.tools.strata.checkers.solidity import FileIndex, Finding, FindingSeverity
+        from whitemagic.tools.strata.checkers.solidity import (
+            FileIndex,
+            Finding,
+            FindingSeverity,
+        )
         fi = FileIndex(tmp_path)
         # Use a finding with keywords that match built-in WM-REENTRANCY-001 pattern
         findings = [Finding(
@@ -541,8 +551,8 @@ class TestFixContestIntegration:
         assert status["fix_coverage"]["total_findings"] == 0
 
     def test_handle_fix_apply_links_to_contest(self, tmp_path):
-        from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
         from whitemagic.tools.handlers.security_tools import handle_fix_apply
+        from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
         pipeline = get_contest_pipeline()
         pipeline._findings = []
         pipeline._seen_hashes = set()
@@ -563,8 +573,8 @@ class TestFixContestIntegration:
         assert finding.fix_status == "applied"
 
     def test_handle_pr_create_links_to_contest(self):
-        from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
         from whitemagic.tools.handlers.security_tools import handle_pr_create
+        from whitemagic.tools.security.contest_pipeline import get_contest_pipeline
         pipeline = get_contest_pipeline()
         pipeline._findings = []
         pipeline._seen_hashes = set()
@@ -719,7 +729,9 @@ class TestExpandedSecretsScanning:
     """G12: Test expanded STRATA secrets scanning checker."""
 
     def _run_checker(self, tmp_path, filename, content):
-        from whitemagic.tools.strata.checkers.python_security import check_hardcoded_secrets
+        from whitemagic.tools.strata.checkers.python_security import (
+            check_hardcoded_secrets,
+        )
         from whitemagic.tools.strata.checkers.solidity import FileIndex
         f = tmp_path / filename
         f.write_text(content)
@@ -729,7 +741,10 @@ class TestExpandedSecretsScanning:
         return findings
 
     def test_rename_alias_exists(self):
-        from whitemagic.tools.strata.checkers.python_security import check_hardcoded_secrets, check_python_secrets
+        from whitemagic.tools.strata.checkers.python_security import (
+            check_hardcoded_secrets,
+            check_python_secrets,
+        )
         assert check_hardcoded_secrets is check_python_secrets
 
     def test_stripe_key_detected(self, tmp_path):

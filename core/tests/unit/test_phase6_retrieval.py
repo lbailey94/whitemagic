@@ -20,23 +20,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from whitemagic.core.memory.retrieval_cache import (
+    RetrievalIndexCache,
+    get_retrieval_cache,
+)
 from whitemagic.core.memory.retrieval_plan import (
-    CandidateScore,
-    LatencyBudget,
     LATENCY_BUDGETS,
+    CandidateScore,
     QueryProfile,
     RetrievalResult,
     RetrievalStage,
     StageTiming,
     classify_query,
-    elapsed_ms,
-    now_ms,
 )
-from whitemagic.core.memory.retrieval_cache import (
-    RetrievalIndexCache,
-    get_retrieval_cache,
-)
-
 
 # ── 1. Data Structures ────────────────────────────────────────────────
 
@@ -371,17 +367,23 @@ class TestBatchConstellationMemberships:
     """Test batch N+1 removal for constellation memberships."""
 
     def test_batch_empty_ids(self):
-        from whitemagic.core.memory.entity_reranker import batch_constellation_memberships
+        from whitemagic.core.memory.entity_reranker import (
+            batch_constellation_memberships,
+        )
         result = batch_constellation_memberships([], backend=MagicMock())
         assert result == {}
 
     def test_batch_no_backend(self):
-        from whitemagic.core.memory.entity_reranker import batch_constellation_memberships
+        from whitemagic.core.memory.entity_reranker import (
+            batch_constellation_memberships,
+        )
         result = batch_constellation_memberships(["m1", "m2"], backend=None)
         assert result == {}
 
     def test_batch_with_mock_backend(self):
-        from whitemagic.core.memory.entity_reranker import batch_constellation_memberships
+        from whitemagic.core.memory.entity_reranker import (
+            batch_constellation_memberships,
+        )
 
         mock_backend = MagicMock()
         mock_pool = MagicMock()
@@ -416,8 +418,8 @@ class TestSearchQueryPlanner:
 
     def test_planner_execute_basic(self):
         """Test that the planner executes and returns results + telemetry."""
-        from whitemagic.core.memory.search_planner import SearchQueryPlanner
         from whitemagic.core.memory.retrieval_plan import QueryProfile
+        from whitemagic.core.memory.search_planner import SearchQueryPlanner
 
         # Mock memory with galaxy backend
         mock_memory = MagicMock()
@@ -441,8 +443,8 @@ class TestSearchQueryPlanner:
 
     def test_planner_telemetry_has_stage_timings(self):
         """Test that telemetry contains per-stage timing."""
-        from whitemagic.core.memory.search_planner import SearchQueryPlanner
         from whitemagic.core.memory.retrieval_plan import QueryProfile
+        from whitemagic.core.memory.search_planner import SearchQueryPlanner
 
         mock_memory = MagicMock()
         mock_backend = MagicMock()
@@ -465,8 +467,8 @@ class TestSearchQueryPlanner:
 
     def test_planner_degraded_stages_tracked(self):
         """Test that degraded stages are tracked in telemetry."""
-        from whitemagic.core.memory.search_planner import SearchQueryPlanner
         from whitemagic.core.memory.retrieval_plan import QueryProfile
+        from whitemagic.core.memory.search_planner import SearchQueryPlanner
 
         mock_memory = MagicMock()
         mock_backend = MagicMock()
@@ -502,8 +504,8 @@ class TestCandidateExplosion:
 
     def test_explosion_protection_trims(self):
         """Test that exceeding max_candidates trims the candidate set."""
-        from whitemagic.core.memory.search_planner import SearchQueryPlanner
         from whitemagic.core.memory.retrieval_plan import QueryProfile
+        from whitemagic.core.memory.search_planner import SearchQueryPlanner
 
         # Create mock that returns many candidates
         mock_mems = []
@@ -543,8 +545,8 @@ class TestRankingDeterminism:
 
     def test_same_inputs_same_order(self):
         """Test that identical inputs produce identical ranking."""
-        from whitemagic.core.memory.search_planner import SearchQueryPlanner
         from whitemagic.core.memory.retrieval_plan import QueryProfile
+        from whitemagic.core.memory.search_planner import SearchQueryPlanner
 
         mock_mems = []
         for i in range(5):
@@ -610,6 +612,7 @@ class TestSearchHybridPlannerToggle:
         # We just verify the signature accepts the param without error
         # Full integration test would require a real UnifiedMemory instance
         import inspect
+
         from whitemagic.core.memory.unified import UnifiedMemory
         sig = inspect.signature(UnifiedMemory.search_hybrid)
         assert "use_planner" in sig.parameters
@@ -619,6 +622,7 @@ class TestSearchHybridPlannerToggle:
     def test_legacy_method_exists(self):
         """Test that _legacy_search_hybrid method exists."""
         import inspect
+
         from whitemagic.core.memory.unified import UnifiedMemory
         assert hasattr(UnifiedMemory, "_legacy_search_hybrid")
         sig = inspect.signature(UnifiedMemory._legacy_search_hybrid)

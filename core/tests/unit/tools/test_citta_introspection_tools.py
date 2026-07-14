@@ -6,12 +6,12 @@ import tempfile
 os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_cit_"))
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
-from whitemagic.tools.handlers.neuro_cognitive import (  # noqa: E402
-    handle_citta_vector,
-    handle_citta_trajectory,
-    handle_citta_coherence,
-)
 from whitemagic.core.consciousness.citta_cycle import get_citta_cycle  # noqa: E402
+from whitemagic.tools.handlers.neuro_cognitive import (  # noqa: E402
+    handle_citta_coherence,
+    handle_citta_trajectory,
+    handle_citta_vector,
+)
 
 
 class TestCittaVectorTool:

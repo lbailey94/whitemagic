@@ -1,11 +1,7 @@
 """Tests for CurrentStateTracker and state MCP tools."""
 
-import json
-import os
-import shutil
-import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -173,7 +169,10 @@ class TestCurrentStateTracker:
         assert any(e["event_type"] == "error" for e in state["recent_events"])
 
     def test_persistence(self):
-        from whitemagic.core.memory.current_state import get_state_tracker, CurrentStateTracker
+        from whitemagic.core.memory.current_state import (
+            CurrentStateTracker,
+            get_state_tracker,
+        )
 
         tracker = get_state_tracker()
         tracker.set_current_task("Persistent task")
@@ -214,7 +213,10 @@ class TestCurrentStateTracker:
         assert state["next_steps"] == []
 
     def test_recent_events_capped(self):
-        from whitemagic.core.memory.current_state import get_state_tracker, _MAX_RECENT_EVENTS
+        from whitemagic.core.memory.current_state import (
+            _MAX_RECENT_EVENTS,
+            get_state_tracker,
+        )
 
         tracker = get_state_tracker()
         for i in range(_MAX_RECENT_EVENTS + 10):
@@ -306,10 +308,10 @@ class TestSearchImprovements:
 
     def test_search_returns_title_and_tags(self):
         """Verify search result format includes title, tags, galaxy, importance."""
-        from whitemagic.tools.handlers.memory import handle_search_memories
-
         # Mock the recall function
         from unittest.mock import MagicMock
+
+        from whitemagic.tools.handlers.memory import handle_search_memories
 
         mock_memory = MagicMock()
         mock_memory.id = "test-id-123"
@@ -335,8 +337,9 @@ class TestSearchImprovements:
 
     def test_search_full_content_option(self):
         """Verify full_content option increases preview length."""
-        from whitemagic.tools.handlers.memory import handle_search_memories
         from unittest.mock import MagicMock
+
+        from whitemagic.tools.handlers.memory import handle_search_memories
 
         long_content = "A" * 600
         mock_memory = MagicMock()
@@ -367,7 +370,7 @@ class TestSessionRecorderImprovements:
 
     def test_meaningful_content_from_args(self):
         """Verify middleware extracts content from tool args."""
-        from whitemagic.tools.middleware import mw_session_recorder, DispatchContext
+        from whitemagic.tools.middleware import DispatchContext, mw_session_recorder
 
         # Create a mock context
         ctx = DispatchContext(
@@ -388,14 +391,14 @@ class TestSessionRecorderImprovements:
             recorder.record_ai = lambda content, turn_type, importance: recorded_calls.append((content, turn_type, importance))
             recorder.record_user = lambda **kw: recorded_calls.append((kw.get("content", ""), kw.get("turn_type", ""), kw.get("importance", 0)))
 
-            result = mw_session_recorder(ctx, next_fn)
+            mw_session_recorder(ctx, next_fn)
 
         # Verify meaningful content was recorded (not just "Tool: create_memory → success")
         assert any("Important decision about architecture" in str(c[0]) for c in recorded_calls)
 
     def test_file_modification_tracked(self):
         """Verify middleware auto-tracks file modifications in state."""
-        from whitemagic.tools.middleware import mw_session_recorder, DispatchContext
+        from whitemagic.tools.middleware import DispatchContext, mw_session_recorder
 
         ctx = DispatchContext(
             tool_name="write_file",

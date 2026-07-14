@@ -1,6 +1,5 @@
-from whitemagic.core.memory.models import Memory
-
 import pytest
+from whitemagic.core.memory.models import Memory
 
 # Skip this test module - whitemagic.core.memory.sqlite_backend module removed in v22
 pytest.skip(

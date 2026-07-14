@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 import time
 
 # Ensure we can import the router
@@ -7,9 +7,9 @@ sys.path.append(os.getcwd())
 
 try:
     from whitemagic.optimization.polyglot_router import (
-        get_router,
-        get_performance_stats,
         Backend,
+        get_performance_stats,
+        get_router,
     )
 except ImportError as e:
     print(f"❌ Failed to import router: {e}")

@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import sqlite3
 import warnings
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -32,16 +32,14 @@ from whitemagic.tools.errors import (
     ValidationError,
     classify_exception,
 )
-from whitemagic.tools.partial_result import ItemError, PartialOperationResult
+from whitemagic.tools.partial_result import PartialOperationResult
 from whitemagic.tools.runtime import (
-    ExecutionMode,
     ToolRequest,
     ToolResult,
     ToolRuntime,
     async_dispatch,
     async_execute,
 )
-
 
 # ── Error Hierarchy ────────────────────────────────────────────────────
 
@@ -394,7 +392,7 @@ class TestFastPathTypedErrors:
     """Fast-path dispatch returns typed error codes."""
 
     def test_fast_path_error_has_typed_code(self):
-        from whitemagic.tools.dispatch_table import _fast_path_dispatch, DISPATCH_TABLE
+        from whitemagic.tools.dispatch_table import DISPATCH_TABLE, _fast_path_dispatch
 
         def failing_handler(**kwargs):
             raise ValueError("bad param")
@@ -414,7 +412,7 @@ class TestFastPathTypedErrors:
                 DISPATCH_TABLE.pop("test.typed_error", None)
 
     def test_fast_path_tool_execution_error_passes_through(self):
-        from whitemagic.tools.dispatch_table import _fast_path_dispatch, DISPATCH_TABLE
+        from whitemagic.tools.dispatch_table import DISPATCH_TABLE, _fast_path_dispatch
 
         def raising_handler(**kwargs):
             raise AuthorizationError("not allowed")

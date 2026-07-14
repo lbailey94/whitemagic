@@ -4,12 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from whitemagic.core.consciousness.time_dilation_master import (
-    Layer,
-    LayerShift,
-    TimeDilationMaster,
-    get_time_master,
-)
 from whitemagic.core.consciousness.apotheosis_engine import (
     ApotheosisEngine,
     CapabilityDiscoveryEngine,
@@ -18,10 +12,14 @@ from whitemagic.core.consciousness.apotheosis_engine import (
     SelfMonitoringHealthLoop,
     get_apotheosis_engine,
 )
+from whitemagic.core.consciousness.time_dilation_master import (
+    Layer,
+    TimeDilationMaster,
+    get_time_master,
+)
 from whitemagic.core.consciousness.unified_nervous_system import (
     CrossSubsystemPatterns,
     UnifiedNervousSystem,
-    get_nervous_system,
 )
 
 
@@ -58,7 +56,7 @@ class TestTimeDilationMaster:
         master = TimeDilationMaster()
         master.enter_flow("test")
         assert master.current_layer == Layer.FLOW
-        shift = master.return_to_surface()
+        master.return_to_surface()
         assert master.current_layer == Layer.SURFACE
 
     def test_get_time_advantage(self):

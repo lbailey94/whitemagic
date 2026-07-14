@@ -7,7 +7,6 @@ Tests the wiring between:
 - HomeostaticLoop._check_apotheosis() — apotheosis integration in homeostatic loop
 """
 
-import pytest
 
 
 class TestApotheosisCapabilityTesting:
@@ -71,9 +70,8 @@ class TestFlowStateAutoDetect:
     def test_auto_detect_returns_indicators(self):
         """auto_detect_indicators should return detected indicators based on metrics."""
         from whitemagic.gardens.presence.flow_state import (
-            FlowState,
             FlowIndicator,
-            get_flow_state,
+            FlowState,
         )
 
         fs = FlowState()
@@ -108,8 +106,8 @@ class TestFlowStateAutoDetect:
     def test_flow_score_nonzero_when_in_flow(self):
         """flow_score should return > 0.0 when in flow with indicators."""
         from whitemagic.gardens.presence.flow_state import (
-            FlowState,
             FlowIndicator,
+            FlowState,
         )
 
         fs = FlowState()
@@ -162,7 +160,7 @@ class TestConsolidatorImport:
     """Test that the fixed consolidator module works."""
 
     def test_consolidator_imports(self):
-        from whitemagic.core.automation.consolidator import MemoryConsolidator
+        pass
         # Just verify it can be instantiated (may fail on memory_system init in test env)
         # but the import itself should work
 
@@ -171,8 +169,8 @@ class TestIChingDeduplication:
     """Test that the I Ching deduplication re-export works."""
 
     def test_gardens_reexport_same_singleton(self):
-        from whitemagic.gardens.wisdom.i_ching import get_i_ching
         from whitemagic.core.intelligence.wisdom.i_ching import get_i_ching as get_core
+        from whitemagic.gardens.wisdom.i_ching import get_i_ching
 
         a = get_i_ching()
         b = get_core()

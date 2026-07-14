@@ -12,11 +12,11 @@ import pytest
 try:
     from whitemagic.tools.handlers.strata import (
         handle_strata_analyze,
-        handle_strata_survey,
         handle_strata_archaeology,
         handle_strata_list_checks,
+        handle_strata_survey,
     )
-    from whitemagic.tools.strata import Strata, FindingSeverity
+    from whitemagic.tools.strata import FindingSeverity, Strata
     from whitemagic.tools.strata.checkers import get_checkers
 
     _STRATA_AVAILABLE = True

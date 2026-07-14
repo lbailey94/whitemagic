@@ -1,5 +1,4 @@
 """Tests for Slither integration — MCP handlers, dispatch, PRAT, registry."""
-import pytest
 
 
 class TestSlitherHandlers:

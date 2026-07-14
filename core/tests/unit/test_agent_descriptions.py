@@ -1,7 +1,6 @@
 # ruff: noqa: BLE001
 """Tests for the agent-friendly tool descriptions module (Phase 7)."""
 
-import pytest
 
 
 class TestAgentDescriptions:

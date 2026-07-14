@@ -1,5 +1,4 @@
 """Tests for browser ONNX embedding integration."""
-import pytest
 from pathlib import Path
 
 

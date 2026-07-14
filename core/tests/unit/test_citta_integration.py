@@ -16,7 +16,6 @@ Verifies that the consciousness subsystem wiring is functional:
 - WI 13: EmergenceEngine ↔ KnowledgeGapLoop cross-reference
 """
 
-import pytest
 
 
 class TestWI1PredecessorInjection:
@@ -218,11 +217,11 @@ class TestWI11SessionCittaCrossRef:
         assert hasattr(SessionRecorder, "_get_citta_stream_position")
 
     def test_citta_stream_position_returns_int(self):
-        from whitemagic.core.memory.session_recorder import SessionRecorder
-
         # Can't easily instantiate without a DB, but we can check the method
         # is defined and would return 0 on failure
         import inspect
+
+        from whitemagic.core.memory.session_recorder import SessionRecorder
 
         source = inspect.getsource(SessionRecorder._get_citta_stream_position)
         assert "get_citta_cycle" in source
@@ -376,9 +375,9 @@ class TestWI11SessionSeqCitta:
     """WI 11: Session sequence number in citta moments."""
 
     def test_citta_moment_has_session_seq(self):
-        from whitemagic.core.consciousness.citta_cycle import CittaMoment
-
         import dataclasses
+
+        from whitemagic.core.consciousness.citta_cycle import CittaMoment
 
         fields = {f.name for f in dataclasses.fields(CittaMoment)}
         assert "session_seq" in fields

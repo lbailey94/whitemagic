@@ -9,7 +9,7 @@ os.environ.setdefault("WM_SILENT_INIT", "1")
 
 import pytest
 
-from whitemagic.agents.warps import Warp, WarpManager, get_warp_manager
+from whitemagic.agents.warps import Warp, get_warp_manager
 
 
 @pytest.fixture

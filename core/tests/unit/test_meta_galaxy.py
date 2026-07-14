@@ -7,19 +7,18 @@ os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp())
 os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
-import pytest
 
 from whitemagic.core.consciousness.meta_galaxy import (
+    CACHE_TTL,
+    GalaxySummary,
     MetaGalaxy,
     MetaGalaxyIndex,
-    GalaxySummary,
-    CACHE_TTL,
 )
 
 
 class TestMetaGalaxy:
     def test_empty_index(self):
-        mg = MetaGalaxy()
+        MetaGalaxy()
         index = MetaGalaxyIndex()
         assert index.total_memories == 0
         assert index.total_galaxies == 0

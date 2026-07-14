@@ -1,6 +1,5 @@
 """Unit tests for neuro-upgrades (P4.3)."""
 
-import math
 
 import pytest
 
@@ -8,8 +7,8 @@ from whitemagic.core.consciousness.neuro_upgrades import (
     AttentionMechanism,
     CorticalColumn,
     DendriticComputation,
-    NeuroUpgrades,
     NeuromodulationGating,
+    NeuroUpgrades,
     OscillatoryBinding,
     PredictiveCittaCoder,
     get_neuro_upgrades,

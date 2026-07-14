@@ -2,15 +2,11 @@
 """Tests for WASM Compute Verification (v24.3 §4.2)."""
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from whitemagic.security.wasm_verifier import (
     VERIFIABLE_TOOLS,
     VerificationRequest,
-    VerificationResult,
-    WasmVerifier,
 )
 
 
@@ -18,6 +14,7 @@ from whitemagic.security.wasm_verifier import (
 def verifier(tmp_path, monkeypatch):
     monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
     import importlib
+
     import whitemagic.config.paths as paths_mod
     importlib.reload(paths_mod)
     import whitemagic.security.wasm_verifier as wv_mod
@@ -37,7 +34,7 @@ class TestWasmVerifier:
             outputs=outputs,
         )
         # First call — no cache, falls to replay (permissive)
-        result1 = verifier.verify(req)
+        verifier.verify(req)
         # Update cache
         verifier._update_checksum_cache(req)
 
@@ -64,7 +61,7 @@ class TestWasmVerifier:
             inputs=inputs,
             outputs={"status": "success", "results": ["a", "b", "c"]},
         )
-        result = verifier.verify(tampered_req)
+        verifier.verify(tampered_req)
         # Checksum should fail, replay may or may not match
         # The key is that checksum method detects the mismatch
         checksum_result = verifier._checksum_verify(tampered_req)

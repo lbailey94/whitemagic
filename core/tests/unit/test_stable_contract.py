@@ -4,9 +4,9 @@ from whitemagic.tools.stable_contract import (
     STABLE_TOOLS,
     StableTool,
     ToolStability,
+    get_deprecated_aliases,
     get_stable_tools,
     is_stable_tool,
-    get_deprecated_aliases,
 )
 
 

@@ -3,8 +3,8 @@
 import pytest
 
 from whitemagic.security.audit_signing import (
-    AuditSigner,
     _CRYPTO_AVAILABLE,
+    AuditSigner,
     get_audit_signer,
 )
 

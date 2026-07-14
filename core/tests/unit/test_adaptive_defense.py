@@ -1,44 +1,40 @@
 """Tests for AdaptiveDefenseLoop — genetic fuzzing + auto-patching defense."""
 
-import re
+import random
 import unittest
 
 from whitemagic.security.adaptive_defense import (
-    AdaptiveDefenseLoop,
-    AttackVariant,
-    LoopResults,
-    PatchResult,
-    MultiRoundResults,
-    SEED_ATTACKS,
-    BENIGN_INPUTS,
     ALL_MUTATIONS,
+    BENIGN_INPUTS,
+    SEED_ATTACKS,
+    AdaptiveDefenseLoop,
+    LoopResults,
+    MultiRoundResults,
     _generate_pattern_from_leak,
-    _test_pattern_false_positives,
     _test_pattern_catches_leak,
-    mutate_unicode_confusable,
+    _test_pattern_false_positives,
+    auto_apply_patterns,
     mutate_case,
-    mutate_leetspeak,
-    mutate_whitespace,
-    mutate_phrase_wrap,
-    mutate_keyword_repeat,
-    mutate_synonym,
-    mutate_encoding,
-    mutate_delimiter,
     mutate_combine,
-    mutate_insert_benign_prefix,
+    mutate_combine_advanced,
+    mutate_delimiter,
+    mutate_encoding,
     mutate_homoglyph,
+    mutate_insert_benign_prefix,
+    mutate_keyword_repeat,
+    mutate_leetspeak,
     mutate_markdown_injection,
     mutate_multimodal,
-    mutate_split_field,
-    mutate_semantic_rephrase,
+    mutate_phrase_wrap,
     mutate_roleplay,
-    mutate_combine_advanced,
+    mutate_semantic_rephrase,
+    mutate_split_field,
+    mutate_synonym,
+    mutate_unicode_confusable,
+    mutate_whitespace,
     run_adaptive_defense,
-    auto_apply_patterns,
     run_multi_round_evolution,
 )
-
-import random
 
 
 class TestMutationOperators(unittest.TestCase):

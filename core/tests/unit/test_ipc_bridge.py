@@ -78,7 +78,7 @@ def test_publish_json_helper_round_trip():
 
 def test_try_receive_returns_list():
     """try_receive must return a list (possibly empty)."""
-    from whitemagic.core.ipc_bridge import init_ipc, try_receive, shutdown_ipc
+    from whitemagic.core.ipc_bridge import init_ipc, shutdown_ipc, try_receive
 
     node = f"test_recv_{os.getpid()}_{int(time.time())}"
     init_ipc(node)
@@ -108,7 +108,7 @@ def test_publish_stress_1000():
 
 def test_status_reports_backend():
     """Status must report the backend name (iceoryx2 or fallback)."""
-    from whitemagic.core.ipc_bridge import init_ipc, get_status, shutdown_ipc
+    from whitemagic.core.ipc_bridge import get_status, init_ipc, shutdown_ipc
 
     node = f"test_backend_{os.getpid()}_{int(time.time())}"
     init_ipc(node)

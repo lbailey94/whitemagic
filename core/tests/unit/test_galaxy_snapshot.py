@@ -2,8 +2,10 @@
 
 import pytest
 
-from whitemagic.core.memory.unified import UnifiedMemory, reset_singleton, get_unified_memory
-from whitemagic.core.memory.unified_types import MemoryType
+from whitemagic.core.memory.unified import (
+    get_unified_memory,
+    reset_singleton,
+)
 
 
 @pytest.fixture

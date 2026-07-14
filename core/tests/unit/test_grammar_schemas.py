@@ -6,8 +6,6 @@ from __future__ import annotations
 import os
 import tempfile
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ["WM_STATE_ROOT"] = _tmp
 os.environ["WM_SILENT_INIT"] = "1"
@@ -17,8 +15,9 @@ class TestGrammarSchemas:
     """Test the grammar schema definitions."""
 
     def test_entity_extraction_schema_is_valid_json(self):
-        from whitemagic.inference.grammar_schemas import ENTITY_EXTRACTION_SCHEMA
         import json
+
+        from whitemagic.inference.grammar_schemas import ENTITY_EXTRACTION_SCHEMA
         schema = json.loads(ENTITY_EXTRACTION_SCHEMA)
         assert schema["type"] == "object"
         assert "entities" in schema["properties"]
@@ -27,8 +26,9 @@ class TestGrammarSchemas:
         assert "type" in schema["properties"]["entities"]["items"]["properties"]
 
     def test_security_classification_schema_is_valid_json(self):
-        from whitemagic.inference.grammar_schemas import SECURITY_CLASSIFICATION_SCHEMA
         import json
+
+        from whitemagic.inference.grammar_schemas import SECURITY_CLASSIFICATION_SCHEMA
         schema = json.loads(SECURITY_CLASSIFICATION_SCHEMA)
         assert schema["type"] == "object"
         assert "is_attack" in schema["properties"]
@@ -37,8 +37,9 @@ class TestGrammarSchemas:
         assert schema["properties"]["confidence"]["type"] == "number"
 
     def test_safety_evaluation_schema_is_valid_json(self):
-        from whitemagic.inference.grammar_schemas import SAFETY_EVALUATION_SCHEMA
         import json
+
+        from whitemagic.inference.grammar_schemas import SAFETY_EVALUATION_SCHEMA
         schema = json.loads(SAFETY_EVALUATION_SCHEMA)
         assert schema["type"] == "object"
         assert "score" in schema["properties"]
@@ -47,24 +48,27 @@ class TestGrammarSchemas:
         assert schema["properties"]["reasoning"]["type"] == "string"
 
     def test_tool_call_schema_is_valid_json(self):
-        from whitemagic.inference.grammar_schemas import TOOL_CALL_SCHEMA
         import json
+
+        from whitemagic.inference.grammar_schemas import TOOL_CALL_SCHEMA
         schema = json.loads(TOOL_CALL_SCHEMA)
         assert schema["type"] == "object"
         assert "tool" in schema["properties"]
         assert "args" in schema["properties"]
 
     def test_tool_call_list_schema_is_valid_json(self):
-        from whitemagic.inference.grammar_schemas import TOOL_CALL_LIST_SCHEMA
         import json
+
+        from whitemagic.inference.grammar_schemas import TOOL_CALL_LIST_SCHEMA
         schema = json.loads(TOOL_CALL_LIST_SCHEMA)
         assert schema["type"] == "object"
         assert "tool_calls" in schema["properties"]
         assert "final_answer" in schema["properties"]
 
     def test_content_summary_schema_is_valid_json(self):
-        from whitemagic.inference.grammar_schemas import CONTENT_SUMMARY_SCHEMA
         import json
+
+        from whitemagic.inference.grammar_schemas import CONTENT_SUMMARY_SCHEMA
         schema = json.loads(CONTENT_SUMMARY_SCHEMA)
         assert schema["type"] == "object"
         assert "summary" in schema["properties"]
@@ -118,15 +122,17 @@ class TestLlamaCppBackendGrammarSupport:
     """Test that LlamaCppBackend.complete accepts json_schema and grammar params."""
 
     def test_complete_accepts_json_schema_param(self):
-        from whitemagic.inference.llama_cpp import LlamaCppBackend
         import inspect
+
+        from whitemagic.inference.llama_cpp import LlamaCppBackend
         sig = inspect.signature(LlamaCppBackend.complete)
         assert "json_schema" in sig.parameters
         assert "grammar" in sig.parameters
 
     def test_complete_accepts_response_format_in_chat(self):
-        from whitemagic.inference.llama_cpp import LlamaCppBackend
         import inspect
+
+        from whitemagic.inference.llama_cpp import LlamaCppBackend
         sig = inspect.signature(LlamaCppBackend.chat)
         assert "response_format" in sig.parameters
 

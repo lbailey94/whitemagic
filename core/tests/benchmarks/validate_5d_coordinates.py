@@ -26,7 +26,7 @@ def validate_5d(num_samples: int = 50, k: int = 10):
     um = get_unified_memory()
     # Trigger lazy loading of holographic index from DB
     _ = um.holographic
-    holo = get_holographic_memory()
+    get_holographic_memory()
 
     # 1. Check if embedding engine is available (at least for cache)
     from whitemagic.core.memory.embeddings import get_embedding_engine
@@ -97,7 +97,7 @@ def validate_5d(num_samples: int = 50, k: int = 10):
         column_names = [
             description[0]
             for description in conn.execute(
-                f"SELECT id, content, title, metadata, memory_type, created_at, importance, access_count, galactic_distance, emotional_valence, neuro_score FROM memories LIMIT 1"
+                "SELECT id, content, title, metadata, memory_type, created_at, importance, access_count, galactic_distance, emotional_valence, neuro_score FROM memories LIMIT 1"
             ).description
         ]
 
@@ -138,7 +138,6 @@ def validate_5d(num_samples: int = 50, k: int = 10):
     sample_ids = random.sample(valid_ids, num_samples)
 
     total_overlap_5d = 0
-    total_overlap_2d = 0
     total_semantic_time = 0.0
     total_spatial_time = 0.0
 
@@ -178,7 +177,6 @@ def validate_5d(num_samples: int = 50, k: int = 10):
 
         # --- Channel C: 2D Spatial Search (X/Y Only) ---
         # We manually calculate this to verify the semantic signal in X/Y
-        query_2d = [coord.x, coord.y]
         # In a real app we'd use a 2D index, but for validation we'll brute force the valid_ids
         # to see if the signal is present in the coordinates themselves.
         # This is for internal diagnostics.

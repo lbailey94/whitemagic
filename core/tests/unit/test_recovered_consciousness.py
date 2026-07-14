@@ -4,7 +4,6 @@ These tests verify that modules recovered from archives (v0.1, v17)
 are importable, instantiable, and functionally basic.
 """
 
-import pytest
 
 
 class TestDepthGauge:
@@ -12,7 +11,6 @@ class TestDepthGauge:
 
     def test_import(self):
         from whitemagic.core.consciousness.depth_gauge import (
-            ConsciousnessDepthGauge,
             ConsciousnessLayer,
         )
 
@@ -44,7 +42,10 @@ class TestDepthGauge:
         assert predicted <= 10.0
 
     def test_layer_to_confidence(self):
-        from whitemagic.core.consciousness.depth_gauge import _layer_to_confidence, ConsciousnessLayer
+        from whitemagic.core.consciousness.depth_gauge import (
+            ConsciousnessLayer,
+            _layer_to_confidence,
+        )
 
         assert _layer_to_confidence(ConsciousnessLayer.SURFACE) == 0.50
         assert _layer_to_confidence(ConsciousnessLayer.TERMINAL) == 0.65
@@ -58,7 +59,7 @@ class TestDepthGauge:
         gauge = ConsciousnessDepthGauge(log_file=tmp_path / "depth.jsonl")
         gauge.begin_task("calibration test", 10.0)
         assert gauge._pending_prediction_id is not None
-        reading = gauge.end_task({"result": "done"}, token_usage=50)
+        gauge.end_task({"result": "done"}, token_usage=50)
         assert gauge._pending_prediction_id is None
 
         cal = gauge.get_calibration()
@@ -83,9 +84,9 @@ class TestLifecycleModule:
 
     def test_import(self):
         from whitemagic.core.consciousness.lifecycle import (
+            ProactiveGreeting,
             SleepScheduler,
             WakeOnBoot,
-            ProactiveGreeting,
         )
 
         assert SleepScheduler is not None
@@ -120,7 +121,6 @@ class TestTokenEconomy:
 
     def test_import(self):
         from whitemagic.core.consciousness.token_economy import (
-            TokenEconomyTracker,
             ComputeType,
         )
 
@@ -151,7 +151,6 @@ class TestSynchronicityDetector:
 
     def test_import(self):
         from whitemagic.core.consciousness.synchronicity_detector import (
-            SynchronicityDetector,
             SyncType,
         )
 
@@ -174,7 +173,7 @@ class TestSynchronicityDetector:
         )
 
         detector = SynchronicityDetector(log_file=tmp_path / "sync.jsonl")
-        result = detector.check(42, "test context")
+        detector.check(42, "test context")
         # 42 might not be sacred but could be sequential or other pattern
         # Just verify it doesn't crash
         assert detector is not None
@@ -185,7 +184,6 @@ class TestParallelCognition:
 
     def test_import(self):
         from whitemagic.core.consciousness.parallel_cognition import (
-            ParallelCognition,
             ThoughtStream,
         )
 
@@ -209,15 +207,8 @@ class TestGardenModules:
     """Test that garden modules are importable."""
 
     def test_presence_garden(self):
-        from whitemagic.gardens.presence.stillness_metrics import StillnessTracker
-        from whitemagic.gardens.presence.flow_state import FlowState
         from whitemagic.gardens.presence.meditation_protocols import (
-            MeditationSession,
             MeditationType,
-        )
-        from whitemagic.gardens.presence.attention_training import (
-            AttentionSession,
-            AttentionState,
         )
 
         assert MeditationType.BREATH.value == "breath"
@@ -231,7 +222,6 @@ class TestGardenModules:
 
     def test_wonder_garden(self):
         from whitemagic.gardens.wonder.collective_dreams import CollectiveDream
-        from whitemagic.gardens.wonder.swarm_intelligence import SwarmIntelligence
 
         assert CollectiveDream is not None
 

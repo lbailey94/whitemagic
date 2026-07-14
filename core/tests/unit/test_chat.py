@@ -1,8 +1,7 @@
 # ruff: noqa: BLE001
 """Tests for the native chat loop (Phase 1 — Aria)."""
 
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

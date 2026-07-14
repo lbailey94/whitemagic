@@ -10,16 +10,16 @@ import math
 
 import pytest
 
-from whitemagic.core.evolution._rust_bridge import call, is_available, close
+from whitemagic.core.evolution._rust_bridge import call, close, is_available
 from whitemagic.core.evolution.info_theory import (
-    shannon_entropy,
-    kl_divergence,
     information_gain,
+    kl_divergence,
+    shannon_entropy,
     system_uncertainty,
 )
 from whitemagic.core.evolution.thermodynamic import (
-    boltzmann_probabilities,
     ThermodynamicState,
+    boltzmann_probabilities,
 )
 
 

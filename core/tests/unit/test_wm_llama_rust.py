@@ -6,8 +6,6 @@ from __future__ import annotations
 import os
 import tempfile
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ["WM_STATE_ROOT"] = _tmp
 os.environ["WM_SILENT_INIT"] = "1"
@@ -89,6 +87,7 @@ class TestDualModelManagerSingleton:
 
     def test_get_dual_model_manager_none_without_env(self):
         import os
+
         from whitemagic.inference import llama_cpp as _lc
         old_bg = os.environ.pop("WM_LLAMA_BG_MODEL", None)
         old_fg = os.environ.pop("WM_LLAMA_FG_MODEL", None)

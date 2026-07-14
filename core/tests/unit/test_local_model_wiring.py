@@ -10,8 +10,6 @@ Tests cover:
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 class TestRouterEnvVarModelPaths:
     """Test that the router correctly resolves model paths from env vars."""
@@ -374,8 +372,8 @@ class TestInferenceRouterSpeculativeRoute:
 
     def test_speculative_route_falls_back_when_disabled(self):
         """When use_speculative=False, should fall back to normal routing."""
-        from whitemagic.inference.router import InferenceRouter
         from whitemagic.inference.complexity import InferenceTier
+        from whitemagic.inference.router import InferenceRouter
 
         router = InferenceRouter(use_speculative=False)
         router.register_handler(
@@ -388,8 +386,8 @@ class TestInferenceRouterSpeculativeRoute:
 
     def test_speculative_route_falls_back_when_unavailable(self):
         """When speculative decoding is unavailable, should fall back."""
-        from whitemagic.inference.router import InferenceRouter
         from whitemagic.inference.complexity import InferenceTier
+        from whitemagic.inference.router import InferenceRouter
 
         router = InferenceRouter(use_speculative=True)
         router.register_handler(
@@ -433,8 +431,8 @@ class TestInferenceRouterSpeculativeRoute:
 
     def test_speculative_route_falls_back_on_exception(self):
         """When speculative decoding raises, should fall back to normal routing."""
-        from whitemagic.inference.router import InferenceRouter
         from whitemagic.inference.complexity import InferenceTier
+        from whitemagic.inference.router import InferenceRouter
 
         router = InferenceRouter(use_speculative=True)
         router.register_handler(
@@ -453,10 +451,10 @@ class TestSpeculativeRouterWiring:
     def test_get_speculative_router_registers_handlers(self):
         """get_speculative_router should register draft/verify handlers."""
         import whitemagic.inference.router as router_mod
-        from whitemagic.inference.speculative_decoder import SpeculativeDecoder
 
         # Reset the singleton
         import whitemagic.inference.speculative_decoder as spec_mod
+        from whitemagic.inference.speculative_decoder import SpeculativeDecoder
         spec_mod._decoder = None
 
         # Mock the handler functions to avoid needing real backends

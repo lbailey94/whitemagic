@@ -15,7 +15,6 @@ from whitemagic.tools.vectorized import (
     is_vectorized_mode,
 )
 
-
 # ── compact_response.py tests ──
 
 

@@ -8,16 +8,15 @@ os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
 import json
+
 import pytest
 
+from whitemagic.core.evolution.research_dag import ResearchDomain
 from whitemagic.mesh.experiment_sync import (
     DOMAIN_TOPICS,
-    ExperimentSync,
     PeerExperiment,
-    SyncStats,
     get_experiment_sync,
 )
-from whitemagic.core.evolution.research_dag import ResearchDomain
 
 
 @pytest.fixture

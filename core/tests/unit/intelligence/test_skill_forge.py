@@ -1965,7 +1965,9 @@ class TestKaizenSkillHealth:
             "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
             return_value=forge,
         ):
-            from whitemagic.core.intelligence.synthesis.kaizen_engine import KaizenEngine
+            from whitemagic.core.intelligence.synthesis.kaizen_engine import (
+                KaizenEngine,
+            )
 
             engine = KaizenEngine.__new__(KaizenEngine)
             proposals = engine._check_skill_health()
@@ -1986,7 +1988,9 @@ class TestKaizenSkillHealth:
             "whitemagic.core.intelligence.omni.skill_forge.get_skill_forge",
             return_value=forge,
         ):
-            from whitemagic.core.intelligence.synthesis.kaizen_engine import KaizenEngine
+            from whitemagic.core.intelligence.synthesis.kaizen_engine import (
+                KaizenEngine,
+            )
 
             engine = KaizenEngine.__new__(KaizenEngine)
             proposals = engine._check_skill_health()

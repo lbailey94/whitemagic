@@ -1,7 +1,6 @@
 """Unit tests for PoC code templates in CodeGenome engine."""
-import pytest
 
-from whitemagic.codegenome.engine import get_codegenome_engine, CodeTemplate
+from whitemagic.codegenome.engine import get_codegenome_engine
 from whitemagic.codegenome.vibe_parser import get_vibe_parser
 
 

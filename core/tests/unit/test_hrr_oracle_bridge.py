@@ -8,10 +8,13 @@ Tests verify:
 - superpose_hexagrams returns valid vector
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
 
-from whitemagic.oracle.hrr_bridge import HRRBridge, get_hrr_bridge, _py_cosine_sim, _get_py_vectors
+from whitemagic.oracle.hrr_bridge import (
+    HRRBridge,
+    _get_py_vectors,
+    _py_cosine_sim,
+    get_hrr_bridge,
+)
 from whitemagic.oracle.wisdom_synthesis import OracleSynthesizer, SynthesisResult
 
 

@@ -1,22 +1,17 @@
 """Tests for the Tarot system (data + casting)."""
 
-import pytest
+from whitemagic.oracle.tarot_cast import (
+    cast_tarot,
+)
 from whitemagic.oracle.tarot_data import (
+    FIXED_SIGN_TETRAMORPH,
     MAJOR_ARCANA,
     MINOR_ARCANA,
-    get_major_arcana,
-    get_minor_arcana,
-    get_all_cards,
-    FIXED_SIGN_TETRAMORPH,
     TRIPLE_ARC,
     MajorArcanaCard,
-    MinorArcanaCard,
-)
-from whitemagic.oracle.tarot_cast import (
-    TarotCaster,
-    TarotReading,
-    DrawnCard,
-    cast_tarot,
+    get_all_cards,
+    get_major_arcana,
+    get_minor_arcana,
 )
 
 

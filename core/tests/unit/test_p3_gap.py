@@ -8,9 +8,10 @@ Tests verify:
 - Graceful degradation when TemporalForecastDB unavailable
 """
 
-import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from whitemagic.core.dreaming.dream_cycle import DreamCycle
 

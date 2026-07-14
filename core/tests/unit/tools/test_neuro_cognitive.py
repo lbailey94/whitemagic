@@ -1,12 +1,12 @@
 """Unit tests for neuro-cognitive MCP tool handlers."""
 
 import os
-import sqlite3
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
 from whitemagic.core.memory.db_manager import safe_connect
 
 # Set WM_STATE_ROOT to temp dir for test isolation

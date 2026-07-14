@@ -7,7 +7,6 @@ import pytest
 from whitemagic.agents.bounty_connector import (
     BountyAutoConnector,
     ExternalBounty,
-    MatchedBounty,
     MockBountyPlatform,
     ReachingAIPlatform,
 )
@@ -124,6 +123,7 @@ class TestBountyAutoConnector:
         """Claimed bounty appears in local BountyBoard."""
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import importlib
+
         import whitemagic.config.paths as paths_mod
         importlib.reload(paths_mod)
         import whitemagic.core.economy.bounty_board as bb_mod
@@ -141,6 +141,7 @@ class TestBountyAutoConnector:
     def test_run_cycle_full_flow(self, connector, tmp_path, monkeypatch):
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import importlib
+
         import whitemagic.config.paths as paths_mod
         importlib.reload(paths_mod)
         import whitemagic.core.economy.bounty_board as bb_mod

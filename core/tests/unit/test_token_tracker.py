@@ -6,8 +6,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from whitemagic.core.monitoring.token_tracker import (
-    _estimate_tokens,
     _determine_locality,
+    _estimate_tokens,
     mw_token_tracker,
 )
 from whitemagic.tools.middleware import DispatchContext

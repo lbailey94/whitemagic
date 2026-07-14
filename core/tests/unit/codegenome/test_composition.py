@@ -1,6 +1,6 @@
 """Tests for Template Composition Graph (Phase 2) and Polyglot Templates (Phase 6)."""
 
-from whitemagic.codegenome.engine import CodeGenomeEngine, CodeTemplate, get_codegenome_engine
+from whitemagic.codegenome.engine import CodeGenomeEngine, CodeTemplate
 from whitemagic.codegenome.vault import GeneseedVault
 
 

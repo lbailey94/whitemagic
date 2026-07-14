@@ -9,8 +9,7 @@ Tests verify:
 - Quantum state creation with HRR amplitudes
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from whitemagic.oracle.quantum_iching import QuantumIChing, QuantumState
 
@@ -69,7 +68,6 @@ class TestBornRuleCasting:
 
     def test_quantum_state_normalized(self):
         """Amplitudes should be normalized (sum of |a|^2 = 1)."""
-        import math
 
         oracle = QuantumIChing()
         state = oracle._create_quantum_state("Normalize me", {})

@@ -15,22 +15,18 @@ Plus basic lifecycle, lease, circuit breaker, and stats tests.
 """
 from __future__ import annotations
 
-import json
-import os
 import sys
 import threading
 import time
-
-import pytest
 
 from whitemagic.core.acceleration.process_supervisor import (
     BridgeResult,
     BridgeStats,
     CapabilityState,
     ProcessSupervisor,
+    list_supervisors,
     register,
     shutdown_all,
-    list_supervisors,
 )
 
 # ── Helper: create a mock bridge script ───────────────────────────
@@ -609,7 +605,7 @@ for line in sys.stdin:
             lease = sup.acquire_lease()
             assert lease is not None
             try:
-                with lease as proc:
+                with lease:
                     raise ValueError("test error")
             except ValueError:
                 pass

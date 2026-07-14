@@ -10,7 +10,6 @@ from whitemagic.ai.dense_encoding import (
 )
 from whitemagic.core.intelligence.working_memory import WorkingMemory
 
-
 # ---------------------------------------------------------------------------
 # Dense encoding tests
 # ---------------------------------------------------------------------------

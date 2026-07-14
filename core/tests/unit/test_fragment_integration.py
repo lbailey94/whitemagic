@@ -13,14 +13,14 @@ import pytest
 # Dynamically check if fragment is available
 try:
     from whitemagic.tools.handlers.fragment import (
-        handle_fragment_search,
-        handle_fragment_index,
-        handle_fragment_status,
-        handle_fragment_query,
-        get_fragment_layer,
-        _pyo3_status,
         _http_status,
+        _pyo3_status,
         _subprocess_status,
+        get_fragment_layer,
+        handle_fragment_index,
+        handle_fragment_query,
+        handle_fragment_search,
+        handle_fragment_status,
     )
 
     _FRAGMENT_AVAILABLE = True

@@ -7,12 +7,12 @@ os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_hotpath_
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
 from whitemagic.core.memory.neuro_hotpath import (  # noqa: E402
-    ThalamicGating,
-    PredictiveCoder,
     MomentumDynamics,
-    get_thalamic_gating,
-    get_predictive_coder,
+    PredictiveCoder,
+    ThalamicGating,
     get_momentum_dynamics,
+    get_predictive_coder,
+    get_thalamic_gating,
 )
 
 

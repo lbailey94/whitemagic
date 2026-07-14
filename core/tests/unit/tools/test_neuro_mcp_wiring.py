@@ -152,7 +152,10 @@ class TestCittaCycleNeuroIntegration:
     """Verify citta cycle auto-injects neuro signals."""
 
     def test_citta_moment_has_neuro_signals(self):
-        from whitemagic.core.consciousness.citta_cycle import advance_citta, get_citta_predecessor
+        from whitemagic.core.consciousness.citta_cycle import (
+            advance_citta,
+            get_citta_predecessor,
+        )
 
         advance_citta(gana="gana_ghost", tool="test", coherence=0.9)
         pred = get_citta_predecessor()
@@ -214,7 +217,9 @@ class TestHandlerExecution:
         assert result["status"] == "success"
 
     def test_metaplasticity_stats_handler(self):
-        from whitemagic.tools.handlers.neuro_cognitive import handle_metaplasticity_stats
+        from whitemagic.tools.handlers.neuro_cognitive import (
+            handle_metaplasticity_stats,
+        )
 
         result = handle_metaplasticity_stats()
         assert result["status"] == "success"
@@ -252,13 +257,17 @@ class TestHandlerExecution:
         assert result["status"] == "success"
 
     def test_metaplasticity_apply_handler(self):
-        from whitemagic.tools.handlers.neuro_cognitive import handle_metaplasticity_apply
+        from whitemagic.tools.handlers.neuro_cognitive import (
+            handle_metaplasticity_apply,
+        )
 
         result = handle_metaplasticity_apply(memory_id="test-mem", delta=0.1)
         assert result["status"] == "success"
 
     def test_metaplasticity_plasticity_handler(self):
-        from whitemagic.tools.handlers.neuro_cognitive import handle_metaplasticity_plasticity
+        from whitemagic.tools.handlers.neuro_cognitive import (
+            handle_metaplasticity_plasticity,
+        )
 
         result = handle_metaplasticity_plasticity(memory_id="test-mem")
         assert result["status"] == "success"

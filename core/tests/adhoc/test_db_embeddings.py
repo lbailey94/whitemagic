@@ -6,7 +6,6 @@ Run manually:
 Not collected by pytest automatically (no test_ functions at module level).
 """
 
-import sqlite3
 import sys
 
 from whitemagic.core.memory.db_manager import safe_connect

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import time
 import sys
+import time
 from pathlib import Path
 
 # Add project root to path

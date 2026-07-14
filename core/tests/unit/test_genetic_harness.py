@@ -91,7 +91,7 @@ class TestGeneticHarness:
     def test_mutate_perturbs_genes(self, simple_harness):
         simple_harness._config.mutation_rate = 1.0  # Force mutation
         chrom = Chromosome(genes={"x": 5.0, "y": 5.0})
-        original_x = chrom.genes["x"]
+        chrom.genes["x"]
         simple_harness.mutate(chrom)
         # With mutation_rate=1.0, x should likely change
         assert 0.0 <= chrom.genes["x"] <= 10.0  # Within bounds

@@ -199,6 +199,7 @@ class TestMeshAwareness:
 
     def test_process_redis_message_peer_discovered(self):
         import json
+
         from whitemagic.mesh.awareness import MeshAwareness
 
         aw = MeshAwareness()
@@ -217,6 +218,7 @@ class TestMeshAwareness:
 
     def test_process_redis_message_peer_left(self):
         import json
+
         from whitemagic.mesh.awareness import MeshAwareness
 
         aw = MeshAwareness()
@@ -313,8 +315,8 @@ class TestConsolidationBicameral:
 
     def test_bicameral_enrich_no_clusters(self):
         from whitemagic.core.memory.consolidation import (
-            MemoryConsolidator,
             MemoryCluster,
+            MemoryConsolidator,
         )
 
         c = MemoryConsolidator()
@@ -338,8 +340,8 @@ class TestConsolidationBicameral:
 
     def test_bicameral_enrich_finds_logical_links(self):
         from whitemagic.core.memory.consolidation import (
-            MemoryConsolidator,
             MemoryCluster,
+            MemoryConsolidator,
         )
 
         c = MemoryConsolidator()
@@ -360,8 +362,8 @@ class TestConsolidationBicameral:
 
     def test_bicameral_enrich_finds_creative_links(self):
         from whitemagic.core.memory.consolidation import (
-            MemoryConsolidator,
             MemoryCluster,
+            MemoryConsolidator,
         )
 
         c = MemoryConsolidator()

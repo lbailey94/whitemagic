@@ -9,13 +9,14 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 try:
+    import whitemagic.core.intelligence.solver
+
+    import whitemagic.agents.swarm
+    import whitemagic.core.acceleration.simd
+    import whitemagic.core.governor
+    import whitemagic.core.intelligence.knowledge_graph
     import whitemagic.core.memory.unified
     import whitemagic.core.memory.vector_search
-    import whitemagic.core.intelligence.knowledge_graph
-    import whitemagic.core.intelligence.solver
-    import whitemagic.core.governor
-    import whitemagic.core.acceleration.simd
-    import whitemagic.agents.swarm
     import whitemagic.tools.sandbox  # noqa: F401 — sentinel for SANDBOX_AVAILABLE
 except ImportError:
     pass
@@ -157,24 +158,24 @@ class TestGovernorHandlers(unittest.TestCase):
 
 class TestMemoryHandlers(unittest.TestCase):
     def test_create_memory_missing_title(self):
-        from whitemagic.tools.handlers.memory import handle_create_memory
         from whitemagic.tools.errors import ToolExecutionError
+        from whitemagic.tools.handlers.memory import handle_create_memory
 
         with self.assertRaises(ToolExecutionError) as ctx:
             handle_create_memory(content="test content")
         self.assertIn("title", str(ctx.exception))
 
     def test_create_memory_missing_content(self):
-        from whitemagic.tools.handlers.memory import handle_create_memory
         from whitemagic.tools.errors import ToolExecutionError
+        from whitemagic.tools.handlers.memory import handle_create_memory
 
         with self.assertRaises(ToolExecutionError) as ctx:
             handle_create_memory(title="test title")
         self.assertIn("content", str(ctx.exception))
 
     def test_create_memory_empty_title(self):
-        from whitemagic.tools.handlers.memory import handle_create_memory
         from whitemagic.tools.errors import ToolExecutionError
+        from whitemagic.tools.handlers.memory import handle_create_memory
 
         with self.assertRaises(ToolExecutionError):
             handle_create_memory(title="   ", content="some content")

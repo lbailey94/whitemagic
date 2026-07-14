@@ -11,8 +11,6 @@ This test suite verifies the Phase 3 fix for fast-path dispatch:
 """
 from __future__ import annotations
 
-import pytest
-
 
 class TestFastPathRegistryMetadata:
     """Verify fast-path dispatch uses registry metadata, not name-pattern inference."""
@@ -35,7 +33,7 @@ class TestFastPathRegistryMetadata:
 
     def test_is_fast_path_matches_explicit_tools(self):
         """Tools in _FAST_PATH_TOOLS are fast-path eligible."""
-        from whitemagic.tools.dispatch_table import _is_fast_path, _FAST_PATH_TOOLS
+        from whitemagic.tools.dispatch_table import _FAST_PATH_TOOLS, _is_fast_path
         for tool_name in _FAST_PATH_TOOLS:
             assert _is_fast_path(tool_name), f"{tool_name} should be fast-path eligible"
 
@@ -56,7 +54,7 @@ class TestFastPathRegistryMetadata:
 
     def test_tool_definition_has_fast_path_field(self):
         """ToolDefinition should have a fast_path boolean field."""
-        from whitemagic.tools.tool_types import ToolDefinition, ToolCategory, ToolSafety
+        from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
         td = ToolDefinition(
             name="test.tool",
             description="test",
@@ -69,7 +67,7 @@ class TestFastPathRegistryMetadata:
 
     def test_tool_definition_fast_path_defaults_false(self):
         """ToolDefinition.fast_path should default to False."""
-        from whitemagic.tools.tool_types import ToolDefinition, ToolCategory, ToolSafety
+        from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
         td = ToolDefinition(
             name="test.tool",
             description="test",

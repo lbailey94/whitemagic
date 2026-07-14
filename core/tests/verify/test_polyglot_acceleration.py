@@ -7,10 +7,11 @@ Tests:
 3. Julia/Haskell/Zig bridge stubs
 """
 
-import time
 import json
-from whitemagic.tools.unified_api import call_tool
+import time
+
 from whitemagic.optimization.polyglot_router import get_router
+from whitemagic.tools.unified_api import call_tool
 
 
 def test_ghost_deep_search():

@@ -13,8 +13,6 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
-
 
 def _build_namespace_cache_key(
     tool_name: str,

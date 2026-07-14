@@ -12,18 +12,14 @@ Tests that:
 """
 from __future__ import annotations
 
-import os
 import time
 
 import pytest
 
 from whitemagic.security.transaction_firewall import (
     ECONOMIC_TOOLS,
-    SecurityEvent,
-    TransactionFirewall,
     TransactionPolicy,
     TransactionRequest,
-    TransactionVerdict,
     VerdictReason,
 )
 
@@ -33,8 +29,9 @@ def firewall(tmp_path, monkeypatch):
     """Create a fresh firewall with a temp state root."""
     monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
     import importlib
-    import whitemagic.security.transaction_firewall as mod
+
     import whitemagic.config.paths as paths_mod
+    import whitemagic.security.transaction_firewall as mod
     importlib.reload(paths_mod)
     importlib.reload(mod)
     mod._firewall = None

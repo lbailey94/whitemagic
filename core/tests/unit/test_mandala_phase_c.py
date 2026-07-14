@@ -3,8 +3,6 @@
 import os
 import tempfile
 
-import pytest
-
 os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_"))
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
@@ -106,8 +104,8 @@ class TestHybridDispatcherKarmic:
 
     def test_karmic_compare_no_mismatch(self):
         from whitemagic.core.acceleration.hybrid_dispatcher import (
-            HybridDispatcher,
             DispatchMode,
+            HybridDispatcher,
         )
 
         hd = HybridDispatcher(DispatchMode.SPEED)  # Force Python
@@ -122,8 +120,8 @@ class TestHybridDispatcherKarmic:
 
     def test_karmic_compare_undeclared_network(self):
         from whitemagic.core.acceleration.hybrid_dispatcher import (
-            HybridDispatcher,
             DispatchMode,
+            HybridDispatcher,
         )
 
         hd = HybridDispatcher(DispatchMode.SPEED)
@@ -138,8 +136,8 @@ class TestHybridDispatcherKarmic:
 
     def test_karmic_compare_undeclared_destructive(self):
         from whitemagic.core.acceleration.hybrid_dispatcher import (
-            HybridDispatcher,
             DispatchMode,
+            HybridDispatcher,
         )
 
         hd = HybridDispatcher(DispatchMode.SPEED)
@@ -154,8 +152,8 @@ class TestHybridDispatcherKarmic:
 
     def test_karmic_compare_fallback_flag(self):
         from whitemagic.core.acceleration.hybrid_dispatcher import (
-            HybridDispatcher,
             DispatchMode,
+            HybridDispatcher,
         )
 
         hd = HybridDispatcher(DispatchMode.SPEED)

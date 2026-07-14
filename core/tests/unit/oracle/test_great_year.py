@@ -1,19 +1,19 @@
 """Tests for the Great Year / Precession system."""
 
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from whitemagic.oracle.great_year import (
+    AGE_THEMES,
+    GREAT_YEAR_YEARS,
+    HARMONIC_72,
+    HARMONIC_144K,
+    YEARS_PER_AGE,
+    YUGA_SYSTEM,
     GreatYearEngine,
-    TemporalContext,
     PrecessionalPosition,
+    TemporalContext,
     get_great_year_engine,
     get_temporal_context,
-    GREAT_YEAR_YEARS,
-    YEARS_PER_AGE,
-    HARMONIC_144K,
-    HARMONIC_72,
-    AGE_THEMES,
-    YUGA_SYSTEM,
 )
 
 
@@ -58,7 +58,7 @@ class TestPrecessionalPosition:
     def test_current_age_is_pisces_or_aquarius(self):
         """In 2026, we should be in Pisces or transitioning to Aquarius."""
         engine = GreatYearEngine()
-        now = datetime(2026, 6, 29, tzinfo=timezone.utc)
+        now = datetime(2026, 6, 29, tzinfo=UTC)
         pos = engine.get_precessional_position(now)
         # With reference_year=1, 2026 is ~2025 years into Pisces
         # Pisces age is 2160 years, so we're still in Pisces but near the end
@@ -67,7 +67,7 @@ class TestPrecessionalPosition:
     def test_is_transition_period(self):
         """2026 should be in a transition period (within 100 years of boundary)."""
         engine = GreatYearEngine()
-        now = datetime(2026, 6, 29, tzinfo=timezone.utc)
+        now = datetime(2026, 6, 29, tzinfo=UTC)
         pos = engine.get_precessional_position(now)
         # 2026 is ~135 years from the Aquarius boundary (2161)
         # So might not be in transition depending on exact calculation
@@ -95,22 +95,22 @@ class TestZodiacSeason:
 
     def test_aries_season(self):
         engine = GreatYearEngine()
-        d = datetime(2026, 3, 25, tzinfo=timezone.utc)
+        d = datetime(2026, 3, 25, tzinfo=UTC)
         assert engine.get_current_zodiac_season(d) == "aries"
 
     def test_leo_season(self):
         engine = GreatYearEngine()
-        d = datetime(2026, 7, 25, tzinfo=timezone.utc)
+        d = datetime(2026, 7, 25, tzinfo=UTC)
         assert engine.get_current_zodiac_season(d) == "leo"
 
     def test_aquarius_season(self):
         engine = GreatYearEngine()
-        d = datetime(2026, 2, 1, tzinfo=timezone.utc)
+        d = datetime(2026, 2, 1, tzinfo=UTC)
         assert engine.get_current_zodiac_season(d) == "aquarius"
 
     def test_capricorn_season(self):
         engine = GreatYearEngine()
-        d = datetime(2026, 1, 15, tzinfo=timezone.utc)
+        d = datetime(2026, 1, 15, tzinfo=UTC)
         assert engine.get_current_zodiac_season(d) == "capricorn"
 
 
@@ -159,7 +159,7 @@ class TestTemporalContext:
         """If we're in or near Aquarius, check for current_relevance."""
         engine = GreatYearEngine()
         # Force a date far into Aquarius
-        far_future = datetime(2500, 6, 29, tzinfo=timezone.utc)
+        far_future = datetime(2500, 6, 29, tzinfo=UTC)
         pos = engine.get_precessional_position(far_future)
         if pos.current_age == "aquarius":
             assert pos.current_relevance is not None

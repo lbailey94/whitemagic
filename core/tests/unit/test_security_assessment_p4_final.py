@@ -3,8 +3,6 @@
 import os
 import tempfile
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_p4_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -136,6 +134,8 @@ class TestCrossChainAnalyzer:
     def test_singleton(self):
         from whitemagic.tools.security.cross_chain_analyzer import (
             get_cross_chain_analyzer,
+        )
+        from whitemagic.tools.security.cross_chain_analyzer import (
             get_cross_chain_analyzer as g2,
         )
 
@@ -158,7 +158,11 @@ class TestCanaryTokenLayer:
     """Test canary token deployment and triggering."""
 
     def test_deploy_api_key_canary(self):
-        from whitemagic.security.canary_tokens import CanaryTokenManager, CanaryType, CanaryStatus
+        from whitemagic.security.canary_tokens import (
+            CanaryStatus,
+            CanaryTokenManager,
+            CanaryType,
+        )
 
         mgr = CanaryTokenManager()
         canary = mgr.deploy_api_key_canary("config.yaml", "Test API key")
@@ -187,7 +191,11 @@ class TestCanaryTokenLayer:
         assert "/api/internal/" in canary.token_value
 
     def test_trigger_canary(self):
-        from whitemagic.security.canary_tokens import CanaryTokenManager, CanaryType, CanaryStatus
+        from whitemagic.security.canary_tokens import (
+            CanaryStatus,
+            CanaryTokenManager,
+            CanaryType,
+        )
 
         mgr = CanaryTokenManager()
         canary = mgr.deploy(
@@ -223,7 +231,11 @@ class TestCanaryTokenLayer:
         assert result["reason"] == "already_triggered"
 
     def test_revoke_canary(self):
-        from whitemagic.security.canary_tokens import CanaryTokenManager, CanaryType, CanaryStatus
+        from whitemagic.security.canary_tokens import (
+            CanaryStatus,
+            CanaryTokenManager,
+            CanaryType,
+        )
 
         mgr = CanaryTokenManager()
         canary = mgr.deploy(CanaryType.API_KEY, "Test", "config.yaml")
@@ -238,7 +250,11 @@ class TestCanaryTokenLayer:
         assert trigger_result["reason"] == "revoked"
 
     def test_expired_canary(self):
-        from whitemagic.security.canary_tokens import CanaryTokenManager, CanaryType, CanaryStatus
+        from whitemagic.security.canary_tokens import (
+            CanaryStatus,
+            CanaryTokenManager,
+            CanaryType,
+        )
 
         mgr = CanaryTokenManager()
         canary = mgr.deploy(CanaryType.API_KEY, "Test", "config.yaml", ttl_seconds=0.01)
@@ -252,7 +268,11 @@ class TestCanaryTokenLayer:
         assert mgr._tokens[canary.token_id].status == CanaryStatus.EXPIRED
 
     def test_list_tokens(self):
-        from whitemagic.security.canary_tokens import CanaryTokenManager, CanaryType, CanaryStatus
+        from whitemagic.security.canary_tokens import (
+            CanaryStatus,
+            CanaryTokenManager,
+            CanaryType,
+        )
 
         mgr = CanaryTokenManager()
         mgr.deploy(CanaryType.API_KEY, "Token 1", "config.yaml")
@@ -316,6 +336,7 @@ class TestCanaryTokenLayer:
         assert len(d["token_value"]) < len(canary.token_value)
 
     def test_singleton(self):
-        from whitemagic.security.canary_tokens import get_canary_manager, get_canary_manager as g2
+        from whitemagic.security.canary_tokens import get_canary_manager
+        from whitemagic.security.canary_tokens import get_canary_manager as g2
 
         assert get_canary_manager() is g2()

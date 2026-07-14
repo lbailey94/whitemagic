@@ -10,8 +10,6 @@ Covers:
 import os
 import tempfile
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_sec_phase2_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -546,7 +544,7 @@ class TestMiddlewareEnforcementNewTools:
                 called.append(True)
                 return {"status": "success"}
 
-            result = mw_engagement_token(ctx, next_fn)
+            mw_engagement_token(ctx, next_fn)
             assert called == [True]
         finally:
             engine.set_profile(original)

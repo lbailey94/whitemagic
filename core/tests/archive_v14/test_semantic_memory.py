@@ -1,4 +1,5 @@
 import pytest
+
 pytestmark = pytest.mark.skip('Legacy architecture obsolete in V22')
 
 

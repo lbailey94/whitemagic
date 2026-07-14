@@ -10,8 +10,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_sec_enh_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -65,7 +63,9 @@ class TestHermitCrabTokenRevocation:
         assert count == 0
 
     def test_hermit_crab_revokes_tokens_on_withdrawal(self):
-        from whitemagic.security.engagement_tokens import EngagementTokenManager, get_token_manager
+        from whitemagic.security.engagement_tokens import (
+            get_token_manager,
+        )
         from whitemagic.security.hermit_crab import HermitCrab, HermitState
 
         # Issue a token first
@@ -122,7 +122,10 @@ class TestAdaptiveDefenseVulnKBFeedback:
 
     def test_vuln_kb_add_pattern_from_adaptive(self):
         """Simulate feeding a discovered attack pattern into the VulnKB."""
-        from whitemagic.tools.security.vuln_knowledge import VulnKnowledgeBase, VulnerabilityPattern
+        from whitemagic.tools.security.vuln_knowledge import (
+            VulnerabilityPattern,
+            VulnKnowledgeBase,
+        )
 
         kb = VulnKnowledgeBase()
         initial_count = len(kb._patterns)
@@ -152,7 +155,9 @@ class TestAdaptiveDefenseVulnKBFeedback:
 
     def test_persistent_vuln_kb_stores_adaptive_patterns(self):
         """Test that PersistentVulnKnowledgeBase stores adaptive defense patterns."""
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
         from whitemagic.tools.security.vuln_knowledge import VulnerabilityPattern
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_adapt_")) / "test_vuln.db"

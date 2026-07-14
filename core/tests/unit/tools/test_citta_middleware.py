@@ -6,17 +6,16 @@ import tempfile
 os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_cmw_"))
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
+from whitemagic.core.consciousness import global_workspace as gw_mod  # noqa: E402
+from whitemagic.core.consciousness.citta_cycle import get_citta_cycle  # noqa: E402
+from whitemagic.core.consciousness.dharma import get_dharma  # noqa: E402
+from whitemagic.core.consciousness.global_workspace import (  # noqa: E402
+    get_global_workspace,
+)
 from whitemagic.tools.middleware import (  # noqa: E402
     DispatchContext,
     mw_citta_consciousness,
 )
-from whitemagic.core.consciousness.citta_cycle import get_citta_cycle  # noqa: E402
-from whitemagic.core.consciousness.dharma import get_dharma  # noqa: E402
-from whitemagic.core.consciousness.global_workspace import (  # noqa: E402
-    GlobalWorkspace,
-    get_global_workspace,
-)
-from whitemagic.core.consciousness import global_workspace as gw_mod  # noqa: E402
 
 
 def _reset_gw():

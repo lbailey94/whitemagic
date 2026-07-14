@@ -13,8 +13,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from whitemagic.agents.immortal_clone_v2 import (
-    CampaignVictoryTracker,
     CampaignDashboard,
+    CampaignVictoryTracker,
     immortal_clone_deploy,
 )
 
@@ -64,7 +64,7 @@ def test_victory_tracker():
     status = tracker.get_status()
     assert status["vcs_met"] == 3
     assert status["total_vcs"] == 3
-    assert status["complete"] == True
+    assert status["complete"]
 
     logger.info("✅ Victory tracker tests passed")
     return True

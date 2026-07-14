@@ -255,7 +255,7 @@ class TestSecurityEventBusLedgerIntegration:
         from whitemagic.security.event_bus import get_security_event_bus
         from whitemagic.security.zodiac.ledger import ZodiacLedger
 
-        bus = get_security_event_bus()
+        get_security_event_bus()
         ledger = ZodiacLedger()
         ledger.subscribe_to_event_bus()
         ledger.subscribe_to_event_bus()  # Should not duplicate

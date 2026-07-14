@@ -8,8 +8,9 @@ End-to-end tests for critical paths:
   4. Dispatch pipeline security gates
 """
 
-import os
 import json
+import os
+
 import pytest
 
 # Ensure test isolation
@@ -127,15 +128,15 @@ class TestPRATRouting:
 
     def test_prat_router_imports(self):
         """PRAT router module imports cleanly."""
-        from whitemagic.tools.prat_router import TOOL_TO_GANA
         from whitemagic.tools.prat_mappings import GANA_TO_TOOLS
+        from whitemagic.tools.prat_router import TOOL_TO_GANA
 
         assert len(TOOL_TO_GANA) > 100
         assert len(GANA_TO_TOOLS) == 28
 
     def test_prat_route_specific_tool(self):
         """Route a specific tool through its Gana."""
-        from whitemagic.tools.prat_router import route_prat_call, TOOL_TO_GANA
+        from whitemagic.tools.prat_router import TOOL_TO_GANA, route_prat_call
 
         # Find which gana owns 'capabilities'
         gana = TOOL_TO_GANA.get("capabilities")
@@ -147,7 +148,7 @@ class TestPRATRouting:
 
     def test_prat_wrong_gana_hint(self):
         """Routing a tool through the wrong Gana gives a helpful hint."""
-        from whitemagic.tools.prat_router import route_prat_call, TOOL_TO_GANA
+        from whitemagic.tools.prat_router import TOOL_TO_GANA, route_prat_call
 
         # Find a tool and its correct gana
         tool_name = "capabilities"

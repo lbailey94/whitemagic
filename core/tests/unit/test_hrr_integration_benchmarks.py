@@ -10,14 +10,13 @@ These tests exercise the real HRREngine (no mocks) to validate:
 
 from __future__ import annotations
 
-import time
 import unittest
 
 import numpy as np
 
-from whitemagic.core.memory.hrr import HRREngine, get_hrr_engine
-from whitemagic.core.memory.qfhrr import QuantizedHRREngine
 from whitemagic.ai.vsa_context_compressor import VSAContextCompressor
+from whitemagic.core.memory.hrr import HRREngine
+from whitemagic.core.memory.qfhrr import QuantizedHRREngine
 
 
 class TestHRRBindUnbindAccuracy(unittest.TestCase):
@@ -147,7 +146,7 @@ class TestQFHRRvsHRRAccuracy(unittest.TestCase):
         self.assertGreater(avg_qhrr, -0.1, f"qFHRR avg similarity: {avg_qhrr:.3f}")
 
         # Log the comparison
-        print(f"\n  HRR vs qFHRR bind/unbind accuracy:")
+        print("\n  HRR vs qFHRR bind/unbind accuracy:")
         print(f"    HRR (float64):  avg similarity = {avg_hrr:.3f}")
         print(f"    qFHRR (4-bit):   avg similarity = {avg_qhrr:.3f}")
         print(f"    Accuracy ratio:  {avg_qhrr / avg_hrr:.2%}")
@@ -158,7 +157,7 @@ class TestQFHRRvsHRRAccuracy(unittest.TestCase):
         qhrr_bytes = self.qhrr.bytes_per_vector
         ratio = hrr_bytes / qhrr_bytes
 
-        print(f"\n  Memory per vector:")
+        print("\n  Memory per vector:")
         print(f"    HRR (float64):  {hrr_bytes} bytes")
         print(f"    qFHRR (4-bit):   {qhrr_bytes} bytes")
         print(f"    Compression:     {ratio:.1f}x")
@@ -171,7 +170,7 @@ class TestVSACompressionBenchmark(unittest.TestCase):
 
     def test_compression_ratio_on_synthetic_data(self) -> None:
         """Measure compression ratio with realistic-sized context items."""
-        compressor = VSAContextCompressor(hrr=HRREngine(dim=384))
+        VSAContextCompressor(hrr=HRREngine(dim=384))
 
         # Simulate 20 context items, each ~500 tokens (2000 chars)
         items = []
@@ -192,7 +191,7 @@ class TestVSACompressionBenchmark(unittest.TestCase):
 
         ratio = original_tokens / compressed_tokens
 
-        print(f"\n  VSA Context Compression:")
+        print("\n  VSA Context Compression:")
         print(f"    Items: {len(items)}")
         print(f"    Original tokens: {original_tokens}")
         print(f"    Compressed tokens: {compressed_tokens}")
@@ -202,7 +201,7 @@ class TestVSACompressionBenchmark(unittest.TestCase):
 
     def test_compression_scales_with_items(self) -> None:
         """Compression ratio should increase with more items."""
-        compressor = VSAContextCompressor(hrr=HRREngine(dim=384))
+        VSAContextCompressor(hrr=HRREngine(dim=384))
         compressed_tokens = 96  # Fixed: 384 dims // 4
 
         for n_items in [5, 10, 20, 50, 100]:
@@ -224,7 +223,6 @@ class TestTokenTrackerIntegration(unittest.TestCase):
     def test_green_score_records_token_savings(self) -> None:
         """Verify that token tracker feeds into GreenScore correctly."""
         from whitemagic.core.monitoring.green_score import get_green_score
-        from whitemagic.core.monitoring.token_tracker import _estimate_tokens
 
         gs = get_green_score()
         snapshot_before = gs.snapshot()
@@ -241,7 +239,7 @@ class TestTokenTrackerIntegration(unittest.TestCase):
         self.assertGreater(snapshot_after.tokens_saved, snapshot_before.tokens_saved)
         self.assertGreater(snapshot_after.edge_calls, snapshot_before.edge_calls)
 
-        print(f"\n  GreenScore token tracking:")
+        print("\n  GreenScore token tracking:")
         print(f"    Tokens saved before: {snapshot_before.tokens_saved}")
         print(f"    Tokens saved after:  {snapshot_after.tokens_saved}")
         print(f"    Edge calls:          {snapshot_after.edge_calls}")
@@ -266,7 +264,7 @@ class TestDispatchPipelineIntegration(unittest.TestCase):
             tt_idx, ir_idx, "Token tracker should run after inference router"
         )
 
-        print(f"\n  Dispatch pipeline middleware order:")
+        print("\n  Dispatch pipeline middleware order:")
         for i, name in enumerate(middleware_names):
             print(f"    {i + 1}. {name}")
 

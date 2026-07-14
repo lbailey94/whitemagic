@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import time
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from whitemagic.core.consciousness.ambient_sensorium import (
-    AmbientSignal,
     AmbientSensorium,
     AmbientState,
     EnvironmentSensor,

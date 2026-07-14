@@ -2,10 +2,8 @@
 conflict resolution, agent registry, and cache invalidation events."""
 
 import os
-import tempfile
-import threading
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -13,14 +11,11 @@ import pytest
 os.environ.setdefault("WM_SILENT_INIT", "1")
 os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 
-from whitemagic.core.memory.unified_types import Memory, MemoryType
 from whitemagic.core.memory.agent_registry import (
-    AgentInfo,
-    AgentRegistry,
     get_agent_registry,
     reset_agent_registry,
 )
-
+from whitemagic.core.memory.unified_types import Memory, MemoryType
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -47,7 +42,6 @@ def registry():
 @pytest.fixture
 def clean_cache_registry():
     """Reset cache registry singleton."""
-    from whitemagic.core.memory.cache_registry import _registry as _cr
     import whitemagic.core.memory.cache_registry as cr_mod
     cr_mod._registry = None
     yield
@@ -403,10 +397,12 @@ class TestCacheInvalidationEvents:
         assert EventType.CACHE_TRANSFER.value == "cache_transfer"
 
     def test_cache_registry_subscribes_to_events(self, clean_cache_registry):
-        from whitemagic.core.memory.cache_registry import get_cache_registry, CacheRegistry
+        from whitemagic.core.memory.cache_registry import (
+            get_cache_registry,
+        )
         from whitemagic.core.resonance import EventType, get_bus
         # Get registry — should auto-subscribe
-        reg = get_cache_registry()
+        get_cache_registry()
         bus = get_bus()
         # Verify listener was registered
         assert EventType.CACHE_INVALIDATE in bus._listeners
@@ -414,7 +410,7 @@ class TestCacheInvalidationEvents:
 
     def test_cache_registry_invalidates_on_event(self, clean_cache_registry):
         from whitemagic.core.memory.cache_registry import get_cache_registry
-        from whitemagic.core.resonance import EventType, get_bus, ResonanceEvent
+        from whitemagic.core.resonance import EventType, ResonanceEvent, get_bus
 
         reg = get_cache_registry()
 

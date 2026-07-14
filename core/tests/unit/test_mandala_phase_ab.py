@@ -3,8 +3,6 @@
 import os
 import tempfile
 
-import pytest
-
 # Set WM_STATE_ROOT to temp dir to avoid loading production DB
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
@@ -174,8 +172,8 @@ class TestMandalaMCPTools:
         assert "secure" in result["templates"]
 
     def test_mandala_create_with_template(self):
-        from whitemagic.tools.handlers.shelter import handle_mandala_create
         from whitemagic.shelter import get_shelter_manager
+        from whitemagic.tools.handlers.shelter import handle_mandala_create
 
         result = handle_mandala_create(name="test_mcp_1", template="sandbox")
         assert result["status"] == "ok"
@@ -184,8 +182,8 @@ class TestMandalaMCPTools:
         get_shelter_manager().destroy(name="test_mcp_1")
 
     def test_mandala_create_without_template(self):
-        from whitemagic.tools.handlers.shelter import handle_mandala_create
         from whitemagic.shelter import get_shelter_manager
+        from whitemagic.tools.handlers.shelter import handle_mandala_create
 
         result = handle_mandala_create(name="test_mcp_2", dharma_profile="creative")
         assert result["status"] == "ok"
@@ -237,7 +235,11 @@ class TestKarmaEntryShelterId:
         assert "shelter_id" not in d
 
     def test_record_with_effects_shelter_id(self):
-        from whitemagic.dharma.karma_ledger import KarmaLedger, EffectSignature, EffectType
+        from whitemagic.dharma.karma_ledger import (
+            EffectSignature,
+            EffectType,
+            KarmaLedger,
+        )
 
         ledger = KarmaLedger()
         entry = ledger.record_with_effects(

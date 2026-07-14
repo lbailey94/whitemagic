@@ -1,4 +1,5 @@
 import pytest
+
 from whitemagic.core.boundaries.boundary_engine import BoundaryEngine, BoundaryType
 
 

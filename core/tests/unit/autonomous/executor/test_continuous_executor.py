@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-import pytest
-
 # NOTE: async executor tests were previously skipped; attempting to fix
 # pytest.skip("Continuous executor tests need async/await fixes", allow_module_level=True)
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from whitemagic.autonomous.executor.assessor import Assessment
 from whitemagic.autonomous.executor.continuous_executor import (
     ContinuousExecutor,
+    ExecutionResult,
     ExecutorConfig,
     Objective,
-    ExecutionResult,
 )
-from whitemagic.autonomous.executor.assessor import Assessment
 
 
 @pytest.fixture
@@ -120,7 +121,7 @@ async def test_run_continuous_empty_queue(executor):
     ) as mock_self_direct:
         with patch.object(
             executor, "execute_batch_async", new_callable=AsyncMock
-        ) as mock_batch:
+        ):
             executor.limits.should_stop.side_effect = [
                 (False, None),
                 (True, "Stop for test"),
@@ -204,7 +205,7 @@ async def test_checkpoint(executor):
             "whitemagic.autonomous.executor.continuous_executor.Objective.to_dict",
             return_value={"test": "data"},
         ):
-            with patch("whitemagic.utils.fast_json.dumps_str") as mock_json:
+            with patch("whitemagic.utils.fast_json.dumps_str"):
                 # Need to also patch limits since it throws json serialize error on MagicMock
                 executor.limits = MagicMock()
                 executor.limits.get_status.return_value = {"limit": "ok"}

@@ -5,9 +5,7 @@ from __future__ import annotations
 import pytest
 
 from whitemagic.core.identity.network_state import (
-    AgentIdentity,
     NetworkStateProfile,
-    Proposal,
 )
 
 
@@ -15,6 +13,7 @@ from whitemagic.core.identity.network_state import (
 def state(tmp_path, monkeypatch):
     monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
     import importlib
+
     import whitemagic.config.paths as paths_mod
     importlib.reload(paths_mod)
     import whitemagic.core.identity.network_state as ns_mod

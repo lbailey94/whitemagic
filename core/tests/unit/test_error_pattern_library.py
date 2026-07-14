@@ -1,21 +1,14 @@
 # ruff: noqa: BLE001
 """Tests for the Error Pattern Library."""
 
-import json
-import os
-import tempfile
-from pathlib import Path
 
 import pytest
 
 from whitemagic.core.patterns.error_library import (
-    AntiPatternEntry,
-    ErrorPattern,
     ErrorPatternLibrary,
-    SolutionPattern,
     _classify_error,
-    _fingerprint,
     _extract_title,
+    _fingerprint,
 )
 
 

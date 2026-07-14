@@ -139,8 +139,8 @@ class TestTipRoute:
     @pytest.mark.asyncio
     async def test_tip_status_when_enabled(self):
         """tip_status should return wallet details when configured."""
-        from whitemagic.interfaces.api.routes.tip import tip_status
         from whitemagic.core.economy import wallet_manager as wm_mod
+        from whitemagic.interfaces.api.routes.tip import tip_status
 
         test_addr = "rN7n7otQDd6FczFgLdlqtyMVrn3HMfHgFj"
         with patch.dict(os.environ, {"WM_XRP_ADDRESS": test_addr}):

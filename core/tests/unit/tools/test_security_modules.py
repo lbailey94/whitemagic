@@ -1,19 +1,35 @@
 """Tests for Phase 2-6 security modules — Foundry bridge, ABI decoder, vuln KB, contest, OSS."""
 import json
-import pytest
 
-from whitemagic.tools.security.foundry_bridge import FoundryBridge, FoundryResult
-from whitemagic.tools.security.abi_decoder import parse_abi, decode_calldata, summarize_abi, extract_events
-from whitemagic.tools.security.vuln_knowledge import get_vuln_knowledge_base, VulnKnowledgeBase, VulnerabilityPattern
-from whitemagic.tools.security.contest_pipeline import get_contest_pipeline, ContestPipeline, ContestFinding
-from whitemagic.tools.security.oss_scanner import get_oss_scanner, OSSBountyScanner, BountyIssue
 from whitemagic.tools.handlers.security_tools import (
-    handle_vuln_search, handle_vuln_status, handle_contest_status,
-    handle_contest_add_finding, handle_contest_format,
-    handle_abi_parse, handle_abi_summarize, handle_abi_decode_calldata,
+    handle_abi_decode_calldata,
+    handle_abi_parse,
+    handle_abi_summarize,
+    handle_contest_add_finding,
+    handle_contest_format,
+    handle_contest_status,
     handle_security_status,
+    handle_vuln_search,
+    handle_vuln_status,
 )
-
+from whitemagic.tools.security.abi_decoder import (
+    decode_calldata,
+    extract_events,
+    parse_abi,
+    summarize_abi,
+)
+from whitemagic.tools.security.contest_pipeline import (
+    ContestPipeline,
+)
+from whitemagic.tools.security.foundry_bridge import FoundryBridge, FoundryResult
+from whitemagic.tools.security.oss_scanner import (
+    get_oss_scanner,
+)
+from whitemagic.tools.security.vuln_knowledge import (
+    VulnerabilityPattern,
+    VulnKnowledgeBase,
+    get_vuln_knowledge_base,
+)
 
 SAMPLE_ABI = json.dumps([
     {"type": "function", "name": "transfer", "inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}], "outputs": [{"name": "", "type": "bool"}], "stateMutability": "nonpayable"},

@@ -13,7 +13,6 @@ from whitemagic.core.consciousness.dharma import (  # noqa: E402
 )
 from whitemagic.core.consciousness.global_workspace import (  # noqa: E402
     GlobalWorkspace,
-    WorkspaceBroadcast,
 )
 
 

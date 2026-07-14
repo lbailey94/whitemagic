@@ -7,7 +7,6 @@ without requiring external services (Redis, llama.cpp).
 
 from unittest.mock import MagicMock, patch
 
-
 # ---------------------------------------------------------------------------
 # Task Distribution Tests (no external deps)
 # ---------------------------------------------------------------------------
@@ -121,8 +120,8 @@ class TestTaskDistribution:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.task_dist import (
-            handle_task_distribute,
             handle_task_complete,
+            handle_task_distribute,
             handle_task_status,
         )
 
@@ -145,8 +144,8 @@ class TestTaskDistribution:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.task_dist import (
-            handle_task_distribute,
             handle_task_complete,
+            handle_task_distribute,
         )
 
         create_result = handle_task_distribute(command="fail_cmd")
@@ -197,8 +196,8 @@ class TestVoting:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
             handle_vote_cast,
+            handle_vote_create,
         )
 
         session = handle_vote_create(problem="Best framework?")
@@ -220,8 +219,8 @@ class TestVoting:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
             handle_vote_cast,
+            handle_vote_create,
         )
 
         session = handle_vote_create(problem="Test question")
@@ -240,9 +239,9 @@ class TestVoting:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
-            handle_vote_cast,
             handle_vote_analyze,
+            handle_vote_cast,
+            handle_vote_create,
         )
 
         session = handle_vote_create(problem="Optimize query?")
@@ -274,9 +273,9 @@ class TestVoting:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
-            handle_vote_cast,
             handle_vote_analyze,
+            handle_vote_cast,
+            handle_vote_create,
         )
 
         session = handle_vote_create(problem="Close test")
@@ -309,9 +308,9 @@ class TestVoting:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
-            handle_vote_cast,
             handle_vote_analyze,
+            handle_vote_cast,
+            handle_vote_create,
         )
 
         session = handle_vote_create(problem="Closed test")

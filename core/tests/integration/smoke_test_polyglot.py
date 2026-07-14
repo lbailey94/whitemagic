@@ -1,6 +1,6 @@
-import subprocess
 import json
 import os
+import subprocess
 
 print("🔮 WhiteMagic Grand Smoke Test 🔮")
 print("=================================")

@@ -12,8 +12,6 @@ Verifies that:
 """
 from __future__ import annotations
 
-import pytest
-
 
 class TestCacheKeyPrivacyClassification:
     """Verify privacy_classification is included in cache keys."""
@@ -92,15 +90,14 @@ class TestWriteDrivenCacheInvalidation:
 
     def test_write_tool_triggers_invalidation(self):
         """After a successful write tool, the semantic cache namespace is invalidated."""
+        import unittest.mock as mock
+
         from whitemagic.tools.middleware import (
             DispatchContext,
             mw_semantic_cache,
-            _is_read_only_tool,
         )
-        import unittest.mock as mock
 
         # Track invalidation calls
-        invalidation_calls = []
 
         def mock_next_fn(ctx):
             return {"status": "success", "result": "written"}
@@ -134,11 +131,12 @@ class TestWriteDrivenCacheInvalidation:
 
     def test_read_tool_does_not_trigger_invalidation(self):
         """After a successful read tool, cache invalidation should NOT fire."""
+        import unittest.mock as mock
+
         from whitemagic.tools.middleware import (
             DispatchContext,
             mw_semantic_cache,
         )
-        import unittest.mock as mock
 
         def mock_next_fn(ctx):
             return {"status": "success", "result": "data"}
@@ -155,18 +153,19 @@ class TestWriteDrivenCacheInvalidation:
 
             with mock.patch("whitemagic.tools.middleware._is_cacheable_tool", return_value=True):
                 with mock.patch("whitemagic.tools.middleware._is_read_only_tool", return_value=True):
-                    result = mw_semantic_cache(ctx, mock_next_fn)
+                    mw_semantic_cache(ctx, mock_next_fn)
 
             # invalidate_namespace should NOT be called for read-only tools
             mock_unified.invalidate_namespace.assert_not_called()
 
     def test_failed_write_does_not_trigger_invalidation(self):
         """A failed write should not trigger cache invalidation."""
+        import unittest.mock as mock
+
         from whitemagic.tools.middleware import (
             DispatchContext,
             mw_semantic_cache,
         )
-        import unittest.mock as mock
 
         def mock_next_fn(ctx):
             return {"status": "error", "error": "write failed"}
@@ -183,7 +182,7 @@ class TestWriteDrivenCacheInvalidation:
 
             with mock.patch("whitemagic.tools.middleware._is_cacheable_tool", return_value=True):
                 with mock.patch("whitemagic.tools.middleware._is_read_only_tool", return_value=False):
-                    result = mw_semantic_cache(ctx, mock_next_fn)
+                    mw_semantic_cache(ctx, mock_next_fn)
 
             mock_unified.invalidate_namespace.assert_not_called()
 
@@ -285,7 +284,7 @@ class TestNamespaceMigrationTooling:
 
     def test_migration_report_structure(self, tmp_path):
         """Migration report has the expected structure."""
-        import sys, json
+        import sys
         sys.path.insert(0, "/home/lucas/Desktop/WHITEMAGIC/core/scripts")
         try:
             from namespace_migration import migrate

@@ -1,6 +1,7 @@
 import json
 
 import whitemagic_rust
+
 from whitemagic.optimization.rust_accelerators import _RUST_SEARCH
 
 print(f"RUST_SEARCH available: {_RUST_SEARCH}")

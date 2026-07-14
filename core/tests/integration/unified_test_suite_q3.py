@@ -7,10 +7,10 @@ Tests all 9 language SDKs with standardized test vectors.
 import json
 import subprocess
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any
 
 
 class TestStatus(Enum):
@@ -113,9 +113,9 @@ class UnifiedTestSuite:
 
     def __init__(self, base_path: Path = Path(__file__).resolve().parent.parent.parent):
         self.base_path = base_path
-        self.results: List[TestResult] = []
+        self.results: list[TestResult] = []
 
-    def run_all(self) -> Dict[str, Any]:
+    def run_all(self) -> dict[str, Any]:
         """Execute full test suite across all languages."""
         print("=" * 60)
         print("WhiteMagic Q3 Unified Cross-Language Test Suite")
@@ -129,7 +129,7 @@ class UnifiedTestSuite:
 
         return self._generate_report()
 
-    def _test_language(self, lang: str, config: Dict[str, Any]) -> None:
+    def _test_language(self, lang: str, config: dict[str, Any]) -> None:
         """Test a single language SDK."""
         print(f"\n[{lang.upper()}] Testing...")
 
@@ -237,7 +237,7 @@ class UnifiedTestSuite:
                 return matches[0]
         return None
 
-    def _generate_report(self) -> Dict[str, Any]:
+    def _generate_report(self) -> dict[str, Any]:
         """Generate comprehensive test report."""
         total = len(self.results)
         passed = sum(1 for r in self.results if r.status == TestStatus.PASS)

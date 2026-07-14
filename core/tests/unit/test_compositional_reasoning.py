@@ -9,7 +9,6 @@ from whitemagic.core.intelligence.agentic.compositional_reasoning import (
     CompositionalReasoner,
     CompositionalResult,
     _extract_relation,
-    reason_compositionally,
 )
 
 

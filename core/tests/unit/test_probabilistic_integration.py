@@ -1,11 +1,11 @@
 """Tests for probabilistic integration with UnifiedMemory hooks."""
 
+from whitemagic.core.memory.probabilistic import MemoryAnalytics
 from whitemagic.core.memory.probabilistic_integration import (
     analytics_summary,
     get_analytics,
     init_analytics,
 )
-from whitemagic.core.memory.probabilistic import MemoryAnalytics
 
 
 class TestProbabilisticIntegration:
@@ -38,13 +38,14 @@ class TestProbabilisticIntegration:
     def test_observe_via_hook(self):
         """Test that the store hook correctly feeds analytics."""
         analytics = init_analytics(hll_precision=10, cms_width=256, cms_depth=3)
-        initial_count = analytics.estimate_distinct_count()
+        analytics.estimate_distinct_count()
 
         # Simulate a hook call
+        import uuid
+        from datetime import datetime
+
         from whitemagic.core.memory.probabilistic_integration import _on_memory_stored
         from whitemagic.core.memory.unified_types import Memory, MemoryType
-        from datetime import datetime
-        import uuid
 
         mem = Memory(
             id=uuid.uuid4(),

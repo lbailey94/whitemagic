@@ -6,7 +6,13 @@ import tempfile
 os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_ripple_"))
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
-from whitemagic.core.memory.ripple_tagging import tag_ripple, batch_tag, get_tags, decay_tags, stats  # noqa: E402
+from whitemagic.core.memory.ripple_tagging import (  # noqa: E402
+    batch_tag,
+    decay_tags,
+    get_tags,
+    stats,
+    tag_ripple,
+)
 
 
 class TestTagRipple:

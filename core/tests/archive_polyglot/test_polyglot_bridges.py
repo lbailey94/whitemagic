@@ -9,8 +9,9 @@ Tests the FFI bridges between Python and:
 - Julia (whitemagic-julia)
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Compute repo root relative to this test file
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent

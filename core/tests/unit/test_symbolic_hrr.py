@@ -9,13 +9,10 @@ Tests verify:
 - Deterministic encoding (same symbol → same vector)
 """
 
-import pytest
 from whitemagic.oracle.symbolic_hrr import (
     SymbolicHRR,
-    get_symbolic_hrr,
-    _cosine_sim,
-    _seeded_vector,
     _hash_seed,
+    get_symbolic_hrr,
 )
 
 

@@ -3,7 +3,6 @@
 import os
 import tempfile
 
-import pytest
 from whitemagic.core.memory.db_manager import safe_connect
 
 os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
@@ -27,7 +26,6 @@ class TestHomeostaticScaling:
         assert hasattr(c, "_homeostatic_scaling")
 
     def test_scaling_pulls_toward_target(self, tmp_path):
-        import sqlite3
         from whitemagic.core.memory.sleep_consolidation import SleepConsolidation
 
         db = str(tmp_path / "test.db")
@@ -60,14 +58,20 @@ class TestDisinhibitionModel:
     """Test sleep/wake state-dependent gating."""
 
     def test_initial_state_is_wake(self):
-        from whitemagic.core.memory.disinhibition import DisinhibitionModel, WAKE
+        from whitemagic.core.memory.disinhibition import WAKE, DisinhibitionModel
         model = DisinhibitionModel()
         state = model.get_state()
         assert state["state_code"] == WAKE
         assert state["state"] == "Wake"
 
     def test_state_transition_cycle(self):
-        from whitemagic.core.memory.disinhibition import DisinhibitionModel, WAKE, LIGHT_SLEEP, DEEP_SLEEP, REM
+        from whitemagic.core.memory.disinhibition import (
+            DEEP_SLEEP,
+            LIGHT_SLEEP,
+            REM,
+            WAKE,
+            DisinhibitionModel,
+        )
         model = DisinhibitionModel()
         assert model.get_state()["state_code"] == WAKE
         assert model.transition()["state_code"] == LIGHT_SLEEP
@@ -76,7 +80,10 @@ class TestDisinhibitionModel:
         assert model.transition()["state_code"] == WAKE
 
     def test_weights_differ_by_state(self):
-        from whitemagic.core.memory.disinhibition import DisinhibitionModel, WAKE, DEEP_SLEEP
+        from whitemagic.core.memory.disinhibition import (
+            DEEP_SLEEP,
+            DisinhibitionModel,
+        )
         model = DisinhibitionModel()
         wake_weights = model.get_weights()
         model.set_state(DEEP_SLEEP)
@@ -85,7 +92,7 @@ class TestDisinhibitionModel:
         assert sleep_weights["sessions"] < wake_weights["sessions"]
 
     def test_rem_boosts_dreams(self):
-        from whitemagic.core.memory.disinhibition import DisinhibitionModel, REM, WAKE
+        from whitemagic.core.memory.disinhibition import REM, DisinhibitionModel
         model = DisinhibitionModel()
         wake_w = model.get_weights()
         model.set_state(REM)
@@ -93,7 +100,10 @@ class TestDisinhibitionModel:
         assert rem_w["dreams"] > wake_w["dreams"]
 
     def test_disinhibition_levels(self):
-        from whitemagic.core.memory.disinhibition import DisinhibitionModel, WAKE, DEEP_SLEEP
+        from whitemagic.core.memory.disinhibition import (
+            DEEP_SLEEP,
+            DisinhibitionModel,
+        )
         model = DisinhibitionModel()
         assert model.get_state()["disinhibition_level"] == 1.0
         model.set_state(DEEP_SLEEP)
@@ -184,7 +194,11 @@ class TestRustPyO3Backend:
         assert tg.stats()["backend"] == "python"
 
     def test_python_wrapper_backend_assignment(self):
-        from whitemagic.core.memory.neuro_hotpath import get_thalamic_gating, get_predictive_coder, get_momentum_dynamics
+        from whitemagic.core.memory.neuro_hotpath import (
+            get_momentum_dynamics,
+            get_predictive_coder,
+            get_thalamic_gating,
+        )
         assert get_thalamic_gating().stats()["backend"] == "python"  # PyO3 FFI overhead > dict lookup
         assert get_predictive_coder().stats()["backend"] == "rust"    # 19x speedup for vector math
         assert get_momentum_dynamics().stats()["backend"] == "python"  # PyO3 FFI overhead > dict update

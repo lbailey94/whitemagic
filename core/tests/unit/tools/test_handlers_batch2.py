@@ -8,7 +8,6 @@ Uses mocks for subsystem singletons to isolate handler logic.
 import unittest
 from unittest.mock import MagicMock, patch
 
-
 # =========================================================================
 # Balance / Harmony handlers
 # =========================================================================

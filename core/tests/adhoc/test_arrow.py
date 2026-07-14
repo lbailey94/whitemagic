@@ -3,7 +3,6 @@ import time
 import uuid
 
 import pyarrow as pa
-
 import whitemagic_rust
 
 try:

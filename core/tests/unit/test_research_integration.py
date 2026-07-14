@@ -28,13 +28,12 @@ from whitemagic.core.evolution.research_dag import (  # noqa: E402
     ResearchDomain,
     get_research_dag,
 )
+from whitemagic.mesh.crdt_leaderboard import get_leaderboard  # noqa: E402
 from whitemagic.mesh.critique_protocol import get_critique_protocol  # noqa: E402
+from whitemagic.mesh.durable_archive import get_durable_archive  # noqa: E402
 from whitemagic.mesh.pulse_verification import (  # noqa: E402
-    VerificationTier,
     get_pulse_verifier,
 )
-from whitemagic.mesh.crdt_leaderboard import get_leaderboard  # noqa: E402
-from whitemagic.mesh.durable_archive import get_durable_archive  # noqa: E402
 
 
 class TestFullResearchPipeline:

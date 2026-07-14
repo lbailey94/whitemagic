@@ -9,8 +9,6 @@ Tests verify:
 - Hypervolume computation for 2 objectives
 """
 
-import pytest
-from unittest.mock import MagicMock
 
 from whitemagic.oracle.parameter_mapper import ParameterMapper, get_parameter_mapper
 

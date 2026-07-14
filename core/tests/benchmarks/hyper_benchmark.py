@@ -1,8 +1,9 @@
 import asyncio
-import time
-import random
 import logging
-from whitemagic.core.memory.unified import get_unified_memory, MemoryType
+import random
+import time
+
+from whitemagic.core.memory.unified import MemoryType, get_unified_memory
 
 # Set up logging
 logging.basicConfig(

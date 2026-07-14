@@ -10,7 +10,6 @@ Regression tests for v11.3 modules:
 import json
 import time
 
-
 # from tests.conftest import assert_envelope_shape  # not available in this test runner
 assert_envelope_shape = None  # placeholder
 
@@ -40,6 +39,7 @@ class TestMemoryLifecycle:
     def test_run_sweep_returns_report(self):
         from types import SimpleNamespace
         from unittest.mock import patch
+
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
 
         mock_report = SimpleNamespace(
@@ -67,6 +67,7 @@ class TestMemoryLifecycle:
     def test_stats_update_after_sweep(self):
         from types import SimpleNamespace
         from unittest.mock import patch
+
         from whitemagic.core.memory.lifecycle import MemoryLifecycleManager
 
         mock_report = SimpleNamespace(
@@ -94,6 +95,7 @@ class TestMemoryLifecycle:
     def test_flush_count_triggers_sweep(self):
         from types import SimpleNamespace
         from unittest.mock import patch
+
         from whitemagic.core.memory.lifecycle import (
             LifecycleConfig,
             MemoryLifecycleManager,

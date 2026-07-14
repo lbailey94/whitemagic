@@ -4,9 +4,7 @@ Verifies that CoreAccessLayer, KaizenEngine, EmergenceEngine, SerendipityEngine,
 and AssociationMiner correctly query across all galaxy DBs via galaxy_scan.
 """
 
-import os
 import sqlite3
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -288,21 +286,27 @@ class TestEmergenceEngineMultiGalaxy:
     """Test EmergenceEngine queries across multiple galaxies."""
 
     def test_detect_tag_clusters_scans_all(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            EmergenceEngine,
+        )
 
         engine = EmergenceEngine()
         insights = engine._detect_tag_clusters()
         assert isinstance(insights, list)
 
     def test_detect_resonance_cascades_scans_all(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            EmergenceEngine,
+        )
 
         engine = EmergenceEngine()
         insights = engine._detect_resonance_cascades()
         assert isinstance(insights, list)
 
     def test_detect_novelty_spikes_scans_all(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            EmergenceEngine,
+        )
 
         engine = EmergenceEngine()
         insights = engine._detect_novelty_spikes()
@@ -313,7 +317,9 @@ class TestSerendipityEngineMultiGalaxy:
     """Test SerendipityEngine queries across multiple galaxies."""
 
     def test_surface_dormant_scans_all(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.synthesis.serendipity_engine import SerendipityEngine
+        from whitemagic.core.intelligence.synthesis.serendipity_engine import (
+            SerendipityEngine,
+        )
 
         engine = SerendipityEngine()
         surfaced = engine._surface_dormant(count=5)
@@ -323,7 +329,9 @@ class TestSerendipityEngineMultiGalaxy:
         assert "mem_a1" in surfaced_ids or "mem_b1" in surfaced_ids
 
     def test_surface_random_scans_all(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.synthesis.serendipity_engine import SerendipityEngine
+        from whitemagic.core.intelligence.synthesis.serendipity_engine import (
+            SerendipityEngine,
+        )
 
         engine = SerendipityEngine()
         surfaced = engine._surface_random(count=4)
@@ -333,7 +341,9 @@ class TestSerendipityEngineMultiGalaxy:
         assert len(surfaced_ids) > 0
 
     def test_surface_ancient_scans_all(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.synthesis.serendipity_engine import SerendipityEngine
+        from whitemagic.core.intelligence.synthesis.serendipity_engine import (
+            SerendipityEngine,
+        )
 
         engine = SerendipityEngine()
         surfaced = engine._surface_ancient(count=4)
@@ -343,7 +353,9 @@ class TestSerendipityEngineMultiGalaxy:
         assert len(surfaced_ids) > 0
 
     def test_surface_bridges_scans_all(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.synthesis.serendipity_engine import SerendipityEngine
+        from whitemagic.core.intelligence.synthesis.serendipity_engine import (
+            SerendipityEngine,
+        )
 
         engine = SerendipityEngine()
         surfaced = engine._surface_bridges(count=4)
@@ -353,7 +365,9 @@ class TestSerendipityEngineMultiGalaxy:
         assert "mem_b2" in surfaced_ids
 
     def test_mark_accessed_across_galaxies(self, multi_galaxy_setup):
-        from whitemagic.core.intelligence.synthesis.serendipity_engine import SerendipityEngine
+        from whitemagic.core.intelligence.synthesis.serendipity_engine import (
+            SerendipityEngine,
+        )
 
         engine = SerendipityEngine()
         engine.mark_accessed("mem_a1")

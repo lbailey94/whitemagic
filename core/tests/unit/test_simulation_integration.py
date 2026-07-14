@@ -20,7 +20,9 @@ def _reset_singletons():
     from whitemagic.core.evolution.research_dag import ResearchDAG
     ResearchDAG._instance = None
     # Reset SimulationOrchestrator singleton
-    from whitemagic.core.consciousness.simulation_orchestrator import SimulationOrchestrator
+    from whitemagic.core.consciousness.simulation_orchestrator import (
+        SimulationOrchestrator,
+    )
     SimulationOrchestrator._instance = None
     yield
     reset_singleton()
@@ -199,7 +201,6 @@ class TestSimulationOrchestrator:
     def test_singleton(self):
         """SimulationOrchestrator is a singleton."""
         from whitemagic.core.consciousness.simulation_orchestrator import (
-            SimulationOrchestrator,
             get_simulation_orchestrator,
         )
         orch1 = get_simulation_orchestrator()
@@ -424,7 +425,6 @@ class TestAutoswarmSuperforecaster:
         """Default campaigns include a superforecaster campaign."""
         from whitemagic.core.evolution.autoswarm import (
             EvolutionaryAutoswarm,
-            CampaignConfig,
         )
         swarm = EvolutionaryAutoswarm()
         campaigns = swarm._default_campaigns()
@@ -434,8 +434,8 @@ class TestAutoswarmSuperforecaster:
     def test_run_superforecaster_campaign(self):
         """_run_superforecaster_campaign returns hypotheses and fitness."""
         from whitemagic.core.evolution.autoswarm import (
-            EvolutionaryAutoswarm,
             CampaignConfig,
+            EvolutionaryAutoswarm,
         )
         swarm = EvolutionaryAutoswarm()
         config = CampaignConfig(

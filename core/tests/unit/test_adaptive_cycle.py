@@ -9,8 +9,9 @@ Tests verify:
 - Graceful degradation when components unavailable
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from whitemagic.oracle.adaptive_cycle import (
     AdaptiveOracleCycle,

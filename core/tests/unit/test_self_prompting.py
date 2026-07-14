@@ -6,8 +6,6 @@ from __future__ import annotations
 import os
 import tempfile
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ["WM_STATE_ROOT"] = _tmp
 os.environ["WM_SILENT_INIT"] = "1"
@@ -17,7 +15,11 @@ class TestSelfPrompting:
     """Test the self-prompting work queue."""
 
     def test_queue_work(self):
-        from whitemagic.core.consciousness.self_initiation import queue_work, get_queue_status, clear_completed
+        from whitemagic.core.consciousness.self_initiation import (
+            clear_completed,
+            get_queue_status,
+            queue_work,
+        )
         clear_completed()
         item_id = queue_work("test task", priority=5)
         assert len(item_id) > 0
@@ -26,7 +28,10 @@ class TestSelfPrompting:
 
     def test_priority_ordering(self):
         from whitemagic.core.consciousness.self_initiation import (
-            queue_work, _load_queue, clear_completed, Priority,
+            Priority,
+            _load_queue,
+            clear_completed,
+            queue_work,
         )
         clear_completed()
         queue_work("low priority", priority=Priority.LOW)
@@ -38,7 +43,9 @@ class TestSelfPrompting:
 
     def test_process_queue(self):
         from whitemagic.core.consciousness.self_initiation import (
-            queue_work, process_queue, clear_completed,
+            clear_completed,
+            process_queue,
+            queue_work,
         )
         clear_completed()
         queue_work("process me", priority=1)
@@ -47,7 +54,9 @@ class TestSelfPrompting:
 
     def test_ask_human(self):
         from whitemagic.core.consciousness.self_initiation import (
-            ask_human, get_pending_questions, answer_question, clear_completed,
+            answer_question,
+            ask_human,
+            get_pending_questions,
         )
         qid = ask_human("What should I do?", context="testing")
         questions = get_pending_questions()
@@ -57,7 +66,9 @@ class TestSelfPrompting:
 
     def test_clear_completed(self):
         from whitemagic.core.consciousness.self_initiation import (
-            queue_work, process_queue, clear_completed,
+            clear_completed,
+            process_queue,
+            queue_work,
         )
         clear_completed()
         queue_work("to be completed", priority=1)
@@ -67,7 +78,11 @@ class TestSelfPrompting:
 
     def test_register_handler(self):
         from whitemagic.core.consciousness.self_initiation import (
-            register_handler, queue_work, process_queue, clear_completed, _load_queue,
+            _load_queue,
+            clear_completed,
+            process_queue,
+            queue_work,
+            register_handler,
         )
         clear_completed()
         called = []
@@ -94,7 +109,12 @@ class TestSelfPrompting:
 
     def test_max_attempts(self):
         from whitemagic.core.consciousness.self_initiation import (
-            register_handler, queue_work, process_queue, clear_completed, _load_queue, _save_queue,
+            _load_queue,
+            _save_queue,
+            clear_completed,
+            process_queue,
+            queue_work,
+            register_handler,
         )
         clear_completed()
         def failing_handler(item):

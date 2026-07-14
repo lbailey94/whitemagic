@@ -1,9 +1,9 @@
 """Tests for PRAT vectorized dispatcher."""
 
 from whitemagic.tools.vectorized import (
-    VectorizedDispatcher,
     _REVERSE_TOOL,
     _TOOL_CODEBOOK,
+    VectorizedDispatcher,
     decode_call,
     encode_call,
     is_vectorized_mode,

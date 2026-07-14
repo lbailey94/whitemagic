@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import json
-import time
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from whitemagic.inference.model_mesh import (
     CHANNEL_MODEL_BITMAMBA,
@@ -15,12 +12,11 @@ from whitemagic.inference.model_mesh import (
     CHANNEL_MODEL_STATUS,
     InferenceRequest,
     InferenceResponse,
+    MeshStats,
     ModelMeshClient,
     ModelMeshPublisher,
     ModelStatus,
-    MeshStats,
     get_mesh_client,
-    is_mesh_available,
 )
 
 

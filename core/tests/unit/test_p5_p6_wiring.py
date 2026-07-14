@@ -8,8 +8,9 @@ Tests verify:
 - Fallback to hardcoded maps when SymbolicHRR unavailable
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from whitemagic.oracle.wisdom_synthesis import (
     OracleSynthesizer,
@@ -138,7 +139,7 @@ class TestLLMInterpretationWiring:
         with patch("whitemagic.oracle.llm_interpreter.get_oracle_interpreter", return_value=mock_interpreter):
             synth = OracleSynthesizer()
             output = _make_oracle_output(question="Should I proceed?")
-            result = synth.synthesize(output, use_llm=True)
+            synth.synthesize(output, use_llm=True)
             # Check interpreter was called
             assert mock_interpreter.interpret.called
             call_args = mock_interpreter.interpret.call_args

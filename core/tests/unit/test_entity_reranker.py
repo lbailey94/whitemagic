@@ -6,7 +6,6 @@ no ML model loading. Pure unit tests with in-memory SQLite.
 """
 
 import sqlite3
-import tempfile
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
@@ -22,7 +21,6 @@ from whitemagic.core.memory.entity_reranker import (
     rerank_results,
 )
 from whitemagic.core.memory.unified_types import Memory, MemoryType
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -341,7 +339,10 @@ class TestProceduralSkillMatching:
 
     def test_match_finds_skill_by_trigger_overlap(self):
         from whitemagic.core.intelligence.omni.skill_forge import ForgedSkill
-        from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, GanaStep
+        from whitemagic.core.intelligence.omni.universal_router import (
+            ExecutionChain,
+            GanaStep,
+        )
 
         chain = ExecutionChain(
             intent="search memories with embeddings",
@@ -370,7 +371,10 @@ class TestProceduralSkillMatching:
 
     def test_match_returns_max_matches(self):
         from whitemagic.core.intelligence.omni.skill_forge import ForgedSkill
-        from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, GanaStep
+        from whitemagic.core.intelligence.omni.universal_router import (
+            ExecutionChain,
+            GanaStep,
+        )
 
         chain = ExecutionChain(
             intent="test",
@@ -400,7 +404,10 @@ class TestProceduralSkillMatching:
 
     def test_match_low_similarity_excluded(self):
         from whitemagic.core.intelligence.omni.skill_forge import ForgedSkill
-        from whitemagic.core.intelligence.omni.universal_router import ExecutionChain, GanaStep
+        from whitemagic.core.intelligence.omni.universal_router import (
+            ExecutionChain,
+            GanaStep,
+        )
 
         chain = ExecutionChain(
             intent="completely unrelated thing",

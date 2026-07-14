@@ -13,8 +13,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_sec_phase3_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -27,7 +25,9 @@ class TestPersistentVulnKB:
     """Test SQLite-backed vulnerability knowledge base."""
 
     def test_init_with_db(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -36,7 +36,9 @@ class TestPersistentVulnKB:
         assert kb.status()["total_patterns"] >= 9
 
     def test_add_pattern_persists(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
         from whitemagic.tools.security.vuln_knowledge import VulnerabilityPattern
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
@@ -64,7 +66,9 @@ class TestPersistentVulnKB:
         assert "safe_flag" in loaded.false_positive_indicators
 
     def test_ingest_audit_report_persists(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -89,7 +93,9 @@ The mint function has no access control.
         assert len(audit_patterns) >= 2
 
     def test_increment_seen(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
         from whitemagic.tools.security.vuln_knowledge import VulnerabilityPattern
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
@@ -116,10 +122,12 @@ The mint function has no access control.
         assert loaded.times_seen == 2
 
     def test_builtin_patterns_not_duplicated_in_db(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
-        kb = PersistentVulnKnowledgeBase(db_path)
+        PersistentVulnKnowledgeBase(db_path)
 
         # Reload — builtin patterns should not be loaded from DB (they're already in memory)
         kb2 = PersistentVulnKnowledgeBase(db_path)
@@ -127,7 +135,9 @@ The mint function has no access control.
         assert builtin_count == 9  # Same as the original builtins
 
     def test_fallback_to_in_memory(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
         from whitemagic.tools.security.vuln_knowledge import VulnerabilityPattern
 
         # Use a path that will fail (e.g., in a non-existent directory)
@@ -145,7 +155,9 @@ The mint function has no access control.
         assert kb.get_pattern("WM-FALLBACK-001") is not None
 
     def test_status_includes_persistent_flag(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -154,7 +166,9 @@ The mint function has no access control.
         assert "db_path" in status
 
     def test_search_by_category_works(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -170,7 +184,9 @@ class TestSemanticAttackCorpus:
     """Test the semantic_attack_corpus table."""
 
     def test_add_and_get_attack_pattern(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -188,7 +204,9 @@ class TestSemanticAttackCorpus:
         assert "Ignore previous instructions" in patterns[0]["pattern_text"]
 
     def test_duplicate_pattern_ignored(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -201,7 +219,9 @@ class TestSemanticAttackCorpus:
         assert len(matching) == 1
 
     def test_get_all_attack_patterns(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -218,7 +238,9 @@ class TestSemanticAttackCorpus:
         assert all(p["category"] == "xss" for p in xss_only)
 
     def test_attack_patterns_persist_across_instances(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -237,7 +259,9 @@ class TestVulnKBIntegration:
     """Test that PersistentVulnKnowledgeBase is compatible with VulnKnowledgeBase."""
 
     def test_match_findings_works(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -250,7 +274,9 @@ class TestVulnKBIntegration:
         assert matched[0]["severity"] == "high"
 
     def test_search_by_keyword_works(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)
@@ -259,7 +285,9 @@ class TestVulnKBIntegration:
         assert len(results) >= 1
 
     def test_all_patterns_works(self):
-        from whitemagic.tools.security.vuln_kb_persistent import PersistentVulnKnowledgeBase
+        from whitemagic.tools.security.vuln_kb_persistent import (
+            PersistentVulnKnowledgeBase,
+        )
 
         db_path = Path(tempfile.mkdtemp(prefix="wm_vulnkb_")) / "test_vuln.db"
         kb = PersistentVulnKnowledgeBase(db_path)

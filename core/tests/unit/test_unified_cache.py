@@ -17,7 +17,6 @@ from whitemagic.core.cache.unified_cache_bridge import (
     is_rust_cache_available,
 )
 
-
 # ---------------------------------------------------------------------------
 # Python fallback cache tests
 # ---------------------------------------------------------------------------
@@ -224,6 +223,7 @@ class TestSemanticCacheUnifiedIntegration:
         """Pre-populate unified cache, verify middleware short-circuits."""
         import tempfile
         from pathlib import Path as _Path
+
         from whitemagic.tools.middleware import (
             DispatchContext,
             _cache_key,
@@ -270,6 +270,7 @@ class TestSemanticCacheUnifiedIntegration:
     def test_cache_miss_dispatches_and_caches(self):
         """On cache miss, should dispatch and store in unified cache."""
         import tempfile
+
         from whitemagic.tools.middleware import (
             DispatchContext,
             _cache_key,

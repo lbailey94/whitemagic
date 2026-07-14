@@ -6,25 +6,24 @@ AdaptiveTargets, and MetricsExporter.
 # ruff: noqa: BLE001
 
 import time
-from pathlib import Path
 
 import pytest
 
 try:
-    from whitemagic.harmony.physical_metrics import (
-        get_physical_metrics_source,
-        PhysicalMetricsSource,
-        PhysicalMetrics,
-        AdaptiveTargets,
-        ThermalAnomalyDetector,
-        ForecastEngine,
-        PowerContext,
-        TimeContext,
-        LoadContext,
-    )
     from whitemagic.harmony.metrics_exporter import (
-        get_metrics_exporter,
         MetricsExporter,
+        get_metrics_exporter,
+    )
+    from whitemagic.harmony.physical_metrics import (
+        AdaptiveTargets,
+        ForecastEngine,
+        LoadContext,
+        PhysicalMetrics,
+        PhysicalMetricsSource,
+        PowerContext,
+        ThermalAnomalyDetector,
+        TimeContext,
+        get_physical_metrics_source,
     )
 
     _PHYSICAL_AVAILABLE = True

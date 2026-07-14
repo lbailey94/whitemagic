@@ -9,13 +9,14 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 try:
+    import whitemagic.core.intelligence.solver
+
+    import whitemagic.agents.swarm
+    import whitemagic.core.acceleration.simd
+    import whitemagic.core.governor
+    import whitemagic.core.intelligence.knowledge_graph
     import whitemagic.core.memory.unified
     import whitemagic.core.memory.vector_search
-    import whitemagic.core.intelligence.knowledge_graph
-    import whitemagic.core.intelligence.solver
-    import whitemagic.core.governor
-    import whitemagic.core.acceleration.simd
-    import whitemagic.agents.swarm
     import whitemagic.tools.sandbox  # noqa: F401 — sentinel for SANDBOX_AVAILABLE
 except ImportError:
     pass

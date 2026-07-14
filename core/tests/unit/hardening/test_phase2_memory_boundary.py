@@ -20,13 +20,11 @@ from unittest.mock import patch
 
 import pytest
 
-from whitemagic.core.memory.memory_context import MemoryContext
 from whitemagic.core.memory.backends.protocol import (
-    MemoryBackendProtocol,
     validate_galaxy_name,
     validate_user_id,
 )
-
+from whitemagic.core.memory.memory_context import MemoryContext
 
 # ── Protocol validation ────────────────────────────────────────────────
 
@@ -45,8 +43,6 @@ class TestMemoryBackendProtocol:
         assert hasattr(SQLiteBackend, "get_stats")
         # close and pool are instance attributes, not class attributes
         # Verify they exist on an instance
-        import tempfile
-        from pathlib import Path
         with tempfile.TemporaryDirectory() as td:
             backend = SQLiteBackend(Path(td) / "test.db")
             assert hasattr(backend, "close") or hasattr(backend, "pool")

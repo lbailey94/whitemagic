@@ -14,7 +14,6 @@ Covers:
 
 import pytest
 
-
 # =========================================================================
 # 1. Emotion & Drive Core
 # =========================================================================
@@ -164,7 +163,7 @@ class TestSelfModel:
     """Test the SelfModel predictive introspection engine."""
 
     def test_import(self):
-        from whitemagic.core.intelligence.self_model import SelfModel, Forecast
+        from whitemagic.core.intelligence.self_model import Forecast, SelfModel
 
         assert SelfModel is not None
         assert Forecast is not None

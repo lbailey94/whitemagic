@@ -8,8 +8,10 @@ import pytest
 rich = pytest.importorskip("rich")
 
 import time
-from whitemagic.tools.unified_api import call_tool
+
 from rich.console import Console
+
+from whitemagic.tools.unified_api import call_tool
 
 console = Console()
 

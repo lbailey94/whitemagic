@@ -8,10 +8,10 @@ os.environ.setdefault("WM_SILENT_INIT", "1")
 
 from whitemagic.core.consciousness import global_workspace as gw_mod  # noqa: E402
 from whitemagic.tools.handlers.neuro_cognitive import (  # noqa: E402
-    handle_workspace_propose,
     handle_workspace_ignite,
-    handle_workspace_pending,
     handle_workspace_ignitions,
+    handle_workspace_pending,
+    handle_workspace_propose,
     handle_workspace_state,
 )
 

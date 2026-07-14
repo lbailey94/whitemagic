@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from whitemagic.core.evolution.zen_meta import (
+    STRATEGY_ARMS,
     MetaBandit,
     MetaFeatures,
-    STRATEGY_ARMS,
 )
 
 

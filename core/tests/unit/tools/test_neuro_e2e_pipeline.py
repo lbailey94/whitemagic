@@ -17,8 +17,8 @@ os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_e2e_"))
 
 def _full_pipeline(phrase: str) -> tuple[str, str | None, float, dict]:
     """Run the full classify → dispatch → handler pipeline and return (gana, tool, conf, result)."""
-    from whitemagic.tools.handlers.meta_tool import classify
     from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+    from whitemagic.tools.handlers.meta_tool import classify
 
     gana, tool, conf = classify(phrase)
     assert tool is not None, f"NLU classify returned no tool for '{phrase}'"
@@ -74,8 +74,8 @@ class TestNeuroComputePipeline:
     """Test neuromodulation compute through the full pipeline."""
 
     def test_neuro_compute_with_args(self):
-        from whitemagic.tools.handlers.meta_tool import classify
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+        from whitemagic.tools.handlers.meta_tool import classify
 
         gana, tool, conf = classify("compute neuromodulator levels")
         assert tool == "neuro.compute"
@@ -93,8 +93,8 @@ class TestWorkspacePipeline:
     """Test global workspace through the full pipeline."""
 
     def test_workspace_propose_full_pipeline(self):
-        from whitemagic.tools.handlers.meta_tool import classify
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+        from whitemagic.tools.handlers.meta_tool import classify
 
         gana, tool, conf = classify("global workspace propose")
         assert tool == "workspace.propose"
@@ -116,8 +116,8 @@ class TestMetaplasticityPipeline:
     """Test metaplasticity through the full pipeline."""
 
     def test_metaplasticity_apply_full_pipeline(self):
-        from whitemagic.tools.handlers.meta_tool import classify
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+        from whitemagic.tools.handlers.meta_tool import classify
 
         gana, tool, conf = classify("apply metaplasticity gating")
         assert tool == "metaplasticity.apply"
@@ -128,8 +128,8 @@ class TestMetaplasticityPipeline:
         assert result["status"] == "success"
 
     def test_metaplasticity_plasticity_full_pipeline(self):
-        from whitemagic.tools.handlers.meta_tool import classify
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+        from whitemagic.tools.handlers.meta_tool import classify
 
         gana, tool, conf = classify("metaplasticity plasticity score")
         assert tool == "metaplasticity.plasticity"
@@ -146,8 +146,8 @@ class TestRipplePipeline:
     """Test ripple tagging through the full pipeline."""
 
     def test_ripple_tag_full_pipeline(self):
-        from whitemagic.tools.handlers.meta_tool import classify
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+        from whitemagic.tools.handlers.meta_tool import classify
 
         gana, tool, conf = classify("ripple tag these memories")
         assert tool == "ripple.tag"
@@ -162,8 +162,8 @@ class TestReplayPipeline:
     """Test replay simulation through the full pipeline."""
 
     def test_replay_run_full_pipeline(self):
-        from whitemagic.tools.handlers.meta_tool import classify
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+        from whitemagic.tools.handlers.meta_tool import classify
 
         gana, tool, conf = classify("replay memory sequence")
         assert tool == "replay.run"
@@ -211,6 +211,7 @@ class TestCittaPersistenceWithNeuro:
 
     def test_persist_and_load_with_neuro_signals(self, tmp_path):
         import json
+
         from whitemagic.core.consciousness.citta_cycle import CittaMoment
 
         moment = CittaMoment(
@@ -239,7 +240,6 @@ class TestCittaPersistenceWithNeuro:
 
     def test_load_old_stream_without_neuro_signals(self):
         """Old persisted moments without neuro_signals should load fine (defaults to None)."""
-        import json
         from whitemagic.core.consciousness.citta_cycle import CittaMoment
 
         old_data = {

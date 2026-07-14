@@ -367,6 +367,8 @@ class TestSingletons:
     def test_get_intention_queue(self):
         from whitemagic.core.consciousness.self_initiation import (
             SelfInitiationQueue as IntentionQueue,
+        )
+        from whitemagic.core.consciousness.self_initiation import (
             get_self_initiation_queue as get_intention_queue,
         )
 
@@ -586,7 +588,7 @@ class TestSelfInitiationKarmaLogging:
     """Test that self-initiation execution logs to karma."""
 
     def test_karma_log_function_exists(self):
-        from whitemagic.core.consciousness.self_initiation import _karma_log, WorkItem
+        from whitemagic.core.consciousness.self_initiation import WorkItem, _karma_log
 
         item = WorkItem(task="test intention", handler="")
         # _karma_log should exist and not crash

@@ -6,9 +6,6 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from pathlib import Path
-
-import pytest
 
 _tmp = tempfile.mkdtemp(prefix="wm_test_")
 os.environ["WM_STATE_ROOT"] = _tmp
@@ -109,8 +106,8 @@ class TestAgentRegistryIntegration:
 
     def test_register_and_list(self):
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register,
             handle_agent_list,
+            handle_agent_register,
         )
         result = handle_agent_register(
             name="Interop Test",
@@ -126,8 +123,8 @@ class TestAgentRegistryIntegration:
 
     def test_heartbeat(self):
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register,
             handle_agent_heartbeat,
+            handle_agent_register,
         )
         handle_agent_register(
             name="Heartbeat Test",
@@ -139,8 +136,8 @@ class TestAgentRegistryIntegration:
 
     def test_deregister(self):
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register,
             handle_agent_deregister,
+            handle_agent_register,
         )
         handle_agent_register(
             name="Dereg Test",

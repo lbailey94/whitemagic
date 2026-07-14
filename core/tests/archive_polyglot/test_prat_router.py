@@ -4,23 +4,23 @@ Tests for PRAT Router — Polymorphic Resonant Adaptive Tools
 Validates the 28-Gana nesting of 175+ tools.
 """
 
-import sys
 import os
+import sys
 
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
+from whitemagic.tools.prat_mappings import (
+    TOOL_TO_GANA,
+    get_gana_for_tool,
+    get_tools_for_gana,
+)
 from whitemagic.tools.prat_router import (
     build_prat_description,
     build_prat_schema,
     route_prat_call,
     validate_mapping,
-)
-from whitemagic.tools.prat_mappings import (
-    TOOL_TO_GANA,
-    get_gana_for_tool,
-    get_tools_for_gana,
 )
 
 

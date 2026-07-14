@@ -60,8 +60,8 @@ class TestAgentRegistry:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register,
             handle_agent_heartbeat,
+            handle_agent_register,
         )
 
         reg = handle_agent_register(name="Test", agent_id="agent-test")
@@ -90,8 +90,8 @@ class TestAgentRegistry:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register,
             handle_agent_list,
+            handle_agent_register,
         )
 
         handle_agent_register(
@@ -115,8 +115,8 @@ class TestAgentRegistry:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register,
             handle_agent_capabilities,
+            handle_agent_register,
         )
 
         handle_agent_register(
@@ -132,9 +132,9 @@ class TestAgentRegistry:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.agent_registry import (
-            handle_agent_register,
             handle_agent_deregister,
             handle_agent_list,
+            handle_agent_register,
         )
 
         handle_agent_register(name="Temp", agent_id="temp-1")
@@ -167,9 +167,9 @@ class TestVoteOutcome:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
-            handle_vote_cast,
             handle_vote_analyze,
+            handle_vote_cast,
+            handle_vote_create,
             handle_vote_record_outcome,
         )
 
@@ -196,9 +196,9 @@ class TestVoteOutcome:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
-            handle_vote_cast,
             handle_vote_analyze,
+            handle_vote_cast,
+            handle_vote_create,
             handle_vote_record_outcome,
         )
 
@@ -221,9 +221,9 @@ class TestVoteOutcome:
         monkeypatch.setattr(paths_mod, "WM_ROOT", tmp_path)
 
         from whitemagic.tools.handlers.voting import (
-            handle_vote_create,
-            handle_vote_cast,
             handle_vote_analyze,
+            handle_vote_cast,
+            handle_vote_create,
             handle_vote_record_outcome,
         )
 
@@ -474,8 +474,8 @@ class TestTemporalClassification:
     def test_broker_disconnect_is_fast(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         from whitemagic.core.resonance.temporal_scheduler import (
-            classify_event,
             TemporalLane,
+            classify_event,
         )
 
         assert classify_event(EventType.BROKER_DISCONNECTED) == TemporalLane.FAST
@@ -483,8 +483,8 @@ class TestTemporalClassification:
     def test_task_failed_is_fast(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         from whitemagic.core.resonance.temporal_scheduler import (
-            classify_event,
             TemporalLane,
+            classify_event,
         )
 
         assert classify_event(EventType.TASK_FAILED) == TemporalLane.FAST
@@ -492,8 +492,8 @@ class TestTemporalClassification:
     def test_agent_deregistered_is_fast(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         from whitemagic.core.resonance.temporal_scheduler import (
-            classify_event,
             TemporalLane,
+            classify_event,
         )
 
         assert classify_event(EventType.AGENT_DEREGISTERED) == TemporalLane.FAST
@@ -501,8 +501,8 @@ class TestTemporalClassification:
     def test_vote_consensus_is_slow(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         from whitemagic.core.resonance.temporal_scheduler import (
-            classify_event,
             TemporalLane,
+            classify_event,
         )
 
         assert classify_event(EventType.VOTE_CONSENSUS_REACHED) == TemporalLane.SLOW
@@ -510,8 +510,8 @@ class TestTemporalClassification:
     def test_vote_session_closed_is_slow(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         from whitemagic.core.resonance.temporal_scheduler import (
-            classify_event,
             TemporalLane,
+            classify_event,
         )
 
         assert classify_event(EventType.VOTE_SESSION_CLOSED) == TemporalLane.SLOW
@@ -519,8 +519,8 @@ class TestTemporalClassification:
     def test_task_created_is_medium(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         from whitemagic.core.resonance.temporal_scheduler import (
-            classify_event,
             TemporalLane,
+            classify_event,
         )
 
         assert classify_event(EventType.TASK_CREATED) == TemporalLane.MEDIUM
@@ -528,8 +528,8 @@ class TestTemporalClassification:
     def test_broker_message_is_medium(self):
         from whitemagic.core.resonance.gan_ying_enhanced import EventType
         from whitemagic.core.resonance.temporal_scheduler import (
-            classify_event,
             TemporalLane,
+            classify_event,
         )
 
         assert classify_event(EventType.BROKER_MESSAGE_PUBLISHED) == TemporalLane.MEDIUM
@@ -658,6 +658,7 @@ class TestCircuitBreakerStateMachine:
 
     def test_open_to_half_open_after_cooldown(self):
         import time
+
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
         breaker = CircuitBreaker(
@@ -677,6 +678,7 @@ class TestCircuitBreakerStateMachine:
 
     def test_half_open_to_closed_on_success(self):
         import time
+
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
         breaker = CircuitBreaker(
@@ -697,6 +699,7 @@ class TestCircuitBreakerStateMachine:
 
     def test_half_open_to_open_on_failure(self):
         import time
+
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
         breaker = CircuitBreaker(
@@ -734,6 +737,7 @@ class TestCircuitBreakerStateMachine:
 
     def test_failure_window_prunes_old_failures(self):
         import time
+
         from whitemagic.tools.circuit_breaker import BreakerConfig, CircuitBreaker
 
         breaker = CircuitBreaker(

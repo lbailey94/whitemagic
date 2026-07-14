@@ -15,6 +15,7 @@ import pytest
 
 _UNDER_XDIST = bool(os.environ.get("PYTEST_XDIST_WORKER"))
 
+from whitemagic.core.monitoring.token_tracker import mw_token_tracker
 from whitemagic.tools.middleware import (
     DispatchPipeline,
     mw_circuit_breaker,
@@ -28,7 +29,6 @@ from whitemagic.tools.middleware import (
     mw_tool_permissions,
     mw_zodiac_resonance,
 )
-from whitemagic.core.monitoring.token_tracker import mw_token_tracker
 
 
 def _build_pipeline_without_new() -> DispatchPipeline:
@@ -104,11 +104,11 @@ class TestPipelineProfiling(unittest.TestCase):
         overhead_pct = (overhead_ms / avg_old) * 100 if avg_old > 0 else 0
 
         print(f"\n  Pipeline Profiling ({iterations} iterations):")
-        print(f"    Without new middlewares (10 stages):")
+        print("    Without new middlewares (10 stages):")
         print(
             f"      avg: {avg_old:.3f}ms  median: {median_old:.3f}ms  p99: {p99_old:.3f}ms"
         )
-        print(f"    With new middlewares (12 stages):")
+        print("    With new middlewares (12 stages):")
         print(
             f"      avg: {avg_new:.3f}ms  median: {median_new:.3f}ms  p99: {p99_new:.3f}ms"
         )

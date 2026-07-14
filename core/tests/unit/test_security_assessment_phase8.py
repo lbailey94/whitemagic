@@ -11,8 +11,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_sec_phase8_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
 os.environ.setdefault("WM_SILENT_INIT", "1")

@@ -6,7 +6,6 @@ All tests use in-memory SQLite databases to avoid touching production data.
 
 from __future__ import annotations
 
-
 import sqlite3
 from datetime import datetime, timedelta
 from importlib.util import find_spec
@@ -405,7 +404,10 @@ class TestInsightPipeline:
 
     def test_briefing_to_dict(self):
         """InsightBriefing.to_dict() produces valid structure."""
-        from whitemagic.core.intelligence.insight_pipeline import BriefingItem, InsightBriefing
+        from whitemagic.core.intelligence.insight_pipeline import (
+            BriefingItem,
+            InsightBriefing,
+        )
         briefing = InsightBriefing(
             timestamp="2026-02-11T12:00:00",
             duration_ms=42.5,
@@ -425,7 +427,10 @@ class TestInsightPipeline:
 
     def test_briefing_format_text(self):
         """format_text() produces readable string."""
-        from whitemagic.core.intelligence.insight_pipeline import BriefingItem, InsightBriefing
+        from whitemagic.core.intelligence.insight_pipeline import (
+            BriefingItem,
+            InsightBriefing,
+        )
         briefing = InsightBriefing(
             timestamp="2026-02-11T12:00:00",
             duration_ms=42.5,
@@ -446,7 +451,10 @@ class TestInsightPipeline:
 
     def test_deduplication(self):
         """Duplicate items are removed."""
-        from whitemagic.core.intelligence.insight_pipeline import BriefingItem, InsightPipeline
+        from whitemagic.core.intelligence.insight_pipeline import (
+            BriefingItem,
+            InsightPipeline,
+        )
         items = [
             BriefingItem(id="dup", category="prediction", title="Dup",
                         description="", priority="high", confidence=0.8,
@@ -463,7 +471,10 @@ class TestInsightPipeline:
 
     def test_priority_sorting(self):
         """Items are sorted by priority then confidence."""
-        from whitemagic.core.intelligence.insight_pipeline import BriefingItem, InsightPipeline
+        from whitemagic.core.intelligence.insight_pipeline import (
+            BriefingItem,
+            InsightPipeline,
+        )
         items = [
             BriefingItem(id="low", category="a", title="Low", description="",
                         priority="low", confidence=0.9, source_engine="x"),
@@ -488,7 +499,9 @@ class TestEmergenceEngine:
     @patch("whitemagic.core.resonance.gan_ying_enhanced.get_bus")
     def test_creation(self, mock_bus):
         mock_bus.return_value = MagicMock()
-        from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            EmergenceEngine,
+        )
         engine = EmergenceEngine(threshold=3)
         assert engine._threshold == 3
         assert len(engine._insights) == 0
@@ -496,7 +509,9 @@ class TestEmergenceEngine:
     @patch("whitemagic.core.resonance.gan_ying_enhanced.get_bus")
     def test_get_status(self, mock_bus):
         mock_bus.return_value = MagicMock()
-        from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            EmergenceEngine,
+        )
         engine = EmergenceEngine()
         status = engine.get_status()
         assert status["active"] is False
@@ -541,7 +556,9 @@ class TestEmergenceEngine:
     @patch("whitemagic.core.resonance.gan_ying_enhanced.get_bus")
     def test_scan_temporal_bursts(self, mock_bus):
         mock_bus.return_value = MagicMock()
-        from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            EmergenceEngine,
+        )
         from whitemagic.core.intelligence.core_access import TemporalBucket
 
         engine = EmergenceEngine()
@@ -614,7 +631,9 @@ class TestDataStructures:
         assert d["sources"] == ["vector", "graph"]
 
     def test_emergence_insight_to_dict(self):
-        from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceInsight
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            EmergenceInsight,
+        )
         i = EmergenceInsight(
             id="test_1", title="Convergence", description="Two merge",
             source="constellation_convergence", confidence=0.85,

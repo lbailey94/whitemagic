@@ -1,4 +1,6 @@
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
 from whitemagic.core.intelligence.hologram.encoder import (
     CoordinateEncoder,
     HolographicCoordinate,

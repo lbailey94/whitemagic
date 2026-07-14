@@ -7,7 +7,10 @@ os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_sensoriu
 os.environ.setdefault("WM_SILENT_INIT", "1")
 os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 
-from whitemagic.core.consciousness.neuro_sensorium import NeuroSensorium, get_neuro_sensorium  # noqa: E402
+from whitemagic.core.consciousness.neuro_sensorium import (  # noqa: E402
+    NeuroSensorium,
+    get_neuro_sensorium,
+)
 
 
 class TestNeuroSensorium:

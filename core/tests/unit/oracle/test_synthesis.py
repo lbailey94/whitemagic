@@ -1,13 +1,11 @@
 """Tests for the Oracle Wisdom Synthesis layer."""
 
 import pytest
+
 from whitemagic.oracle.wisdom_synthesis import (
-    OracleSynthesizer,
     SynthesisResult,
-    ResonancePattern,
-    NarrativeArc,
-    synthesize_oracle,
     get_synthesizer,
+    synthesize_oracle,
 )
 
 

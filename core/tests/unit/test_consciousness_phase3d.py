@@ -1,26 +1,17 @@
 """Tests for Phase 3d consciousness modules: goal graph, emotional steering, self-directed attention."""
 
-import tempfile
-from pathlib import Path
 
-import pytest
 
+from whitemagic.core.consciousness.emotional_steering import (
+    EmotionalSteering,
+)
 from whitemagic.core.consciousness.goal_graph import (
-    Goal,
     GoalGraph,
     GoalStatus,
     GoalType,
-    get_goal_graph,
-)
-from whitemagic.core.consciousness.emotional_steering import (
-    EmotionalSignal,
-    EmotionalSteering,
-    get_emotional_steering,
 )
 from whitemagic.core.consciousness.self_initiation import (
     SelfDirectedAttention,
-    SelfInitiatedTurn,
-    get_self_directed_attention,
 )
 
 
@@ -160,7 +151,6 @@ class TestSelfDirectedAttention:
     def test_observe_no_goals(self, tmp_path, monkeypatch):
         # Patch goal graph to use temp path
         import whitemagic.core.consciousness.goal_graph as gg_mod
-        original_get = gg_mod.get_goal_graph
         test_graph = GoalGraph(persist_path=tmp_path / "goals.json")
         monkeypatch.setattr(gg_mod, "get_goal_graph", lambda: test_graph)
 
@@ -171,8 +161,8 @@ class TestSelfDirectedAttention:
         assert any(t.action_type == "connect" for t in turns)
 
     def test_observe_blocked_goals(self, tmp_path, monkeypatch):
-        import whitemagic.core.consciousness.goal_graph as gg_mod
         import whitemagic.core.consciousness.emotional_steering as es_mod
+        import whitemagic.core.consciousness.goal_graph as gg_mod
         import whitemagic.core.consciousness.self_initiation as sda_mod
         test_graph = GoalGraph(persist_path=tmp_path / "goals.json")
         test_graph.add_goal("g1", "Blocked goal", GoalType.BUILD)
@@ -190,8 +180,8 @@ class TestSelfDirectedAttention:
         assert any(t.action_type == "fix" for t in turns)
 
     def test_observe_proposed_goals(self, tmp_path, monkeypatch):
-        import whitemagic.core.consciousness.goal_graph as gg_mod
         import whitemagic.core.consciousness.emotional_steering as es_mod
+        import whitemagic.core.consciousness.goal_graph as gg_mod
         import whitemagic.core.consciousness.self_initiation as sda_mod
         test_graph = GoalGraph(persist_path=tmp_path / "goals.json")
         test_graph.add_goal("g1", "Proposed goal", GoalType.BUILD)

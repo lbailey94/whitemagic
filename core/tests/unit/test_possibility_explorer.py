@@ -7,12 +7,10 @@ os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp())
 os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 os.environ.setdefault("WM_SILENT_INIT", "1")
 
-import pytest
 
 from whitemagic.core.consciousness.possibility_explorer import (
-    PossibilitySpaceExplorer,
-    PossibilityTrial,
     ExplorationResult,
+    PossibilitySpaceExplorer,
 )
 
 

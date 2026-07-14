@@ -279,12 +279,12 @@ class TestM7_SecurityContact:
     """M7: Verify security contact is consistent and canonical."""
 
     def test_security_md_has_correct_versions(self):
-        """SECURITY.md should list 22.x as supported, not 21.x."""
+        """SECURITY.md should list current major version as supported."""
         security_path = os.path.join(REPO_ROOT, "SECURITY.md")
         with open(security_path) as f:
             content = f.read()
-        assert "| 22.x    | :white_check_mark: |" in content or "22.x" in content
-        # Should NOT say 21.x is current supported
+        assert "| 25.x    | :white_check_mark: |" in content or "25.x" in content
+        # Should NOT claim obsolete versions are current supported
         assert "| 21.x    | :white_check_mark: |" not in content
 
     def test_security_md_prefers_github_advisory(self):

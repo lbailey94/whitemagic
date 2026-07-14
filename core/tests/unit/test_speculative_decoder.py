@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import time
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from whitemagic.inference.speculative_decoder import (
     SpeculativeDecoder,
@@ -355,11 +352,9 @@ class TestSpeculativeRouterWiring:
 
     def test_get_speculative_router_registers_handlers(self):
         """get_speculative_router should register draft+verify handlers."""
-        from whitemagic.inference.router import get_speculative_router
-        from whitemagic.inference.speculative_decoder import get_speculative_decoder
-
         # Reset singleton
         import whitemagic.inference.speculative_decoder as sd
+        from whitemagic.inference.router import get_speculative_router
 
         sd._decoder = None
 

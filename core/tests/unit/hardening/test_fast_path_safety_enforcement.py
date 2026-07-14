@@ -51,7 +51,9 @@ class TestFastPathEligibleProperty:
 
     def _make_td(self, **kwargs):
         from whitemagic.tools.tool_types import (
-            ToolDefinition, ToolCategory, ToolSafety, FastPathSafety,
+            ToolCategory,
+            ToolDefinition,
+            ToolSafety,
         )
         defaults = dict(
             name="test.tool",
@@ -74,7 +76,7 @@ class TestFastPathEligibleProperty:
 
     def test_fast_path_true_write_safety_not_eligible(self):
         """fast_path=True but safety=WRITE → NOT eligible."""
-        from whitemagic.tools.tool_types import ToolSafety, FastPathSafety
+        from whitemagic.tools.tool_types import FastPathSafety, ToolSafety
         td = self._make_td(
             fast_path=True,
             safety=ToolSafety.WRITE,
@@ -84,7 +86,7 @@ class TestFastPathEligibleProperty:
 
     def test_fast_path_true_delete_safety_not_eligible(self):
         """fast_path=True but safety=DELETE → NOT eligible."""
-        from whitemagic.tools.tool_types import ToolSafety, FastPathSafety
+        from whitemagic.tools.tool_types import FastPathSafety, ToolSafety
         td = self._make_td(
             fast_path=True,
             safety=ToolSafety.DELETE,
@@ -94,7 +96,7 @@ class TestFastPathEligibleProperty:
 
     def test_fast_path_true_read_with_safety_eligible(self):
         """fast_path=True, safety=READ, fast_path_safety all satisfied → eligible."""
-        from whitemagic.tools.tool_types import ToolSafety, FastPathSafety
+        from whitemagic.tools.tool_types import FastPathSafety, ToolSafety
         td = self._make_td(
             fast_path=True,
             safety=ToolSafety.READ,
@@ -104,7 +106,7 @@ class TestFastPathEligibleProperty:
 
     def test_fast_path_true_safety_constraint_false_not_eligible(self):
         """fast_path=True, safety=READ, but one constraint False → NOT eligible."""
-        from whitemagic.tools.tool_types import ToolSafety, FastPathSafety
+        from whitemagic.tools.tool_types import FastPathSafety, ToolSafety
         td = self._make_td(
             fast_path=True,
             safety=ToolSafety.READ,
@@ -113,7 +115,7 @@ class TestFastPathEligibleProperty:
         assert td.fast_path_eligible is False
 
     def test_to_dict_includes_fast_path_fields(self):
-        from whitemagic.tools.tool_types import ToolSafety, FastPathSafety
+        from whitemagic.tools.tool_types import FastPathSafety
         td = self._make_td(
             fast_path=True,
             fast_path_safety=FastPathSafety(),
@@ -130,7 +132,10 @@ class TestEnsureFastPathRegistryEnforcement:
 
     def test_ineligible_tool_not_added_to_registry(self):
         """A tool with fast_path=True but no fast_path_safety should not be in _FAST_PATH_FROM_REGISTRY."""
-        from whitemagic.tools.dispatch_table import _FAST_PATH_FROM_REGISTRY, _ensure_fast_path_registry
+        from whitemagic.tools.dispatch_table import (
+            _FAST_PATH_FROM_REGISTRY,
+            _ensure_fast_path_registry,
+        )
         # Clear and rebuild
         _FAST_PATH_FROM_REGISTRY.clear()
         _ensure_fast_path_registry()
@@ -144,7 +149,10 @@ class TestEnsureFastPathRegistryEnforcement:
 
     def test_registry_cleared_and_rebuilt(self):
         """_ensure_fast_path_registry should be idempotent (only builds once)."""
-        from whitemagic.tools.dispatch_table import _FAST_PATH_FROM_REGISTRY, _ensure_fast_path_registry
+        from whitemagic.tools.dispatch_table import (
+            _FAST_PATH_FROM_REGISTRY,
+            _ensure_fast_path_registry,
+        )
         _FAST_PATH_FROM_REGISTRY.clear()
         _ensure_fast_path_registry()
         first = set(_FAST_PATH_FROM_REGISTRY)

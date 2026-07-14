@@ -61,13 +61,13 @@ class TestPatternDiscovery:
 
     def test_count_patterns_handles_types(self):
         """_count_patterns should handle list, dict, object, scalar."""
-        from whitemagic.core.patterns.emergence.pattern_discovery import (
-            PatternDiscovery,
-        )
-
         # Use a temp dir to avoid touching the real state root
         import tempfile
         from pathlib import Path
+
+        from whitemagic.core.patterns.emergence.pattern_discovery import (
+            PatternDiscovery,
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             d = PatternDiscovery(base_dir=Path(tmp))

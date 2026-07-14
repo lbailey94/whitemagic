@@ -8,10 +8,12 @@ Tests verify:
 - Graceful degradation when LLM unavailable
 """
 
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
-from whitemagic.oracle.llm_interpreter import OracleLLMInterpreter, get_oracle_interpreter
+from whitemagic.oracle.llm_interpreter import (
+    OracleLLMInterpreter,
+    get_oracle_interpreter,
+)
 
 
 class TestOracleLLMInterpreter:

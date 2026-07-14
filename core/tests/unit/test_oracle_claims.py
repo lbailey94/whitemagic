@@ -8,12 +8,13 @@ Tests verify:
 - Graceful degradation when DB unavailable
 """
 
-import pytest
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from whitemagic.forecasting.temporal_db import TemporalForecastDB
-from whitemagic.oracle.wisdom_synthesis import OracleSynthesizer, SynthesisResult
+from whitemagic.oracle.wisdom_synthesis import OracleSynthesizer
 
 
 @pytest.fixture

@@ -14,7 +14,6 @@ fixed immediately before merging.
 
 import pytest
 
-
 # =============================================================================
 # P0-001: Tool Registry Contract
 # =============================================================================
@@ -282,7 +281,7 @@ class TestSecurityContract:
 
     def test_tool_gate_singleton_exists(self):
         """ToolGate singleton must be accessible."""
-        from whitemagic.security.tool_gating import get_tool_gate, ToolGate
+        from whitemagic.security.tool_gating import ToolGate, get_tool_gate
 
         gate = get_tool_gate()
         assert isinstance(gate, ToolGate)

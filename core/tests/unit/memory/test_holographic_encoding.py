@@ -1,7 +1,10 @@
 """Tests for holographic coordinate encoding — 6D coordinate round-trips."""
 import pytest
 
-from whitemagic.core.intelligence.hologram.encoder import CoordinateEncoder, HolographicCoordinate
+from whitemagic.core.intelligence.hologram.encoder import (
+    CoordinateEncoder,
+    HolographicCoordinate,
+)
 
 
 @pytest.fixture

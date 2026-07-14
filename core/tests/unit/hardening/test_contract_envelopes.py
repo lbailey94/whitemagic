@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from whitemagic.tools.contract import ENVELOPE_VERSION, TOOL_CONTRACT_VERSION
 from whitemagic.tools.envelope import (
     coerce_jsonable,
@@ -185,7 +183,7 @@ class TestPipelineIdentity:
         assert ctx.agent_id == "agent_42"
 
     def test_pipeline_order_preserved(self):
-        from whitemagic.tools.middleware import DispatchPipeline, DispatchContext
+        from whitemagic.tools.middleware import DispatchPipeline
 
         order: list[str] = []
 

@@ -7,7 +7,11 @@ os.environ.setdefault("WM_STATE_ROOT", tempfile.mkdtemp(prefix="wm_test_replay_"
 os.environ.setdefault("WM_SILENT_INIT", "1")
 os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 
-from whitemagic.core.memory.replay_simulation import replay, batch_replay, stats  # noqa: E402
+from whitemagic.core.memory.replay_simulation import (  # noqa: E402
+    batch_replay,
+    replay,
+    stats,
+)
 
 
 class TestReplay:

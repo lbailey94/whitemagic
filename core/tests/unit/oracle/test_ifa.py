@@ -1,13 +1,14 @@
 """Tests for the Ifa divination system (ifa_data + ifa_cast)."""
 
-import pytest
 
+from whitemagic.oracle.ifa_cast import (
+    CastResult,
+    IfaCaster,
+    cast_ifa,
+    get_caster,
+)
 from whitemagic.oracle.ifa_data import (
     PRINCIPAL_ODU,
-    ODU_BY_BINARY,
-    ODU_BY_NUMBER,
-    ODU_BY_SHORT_NAME,
-    ODU_BY_DECIMAL,
     OduAmulu,
     OduMeji,
     generate_all_amulu,
@@ -17,14 +18,8 @@ from whitemagic.oracle.ifa_data import (
     get_meji_by_short_name,
     get_odu_by_binary,
     get_odu_by_decimal,
-    ifa_to_iching,
     iching_to_ifa,
-)
-from whitemagic.oracle.ifa_cast import (
-    CastResult,
-    IfaCaster,
-    cast_ifa,
-    get_caster,
+    ifa_to_iching,
 )
 
 

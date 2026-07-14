@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -60,7 +60,7 @@ class TestEffectRegistryHyperspace:
         assert "mesh.experiment.status" in _PURE_TOOLS
 
     def test_infer_target_research(self):
-        from whitemagic.dharma.effect_registry import _infer_target, infer_effects
+        from whitemagic.dharma.effect_registry import infer_effects
         effects = infer_effects("research.dag.submit", safety="WRITE")
         assert any(e.target == "research:db" for e in effects)
 
@@ -216,8 +216,9 @@ class TestCRDTLeaderboard:
         assert entry.fitness_score == 0.8
 
     def test_merge_remote_json(self):
-        from whitemagic.mesh.crdt_leaderboard import CRDTLeaderboard
         import json
+
+        from whitemagic.mesh.crdt_leaderboard import CRDTLeaderboard
         lb = CRDTLeaderboard(node_id="test_node")
         lb.clear()
 
@@ -363,7 +364,8 @@ class TestResearchDAGSynthesis:
 
     def test_generate_synthesis_with_experiments(self):
         from whitemagic.core.evolution.research_dag import (
-            ResearchDAG, ResearchDomain, get_research_dag,
+            ResearchDomain,
+            get_research_dag,
         )
         dag = get_research_dag()
 
@@ -399,7 +401,7 @@ class TestPulseVerification:
     @pytest.fixture(autouse=True)
     def _clear_pulse_state(self):
         """Clear pulse verifier state to prevent cross-test contamination."""
-        from whitemagic.mesh.pulse_verification import get_pulse_verifier, _KEY_CACHE
+        from whitemagic.mesh.pulse_verification import _KEY_CACHE, get_pulse_verifier
         verifier = get_pulse_verifier()
         # Clear in-memory pulses to prevent stale data from prior tests
         if hasattr(verifier, "_pulses"):
@@ -411,7 +413,9 @@ class TestPulseVerification:
         yield
 
     def test_create_pulse(self):
-        from whitemagic.mesh.pulse_verification import get_pulse_verifier, VerificationTier
+        from whitemagic.mesh.pulse_verification import (
+            get_pulse_verifier,
+        )
         verifier = get_pulse_verifier()
         pulse = verifier.create_pulse(
             experiment_id="test_exp_001",
@@ -446,7 +450,10 @@ class TestPulseVerification:
         assert pulse.verifications[0].passed
 
     def test_verify_tier0_fail_wrong_data(self):
-        from whitemagic.mesh.pulse_verification import get_pulse_verifier, VerificationTier
+        from whitemagic.mesh.pulse_verification import (
+            VerificationTier,
+            get_pulse_verifier,
+        )
         verifier = get_pulse_verifier()
         verifier.create_pulse(
             experiment_id="test_exp_003",
@@ -464,7 +471,9 @@ class TestPulseVerification:
 
     def test_escalation_high_fitness_low_reputation(self):
         from whitemagic.mesh.pulse_verification import (
-            get_pulse_verifier, PulseRecord, VerificationTier,
+            PulseRecord,
+            VerificationTier,
+            get_pulse_verifier,
         )
         verifier = get_pulse_verifier()
         pulse = PulseRecord(
@@ -479,7 +488,9 @@ class TestPulseVerification:
 
     def test_escalation_normal(self):
         from whitemagic.mesh.pulse_verification import (
-            get_pulse_verifier, PulseRecord, VerificationTier,
+            PulseRecord,
+            VerificationTier,
+            get_pulse_verifier,
         )
         verifier = get_pulse_verifier()
         pulse = PulseRecord(
@@ -490,7 +501,6 @@ class TestPulseVerification:
             fitness_claim=0.5,
         )
         # Mock random to avoid 5% sampling escalation to REPOPS
-        from unittest.mock import patch
         with patch("random.random", return_value=0.99):
             tier = verifier._determine_escalation(pulse, node_reputation=0.8)
         assert tier == VerificationTier.AUTOMATED
@@ -517,8 +527,11 @@ class TestCritiqueProtocol:
         assert "reproducibility" in CRITIQUE_DIMENSIONS
 
     def test_critique_experiment(self):
+        from whitemagic.core.evolution.research_dag import (
+            ResearchDomain,
+            get_research_dag,
+        )
         from whitemagic.mesh.critique_protocol import get_critique_protocol
-        from whitemagic.core.evolution.research_dag import get_research_dag, ResearchDomain
 
         dag = get_research_dag()
         exp = dag.submit_hypothesis(
@@ -547,8 +560,11 @@ class TestCritiqueProtocol:
         assert critique.recommendation == "accept"
 
     def test_critique_revision_threshold(self):
+        from whitemagic.core.evolution.research_dag import (
+            ResearchDomain,
+            get_research_dag,
+        )
         from whitemagic.mesh.critique_protocol import get_critique_protocol
-        from whitemagic.core.evolution.research_dag import get_research_dag, ResearchDomain
 
         dag = get_research_dag()
         exp = dag.submit_hypothesis(
@@ -575,8 +591,11 @@ class TestCritiqueProtocol:
         assert critique.recommendation == "revise"
 
     def test_critique_reject_threshold(self):
+        from whitemagic.core.evolution.research_dag import (
+            ResearchDomain,
+            get_research_dag,
+        )
         from whitemagic.mesh.critique_protocol import get_critique_protocol
-        from whitemagic.core.evolution.research_dag import get_research_dag, ResearchDomain
 
         dag = get_research_dag()
         exp = dag.submit_hypothesis(
@@ -603,8 +622,11 @@ class TestCritiqueProtocol:
         assert critique.recommendation == "reject"
 
     def test_auto_critique(self):
+        from whitemagic.core.evolution.research_dag import (
+            ResearchDomain,
+            get_research_dag,
+        )
         from whitemagic.mesh.critique_protocol import get_critique_protocol
-        from whitemagic.core.evolution.research_dag import get_research_dag, ResearchDomain
 
         dag = get_research_dag()
         exp = dag.submit_hypothesis(
@@ -658,8 +680,12 @@ class TestDurableArchive:
         assert "files_on_disk" in status
 
     def test_write_experiment_file(self):
+        from whitemagic.core.evolution.research_dag import (
+            Experiment,
+            ExperimentStage,
+            ResearchDomain,
+        )
         from whitemagic.mesh.durable_archive import DurableArchive
-        from whitemagic.core.evolution.research_dag import Experiment, ResearchDomain, ExperimentStage
 
         archive = DurableArchive()
         exp = Experiment(

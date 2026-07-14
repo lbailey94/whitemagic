@@ -1,14 +1,11 @@
 """Unit tests for semantic defense layer (embedding + LLM ensemble)."""
 
-import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from whitemagic.security.semantic_defense import (
-    EnsembleResult,
     EnsembleVote,
     _cosine_sim,
-    _llama_available,
     combined_semantic_check,
     llm_ensemble_check,
     reset_corpus_cache,

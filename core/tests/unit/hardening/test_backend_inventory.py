@@ -10,7 +10,6 @@ set of consumers matches the actual set found by grepping the codebase.
 from __future__ import annotations
 
 import importlib
-import os
 from pathlib import Path
 
 import pytest
@@ -108,7 +107,7 @@ class TestBackendInventory:
         missing = actual_backend_consumers - known_set
         # Print what's missing for debugging
         if missing:
-            print(f"\nNew .backend consumers found not in KNOWN_BACKEND_CONSUMERS:")
+            print("\nNew .backend consumers found not in KNOWN_BACKEND_CONSUMERS:")
             for m in sorted(missing):
                 print(f"  - {m}")
         # Allow some drift but flag it

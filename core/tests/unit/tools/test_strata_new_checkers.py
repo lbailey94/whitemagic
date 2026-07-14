@@ -1,18 +1,23 @@
 """Tests for the new STRATA checkers added during de-sloppification."""
 
 import ast
-import tempfile
 from pathlib import Path
 
-import pytest
-
-from whitemagic.tools.strata.checkers.fstring_no_placeholder import check_fstring_no_placeholder
-from whitemagic.tools.strata.checkers.ambiguous_names import check_ambiguous_variable_names
-from whitemagic.tools.strata.checkers.equality_comparison import check_equality_comparison
-from whitemagic.tools.strata.checkers.undefined_names import check_undefined_names
-from whitemagic.tools.strata.checkers.repetitive_dispatch import check_repetitive_dispatch
+from whitemagic.tools.strata.checkers.ambiguous_names import (
+    check_ambiguous_variable_names,
+)
 from whitemagic.tools.strata.checkers.chained_get import check_chained_get
-from whitemagic.tools.strata.models import Finding, FindingSeverity
+from whitemagic.tools.strata.checkers.equality_comparison import (
+    check_equality_comparison,
+)
+from whitemagic.tools.strata.checkers.fstring_no_placeholder import (
+    check_fstring_no_placeholder,
+)
+from whitemagic.tools.strata.checkers.repetitive_dispatch import (
+    check_repetitive_dispatch,
+)
+from whitemagic.tools.strata.checkers.undefined_names import check_undefined_names
+from whitemagic.tools.strata.models import Finding
 
 
 class _FakeFileIndex:

@@ -1,9 +1,6 @@
 # ruff: noqa: BLE001
 """Tests for ErrorPatternLibrary — learned error resolution from session mining."""
 
-import json
-import time
-from pathlib import Path
 
 import pytest
 
@@ -17,7 +14,6 @@ from whitemagic.core.patterns.error_library import (
     _fingerprint,
     get_error_library,
 )
-
 
 # ─── Fingerprinting tests ────────────────────────────────────────────────
 
@@ -488,7 +484,6 @@ class TestErrorLearnerMiddleware:
             "whitemagic.core.patterns.error_library.get_state_root",
             lambda: tmp_path,
         )
-        from whitemagic.core.patterns.error_library import _library as _lib
         import whitemagic.core.patterns.error_library as el_mod
 
         # Reset singleton
@@ -556,7 +551,7 @@ class TestErrorLearnerMiddleware:
             return {"status": "error", "error": "test error"}
 
         ctx = DispatchContext(tool_name="pattern.lookup", kwargs={})
-        result = mw_error_learner(ctx, fake_next)
+        mw_error_learner(ctx, fake_next)
 
         assert called["next"] is True
         lib = el_mod.get_error_library()

@@ -14,8 +14,6 @@ Covers:
 import os
 import tempfile
 
-import pytest
-
 _tmp = tempfile.mkdtemp(prefix="wm_test_sec_phase1_")
 os.environ.setdefault("WM_STATE_ROOT", _tmp)
 os.environ.setdefault("WM_SILENT_INIT", "1")
@@ -29,7 +27,6 @@ class TestSecurityEventBus:
 
     def test_publish_and_subscribe(self):
         from whitemagic.security.event_bus import (
-            SecurityEvent,
             SecurityEventBus,
             SecurityEventType,
         )
@@ -63,7 +60,8 @@ class TestSecurityEventBus:
 
         bus = SecurityEventBus()
         received = []
-        cb = lambda e: received.append(e)
+        def cb(e):
+            return received.append(e)
         bus.subscribe(SecurityEventType.TOOL_BLOCKED, cb)
 
         bus.emit(event_type=SecurityEventType.TOOL_BLOCKED, source="test")
@@ -113,7 +111,10 @@ class TestSecurityEventBus:
         assert len(bus.history()) == 0
 
     def test_severity_levels(self):
-        from whitemagic.security.event_bus import SecurityEvent, SecurityEventBus, SecurityEventType
+        from whitemagic.security.event_bus import (
+            SecurityEventBus,
+            SecurityEventType,
+        )
 
         bus = SecurityEventBus()
         received = []
@@ -251,8 +252,8 @@ class TestTransactionFirewallEvents:
         )
         from whitemagic.security.transaction_firewall import (
             TransactionFirewall,
-            TransactionRequest,
             TransactionPolicy,
+            TransactionRequest,
         )
 
         reset_security_event_bus()
@@ -286,8 +287,8 @@ class TestTransactionFirewallEvents:
         )
         from whitemagic.security.transaction_firewall import (
             TransactionFirewall,
-            TransactionRequest,
             TransactionPolicy,
+            TransactionRequest,
         )
 
         reset_security_event_bus()
@@ -387,7 +388,7 @@ class TestEngagementTokenEvents:
 
         mgr = get_token_manager()
         mgr._tokens.clear()
-        result = mgr.issue(scope=["10.0.0.*"], tools=["nmap_*"], issuer="test", duration_minutes=5)
+        mgr.issue(scope=["10.0.0.*"], tools=["nmap_*"], issuer="test", duration_minutes=5)
 
         events = bus.history(event_type=SecurityEventType.ENGAGEMENT_TOKEN_ISSUED)
         assert len(events) >= 1

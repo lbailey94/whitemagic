@@ -2,13 +2,13 @@ import pytest
 
 pytestmark = pytest.mark.core  # Entire module is core contract validation
 
-from whitemagic.tools.registry import TOOL_REGISTRY
 from whitemagic.tools.dispatch_table import DISPATCH_TABLE
-from whitemagic.tools.tool_catalog import GANA_NAMES
-from whitemagic.tools.tool_types import ToolStability
-from whitemagic.tools.tool_surface import get_surface_counts
-from whitemagic.tools.unified_api import call_tool
 from whitemagic.tools.envelope import is_enveloped
+from whitemagic.tools.registry import TOOL_REGISTRY
+from whitemagic.tools.tool_catalog import GANA_NAMES
+from whitemagic.tools.tool_surface import get_surface_counts
+from whitemagic.tools.tool_types import ToolStability
+from whitemagic.tools.unified_api import call_tool
 
 
 @pytest.mark.parametrize("tool_def", TOOL_REGISTRY)

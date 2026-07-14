@@ -1,6 +1,5 @@
 """Tests for Cache Evolution Strategy — Phase 6 features."""
 
-import pytest
 
 
 class TestVersionAwareHybridRecallCache:
@@ -19,8 +18,8 @@ class TestVersionAwareHybridRecallCache:
 
     def test_cached_result_invalidated_on_version_bump(self):
         """Results are NOT served after version is bumped via CacheRegistry."""
-        from whitemagic.core.memory.hybrid_cache import HybridRecallCache
         from whitemagic.core.memory.cache_registry import get_cache_registry
+        from whitemagic.core.memory.hybrid_cache import HybridRecallCache
 
         cache = HybridRecallCache()
         cache.clear_all()
@@ -143,7 +142,7 @@ class TestRedisPubSub:
 
     def test_publish_invalidation_returns_bool(self):
         """publish_invalidation returns a bool (True if connected, False otherwise)."""
-        from whitemagic.cache.redis import RedisCache, CacheConfig
+        from whitemagic.cache.redis import CacheConfig, RedisCache
 
         cache = RedisCache(CacheConfig())
         result = cache.publish_invalidation("test_ns")
@@ -151,7 +150,7 @@ class TestRedisPubSub:
 
     def test_subscribe_invalidation_returns_pubsub_or_none(self):
         """subscribe_invalidation returns pubsub object if connected, None otherwise."""
-        from whitemagic.cache.redis import RedisCache, CacheConfig
+        from whitemagic.cache.redis import CacheConfig, RedisCache
 
         cache = RedisCache(CacheConfig())
         result = cache.subscribe_invalidation(lambda ns: None)

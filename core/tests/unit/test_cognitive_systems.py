@@ -2,12 +2,12 @@
 
 # ruff: noqa: BLE001
 
-import sqlite3
 import tempfile
 from pathlib import Path
 
 import pytest
 
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.galaxy_gating import (
     GalaxyGating,
     get_galaxy_gating,
@@ -20,7 +20,6 @@ from whitemagic.core.memory.spreading_activation import (
     SpreadingActivation,
     get_spreading_activation,
 )
-from whitemagic.core.memory.db_manager import safe_connect
 
 # ── Fixtures ────────────────────────────────────────────────────────
 

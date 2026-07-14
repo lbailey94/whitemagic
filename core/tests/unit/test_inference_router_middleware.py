@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 
 from whitemagic.tools.middleware import (
     DispatchContext,
-    mw_inference_router,
-    _is_inference_tool,
     _extract_prompt,
+    _is_inference_tool,
+    mw_inference_router,
 )
 
 
@@ -309,7 +309,7 @@ class TestCompositionalReasoningIntegration(unittest.TestCase):
             called[0] = True
             return {"status": "success", "result": "sunny"}
 
-        result = mw_inference_router(ctx, next_fn)
+        mw_inference_router(ctx, next_fn)
 
         # Should pass through (compositional reasoning didn't resolve via middleware)
         self.assertTrue(called[0])

@@ -1,6 +1,5 @@
 """Tests for Tier 5 recovered infrastructure modules."""
 
-import pytest
 
 
 class TestTemporalWeaving:

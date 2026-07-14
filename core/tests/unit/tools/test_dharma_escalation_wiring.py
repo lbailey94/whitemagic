@@ -1,5 +1,4 @@
 """Tests for Dharma 4-tier escalation MCP tool wiring."""
-import pytest
 
 
 class TestDharmaEscalationWiring:

@@ -15,7 +15,6 @@ from whitemagic.tools.middleware import (
     mw_semantic_cache,
 )
 
-
 # ---------------------------------------------------------------------------
 # Semantic cache tests
 # ---------------------------------------------------------------------------
@@ -86,7 +85,6 @@ class TestSemanticCache:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Pre-populate cache using the SAME filename the middleware uses
             from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
-
             from whitemagic.tools.middleware import _compute_tool_schema_hash
             cache = QueryCache(cache_file=Path(tmpdir) / "dispatch_query_cache.json")
             key = _cache_key(
@@ -171,7 +169,7 @@ class TestDraftReview:
             tool_name="memory.search",
             kwargs={"prompt": "x" * 200},
         )
-        result = mw_draft_review(ctx, next_fn)
+        mw_draft_review(ctx, next_fn)
         assert called
 
     def test_draft_review_falls_back_on_import_error(self):
@@ -192,7 +190,7 @@ class TestDraftReview:
             "whitemagic.tools.handlers.llama_tools.handle_llama_chat",
             side_effect=ImportError("no llama.cpp"),
         ):
-            result = mw_draft_review(ctx, next_fn)
+            mw_draft_review(ctx, next_fn)
             assert called  # Fell through to normal dispatch
 
 

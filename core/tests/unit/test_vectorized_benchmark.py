@@ -1,6 +1,7 @@
 """Benchmark: VectorizedDispatcher compression on realistic tool call patterns."""
 
 import pytest
+
 from whitemagic.tools.vectorized import VectorizedDispatcher, decode_call, encode_call
 
 BENCHMARK_CASES = [

@@ -2,9 +2,7 @@
 """Tests for Model Auto-Optimization Loop (v24.3 §3.3)."""
 from __future__ import annotations
 
-import json
-import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,6 +19,7 @@ def optimizer(tmp_path, monkeypatch):
     """Fresh optimizer with temp state root."""
     monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
     import importlib
+
     import whitemagic.config.paths as paths_mod
     importlib.reload(paths_mod)
     import whitemagic.inference.auto_optimizer as opt_mod
@@ -62,7 +61,7 @@ class TestModelAutoOptimizer:
 
     def test_benchmark_with_custom_prompts(self, optimizer, mock_backend):
         config = LlamaCppConfig()
-        result = optimizer.benchmark(mock_backend, config, prompts=["Hello"])
+        optimizer.benchmark(mock_backend, config, prompts=["Hello"])
         assert mock_backend.complete.call_count == 1
 
     def test_benchmark_handles_errors(self, optimizer):
@@ -135,6 +134,7 @@ class TestBackgroundOptimizer:
     def test_record_call_increments_count(self, tmp_path, monkeypatch):
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import importlib
+
         import whitemagic.inference.auto_optimizer as opt_mod
         importlib.reload(opt_mod)
 
@@ -147,6 +147,7 @@ class TestBackgroundOptimizer:
     def test_load_optimal_on_startup_idempotent(self, tmp_path, monkeypatch):
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import importlib
+
         import whitemagic.inference.auto_optimizer as opt_mod
         importlib.reload(opt_mod)
 
@@ -161,6 +162,7 @@ class TestBackgroundOptimizer:
     def test_start_and_stop(self, tmp_path, monkeypatch):
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import importlib
+
         import whitemagic.inference.auto_optimizer as opt_mod
         importlib.reload(opt_mod)
 
@@ -174,6 +176,7 @@ class TestBackgroundOptimizer:
     def test_get_status(self, tmp_path, monkeypatch):
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import importlib
+
         import whitemagic.inference.auto_optimizer as opt_mod
         importlib.reload(opt_mod)
 

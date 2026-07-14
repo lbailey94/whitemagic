@@ -10,10 +10,8 @@ os.environ.setdefault("WM_SILENT_INIT", "1")
 import pytest
 
 from whitemagic.core.consciousness.guna_balance import (
-    GunaBalanceMetric,
-    GunaBalanceReading,
     TARGET_RATIOS,
-    BALANCE_TOLERANCE,
+    GunaBalanceMetric,
 )
 
 

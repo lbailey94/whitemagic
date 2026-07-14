@@ -185,6 +185,7 @@ class TestTokenOptimizer:
     def test_query_cache(self):
         import tempfile
         from pathlib import Path
+
         from whitemagic.agentic.token_optimizer import QueryCache
 
         # Use a fresh temp file to avoid cross-test cache pollution

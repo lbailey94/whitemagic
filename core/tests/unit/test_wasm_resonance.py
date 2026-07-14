@@ -1,9 +1,5 @@
 """Tests for resonance models ported to WASM/TypeScript."""
-import json
-import math
 from pathlib import Path
-
-import pytest
 
 
 def _ts_src() -> Path:
@@ -81,7 +77,10 @@ class TestPythonResonanceModels:
         assert result["memories_analyzed"] == 3
 
     def test_constellation_merger_basic(self):
-        from whitemagic.core.resonance.resonance_models import ConstellationMerger, Constellation
+        from whitemagic.core.resonance.resonance_models import (
+            Constellation,
+            ConstellationMerger,
+        )
         merger = ConstellationMerger(overlap_threshold=0.3)
         constellations = [
             Constellation(constellation_id=0, member_ids=[1, 2], center=(0, 0, 0, 0, 0), radius=1.0, avg_importance=0.8, garden="codex"),

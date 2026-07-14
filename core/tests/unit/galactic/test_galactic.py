@@ -12,14 +12,13 @@ tests against that real state, not against mocks.
 
 from __future__ import annotations
 
-import os
 import sqlite3
 import tempfile
 from pathlib import Path
 
 import pytest
-from whitemagic.core.memory.db_manager import safe_connect
 
+from whitemagic.core.memory.db_manager import safe_connect
 
 # ─── Fixtures ──────────────────────────────────────────────────────
 
@@ -130,7 +129,7 @@ def temp_substrate_db():
 
 
 def test_galactic_zone_classification():
-    from whitemagic.core.galactic import classify_zone, Memory
+    from whitemagic.core.galactic import Memory, classify_zone
 
     # Direct unit test of the zone classification.
     for distance, expected_zone in [
@@ -250,7 +249,7 @@ def test_substrate_health_returns_alive(substrate_path):
 
 
 def test_galaxy_stats_returns_valid_distribution(substrate_path):
-    from whitemagic.core.galactic import galaxy_stats, GALACTIC_ZONES
+    from whitemagic.core.galactic import GALACTIC_ZONES, galaxy_stats
 
     stats = galaxy_stats()
     assert stats.total_memories > 0
@@ -280,7 +279,7 @@ def test_memory_recent_returns_n(substrate_path):
 def test_memory_recent_filters_by_type(substrate_path):
     from whitemagic.core.galactic import memory_recent
 
-    all_mems = memory_recent(limit=20)
+    memory_recent(limit=20)
     short_term = memory_recent(limit=20, memory_type="SHORT_TERM")
     long_term = memory_recent(limit=20, memory_type="LONG_TERM")
     assert all(m.memory_type == "SHORT_TERM" for m in short_term)
@@ -292,7 +291,7 @@ def test_memory_recent_filters_by_type(substrate_path):
 
 
 def test_memory_by_id_roundtrip(substrate_path):
-    from whitemagic.core.galactic import memory_recent, memory_by_id
+    from whitemagic.core.galactic import memory_by_id, memory_recent
 
     recent = memory_recent(limit=1)
     if not recent:
@@ -333,7 +332,7 @@ def test_memory_search_respects_limit(substrate_path):
 
 
 def test_associations_for_returns_valid(substrate_path):
-    from whitemagic.core.galactic import memory_recent, associations_for, connect
+    from whitemagic.core.galactic import associations_for, connect
 
     # Find a memory that has associations by checking the associations table first.
     with connect() as conn:
