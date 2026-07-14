@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/badge/version-25.0.0-purple.svg)](core/VERSION)
 [![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 
-**829 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
+**v25.0.0** — **829 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
 
 ## What it is
 
