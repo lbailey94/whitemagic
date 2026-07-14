@@ -34,6 +34,7 @@ import sqlite3
 import threading
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -59,6 +60,23 @@ class DreamPhase(Enum):
     ENRICHMENT = "enrichment"  # Entity extraction & semantic enrichment
     HARMONIZE = "harmonize"  # Wu Xing balance & harmony tuning
     CODE_GRAPH = "code_graph"  # v24.3: Code structure graph analysis
+
+
+@dataclass
+class DreamJob:
+    """A schedulable dream phase job.
+
+    Wraps a phase callable with metadata for the job model.
+    """
+
+    phase: DreamPhase
+    handler: Callable[[], dict[str, Any]]
+    timeout_s: float = 60.0
+    cancellable: bool = True
+
+    def __post_init__(self) -> None:
+        if self.timeout_s <= 0:
+            self.timeout_s = 60.0
 
 
 @dataclass
@@ -116,6 +134,26 @@ class DreamCycle:
         self._phases = list(DreamPhase)
         self._total_cycles = 0
         self._history: deque = deque(maxlen=max_history)
+
+        # Per-phase cancellation set
+        self._cancelled_phases: set[DreamPhase] = set()
+
+        # Phase handler dispatch table (replaces if/elif chain)
+        self._phase_handlers: dict[DreamPhase, DreamJob] = {
+            DreamPhase.TRIAGE: DreamJob(DreamPhase.TRIAGE, self._dream_triage, timeout_s=30),
+            DreamPhase.CONSOLIDATION: DreamJob(DreamPhase.CONSOLIDATION, self._dream_consolidation, timeout_s=60),
+            DreamPhase.SERENDIPITY: DreamJob(DreamPhase.SERENDIPITY, self._dream_serendipity, timeout_s=45),
+            DreamPhase.GOVERNANCE: DreamJob(DreamPhase.GOVERNANCE, self._dream_governance, timeout_s=45),
+            DreamPhase.NARRATIVE: DreamJob(DreamPhase.NARRATIVE, self._dream_narrative, timeout_s=30),
+            DreamPhase.KAIZEN: DreamJob(DreamPhase.KAIZEN, self._dream_kaizen, timeout_s=60),
+            DreamPhase.ORACLE: DreamJob(DreamPhase.ORACLE, self._dream_oracle, timeout_s=45),
+            DreamPhase.DECAY: DreamJob(DreamPhase.DECAY, self._dream_decay, timeout_s=30),
+            DreamPhase.CONSTELLATION: DreamJob(DreamPhase.CONSTELLATION, self._dream_constellation, timeout_s=45),
+            DreamPhase.PREDICTION: DreamJob(DreamPhase.PREDICTION, self._dream_prediction, timeout_s=45),
+            DreamPhase.ENRICHMENT: DreamJob(DreamPhase.ENRICHMENT, self._dream_enrichment, timeout_s=60),
+            DreamPhase.HARMONIZE: DreamJob(DreamPhase.HARMONIZE, self._dream_harmonize, timeout_s=30),
+            DreamPhase.CODE_GRAPH: DreamJob(DreamPhase.CODE_GRAPH, self._dream_code_graph, timeout_s=60),
+        }
 
     def start(self) -> None:
         """Start the dream cycle watcher."""
@@ -225,6 +263,13 @@ class DreamCycle:
         phase = self._phases[self._current_phase_index % len(self._phases)]
         self._current_phase_index += 1
 
+        # Check if this phase was cancelled
+        with self._lock:
+            if phase in self._cancelled_phases:
+                self._cancelled_phases.discard(phase)
+                logger.info("Dream phase %s cancelled, skipping", phase.value)
+                return
+
         start = time.perf_counter()
         report = DreamReport(
             phase=phase,
@@ -232,32 +277,11 @@ class DreamCycle:
         )
 
         try:
-            if phase == DreamPhase.TRIAGE:
-                report.details = self._dream_triage()
-            elif phase == DreamPhase.CONSOLIDATION:
-                report.details = self._dream_consolidation()
-            elif phase == DreamPhase.SERENDIPITY:
-                report.details = self._dream_serendipity()
-            elif phase == DreamPhase.GOVERNANCE:
-                report.details = self._dream_governance()
-            elif phase == DreamPhase.NARRATIVE:
-                report.details = self._dream_narrative()
-            elif phase == DreamPhase.KAIZEN:
-                report.details = self._dream_kaizen()
-            elif phase == DreamPhase.ORACLE:
-                report.details = self._dream_oracle()
-            elif phase == DreamPhase.DECAY:
-                report.details = self._dream_decay()
-            elif phase == DreamPhase.CONSTELLATION:
-                report.details = self._dream_constellation()
-            elif phase == DreamPhase.PREDICTION:
-                report.details = self._dream_prediction()
-            elif phase == DreamPhase.ENRICHMENT:
-                report.details = self._dream_enrichment()
-            elif phase == DreamPhase.HARMONIZE:
-                report.details = self._dream_harmonize()
-            elif phase == DreamPhase.CODE_GRAPH:
-                report.details = self._dream_code_graph()
+            job = self._phase_handlers.get(phase)
+            if job is None:
+                report.details = {"skipped": True, "reason": f"No handler for phase {phase.value}"}
+            else:
+                report.details = job.handler()
         except Exception as e:
             report.success = False
             report.error = str(e)
@@ -1635,6 +1659,37 @@ class DreamCycle:
         except (ImportError, AttributeError):
             logger.debug("Optional dependency unavailable: ImportError")
 
+    def cancel_phase(self, phase: DreamPhase) -> bool:
+        """Cancel a specific dream phase before it runs.
+
+        Args:
+            phase: The dream phase to cancel.
+
+        Returns:
+            True if the phase was marked for cancellation, False if not cancellable.
+        """
+        with self._lock:
+            job = self._phase_handlers.get(phase)
+            if job is None or not job.cancellable:
+                return False
+            self._cancelled_phases.add(phase)
+            logger.info("Dream phase %s marked for cancellation", phase.value)
+            return True
+
+    def get_phase_jobs(self) -> dict[str, dict[str, Any]]:
+        """Get all registered phase jobs with metadata.
+
+        Returns:
+            Dict mapping phase name to job metadata (timeout, cancellable).
+        """
+        return {
+            phase.value: {
+                "timeout_s": job.timeout_s,
+                "cancellable": job.cancellable,
+            }
+            for phase, job in self._phase_handlers.items()
+        }
+
     def status(self) -> dict[str, Any]:
         """Get dream cycle status."""
         with self._lock:
@@ -1651,6 +1706,9 @@ class DreamCycle:
                     self._current_phase_index % len(self._phases)
                 ].value,
                 "recent_dreams": recent,
+                "registered_phases": list(self._phase_handlers.keys()),
+                "cancelled_phases": [p.value for p in self._cancelled_phases],
+                "phase_jobs": self.get_phase_jobs(),
             }
 
 

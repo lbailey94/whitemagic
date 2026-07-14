@@ -170,7 +170,9 @@ class TestPipelineOrder:
         p = get_pipeline()
         names = p.describe()
         assert "transaction_firewall" in names
-        assert "wasm_verify" in names
+        # wasm_verify moved to post-call hooks in Phase 3
+        post_call_names = p.describe_post_call()
+        assert "wasm_verify" in post_call_names
 
     def test_firewall_after_governor(self):
         """Firewall should run after governor (governor can set goals/context)."""
@@ -183,11 +185,9 @@ class TestPipelineOrder:
         assert fw_idx > gov_idx
 
     def test_wasm_verify_is_last_before_router(self):
-        """WASM verify should be near the end (post-dispatch)."""
+        """WASM verify should be in post-call hooks (post-dispatch)."""
         from whitemagic.tools.dispatch_table import get_pipeline
 
         p = get_pipeline()
-        names = p.describe()
-        wasm_idx = names.index("wasm_verify")
-        router_idx = names.index("core_router")
-        assert wasm_idx < router_idx
+        post_call_names = p.describe_post_call()
+        assert "wasm_verify" in post_call_names

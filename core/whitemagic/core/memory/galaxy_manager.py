@@ -927,25 +927,6 @@ n            Global active-galaxy mutation is unsafe for concurrent requests.
             "errors": errors if errors else None,
         }
 
-    def get_memory_for_galaxy(self, name: str, user_id: str | None = None) -> Any:
-        """Get the UnifiedMemory instance for a specific galaxy (without switching).
-
-        Allows reading/writing to a non-active galaxy without changing
-        the active galaxy context.
-
-        Args:
-            name: Galaxy name.
-            user_id: Owner user ID. Defaults to "local".
-
-        Returns:
-            UnifiedMemory instance for the specified galaxy.
-        """
-        uid = resolve_user_id(user_id)
-        registry_key = f"{uid}/{name}"
-        if registry_key not in self._galaxies:
-            raise ValueError(f"Galaxy '{name}' not found for user '{uid}'")
-        return self._get_memory(registry_key)
-
     def share_galaxy(
         self,
         name: str,

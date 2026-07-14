@@ -35,14 +35,15 @@ def mcp_call(tool_name, args=None, tool=None):
         }
     }
     
+    root = os.path.dirname(os.path.abspath(__file__))
     proc = subprocess.Popen(
         [sys.executable, "-m", "whitemagic.run_mcp_lean"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        cwd="<WHITEMAGIC_ROOT>",
-        env={**os.environ, "PYTHONPATH": "core"}
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": os.path.join(root, "core")}
     )
     
     # Send init + tool call

@@ -673,9 +673,9 @@ class CodeStructureGraph:
         Returns:
             Summary of injected nodes and edges.
         """
-        try:
-            import networkx as nx
-        except ImportError:
+        import importlib.util
+
+        if importlib.util.find_spec("networkx") is None:
             return {"status": "error", "error": "networkx not available"}
 
         G = getattr(graph_engine, "_graph", None)

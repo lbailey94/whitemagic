@@ -159,3 +159,58 @@ class TestEnsureFastPathRegistryEnforcement:
         _ensure_fast_path_registry()  # Should be no-op
         second = set(_FAST_PATH_FROM_REGISTRY)
         assert first == second
+
+
+class TestExplicitFastPathUnification:
+    """Verify that every explicit _FAST_PATH_TOOLS entry has registry metadata."""
+
+    def test_all_explicit_tools_have_registry_definitions(self):
+        """Every tool in _FAST_PATH_TOOLS must have an authored ToolDefinition."""
+        from whitemagic.tools.dispatch_table import _FAST_PATH_TOOLS
+        from whitemagic.tools.registry import get_all_tools
+
+        registry_map = {td.name: td for td in get_all_tools()}
+        missing = [n for n in _FAST_PATH_TOOLS if n not in registry_map]
+        assert not missing, f"Explicit fast-path tools lacking registry defs: {missing}"
+
+    def test_all_explicit_tools_have_fast_path_true(self):
+        """Every tool in _FAST_PATH_TOOLS must have fast_path=True in registry."""
+        from whitemagic.tools.dispatch_table import _FAST_PATH_TOOLS
+        from whitemagic.tools.registry import get_all_tools
+
+        registry_map = {td.name: td for td in get_all_tools()}
+        no_fp = [
+            n for n in _FAST_PATH_TOOLS
+            if n in registry_map and not registry_map[n].fast_path
+        ]
+        assert not no_fp, f"Explicit fast-path tools lacking fast_path=True: {no_fp}"
+
+    def test_all_explicit_tools_are_eligible(self):
+        """Every tool in _FAST_PATH_TOOLS must pass fast_path_eligible check."""
+        from whitemagic.tools.dispatch_table import _FAST_PATH_TOOLS
+        from whitemagic.tools.registry import get_all_tools
+
+        registry_map = {td.name: td for td in get_all_tools()}
+        ineligible = [
+            n for n in _FAST_PATH_TOOLS
+            if n in registry_map and not registry_map[n].fast_path_eligible
+        ]
+        assert not ineligible, f"Ineligible explicit fast-path tools: {ineligible}"
+
+    def test_unsafe_tools_excluded_from_fast_path(self):
+        """Tools with write/side-effect behavior must NOT be in _FAST_PATH_TOOLS."""
+        from whitemagic.tools.dispatch_table import _FAST_PATH_TOOLS
+
+        excluded = {
+            "consciousness.mode",    # Can set mode (write)
+            "session_bootstrap",     # Starts daemons (side effects)
+            "health.check",          # Dead entry (no handler)
+            "system.status",         # Dead entry (no handler)
+        }
+        present = excluded & _FAST_PATH_TOOLS
+        assert not present, f"Unsafe tools still in fast-path: {present}"
+
+    def test_verify_explicit_fast_path_runs_clean(self):
+        """_verify_explicit_fast_path should not raise for current tool set."""
+        from whitemagic.tools.dispatch_table import _verify_explicit_fast_path
+        _verify_explicit_fast_path()  # Should complete without error

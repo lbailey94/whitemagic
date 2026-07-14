@@ -178,6 +178,18 @@ def to_mcp_tools() -> list[dict[str, Any]]:
     return [t.to_mcp_tool() for t in TOOL_REGISTRY]
 
 
+def get_stable_tools() -> list[ToolDefinition]:
+    """Return only tools with stability=STABLE (the supported public surface)."""
+    from whitemagic.tools.tool_types import ToolStability
+
+    return [t for t in TOOL_REGISTRY if t.stability == ToolStability.STABLE]
+
+
+def to_mcp_tools_stable() -> list[dict[str, Any]]:
+    """Convert stable tools to MCP format (for first public release listings)."""
+    return [t.to_mcp_tool() for t in get_stable_tools()]
+
+
 def get_tool_names() -> list[str]:
     """
     Get the tool names.

@@ -2,8 +2,8 @@
 
 **Version**: v25.0.0
 **Created**: 2026-07-14
-**Status**: Planning
-**Goal**: Bring WhiteMagic to 100% — clean 5-tier installation topology, `whitemagic grow` unfold experience, Dockerfile with 3 targets (seed/core/heavy), per-tool docs, benchmarks, framework adapters — before registry listing and website update.
+**Status**: Active execution plan — runtime hardening precedes distribution
+**Goal**: Make WhiteMagic a small, predictable cognitive kernel with bounded optional organs, then package and benchmark the verified public surface before registry listing and website update.
 
 ---
 
@@ -49,6 +49,104 @@ Anthropic's one-click install for Claude Desktop. Bundles server + deps + config
 **Decision**: Skip tarball distribution. The three surfaces (wm-seed binary, `uvx whitemagic-mcp`, Docker) cover every use case.
 
 ---
+
+## Revised Design Thesis — The Cognitive Kernel Before the Ecosystem
+
+WhiteMagic is treated as a cognitive organism with a small nervous system and bounded optional organs. The public runtime must remain useful when optional subsystems are absent, slow, or failing.
+
+### Kernel responsibilities
+
+The stable kernel owns only:
+
+1. Identity and state
+2. Memory read and write contracts
+3. Session continuity
+4. Tool discovery and schema validation
+5. Safety, authorization, and effect accounting
+6. Predictable result and error envelopes
+7. Explicit long-running job lifecycle
+
+Dreaming, citta enrichment, gardens, polyglot acceleration, inference, evolution, browser automation, economy, and experimental mathematics remain supported capabilities, but they must attach through explicit boundaries rather than becoming hidden dependencies of every call.
+
+### Agent-first invariants
+
+- Every public tool declares read/write, destructive, idempotent, local/network, fast/long-running, and authorization effects.
+- Fast paths may skip expensive enrichment, but never skip the minimum safety, identity, privacy, and read-only verification gate.
+- Reads do not silently create durable writes unless the effect is declared and intentionally enabled.
+- Timeouts describe response behavior unless cooperative cancellation is proven; timed-out work must remain observable.
+- Long-running work is represented as an explicit job with durable state, retry semantics, and cancellation.
+- Errors explain what failed, whether retrying is safe, and how an agent can recover.
+- Public MCP defaults expose a narrow stable surface; experimental capabilities are discoverable on demand.
+- Every phase records UTC epoch start/end timestamps and preserves a baseline comparison.
+
+### Biological design mapping
+
+| Motif | Engineering rule |
+|---|---|
+| Homeostasis | Enforce latency, memory, error, and dependency budgets |
+| Attention | Keep default tool schemas and outputs compact |
+| Immune response | Fail closed for authorization and destructive-action policy |
+| Sleep | Move consolidation and optimization off the request path |
+| Organ boundaries | Keep phase implementations separate from schedulers |
+| Metabolism | Track computational cost without synchronously instrumenting everything |
+| Regeneration | Make workers restartable and background jobs resumable |
+
+## Execution Phase 0 — Baseline and Surface Inventory
+
+Before changing behavior, record epoch timestamps and baseline results for:
+
+- Clean-tree status and existing user modifications
+- Package import and installation behavior
+- MCP handshake and tool listing
+- Warm in-process and actual MCP latency
+- Representative read, write, status, and long-running calls
+- Error, authorization, retry, and timeout behavior
+- Thread/process/memory growth
+- Registry/dispatch/effect consistency
+
+No cleanup pass may erase or overwrite an existing user change. Baseline results are evidence, not assumptions.
+
+## Execution Phase 1 — Contract and Safety Hardening
+
+- Select canonical memory read/write operations.
+- Normalize result and error envelopes.
+- Make tool effects authoritative and machine-readable.
+- Replace taxonomy-based fast-path trust with mechanically verified safety eligibility.
+- Retain minimal identity, privacy, rate, and read-only checks on fast paths.
+- Separate fail-closed policy middleware from fail-open enrichment and telemetry.
+- Make timeout semantics explicit and expose still-running timed-out work.
+
+Acceptance gate: representative tools have stable schemas, effects, retry guidance, and side-effect tests.
+
+## Execution Phase 2 — Runtime Simplification
+
+- Separate mandatory safety middleware from optional observers.
+- Move telemetry, cognitive bookkeeping, and resonance enrichment off the critical path where safe.
+- Remove duplicate dispatch routes and document the authoritative route.
+- Reduce agent-facing god tools and mode-heavy interfaces.
+- Keep advanced implementations behind stable contracts and capability detection.
+
+Acceptance gate: no public read/write operation has undocumented durable side effects; latency and error behavior do not regress.
+
+## Execution Phase 3 — Memory and Background Work
+
+- Consolidate `create_memory` and unified memory writes into one canonical contract.
+- Separate `DreamCycle` scheduling from phase implementations.
+- Introduce explicit job state for dream, graph, ingestion, and analysis work.
+- Add cooperative cancellation, restart, retry, and idempotency behavior.
+- Govern destructive maintenance phases individually.
+
+Acceptance gate: background work is inspectable, cancelable, restartable, and does not block foreground MCP calls.
+
+## Execution Phase 4 — Quality and Release Surface
+
+- Reduce broad exception handling at stable-core boundaries.
+- Improve typing and remove duplicate compatibility layers where evidence supports it.
+- Classify tools into stable, extended, experimental, and internal surfaces.
+- Generate compact public schemas and actionable examples.
+- Upgrade the benchmark gauntlet with MCP-boundary, concurrency, safety, and lifecycle tests.
+
+Acceptance gate: stable surface passes a clean-environment install, smoke, safety, and performance suite.
 
 ## Installation Topology — 5 Tiers
 

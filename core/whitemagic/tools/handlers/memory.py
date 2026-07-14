@@ -24,13 +24,12 @@ def _load_rust() -> tuple[Any, Any]:
 
 
 def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
-    """
-    Handle a create memory event.
+    """Handle a create memory event.
 
-    Returns:
-        dict[str, Any]
+    Delegates to the canonical _write_memory path from wm_write.py to ensure
+    a single memory write implementation.  Preserves create_memory-specific
+    features: title requirement, wu_xing metadata, emit_gan_ying, FK fallback.
     """
-    from whitemagic.core.memory.unified import remember
     from whitemagic.tools.errors import ErrorCode, ToolExecutionError
 
     content = kwargs.get("content")
@@ -44,21 +43,20 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
             "content is required", error_code=ErrorCode.INVALID_PARAMS
         )
 
-    memory_type_str = kwargs.get("type") or kwargs.get("memory_type") or "short_term"
-    try:
-        from whitemagic.core.memory.unified_types import MemoryType
+    # Build kwargs for the canonical _write_memory path
+    write_kwargs: dict[str, Any] = dict(kwargs)
+    write_kwargs["mode"] = "memory"
+    write_kwargs["title"] = title.strip()
+    write_kwargs["content"] = content
 
-        memory_type = {
-            "short_term": MemoryType.SHORT_TERM,
-            "long_term": MemoryType.LONG_TERM,
-        }.get(str(memory_type_str), MemoryType.SHORT_TERM)
-    except (ImportError, ModuleNotFoundError):
-        memory_type = None
+    # create_memory defaults: conservative enrichment (no surprise gate)
+    # but full entity extraction and holographic index — same as before
+    write_kwargs.setdefault("enable_surprise_gate", False)
+    write_kwargs.setdefault("enable_entity_extraction", True)
+    write_kwargs.setdefault("enable_holographic_index", True)
+    write_kwargs.setdefault("auto_embed", kwargs.get("auto_embed", False))
 
-    tags = kwargs.get("tags", [])
-    # UX: accept comma-separated string as well as list
-    if isinstance(tags, str):
-        tags = [t.strip() for t in tags.split(",") if t.strip()]
+    # Wu Xing metadata enrichment (create_memory-specific)
     metadata_raw = kwargs.get("metadata")
     metadata: dict[str, Any] = (
         dict(metadata_raw) if isinstance(metadata_raw, dict) else {}
@@ -79,14 +77,8 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
             metadata.setdefault("wu_xing_timestamp", now_iso())
         except (ImportError, ModuleNotFoundError) as e:
             logger.debug("Silenced memory handler err: %s", e, exc_info=True)
+    write_kwargs["metadata"] = metadata
 
-    tag_set = {str(t).lower() for t in (tags or []) if str(t).strip()}
-    auto_embed_raw = kwargs.get("auto_embed", False)
-    auto_embed = (
-        auto_embed_raw
-        if isinstance(auto_embed_raw, bool)
-        else str(auto_embed_raw).strip().lower() in {"1", "true", "yes", "on"}
-    )
     emit_gan_ying_raw = kwargs.get("emit_gan_ying", False)
     emit_gan_ying = (
         emit_gan_ying_raw
@@ -94,42 +86,36 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
         else str(emit_gan_ying_raw).strip().lower() in {"1", "true", "yes", "on"}
     )
 
-    store_kwargs: dict[str, Any] = {
-        "content": content,
-        "title": title.strip(),
-        "tags": tag_set,
-        "metadata": metadata,
-        "auto_embed": auto_embed,
-        "enable_surprise_gate": False,
-        "enable_entity_extraction": True,
-        "enable_holographic_index": True,
-    }
-    if memory_type is not None:
-        store_kwargs["memory_type"] = memory_type
+    tags = kwargs.get("tags", [])
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(",") if t.strip()]
 
     try:
-        mem = remember(**store_kwargs)
-        if emit_gan_ying:
+        from whitemagic.tools.handlers.wm_write import _write_memory
+
+        result = _write_memory(write_kwargs)
+
+        if emit_gan_ying and isinstance(result, dict) and result.get("status") == "success":
             _emit(
                 "MEMORY_CREATED",
-                {"title": title, "tags": tags, "memory_id": str(mem.id)},
+                {"title": title, "tags": tags, "memory_id": result.get("memory_id", "")},
             )
-        return {
-            "status": "success",
-            "memory_id": str(mem.id),
-            "filename": f"{mem.id}.md",
-        }
+        return result
     except Exception as e:
         if "FOREIGN KEY" in str(e):
-            store_kwargs["enable_entity_extraction"] = False
-            store_kwargs["enable_holographic_index"] = False
+            # FK fallback: disable enrichment and retry
+            write_kwargs["enable_entity_extraction"] = False
+            write_kwargs["enable_holographic_index"] = False
             try:
-                mem = remember(**store_kwargs)
-                return {
-                    "status": "success",
-                    "memory_id": str(mem.id),
-                    "filename": f"{mem.id}.md",
-                }
+                from whitemagic.tools.handlers.wm_write import _write_memory
+
+                result = _write_memory(write_kwargs)
+                if emit_gan_ying and isinstance(result, dict) and result.get("status") == "success":
+                    _emit(
+                        "MEMORY_CREATED",
+                        {"title": title, "tags": tags, "memory_id": result.get("memory_id", "")},
+                    )
+                return result
             except Exception as e2:
                 return {
                     "status": "error",

@@ -5,8 +5,8 @@ This test suite verifies the Phase 3 fix for fast-path dispatch:
 - _FAST_PATH_PREFIXES has been REMOVED — no more name-pattern inference
 - Fast-path eligibility is determined by:
   1. Explicit _FAST_PATH_TOOLS set, OR
-  2. ToolDefinition.fast_path=True in the registry, OR
-  3. Tool belongs to gana_ghost (all introspection/read-only tools)
+  2. ToolDefinition.fast_path=True with satisfied safety metadata in the registry
+- Gana taxonomy alone does not grant fast-path eligibility
 - ToolDefinition has a fast_path boolean field (defaults False)
 """
 from __future__ import annotations
@@ -43,6 +43,12 @@ class TestFastPathRegistryMetadata:
         assert not _is_fast_path("memory_create")
         assert not _is_fast_path("llama_chat")
         assert not _is_fast_path("some.random.tool")
+
+    def test_gana_taxonomy_does_not_grant_fast_path(self):
+        """Gana membership is not a substitute for safety metadata."""
+        from whitemagic.tools.dispatch_table import _is_fast_path
+        assert not _is_fast_path("security.status")
+        assert not _is_fast_path("autoswarm.status")
 
     def test_fast_path_tools_count_reasonable(self):
         """The explicit tool set should be small (only safe read-only tools)."""

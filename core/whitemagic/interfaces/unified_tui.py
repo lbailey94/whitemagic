@@ -45,11 +45,9 @@ try:
 except ImportError:
     HAS_TEXTUAL = False
 
-try:
-    from rich.console import Console
-    HAS_RICH = True
-except ImportError:
-    HAS_RICH = False
+import importlib.util
+
+HAS_RICH = importlib.util.find_spec("rich") is not None
 
 
 # ── Model Backend Abstraction ────────────────────────────────────────

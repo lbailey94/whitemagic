@@ -252,21 +252,21 @@ class TestPipelineIntegration:
         """Pipeline should include semantic_cache stage."""
         from whitemagic.tools.dispatch_table import _pipeline
 
-        stage_names = [name for name, _ in _pipeline._middlewares]
+        stage_names = [name for name, _, _ in _pipeline._middlewares]
         assert "semantic_cache" in stage_names
 
     def test_pipeline_has_draft_review(self):
         """Pipeline should include draft_review stage."""
         from whitemagic.tools.dispatch_table import _pipeline
 
-        stage_names = [name for name, _ in _pipeline._middlewares]
+        stage_names = [name for name, _, _ in _pipeline._middlewares]
         assert "draft_review" in stage_names
 
     def test_pipeline_order(self):
         """Semantic cache should come before inference_router, draft_review after."""
         from whitemagic.tools.dispatch_table import _pipeline
 
-        stage_names = [name for name, _ in _pipeline._middlewares]
+        stage_names = [name for name, _, _ in _pipeline._middlewares]
         sc_idx = stage_names.index("semantic_cache")
         ir_idx = stage_names.index("inference_router")
         dr_idx = stage_names.index("draft_review")

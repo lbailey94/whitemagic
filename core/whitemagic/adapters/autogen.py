@@ -22,8 +22,9 @@ def register_whitemagic_tools(
         galaxy: WhiteMagic galaxy to use for memory operations
         tools: Optional list of tool names to register (default: search, create, health)
     """
-    from whitemagic.tools.unified_api import call_tool
     import json
+
+    from whitemagic.tools.unified_api import call_tool
 
     default_tools = tools or ["search_memories", "create_memory", "health"]
 

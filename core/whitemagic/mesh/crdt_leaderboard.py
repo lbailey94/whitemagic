@@ -39,14 +39,15 @@ def _check_loro() -> bool:
     """Check if loro is available (cached)."""
     global _LORO_AVAILABLE, _LORO_IMPORT_ERROR
     if _LORO_AVAILABLE is None:
-        try:
-            import loro  # type: ignore[import-untyped]
+        import importlib.util
+
+        if importlib.util.find_spec("loro") is not None:
             _LORO_AVAILABLE = True
             _LORO_IMPORT_ERROR = ""
-        except ImportError as e:
+        else:
             _LORO_AVAILABLE = False
-            _LORO_IMPORT_ERROR = str(e)
-            logger.info("Loro CRDT not available, using local-only mode: %s", e)
+            _LORO_IMPORT_ERROR = "loro not installed"
+            logger.info("Loro CRDT not available, using local-only mode")
     return _LORO_AVAILABLE
 
 

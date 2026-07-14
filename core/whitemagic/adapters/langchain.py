@@ -114,8 +114,9 @@ class WhiteMagicTool:
 
     def run(self, **kwargs: Any) -> str:
         """Execute the tool and return a string result."""
-        from whitemagic.tools.unified_api import call_tool
         import json
+
+        from whitemagic.tools.unified_api import call_tool
         result = call_tool(self.tool_name, **kwargs)
         return json.dumps(result, default=str)
 

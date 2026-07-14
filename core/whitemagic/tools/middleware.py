@@ -50,6 +50,20 @@ _reason_locally: Callable[..., Any] | None = None
 _get_green_score: Callable[[], Any] | None = None
 _cached: bool = False
 
+# Names of critical dependencies that failed to load.  Middleware functions
+# can check this set to decide whether to fail-closed or degrade gracefully.
+_critical_deps_failed: set[str] = set()
+
+# Dependencies whose absence is a safety concern (fail-closed candidates).
+_CRITICAL_DEP_NAMES: frozenset[str] = frozenset({
+    "input_sanitizer",
+    "circuit_breaker",
+    "rate_limiter",
+    "tool_permissions",
+    "security_monitor",
+    "governor",
+})
+
 
 def _ensure_cached() -> None:
     """Load all middleware dependencies once.  Safe to call multiple times."""
@@ -65,25 +79,29 @@ def _ensure_cached() -> None:
 
         _sanitize_tool_args = sanitize_tool_args
     except Exception as e:
-        logger.debug("Middleware: input_sanitizer dependency missing: %s", e)
+        _critical_deps_failed.add("input_sanitizer")
+        logger.error("CRITICAL: input_sanitizer dependency missing: %s", e)
     try:
         from whitemagic.tools.circuit_breaker import get_breaker_registry
 
         _get_breaker_registry = get_breaker_registry
     except Exception as e:
-        logger.debug("Middleware: circuit_breaker dependency missing: %s", e)
+        _critical_deps_failed.add("circuit_breaker")
+        logger.error("CRITICAL: circuit_breaker dependency missing: %s", e)
     try:
         from whitemagic.tools.rate_limiter import get_rate_limiter
 
         _get_rate_limiter = get_rate_limiter
     except Exception as e:
-        logger.debug("Middleware: rate_limiter dependency missing: %s", e)
+        _critical_deps_failed.add("rate_limiter")
+        logger.error("CRITICAL: rate_limiter dependency missing: %s", e)
     try:
         from whitemagic.tools.tool_permissions import check_tool_permission
 
         _check_tool_permission = check_tool_permission  # type: ignore[assignment]
     except Exception as e:
-        logger.debug("Middleware: tool_permissions dependency missing: %s", e)
+        _critical_deps_failed.add("tool_permissions")
+        logger.error("CRITICAL: tool_permissions dependency missing: %s", e)
     try:
         from whitemagic.tools.maturity_check import check_maturity_for_tool
 
@@ -95,7 +113,8 @@ def _ensure_cached() -> None:
 
         _get_security_monitor = get_security_monitor
     except Exception as e:
-        logger.debug("Middleware: security_breaker dependency missing: %s", e)
+        _critical_deps_failed.add("security_monitor")
+        logger.error("CRITICAL: security_monitor dependency missing: %s", e)
     try:
         from whitemagic.core.governor import get_governor
 
@@ -108,8 +127,9 @@ def _ensure_cached() -> None:
 
             _get_governor = get_governor
         except (ImportError, AttributeError):
-            logger.debug("Optional dependency unavailable: ImportError")
-        logger.debug("Middleware: governor dependency missing: %s", e)
+            _critical_deps_failed.add("governor")
+            logger.error("CRITICAL: governor dependency missing: %s", e)
+        logger.debug("Middleware: governor fallback attempted: %s", e)
     try:
         from whitemagic.core.monitoring.prometheus_export import get_prometheus
 
@@ -151,6 +171,7 @@ def _ensure_cached() -> None:
 
 NextFn = Callable[["DispatchContext"], dict[str, Any] | None]
 MiddlewareFn = Callable[["DispatchContext", NextFn], dict[str, Any] | None]
+PostCallHook = Callable[["DispatchContext", dict[str, Any] | None], dict[str, Any] | None]
 
 
 @dataclass
@@ -176,25 +197,56 @@ class DispatchPipeline:
 
     Middlewares execute in registration order.  Each can short-circuit
     by returning a result, or call ``next_fn(ctx)`` to continue.
+
+    Middleware is tagged as **critical** or **enrichment**:
+    - **critical** (fail-closed): if the middleware raises an exception,
+      execution is blocked and an error envelope is returned.
+    - **enrichment** (fail-open): if the middleware raises, the error is
+      logged and execution continues (legacy behaviour).
     """
 
     def __init__(self) -> None:
-        self._middlewares: list[tuple[str, MiddlewareFn]] = []
+        self._middlewares: list[tuple[str, MiddlewareFn, bool]] = []
+        self._post_call_hooks: list[tuple[str, PostCallHook]] = []
         self._chain: NextFn | None = (
             None  # Pre-built chain (frozen after first execute)
         )
 
-    def use(self, name: str, middleware: MiddlewareFn) -> DispatchPipeline:
-        """Register a middleware.  Order matters — first registered runs first."""
-        self._middlewares.append((name, middleware))
+    def use(
+        self, name: str, middleware: MiddlewareFn, *, critical: bool = False
+    ) -> DispatchPipeline:
+        """Register a middleware.  Order matters — first registered runs first.
+
+        Args:
+            name: Human-readable name for logging.
+            middleware: The middleware function.
+            critical: If True, exceptions from this middleware block execution
+                (fail-closed). If False (default), exceptions are logged and
+                execution continues (fail-open).
+        """
+        self._middlewares.append((name, middleware, critical))
         self._chain = None  # Invalidate pre-built chain
+        return self
+
+    def use_post_call(self, name: str, hook: PostCallHook) -> DispatchPipeline:
+        """Register a post-call hook that runs after the main chain completes.
+
+        Post-call hooks receive ``(ctx, result)`` and can inspect or augment
+        the result.  They always fail-open: exceptions are logged and the
+        original result is preserved.
+
+        Args:
+            name: Human-readable name for logging.
+            hook: The post-call hook function.
+        """
+        self._post_call_hooks.append((name, hook))
         return self
 
     def _build_chain(self) -> NextFn:
         """Build the closure chain once from registered middlewares."""
         chain: NextFn = _terminal
-        for name, mw in reversed(self._middlewares):
-            chain = _wrap(mw, chain, name)
+        for name, mw, critical in reversed(self._middlewares):
+            chain = _wrap(mw, chain, name, critical=critical)
         return chain
 
     def execute(self, tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
@@ -222,6 +274,22 @@ class DispatchPipeline:
 
         result = self._chain(ctx)
 
+        # Post-call hooks: observers that can inspect/augment the result.
+        # Always fail-open — exceptions are logged, original result preserved.
+        for hook_name, hook in self._post_call_hooks:
+            try:
+                augmented = hook(ctx, result)
+                if augmented is not None:
+                    result = augmented
+            except Exception as e:
+                logger.warning(
+                    "Post-call hook '%s' error: %s: %s",
+                    hook_name,
+                    e.__class__.__name__,
+                    e,
+                    exc_info=True,
+                )
+
         # Post-pipeline: compact response mode
         if ctx.compact and isinstance(result, dict) and _compact_fn is not None:
             try:
@@ -245,7 +313,11 @@ class DispatchPipeline:
 
     def describe(self) -> list[str]:
         """Return middleware names in registration order (for introspection)."""
-        return [name for name, _ in self._middlewares]
+        return [name for name, _, _ in self._middlewares]
+
+    def describe_post_call(self) -> list[str]:
+        """Return post-call hook names in registration order."""
+        return [name for name, _ in self._post_call_hooks]
 
 
 def _terminal(ctx: DispatchContext) -> dict[str, Any] | None:
@@ -264,19 +336,21 @@ def _terminal(ctx: DispatchContext) -> dict[str, Any] | None:
     }
 
 
-def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
-    """Wrap a middleware + next into a single NextFn with safety net."""
+def _wrap(
+    mw: MiddlewareFn, next_fn: NextFn, name: str, *, critical: bool = False
+) -> NextFn:
+    """Wrap a middleware + next into a single NextFn with safety net.
+
+    Args:
+        mw: The middleware function.
+        next_fn: The next function in the chain.
+        name: Human-readable name for logging.
+        critical: If True, exceptions from this middleware block execution
+            (fail-closed). If False, exceptions are logged and execution
+            continues (fail-open).
+    """
 
     def wrapped(ctx: DispatchContext) -> dict[str, Any] | None:
-        """
-        Perform the wrapped operation.
-
-        Args:
-            ctx: Parameter description.
-
-        Returns:
-            dict[str, Any] | None
-        """
         try:
             return mw(ctx, next_fn)
         except Exception as e:
@@ -309,6 +383,23 @@ def _wrap(mw: MiddlewareFn, next_fn: NextFn, name: str) -> NextFn:
                     "retryable": typed.retryable,
                 }
             )
+            if critical:
+                # Fail-closed: return an error envelope instead of continuing
+                logger.error(
+                    "Critical middleware '%s' failed — blocking execution for %s",
+                    name,
+                    ctx.tool_name,
+                )
+                return {
+                    "status": "error",
+                    "error_code": "middleware_fail_closed",
+                    "message": (
+                        f"Critical middleware '{name}' failed and execution "
+                        f"was blocked for safety. Error: {e}"
+                    ),
+                    "middleware": name,
+                    "tool": ctx.tool_name,
+                }
             return next_fn(ctx)
 
     return wrapped
@@ -318,14 +409,21 @@ def mw_input_sanitizer(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
     """Validate tool arguments before any processing."""
     _ensure_cached()
     if _sanitize_tool_args is not None:
-        try:
-            result = _sanitize_tool_args(ctx.tool_name, ctx.kwargs)
-            if result is not None:
-                return cast(dict[str, Any], result)
-        except Exception as e:
-            logger.debug(
-                "Input sanitizer failed for %s: %s", ctx.tool_name, e, exc_info=True
-            )
+        result = _sanitize_tool_args(ctx.tool_name, ctx.kwargs)
+        if result is not None:
+            return cast(dict[str, Any], result)
+    elif "input_sanitizer" in _critical_deps_failed:
+        logger.error(
+            "input_sanitizer failed to load — blocking %s (fail-closed)",
+            ctx.tool_name,
+        )
+        return {
+            "status": "error",
+            "error_code": "dependency_missing",
+            "message": "Input sanitizer dependency unavailable — execution blocked for safety.",
+            "middleware": "input_sanitizer",
+            "tool": ctx.tool_name,
+        }
     return next_fn(ctx)
 
 
@@ -334,25 +432,16 @@ def mw_circuit_breaker(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] 
     _ensure_cached()
     breaker = None
     if _get_breaker_registry is not None:
-        try:
-            breaker = _get_breaker_registry().get(ctx.tool_name)
-            # Skip pre-check if Zig dispatch already validated circuit state
-            if breaker is not None and not ctx.zig_prevalidated and breaker.is_open():
-                calm = breaker.calm_response()
-                if calm is not None:
-                    return cast(dict[str, Any], calm)
-        except (ImportError, AttributeError, ValueError, RuntimeError) as e:
-            logger.debug(
-                "Middleware: circuit breaker lookup failed for %s: %s",
-                ctx.tool_name,
-                e,
-                exc_info=True,
-            )
-            breaker = None
+        breaker = _get_breaker_registry().get(ctx.tool_name)
+        # Skip pre-check if Zig dispatch already validated circuit state
+        if breaker is not None and not ctx.zig_prevalidated and breaker.is_open():
+            calm = breaker.calm_response()
+            if calm is not None:
+                return cast(dict[str, Any], calm)
 
     result = next_fn(ctx)
 
-    # Post-processing: breaker feedback
+    # Post-processing: breaker feedback (fail-open — just recording)
     if breaker is not None and isinstance(result, dict):
         try:
             status_val = str(result.get("status", "")).lower()
@@ -528,18 +617,10 @@ def mw_rate_limiter(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | N
         return next_fn(ctx)  # Zig already checked rate limit
     _ensure_cached()
     if _get_rate_limiter is not None:
-        try:
-            limiter = _get_rate_limiter()
-            result = limiter.check(ctx.agent_id, ctx.tool_name)
-            if result is not None:
-                return result
-        except (AttributeError, RuntimeError) as e:
-            logger.debug(
-                "Middleware: rate limit check failed for %s: %s",
-                ctx.tool_name,
-                e,
-                exc_info=True,
-            )
+        limiter = _get_rate_limiter()
+        result = limiter.check(ctx.agent_id, ctx.tool_name)
+        if result is not None:
+            return result
     return next_fn(ctx)
 
 
@@ -547,17 +628,9 @@ def mw_tool_permissions(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
     """Per-agent RBAC permission check."""
     _ensure_cached()
     if _check_tool_permission is not None:
-        try:
-            perm_result = _check_tool_permission(ctx.agent_id, ctx.tool_name)
-            if perm_result is not None:
-                return perm_result  # type: ignore[return-value]
-        except (AttributeError, RuntimeError) as e:
-            logger.debug(
-                "Middleware: permission check failed for %s: %s",
-                ctx.tool_name,
-                e,
-                exc_info=True,
-            )
+        perm_result = _check_tool_permission(ctx.agent_id, ctx.tool_name)
+        if perm_result is not None:
+            return perm_result  # type: ignore[return-value]
     return next_fn(ctx)
 
 
@@ -569,17 +642,9 @@ def mw_maturity_gate(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | 
         return next_fn(ctx)  # Bypass maturity gates in benchmark mode
     _ensure_cached()
     if _check_maturity_for_tool is not None:
-        try:
-            mat_result = _check_maturity_for_tool(ctx.tool_name)
-            if mat_result is not None:
-                return mat_result  # type: ignore[return-value]
-        except (AttributeError, RuntimeError) as e:
-            logger.debug(
-                "Middleware: maturity check failed for %s: %s",
-                ctx.tool_name,
-                e,
-                exc_info=True,
-            )
+        mat_result = _check_maturity_for_tool(ctx.tool_name)
+        if mat_result is not None:
+            return mat_result  # type: ignore[return-value]
     return next_fn(ctx)
 
 
@@ -595,39 +660,29 @@ def mw_security_monitor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any]
         ctx.meta.get("quiet_internal_benchmark", False)
     )
     if _get_security_monitor is not None and not quiet_internal:
-        try:
-            safety = ctx.kwargs.get("safety", "READ")
-            if not isinstance(safety, str):
-                safety = "READ"
-            # Extract content from common kwargs for content-aware detection
-            content = None
-            for key in ("content", "query", "prompt", "text", "message", "input", "action", "description", "thought"):
-                val = ctx.kwargs.get(key)
-                if isinstance(val, str) and len(val) > 3:
-                    content = val
-                    break
-            alert = _get_security_monitor().record_call(
-                tool=ctx.tool_name,
-                safety=safety,
-                agent_id=ctx.agent_id,
-                content=content,
-            )
-            if alert and alert.get("action") == "block":
-                return {
-                    "status": "error",
-                    "error_code": "security_breaker",
-                    "message": f"Security monitor blocked: {alert.get('detail', 'anomaly detected')}",
-                    "alert": alert,
-                }
-        except (AttributeError, KeyError, ValueError) as e:
-            logger.debug(
-                "Security monitor call recording failed for %s: %s",
-                ctx.tool_name,
-                e,
-                exc_info=True,
-            )
-        except RuntimeError as e:
-            logger.warning("Security monitor runtime failure: %s", e, exc_info=True)
+        safety = ctx.kwargs.get("safety", "READ")
+        if not isinstance(safety, str):
+            safety = "READ"
+        # Extract content from common kwargs for content-aware detection
+        content = None
+        for key in ("content", "query", "prompt", "text", "message", "input", "action", "description", "thought"):
+            val = ctx.kwargs.get(key)
+            if isinstance(val, str) and len(val) > 3:
+                content = val
+                break
+        alert = _get_security_monitor().record_call(
+            tool=ctx.tool_name,
+            safety=safety,
+            agent_id=ctx.agent_id,
+            content=content,
+        )
+        if alert and alert.get("action") == "block":
+            return {
+                "status": "error",
+                "error_code": "security_breaker",
+                "message": f"Security monitor blocked: {alert.get('detail', 'anomaly detected')}",
+                "alert": alert,
+            }
     return next_fn(ctx)
 
 
@@ -781,38 +836,30 @@ def mw_governor(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
         return next_fn(ctx)  # Bypass governor in benchmark mode
     _ensure_cached()
     if _get_governor is not None:
-        try:
-            gov = _get_governor()
-            validation = gov.validate_tool_call(ctx.tool_name, ctx.kwargs)
-            if not validation.safe:
-                try:
-                    from whitemagic.tools.unified_api import _emit_gan_ying
+        gov = _get_governor()
+        validation = gov.validate_tool_call(ctx.tool_name, ctx.kwargs)
+        if not validation.safe:
+            try:
+                from whitemagic.tools.unified_api import _emit_gan_ying
 
-                    _emit_gan_ying(
-                        "GOVERNOR_BLOCKED",
-                        {
-                            "tool": ctx.tool_name,
-                            "reason": validation.reason,
-                        },
-                    )
-                except (ImportError, AttributeError, RuntimeError) as e:
-                    logger.debug(
-                        "Middleware: governor gan-ying emit failed: %s",
-                        e,
-                        exc_info=True,
-                    )
-                return {
-                    "status": "error",
-                    "error": f"Governor Blocked: {validation.reason}",
-                    "risk_level": validation.risk_level.name,
-                }
-        except (AttributeError, RuntimeError) as e:
-            logger.debug(
-                "Middleware: governor validation failed for %s: %s",
-                ctx.tool_name,
-                e,
-                exc_info=True,
-            )
+                _emit_gan_ying(
+                    "GOVERNOR_BLOCKED",
+                    {
+                        "tool": ctx.tool_name,
+                        "reason": validation.reason,
+                    },
+                )
+            except (ImportError, AttributeError, RuntimeError) as e:
+                logger.debug(
+                    "Middleware: governor gan-ying emit failed: %s",
+                    e,
+                    exc_info=True,
+                )
+            return {
+                "status": "error",
+                "error": f"Governor Blocked: {validation.reason}",
+                "risk_level": validation.risk_level.name,
+            }
     return next_fn(ctx)
 
 
@@ -2523,5 +2570,235 @@ def mw_code_nudge(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | Non
                         result["code_context"] = code_context
         except Exception:
             logger.debug("Ignored error in middleware.py:2518")
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Post-Call Hooks (Phase 3 — separated from main pipeline)
+# ═══════════════════════════════════════════════════════════════════════
+# These hooks run after the main pipeline completes.  They receive
+# (ctx, result) and can inspect/augment the result.  Always fail-open.
+
+
+def _post_call_observability(ctx: DispatchContext, result: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Record tool metrics to Prometheus and OpenTelemetry."""
+    import time as _time
+
+    _ensure_cached()
+    start = ctx.meta.get("_obs_start", _time.perf_counter())
+    duration = _time.perf_counter() - start
+
+    status = "success"
+    if isinstance(result, dict):
+        status_val = str(result.get("status", "")).lower()
+        if status_val == "error":
+            status = "error"
+
+    if _get_prometheus is not None:
+        try:
+            _get_prometheus().record_tool_call(ctx.tool_name, duration, status)
+        except (AttributeError, RuntimeError) as e:
+            logger.debug("Middleware: prometheus recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
+
+    if _get_otel is not None:
+        try:
+            _get_otel().record_tool_span(ctx.tool_name, duration, status)
+        except (AttributeError, RuntimeError) as e:
+            logger.debug("Middleware: otel recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
+
+    return result
+
+
+def _post_call_karma_effects(ctx: DispatchContext, result: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Auto-record karmic effects for every tool call."""
+    try:
+        from whitemagic.dharma.effect_registry import get_declared_effects
+        from whitemagic.dharma.effect_registry import get_declared_safety as _get_safety
+        from whitemagic.dharma.karma_ledger import get_karma_ledger
+
+        declared_effects = get_declared_effects(ctx.tool_name)
+        declared_safety = _get_safety(ctx.tool_name)
+
+        is_success = isinstance(result, dict) and result.get("status") == "success"
+        actual_writes = 0
+        if declared_safety in ("WRITE", "DELETE") and is_success:
+            actual_writes = 1
+
+        actual_effects = declared_effects if is_success else []
+
+        ledger = get_karma_ledger()
+
+        ops_class = ctx.meta.get("ops_class", "")
+        if not ops_class:
+            try:
+                from whitemagic.security.engagement_tokens import classify_ops
+                ops_class = classify_ops(ctx.tool_name)
+            except ImportError:
+                logger.debug("Optional dependency unavailable: ImportError")
+
+        ledger.record_with_effects(
+            tool=ctx.tool_name,
+            declared_safety=declared_safety,
+            actual_writes=actual_writes,
+            success=is_success,
+            declared_effects=declared_effects,
+            actual_effects=actual_effects,
+            shelter_id=ctx.meta.get("shelter_id", ""),
+            ops_class=ops_class,
+        )
+    except Exception as e:
+        logger.debug("Post-call: karma effects recording failed for %s: %s", ctx.tool_name, e, exc_info=True)
+    return result
+
+
+def _post_call_session_recorder(ctx: DispatchContext, result: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Auto-record tool calls as session memories for chronological recall."""
+    tool = ctx.tool_name
+
+    if tool in _SESSION_RECORD_SKIP:
+        return result
+
+    if os.environ.get("WM_SESSION_RECORD") == "0":
+        return result
+
+    try:
+        from whitemagic.core.memory.session_recorder import get_session_recorder
+
+        recorder = get_session_recorder()
+
+        turn_type = "message"
+        importance = 0.4
+        content_preview = ""
+
+        if tool == "wm":
+            thought = ctx.kwargs.get("thought", "")
+            if thought:
+                recorder.record_user(
+                    content=thought,
+                    turn_type="message",
+                    importance=0.5,
+                )
+            if isinstance(result, dict):
+                status = result.get("status", "")
+                routed = result.get("routed_to", "")
+                content_preview = f"wm -> {routed} ({status})"
+            turn_type = "answer"
+            importance = 0.5
+        else:
+            status = "success"
+            if isinstance(result, dict):
+                status = str(result.get("status", "success"))
+
+            arg_summary = ""
+            for key in ("content", "query", "description", "title", "message", "text", "command"):
+                val = ctx.kwargs.get(key)
+                if val and isinstance(val, str) and len(val) > 5:
+                    arg_summary = val[:200]
+                    break
+
+            if status == "error":
+                turn_type = "error"
+                importance = 0.7
+                error_detail = ""
+                if isinstance(result, dict):
+                    error_detail = str(result.get("error", result.get("error_message", "")))[:200]
+                content_preview = f"Error in {tool}: {error_detail}" if error_detail else f"Tool: {tool} -> error"
+            elif any(kw in tool for kw in ("create", "store", "save", "write", "update", "record")):
+                turn_type = "code_change"
+                importance = 0.6
+                content_preview = arg_summary if arg_summary else f"Tool: {tool} -> {status}"
+            elif any(kw in tool for kw in ("search", "recall", "read", "list", "status")):
+                turn_type = "context"
+                importance = 0.3
+                content_preview = arg_summary if arg_summary else f"Tool: {tool} -> {status}"
+            else:
+                content_preview = arg_summary if arg_summary else f"Tool: {tool} -> {status}"
+
+        recorder.record_ai(
+            content=content_preview,
+            turn_type=turn_type,
+            importance=importance,
+        )
+
+        if status != "error":
+            try:
+                from whitemagic.core.memory.current_state import get_state_tracker
+                tracker = get_state_tracker()
+
+                file_path = ctx.kwargs.get("file_path") or ctx.kwargs.get("path")
+                if file_path and any(kw in tool for kw in ("write", "edit", "create", "save", "update")):
+                    tracker.record_file_modification(
+                        str(file_path),
+                        description=arg_summary[:100] if arg_summary else "",
+                    )
+
+                if status == "error":
+                    tracker.record_error(f"{tool}: {content_preview[:100]}")
+            except Exception:
+                logger.debug("Ignored error in post-call session recorder")
+    except Exception:
+        logger.debug("Post-call: session recorder best-effort recording failed", exc_info=True)
+
+    return result
+
+
+def _post_call_error_learner(ctx: DispatchContext, result: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Auto-learn errors from failed tool dispatches."""
+    tool = ctx.tool_name
+
+    if tool in _PATTERN_LEARN_SKIP:
+        return result
+
+    if os.environ.get("WM_ERROR_LEARN", "1") == "0":
+        return result
+
+    is_error = False
+    error_text = ""
+    if isinstance(result, dict):
+        status = str(result.get("status", "")).lower()
+        if status == "error":
+            is_error = True
+            error_text = str(result.get("error", result.get("error_message", "")))
+            if not error_text:
+                error_text = str(result.get("message", ""))
+        elif status == "exception":
+            is_error = True
+            error_text = str(result.get("exception", result.get("error", "")))
+
+    if is_error and error_text and len(error_text) > 10:
+        try:
+            from whitemagic.core.patterns.error_library import get_error_library
+
+            library = get_error_library()
+            full_error = f"[{tool}] {error_text}"
+            library.learn_from_error(full_error, session=tool)
+        except Exception as e:
+            logger.debug("Post-call: error learner failed for %s: %s", tool, e, exc_info=True)
+
+    return result
+
+
+def _post_call_wasm_verify(ctx: DispatchContext, result: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Post-dispatch WASM compute verification for pure/read tools."""
+    import os as _os
+
+    if _os.environ.get("WM_WASM_VERIFY", "0") not in ("1", "true", "yes"):
+        return result
+
+    try:
+        from whitemagic.security.wasm_verifier import get_wasm_verifier
+
+        verifier = get_wasm_verifier()
+        if verifier and isinstance(result, dict):
+            mismatch = verifier.verify_result(ctx.tool_name, ctx.kwargs, result)
+            if mismatch:
+                logger.warning(
+                    "WASM verification mismatch for %s: %s",
+                    ctx.tool_name,
+                    mismatch,
+                )
+    except Exception as e:
+        logger.debug("Post-call: WASM verify failed for %s: %s", ctx.tool_name, e, exc_info=True)
 
     return result

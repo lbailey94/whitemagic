@@ -581,16 +581,6 @@ class GalaxyAwareBackend:
         all_mems.sort(key=lambda m: getattr(m, "neuro_score", 1.0))
         return all_mems[:limit]
 
-    def get_all_coords(self) -> dict[str, tuple]:
-        """Get all coordinates from all backends (merged)."""
-        all_coords: dict[str, tuple] = {}
-        for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
-            try:
-                all_coords.update(gbackend.get_all_coords())
-            except Exception:
-                continue
-        return all_coords
-
     def get_constellation_memberships(self, memory_id: str) -> list:
         """Get constellation memberships — searches all backends."""
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:

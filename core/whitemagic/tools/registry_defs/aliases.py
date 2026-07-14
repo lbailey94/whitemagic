@@ -3,7 +3,12 @@
 Maps intuitive verbs to common WhiteMagic operations.
 """
 
-from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
+from whitemagic.tools.tool_types import (
+    FastPathSafety,
+    ToolCategory,
+    ToolDefinition,
+    ToolSafety,
+)
 
 TOOLS: list[ToolDefinition] = [
     ToolDefinition(
@@ -76,5 +81,42 @@ TOOLS: list[ToolDefinition] = [
         garden="truth",
         quadrant="eastern",
         element="wood",
+    ),
+    # ── Core read-only tools promoted to fast-path ───────────────────
+    ToolDefinition(
+        name="health_report",
+        description="Get comprehensive system health report — coherence, memory stats, tool health, and any issues.",
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
+    ),
+    ToolDefinition(
+        name="gnosis",
+        description="Get system self-knowledge and architecture info — version, tool count, subsystem status.",
+        category=ToolCategory.INTROSPECTION,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
+    ),
+    ToolDefinition(
+        name="capabilities",
+        description="Get the complete list of available tools and their schemas.",
+        category=ToolCategory.INTROSPECTION,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
+    ),
+    ToolDefinition(
+        name="manifest",
+        description="Get the system manifest with version and health info.",
+        category=ToolCategory.SYSTEM,
+        safety=ToolSafety.READ,
+        input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
 ]

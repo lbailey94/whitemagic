@@ -4,7 +4,12 @@ Project-scoped memory databases for organizing knowledge
 across different projects, archives, and domains.
 """
 
-from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
+from whitemagic.tools.tool_types import (
+    FastPathSafety,
+    ToolCategory,
+    ToolDefinition,
+    ToolSafety,
+)
 
 TOOLS: list[ToolDefinition] = [
     ToolDefinition(
@@ -76,6 +81,8 @@ TOOLS: list[ToolDefinition] = [
         garden="stillness",
         quadrant="northern",
         element="water",
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
     ToolDefinition(
         name="galaxy.status",
@@ -201,6 +208,8 @@ TOOLS: list[ToolDefinition] = [
         garden="stillness",
         quadrant="northern",
         element="water",
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
     ToolDefinition(
         name="galaxy.migrate",

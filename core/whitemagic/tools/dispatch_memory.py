@@ -53,7 +53,6 @@ DISPATCH_MEMORY: dict[str, Callable[..., dict[str, Any]]] = {
     "galaxy.share": LazyHandler("galaxy", "handle_galaxy_share"),
     "galaxy.list_shared": LazyHandler("galaxy", "handle_galaxy_list_shared"),
     "galaxy.snapshot": LazyHandler("galaxy", "handle_galaxy_snapshot"),
-    "galaxy.restore": LazyHandler("galaxy", "handle_galaxy_restore"),
     "galaxy.package": LazyHandler("galaxy", "handle_galaxy_package"),
     "galaxy.receive": LazyHandler("galaxy", "handle_galaxy_receive"),
     "simulation.create": LazyHandler("simulation", "handle_simulation_create"),

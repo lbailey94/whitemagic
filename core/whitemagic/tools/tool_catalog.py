@@ -96,6 +96,8 @@ _COMMON_PROPS: dict[str, Any] = {
 
 
 def _apply_common_props(tools: list[ToolDefinition]) -> list[ToolDefinition]:
+    from whitemagic.tools.stable_surface import is_stable
+
     for tool_def in tools:
         schema = tool_def.input_schema or {}
         props = schema.setdefault("properties", {})
@@ -103,6 +105,10 @@ def _apply_common_props(tools: list[ToolDefinition]) -> list[ToolDefinition]:
             for key, value in _COMMON_PROPS.items():
                 props.setdefault(key, value)
         tool_def.input_schema = schema
+        # Enforce stable surface: tools in the canonical STABLE set get
+        # stability=STABLE regardless of their authored default.
+        if is_stable(tool_def.name) and tool_def.stability != ToolStability.STABLE:
+            tool_def.stability = ToolStability.STABLE
     return tools
 
 

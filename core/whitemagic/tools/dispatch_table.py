@@ -469,6 +469,11 @@ def _build_pipeline() -> Any:
     from whitemagic.core.monitoring.token_tracker import mw_token_tracker
     from whitemagic.tools.middleware import (
         DispatchPipeline,
+        _post_call_error_learner,
+        _post_call_karma_effects,
+        _post_call_observability,
+        _post_call_session_recorder,
+        _post_call_wasm_verify,
         mw_auto_optimize,
         mw_circuit_breaker,
         mw_citta_consciousness,
@@ -476,54 +481,58 @@ def _build_pipeline() -> Any:
         mw_cognitive_mode,
         mw_draft_review,
         mw_engagement_token,
-        mw_error_learner,
         mw_governor,
         mw_inference_router,
         mw_input_sanitizer,
-        mw_karma_effects,
         mw_maturity_gate,
         mw_model_signing,
-        mw_observability,
         mw_pattern_guard,
         mw_rate_limiter,
         mw_security_monitor,
         mw_semantic_cache,
-        mw_session_recorder,
         mw_timeout,
         mw_tool_permissions,
         mw_transaction_firewall,
-        mw_wasm_verify,
         mw_zodiac_resonance,
     )
 
     p = DispatchPipeline()
-    p.use("input_sanitizer", mw_input_sanitizer)
-    p.use("circuit_breaker", mw_circuit_breaker)
+    # ── Timing capture (for post-call observability) ───────────────────
+    def _mw_timing(ctx, next_fn):
+        import time as _t
+        ctx.meta["_obs_start"] = _t.perf_counter()
+        return next_fn(ctx)
+    p.use("timing", _mw_timing)
+    # ── Critical middleware (fail-closed) ──────────────────────────────
+    p.use("input_sanitizer", mw_input_sanitizer, critical=True)
+    p.use("circuit_breaker", mw_circuit_breaker, critical=True)
     p.use("timeout", mw_timeout)
-    p.use("rate_limiter", mw_rate_limiter)
-    p.use("security_monitor", mw_security_monitor)
-    p.use("pattern_guard", mw_pattern_guard)
+    p.use("rate_limiter", mw_rate_limiter, critical=True)
+    p.use("security_monitor", mw_security_monitor, critical=True)
+    p.use("pattern_guard", mw_pattern_guard, critical=True)
     p.use("engagement_token", mw_engagement_token)
     p.use("model_signing", mw_model_signing)
     p.use("cognitive_mode", mw_cognitive_mode)
-    p.use("tool_permissions", mw_tool_permissions)
-    p.use("maturity_gate", mw_maturity_gate)
+    p.use("tool_permissions", mw_tool_permissions, critical=True)
+    p.use("maturity_gate", mw_maturity_gate, critical=True)
+    # ── Enrichment middleware (fail-open) ──────────────────────────────
     p.use("zodiac_resonance", mw_zodiac_resonance)
     p.use("citta_consciousness", mw_citta_consciousness)
-    p.use("governor", mw_governor)
-    p.use("transaction_firewall", mw_transaction_firewall)
+    p.use("governor", mw_governor, critical=True)
+    p.use("transaction_firewall", mw_transaction_firewall, critical=True)
     p.use("semantic_cache", mw_semantic_cache)
     p.use("auto_optimize", mw_auto_optimize)
     p.use("inference_router", mw_inference_router)
     p.use("draft_review", mw_draft_review)
     p.use("token_tracker", mw_token_tracker)
-    p.use("karma_effects", mw_karma_effects)
-    p.use("observability", mw_observability)
-    p.use("session_recorder", mw_session_recorder)
-    p.use("error_learner", mw_error_learner)
-    p.use("wasm_verify", mw_wasm_verify)
     p.use("code_nudge", mw_code_nudge)
     p.use("core_router", _mw_core_router)
+    # ── Post-call hooks (fail-open, never block execution) ─────────────
+    p.use_post_call("karma_effects", _post_call_karma_effects)
+    p.use_post_call("observability", _post_call_observability)
+    p.use_post_call("session_recorder", _post_call_session_recorder)
+    p.use_post_call("error_learner", _post_call_error_learner)
+    p.use_post_call("wasm_verify", _post_call_wasm_verify)
     return p
 
 
@@ -532,18 +541,14 @@ _pipeline = _build_pipeline()
 
 _FAST_PATH_TOOLS = frozenset({
     "consciousness.loop.status",
-    "consciousness.mode",
     "guna.balance.status",
     "meta.galaxy.overview",
     "galaxy.stats",
     "galaxy.list",
-    "health.check",
-    "system.status",
     # ── Common read operations for MCP/IDE response time ──
     "health_report",
     "gnosis",
     "state.current",
-    "session_bootstrap",
     "galactic.dashboard",
     "capabilities",
     "manifest",
@@ -561,7 +566,7 @@ def _ensure_fast_path_registry() -> None:
     Mechanically enforces fast-path safety declarations:
     - Tools with ``fast_path=True`` must have ``safety=READ`` and
       ``fast_path_safety`` declared with all constraints satisfied.
-    - Tools with ``gana="gana_ghost"`` are included as before (legacy trust).
+    - Tools without explicit fast-path safety metadata are excluded.
     - Tools that fail safety verification are skipped with a warning.
     """
     if _FAST_PATH_FROM_REGISTRY:
@@ -569,19 +574,54 @@ def _ensure_fast_path_registry() -> None:
     try:
         from whitemagic.tools.registry import get_all_tools
         for td in get_all_tools():
-            if td.gana == "gana_ghost":
+            if td.fast_path and td.fast_path_eligible:
                 _FAST_PATH_FROM_REGISTRY.add(td.name)
             elif td.fast_path:
-                if td.fast_path_eligible:
-                    _FAST_PATH_FROM_REGISTRY.add(td.name)
-                else:
-                    logger.warning(
-                        "Fast-path safety check failed for '%s' — "
-                        "safety=%s, fast_path_safety=%s. Skipping.",
-                        td.name, td.safety, td.fast_path_safety,
-                    )
+                logger.warning(
+                    "Fast-path safety check failed for '%s' — "
+                    "safety=%s, fast_path_safety=%s. Skipping.",
+                    td.name, td.safety, td.fast_path_safety,
+                )
     except Exception:
         logger.debug("Ignored Exception in dispatch_table.py:584")
+
+
+def _verify_explicit_fast_path() -> None:
+    """Verify that every explicit _FAST_PATH_TOOLS entry has registry metadata.
+
+    Logs warnings for tools that lack authored ToolDefinitions with fast_path=True
+    and fast_path_safety declarations.  This is a startup diagnostic — it does
+    not remove tools from the explicit set, but surfaces missing metadata so
+    it can be fixed.
+    """
+    try:
+        from whitemagic.tools.registry import get_all_tools
+        registry_map = {td.name: td for td in get_all_tools()}
+    except Exception:
+        return
+    for name in _FAST_PATH_TOOLS:
+        td = registry_map.get(name)
+        if td is None:
+            logger.warning(
+                "Explicit fast-path tool '%s' has no registry definition. "
+                "Add a ToolDefinition in registry_defs/.",
+                name,
+            )
+        elif not td.fast_path:
+            logger.warning(
+                "Explicit fast-path tool '%s' is registered but lacks "
+                "fast_path=True metadata. Add fast_path=True and "
+                "fast_path_safety=FastPathSafety() to its ToolDefinition.",
+                name,
+            )
+        elif not td.fast_path_eligible:
+            logger.warning(
+                "Explicit fast-path tool '%s' has fast_path=True but fails "
+                "safety verification (safety=%s, fast_path_safety=%s).",
+                name,
+                td.safety,
+                td.fast_path_safety,
+            )
 
 
 def _is_fast_path(tool_name: str) -> bool:
@@ -589,10 +629,9 @@ def _is_fast_path(tool_name: str) -> bool:
 
     A tool is fast-path eligible if:
     1. It's in the explicit _FAST_PATH_TOOLS set, OR
-    2. It's declared fast_path=True in the tool registry, OR
-    3. It belongs to gana_ghost (all introspection/read-only tools)
+    2. It's declared fast_path=True with satisfied safety metadata in the registry.
 
-    No name-pattern prefix inference is used.
+    Taxonomy membership is not a safety proof, and no name-pattern inference is used.
     """
     if tool_name in _FAST_PATH_TOOLS:
         return True

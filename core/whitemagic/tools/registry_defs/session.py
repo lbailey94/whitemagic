@@ -1,6 +1,11 @@
 """Session Tools — create, checkpoint, resume, bootstrap, scratchpad."""
 
-from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
+from whitemagic.tools.tool_types import (
+    FastPathSafety,
+    ToolCategory,
+    ToolDefinition,
+    ToolSafety,
+)
 
 TOOLS: list[ToolDefinition] = [
     ToolDefinition(
@@ -247,6 +252,8 @@ TOOLS: list[ToolDefinition] = [
             "type": "object",
             "properties": {},
         },
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
     ToolDefinition(
         name="state.update",

@@ -1,6 +1,11 @@
 """Garden Tools — activate, status, synergy, health, galactic dashboard."""
 
-from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
+from whitemagic.tools.tool_types import (
+    FastPathSafety,
+    ToolCategory,
+    ToolDefinition,
+    ToolSafety,
+)
 
 TOOLS: list[ToolDefinition] = [
     ToolDefinition(
@@ -9,6 +14,8 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.INTROSPECTION,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
     ToolDefinition(
         name="garden_activate",

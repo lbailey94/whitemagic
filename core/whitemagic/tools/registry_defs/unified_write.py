@@ -19,8 +19,8 @@ TOOLS: list[ToolDefinition] = [
             "Unified write interface — auto-selects best strategy or uses explicit mode. "
             "Modes: auto, memory (full enrichment), scratchpad (ephemeral), file (atomic), "
             "neural (neural store), dream (artifact), oms (.mem package). "
-            "Memory mode enables: surprise gate, holographic coords, embeddings, "
-            "entity extraction — unlike handle_create_memory which disables them."
+            "Memory mode is the canonical write path — create_memory delegates here "
+            "with conservative enrichment defaults (surprise gate off)."
         ),
         category=ToolCategory.MEMORY,
         safety=ToolSafety.WRITE,

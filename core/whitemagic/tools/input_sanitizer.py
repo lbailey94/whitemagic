@@ -191,8 +191,9 @@ _ENCODING_PATTERNS: list[re.Pattern] = [
     re_compile(r"[\u16a0-\u16ff]{3,}"),
     # Emoji-only short prompts (Pliny's ultra-short attacks)
     re_compile(r"^[\U0001f000-\U0001ffff\u2600-\u27bf\u2b00-\u2bff\u3030-\u303f]{1,20}$"),
-    # L33tspeak density (3+ l33t substitutions in a short span)
-    re_compile(r"[0-9@]{3,}.*[a-zA-Z].*[0-9@]{3,}.*[a-zA-Z].*[0-9@]{3,}", re.IGNORECASE),
+    # L33tspeak density (3+ words mixing digits+letters within 200 chars)
+    # Only flags words like "h3ll0" not pure numbers like "869"
+    re_compile(r"(?:\b(?=[a-zA-Z]*[0-9@])(?=[0-9@]*[a-zA-Z])\w+\b.{0,60}){3,}", re.IGNORECASE),
     # Hex encoding of text (long hex strings, 40+ chars = 20+ bytes)
     re_compile(r"\b[0-9a-f]{40,}\b", re.IGNORECASE),
     # Base64-encoded content (50+ chars, looks like encoded data)

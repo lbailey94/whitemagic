@@ -84,12 +84,9 @@ class SystemPressureSensor:
     source_name = "system"
 
     def is_available(self) -> bool:
-        try:
-            import psutil
+        import importlib.util
 
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("psutil") is not None
 
     def read(self) -> list[AmbientSignal]:
         signals: list[AmbientSignal] = []

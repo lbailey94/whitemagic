@@ -7,7 +7,12 @@ New capabilities:
 - Incremental community maintenance (label propagation)
 """
 
-from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
+from whitemagic.tools.tool_types import (
+    FastPathSafety,
+    ToolCategory,
+    ToolDefinition,
+    ToolSafety,
+)
 
 TOOLS: list[ToolDefinition] = [
     # ═══════════════════════════════════════════════════════════════════
@@ -689,6 +694,8 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.SYNTHESIS,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
     ToolDefinition(
         name="consciousness.mode",
@@ -712,6 +719,8 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.SYNTHESIS,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
     ToolDefinition(
         name="meta.galaxy.overview",
@@ -719,6 +728,8 @@ TOOLS: list[ToolDefinition] = [
         category=ToolCategory.SYNTHESIS,
         safety=ToolSafety.READ,
         input_schema={"type": "object", "properties": {}},
+        fast_path=True,
+        fast_path_safety=FastPathSafety(),
     ),
     ToolDefinition(
         name="possibility.explore",
