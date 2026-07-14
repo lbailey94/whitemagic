@@ -380,3 +380,4 @@ whitemagic-ide/
 erl_crash.dump
 archives/whitemagic-public-retired-20260709/
 archives/whitemagic-site-backup-20260709/
+core/test/PoC_*.t.sol
