@@ -264,13 +264,13 @@ class TestAliasResolution:
     """Aliases must resolve to one canonical tool."""
 
     def test_read_memory_alias_resolves(self):
-        from whitemagic.tools.unified_api import _canonical_tool_name, _TOOL_ALIASES
+        from whitemagic.tools.unified_api import _TOOL_ALIASES, _canonical_tool_name
 
         assert "read_memory" in _TOOL_ALIASES
         assert _canonical_tool_name("read_memory") == "memory_read"
 
     def test_galaxy_status_alias_resolves(self):
-        from whitemagic.tools.unified_api import _canonical_tool_name, _TOOL_ALIASES
+        from whitemagic.tools.unified_api import _TOOL_ALIASES, _canonical_tool_name
 
         assert "galaxy_status" in _TOOL_ALIASES
         assert _canonical_tool_name("galaxy_status") == "galaxy.status"
@@ -309,8 +309,8 @@ class TestCanonicalNameNormalization:
 
     def test_unified_api_uses_shared_canonical(self):
         """unified_api.py must import from canonical.py, not define its own."""
-        from whitemagic.tools.unified_api import _canonical_tool_name, _TOOL_ALIASES
         from whitemagic.tools.canonical import _TOOL_ALIASES as shared_aliases
+        from whitemagic.tools.unified_api import _TOOL_ALIASES
         # The dict should be the same object (imported, not copied)
         assert _TOOL_ALIASES is shared_aliases
 
@@ -340,6 +340,6 @@ class TestCanonicalNameNormalization:
 
     def test_unified_api_uses_shared_canonical(self):
         """unified_api.py must import from canonical.py, not define its own."""
-        from whitemagic.tools.unified_api import _canonical_tool_name, _TOOL_ALIASES
         from whitemagic.tools.canonical import _TOOL_ALIASES as shared_aliases
+        from whitemagic.tools.unified_api import _TOOL_ALIASES
         assert _TOOL_ALIASES is shared_aliases

@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 from whitemagic.tools.tool_types import (
     ToolCategory,
     ToolDefinition,
@@ -219,11 +221,18 @@ def synthesize_callable_tool_definitions(
         # Default to READ safety for dispatch-only tools without authored definitions.
         # Name-pattern inference was removed (Phase 7 WI 8): safety must be declared
         # in registry_defs/, not inferred from tool name prefixes.
+        # Exception: tools in WRITE_TOOLS (dispatch_core.py) get WRITE safety.
+        from whitemagic.tools.dispatch_core import WRITE_TOOLS
+
+        inferred_safety = (
+            ToolSafety.WRITE if name in WRITE_TOOLS else ToolSafety.READ
+        )
         _logger = logging.getLogger(__name__)
         _logger.debug(
-            "Tool %s has no authored definition — defaulting to READ safety. "
+            "Tool %s has no authored definition — defaulting to %s safety. "
             "Add a ToolDefinition in registry_defs/ to declare explicit safety.",
             name,
+            inferred_safety.value,
         )
 
         defs.append(
@@ -231,7 +240,7 @@ def synthesize_callable_tool_definitions(
                 name=name,
                 description=f"Dispatch-routable WhiteMagic tool '{name}'.",
                 category=ToolCategory.SYSTEM,
-                safety=ToolSafety.READ,
+                safety=inferred_safety,
                 input_schema={"type": "object", "properties": {}},
             )
         )

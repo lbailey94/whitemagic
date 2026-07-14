@@ -157,6 +157,15 @@ class TestPathHygiene:
             "core/memory/embedding_daemon.py",
             # Local LLM model discovery (lm-studio, llama.cpp model paths)
             "interfaces/chat.py",
+            "interfaces/unified_tui.py",
+            # Session mining reads user session data from home directory
+            "archaeology/session_miner.py",
+            # Pattern tools resolve user-provided path patterns
+            "tools/handlers/pattern_tools.py",
+            # Report scraper discovers security reports in user's home
+            "tools/security/report_scraper.py",
+            # Plugin discovery scans user's home for installed plugins
+            "core/plugin/discovery.py",
         ]
 
         whitemagic_root = Path(__file__).parent.parent.parent / "whitemagic"
@@ -204,14 +213,14 @@ class TestPathHygiene:
     def test_paths_are_absolute(self):
         """All critical paths must be absolute paths."""
         from whitemagic.config.paths import (
-            WM_ROOT,
-            DATA_DIR,
-            MEMORY_DIR,
-            CACHE_DIR,
-            SESSIONS_DIR,
-            LOGS_DIR,
             ARTIFACTS_DIR,
+            CACHE_DIR,
+            DATA_DIR,
             DB_PATH,
+            LOGS_DIR,
+            MEMORY_DIR,
+            SESSIONS_DIR,
+            WM_ROOT,
         )
 
         critical_paths = [
@@ -238,7 +247,7 @@ class TestPathHygiene:
                 if mod.startswith("whitemagic.config"):
                     del sys.modules[mod]
 
-            from whitemagic.config.paths import ensure_paths, WM_ROOT
+            from whitemagic.config.paths import WM_ROOT, ensure_paths
 
             ensure_paths()
 

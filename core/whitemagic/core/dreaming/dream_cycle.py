@@ -1086,8 +1086,9 @@ class DreamCycle:
 
             # Auto-resolve stale oracle claims (Phase 3 gap closure)
             try:
-                from whitemagic.forecasting.temporal_db import TemporalForecastDB
                 from datetime import datetime, timedelta
+
+                from whitemagic.forecasting.temporal_db import TemporalForecastDB
 
                 db = TemporalForecastDB()
                 stale_claims = db.get_oracle_claims(status="pending")
@@ -1104,7 +1105,7 @@ class DreamCycle:
                     if parsed_date < cutoff:
                         claim_id = claim.get("id", "")
                         guidance = claim.get("guidance_action", "")
-                        oracle_hex = claim.get("oracle_hexagram")
+                        claim.get("oracle_hexagram")
 
                         # Search memory for evidence that guidance was followed
                         action_taken = self._check_oracle_action_evidence(guidance)
@@ -1486,7 +1487,9 @@ class DreamCycle:
         """
         result: dict[str, Any] = {"skipped": True, "hypotheses": []}
         try:
-            from whitemagic.core.intelligence.code_structure_graph import get_code_structure_graph
+            from whitemagic.core.intelligence.code_structure_graph import (
+                get_code_structure_graph,
+            )
 
             g = get_code_structure_graph()
             stats = g.stats()
@@ -1548,6 +1551,7 @@ class DreamCycle:
                             memory_type="dream",
                             tags=["code_graph", "dream", h["type"]],
                             importance=0.6,
+                            galaxy="dreams",
                         )
                 except Exception:
                     logger.debug("Ignored Exception in dream_cycle.py:1552")

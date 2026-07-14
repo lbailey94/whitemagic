@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import math
-import sqlite3
 from pathlib import Path
 
 import pytest
 
+from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.forecasting.brier import (
     brier_score,
     brier_skill_score,
@@ -17,7 +17,6 @@ from whitemagic.forecasting.brier import (
     resolution,
 )
 from whitemagic.forecasting.temporal_db import TemporalForecastDB
-from whitemagic.core.memory.db_manager import safe_connect
 
 # ---------------------------------------------------------------------------
 # brier.py tests
@@ -195,23 +194,23 @@ class TestTemporalForecastDB:
     def test_seed_validated_claims_inserts_all(self, tmp_db: TemporalForecastDB):
         result = tmp_db.seed_validated_claims()
         assert (
-            result["inserted"] == 30
-        )  # 27 validated + 2 pending + 1 expired = 30 total
+            result["inserted"] == 35
+        )  # 30 validated + 4 pending + 1 expired = 35 total
 
     def test_seed_syncs_existing_rows(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         second = tmp_db.seed_validated_claims()
-        # YAML is source of truth — second call updates all 30 rows to match
+        # YAML is source of truth — second call updates all 35 rows to match
         assert second["inserted"] == 0
-        assert second["updated"] == 30
+        assert second["updated"] == 35
         assert second["removed"] == 0
 
     def test_summary_after_seed(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         s = tmp_db.summary()
-        assert s["total"] == 30
-        assert s["validated"] == 27
-        assert s["pending"] == 2
+        assert s["total"] == 35
+        assert s["validated"] == 30
+        assert s["pending"] == 4
         assert s["falsified"] == 0
         assert s["total_points"] > 510  # known: 600+
         assert s["avg_lead_weeks"] > 20
@@ -243,7 +242,7 @@ class TestTemporalForecastDB:
         tmp_db.seed_validated_claims()
         all_preds = tmp_db.all_predictions()
         assert isinstance(all_preds, list)
-        assert len(all_preds) == 30
+        assert len(all_preds) == 35
 
     def test_total_points_matches_known_score(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()

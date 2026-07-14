@@ -472,6 +472,7 @@ def _build_pipeline() -> Any:
         mw_auto_optimize,
         mw_circuit_breaker,
         mw_citta_consciousness,
+        mw_code_nudge,
         mw_cognitive_mode,
         mw_draft_review,
         mw_engagement_token,
@@ -493,7 +494,6 @@ def _build_pipeline() -> Any:
         mw_transaction_firewall,
         mw_wasm_verify,
         mw_zodiac_resonance,
-        mw_code_nudge,
     )
 
     p = DispatchPipeline()
@@ -540,7 +540,6 @@ _FAST_PATH_TOOLS = frozenset({
     "health.check",
     "system.status",
     # ── Common read operations for MCP/IDE response time ──
-    "search_memories",
     "health_report",
     "gnosis",
     "state.current",
@@ -626,6 +625,20 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
     _start = _time.monotonic()
     result = None
 
+    # Garden resonance (v23.3: gardens as active participants)
+    try:
+        from whitemagic.core.engines.registry import get_garden_for_tool
+
+        garden_name = get_garden_for_tool(tool_name)
+        if garden_name is not None:
+            from whitemagic.gardens import get_garden
+
+            garden = get_garden(garden_name)
+            if garden is not None:
+                garden.boost(0.1)
+    except Exception:
+        logger.debug("Swallowed exception", exc_info=True)
+
     # Gana-prefixed tools → gana_invoke
     if tool_name.startswith("gana_") and _gana_invoke is not None:
         try:
@@ -642,7 +655,10 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
             try:
                 result = handler(**kwargs)
             except Exception as e:
-                from whitemagic.tools.errors import ToolExecutionError, classify_exception
+                from whitemagic.tools.errors import (
+                    ToolExecutionError,
+                    classify_exception,
+                )
 
                 if isinstance(e, ToolExecutionError):
                     return {

@@ -23,9 +23,15 @@ class TestVSAIntegration(unittest.TestCase):
         # Should not have VSA header
         self.assertNotIn("[VSA Compressed", ctx)
 
+    @patch("whitemagic.core.consciousness.depth_gauge.get_depth_gauge")
     @patch("whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor")
-    def test_large_context_uses_vsa(self, mock_get_compressor: MagicMock) -> None:
+    def test_large_context_uses_vsa(self, mock_get_compressor: MagicMock, mock_get_depth: MagicMock) -> None:
         """Large contexts should trigger VSA compression."""
+        # Mock depth gauge to return 1.0 multiplier (no budget expansion)
+        mock_gauge = MagicMock()
+        mock_gauge.current_compression.return_value = 1.0
+        mock_get_depth.return_value = mock_gauge
+
         # Mock the VSA compressor
         mock_compressor = MagicMock()
         from whitemagic.ai.vsa_context_compressor import VSACompressedContext
@@ -70,11 +76,17 @@ class TestVSAIntegration(unittest.TestCase):
         # Should still have some context
         self.assertGreater(len(ctx), 0)
 
+    @patch("whitemagic.core.consciousness.depth_gauge.get_depth_gauge")
     @patch("whitemagic.ai.vsa_context_compressor.get_vsa_context_compressor")
     def test_vsa_preserves_relevant_content(
-        self, mock_get_compressor: MagicMock
+        self, mock_get_compressor: MagicMock, mock_get_depth: MagicMock
     ) -> None:
         """VSA summary should preserve content relevant to the query."""
+        # Mock depth gauge to return 1.0 multiplier (no budget expansion)
+        mock_gauge = MagicMock()
+        mock_gauge.current_compression.return_value = 1.0
+        mock_get_depth.return_value = mock_gauge
+
         from whitemagic.ai.vsa_context_compressor import VSACompressedContext
 
         mock_compressor = MagicMock()
@@ -124,7 +136,7 @@ class TestVSAIntegration(unittest.TestCase):
             mock_compressor.compress.return_value = mock_result
             mock_get.return_value = mock_compressor
 
-            result = opt._vsa_compress(context, "test query")
+            opt._vsa_compress(context, "test query")
 
             # Check that compress was called with multiple items
             call_args = mock_compressor.compress.call_args

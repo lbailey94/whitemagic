@@ -1,6 +1,5 @@
 """Tests for Citta Architecture — sensorium and temporal continuity."""
 
-import pytest
 
 
 class TestCittaStream:

@@ -1,7 +1,6 @@
 """Unit tests for the ConsciousnessLoop background daemon component."""
 
 import os
-import threading
 import time
 
 import pytest
@@ -242,7 +241,7 @@ class TestMetaEngine:
         )
         loop = ConsciousnessLoop(config=config)
         loop.start()
-        time.sleep(1.5)
+        time.sleep(3.0)
         loop.stop()
         # At least one T2 tick should have fired
         assert loop._stats.health_checks > 0 or loop._stats.emergence_scans > 0

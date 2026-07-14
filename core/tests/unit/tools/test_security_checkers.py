@@ -6,7 +6,7 @@ import pytest
 
 from whitemagic.tools.strata.checkers import get_checkers
 from whitemagic.tools.strata.file_index import FileIndex
-from whitemagic.tools.strata.models import Finding, FindingSeverity
+from whitemagic.tools.strata.models import Finding
 
 
 def _run(sol_content: str, checker_name: str) -> list[Finding]:
@@ -160,17 +160,17 @@ class TestPythonSecrets:
     def test_hardcoded_api_key(self):
         py = 'api_key = "sk-1234567890abcdefghij1234567890abcdefghij"'
         f = _run_py(py, "check_python_secrets")
-        assert any(x.category == "py_hardcoded_secret" for x in f)
+        assert any(x.category == "hardcoded_secret" for x in f)
 
     def test_env_var_no_finding(self):
         py = 'api_key = os.getenv("API_KEY")'
         f = _run_py(py, "check_python_secrets")
-        assert not any(x.category == "py_hardcoded_secret" for x in f)
+        assert not any(x.category == "hardcoded_secret" for x in f)
 
     def test_github_token(self):
         py = 'token = "ghp_1234567890abcdefghijklmnopqrstuvwxyz1234"'
         f = _run_py(py, "check_python_secrets")
-        assert any(x.category == "py_hardcoded_secret" for x in f)
+        assert any(x.category == "hardcoded_secret" for x in f)
 
 
 class TestPythonSQLi:

@@ -2,7 +2,7 @@
 """Integration tests for 2B-3: DNA Sequencer, Zodiac Aries, Dream Cycle, Garden vitality."""
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class TestDNAValidator(unittest.TestCase):
@@ -166,14 +166,14 @@ class TestZodiacActivation(unittest.TestCase):
 
 
 class TestDreamCyclePhases(unittest.TestCase):
-    """Test that all 12 dream phases have real implementations."""
+    """Test that all 13 dream phases have real implementations."""
 
-    def test_all_12_phases_exist(self):
-        """Verify all 12 DreamPhase members are present."""
+    def test_all_13_phases_exist(self):
+        """Verify all 13 DreamPhase members are present."""
         from whitemagic.core.dreaming.dream_cycle import DreamPhase
 
         phases = list(DreamPhase)
-        self.assertEqual(len(phases), 12)
+        self.assertEqual(len(phases), 13)
         expected = {
             "triage",
             "consolidation",
@@ -187,6 +187,7 @@ class TestDreamCyclePhases(unittest.TestCase):
             "prediction",
             "enrichment",
             "harmonize",
+            "code_graph",
         }
         actual = {p.value for p in phases}
         self.assertEqual(expected, actual)

@@ -53,6 +53,7 @@ _RESONANCE_COMPACT_KEYS = (
     "chain_position",
     "successor_hint",
     "vitality_warning",
+    "_sensorium",
 )
 
 # Tools where sensorium data is relevant and should be included in responses

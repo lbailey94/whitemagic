@@ -718,8 +718,8 @@ class TestDreamCycleNarrative(unittest.TestCase):
         from whitemagic.core.dreaming.dream_cycle import DreamPhase
 
         self.assertEqual(
-            len(DreamPhase), 12
-        )  # +1 NARRATIVE, +1 TRIAGE (v15.3), +4 v17.0
+            len(DreamPhase), 13
+        )  # +1 NARRATIVE, +1 TRIAGE (v15.3), +4 v17.0, +1 CODE_GRAPH (v24.3)
 
 
 # ═══════════════════════════════════════════════════════════════

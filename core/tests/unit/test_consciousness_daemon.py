@@ -10,11 +10,9 @@ Tests:
 
 from __future__ import annotations
 
-import json
 import os
 import tempfile
 import time
-from pathlib import Path
 
 import pytest
 
@@ -32,13 +30,18 @@ class TestDepthGauge:
     """Test the ConsciousnessDepthGauge."""
 
     def test_depth_gauge_singleton(self):
-        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge, ConsciousnessLayer
+        from whitemagic.core.consciousness.depth_gauge import (
+            ConsciousnessLayer,
+            get_depth_gauge,
+        )
         gauge = get_depth_gauge()
+        gauge.ascend()  # Reset to SURFACE (xdist may have modified singleton state)
         assert gauge.current_layer == ConsciousnessLayer.SURFACE
 
     def test_layer_detection_surface(self):
         from whitemagic.core.consciousness.depth_gauge import (
-            ConsciousnessDepthGauge, ConsciousnessLayer,
+            ConsciousnessDepthGauge,
+            ConsciousnessLayer,
         )
         gauge = ConsciousnessDepthGauge()
         layer = gauge._detect_layer(1.0, {"type": "chat"})
@@ -46,7 +49,8 @@ class TestDepthGauge:
 
     def test_layer_detection_terminal(self):
         from whitemagic.core.consciousness.depth_gauge import (
-            ConsciousnessDepthGauge, ConsciousnessLayer,
+            ConsciousnessDepthGauge,
+            ConsciousnessLayer,
         )
         gauge = ConsciousnessDepthGauge()
         layer = gauge._detect_layer(2.5, {"type": "script"})
@@ -54,7 +58,8 @@ class TestDepthGauge:
 
     def test_layer_detection_flow(self):
         from whitemagic.core.consciousness.depth_gauge import (
-            ConsciousnessDepthGauge, ConsciousnessLayer,
+            ConsciousnessDepthGauge,
+            ConsciousnessLayer,
         )
         gauge = ConsciousnessDepthGauge()
         layer = gauge._detect_layer(4.0, {"type": "creation"})
@@ -62,7 +67,8 @@ class TestDepthGauge:
 
     def test_layer_detection_dream(self):
         from whitemagic.core.consciousness.depth_gauge import (
-            ConsciousnessDepthGauge, ConsciousnessLayer,
+            ConsciousnessDepthGauge,
+            ConsciousnessLayer,
         )
         gauge = ConsciousnessDepthGauge()
         layer = gauge._detect_layer(10.0, {"type": "synthesis"})
@@ -85,7 +91,8 @@ class TestDepthGauge:
 
     def test_predict_objective_time(self):
         from whitemagic.core.consciousness.depth_gauge import (
-            ConsciousnessDepthGauge, ConsciousnessLayer,
+            ConsciousnessDepthGauge,
+            ConsciousnessLayer,
         )
         gauge = ConsciousnessDepthGauge()
         gauge.set_layer(ConsciousnessLayer.FLOW)

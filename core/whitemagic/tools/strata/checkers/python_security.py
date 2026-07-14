@@ -36,7 +36,7 @@ _UNQUOTED_SKIP = re.compile(
 
 
 @register
-def check_hardcoded_secrets(
+def check_python_secrets(
     project_path: Path, file_index: FileIndex, findings: list[Finding]
 ):
     """Detect hardcoded secrets, API keys, and credentials across file types."""
@@ -90,7 +90,7 @@ def check_hardcoded_secrets(
 
 
 # Backward-compatible alias
-check_python_secrets = check_hardcoded_secrets
+check_hardcoded_secrets = check_python_secrets
 
 
 @register

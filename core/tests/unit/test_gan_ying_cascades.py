@@ -309,7 +309,7 @@ class TestDispatchPipelineGardenBoost(unittest.TestCase):
     def test_dispatch_boosts_garden(self):
         """Dispatching a tool boosts the associated garden's activation."""
         from whitemagic.core.engines.registry import get_garden_for_tool
-        from whitemagic.gardens import get_garden, _garden_cache
+        from whitemagic.gardens import _garden_cache, get_garden
         from whitemagic.tools.dispatch_table import dispatch
 
         garden_name = get_garden_for_tool("capabilities")
@@ -482,9 +482,9 @@ class TestPyO3Acceleration(unittest.TestCase):
 
     def setUp(self):
         from whitemagic.core.resonance._consolidated import (
-            GanYingBus,
-            EventType,
             CascadeTrigger,
+            EventType,
+            GanYingBus,
         )
 
         self.GanYingBus = GanYingBus
@@ -591,9 +591,9 @@ class TestPolyglotBridges(unittest.TestCase):
 
     def setUp(self):
         from whitemagic.core.resonance._consolidated import (
-            GanYingBus,
-            EventType,
             CascadeTrigger,
+            EventType,
+            GanYingBus,
         )
 
         self.GanYingBus = GanYingBus
@@ -633,7 +633,7 @@ class TestPolyglotBridges(unittest.TestCase):
 
     def test_class_level_availability_cache(self):
         """Class-level availability cache should prevent re-discovery."""
-        bus = self.GanYingBus()
+        self.GanYingBus()
         # Koka is always attempted (post-cascade), so cache should be set
         self.assertIsNotNone(GanYingBus._koka_available)
         # Haskell may be None if PyO3 handled cycle detection first

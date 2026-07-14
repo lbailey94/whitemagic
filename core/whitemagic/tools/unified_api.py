@@ -382,6 +382,7 @@ _DEAD_CODE_REMOVED = True  # Marker for grep-ability
 
 
 from whitemagic.tools.canonical import (
+    _TOOL_ALIASES,
     canonical_tool_name as _canonical_tool_name,
 )
 

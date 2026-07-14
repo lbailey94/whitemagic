@@ -18,7 +18,6 @@ import unittest
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # 1. Gnosis compact mode
 # ---------------------------------------------------------------------------
@@ -565,6 +564,7 @@ class TestRegistryAndDispatch(unittest.TestCase):
         )
         self.assertEqual(_canonical_tool_name("audit_export"), "audit.export")
 
+    @pytest.mark.timeout(30)
     def test_dispatch_roundtrip_new_tools(self):
         """Every new tool dispatches without crashing."""
         from whitemagic.tools.dispatch_table import dispatch

@@ -10,18 +10,16 @@ Also verifies galactic promotion of strategy memories after consolidation.
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Set
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 from whitemagic.core.dreaming.dream_cycle import (
     DreamCycle,
     DreamPhase,
     DreamReport,
 )
-
 
 # ---------------------------------------------------------------------------
 # Synthetic memory objects for consolidation / association tests
@@ -33,7 +31,7 @@ class FakeMemory:
     id: str
     title: str = ""
     content: str = ""
-    tags: Set[str] = field(default_factory=set)
+    tags: set[str] = field(default_factory=set)
     importance: float = 0.5
     access_count: int = 0
     emotional_valence: float = 0.0
@@ -41,10 +39,10 @@ class FakeMemory:
     retention_score: float = 0.5
     last_accessed: Any = None
     created_at: Any = None
-    galactic_distance: Optional[float] = None
+    galactic_distance: float | None = None
 
 
-def _make_memories(n: int = 20) -> List[FakeMemory]:
+def _make_memories(n: int = 20) -> list[FakeMemory]:
     """Generate a cluster-friendly set of synthetic memories."""
     mems = []
     # Cluster 1: Python/ML theme (7 mems, high importance, frequently accessed)
@@ -239,7 +237,7 @@ class TestDreamCycleE2E:
         """Run all 5 phases and verify each produces a valid DreamReport."""
         dc = DreamCycle(idle_threshold_seconds=0.01, cycle_interval_seconds=0.01)
 
-        reports: List[DreamReport] = []
+        reports: list[DreamReport] = []
         for i in range(8):
             await dc._run_phase()
             reports.append(dc._history[-1])
@@ -284,13 +282,13 @@ class TestDreamCycleE2E:
     @pytest.mark.timeout(60)
     @pytest.mark.asyncio
     async def test_phase_rotation_wraps_around(self):
-        """After 12 phases, phase 13 should be TRIAGE again."""
+        """After 13 phases, phase 14 should be TRIAGE again."""
         dc = DreamCycle()
-        for _ in range(13):
+        for _ in range(14):
             await dc._run_phase()
 
-        assert dc._total_cycles == 13
-        # Phase 13 (index 12) should wrap to TRIAGE (index 0)
+        assert dc._total_cycles == 14
+        # Phase 14 (index 13) should wrap to TRIAGE (index 0)
         assert dc._history[-1].phase == DreamPhase.TRIAGE
 
     @pytest.mark.asyncio
