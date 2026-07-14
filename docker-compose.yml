@@ -1,23 +1,64 @@
 services:
   core:
-    build: .
+    build:
+      context: .
+      target: core
     volumes:
       - whitemagic_data:/data/whitemagic
     environment:
       - REDIS_URL=redis://redis:6379/0
       - WM_STATE_ROOT=/data/whitemagic
       - WM_DB_PATH=/data/whitemagic/memory/whitemagic.db
+      - WM_SILENT_INIT=1
+      - WM_MCP_PRAT=2
       - LOG_LEVEL=INFO
     depends_on:
       - redis
     # MCP server (stdio) — use `docker exec` or stdin/stdout piping
-    command: python -m whitemagic.run_mcp
+    command: python -m whitemagic.run_mcp_lean
+
+  # Seed binary (zero Python, ~20MB)
+  seed:
+    build:
+      context: .
+      target: seed
+    volumes:
+      - whitemagic_data:/data/whitemagic
+    environment:
+      - WM_STATE_ROOT=/data/whitemagic
+      - WM_DB_PATH=/data/whitemagic/memory/whitemagic.db
+    command: wm-seed serve
+    profiles:
+      - seed
+
+  # HTTP server (expose MCP over HTTP)
+  http:
+    build:
+      context: .
+      target: core
+    ports:
+      - "8770:8770"
+    volumes:
+      - whitemagic_data:/data/whitemagic
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - WM_STATE_ROOT=/data/whitemagic
+      - WM_DB_PATH=/data/whitemagic/memory/whitemagic.db
+      - WM_SILENT_INIT=1
+      - WM_MCP_PRAT=2
+    depends_on:
+      - redis
+    command: python -m whitemagic.run_mcp_lean --http --port 8770
+    profiles:
+      - http
 
   # CLI one-shot (run manually)
   # Example:
   #   docker compose run --rm cli --json status
   cli:
-    build: .
+    build:
+      context: .
+      target: core
     volumes:
       - whitemagic_data:/data/whitemagic
     environment:

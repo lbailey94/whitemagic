@@ -26,13 +26,16 @@
     "tasks": "optional"
   },
   "installation": {
-    "pip": "pip install whitemagic",
-    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e core/."
+    "uvx": "uvx whitemagic-mcp",
+    "pip": "pip install whitemagic-mcp",
+    "pip_full": "pip install whitemagic",
+    "source": "git clone https://github.com/lbailey94/whitemagic && cd whitemagic && pip install -e core/.",
+    "seed_binary": "curl https://whitemagic.dev/install.sh | sh"
   },
   "configuration": {
     "stdio": {
-      "command": "python",
-      "args": ["-m", "whitemagic.run_mcp_lean"],
+      "command": "uvx",
+      "args": ["whitemagic-mcp"],
       "env": {
         "PYTHONUNBUFFERED": "1",
         "WM_SILENT_INIT": "1",
@@ -40,8 +43,8 @@
       }
     },
     "http": {
-      "command": "python",
-      "args": ["-m", "whitemagic.run_mcp_lean", "--http", "--port", "8770"]
+      "command": "uvx",
+      "args": ["whitemagic-mcp", "--http", "--port", "8770"]
     }
   },
   "tool_count": 1,

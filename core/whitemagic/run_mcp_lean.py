@@ -1322,6 +1322,46 @@ def _read_grimoire_resource(uri_str: str) -> str:
 # ══════════════════════════════════════════════════════════════════════
 
 
+def _print_upgrade_hints() -> None:
+    """Print optional upgrade hints to stderr (suppressed by WM_SILENT_INIT)."""
+    import importlib
+
+    hints = []
+
+    try:
+        importlib.import_module("fastembed")
+    except ImportError:
+        pass  # fastembed not installed — search falls back to FTS5
+
+    try:
+        importlib.import_module("sentence_transformers")
+    except ImportError:
+        hints.append("whitemagic[embeddings]  — Full ML embeddings (2.5GB, better recall)")
+
+    try:
+        importlib.import_module("whitemagic_rust")
+    except ImportError:
+        hints.append("whitemagic-rust          — Rust SIMD acceleration (3-10x faster search)")
+
+    # Check polyglot
+    has_polyglot = False
+    for mod in ("julia", "erlport", "haskell_bridge", "whitemagic_polyglot"):
+        try:
+            importlib.import_module(mod)
+            has_polyglot = True
+            break
+        except ImportError:
+            pass
+    if not has_polyglot:
+        hints.append("Polyglot bridges         — Julia/Elixir/Haskell/Koka/Zig (advanced cognition)")
+
+    if hints:
+        print("  Optional upgrades available:", file=sys.stderr)
+        for hint in hints:
+            print(f"     • {hint}", file=sys.stderr)
+        print("  Run `whitemagic grow` to install recommended upgrades.", file=sys.stderr)
+
+
 async def main_stdio() -> None:
     """Run as stdio MCP server (default, for IDE integration)."""
     import signal
@@ -1347,6 +1387,10 @@ async def main_stdio() -> None:
         if runtime_status.get("degraded_reasons"):
             reasons = ", ".join(runtime_status["degraded_reasons"])
             print(f"  Degraded reasons: {reasons}", file=sys.stderr)
+
+        # Upgrade hints
+        _print_upgrade_hints()
+
         print("", file=sys.stderr)
 
     # Bridge 3 (Microkernel Mandala): register hot-loadable subsystems

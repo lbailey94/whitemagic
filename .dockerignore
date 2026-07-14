@@ -34,6 +34,7 @@ logs/
 reports/
 .whitemagic/
 windsurf_conversations/
+WindsurfRips/
 .mcp.json
 .env
 .env.*
@@ -42,3 +43,27 @@ whitemagic.db*
 *.log
 *.sqlite
 markov_chain.json
+
+# Node.js / Next.js (not needed in Docker)
+node_modules/
+.next/
+.vercel/
+
+# Test artifacts
+core/test/PoC_*.t.sol
+test/
+.hypothesis/
+
+# Docs (not needed at runtime)
+docs/
+articles/
+grimoire/
+content/
+
+# MCP package (built separately)
+mcp-package/
+
+# CI / IDE
+.github/
+.desloppify/
+.devcontainer/

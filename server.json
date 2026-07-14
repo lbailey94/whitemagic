@@ -10,17 +10,17 @@
   "packages": [
     {
       "registryType": "pypi",
-      "identifier": "whitemagic",
+      "identifier": "whitemagic-mcp",
       "version": "25.0.0",
       "transport": {
         "type": "stdio"
       },
-      "runtime": "python",
-      "runtimeArgs": ["-m", "whitemagic.run_mcp_lean"],
+      "runtime": "uvx",
+      "runtimeArgs": ["whitemagic-mcp"],
       "environmentVariables": [
         {
           "name": "WM_MCP_PRAT",
-          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (773 tools)",
+          "description": "Set to 2 for Seed mode (1 tool: wm, default), 1 for PRAT mode (29 tools), or 0 for classic mode (801 tools)",
           "isRequired": false,
           "format": "string",
           "isSecret": false

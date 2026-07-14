@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whitemagic-mcp"
+version = "25.0.0"
+description = "WhiteMagic MCP Server — 829 callable tools, 5D holographic memory, Dharma governance, fastembed semantic search"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "WhiteMagic Contributors"}
+]
+keywords = ["mcp", "memory", "ai", "agents", "tools", "governance", "context", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "whitemagic>=25.0.0",
+    "mcp>=1.0.0",
+    "fastembed>=0.2.0",
+]
+
+[project.urls]
+Homepage = "https://whitemagic.dev"
+Documentation = "https://github.com/lbailey94/whitemagic/blob/main/docs/QUICKSTART.md"
+Repository = "https://github.com/lbailey94/whitemagic"
+Issues = "https://github.com/lbailey94/whitemagic/issues"
+
+[project.scripts]
+whitemagic-mcp = "whitemagic_mcp:main"
+whitemagic-grow = "whitemagic_mcp.grow:main"
+
+[tool.setuptools]
+packages = ["whitemagic_mcp"]
