@@ -32,10 +32,9 @@ def collect_tool_definitions() -> list[dict[str, Any]]:
     sys.path.insert(0, str(CORE_ROOT))
 
     try:
-        from whitemagic.tools.registry import LazyToolRegistry
-        registry = LazyToolRegistry()
-        tools = registry.get_all_definitions()
-        return [_tool_to_dict(t) for t in tools]
+        from whitemagic.tools.registry import get_all_tools
+        tools_defs = get_all_tools()
+        return [_tool_to_dict(t) for t in tools_defs]
     except Exception as e:
         logger.warning("Could not load full registry: %s. Falling back to manual scan.", e)
         return _collect_manual()
@@ -92,6 +91,15 @@ def _collect_manual() -> list[dict[str, Any]]:
     return tools
 
 
+def _get_gana_for_tool(tool_name: str) -> str | None:
+    """Map a tool name to its Gana routing."""
+    try:
+        from whitemagic.tools.prat_mappings import get_gana_for_tool
+        return get_gana_for_tool(tool_name)
+    except Exception:
+        return None
+
+
 def generate_tool_markdown(tool: dict[str, Any]) -> str:
     """Generate a markdown doc for a single tool."""
     name = tool.get("name", "unknown")
@@ -99,30 +107,35 @@ def generate_tool_markdown(tool: dict[str, Any]) -> str:
     category = tool.get("category", "")
     safety = tool.get("safety", "")
     schema = tool.get("input_schema", {})
+    gana = tool.get("gana")
 
     lines = [
         f"# {name}",
         "",
         f"**Category**: {category} | **Safety**: {safety}",
+    ]
+    if gana:
+        lines.append(f"**Gana**: `{gana}`")
+    lines.extend([
         "",
-        f"## Description",
+        "## Description",
         "",
         desc,
         "",
-        f"## Input Schema",
+        "## Input Schema",
         "",
         "```json",
         json.dumps(schema, indent=2),
         "```",
         "",
-        f"## Example Invocation",
+        "## Example Invocation",
         "",
-        f"```python",
-        f"from whitemagic.tools.unified_api import call_tool",
-        f"",
-        f"result = call_tool(",
+        "```python",
+        "from whitemagic.tools.unified_api import call_tool",
+        "",
+        "result = call_tool(",
         f'    "{name}",',
-    ]
+    ])
 
     props = schema.get("properties", {})
     required = schema.get("required", [])
@@ -219,24 +232,107 @@ def generate_openapi_spec(tools: list[dict[str, Any]]) -> dict[str, Any]:
         "openapi": "3.0.0",
         "info": {
             "title": "WhiteMagic MCP API",
-            "version": "1.0.0",
-            "description": "490+ MCP tools for AI agent memory, code analysis, and governance.",
+            "version": "25.0.0",
+            "description": f"{len(tools)} MCP tools for AI agent memory, cognitive upgrades, and governance.",
         },
         "paths": paths,
     }
+
+
+def generate_category_index(tools: list[dict[str, Any]]) -> dict[str, str]:
+    """Generate per-category index pages. Returns {category: markdown}."""
+    by_cat: dict[str, list[dict[str, Any]]] = {}
+    for tool in tools:
+        cat = tool.get("category", "UNKNOWN")
+        by_cat.setdefault(cat, []).append(tool)
+
+    pages = {}
+    for cat, cat_tools in sorted(by_cat.items()):
+        lines = [
+            f"# Category: {cat}",
+            "",
+            f"**{len(cat_tools)} tools** in this category.",
+            "",
+            "| Tool | Safety | Description |",
+            "|------|--------|-------------|",
+        ]
+        for tool in sorted(cat_tools, key=lambda t: t.get("name", "")):
+            name = tool.get("name", "")
+            safety = tool.get("safety", "")
+            desc = tool.get("description", "")[:80]
+            lines.append(f"| [{name}](../tools/{name}.md) | {safety} | {desc} |")
+        lines.append("")
+        pages[cat] = "\n".join(lines)
+    return pages
+
+
+def generate_gana_index(tools: list[dict[str, Any]]) -> dict[str, str]:
+    """Generate per-Gana index pages. Returns {gana: markdown}."""
+    by_gana: dict[str, list[dict[str, Any]]] = {}
+    for tool in tools:
+        gana = tool.get("gana")
+        if gana:
+            by_gana.setdefault(gana, []).append(tool)
+
+    pages = {}
+    for gana, gana_tools in sorted(by_gana.items()):
+        lines = [
+            f"# Gana: {gana}",
+            "",
+            f"**{len(gana_tools)} tools** routed through this Gana.",
+            "",
+            "| Tool | Category | Safety | Description |",
+            "|------|----------|--------|-------------|",
+        ]
+        for tool in sorted(gana_tools, key=lambda t: t.get("name", "")):
+            name = tool.get("name", "")
+            cat = tool.get("category", "")
+            safety = tool.get("safety", "")
+            desc = tool.get("description", "")[:80]
+            lines.append(f"| [{name}](../tools/{name}.md) | {cat} | {safety} | {desc} |")
+        lines.append("")
+        pages[gana] = "\n".join(lines)
+    return pages
+
+
+def generate_catalog_json(tools: list[dict[str, Any]]) -> str:
+    """Generate machine-readable tool catalog."""
+    catalog = {
+        "version": "25.0.0",
+        "tool_count": len(tools),
+        "tools": sorted(tools, key=lambda t: t.get("name", "")),
+    }
+    return json.dumps(catalog, indent=2, default=str)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate WhiteMagic tool documentation")
     parser.add_argument("--output", "-o", default="docs/api", help="Output directory for markdown docs")
     parser.add_argument("--openapi", help="Output path for OpenAPI spec JSON")
+    parser.add_argument("--format", choices=["markdown", "json"], default="markdown", help="Output format")
+    parser.add_argument("--limit", type=int, help="Limit number of tools (for testing)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logger.info("Collecting tool definitions...")
     tools = collect_tool_definitions()
+    if args.limit:
+        tools = tools[:args.limit]
     logger.info("Found %d tools", len(tools))
+
+    # Enrich with Gana mapping
+    logger.info("Mapping tools to Ganas...")
+    for tool in tools:
+        tool["gana"] = _get_gana_for_tool(tool.get("name", ""))
+
+    if args.format == "json":
+        catalog = generate_catalog_json(tools)
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(catalog, encoding="utf-8")
+        logger.info("Catalog written to %s (%d tools)", args.output, len(tools))
+        return
 
     output_dir = Path(args.output)
     tools_dir = output_dir / "tools"
@@ -251,6 +347,21 @@ def main() -> None:
     logger.info("Generating index page...")
     index = generate_index_page(tools)
     (output_dir / "README.md").write_text(index, encoding="utf-8")
+
+    logger.info("Generating category index pages...")
+    cat_dir = output_dir / "categories"
+    cat_dir.mkdir(exist_ok=True)
+    for cat, page in generate_category_index(tools).items():
+        (cat_dir / f"{cat.lower()}.md").write_text(page, encoding="utf-8")
+
+    logger.info("Generating Gana index pages...")
+    gana_dir = output_dir / "gana"
+    gana_dir.mkdir(exist_ok=True)
+    for gana, page in generate_gana_index(tools).items():
+        (gana_dir / f"{gana}.md").write_text(page, encoding="utf-8")
+
+    logger.info("Generating catalog.json...")
+    (output_dir / "catalog.json").write_text(generate_catalog_json(tools), encoding="utf-8")
 
     if args.openapi:
         logger.info("Generating OpenAPI spec...")
