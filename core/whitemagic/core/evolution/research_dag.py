@@ -642,29 +642,29 @@ class ResearchDAG:
                 next_frontier: list[str] = []
                 with self._get_conn() as conn:
                     conn.row_factory = __import__("sqlite3").Row
-                    for eid in frontier:
-                        rows = conn.execute(
-                            """SELECT * FROM lineage_edges
-                               WHERE target_id = ? AND target_galaxy = 'research'
-                               ORDER BY created_at""",
-                            (eid,),
-                        ).fetchall()
-                        for row in rows:
-                            src = row["source_id"]
-                            if src not in visited:
-                                visited.add(src)
-                                next_frontier.append(src)
-                                # Load the ancestor experiment
-                                anc = self._load(src)
-                                ancestors.append({
-                                    "experiment_id": src,
-                                    "hypothesis": anc.hypothesis if anc else "",
-                                    "domain": anc.domain.value if anc else "",
-                                    "fitness_score": anc.fitness_score if anc else 0.0,
-                                    "stage": anc.stage.value if anc else "",
-                                    "edge_type": row["edge_type"],
-                                    "depth": depth + 1,
-                                })
+                    placeholders = ",".join(["?"] * len(frontier))
+                    rows = conn.execute(
+                        f"""SELECT * FROM lineage_edges
+                           WHERE target_id IN ({placeholders}) AND target_galaxy = 'research'
+                           ORDER BY created_at""",
+                        frontier,
+                    ).fetchall()
+                    for row in rows:
+                        src = row["source_id"]
+                        if src not in visited:
+                            visited.add(src)
+                            next_frontier.append(src)
+                            # Load the ancestor experiment
+                            anc = self._load(src)
+                            ancestors.append({
+                                "experiment_id": src,
+                                "hypothesis": anc.hypothesis if anc else "",
+                                "domain": anc.domain.value if anc else "",
+                                "fitness_score": anc.fitness_score if anc else 0.0,
+                                "stage": anc.stage.value if anc else "",
+                                "edge_type": row["edge_type"],
+                                "depth": depth + 1,
+                            })
                 frontier = next_frontier
             return ancestors
         except Exception as e:
@@ -684,28 +684,28 @@ class ResearchDAG:
                 next_frontier: list[str] = []
                 with self._get_conn() as conn:
                     conn.row_factory = __import__("sqlite3").Row
-                    for eid in frontier:
-                        rows = conn.execute(
-                            """SELECT * FROM lineage_edges
-                               WHERE source_id = ? AND source_galaxy = 'research'
-                               ORDER BY created_at""",
-                            (eid,),
-                        ).fetchall()
-                        for row in rows:
-                            tgt = row["target_id"]
-                            if tgt not in visited:
-                                visited.add(tgt)
-                                next_frontier.append(tgt)
-                                desc = self._load(tgt)
-                                descendants.append({
-                                    "experiment_id": tgt,
-                                    "hypothesis": desc.hypothesis if desc else "",
-                                    "domain": desc.domain.value if desc else "",
-                                    "fitness_score": desc.fitness_score if desc else 0.0,
-                                    "stage": desc.stage.value if desc else "",
-                                    "edge_type": row["edge_type"],
-                                    "depth": depth + 1,
-                                })
+                    placeholders = ",".join(["?"] * len(frontier))
+                    rows = conn.execute(
+                        f"""SELECT * FROM lineage_edges
+                           WHERE source_id IN ({placeholders}) AND source_galaxy = 'research'
+                           ORDER BY created_at""",
+                        frontier,
+                    ).fetchall()
+                    for row in rows:
+                        tgt = row["target_id"]
+                        if tgt not in visited:
+                            visited.add(tgt)
+                            next_frontier.append(tgt)
+                            desc = self._load(tgt)
+                            descendants.append({
+                                "experiment_id": tgt,
+                                "hypothesis": desc.hypothesis if desc else "",
+                                "domain": desc.domain.value if desc else "",
+                                "fitness_score": desc.fitness_score if desc else 0.0,
+                                "stage": desc.stage.value if desc else "",
+                                "edge_type": row["edge_type"],
+                                "depth": depth + 1,
+                            })
                 frontier = next_frontier
             return descendants
         except Exception as e:

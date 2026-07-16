@@ -354,28 +354,28 @@ class PhylogeneticTracker:
                 next_frontier = []
                 with um.pool.connection() as conn:
                     conn.row_factory = __import__("sqlite3").Row
-                    for mid in frontier:
-                        rows = conn.execute(
-                            """SELECT * FROM lineage_edges
-                               WHERE target_id = ?
-                               ORDER BY created_at""",
-                            (mid,),
-                        ).fetchall()
-                        for row in rows:
-                            src = row["source_id"]
-                            if src not in visited:
-                                visited.add(src)
-                                next_frontier.append(src)
-                                ancestors.append(
-                                    {
-                                        "id": src,
-                                        "galaxy": row["source_galaxy"],
-                                        "edge_type": row["edge_type"],
-                                        "mechanism": row["mechanism"],
-                                        "created_at": row["created_at"],
-                                        "depth": _depth + 1,
-                                    }
-                                )
+                    placeholders = ",".join(["?"] * len(frontier))
+                    rows = conn.execute(
+                        f"""SELECT * FROM lineage_edges
+                           WHERE target_id IN ({placeholders})
+                           ORDER BY created_at""",
+                        frontier,
+                    ).fetchall()
+                    for row in rows:
+                        src = row["source_id"]
+                        if src not in visited:
+                            visited.add(src)
+                            next_frontier.append(src)
+                            ancestors.append(
+                                {
+                                    "id": src,
+                                    "galaxy": row["source_galaxy"],
+                                    "edge_type": row["edge_type"],
+                                    "mechanism": row["mechanism"],
+                                    "created_at": row["created_at"],
+                                    "depth": _depth + 1,
+                                }
+                            )
                 frontier = next_frontier
             return ancestors
         except Exception as e:
@@ -398,28 +398,28 @@ class PhylogeneticTracker:
                 next_frontier = []
                 with um.pool.connection() as conn:
                     conn.row_factory = __import__("sqlite3").Row
-                    for mid in frontier:
-                        rows = conn.execute(
-                            """SELECT * FROM lineage_edges
-                               WHERE source_id = ?
-                               ORDER BY created_at""",
-                            (mid,),
-                        ).fetchall()
-                        for row in rows:
-                            tgt = row["target_id"]
-                            if tgt not in visited:
-                                visited.add(tgt)
-                                next_frontier.append(tgt)
-                                descendants.append(
-                                    {
-                                        "id": tgt,
-                                        "galaxy": row["target_galaxy"],
-                                        "edge_type": row["edge_type"],
-                                        "mechanism": row["mechanism"],
-                                        "created_at": row["created_at"],
-                                        "depth": _depth + 1,
-                                    }
-                                )
+                    placeholders = ",".join(["?"] * len(frontier))
+                    rows = conn.execute(
+                        f"""SELECT * FROM lineage_edges
+                           WHERE source_id IN ({placeholders})
+                           ORDER BY created_at""",
+                        frontier,
+                    ).fetchall()
+                    for row in rows:
+                        tgt = row["target_id"]
+                        if tgt not in visited:
+                            visited.add(tgt)
+                            next_frontier.append(tgt)
+                            descendants.append(
+                                {
+                                    "id": tgt,
+                                    "galaxy": row["target_galaxy"],
+                                    "edge_type": row["edge_type"],
+                                    "mechanism": row["mechanism"],
+                                    "created_at": row["created_at"],
+                                    "depth": _depth + 1,
+                                }
+                            )
                 frontier = next_frontier
             return descendants
         except Exception as e:

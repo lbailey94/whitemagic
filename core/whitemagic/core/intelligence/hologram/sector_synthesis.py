@@ -42,7 +42,26 @@ class SectorSynthesizer:
 
     def __init__(self, llm_bridge=None, db_path: Path | None = None):
         self.bridge = llm_bridge
-        self.db_path = db_path or WM_ROOT / "memory" / "whitemagic.db"
+        self.db_path = db_path  # If None, will use multi-galaxy scanner
+        self._galaxy_coords: dict[str, tuple[str, tuple]] | None = None
+
+    def _load_all_coords(self) -> dict[str, tuple[str, tuple]]:
+        """Load coordinates from all galaxies (cached)."""
+        if self._galaxy_coords is not None:
+            return self._galaxy_coords
+        if self.db_path is not None:
+            # Single DB mode
+            from whitemagic.core.memory.db_manager import safe_connect
+            conn = safe_connect(str(self.db_path), read_only=True)
+            rows = conn.execute(
+                "SELECT memory_id, x, y, z, w, COALESCE(v, 0.5) FROM holographic_coords"
+            ).fetchall()
+            conn.close()
+            self._galaxy_coords = {r[0]: ("default", (r[1], r[2], r[3], r[4], r[5])) for r in rows}
+        else:
+            from whitemagic.core.memory.galaxy_db_scanner import scan_all_coords
+            self._galaxy_coords = scan_all_coords()
+        return self._galaxy_coords
 
     def _determine_style(self, center: tuple[float, float, float, float]) -> str:
         """Determine synthesis style based on 4D coordinates."""

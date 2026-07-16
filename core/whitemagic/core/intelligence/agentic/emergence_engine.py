@@ -10,6 +10,7 @@ Detects emergent phenomena in the memory system:
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import sqlite3
 from dataclasses import dataclass, field
@@ -20,6 +21,20 @@ from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.core.memory.galaxy_scan import scan_query_all
 
 logger = logging.getLogger(__name__)
+
+# System-generated tags that are metadata, not cognitive signals
+_NOISE_TAG_PREFIXES = {"galaxy:", "source:", "confidence-", "auto-", "auto_"}
+_NOISE_TAGS = {"ingested", "auto_generated", "auto-finalized", "scratchpad"}
+
+
+def _is_noise_tag(tag: str) -> bool:
+    """Check if a tag is system-generated metadata rather than a cognitive signal."""
+    if tag in _NOISE_TAGS:
+        return True
+    for prefix in _NOISE_TAG_PREFIXES:
+        if tag.startswith(prefix):
+            return True
+    return False
 
 
 @dataclass
@@ -199,7 +214,79 @@ class EmergenceEngine:
             len(insights),
             suppressed,
         )
+
+        # Persist novel insights to knowledge galaxy
+        if insights:
+            try:
+                self._persist_insights(insights)
+            except Exception:
+                logger.debug("Failed to persist emergence insights", exc_info=True)
+
         return insights
+
+    def _persist_insights(self, insights: list[EmergenceInsight]) -> None:
+        """Persist emergence insights to the knowledge galaxy."""
+        from pathlib import Path
+        from datetime import datetime, timezone
+        from whitemagic.core.memory.db_manager import safe_connect
+        from whitemagic.config.paths import galaxy_db_path
+
+        db = galaxy_db_path("knowledge")
+        if not db.exists():
+            db.parent.mkdir(parents=True, exist_ok=True)
+
+        conn = safe_connect(str(db))
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS emergence_insights (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                description TEXT,
+                confidence REAL,
+                source TEXT,
+                timestamp TEXT,
+                metadata_json TEXT,
+                persisted_at TEXT
+            )
+        """)
+
+        now = datetime.now(timezone.utc).isoformat()
+        rows = []
+        skipped = 0
+        for ins in insights:
+            import json as _json
+            # Compute content_hash for deduplication
+            content_key = f"{ins.source}:{ins.title}:{ins.description[:200]}"
+            content_hash = hashlib.sha256(content_key.encode()).hexdigest()[:16]
+
+            # Check if an insight with the same hash already exists
+            existing = conn.execute(
+                "SELECT 1 FROM emergence_insights WHERE id = ? OR "
+                "(source = ? AND title = ? AND description = ?)",
+                (ins.id, ins.source, ins.title, ins.description),
+            ).fetchone()
+            if existing:
+                skipped += 1
+                continue
+
+            rows.append((
+                ins.id,
+                ins.title,
+                ins.description,
+                ins.confidence,
+                ins.source,
+                ins.timestamp,
+                _json.dumps(ins.metadata),
+                now,
+            ))
+
+        if rows:
+            conn.executemany(
+                "INSERT OR IGNORE INTO emergence_insights (id, title, description, confidence, source, timestamp, metadata_json, persisted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                rows,
+            )
+            conn.commit()
+        conn.close()
+        logger.info("Persisted %d emergence insights to knowledge galaxy (%d duplicates skipped)", len(rows), skipped)
 
     def get_insights(self, limit: int = 5) -> list[dict[str, Any]]:
         """Return past emergence insights."""
@@ -261,6 +348,8 @@ class EmergenceEngine:
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag_a, tag_b, count = r["tag_a"], r["tag_b"], r["co_count"]
+            if _is_noise_tag(tag_a) or _is_noise_tag(tag_b):
+                continue
             insights.append(
                 EmergenceInsight(
                     id=f"tag_cluster_{tag_a}_{tag_b}",
@@ -292,6 +381,8 @@ class EmergenceEngine:
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag, count = r["tag"], r["burst_count"]
+            if _is_noise_tag(tag):
+                continue
             insights.append(
                 EmergenceInsight(
                     id=f"cascade_{tag}",
@@ -335,6 +426,8 @@ class EmergenceEngine:
         insights: list[EmergenceInsight] = []
         for r in rows:
             tag, recent, hist = r["tag"], r["recent_count"], r["hist_count"]
+            if _is_noise_tag(tag):
+                continue
             if hist == 0:
                 desc = f"Tag '{tag}' is brand new — {recent} appearances in the last 3 days with zero prior history."
             else:

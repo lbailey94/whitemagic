@@ -22,8 +22,10 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -189,6 +191,9 @@ class RecursiveImprovementLoop:
         cycle.phase_results["verify"] = self._phase_verify(cycle)
 
         cycle.phase_results["observe"] = self._phase_observe(cycle)
+
+        # Phase 4.4: Execute auto-fixable proposals via action loop
+        self._execute_auto_fixable(cycle)
 
         cycle.phase_results["imagine"] = self._phase_imagine(cycle, max_hypotheses)
 
@@ -529,147 +534,337 @@ class RecursiveImprovementLoop:
         return results
 
     def _phase_observe(self, cycle: ImprovementCycle) -> dict[str, Any]:
-        """Phase 1: Gather proposals from all intelligence engines."""
+        """Phase 1: Gather proposals from all intelligence engines (parallelized)."""
         results: dict[str, Any] = {"proposals": [], "errors": []}
 
-        # KaizenEngine — codebase + memory analysis
-        try:
-            from whitemagic.core.intelligence.synthesis.kaizen_engine import (
-                get_kaizen_engine,
-            )
-
-            engine = get_kaizen_engine()
-            report = engine.analyze()
-            for prop in report.proposals:
-                # Extract verification query from proposal ID for automated outcome detection
-                # e.g. "quality_untitled_5" → "untitled", "quality_untagged_3" → "untagged"
-                parts = prop.id.split("_")
-                verification_query = "_".join(parts[1:-1]) if len(parts) > 2 else None
-                before_count = prop.metadata.get("count") if prop.metadata else None
-
-                results["proposals"].append(
-                    {
-                        "source": "kaizen",
-                        "id": prop.id,
-                        "title": prop.title,
-                        "description": prop.description,
-                        "category": prop.category,
-                        "impact": prop.impact,
-                        "effort": prop.effort,
-                        "auto_fixable": prop.auto_fixable,
-                        "fix_action": prop.fix_action,
-                        "metadata": prop.metadata,
-                        "verification_query": verification_query,
-                        "before_count": before_count,
-                    }
+        def _run_kaizen() -> tuple[str, dict[str, Any]]:
+            out: dict[str, Any] = {}
+            try:
+                from whitemagic.core.intelligence.synthesis.kaizen_engine import (
+                    get_kaizen_engine,
                 )
-            results["kaizen_metrics"] = report.metrics
-        except Exception as e:
-            results["errors"].append(f"kaizen: {e}")
-            logger.debug("KaizenEngine failed: %s", e, exc_info=True)
 
-        # PredictiveEngine — milestone/velocity/gap predictions
-        try:
-            from whitemagic.core.intelligence.synthesis.predictive_engine import (
-                get_predictive_engine,
-            )
-
-            engine = get_predictive_engine()
-            report = engine.predict()
-            for pred in report.predictions[:10]:
-                results["proposals"].append(
-                    {
-                        "source": "predictive",
-                        "id": pred.id,
-                        "title": pred.title,
-                        "description": pred.description,
-                        "category": "prediction",
-                        "impact": "high" if pred.impact_score > 0.7 else "medium",
-                        "effort": "medium",
-                        "auto_fixable": False,
-                        "fix_action": None,
-                        "metadata": {
-                            "impact_score": pred.impact_score,
-                            "time_horizon": pred.time_horizon,
-                            "suggested_actions": pred.suggested_actions[:3],
-                        },
-                    }
-                )
-            results["predictive_metrics"] = {
-                "patterns_analyzed": report.patterns_analyzed,
-                "memories_scanned": report.memories_scanned,
-            }
-        except Exception as e:
-            results["errors"].append(f"predictive: {e}")
-            logger.debug("PredictiveEngine failed: %s", e, exc_info=True)
-
-        # EmergenceEngine — novel pattern detection
-        try:
-            from whitemagic.core.intelligence.agentic.emergence_engine import (
-                get_emergence_engine,
-            )
-
-            engine = get_emergence_engine()
-            insights = engine.scan_for_emergence()
-            for insight in insights[:5]:
-                results["proposals"].append(
-                    {
-                        "source": "emergence",
-                        "id": insight.id,
-                        "title": insight.title,
-                        "description": insight.description,
-                        "category": "emergence",
-                        "impact": "high" if insight.confidence > 0.7 else "medium",
-                        "effort": "medium",
-                        "auto_fixable": False,
-                        "fix_action": None,
-                        "metadata": {
-                            "confidence": insight.confidence,
-                            "source_type": insight.source,
-                        },
-                    }
-                )
-        except Exception as e:
-            results["errors"].append(f"emergence: {e}")
-            logger.debug("EmergenceEngine failed: %s", e, exc_info=True)
-
-        # InsightPipeline — strategic foresight from all cognitive engines
-        try:
-            from whitemagic.core.intelligence.insight_pipeline import InsightPipeline
-
-            pipeline = InsightPipeline()
-            briefing = pipeline.generate_briefing()
-            for item in briefing.items:
-                if item.priority in ("critical", "high"):
-                    results["proposals"].append(
+                engine = get_kaizen_engine()
+                report = engine.analyze()
+                props = []
+                for prop in report.proposals:
+                    parts = prop.id.split("_")
+                    verification_query = "_".join(parts[1:-1]) if len(parts) > 2 else None
+                    before_count = prop.metadata.get("count") if prop.metadata else None
+                    props.append(
                         {
-                            "source": "insight",
-                            "id": item.id,
-                            "title": item.title,
-                            "description": item.description,
-                            "category": item.category,
-                            "impact": "high"
-                            if item.priority == "critical"
-                            else "medium",
+                            "source": "kaizen",
+                            "id": prop.id,
+                            "title": prop.title,
+                            "description": prop.description,
+                            "category": prop.category,
+                            "impact": prop.impact,
+                            "effort": prop.effort,
+                            "auto_fixable": prop.auto_fixable,
+                            "fix_action": prop.fix_action,
+                            "metadata": prop.metadata,
+                            "verification_query": verification_query,
+                            "before_count": before_count,
+                        }
+                    )
+                out["kaizen_metrics"] = report.metrics
+                out["kaizen_proposals"] = props
+            except Exception as e:
+                out["kaizen_error"] = f"kaizen: {e}"
+                logger.debug("KaizenEngine failed: %s", e, exc_info=True)
+            return ("kaizen", out)
+
+        def _run_predictive() -> tuple[str, dict[str, Any]]:
+            out: dict[str, Any] = {}
+            try:
+                from whitemagic.core.intelligence.synthesis.predictive_engine import (
+                    get_predictive_engine,
+                )
+
+                engine = get_predictive_engine()
+                report = engine.predict()
+                props = []
+                for pred in report.predictions[:10]:
+                    props.append(
+                        {
+                            "source": "predictive",
+                            "id": pred.id,
+                            "title": pred.title,
+                            "description": pred.description,
+                            "category": "prediction",
+                            "impact": "high" if pred.impact_score > 0.7 else "medium",
                             "effort": "medium",
                             "auto_fixable": False,
                             "fix_action": None,
                             "metadata": {
-                                "confidence": item.confidence,
-                                "source_engine": item.source_engine,
-                                "suggested_actions": item.suggested_actions[:3],
-                                "priority": item.priority,
+                                "impact_score": pred.impact_score,
+                                "time_horizon": pred.time_horizon,
+                                "suggested_actions": pred.suggested_actions[:3],
                             },
                         }
                     )
-            results["insight_count"] = len(briefing.items)
-        except Exception as e:
-            results["errors"].append(f"insight: {e}")
-            logger.debug("InsightPipeline failed: %s", e, exc_info=True)
+                out["predictive_metrics"] = {
+                    "patterns_analyzed": report.patterns_analyzed,
+                    "memories_scanned": report.memories_scanned,
+                }
+                out["predictive_proposals"] = props
+            except Exception as e:
+                out["predictive_error"] = f"predictive: {e}"
+                logger.debug("PredictiveEngine failed: %s", e, exc_info=True)
+            return ("predictive", out)
+
+        def _run_emergence() -> tuple[str, dict[str, Any]]:
+            out: dict[str, Any] = {}
+            try:
+                from whitemagic.core.intelligence.agentic.emergence_engine import (
+                    get_emergence_engine,
+                )
+
+                engine = get_emergence_engine()
+                insights = engine.scan_for_emergence()
+                props = []
+                for insight in insights[:5]:
+                    props.append(
+                        {
+                            "source": "emergence",
+                            "id": insight.id,
+                            "title": insight.title,
+                            "description": insight.description,
+                            "category": "emergence",
+                            "impact": "high" if insight.confidence > 0.7 else "medium",
+                            "effort": "medium",
+                            "auto_fixable": False,
+                            "fix_action": None,
+                            "metadata": {
+                                "confidence": insight.confidence,
+                                "source_type": insight.source,
+                            },
+                        }
+                    )
+                out["emergence_proposals"] = props
+            except Exception as e:
+                out["emergence_error"] = f"emergence: {e}"
+                logger.debug("EmergenceEngine failed: %s", e, exc_info=True)
+            return ("emergence", out)
+
+        def _run_insight() -> tuple[str, dict[str, Any]]:
+            out: dict[str, Any] = {}
+            try:
+                from whitemagic.core.intelligence.insight_pipeline import InsightPipeline
+
+                pipeline = InsightPipeline()
+                briefing = pipeline.generate_briefing()
+                props = []
+                for item in briefing.items:
+                    if item.priority in ("critical", "high"):
+                        props.append(
+                            {
+                                "source": "insight",
+                                "id": item.id,
+                                "title": item.title,
+                                "description": item.description,
+                                "category": item.category,
+                                "impact": "high" if item.priority == "critical" else "medium",
+                                "effort": "medium",
+                                "auto_fixable": False,
+                                "fix_action": None,
+                                "metadata": {
+                                    "confidence": item.confidence,
+                                    "source_engine": item.source_engine,
+                                    "suggested_actions": item.suggested_actions[:3],
+                                    "priority": item.priority,
+                                },
+                            }
+                        )
+                out["insight_count"] = len(briefing.items)
+                out["insight_proposals"] = props
+            except Exception as e:
+                out["insight_error"] = f"insight: {e}"
+                logger.debug("InsightPipeline failed: %s", e, exc_info=True)
+            return ("insight", out)
+
+        def _run_guna() -> tuple[str, dict[str, Any]]:
+            out: dict[str, Any] = {}
+            try:
+                from whitemagic.core.consciousness.guna_balance import get_guna_balance
+
+                gb = get_guna_balance()
+                reading = gb.measure()
+                out["guna_balance"] = reading.to_dict()
+                if not reading.balanced and reading.correction_action:
+                    out["guna_proposal"] = {
+                        "source": "guna_balance",
+                        "id": f"guna_imbalance_{reading.dominant_guna}",
+                        "title": f"Guna imbalance: {reading.dominant_guna} dominant",
+                        "description": (
+                            f"Guna balance is {reading.dominant_guna}-dominant. "
+                            f"Deficits: {list(reading.deficits.keys())}, "
+                            f"Surpluses: {list(reading.surpluses.keys())}. "
+                            f"Correction: {reading.correction_action}"
+                        ),
+                        "category": "guna_imbalance",
+                        "impact": "high" if max(reading.deficits.values(), default=0) > 0.3 else "medium",
+                        "effort": "low",
+                        "auto_fixable": True,
+                        "fix_action": reading.correction_action,
+                        "metadata": {
+                            "sattvic_ratio": reading.sattvic_ratio,
+                            "rajasic_ratio": reading.rajasic_ratio,
+                            "tamasic_ratio": reading.tamasic_ratio,
+                            "deficits": reading.deficits,
+                            "surpluses": reading.surpluses,
+                        },
+                    }
+            except Exception as e:
+                out["guna_error"] = f"guna_balance: {e}"
+                logger.debug("GunaBalance failed: %s", e, exc_info=True)
+            return ("guna", out)
+
+        def _run_citta() -> tuple[str, dict[str, Any]]:
+            out: dict[str, Any] = {}
+            try:
+                from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+
+                cyc = get_citta_cycle()
+                traj = cyc.get_trajectory()
+                ignitions = traj.ignition_events()
+                out["ignition_count"] = len(ignitions)
+                if len(ignitions) > 5:
+                    top_ig = max(ignitions, key=lambda x: x.get("ratio", 0))
+                    out["citta_proposal"] = {
+                        "source": "citta_ignition",
+                        "id": f"ignition_pos_{top_ig.get('position', 0)}",
+                        "title": f"Citta ignition at position {top_ig.get('position', 0)}",
+                        "description": (
+                            f"Sudden state shift in consciousness stream: "
+                            f"displacement={top_ig.get('distance', 0):.4f}, "
+                            f"ratio={top_ig.get('ratio', 0):.2f}x average. "
+                            f"Total ignitions: {len(ignitions)}"
+                        ),
+                        "category": "ignition",
+                        "impact": "medium",
+                        "effort": "medium",
+                        "auto_fixable": False,
+                        "fix_action": None,
+                        "metadata": {
+                            "ignition_count": len(ignitions),
+                            "top_ratio": top_ig.get("ratio", 0),
+                            "trajectory_length": len(traj.vectors),
+                        },
+                    }
+            except Exception as e:
+                out["citta_error"] = f"citta_ignition: {e}"
+                logger.debug("Citta ignition failed: %s", e, exc_info=True)
+            return ("citta", out)
+
+        tasks = [_run_kaizen, _run_predictive, _run_emergence, _run_insight]
+        if not os.environ.get("WM_SKIP_CONSCIOUSNESS_OBSERVE"):
+            tasks.extend([_run_guna, _run_citta])
+
+        # Sequential fallback for test mode (4 mocked engines) or when parallelism disabled
+        if len(tasks) <= 4 or os.environ.get("WM_SEQUENTIAL_OBSERVE"):
+            for fn in tasks:
+                name, out = fn()
+                if f"{name}_error" in out:
+                    results["errors"].append(out[f"{name}_error"])
+                if f"{name}_proposals" in out:
+                    results["proposals"].extend(out[f"{name}_proposals"])
+                if f"{name}_proposal" in out:
+                    results["proposals"].append(out[f"{name}_proposal"])
+                if f"{name}_metrics" in out:
+                    results[f"{name}_metrics"] = out[f"{name}_metrics"]
+                if name == "guna" and "guna_balance" in out:
+                    results["guna_balance"] = out["guna_balance"]
+                if name == "citta" and "ignition_count" in out:
+                    results["ignition_count"] = out["ignition_count"]
+                if name == "insight" and "insight_count" in out:
+                    results["insight_count"] = out["insight_count"]
+        else:
+            pool = ThreadPoolExecutor(max_workers=len(tasks), thread_name_prefix="observe")
+            futures = {pool.submit(fn): fn.__name__ for fn in tasks}
+            try:
+                for future in as_completed(futures, timeout=10):
+                    fn_name = futures[future]
+                    try:
+                        name, out = future.result(timeout=5)
+                    except TimeoutError:
+                        results["errors"].append(f"{fn_name}: timed out")
+                        logger.warning("Observe engine %s timed out", fn_name)
+                        continue
+                    except Exception as e:
+                        results["errors"].append(f"{fn_name}: {e}")
+                        logger.debug("Observe engine %s failed: %s", fn_name, e, exc_info=True)
+                        continue
+                    if f"{name}_error" in out:
+                        results["errors"].append(out[f"{name}_error"])
+                    if f"{name}_proposals" in out:
+                        results["proposals"].extend(out[f"{name}_proposals"])
+                    if f"{name}_proposal" in out:
+                        results["proposals"].append(out[f"{name}_proposal"])
+                    if f"{name}_metrics" in out:
+                        results[f"{name}_metrics"] = out[f"{name}_metrics"]
+                    if name == "guna" and "guna_balance" in out:
+                        results["guna_balance"] = out["guna_balance"]
+                    if name == "citta" and "ignition_count" in out:
+                        results["ignition_count"] = out["ignition_count"]
+                    if name == "insight" and "insight_count" in out:
+                        results["insight_count"] = out["insight_count"]
+            except TimeoutError:
+                for f in futures:
+                    if not f.done():
+                        f.cancel()
+                        results["errors"].append(f"{futures[f]}: timed out (10s)")
+                logger.warning("Observe phase: some engines timed out (10s)")
+            finally:
+                pool.shutdown(wait=False)
 
         results["total_proposals"] = len(results["proposals"])
         logger.info("Observe phase: %d proposals gathered", results["total_proposals"])
+
         return results
+
+    def _execute_auto_fixable(self, cycle: ImprovementCycle) -> None:
+        """Phase 4.4: Execute auto-fixable proposals via the cognitive action loop.
+
+        After the observe phase, any proposal with auto_fixable=True and a
+        fix_action is passed to the CognitiveActionLoop for execution and
+        measurement. This closes the gap between detecting a fixable issue
+        and actually fixing it.
+        """
+        observe_data = cycle.phase_results.get("observe", {})
+        proposals = observe_data.get("proposals", [])
+
+        auto_fixable = [p for p in proposals if p.get("auto_fixable") and p.get("fix_action")]
+        if not auto_fixable:
+            return
+
+        try:
+            from whitemagic.core.consciousness.cognitive_action_loop import (
+                ActionSignal,
+                get_action_loop,
+            )
+
+            loop = get_action_loop()
+            for prop in auto_fixable[:3]:  # Max 3 auto-fixes per cycle
+                signal = ActionSignal(
+                    source="recursive_improvement",
+                    signal_id=f"ril_{prop.get('id', 'unknown')}",
+                    title=prop.get("description", prop.get("fix_action", ""))[:80],
+                    description=prop.get("description", ""),
+                    confidence=min(1.0, prop.get("confidence", 0.7)),
+                    urgency=0.6,
+                    action=prop["fix_action"],
+                    metadata={"proposal_id": prop.get("id"), "category": prop.get("category")},
+                )
+                outcome = loop._execute_and_measure(signal)
+                logger.info(
+                    "Auto-fixable proposal executed: %s → executed=%s, delta=%s",
+                    prop["fix_action"],
+                    outcome.executed,
+                    outcome.delta,
+                )
+        except Exception:
+            logger.debug("Auto-fixable execution failed", exc_info=True)
 
     def _phase_imagine(
         self,

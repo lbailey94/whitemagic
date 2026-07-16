@@ -45,6 +45,7 @@ def _get_supervisor() -> ProcessSupervisor:
             binary_path=str(_BRIDGE_PATH),
             startup_timeout=5.0,
             call_timeout=5.0,
+            skip_polyglot=True,
         )
         register(_supervisor)
     return _supervisor

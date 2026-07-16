@@ -26,6 +26,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from whitemagic.core.memory.db_manager import safe_connect
+
 logger = logging.getLogger(__name__)
 
 # Rust acceleration attempt
@@ -192,14 +194,14 @@ class CodeStructureGraph:
         if self._db_path is None:
             return
         Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self._db_path) as conn:
+        with safe_connect(self._db_path) as conn:
             conn.executescript(self.SCHEMA_SQL)
             conn.commit()
 
     def _get_db_conn(self) -> sqlite3.Connection:
         if self._db_path is None:
             raise RuntimeError("No database path configured")
-        return sqlite3.connect(self._db_path)
+        return safe_connect(self._db_path)
 
     # ── Public API ──────────────────────────────────────────────
 
@@ -820,7 +822,7 @@ class CodeStructureGraph:
         # Persist
         if self._db_path is not None:
             now = datetime.now(UTC).isoformat()
-            with sqlite3.connect(self._db_path) as conn:
+            with safe_connect(self._db_path) as conn:
                 conn.execute(
                     """INSERT OR REPLACE INTO code_edges
                     (id, source_id, target_id, edge_type, confidence,
@@ -1591,7 +1593,7 @@ class CodeStructureGraph:
         if self._db_path is None:
             return
         try:
-            with sqlite3.connect(self._db_path) as conn:
+            with safe_connect(self._db_path) as conn:
                 rows = conn.execute(
                     "SELECT key, value FROM code_graph_meta WHERE key LIKE 'hash:%'"
                 ).fetchall()
@@ -1611,7 +1613,7 @@ class CodeStructureGraph:
         if self._db_path is None:
             return
 
-        with sqlite3.connect(self._db_path) as conn:
+        with safe_connect(self._db_path) as conn:
             conn.executescript(self.SCHEMA_SQL)
 
             if not incremental:
@@ -1619,57 +1621,49 @@ class CodeStructureGraph:
                 conn.execute("DELETE FROM code_edges")
                 conn.execute("DELETE FROM code_graph_meta")
 
-            # Insert/replace nodes
-            for node in nodes:
-                conn.execute(
+            # Batch insert/replace nodes
+            if nodes:
+                conn.executemany(
                     """INSERT OR REPLACE INTO code_nodes
                     (id, node_type, name, file_path, line_start, line_end,
                      language, content_hash, metadata)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (node.id, node.node_type, node.name, node.file_path,
-                     node.line_start, node.line_end, node.language,
-                     node.content_hash, json.dumps(node.metadata)),
+                    [(node.id, node.node_type, node.name, node.file_path,
+                      node.line_start, node.line_end, node.language,
+                      node.content_hash, json.dumps(node.metadata))
+                     for node in nodes],
                 )
 
-            # Insert/replace edges
+            # Batch insert/replace edges
             now = datetime.now(UTC).isoformat()
-            for edge in edges:
-                conn.execute(
+            if edges:
+                conn.executemany(
                     """INSERT OR REPLACE INTO code_edges
                     (id, source_id, target_id, edge_type, confidence,
                      weight, metadata, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (edge.id, edge.source_id, edge.target_id, edge.edge_type,
-                     edge.confidence, edge.weight, json.dumps(edge.metadata), now),
+                    [(edge.id, edge.source_id, edge.target_id, edge.edge_type,
+                      edge.confidence, edge.weight, json.dumps(edge.metadata), now)
+                     for edge in edges],
                 )
 
-            # Update file hashes
-            for rel, h in file_hashes.items():
-                conn.execute(
+            # Batch update file hashes
+            if file_hashes:
+                conn.executemany(
                     "INSERT OR REPLACE INTO code_graph_meta (key, value) VALUES (?, ?)",
-                    (f"hash:{rel}", h),
+                    [(f"hash:{rel}", h) for rel, h in file_hashes.items()],
                 )
 
             # Update meta
-            conn.execute(
+            conn.executemany(
                 "INSERT OR REPLACE INTO code_graph_meta (key, value) VALUES (?, ?)",
-                ("project_root", project_root),
-            )
-            conn.execute(
-                "INSERT OR REPLACE INTO code_graph_meta (key, value) VALUES (?, ?)",
-                ("last_build", now),
-            )
-            conn.execute(
-                "INSERT OR REPLACE INTO code_graph_meta (key, value) VALUES (?, ?)",
-                ("node_count", str(len(nodes))),
-            )
-            conn.execute(
-                "INSERT OR REPLACE INTO code_graph_meta (key, value) VALUES (?, ?)",
-                ("edge_count", str(len(edges))),
-            )
-            conn.execute(
-                "INSERT OR REPLACE INTO code_graph_meta (key, value) VALUES (?, ?)",
-                ("parser_version", "1.0"),
+                [
+                    ("project_root", project_root),
+                    ("last_build", now),
+                    ("node_count", str(len(nodes))),
+                    ("edge_count", str(len(edges))),
+                    ("parser_version", "1.0"),
+                ],
             )
 
             conn.commit()
@@ -1679,7 +1673,7 @@ class CodeStructureGraph:
         if self._db_path is None:
             return
         try:
-            with sqlite3.connect(self._db_path) as conn:
+            with safe_connect(self._db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute("SELECT * FROM code_nodes").fetchall()
                 self._nodes = {}
