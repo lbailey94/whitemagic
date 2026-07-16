@@ -23,12 +23,12 @@ export async function GET() {
     },
     note: "Full track record available at /api/prescience.json",
     counts: {
-      claims: 30,
-      validated: 30,
-      total_points: 672,
-      avg_lead_weeks: 22.5,
-      brier_score: 0.0861,
-      brier_skill_score: 0.6557,
+      claims: 38,
+      validated: 38,
+      total_points: 940,
+      avg_lead_weeks: 24.9,
+      brier_score: 0.0958,
+      brier_skill_score: 0.6167,
     },
     categories: [
       "ai_governance",
@@ -38,6 +38,7 @@ export async function GET() {
       "robotics",
       "energy",
       "geopolitics",
+      "market_forecast",
     ],
   };
 

@@ -18,7 +18,7 @@
     },
     "flat": {
       "description": "Flat mode: all individual tools exposed directly",
-      "tool_count": 773,
+      "tool_count": 820,
       "env": "WM_MCP_PRAT=0"
     }
   }

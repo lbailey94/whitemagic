@@ -20,8 +20,14 @@ const STEPS: Step[] = [
   {
     num: 1,
     title: "Install",
-    code: `pip install whitemagic[mcp]`,
-    explanation: "Installs the WhiteMagic core package with MCP server support. Python 3.12+ required. No external services needed.",
+    code: `pip install whitemagic[mcp]
+
+# One-command onboarding (scaffolds + ingests your notes + verifies):
+wm onboard --from ~/my-obsidian-vault --launch
+
+# Or without existing notes:
+wm init && wm quickstart`,
+    explanation: "Installs WhiteMagic with MCP server support. Python 3.12+ required. `wm onboard --from <dir>` scaffolds a project, ingests your markdown files into a galaxy, runs a health check, and optionally launches the MCP server — all in one command.",
   },
   {
     num: 2,

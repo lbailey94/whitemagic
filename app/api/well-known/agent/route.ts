@@ -153,8 +153,8 @@ export async function GET() {
         id: "prescience-forecast",
         name: "Prescience track record",
         description:
-          "30 validated forecast claims against public events, with " +
-          "Brier score 0.0958, 666 lead-time points, 22-week average " +
+          "38 validated forecast claims against public events, with " +
+          "Brier score 0.0958, 940 lead-time points, 25-week average " +
           "lead. Served at /api/prescience.json. Use to ground trust in " +
           "WhiteMagic's architectural predictions. The gana_dipper.predict " +
           "task routes to the live forecasting engine.",
