@@ -1,5 +1,32 @@
 # WhiteMagic Quickstart
 
+## 30-Second Quickstart
+
+```bash
+pip install whitemagic[mcp]          # 1. Install
+wm quickstart                         # 2. Run the built-in demo (memory → search → gnosis)
+python -m whitemagic.run_mcp_lean     # 3. Start the MCP server
+```
+
+That's it. Your AI agent now has persistent memory, governance, and cognitive upgrades.
+
+**Connect your agent** (Claude Desktop, Cursor, Windsurf, etc.):
+```json
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "python3",
+      "args": ["-m", "whitemagic.run_mcp_lean"],
+      "env": { "WM_MCP_PRAT": "1", "WM_SILENT_INIT": "1" }
+    }
+  }
+}
+```
+
+---
+
+## Full Guide
+
 Get from zero to productive in 5 minutes.
 
 **Performance**: Sub-millisecond core operations with polyglot acceleration (Rust 0.012ms cosine, Zig 0.044ms cosine, Julia 0.001ms neighbor search, memory recall 0.037ms). See full benchmarks below.
@@ -40,7 +67,7 @@ Expected output:
 ```
 ✅ Core: OK
 ✅ Memory DB: OK
-✅ Tools: 687 registered (659 dispatch + 28 Gana meta-tools)
+✅ Tools: 829 registered (801 dispatch + 28 Gana meta-tools)
 ✅ MCP: fastmcp available
 ```
 

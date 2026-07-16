@@ -5,17 +5,21 @@
 [![Version](https://img.shields.io/badge/version-25.0.0-purple.svg)](core/VERSION)
 [![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 
-**829 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
+**829 callable tools** · **28 Gana meta-tools** · **14-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
 
 ## What it is
 
 WhiteMagic gives your AI agent persistent memory, cognitive upgrades, and more — all through a single MCP tool.
 
-- **Persistent memory** — 5D holographic coordinates, 10-galaxy taxonomy, FTS5 + HNSW search, session recording with progressive recall
+**The problem**: AI agents are amnesiac. Every session starts from scratch. They forget your preferences, your decisions, your context. Cloud-based "memory" solutions send your data to servers you don't control.
+
+**The solution**: WhiteMagic runs entirely on your machine. Your agent remembers across sessions, consolidates memories overnight (dream cycle), governs its own actions (Dharma), and develops a continuous consciousness stream (citta) — all local, all private, all yours.
+
+- **Persistent memory** — 6D holographic coordinates, 14-galaxy taxonomy, FTS5 + HNSW search, session recording with progressive recall
 - **Continuous consciousness** — citta stream with coherence tracking, emotional steering (frustration, curiosity, satisfaction), self-directed attention, goal graph
 - **Ethical governance** — Dharma rules engine (3 profiles, graduated actions), Karma side-effect ledger, 8-stage dispatch pipeline
 - **Self-awareness** — gnosis introspection, capability matrix, homeostatic loop, dream cycle (12-phase memory consolidation)
-- **Polyglot acceleration** — Rust, Haskell, Elixir, Go, Zig, Julia (graceful Python fallback)
+- **Polyglot acceleration** — Rust, Haskell, Elixir, Go, Zig, Julia, Koka (graceful Python fallback)
 
 MIT-licensed. Local-first. No telemetry. No API keys. Your data never leaves your machine.
 
@@ -75,11 +79,13 @@ call_tool("gnosis", compact=True)
 | PRAT | `WM_MCP_PRAT=1` | 28 Gana meta-tools | Advanced agents, structured access |
 | Classic | `WM_MCP_PRAT=0` | 801 dispatch tools | Direct tool access, debugging |
 
+> **New?** Start with Seed mode — your agent gets a single `wm` tool that intelligently routes to all 829 tools. No token waste.
+
 ## Key Concepts
 
 ### Memory
-- **10 galaxies**: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal
-- **5D coordinates** (XYZWV): emotional, temporal, associative, importance, novelty
+- **14 galaxies**: aria, citta, codex, journals, dreams, research, sessions, substrate, telemetry, meta, tutorial, archive, universal
+- **6D coordinates** (XYZWVU): logic/emotion, micro/macro, time, importance, vitality, galaxy affinity
 - **Galactic lifecycle**: CORE → INNER_RIM → MID_BAND → OUTER_RIM → FAR_EDGE (no deletion)
 - **Search**: FTS5 full-text + HNSW vector similarity + graph traversal
 
@@ -116,7 +122,7 @@ call_tool("gnosis", compact=True)
 
 - **6,902 tests** passing, 0 failures
 - **829 callable tools** across 801 dispatch entries + 28 Gana meta-tools
-- **49,413 memories** in production (10 galaxies)
+- **49,413 memories** in production (14 galaxies)
 - **7 polyglot languages**: Rust, Haskell, Elixir, Go, Zig, Julia, Koka
 - **MIT-licensed**, no telemetry, no API keys
 
