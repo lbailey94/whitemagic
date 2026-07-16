@@ -31,6 +31,7 @@ __all__ = [
     "rules_command",
     "systemmap_command",
     "start_session_cli",
+    "tutorial_command",
     "list_tools",
     "setup",
     "tools",
@@ -416,10 +417,10 @@ def tools(ctx, json_output: bool) -> None:
 @click.option("--json", "json_output", is_flag=True, help="Output results as JSON")
 @click.pass_context
 def quickstart_command(ctx, json_output: bool) -> None:
-    """Run a full demo loop: create memory, search, health report.
+    """Run a full demo loop: health check, tutorial search, gnosis.
 
     Proves the system works end-to-end in under 30 seconds.
-    Perfect for AI agents verifying their installation.
+    Searches the pre-seeded tutorial galaxy to show real content.
     """
     from whitemagic.tools.unified_api import call_tool
 
@@ -433,34 +434,30 @@ def quickstart_command(ctx, json_output: bool) -> None:
         tools = health.get("details", {}).get("runtime", {}).get("surface_counts", {}).get("callable_tools", "?")
         click.echo(f"\n  1. Health: v{ver}, {tools} tools — {health.get('status')}\n")
 
-    # Step 2: Create a memory (skip embeddings for speed — fresh install doesn't have model cached)
-    mem = call_tool(
-        "create_memory",
-        title="Quickstart Memory",
-        content="WhiteMagic quickstart ran successfully. This memory proves the system works.",
-        tags=["quickstart", "test"],
-        auto_embed=False,
-        enable_surprise_gate=False,
-        enable_entity_extraction=False,
-        enable_holographic_index=False,
-    )
-    steps.append({"step": "create_memory", "status": mem.get("status", "error")})
-    if not json_output:
-        mem_id = mem.get("details", {}).get("id", "?")
-        click.echo(f"  2. Created memory: {mem_id} — {mem.get('status')}\n")
+    # Step 2: Search the tutorial galaxy (proves memory system works + shows useful content)
+    from whitemagic.core.memory.tutorial_refresh import auto_seed_if_needed, is_tutorial_seeded
 
-    # Step 3: Search for it
-    search = call_tool("search_memories", query="quickstart", limit=3)
-    steps.append({"step": "search", "status": search.get("status", "error")})
-    if not json_output:
-        count = search.get("details", {}).get("count", 0)
-        click.echo(f"  3. Search 'quickstart': {count} results — {search.get('status')}\n")
+    if not is_tutorial_seeded():
+        auto_seed_if_needed()
 
-    # Step 4: Gnosis (self-awareness snapshot)
+    search = call_tool("search_memories", query="quickstart", galaxy="tutorial", limit=3)
+    steps.append({"step": "search_tutorial", "status": search.get("status", "error")})
+    if not json_output:
+        hits = search.get("details", {}).get("memories", search.get("details", {}).get("results", []))
+        count = search.get("details", {}).get("count", len(hits))
+        click.echo(f"  2. Tutorial search: {count} results — {search.get('status')}")
+        if hits:
+            top = hits[0]
+            title = top.get("title", "?")
+            click.echo(f"     → '{title}'\n")
+        else:
+            click.echo("     (Tutorial galaxy empty — run 'wm init' to seed)\n")
+
+    # Step 3: Gnosis (self-awareness snapshot)
     gnosis = call_tool("gnosis", compact=True)
     steps.append({"step": "gnosis", "status": gnosis.get("status", "error")})
     if not json_output:
-        click.echo(f"  4. Gnosis: {gnosis.get('status')}\n")
+        click.echo(f"  3. Gnosis: {gnosis.get('status')}\n")
 
     if json_output:
         click.echo(_json_dumps({"steps": steps, "version": __version__}))
@@ -469,7 +466,8 @@ def quickstart_command(ctx, json_output: bool) -> None:
         if all_ok:
             click.echo("  ✅ Quickstart complete — all systems operational.\n")
             click.echo("  Next steps:")
-            click.echo("    • wm recall \"quickstart\"     # search your memories")
+            click.echo("    • wm tutorial                 # guided tour of WhiteMagic")
+            click.echo("    • wm recall \"galaxy\"         # search your memories")
             click.echo("    • wm status                   # system status")
             click.echo("    • wm sleep                    # run dream cycle")
             click.echo("    • python -m whitemagic.run_mcp_lean  # start MCP server\n")
@@ -477,3 +475,40 @@ def quickstart_command(ctx, json_output: bool) -> None:
             failed = [s["step"] for s in steps if s["status"] != "success"]
             click.echo(f"  ❌ Quickstart failed at: {', '.join(failed)}\n")
             click.echo("  Run 'wm doctor' for diagnostics.\n")
+
+
+@click.command(name="tutorial")
+@click.argument("topic", required=False, default="")
+@click.pass_context
+def tutorial_command(ctx, topic: str) -> None:
+    """Guided tour of WhiteMagic from the tutorial galaxy."""
+    from whitemagic.core.memory.tutorial_refresh import auto_seed_if_needed, is_tutorial_seeded
+
+    if not is_tutorial_seeded():
+        click.echo("\n  Seeding tutorial galaxy...\n")
+        auto_seed_if_needed()
+
+    from whitemagic.tools.unified_api import call_tool
+
+    if not topic:
+        result = call_tool("search_memories", query="tutorial", galaxy="tutorial", limit=20)
+    else:
+        result = call_tool("search_memories", query=topic, galaxy="tutorial", limit=5)
+
+    if result.get("status") != "success":
+        click.echo(f"  Tutorial search failed: {result.get('message', 'unknown error')}")
+        return
+
+    hits = result.get("details", {}).get("memories", result.get("details", {}).get("results", []))
+    if not hits:
+        click.echo(f"\n  No tutorials found for '{topic}'. Try: memory, governance, dream, modes, cli\n")
+        return
+
+    click.echo(f"\n  WhiteMagic Tutorial\n")
+    for hit in hits:
+        title = hit.get("title", "?")
+        content = hit.get("content", hit.get("preview", ""))
+        if isinstance(content, str) and len(content) > 500:
+            content = content[:500] + "..."
+        click.echo(f"  [{title}]")
+        click.echo(f"  {content}\n")

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "whitemagic-mcp"
 version = "25.0.0"
-description = "WhiteMagic MCP Server — 829 callable tools, 5D holographic memory, Dharma governance, fastembed semantic search"
+description = "WhiteMagic MCP Server — 829 callable tools, 6D holographic memory, 14 galaxies, Dharma governance, fastembed semantic search"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -43,3 +43,6 @@ whitemagic-grow = "whitemagic_mcp.grow:main"
 
 [tool.setuptools]
 packages = ["whitemagic_mcp"]
+
+[tool.setuptools.package-dir]
+whitemagic_mcp = "src/whitemagic_mcp"

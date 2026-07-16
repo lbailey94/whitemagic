@@ -82,6 +82,7 @@ def register_all_commands(
         start_session_cli,
         systemmap_command,
         tools,
+        tutorial_command,
     )
 
     for cmd in [
@@ -94,6 +95,7 @@ def register_all_commands(
         list_tools,
         setup,
         tools,
+        tutorial_command,
     ]:
         main_group.add_command(cmd)
 

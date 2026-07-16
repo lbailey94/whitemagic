@@ -89,6 +89,12 @@ def multi_hop_search(
     if not results or not backend:
         return results
 
+    # Only run multi-hop for natural language questions (not synthetic queries)
+    query_lower = query.lower().strip()
+    _question_starts = ("what ", "who ", "which ", "where ", "when ", "why ", "how ", "whose ")
+    if not any(query_lower.startswith(s) for s in _question_starts):
+        return results
+
     # Extract entities from top results (hop-1 seeds)
     seed_entities = _extract_result_entities(results, top_k=3)
     if not seed_entities:
@@ -119,7 +125,7 @@ def multi_hop_search(
     existing_ids = {m.id for m in results}
     secondary_results: list[Any] = []
 
-    for sq in secondary_queries[:3]:  # Limit to 3 secondary searches
+    for sq in secondary_queries[:1]:  # Limit to 1 secondary search for latency
         try:
             hits = backend.search(query=sq, limit=hop_limit, galaxy=galaxy)
             for mem in hits:

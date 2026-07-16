@@ -273,15 +273,16 @@ def build_intragalactic(galaxy: str, min_overlap: float = 0.15, dry_run: bool = 
     logger.info(f"  {galaxy}: {pairs_evaluated} pairs evaluated, {len(edges)} new edges found")
 
     if not dry_run and edges:
-        # Optimize for bulk insert
-        db.execute("PRAGMA journal_mode=WAL")
+        # Use DELETE journal mode for bulk inserts (avoids WAL bloat)
+        db.execute("PRAGMA journal_mode=DELETE")
         db.execute("PRAGMA synchronous=OFF")
         db.execute("PRAGMA cache_size=-64000")  # 64MB cache
+        db.execute("PRAGMA temp_store=MEMORY")
 
-        # Use plain INSERT with periodic commits to avoid WAL bloat.
+        # Use plain INSERT with periodic commits.
         # We already filtered existing associations in Python.
         BATCH_SIZE = 50000
-        COMMIT_EVERY = 200000  # commit every 200K rows
+        COMMIT_EVERY = 500000  # commit every 500K rows
         total_inserted = 0
         chunk = []
         since_commit = 0
@@ -307,7 +308,6 @@ def build_intragalactic(galaxy: str, min_overlap: float = 0.15, dry_run: bool = 
 
                 if since_commit >= COMMIT_EVERY:
                     db.commit()
-                    db.execute("PRAGMA wal_checkpoint(PASSIVE)")
                     since_commit = 0
                     logger.info(f"  {galaxy}: {total_inserted} rows inserted...")
 
@@ -408,25 +408,23 @@ def build_extragalactic(min_overlap: float = 0.20, dry_run: bool = False) -> dic
             if not db_path.exists():
                 continue
             db = sqlite3.connect(str(db_path))
-            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("PRAGMA journal_mode=DELETE")
             db.execute("PRAGMA synchronous=OFF")
             db.execute("PRAGMA cache_size=-64000")
+            db.execute("PRAGMA temp_store=MEMORY")
             try:
-                db.execute("BEGIN")
                 db.executemany(
                     "INSERT INTO associations (source_id, target_id, strength, relation_type, edge_type) VALUES (?, ?, ?, ?, ?)",
                     chunk_data,
                 )
-                db.execute("COMMIT")
+                db.commit()
                 total_inserted += len(chunk_data)
             except sqlite3.OperationalError:
-                db.execute("ROLLBACK")
-                db.execute("BEGIN")
                 db.executemany(
                     "INSERT INTO associations (source_id, target_id, strength) VALUES (?, ?, ?)",
                     [(c[0], c[1], c[2]) for c in chunk_data],
                 )
-                db.execute("COMMIT")
+                db.commit()
                 total_inserted += len(chunk_data)
             db.execute("PRAGMA synchronous=NORMAL")
             db.close()

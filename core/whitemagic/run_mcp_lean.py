@@ -316,6 +316,15 @@ def _ensure_init() -> None:
             except Exception as e:
                 logger.debug("Auto-scheduler start failed: %s", e, exc_info=True)
 
+        # ── Tutorial galaxy auto-seed ──
+        # Ensures the tutorial galaxy is populated on first install so AI agents
+        # can search_memories(galaxy='tutorial') to learn the system.
+        try:
+            from whitemagic.core.memory.tutorial_refresh import auto_seed_if_needed
+            auto_seed_if_needed()
+        except Exception as e:
+            logger.debug("Tutorial auto-seed failed: %s", e)
+
         _INITIALISED = True
 
 
