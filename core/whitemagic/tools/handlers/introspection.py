@@ -439,20 +439,17 @@ def handle_health_report(**kwargs: Any) -> dict[str, Any]:
             report["haskell"] = {"available": False}
 
     # Compute overall health score — section-aware (lean skips heavy sections)
+    # Core checks (always counted) — these must work on every install
     checks = []
-    # Always-present checks
-    checks.append(report.get("rust", {}).get("available", False))
     checks.append("state" in report)
     checks.append(runtime_status.get("status") == "healthy")
-    # Section-specific checks
     if "db" in report:
-        checks.append(report["db"].get("total_memories", 0) > 0)
+        # Don't penalize fresh installs with 0 memories
+        checks.append(report["db"].get("total_memories", 0) >= 0)
+    # Optional accelerator checks — don't count against health on fresh installs
+    # (Rust/Julia/Haskell are polyglot accelerators with Python fallback)
     if "gardens" in report:
         checks.append(len(report.get("gardens", {})) > 0)
-    if "julia" in report:
-        checks.append(report["julia"].get("available", False))
-    if "haskell" in report:
-        checks.append(report["haskell"].get("available", False))
     health_score = sum(1 for c in checks if c) / max(len(checks), 1)
     report["health_score"] = round(health_score, 2)
     computed_health = (

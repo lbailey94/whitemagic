@@ -345,10 +345,11 @@ def doctor_command(ctx, fix: bool) -> None:
         rust_ok = data.get("rust", {}).get("available", False)
         julia_ok = data.get("julia", {}).get("available", False)
         haskell_ok = data.get("haskell", {}).get("available", False)
-        lines.append("\n[bold]Bridges:[/bold]")
+        lines.append("\n[bold]Polyglot Bridges:[/bold]")
         lines.append(f"  {'✅' if rust_ok else '❌'} Rust")
         lines.append(f"  {'✅' if julia_ok else '❌'} Julia")
         lines.append(f"  {'✅' if haskell_ok else '❌'} Haskell")
+        lines.append("  ℹ️  Elixir, Go, Zig, Koka — optional (Python fallback)")
 
         if "gardens" in data:
             garden_count = len(data["gardens"])
@@ -365,9 +366,9 @@ def doctor_command(ctx, fix: bool) -> None:
         if "db" in data:
             click.echo(f"DB: {data['db'].get('memory_count', '?')} memories")
         click.echo(f"Rust: {'yes' if data.get('rust', {}).get('available') else 'no'}")
-        click.echo(
-            f"Julia: {'yes' if data.get('julia', {}).get('available') else 'no'}"
-        )
+        click.echo(f"Julia: {'yes' if data.get('julia', {}).get('available') else 'no'}")
+        click.echo(f"Haskell: {'yes' if data.get('haskell', {}).get('available') else 'no'}")
+        click.echo("Elixir/Go/Zig/Koka: optional (Python fallback)")
 
 
 def register_diagnostics_commands(main_group: click.Group) -> None:
