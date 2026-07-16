@@ -23,7 +23,7 @@ pub mod unified;
 // pub mod memorial_sync;
 // pub mod memory_engine;
 // pub mod mindful_forgetting;
-// pub mod sqlite_accel;
+pub mod sqlite_accel;
 // pub mod sqlite_backend_v2;
 // pub mod sqlite_ext;
 // pub mod unified_memory;

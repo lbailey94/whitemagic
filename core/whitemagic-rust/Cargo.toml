@@ -63,6 +63,7 @@ rand = { version = "0.8", features = ["small_rng"] }
 getrandom = { version = "0.2", optional = true }
 lazy_static = "1.4"
 sha2 = "0.10.9"
+rustfft = "6.2"
 regex = "1.10"
 uuid = { version = "1.10", features = ["v4"], optional = true }
 

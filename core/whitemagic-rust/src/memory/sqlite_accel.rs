@@ -30,6 +30,21 @@ fn open_db(db_path: &str) -> Result<rusqlite::Connection, String> {
     Ok(conn)
 }
 
+/// Open a read-only SQLite connection with minimal pragmas.
+/// Skips WAL mode switch (reads work fine on WAL-mode DBs without setting it).
+/// This avoids the expensive PRAGMA journal_mode = WAL roundtrip.
+fn open_db_readonly(db_path: &str) -> Result<rusqlite::Connection, String> {
+    let conn = rusqlite::Connection::open_with_flags(
+        db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    ).map_err(|e| format!("SQLite open readonly error: {}", e))?;
+    conn.execute_batch(
+        "PRAGMA busy_timeout = 5000;
+         PRAGMA cache_size = -16384;"
+    ).map_err(|e| format!("PRAGMA error: {}", e))?;
+    Ok(conn)
+}
+
 /// Update galactic distances for a batch of memories.
 /// Much faster than Python's one-at-a-time UPDATE loop.
 ///
@@ -117,7 +132,7 @@ pub fn sqlite_fts_search(
     limit: usize,
     min_importance: f64,
 ) -> PyResult<String> {
-    let conn = open_db(db_path)
+    let conn = open_db_readonly(db_path)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e))?;
 
     // Build FTS query: multi-word → phrase OR individual keywords
@@ -180,7 +195,7 @@ struct ZoneStats {
 /// Get galactic zone distribution stats from the database.
 #[pyfunction]
 pub fn sqlite_zone_stats(db_path: &str) -> PyResult<String> {
-    let conn = open_db(db_path)
+    let conn = open_db_readonly(db_path)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e))?;
 
     let stats = conn.query_row(
@@ -234,7 +249,7 @@ pub fn sqlite_export_for_mining(
     min_importance: f64,
     limit: usize,
 ) -> PyResult<String> {
-    let conn = open_db(db_path)
+    let conn = open_db_readonly(db_path)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e))?;
 
     // Fetch memories
@@ -277,6 +292,207 @@ pub fn sqlite_export_for_mining(
     }).collect();
 
     serde_json::to_string(&exports)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("JSON: {}", e)))
+}
+
+/// Hybrid search result combining FTS5 rank + cosine similarity + galactic weighting.
+#[derive(Serialize)]
+struct HybridSearchResult {
+    id: String,
+    title: String,
+    content_preview: String,
+    importance: f64,
+    galactic_distance: f64,
+    memory_type: String,
+    fts_score: f64,
+    cosine_score: f64,
+    combined_score: f64,
+}
+
+/// Hybrid search: FTS5 full-text + embedding cosine similarity in one call.
+///
+/// This eliminates the Python N+1 pattern where:
+///   1. Python runs FTS5 query → gets IDs
+///   2. Python loads embeddings for each ID (N queries)
+///   3. Python computes cosine similarity (Python loop or numpy)
+///   4. Python combines scores
+///
+/// Instead, Rust does all 4 steps in one call with zero Python overhead.
+///
+/// Args:
+///   db_path: path to SQLite database
+///   query: FTS5 search query
+///   query_embedding: flat f32 query embedding (dim floats)
+///   dim: embedding dimension (e.g. 384)
+///   limit: max results
+///   min_importance: minimum importance filter
+///   fts_weight: weight for FTS score (default 0.4)
+///   cosine_weight: weight for cosine score (default 0.4)
+///   galactic_weight: weight for galactic distance (default 0.2)
+///
+/// Returns: JSON array of HybridSearchResult sorted by combined_score DESC
+#[pyfunction]
+pub fn sqlite_hybrid_search(
+    db_path: &str,
+    query: &str,
+    query_embedding: Vec<f32>,
+    dim: usize,
+    limit: usize,
+    min_importance: f64,
+    fts_weight: f64,
+    cosine_weight: f64,
+    galactic_weight: f64,
+) -> PyResult<String> {
+    if query_embedding.len() != dim || dim == 0 {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            format!("query_embedding len {} != dim {}", query_embedding.len(), dim)
+        ));
+    }
+
+    let conn = open_db_readonly(db_path)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e))?;
+
+    // Step 1: FTS5 search to get candidate IDs + ranks
+    let fts_query = if query.contains(' ') && !query.starts_with('"') {
+        let keywords: Vec<&str> = query.split_whitespace().collect();
+        format!("\"{}\" OR {}", query, keywords.join(" OR "))
+    } else {
+        query.to_string()
+    };
+
+    // Fetch FTS candidates with memory metadata (fetch 3x limit for cosine re-ranking)
+    let fts_limit = (limit * 3).max(50);
+    let mut stmt = conn.prepare_cached(
+        "SELECT m.id, m.title, SUBSTR(m.content, 1, 200) as content_preview,
+                m.importance, COALESCE(m.galactic_distance, 0.5) as galactic_distance,
+                m.memory_type,
+                ABS(fts.rank) as fts_rank
+         FROM memories m
+         JOIN (
+             SELECT id, rank FROM memories_fts WHERE memories_fts MATCH ?1
+             ORDER BY rank LIMIT ?2
+         ) fts ON m.id = fts.id
+         WHERE m.importance >= ?3
+         ORDER BY fts.rank ASC
+         LIMIT ?4"
+    ).map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Prepare FTS: {}", e)))?;
+
+    let candidates: Vec<(String, String, String, f64, f64, String, f64)> = stmt.query_map(
+        rusqlite::params![fts_query, fts_limit, min_importance, fts_limit],
+        |row| {
+            Ok((
+                row.get(0)?,
+                row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                row.get::<_, Option<String>>(2)?.unwrap_or_default(),
+                row.get(3)?,
+                row.get(4)?,
+                row.get::<_, Option<String>>(5)?.unwrap_or_default(),
+                row.get::<_, f64>(6).unwrap_or(0.0),
+            ))
+        }
+    ).map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("FTS query: {}", e)))?
+    .filter_map(|r| r.ok())
+    .collect();
+
+    if candidates.is_empty() {
+        return Ok("[]".to_string());
+    }
+
+    // Step 2: Load embeddings for all candidate IDs in one query
+    let candidate_ids: Vec<&str> = candidates.iter().map(|c| c.0.as_str()).collect();
+    let placeholders: Vec<String> = (0..candidate_ids.len()).map(|_| "?".to_string()).collect();
+    let placeholder_str = placeholders.join(",");
+
+    let sql = format!(
+        "SELECT memory_id, embedding FROM memory_embeddings WHERE memory_id IN ({})",
+        placeholder_str
+    );
+
+    let mut embed_stmt = conn.prepare(&sql)
+        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Prepare embeddings: {}", e)))?;
+
+    // Build params for IN clause
+    let params: Vec<&dyn rusqlite::ToSql> = candidate_ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
+
+    let mut embed_map: std::collections::HashMap<String, Vec<f32>> = std::collections::HashMap::new();
+    let embed_rows = embed_stmt.query_map(params.as_slice(), |row| {
+        let id: String = row.get(0)?;
+        let blob: Vec<u8> = row.get(1)?;
+        Ok((id, blob))
+    }).map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Embedding query: {}", e)))?;
+
+    for row in embed_rows.filter_map(|r| r.ok()) {
+        let (id, blob) = row;
+        // Unpack f32 from blob (little-endian)
+        let embedding: Vec<f32> = blob.chunks_exact(4)
+            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+            .collect();
+        embed_map.insert(id, embedding);
+    }
+
+    // Step 3: Compute cosine similarity for each candidate that has an embedding
+    // Normalize query embedding
+    let q_norm: f32 = query_embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let q_normalized: Vec<f32> = if q_norm > 1e-8 {
+        query_embedding.iter().map(|x| x / q_norm).collect()
+    } else {
+        query_embedding.clone()
+    };
+
+    // Find max FTS rank for normalization
+    let max_fts = candidates.iter().map(|c| c.6).fold(0.0f64, f64::max).max(1e-8);
+
+    let mut results: Vec<HybridSearchResult> = Vec::new();
+
+    for (id, title, content_preview, importance, galactic_distance, memory_type, fts_rank) in &candidates {
+        let cosine_score = if let Some(embedding) = embed_map.get(id) {
+            if embedding.len() == dim {
+                // Cosine similarity (dot product of normalized vectors)
+                let e_norm: f32 = embedding.iter().map(|x| x * x).sum::<f32>().sqrt();
+                if e_norm > 1e-8 {
+                    let dot: f32 = q_normalized.iter()
+                        .zip(embedding.iter())
+                        .map(|(q, e)| q * (e / e_norm))
+                        .sum();
+                    dot as f64
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            }
+        } else {
+            // No embedding — use 0.5 as neutral cosine score
+            0.5
+        };
+
+        // Normalize FTS score to [0, 1]
+        let fts_score_norm = (*fts_rank / max_fts).min(1.0);
+
+        // Combined score: weighted sum of FTS, cosine, and galactic proximity (1 - distance)
+        let galactic_proximity = 1.0 - *galactic_distance;
+        let combined = fts_weight * fts_score_norm
+            + cosine_weight * cosine_score
+            + galactic_weight * galactic_proximity;
+
+        results.push(HybridSearchResult {
+            id: id.clone(),
+            title: title.clone(),
+            content_preview: content_preview.clone(),
+            importance: *importance,
+            galactic_distance: *galactic_distance,
+            memory_type: memory_type.clone(),
+            fts_score: fts_score_norm,
+            cosine_score,
+            combined_score: combined,
+        });
+    }
+
+    // Step 4: Sort by combined score descending and take top `limit`
+    results.sort_by(|a, b| b.combined_score.partial_cmp(&a.combined_score).unwrap_or(std::cmp::Ordering::Equal));
+    results.truncate(limit);
+
+    serde_json::to_string(&results)
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("JSON: {}", e)))
 }
 

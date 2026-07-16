@@ -252,6 +252,7 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(search::search_fuzzy, m)?)?;
     m.add_function(wrap_pyfunction!(search::search_and_query, m)?)?;
     m.add_function(wrap_pyfunction!(search::search_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(search::patterns::extract_patterns_from_content, m)?)?;
 
     // Add hot_paths functions directly to main module
     hot_paths::hot_paths(_py, m)?;
@@ -265,6 +266,14 @@ fn whitemagic_rust(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     let sqlite_module = PyModule::new_bound(_py, "sqlite_backend")?;
     memory::sqlite_backend::register_sqlite_backend(&sqlite_module)?;
     m.add_submodule(&sqlite_module)?;
+
+    // SQLite accelerator functions (batch ops, FTS5, hybrid search)
+    m.add_function(wrap_pyfunction!(memory::sqlite_accel::sqlite_batch_update_galactic, m)?)?;
+    m.add_function(wrap_pyfunction!(memory::sqlite_accel::sqlite_decay_drift, m)?)?;
+    m.add_function(wrap_pyfunction!(memory::sqlite_accel::sqlite_fts_search, m)?)?;
+    m.add_function(wrap_pyfunction!(memory::sqlite_accel::sqlite_zone_stats, m)?)?;
+    m.add_function(wrap_pyfunction!(memory::sqlite_accel::sqlite_export_for_mining, m)?)?;
+    m.add_function(wrap_pyfunction!(memory::sqlite_accel::sqlite_hybrid_search, m)?)?;
 
     // Add zig_ffi functions directly to main module for Zig bridge support
     zig_ffi::register_zig_ffi(m)?;

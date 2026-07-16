@@ -110,7 +110,7 @@ fn extract_from_content(
             .max(opt_score);
 
         if max_score > 0 {
-            let confidence = ((max_score as f64) / 3.0).min(1.0);
+            let confidence = (0.6 + (max_score - 1) as f64 * 0.2).min(1.0);
 
             if confidence >= min_confidence {
                 let trimmed = sentence.trim().to_string();

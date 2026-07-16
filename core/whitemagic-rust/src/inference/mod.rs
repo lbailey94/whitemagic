@@ -11,8 +11,13 @@
 pub mod streaming;
 pub mod quantization;
 pub mod simd;
+pub mod simd_ops;
 pub mod ternary_kernel;
+pub mod ring_buffer;
+pub mod trigram_pool;
 
 pub use streaming::StreamingEngine;
 pub use quantization::{QuantizedKVCache, Quantizer};
 pub use ternary_kernel::{ternary_gemv, ternary_dot, pack_ternary_matrix, Ternary};
+pub use ring_buffer::RingBuffer;
+pub use trigram_pool::{Trigram, TrigramPool, TrigramStatus};
