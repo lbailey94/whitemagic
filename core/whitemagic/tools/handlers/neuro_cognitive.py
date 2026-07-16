@@ -835,3 +835,302 @@ def handle_knowledge_gap_run(**kwargs: Any) -> dict[str, Any]:
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
+
+
+def handle_emergence_insights(**kwargs: Any) -> dict[str, Any]:
+    """Query persisted emergence insights from the knowledge galaxy.
+
+    Returns insights detected by the EmergenceEngine, including tag clusters,
+    resonance cascades, and novelty spikes. Insights are persisted to the
+    knowledge galaxy DB on each scan.
+
+    Args:
+        limit: Maximum insights to return (default 20).
+        source: Filter by source type (tag_cluster, cascade, novelty_spike, etc.).
+        min_confidence: Minimum confidence threshold (default 0.0).
+    """
+    try:
+        import sqlite3
+        from pathlib import Path
+
+        limit = int(kwargs.get("limit", 20))
+        source = kwargs.get("source")
+        min_conf = float(kwargs.get("min_confidence", 0.0))
+
+        from whitemagic.config.paths import galaxy_db_path
+        db = galaxy_db_path("knowledge")
+        if not db.exists():
+            return {"status": "success", "insights": [], "count": 0, "message": "No insights persisted yet"}
+
+        from whitemagic.core.memory.db_manager import safe_connect
+        conn = safe_connect(str(db), read_only=True)
+        query = "SELECT id, title, description, confidence, source, timestamp, metadata_json FROM emergence_insights"
+        conditions: list[str] = []
+        params: list = []
+        if source:
+            conditions.append("source = ?")
+            params.append(source)
+        if min_conf > 0:
+            conditions.append("confidence >= ?")
+            params.append(min_conf)
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY confidence DESC, timestamp DESC LIMIT ?"
+        params.append(limit)
+
+        rows = conn.execute(query, params).fetchall()
+        conn.close()
+
+        import json as _json
+        insights = []
+        for r in rows:
+            insights.append({
+                "id": r[0],
+                "title": r[1],
+                "description": r[2],
+                "confidence": r[3],
+                "source": r[4],
+                "timestamp": r[5],
+                "metadata": _json.loads(r[6]) if r[6] else {},
+            })
+
+        return {"status": "success", "insights": insights, "count": len(insights)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_citta_ignitions(**kwargs: Any) -> dict[str, Any]:
+    """Get ignition events from the citta stream — moments of sudden state shift.
+
+    Ignition events are detected when the normalized velocity between consecutive
+    citta vectors exceeds 1.2x the average. These represent 'aha moments' where
+    the consciousness stream undergoes a significant shift.
+
+    Args:
+        threshold: Multiplier above average velocity (default 1.2).
+    """
+    try:
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        threshold = float(kwargs.get("threshold", 1.2))
+        cycle = get_citta_cycle()
+        traj = cycle.get_trajectory()
+        ignitions = traj.ignition_events(threshold=threshold)
+        return {
+            "status": "success",
+            "ignition_count": len(ignitions),
+            "ignitions": ignitions,
+            "trajectory_length": len(traj.vectors),
+            "avg_velocity": round(traj.avg_velocity(), 4),
+            "max_velocity": round(traj.max_velocity(), 4),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_cognitive_patterns(**kwargs: Any) -> dict[str, Any]:
+    """Extract and surface cognitive patterns from the memory graph.
+
+    Runs the PatternEngine to extract solutions, anti-patterns, heuristics,
+    and optimizations from all galaxy memories.
+
+    Args:
+        limit: Maximum patterns per category (default 10).
+    """
+    try:
+        from whitemagic.core.memory.pattern_engine import PatternEngine
+        limit = int(kwargs.get("limit", 10))
+        engine = PatternEngine()
+        report = engine.extract_patterns()
+
+        patterns = {
+            "solutions": report.solutions[:limit] if hasattr(report, "solutions") else [],
+            "anti_patterns": report.anti_patterns[:limit] if hasattr(report, "anti_patterns") else [],
+            "heuristics": report.heuristics[:limit] if hasattr(report, "heuristics") else [],
+            "optimizations": report.optimizations[:limit] if hasattr(report, "optimizations") else [],
+        }
+
+        counts = {k: len(v) for k, v in patterns.items()}
+        return {
+            "status": "success",
+            "patterns": patterns,
+            "counts": counts,
+            "total": sum(counts.values()),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_guna_correct(**kwargs: Any) -> dict[str, Any]:
+    """Apply guna balance correction — triggers appropriate system based on imbalance.
+
+    Measures current guna balance and applies the recommended correction action.
+    For example, if tamasic deficit is detected (too much active processing),
+    this triggers a dream cycle for consolidation.
+    """
+    try:
+        from whitemagic.core.consciousness.guna_balance import get_guna_balance
+        gb = get_guna_balance()
+        reading = gb.measure()
+
+        if reading.balanced:
+            return {
+                "status": "success",
+                "action": "none",
+                "message": "Guna balance is healthy",
+                "ratios": reading.to_dict(),
+            }
+
+        action = reading.correction_action
+        gb.apply_correction(action)
+
+        return {
+            "status": "success",
+            "action": action,
+            "balanced": reading.balanced,
+            "dominant_guna": reading.dominant_guna,
+            "deficits": reading.deficits,
+            "surpluses": reading.surpluses,
+            "ratios": reading.to_dict(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_cognitive_signals(**kwargs: Any) -> dict[str, Any]:
+    """Get all cognitive signals in one call — emergence, guna, ignitions, patterns.
+
+    Unified endpoint for the action flywheel to collect all system signals
+    in a single query. Returns a prioritized action queue based on the
+    combined analysis of all cognitive systems.
+    """
+    try:
+        signals: dict[str, Any] = {}
+        actions: list[dict[str, Any]] = []
+
+        # 1. Guna balance
+        from whitemagic.core.consciousness.guna_balance import get_guna_balance
+        gb = get_guna_balance()
+        reading = gb.measure()
+        signals["guna"] = reading.to_dict()
+        if not reading.balanced and reading.correction_action:
+            actions.append({
+                "priority": 1,
+                "source": "guna_balance",
+                "action": reading.correction_action,
+                "reason": f"dominant={reading.dominant_guna}, deficits={list(reading.deficits.keys())}",
+                "urgency": "high" if max(reading.deficits.values(), default=0) > 0.3 else "medium",
+            })
+
+        # 2. Emergence insights (from memory)
+        from whitemagic.config.paths import galaxy_db_path
+        from whitemagic.core.memory.db_manager import safe_connect
+        db = galaxy_db_path("knowledge")
+        emergence_count = 0
+        top_insights: list[dict[str, Any]] = []
+        if db.exists():
+            conn = safe_connect(str(db), read_only=True)
+            try:
+                row = conn.execute("SELECT COUNT(*) FROM emergence_insights").fetchone()
+                emergence_count = row[0] if row else 0
+                rows = conn.execute(
+                    "SELECT id, title, confidence, source FROM emergence_insights ORDER BY confidence DESC LIMIT 5"
+                ).fetchall()
+                top_insights = [{"id": r[0], "title": r[1], "confidence": r[2], "source": r[3]} for r in rows]
+            except Exception:
+                pass
+            conn.close()
+        signals["emergence"] = {"count": emergence_count, "top_insights": top_insights}
+        if top_insights:
+            actions.append({
+                "priority": 2,
+                "source": "emergence",
+                "action": "review_insights",
+                "reason": f"{emergence_count} insights detected, top: {top_insights[0]['title']}",
+                "urgency": "medium",
+            })
+
+        # 3. Ignition events
+        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        cycle = get_citta_cycle()
+        traj = cycle.get_trajectory()
+        ignitions = traj.ignition_events()
+        signals["ignitions"] = {"count": len(ignitions), "trajectory_length": len(traj.vectors)}
+        if len(ignitions) > 10:
+            actions.append({
+                "priority": 3,
+                "source": "citta_ignition",
+                "action": "analyze_ignition_clusters",
+                "reason": f"{len(ignitions)} ignition events in trajectory of {len(traj.vectors)}",
+                "urgency": "low",
+            })
+
+        # 4. Coherence
+        from whitemagic.core.consciousness.coherence import get_coherence_metric
+        cm = get_coherence_metric()
+        signals["coherence"] = {
+            "scores": cm.scores,
+            "level": cm.get_coherence_level(),
+        }
+        low_dims = [d for d, s in cm.scores.items() if s < 0.7]
+        if low_dims:
+            actions.append({
+                "priority": 4,
+                "source": "coherence",
+                "action": "address_low_coherence_dims",
+                "reason": f"Low coherence dimensions: {low_dims}",
+                "urgency": "medium",
+            })
+
+        # Sort actions by priority
+        actions.sort(key=lambda a: a["priority"])
+
+        return {
+            "status": "success",
+            "signals": signals,
+            "action_queue": actions,
+            "action_count": len(actions),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+def handle_cognitive_action_loop(**kwargs: Any) -> dict[str, Any]:
+    """Run the cognitive action loop — the self-improvement flywheel.
+
+    Collects all cognitive signals, prioritizes them, translates to actions,
+    executes, measures the delta, and learns from outcomes.
+
+    Args:
+        max_actions: Maximum actions to execute per cycle (default 3).
+    """
+    try:
+        from whitemagic.core.consciousness.cognitive_action_loop import get_action_loop
+        max_actions = int(kwargs.get("max_actions", 3))
+        loop = get_action_loop()
+        result = loop.run_cycle(max_actions=max_actions)
+
+        outcomes = []
+        for o in result.outcomes:
+            outcomes.append({
+                "action_id": o.action_id,
+                "source": o.signal_source,
+                "action": o.action,
+                "executed": o.executed,
+                "delta": o.delta,
+                "duration_ms": o.duration_ms,
+                "error": o.error,
+                "learned": o.learned,
+            })
+
+        return {
+            "status": "success",
+            "cycle_id": result.cycle_id,
+            "timestamp": result.timestamp,
+            "signals_collected": result.signals_collected,
+            "actions_executed": result.actions_executed,
+            "outcomes": outcomes,
+            "duration_ms": result.duration_ms,
+            "loop_status": loop.get_status(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}

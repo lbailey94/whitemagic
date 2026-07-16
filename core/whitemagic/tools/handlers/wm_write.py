@@ -185,9 +185,20 @@ def _write_memory(kwargs: dict[str, Any]) -> dict[str, Any]:
         "enable_surprise_gate": bool(kwargs.get("enable_surprise_gate", True)),
         "enable_entity_extraction": bool(kwargs.get("enable_entity_extraction", True)),
         "enable_holographic_index": bool(kwargs.get("enable_holographic_index", True)),
+        "galaxy": kwargs.get("galaxy", "universal"),
     }
 
     mem = remember(**store_kwargs)
+
+    # Temporal KG fact extraction (0-token, optional)
+    try:
+        from whitemagic.core.memory.temporal_kg import get_temporal_kg
+        tkg = get_temporal_kg()
+        fact_ids = tkg.extract_and_assert(content, memory_id=str(mem.id))
+        if fact_ids:
+            metadata["temporal_facts"] = fact_ids
+    except (ImportError, ModuleNotFoundError, Exception):
+        pass
 
     coords_populated = False
     try:

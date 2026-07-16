@@ -787,6 +787,8 @@ _FUZZY_ALLOWLIST: frozenset[str] = frozenset({
     "order", "orders", "ordered", "ordering", "border",
     "elder", "older", "folded", "holder", "boulder",
     "silver", "deliver", "delivered", "liver", "river",
+    # Common words near "activate" (distance ≤3, >6 chars threshold=3)
+    "climate", "climates", "climatic", "climax", "climaxed",
 })
 
 

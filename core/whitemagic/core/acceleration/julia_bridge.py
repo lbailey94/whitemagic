@@ -599,3 +599,38 @@ def julia_recommend_ttl_adjustments(
             "namespaces": namespaces,
         },
     )
+
+
+def julia_detect_galaxy_drift(
+    baseline_importance: list[float],
+    current_importance: list[float],
+    baseline_distances: list[float],
+    current_distances: list[float],
+) -> dict[str, Any] | None:
+    """Detect distributional drift in a galaxy's memory corpus.
+
+    Compares baseline and current distributions of importance scores and
+    galactic distances to detect when a galaxy's memory population has
+    significantly shifted. Uses KS test for distribution comparison and
+    mean/median shift detection.
+
+    Args:
+        baseline_importance: Importance scores from a prior snapshot.
+        current_importance: Importance scores from current state.
+        baseline_distances: Galactic distances from a prior snapshot.
+        current_distances: Galactic distances from current state.
+
+    Returns:
+        Dict with drift_detected (bool), importance_drift, distance_drift,
+        severity (low/medium/high), and recommendations, or None if Julia unavailable.
+    """
+    return _call_julia(
+        "memory_stats.jl",
+        {
+            "command": "detect_galaxy_drift",
+            "baseline_importance": baseline_importance,
+            "current_importance": current_importance,
+            "baseline_distances": baseline_distances,
+            "current_distances": current_distances,
+        },
+    )

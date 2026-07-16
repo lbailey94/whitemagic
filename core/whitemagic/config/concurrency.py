@@ -48,6 +48,20 @@ IO_WORKERS = min(32, (multiprocessing.cpu_count() or 4) * 4)
 ASYNC_TASK_LIMIT = 16000
 
 
+# 8-Trigram core pinning (Phase 9: 8-Trigram Vectorization)
+TRIGRAM_CORE_PINNING = os.environ.get("WM_TRIGRAM_CORE_PINNING", "0") == "1"
+TRIGRAM_RING_BUFFER_DIR = os.environ.get("WM_TRIGRAM_SHM_DIR", "/dev/shm")
+TRIGRAM_RING_BUFFER_CAPACITY = int(os.environ.get("WM_TRIGRAM_RB_CAP", str(1024 * 1024)))
+
+# When trigram pinning is active, reduce other worker pools to avoid
+# contention with the 8 core-pinned trigram threads.
+if TRIGRAM_CORE_PINNING:
+    MAX_WORKERS = 1
+    CPU_WORKERS = 1
+    CLONE_ARMY_WORKERS = 1
+    TEST_RUNNER_WORKERS = 1
+
+
 def get_max_workers() -> Any:
     """Get maximum worker count for parallel operations.
 

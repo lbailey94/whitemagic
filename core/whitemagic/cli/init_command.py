@@ -12,6 +12,9 @@ Generated files:
     .gitignore       — Sensible defaults for a WM project
     data/            — Runtime data directory
     logs/            — Log output directory
+
+With --from, also ingests existing files (e.g. an Obsidian vault) into a
+galaxy during init — the single-command onboarding flow.
 """
 
 from __future__ import annotations
@@ -43,6 +46,18 @@ WhiteMagic is a **cognitive scaffolding layer** for AI agents. It provides:
 - **7-language polyglot accelerators** (Rust, Zig, Julia, Haskell, Koka, Elixir, Go) — all free, no accounts needed
 
 ## Quick Start
+
+### One-Command Onboarding (with existing notes)
+
+```bash
+# Scaffold + ingest your notes + verify + launch — all in one:
+wm onboard --from ~/my-obsidian-vault --launch
+
+# Or step by step:
+wm init --from ~/my-obsidian-vault --galaxy knowledge
+wm quickstart
+./run.sh
+```
 
 ### For AI Agents (MCP)
 
@@ -545,19 +560,63 @@ _MCP_JSON = """\
     is_flag=True,
     help="Skip all prompts, use defaults (for AI agents and CI)",
 )
-def init_command(directory: str, force: bool, minimal: bool, non_interactive: bool) -> None:
+@click.option(
+    "--from",
+    "from_path",
+    default=None,
+    type=click.Path(exists=True),
+    help="Ingest files from this directory into a galaxy during init (e.g. Obsidian vault)",
+)
+@click.option(
+    "--galaxy",
+    "galaxy_name",
+    default="knowledge",
+    help="Name for the galaxy to ingest files into (default: knowledge)",
+)
+@click.option(
+    "--pattern",
+    "file_pattern",
+    default="**/*.md",
+    help="Glob pattern for files to ingest (default: **/*.md)",
+)
+@click.option(
+    "--launch",
+    is_flag=True,
+    help="Start the MCP server after setup (blocks until interrupted)",
+)
+@click.option(
+    "--quickstart/--no-quickstart",
+    default=True,
+    help="Run quickstart verification after init (default: on)",
+)
+def init_command(
+    directory: str,
+    force: bool,
+    minimal: bool,
+    non_interactive: bool,
+    from_path: str | None,
+    galaxy_name: str,
+    file_pattern: str,
+    launch: bool,
+    quickstart: bool,
+) -> None:
     """Initialize a new WhiteMagic project directory.
 
     Scaffolds the essential files an AI agent needs to understand, configure,
     and launch WhiteMagic. Run this after `pip install whitemagic`.
 
+    With --from, also ingests existing files into a galaxy — the single-command
+    onboarding flow for humans and AI agents alike.
+
     \b
     Examples:
         wm init                          # Initialize current directory
         wm init my-project               # Create and initialize my-project/
-        wm init . --force                # Overwrite existing files
-        wm init . --minimal              # Only README.md + run.sh
-        wm init . --non-interactive      # No prompts, use defaults (AI agents)
+        wm init . --from ~/obsidian-vault  # Scaffold + ingest your notes
+        wm init . --from ./docs --galaxy research  # Ingest into 'research' galaxy
+        wm init . --from ~/vault --launch  # Scaffold + ingest + start MCP server
+        wm init . --non-interactive       # No prompts, use defaults (AI agents)
+        wm init . --no-quickstart         # Skip verification step
     """
     try:
         from whitemagic import __version__
@@ -614,17 +673,224 @@ def init_command(directory: str, force: bool, minimal: bool, non_interactive: bo
         for f in skipped:
             click.echo(f"    ~ {f}")
 
-    click.echo("\n  Next steps:")
-    click.echo("    1. wm quickstart              # Verify system works (30s)")
-    click.echo("    2. python playground.py       # Interactive demo")
-    click.echo("    3. ./run.sh                   # Launch MCP server")
-    click.echo("    4. wm doctor                  # System health check")
+    # ── Ingest files from --from path ──────────────────────────────────
+    ingest_result: dict | None = None
+    if from_path:
+        click.echo(f"\n  Ingesting files from {from_path} into galaxy '{galaxy_name}'...")
+        try:
+            import os as _os
+
+            resolved_from = str(Path(from_path).resolve())
+            existing_allowed = _os.environ.get("WHITEMAGIC_ALLOWED_PATHS", "")
+            if resolved_from not in existing_allowed:
+                _os.environ["WHITEMAGIC_ALLOWED_PATHS"] = (
+                    f"{existing_allowed}:{resolved_from}" if existing_allowed else resolved_from
+                )
+
+            from whitemagic.security.tool_gating import get_tool_gate
+
+            gate = get_tool_gate()
+            gate.path_validator.allowed_bases.add(Path(resolved_from))
+
+            from whitemagic.core.memory.galaxy_manager import get_galaxy_manager
+
+            gm = get_galaxy_manager()
+            existing = gm.list_galaxies()
+            if not any(g.get("name") == galaxy_name for g in existing):
+                gm.create_galaxy(galaxy_name)
+                click.echo(f"    + Galaxy '{galaxy_name}' created")
+
+            result = gm.ingest_files(
+                galaxy_name=galaxy_name,
+                source_path=from_path,
+                pattern=file_pattern,
+                max_files=2000,
+                tags=["onboarding"],
+            )
+            ingest_result = result
+            ingested = result.get("ingested", 0)
+            found = result.get("files_found", 0)
+            errors = result.get("errors", 0)
+            skipped_files = result.get("skipped", 0)
+            click.echo(
+                f"    ✅ Ingested {ingested}/{found} files "
+                f"({skipped_files} skipped, {errors} errors)"
+            )
+        except Exception as e:
+            click.echo(f"    ❌ Ingest failed: {e}")
+            if non_interactive:
+                click.echo("       Continuing with setup (use 'wm galaxy ingest' to retry)")
+
+    # ── Run quickstart verification ────────────────────────────────────
+    if quickstart:
+        click.echo("\n  Running quickstart verification...")
+        try:
+            from whitemagic.tools.unified_api import call_tool
+
+            steps_ok = 0
+            steps_fail = 0
+
+            # Health
+            health = call_tool("health_report")
+            if health.get("status") == "success":
+                details = health.get("details", {})
+                runtime = details.get("runtime", {})
+                ver = runtime.get("version", "?")
+                tools = runtime.get("surface_counts", {}).get("callable_tools", "?")
+                click.echo(f"    ✅ Health: v{ver}, {tools} tools")
+                steps_ok += 1
+            else:
+                click.echo(f"    ❌ Health check failed")
+                steps_fail += 1
+
+            # Memory round-trip
+            mem = call_tool(
+                "create_memory",
+                title="Init Memory",
+                content="WhiteMagic init completed successfully.",
+                tags=["init", "onboarding"],
+            )
+            if mem.get("status") == "success":
+                click.echo("    ✅ Memory: store works")
+                steps_ok += 1
+            else:
+                click.echo(f"    ❌ Memory store failed")
+                steps_fail += 1
+
+            # Search
+            search = call_tool("search_memories", query="init", limit=3)
+            if search.get("status") == "success":
+                count = search.get("details", {}).get("count", 0)
+                click.echo(f"    ✅ Search: {count} results for 'init'")
+                steps_ok += 1
+            else:
+                click.echo("    ❌ Search failed")
+                steps_fail += 1
+
+            if steps_fail == 0:
+                click.echo(f"\n  ✅ Quickstart passed — all {steps_ok} checks passed.")
+            else:
+                click.echo(f"\n  ⚠️  Quickstart: {steps_ok} passed, {steps_fail} failed.")
+                click.echo("     Run 'wm doctor' for diagnostics.")
+        except Exception as e:
+            click.echo(f"    ⚠️  Quickstart skipped: {e}")
+
+    # ── Print next steps ───────────────────────────────────────────────
+    click.echo("\n  ── Next steps ──")
+    click.echo()
+    click.echo("  For humans:")
+    click.echo("    python playground.py          # Interactive demo")
+    click.echo("    wm doctor                     # System health check")
+    click.echo("    wm recall 'init'              # Search your memories")
+    if ingest_result:
+        click.echo(f"    wm recall 'knowledge'           # Search ingested notes")
+    click.echo()
+    click.echo("  For AI agents:")
+    click.echo("    ./run.sh                      # Launch MCP server")
+    click.echo("    # Then connect via MCP client (Claude Desktop, Cursor, etc.)")
+    click.echo("    # First calls: gnosis → capabilities → session_bootstrap")
+    click.echo()
+    click.echo("  Connect your AI:")
+    click.echo("    # .mcp.json is ready in this directory")
+    click.echo("    # Claude Desktop: cp .mcp.json ~/.claude/mcp.json")
+    click.echo("    # Cursor/Windsurf: already in project config")
+    click.echo()
+
+    # ── Launch MCP server ──────────────────────────────────────────────
+    if launch:
+        click.echo("  ── Launching MCP server ──\n")
+        click.echo("  Press Ctrl+C to stop.\n")
+        import os
+        import sys
+
+        env = os.environ.copy()
+        env["WM_MCP_PRAT"] = env.get("WM_MCP_PRAT", "1")
+        env["WM_SILENT_INIT"] = "1"
+        env["WM_STATE_ROOT"] = str(target / ".whitemagic")
+
+        run_sh = target / "run.sh"
+        if run_sh.exists():
+            os.execvpe(str(run_sh), [str(run_sh)], env)
+        else:
+            os.execvpe(
+                sys.executable,
+                [sys.executable, "-m", "whitemagic.run_mcp"],
+                env,
+            )
+
     if non_interactive:
-        click.echo("\n  ✅ Ready. Run 'wm quickstart' to verify.\n")
+        click.echo("  ✅ Ready.\n")
     else:
         click.echo()
 
 
+@click.command(name="onboard")
+@click.argument("directory", default=".", type=click.Path())
+@click.option(
+    "--from",
+    "from_path",
+    default=None,
+    type=click.Path(exists=True),
+    help="Ingest files from this directory (e.g. Obsidian vault path)",
+)
+@click.option(
+    "--galaxy",
+    "galaxy_name",
+    default="knowledge",
+    help="Galaxy name for ingested files (default: knowledge)",
+)
+@click.option(
+    "--pattern",
+    "file_pattern",
+    default="**/*.md",
+    help="Glob pattern for files to ingest (default: **/*.md)",
+)
+@click.option(
+    "--launch",
+    is_flag=True,
+    help="Start the MCP server after onboarding (blocks until interrupted)",
+)
+@click.option(
+    "--non-interactive",
+    "-y",
+    is_flag=True,
+    help="Skip all prompts, use defaults (for AI agents and CI)",
+)
+def onboard_command(
+    directory: str,
+    from_path: str | None,
+    galaxy_name: str,
+    file_pattern: str,
+    launch: bool,
+    non_interactive: bool,
+) -> None:
+    """One-command onboarding: init + ingest + quickstart + (optional) launch.
+
+    The fastest path from zero to a working WhiteMagic deployment.
+
+    \b
+    Examples:
+        wm onboard --from ~/my-obsidian-vault    # Ingest your notes + verify
+        wm onboard --from ~/vault --launch       # Ingest + start MCP server
+        wm onboard --from ./docs --galaxy research  # Ingest into 'research' galaxy
+        wm onboard                                # Fresh start, no existing notes
+    """
+    ctx = click.get_current_context()
+    ctx.invoke(
+        init_command,
+        directory=directory,
+        force=False,
+        minimal=False,
+        non_interactive=non_interactive,
+        from_path=from_path,
+        galaxy_name=galaxy_name,
+        file_pattern=file_pattern,
+        launch=launch,
+        quickstart=True,
+    )
+
+
 def register(main: click.Group) -> None:
-    """Register the init command with the main CLI group."""
+    """Register the init and onboard commands with the main CLI group."""
     main.add_command(init_command)
+    main.add_command(onboard_command)

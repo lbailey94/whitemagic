@@ -715,17 +715,10 @@ def _get_citta_predecessor_context() -> dict[str, Any] | None:
 
 
 def _get_memory_count_for_sensorium() -> int:
-    """Get total memory count from the SQLite backend."""
+    """Get total memory count across all galaxies."""
     try:
-
-        from whitemagic.config.paths import WM_ROOT
-
-        db_path = WM_ROOT / "memory" / "whitemagic.db"
-        if db_path.exists():
-            conn = safe_connect(str(db_path))
-            count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
-            conn.close()
-            return count
+        from whitemagic.core.memory.galaxy_db_scanner import count_all_memories
+        return count_all_memories()
     except Exception:
         logger.debug("Swallowed exception", exc_info=True)
     return 0

@@ -2,6 +2,7 @@
 
 # ruff: noqa: BLE001, E402
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def handle_create_memory(**kwargs: Any) -> dict[str, Any]:
     write_kwargs.setdefault("enable_surprise_gate", False)
     write_kwargs.setdefault("enable_entity_extraction", True)
     write_kwargs.setdefault("enable_holographic_index", True)
-    write_kwargs.setdefault("auto_embed", kwargs.get("auto_embed", False))
+    write_kwargs.setdefault("auto_embed", kwargs.get("auto_embed", True))
 
     # Wu Xing metadata enrichment (create_memory-specific)
     metadata_raw = kwargs.get("metadata")
@@ -392,6 +393,44 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
         polyglot_meta["spatial_ranked"] = True
         polyglot_meta["query_v"] = query_v
 
+    # Abstention gate — filter irrelevant results when enabled
+    # Can be enabled via abstention_threshold kwarg or WM_ABSTENTION_THRESHOLD env var
+    abstention_threshold = kwargs.get("abstention_threshold")
+    if abstention_threshold is None:
+        env_thresh = os.environ.get("WM_ABSTENTION_THRESHOLD")
+        if env_thresh:
+            abstention_threshold = float(env_thresh)
+    abstention_info: dict[str, Any] | None = None
+    if abstention_threshold is not None and memories:
+        try:
+            from whitemagic.core.memory.abstention_gate import get_abstention_gate
+
+            gate = get_abstention_gate()
+            thresh = float(abstention_threshold) if abstention_threshold is not True else None
+            memories, decision = gate.filter_results(query, memories, threshold=thresh)
+            abstention_info = decision.to_dict()
+        except (ImportError, ModuleNotFoundError, Exception) as e:
+            logger.debug("Abstention gate failed: %s", e, exc_info=True)
+
+    # Temporal query filtering — remove memories with superseded facts
+    temporal_filter = kwargs.get("temporal_filter", False)
+    temporal_info: dict[str, Any] | None = None
+    if temporal_filter and memories:
+        try:
+            from whitemagic.core.memory.temporal_kg import get_temporal_kg
+
+            tkg = get_temporal_kg()
+            superseded_ids = tkg.get_superseded_memory_ids()
+            if superseded_ids:
+                before = len(memories)
+                memories = [m for m in memories if str(m.id) not in superseded_ids]
+                temporal_info = {
+                    "superseded_filtered": before - len(memories),
+                    "superseded_ids_count": len(superseded_ids),
+                }
+        except (ImportError, ModuleNotFoundError, Exception) as e:
+            logger.debug("Temporal filter failed: %s", e, exc_info=True)
+
     # Track context reuse in telemetry
     try:
         from whitemagic.core.monitoring.telemetry import get_telemetry
@@ -423,6 +462,10 @@ def handle_search_memories(**kwargs: Any) -> dict[str, Any]:
     }
     if polyglot_meta:
         result["polyglot"] = polyglot_meta
+    if abstention_info:
+        result["abstention"] = abstention_info
+    if temporal_info:
+        result["temporal_filter"] = temporal_info
     return result
 
 

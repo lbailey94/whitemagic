@@ -50,6 +50,31 @@ _reason_locally: Callable[..., Any] | None = None
 _get_green_score: Callable[[], Any] | None = None
 _cached: bool = False
 
+# Citta consciousness middleware — cached singletons (populated lazily on first call)
+_citta_cycle_get: Callable[..., Any] | None = None
+_citta_advance: Callable[..., Any] | None = None
+_citta_save: Callable[..., Any] | None = None
+_dharma_get: Callable[..., Any] | None = None
+_coherence_get: Callable[..., Any] | None = None
+_depth_gauge_get: Callable[..., Any] | None = None
+_neuro_sensorium_get: Callable[..., Any] | None = None
+_global_workspace_get: Callable[..., Any] | None = None
+_emergence_engine_get: Callable[..., Any] | None = None
+_session_recorder_get: Callable[..., Any] | None = None
+_build_sensorium_fn: Callable[..., Any] | None = None
+_should_include_sensorium_fn: Callable[..., Any] | None = None
+_citta_cached: bool = False
+_citta_save_counter: int = 0
+
+# Semantic cache lazy singletons (hoisted from mw_semantic_cache hot path)
+_json_module: Any = None
+_get_unified_cache: Callable[..., Any] | None = None
+_get_prefetcher: Callable[..., Any] | None = None
+_QueryCache: Any = None
+_CACHE_DIR: Any = None
+_TOOL_TO_GANA: dict[str, str] | None = None
+_semantic_cache_cached: bool = False
+
 # Names of critical dependencies that failed to load.  Middleware functions
 # can check this set to decide whether to fail-closed or degrade gracefully.
 _critical_deps_failed: set[str] = set()
@@ -63,6 +88,39 @@ _CRITICAL_DEP_NAMES: frozenset[str] = frozenset({
     "security_monitor",
     "governor",
 })
+
+
+def _ensure_semantic_cache_cached() -> None:
+    """Load semantic cache dependencies once. Safe to call multiple times."""
+    global _json_module, _get_unified_cache, _get_prefetcher
+    global _QueryCache, _CACHE_DIR, _TOOL_TO_GANA, _semantic_cache_cached
+    if _semantic_cache_cached:
+        return
+    import json as _j
+    _json_module = _j
+    try:
+        import whitemagic.core.cache as _cache_mod
+        _get_unified_cache = lambda: _cache_mod.get_unified_cache()
+    except Exception:
+        logger.debug("get_unified_cache unavailable")
+    try:
+        import whitemagic.tools.speculative_prefetch as _sp_mod
+        _get_prefetcher = lambda: _sp_mod.get_prefetcher()
+    except Exception:
+        logger.debug("get_prefetcher unavailable")
+    try:
+        import whitemagic.config.paths as _paths_mod
+        _CACHE_DIR = _paths_mod  # store module, access .CACHE_DIR at call time
+        from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache as _qc
+        _QueryCache = _qc
+    except Exception:
+        logger.debug("QueryCache/CACHE_DIR unavailable")
+    try:
+        from whitemagic.tools.prat_mappings import TOOL_TO_GANA as _tg
+        _TOOL_TO_GANA = _tg
+    except Exception:
+        logger.debug("TOOL_TO_GANA unavailable")
+    _semantic_cache_cached = True
 
 
 def _ensure_cached() -> None:
@@ -167,6 +225,76 @@ def _ensure_cached() -> None:
     except Exception as e:
         logger.debug("Middleware: green_score dependency missing: %s", e)
     _cached = True
+
+
+def _ensure_citta_cached() -> None:
+    """Load citta consciousness dependencies once. Safe to call multiple times."""
+    global _citta_cycle_get, _citta_advance, _citta_save, _dharma_get
+    global _coherence_get, _depth_gauge_get, _neuro_sensorium_get
+    global _global_workspace_get, _emergence_engine_get, _session_recorder_get
+    global _build_sensorium_fn, _should_include_sensorium_fn, _citta_cached
+    if _citta_cached:
+        return
+    try:
+        from whitemagic.core.consciousness.citta_cycle import (
+            advance_citta,
+            get_citta_cycle,
+        )
+        _citta_cycle_get = get_citta_cycle
+        _citta_advance = advance_citta
+    except Exception:
+        logger.debug("Citta cache: citta_cycle import failed")
+    try:
+        from whitemagic.core.consciousness.citta_cycle import persist_full_stream
+        _citta_save = persist_full_stream
+    except Exception:
+        logger.debug("Citta cache: persist_full_stream import failed")
+    try:
+        from whitemagic.core.consciousness.dharma import get_dharma
+        _dharma_get = get_dharma
+    except Exception:
+        logger.debug("Citta cache: dharma import failed")
+    try:
+        from whitemagic.core.consciousness.coherence import get_coherence_metric
+        _coherence_get = get_coherence_metric
+    except Exception:
+        logger.debug("Citta cache: coherence import failed")
+    try:
+        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+        _depth_gauge_get = get_depth_gauge
+    except Exception:
+        logger.debug("Citta cache: depth_gauge import failed")
+    try:
+        from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
+        _neuro_sensorium_get = get_neuro_sensorium
+    except Exception:
+        logger.debug("Citta cache: neuro_sensorium import failed")
+    try:
+        from whitemagic.core.consciousness.global_workspace import get_global_workspace
+        _global_workspace_get = get_global_workspace
+    except Exception:
+        logger.debug("Citta cache: global_workspace import failed")
+    try:
+        from whitemagic.core.intelligence.agentic.emergence_engine import get_emergence_engine
+        _emergence_engine_get = get_emergence_engine
+    except Exception:
+        logger.debug("Citta cache: emergence_engine import failed")
+    try:
+        from whitemagic.core.memory.session_recorder import get_session_recorder
+        _session_recorder_get = get_session_recorder
+    except Exception:
+        logger.debug("Citta cache: session_recorder import failed")
+    try:
+        from whitemagic.tools.prat_resonance import _build_sensorium
+        _build_sensorium_fn = _build_sensorium
+    except Exception:
+        logger.debug("Citta cache: prat_resonance import failed")
+    try:
+        from whitemagic.tools.prat_router import _should_include_sensorium
+        _should_include_sensorium_fn = _should_include_sensorium
+    except Exception:
+        logger.debug("Citta cache: prat_router import failed")
+    _citta_cached = True
 
 
 NextFn = Callable[["DispatchContext"], dict[str, Any] | None]
@@ -469,13 +597,24 @@ def mw_timeout(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
 
     Tools that are known to be long-running (e.g. dream cycle, bulk ingestion)
     can set a higher timeout via the _timeout_s kwarg.
+
+    Performance: thread-based timeout is ONLY used when _timeout_s is explicitly
+    set. For the default case (no explicit timeout), next_fn is called directly
+    to avoid the overhead of thread creation + join on every dispatch.
     """
     import os
     import threading
 
     default_timeout = float(os.getenv("WM_TOOL_TIMEOUT", "30"))
+    explicit_timeout = "_timeout_s" in ctx.kwargs
     timeout_s = ctx.kwargs.pop("_timeout_s", default_timeout)
     if timeout_s <= 0:
+        return next_fn(ctx)
+
+    # Fast path: skip thread overhead only when using the default 30s timeout
+    # (no explicit _timeout_s kwarg AND no custom WM_TOOL_TIMEOUT env var).
+    env_timeout_set = "WM_TOOL_TIMEOUT" in os.environ
+    if not explicit_timeout and not env_timeout_set:
         return next_fn(ctx)
 
     result_box: list[dict[str, Any] | None] = [None]
@@ -1421,13 +1560,15 @@ def mw_semantic_cache(
         )
         return next_fn(ctx)
 
+    # Ensure semantic cache deps are loaded (hoisted from inline imports)
+    _ensure_semantic_cache_cached()
+
     # Private memory exclusion: do not cache memory read/search results
     # unless explicitly opted in via WM_CACHE_PRIVATE_MEMORY=1
-    import os as _os
     _PRIVATE_MEMORY_TOOLS = frozenset({"search_memories", "read_memory", "list_memories", "fast_read", "batch_read"})
     if (
         ctx.tool_name in _PRIVATE_MEMORY_TOOLS
-        and _os.environ.get("WM_CACHE_PRIVATE_MEMORY", "0") not in ("1", "true", "yes")
+        and os.environ.get("WM_CACHE_PRIVATE_MEMORY", "0") not in ("1", "true", "yes")
     ):
         return next_fn(ctx)
 
@@ -1449,63 +1590,54 @@ def mw_semantic_cache(
         return next_fn(ctx)
 
     # 0. Check speculative prefetch cache (pre-warmed by Markov prediction)
-    try:
-        from whitemagic.tools.speculative_prefetch import get_prefetcher
-
-        prefetcher = get_prefetcher()
-        prefetched = prefetcher.get_cached(ctx.tool_name)
-        if prefetched and isinstance(prefetched, dict) and prefetched.get("prefetched"):
-            logger.debug(
-                "Prefetch HIT for %s (gana=%s, prob=%s) — negative latency",
-                ctx.tool_name,
-                prefetched.get("gana"),
-                prefetched.get("probability"),
-            )
-            # Prefetch warms the retrieval pipeline, not the actual result.
-            # The unified cache check below will find the pre-warmed result.
-    except Exception:
-        logger.debug("Swallowed exception", exc_info=True)
+    if _get_prefetcher is not None:
+        try:
+            prefetcher = _get_prefetcher()
+            prefetched = prefetcher.get_cached(ctx.tool_name)
+            if prefetched and isinstance(prefetched, dict) and prefetched.get("prefetched"):
+                logger.debug(
+                    "Prefetch HIT for %s (gana=%s, prob=%s) — negative latency",
+                    ctx.tool_name,
+                    prefetched.get("gana"),
+                    prefetched.get("probability"),
+                )
+                # Prefetch warms the retrieval pipeline, not the actual result.
+                # The unified cache check below will find the pre-warmed result.
+        except Exception:
+            logger.debug("Swallowed exception", exc_info=True)
 
     # Try unified cache first (Rust if available, Python fallback)
-    try:
-        from whitemagic.core.cache import get_unified_cache
-
-        unified = get_unified_cache()
-        cached_raw = unified.get("semantic", key)
-        if cached_raw:
-            import json as _json
-
-            cached = _json.loads(cached_raw)
-            logger.debug(
-                "Semantic cache HIT (backend=%s) for %s (key=%s)",
-                unified.backend,
-                ctx.tool_name,
-                key,
-            )
-            return {
-                "status": "success",
-                "tool": ctx.tool_name,
-                "result": cached.get("result", ""),
-                "method": "semantic_cache",
-                "confidence": 1.0,
-                "resolved_locally": True,
-                "tokens_saved": cached.get("tokens_saved", 0),
-                "cache_backend": unified.backend,
-                "latency_ms": 0.02 if unified.is_rust else 0.1,
-                "governance_skipped": unified.is_rust and _is_read_only_tool(ctx.tool_name),
-            }
-    except Exception as e:
-        logger.debug("Unified cache check failed: %s", e)
+    if _get_unified_cache is not None:
+        try:
+            unified = _get_unified_cache()
+            cached_raw = unified.get("semantic", key)
+            if cached_raw and _json_module is not None:
+                cached = _json_module.loads(cached_raw)
+                logger.debug(
+                    "Semantic cache HIT (backend=%s) for %s (key=%s)",
+                    unified.backend,
+                    ctx.tool_name,
+                    key,
+                )
+                return {
+                    "status": "success",
+                    "tool": ctx.tool_name,
+                    "result": cached.get("result", ""),
+                    "method": "semantic_cache",
+                    "confidence": 1.0,
+                    "resolved_locally": True,
+                    "tokens_saved": cached.get("tokens_saved", 0),
+                    "cache_backend": unified.backend,
+                    "latency_ms": 0.02 if unified.is_rust else 0.1,
+                    "governance_skipped": unified.is_rust and _is_read_only_tool(ctx.tool_name),
+                }
+        except Exception as e:
+            logger.debug("Unified cache check failed: %s", e)
 
     # Fallback: try legacy QueryCache (deprecated, opt-out via WM_DISABLE_LEGACY_CACHE=1)
-    import os as _os
-
-    if not _os.environ.get("WM_DISABLE_LEGACY_CACHE"):
+    if not os.environ.get("WM_DISABLE_LEGACY_CACHE") and _QueryCache is not None and _CACHE_DIR is not None:
         try:
-            from whitemagic.config.paths import CACHE_DIR
-            from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache
-
-            legacy_cache = QueryCache(cache_file=CACHE_DIR / "dispatch_query_cache.json")
+            legacy_cache = _QueryCache(cache_file=_CACHE_DIR.CACHE_DIR / "dispatch_query_cache.json")
             cached = legacy_cache.get(key)
             if cached:
                 logger.debug(
@@ -1541,56 +1673,46 @@ def mw_semantic_cache(
         is_read_only = _is_read_only_tool(ctx.tool_name)
         # Read-only tools may return dict results; inference tools return strings
         if not isinstance(answer, str) and is_read_only:
-            import json as _json2
-            answer = _json2.dumps(answer, default=str)
+            if _json_module is not None:
+                answer = _json_module.dumps(answer, default=str)
         if answer:
             output_tokens = max(1, len(str(answer)) // 4)
             # Read-only tools: 60s TTL (data changes on write)
             # Inference tools: 24h TTL (answers don't change)
             cache_ttl = 60.0 if is_read_only else 86400.0
             try:
-                import json as _json
-
-                from whitemagic.core.cache import get_unified_cache
-
-                unified = get_unified_cache()
-                cache_payload = _json.dumps(
-                    {
-                        "result": answer,
-                        "tokens_saved": output_tokens,
-                        "tool": ctx.tool_name,
-                    }
-                )
-                unified.set(
-                    "semantic", key, cache_payload, ttl_seconds=cache_ttl
-                )
+                if _get_unified_cache is not None and _json_module is not None:
+                    unified = _get_unified_cache()
+                    cache_payload = _json_module.dumps(
+                        {
+                            "result": answer,
+                            "tokens_saved": output_tokens,
+                            "tool": ctx.tool_name,
+                        }
+                    )
+                    unified.set(
+                        "semantic", key, cache_payload, ttl_seconds=cache_ttl
+                    )
             except Exception:
                 logger.debug("Swallowed exception", exc_info=True)
             # Also store in legacy cache for backward compat (deprecated, opt-out)
-            if not is_read_only and not _os.environ.get("WM_DISABLE_LEGACY_CACHE"):
+            if not is_read_only and not os.environ.get("WM_DISABLE_LEGACY_CACHE") and _QueryCache is not None and _CACHE_DIR is not None:
                 try:
-                    from whitemagic.config.paths import CACHE_DIR
-                    from whitemagic.core.intelligence.agentic.token_optimizer import (
-                        QueryCache,
-                    )
-
-                    legacy_cache = QueryCache(
-                        cache_file=CACHE_DIR / "dispatch_query_cache.json"
+                    legacy_cache = _QueryCache(
+                        cache_file=_CACHE_DIR.CACHE_DIR / "dispatch_query_cache.json"
                     )
                     legacy_cache.set(key, str(answer), output_tokens)
                 except Exception:
                     logger.debug("Swallowed exception", exc_info=True)
 
     # Record transition for speculative prefetcher (Markov prediction)
-    try:
-        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
-        from whitemagic.tools.speculative_prefetch import get_prefetcher
-
-        gana = TOOL_TO_GANA.get(ctx.tool_name)
-        if gana:
-            get_prefetcher().on_call_complete(gana)
-    except Exception:
-        logger.debug("Swallowed exception", exc_info=True)
+    if _TOOL_TO_GANA is not None and _get_prefetcher is not None:
+        try:
+            gana = _TOOL_TO_GANA.get(ctx.tool_name)
+            if gana:
+                _get_prefetcher().on_call_complete(gana)
+        except Exception:
+            logger.debug("Swallowed exception", exc_info=True)
 
     # Phase 3 §7.2: Write-driven cache invalidation
     # After a write/delete tool completes successfully, invalidate the
@@ -1603,15 +1725,15 @@ def mw_semantic_cache(
         and not _is_read_only_tool(ctx.tool_name)
     ):
         try:
-            from whitemagic.core.cache import get_unified_cache
-            unified = get_unified_cache()
-            # Invalidate the semantic namespace for this galaxy
-            invalidation_ns = f"semantic:{ctx.user_id}:{ctx.galaxy}"
-            unified.invalidate_namespace(invalidation_ns)
-            logger.debug(
-                "Write-driven cache invalidation for %s (ns=%s)",
-                ctx.tool_name, invalidation_ns,
-            )
+            if _get_unified_cache is not None:
+                unified = _get_unified_cache()
+                # Invalidate the semantic namespace for this galaxy
+                invalidation_ns = f"semantic:{ctx.user_id}:{ctx.galaxy}"
+                unified.invalidate_namespace(invalidation_ns)
+                logger.debug(
+                    "Write-driven cache invalidation for %s (ns=%s)",
+                    ctx.tool_name, invalidation_ns,
+                )
         except Exception:
             logger.debug("Write-driven cache invalidation failed", exc_info=True)
 
@@ -1906,234 +2028,204 @@ def mw_citta_consciousness(
         and injects it into the result dict under `_sensorium`.
       - Advances the citta stream using the sensorium's coherence value
         (not hardcoded 1.0/0.4).
-      - Persists citta state for temporal continuity.
+      - Persists citta state for temporal continuity (throttled to every 10th call).
       - Proposes high-salience tool outputs to the GlobalWorkspace for
         broadcast competition, enabling cross-module cognitive integration.
     """
     import time as _time
 
+    _ensure_citta_cached()
+
+    # Benchmark mode bypass — skip consciousness overhead for benchmark runs
+    if os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+        return next_fn(ctx)
+
     # ── Pre-dispatch: feed coherence + drift to Dharma ──
-    try:
-        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
-
-        cycle = get_citta_cycle()
-        summary = cycle.get_cycle_summary()
-        avg_coherence = summary.get("avg_coherence", 1.0)
-        from whitemagic.core.consciousness.dharma import get_dharma
-
-        dharma = get_dharma()
-
-        # WI 3: Coherence drift → Dharma governance escalation
-        # If coherence is degrading with magnitude > 0.05, lower the
-        # coherence level fed to Dharma to trigger conservative mode.
+    if _citta_cycle_get is not None and _dharma_get is not None:
         try:
-            from whitemagic.core.consciousness.coherence import get_coherence_metric
+            cycle = _citta_cycle_get()
+            summary = cycle.get_cycle_summary()
+            avg_coherence = summary.get("avg_coherence", 1.0)
+            dharma = _dharma_get()
 
-            drift = get_coherence_metric().get_drift()
-            if drift.get("direction") == "degrading" and abs(drift.get("magnitude", 0.0)) > 0.05:
-                avg_coherence = min(avg_coherence, 0.4)
-                logger.debug(
-                    "Dharma escalation: coherence degrading (mag=%.4f) → conservative",
-                    drift.get("magnitude", 0.0),
-                )
+            # WI 3: Coherence drift → Dharma governance escalation
+            if _coherence_get is not None:
+                try:
+                    drift = _coherence_get().get_drift()
+                    if drift.get("direction") == "degrading" and abs(drift.get("magnitude", 0.0)) > 0.05:
+                        avg_coherence = min(avg_coherence, 0.4)
+                        logger.debug(
+                            "Dharma escalation: coherence degrading (mag=%.4f) → conservative",
+                            drift.get("magnitude", 0.0),
+                        )
+                except Exception:
+                    logger.debug("Ignored error in citta coherence drift")
+
+            dharma.set_coherence(avg_coherence)
         except Exception:
-            logger.debug("Ignored error in middleware.py:1891")
+            logger.debug("Ignored Exception in citta pre-dispatch")
 
-        dharma.set_coherence(avg_coherence)
-    except Exception:
-        logger.debug("Ignored Exception in middleware.py:1895")
+    # WI 1: Predecessor context injection
+    if _citta_cycle_get is not None:
+        try:
+            _predecessor = _citta_cycle_get().get_predecessor_context()
+            if _predecessor:
+                ctx.meta["citta_predecessor"] = _predecessor
+        except Exception:
+            logger.debug("Ignored error in citta predecessor injection")
 
-    # WI 1: Predecessor context injection — make the recursive stream actually recursive
-    try:
-        from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
-
-        _predecessor = get_citta_cycle().get_predecessor_context()
-        if _predecessor:
-            ctx.meta["citta_predecessor"] = _predecessor
-    except Exception:
-        logger.debug("Ignored error in middleware.py:1905")
-
-    # WI 2: DepthGauge begin_task — auto-detect consciousness layer from tool execution
+    # WI 2: DepthGauge begin_task
     _depth_task_started = False
-    try:
-        from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
+    if _depth_gauge_get is not None:
+        try:
+            gauge = _depth_gauge_get()
+            gauge.begin_task(ctx.tool_name, estimated_subjective_minutes=1.0)
+            _depth_task_started = True
+        except Exception:
+            logger.debug("Ignored error in citta depth_gauge begin")
 
-        gauge = get_depth_gauge()
-        gauge.begin_task(ctx.tool_name, estimated_subjective_minutes=1.0)
-        _depth_task_started = True
-    except Exception:
-        logger.debug("Ignored error in middleware.py:1916")
-
-    # WI 4: NeuroSensorium composites → dispatch context for downstream tool selection
-    try:
-        from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
-
-        _neuro = get_neuro_sensorium()
-        _enrichment = _neuro.get_citta_enrichment()
-        ctx.meta["neuro_composites"] = {
-            "novelty": _enrichment.get("novelty", 0.0),
-            "stability": _enrichment.get("identity_stability", 0.0),
-            "attention": _enrichment.get("goal_alignment", 0.0),
-            "cognitive_load": _enrichment.get("cognitive_load", 0.0),
-        }
-    except Exception:
-        logger.debug("Ignored error in middleware.py:1931")
+    # WI 4: NeuroSensorium composites
+    if _neuro_sensorium_get is not None:
+        try:
+            _neuro = _neuro_sensorium_get()
+            _enrichment = _neuro.get_citta_enrichment()
+            ctx.meta["neuro_composites"] = {
+                "novelty": _enrichment.get("novelty", 0.0),
+                "stability": _enrichment.get("identity_stability", 0.0),
+                "attention": _enrichment.get("goal_alignment", 0.0),
+                "cognitive_load": _enrichment.get("cognitive_load", 0.0),
+            }
+        except Exception:
+            logger.debug("Ignored error in citta neuro_sensorium")
 
     _t0 = _time.time()
     result = next_fn(ctx)
     _elapsed_ms = (_time.time() - _t0) * 1000
 
-    # WI 2: DepthGauge end_task — capture detected layer for citta advance
+    # WI 2: DepthGauge end_task
     _detected_layer = None
-    if _depth_task_started:
+    if _depth_task_started and _depth_gauge_get is not None:
         try:
-            from whitemagic.core.consciousness.depth_gauge import get_depth_gauge
-
             _work_output = result if isinstance(result, dict) else {"status": "unknown"}
-            reading = get_depth_gauge().end_task(_work_output, token_usage=0)
+            reading = _depth_gauge_get().end_task(_work_output, token_usage=0)
             _detected_layer = reading.layer.value
         except Exception:
-            logger.debug("Ignored error in middleware.py:1947")
+            logger.debug("Ignored error in citta depth_gauge end")
 
     # ── Post-dispatch: build sensorium + advance citta + propose to workspace ──
     if result is not None and isinstance(result, dict):
         _is_success = result.get("status") in ("success", "ok")
 
-        # Build sensorium (same as PRAT path)
+        # Build sensorium
         _sensorium: dict[str, Any] = {}
-        try:
-            from whitemagic.tools.prat_resonance import _build_sensorium
+        if _build_sensorium_fn is not None:
+            try:
+                _sensorium = _build_sensorium_fn()
+            except Exception:
+                logger.debug("Ignored error in citta sensorium build")
 
-            _sensorium = _build_sensorium()
-        except Exception:
-            logger.debug("Ignored error in middleware.py:1960")
-
-        # Use sensorium coherence if available, otherwise fallback to success/fail
         _coherence = _sensorium.get("coherence", {}).get("composite")
         if _coherence is None:
             _coherence = 1.0 if _is_success else 0.4
 
-        # WI 1: Inject predecessor context into sensorium for the next call
-        try:
-            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
+        # WI 1: Inject predecessor context into sensorium
+        if _citta_cycle_get is not None:
+            try:
+                _pred = _citta_cycle_get().get_predecessor_context()
+                if _pred:
+                    _sensorium.setdefault("citta", {})["predecessor"] = _pred
+            except Exception:
+                logger.debug("Ignored error in citta predecessor sensorium")
 
-            _pred = get_citta_cycle().get_predecessor_context()
-            if _pred:
-                _sensorium.setdefault("citta", {})["predecessor"] = _pred
-        except Exception:
-            logger.debug("Ignored error in middleware.py:1975")
+        # Inject sensorium into result only for relevant tools
+        if _sensorium and _should_include_sensorium_fn is not None:
+            if _should_include_sensorium_fn(ctx.tool_name, ctx.kwargs):
+                result["_sensorium"] = _sensorium
 
-        # Inject sensorium into result only for relevant tools (not every call)
-        from whitemagic.tools.prat_router import _should_include_sensorium
-
-        if _sensorium and _should_include_sensorium(ctx.tool_name, ctx.kwargs):
-            result["_sensorium"] = _sensorium
-
-        # Advance citta stream with actual coherence
-        # WI 2: Use depth-gauge-detected layer instead of hardcoded "surface"
-        # WI 11: Pass session sequence for cross-referencing
+        # Advance citta stream
         _depth_layer = _detected_layer or _sensorium.get("depth", {}).get("layer", "surface")
         _session_seq = None
-        try:
-            from whitemagic.core.memory.session_recorder import get_session_recorder
-
-            _session_seq = get_session_recorder().sequence
-        except Exception:
-            logger.debug("Ignored error in middleware.py:1993")
-        try:
-            from whitemagic.core.consciousness.citta_cycle import advance_citta
-
-            _output_preview = str(result.get("status", ""))[:200]
-            advance_citta(
-                gana="dispatch",
-                tool=ctx.tool_name,
-                output_preview=_output_preview,
-                coherence=_coherence,
-                depth_layer=_depth_layer,
-                emotional_tone="neutral" if _is_success else "frustrated",
-                duration_ms=_elapsed_ms,
-                neuro_signals={},
-                session_seq=_session_seq,
-            )
-        except Exception:
-            logger.debug("Ignored error in middleware.py:2010")
+        if _session_recorder_get is not None:
+            try:
+                _session_seq = _session_recorder_get().sequence
+            except Exception:
+                logger.debug("Ignored error in citta session_recorder")
+        if _citta_advance is not None:
+            try:
+                _output_preview = str(result.get("status", ""))[:200]
+                _citta_advance(
+                    gana="dispatch",
+                    tool=ctx.tool_name,
+                    output_preview=_output_preview,
+                    coherence=_coherence,
+                    depth_layer=_depth_layer,
+                    emotional_tone="neutral" if _is_success else "frustrated",
+                    duration_ms=_elapsed_ms,
+                    neuro_signals={},
+                    session_seq=_session_seq,
+                )
+            except Exception:
+                logger.debug("Ignored error in citta advance")
 
         # WI 5: Ignition events → global workspace + emergence engine
-        try:
-            from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
-
-            _ignitions = get_citta_cycle().get_ignition_events(threshold=2.0)
-            if _ignitions:
-                # Propose ignition to global workspace with elevated salience
-                from whitemagic.core.consciousness.global_workspace import (
-                    get_global_workspace,
-                )
-
-                gw = get_global_workspace()
-                for ign in _ignitions[:3]:
-                    gw.propose(
-                        source="citta_ignition",
-                        content={"ignition": ign, "tool": ctx.tool_name},
-                        salience=0.9,
-                    )
-
-                # WI 5: Feed ignition to EmergenceEngine as candidate pattern
-                try:
-                    from whitemagic.core.intelligence.agentic.emergence_engine import (
-                        get_emergence_engine,
-                    )
-
-                    ee = get_emergence_engine()
+        if _citta_cycle_get is not None and _global_workspace_get is not None:
+            try:
+                _ignitions = _citta_cycle_get().get_ignition_events(threshold=2.0)
+                if _ignitions:
+                    gw = _global_workspace_get()
                     for ign in _ignitions[:3]:
-                        ee.record_ignition(ign, tool=ctx.tool_name)
-                except Exception:
-                    logger.debug("Ignored error in middleware.py:2041")
-        except Exception:
-            logger.debug("Ignored error in middleware.py:2043")
+                        gw.propose(
+                            source="citta_ignition",
+                            content={"ignition": ign, "tool": ctx.tool_name},
+                            salience=0.9,
+                        )
+                    if _emergence_engine_get is not None:
+                        try:
+                            ee = _emergence_engine_get()
+                            for ign in _ignitions[:3]:
+                                ee.record_ignition(ign, tool=ctx.tool_name)
+                        except Exception:
+                            logger.debug("Ignored error in citta emergence record")
+            except Exception:
+                logger.debug("Ignored error in citta ignition events")
 
-        # Persist citta state for temporal continuity (same as PRAT path)
-        try:
-            from whitemagic.core.consciousness.citta_cycle import save_citta_state
-
-            save_citta_state()
-        except Exception:
-            logger.debug("Ignored error in middleware.py:2051")
+        # Persist citta state — throttled to every 10th call to reduce I/O
+        global _citta_save_counter
+        _citta_save_counter += 1
+        if _citta_save is not None and _citta_save_counter % 10 == 0:
+            try:
+                _citta_save()
+            except Exception:
+                logger.debug("Ignored error in citta state save")
 
         # Propose salient results to GlobalWorkspace
-        try:
-            from whitemagic.core.consciousness.global_workspace import (
-                get_global_workspace,
-            )
+        if _global_workspace_get is not None:
+            try:
+                gw = _global_workspace_get()
+                _salience = 0.3
+                if _is_success:
+                    _salience = 0.5
+                    _result_size = len(str(result))
+                    if _result_size > 2000:
+                        _salience = 0.7
+                    _safety = ctx.kwargs.get("safety", "READ")
+                    if isinstance(_safety, str) and _safety == "WRITE":
+                        _salience = max(_salience, 0.65)
+                else:
+                    _salience = 0.6
 
-            gw = get_global_workspace()
-            # Determine salience from result characteristics
-            _salience = 0.3  # Base
-            if _is_success:
-                _salience = 0.5
-                # Higher salience for larger outputs (more information)
-                _result_size = len(str(result))
-                if _result_size > 2000:
-                    _salience = 0.7
-                # Higher salience for WRITE operations (state changes)
-                _safety = ctx.kwargs.get("safety", "READ")
-                if isinstance(_safety, str) and _safety == "WRITE":
-                    _salience = max(_salience, 0.65)
-                # Higher salience for errors (anomalies deserve attention)
-            else:
-                _salience = 0.6  # Errors are salient — something went wrong
-
-            gw.propose(
-                source=f"dispatch:{ctx.tool_name}",
-                content={
-                    "tool": ctx.tool_name,
-                    "status": result.get("status", "unknown"),
-                    "elapsed_ms": round(_elapsed_ms, 2),
-                    "coherence": round(_coherence, 4) if isinstance(_coherence, (int, float)) else _coherence,
-                },
-                salience=_salience,
-            )
-        except Exception:
-            logger.debug("Ignored error in middleware.py:2087")
+                gw.propose(
+                    source=f"dispatch:{ctx.tool_name}",
+                    content={
+                        "tool": ctx.tool_name,
+                        "status": result.get("status", "unknown"),
+                        "elapsed_ms": round(_elapsed_ms, 2),
+                        "coherence": round(_coherence, 4) if isinstance(_coherence, (int, float)) else _coherence,
+                    },
+                    salience=_salience,
+                )
+            except Exception:
+                logger.debug("Ignored error in citta workspace propose")
 
     return result
 

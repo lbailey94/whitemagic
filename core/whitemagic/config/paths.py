@@ -134,6 +134,14 @@ GRATITUDE_DIR: Path = WM_ROOT / "gratitude"
 WISDOM_DIR: Path = WM_ROOT / "wisdom"
 ECONOMY_DIR: Path = WM_ROOT / "economy"
 
+
+def galaxy_db_path(galaxy: str, user: str = "local") -> Path:
+    """Return the path to a galaxy's SQLite database file.
+
+    All modules should use this instead of constructing Path.home() / ".whitemagic/..." directly.
+    """
+    return WM_ROOT / "users" / user / "galaxies" / galaxy / "whitemagic.db"
+
 # Files
 USER_PROFILE_PATH: Path = WM_ROOT / "user_profile.json"
 CONFIG_PATH: Path = WM_ROOT / "config.json"

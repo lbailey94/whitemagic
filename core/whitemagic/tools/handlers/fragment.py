@@ -33,9 +33,7 @@ _FRAGMENT_BIN = Path(
         "FRAGMENT_BIN",
         str(
             Path(__file__).resolve().parent.parent.parent.parent.parent
-            / "WHITEMAGIC-aux"
-            / "experiments"
-            / "whitemagic-labs-aux"
+            / "aux"
             / "fragment"
             / "target"
             / "release"
@@ -227,6 +225,8 @@ def _subprocess_query(
     )
     if result.returncode != 0:
         raise RuntimeError(f"Fragment query failed: {result.stderr}")
+    if "No index found" in result.stdout:
+        raise RuntimeError(f"No Fragment index found at {path}")
     try:
         data = json.loads(result.stdout)
     except json.JSONDecodeError:
@@ -241,6 +241,8 @@ def _subprocess_query(
 
 
 def _subprocess_status(path: str, index_dir: str | None) -> dict[str, Any]:
+    if not _binary_available():
+        return {"exists": False, "path": path}
     cmd = [str(_FRAGMENT_BIN), "status", path]
     if index_dir:
         cmd.extend(["--index", index_dir])

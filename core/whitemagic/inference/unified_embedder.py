@@ -208,12 +208,11 @@ def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) 
         if len(batch_texts) >= batch_size:
             try:
                 embeddings = embedder.encode_batch(batch_texts, batch_size)
-                for mid, emb in zip(batch_ids, embeddings):
-                    conn.execute(
-                        """INSERT OR REPLACE INTO memory_embeddings
-                           (memory_id, embedding) VALUES (?, ?)""",
-                        (mid, emb.tobytes()),
-                    )
+                conn.executemany(
+                    """INSERT OR REPLACE INTO memory_embeddings
+                       (memory_id, embedding) VALUES (?, ?)""",
+                    [(mid, emb.tobytes()) for mid, emb in zip(batch_ids, embeddings)],
+                )
                 total_embedded += len(batch_texts)
                 result.completed += len(batch_texts)
                 logger.info("Embedded %s memories...", total_embedded)
@@ -226,12 +225,11 @@ def batch_embed_memories(db_path: str, embedder: UnifiedEmbedder | None = None) 
     if batch_texts:
         try:
             embeddings = embedder.encode_batch(batch_texts, batch_size)
-            for mid, emb in zip(batch_ids, embeddings):
-                conn.execute(
-                    """INSERT OR REPLACE INTO memory_embeddings
-                       (memory_id, embedding) VALUES (?, ?)""",
-                    (mid, emb.tobytes()),
-                )
+            conn.executemany(
+                """INSERT OR REPLACE INTO memory_embeddings
+                   (memory_id, embedding) VALUES (?, ?)""",
+                [(mid, emb.tobytes()) for mid, emb in zip(batch_ids, embeddings)],
+            )
             total_embedded += len(batch_texts)
             result.completed += len(batch_texts)
         except Exception as exc:

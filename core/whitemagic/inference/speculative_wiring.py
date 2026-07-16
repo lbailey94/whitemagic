@@ -192,6 +192,116 @@ def wire_speculative_decoder(
     return decoder
 
 
+def wire_pipelined_speculative(
+    draft_model: str = "bitmamba",
+    verify_model: str = "llamacpp",
+    trigram_pool: Any | None = None,
+) -> SpeculativeDecoder:
+    """Wire speculative decoding with pipelined draft/verify on separate cores.
+
+    When trigram_pool is available:
+    - Draft generation runs on core 0 (☰ Qián)
+    - Verify generation runs on core 1 (☲ Lí)
+    - Draft tokens flow via ring buffer (Qian→Li channel)
+    - Verify runs in parallel with next draft batch
+
+    Without trigram_pool, falls back to sequential mode (standard wire_speculative_decoder).
+
+    Args:
+        draft_model: "bitmamba" (default) or "smollm2" for draft.
+        verify_model: "llamacpp" (default), "bitnet", or "falcon3" for verify.
+        trigram_pool: Optional TrigramPool instance for core-pinned execution.
+
+    Returns the configured decoder.
+    """
+    if trigram_pool is None:
+        return wire_speculative_decoder(draft_model, verify_model)
+
+    from whitemagic.core.consciousness.hexagram_state import get_hexagram_state
+
+    state = get_hexagram_state()
+    state.transition(
+        new_lower="Qian",
+        new_upper="Li",
+        reason="pipelined speculative decoding start",
+    )
+
+    decoder = get_speculative_decoder()
+
+    # Register pipelined draft handler that sends tokens via ring buffer
+    def _pipelined_draft_handler(
+        prompt: str, max_tokens: int, temperature: float = 0.7
+    ) -> dict[str, Any]:
+        result = _bitmamba_draft_handler(prompt, max_tokens, temperature)
+        # Send draft tokens to verify thread via ring buffer
+        try:
+            from whitemagic.inference.ring_buffer_bridge import RingBufferBridge
+
+            with RingBufferBridge("Qian_to_Li") as rb:
+                rb.send_json({
+                    "prompt": prompt,
+                    "tokens": result.get("tokens", []),
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                })
+        except Exception as e:
+            logger.debug("Ring buffer send failed (pipelined draft): %s", e)
+        return result
+
+    # Register pipelined verify handler that reads from ring buffer
+    def _pipelined_verify_handler(
+        prompt: str, max_tokens: int, temperature: float = 0.7,
+        draft_tokens: list[int] | None = None,
+    ) -> dict[str, Any]:
+        # Try to read draft tokens from ring buffer
+        try:
+            from whitemagic.inference.ring_buffer_bridge import RingBufferBridge
+
+            with RingBufferBridge("Qian_to_Li") as rb:
+                msg = rb.recv_json()
+                if msg and "tokens" in msg:
+                    draft_tokens = msg["tokens"]
+        except Exception as e:
+            logger.debug("Ring buffer recv failed (pipelined verify): %s", e)
+
+        # Use standard verify handler
+        if verify_model == "llamacpp":
+            return _llamacpp_verify_handler(prompt, max_tokens, temperature, draft_tokens)
+        return _bitnetcpp_verify_handler(prompt, max_tokens, temperature, draft_tokens)
+
+    # Register handlers
+    if draft_model == "bitmamba":
+        try:
+            from .bitmamba_autonomic import get_autonomic
+
+            autonomic = get_autonomic()
+            if autonomic.is_available:
+                decoder.register_draft(_pipelined_draft_handler)
+                logger.info("Pipelined speculative: draft=BitMamba-2 (core 0, ☰ Qián)")
+        except Exception as e:
+            logger.debug("Pipelined draft registration failed: %s", e)
+
+    if verify_model == "llamacpp":
+        try:
+            from .llama_cpp import get_llama_cpp_backend
+
+            backend = get_llama_cpp_backend()
+            if backend.is_available:
+                decoder.register_verify(_pipelined_verify_handler)
+                logger.info("Pipelined speculative: verify=llama.cpp (core 1, ☲ Lí)")
+        except Exception as e:
+            logger.debug("Pipelined verify registration failed: %s", e)
+    elif verify_model in ("bitnet", "falcon3"):
+        env_key = "bitnet-2b4t" if verify_model == "bitnet" else "falcon3-1b"
+        os.environ["WM_SPEC_VERIFY_MODEL"] = env_key
+        model_path = _MODEL_PATHS.get(env_key, "")
+        if model_path and os.path.isfile(model_path) and os.path.isfile(_BITNET_CPP_CLI):
+            decoder.register_verify(_pipelined_verify_handler)
+            logger.info("Pipelined speculative: verify=%s (core 1, ☲ Lí)", verify_model)
+
+    return decoder
+
+
 def is_speculative_ready() -> bool:
     """Check if both draft and verify models are available for speculative decoding."""
     decoder = get_speculative_decoder()

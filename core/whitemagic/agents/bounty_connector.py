@@ -314,9 +314,21 @@ class BountyAutoConnector:
 _connector: BountyAutoConnector | None = None
 
 
+def _auto_register_platforms(connector: BountyAutoConnector) -> None:
+    """Register all real platform adapters on first connector creation."""
+    try:
+        from whitemagic.agents.bounty_platforms import get_all_platforms
+
+        for platform in get_all_platforms():
+            connector.register_platform(platform)
+    except ImportError:
+        logger.debug("bounty_platforms module not available — skipping auto-registration")
+
+
 def get_bounty_connector() -> BountyAutoConnector:
     """Get the global BountyAutoConnector singleton."""
     global _connector
     if _connector is None:
         _connector = BountyAutoConnector()
+        _auto_register_platforms(_connector)
     return _connector

@@ -1955,6 +1955,9 @@ _ROUTING_PATTERNS: list[tuple[re.Pattern[str], str, str | None]] = [
     (re.compile(r"\b(bounty.*scan|scan.*bounty)\b", re.I), "gana_abundance", "bounty.scan"),
     (re.compile(r"\b(bounty.*auto.*claim|auto.*claim.*bounty)\b", re.I), "gana_abundance", "bounty.auto_claim"),
     (re.compile(r"\b(bounty.*connector|connector.*status)\b", re.I), "gana_abundance", "bounty.connector_status"),
+    (re.compile(r"\b(bounty.*scan.*all|scan.*all.*platform|all.*bounty.*platform)\b", re.I), "gana_abundance", "bounty.scan_all"),
+    (re.compile(r"\b(poc.*generat|generat.*poc|exploit.*generat|generat.*exploit)\b", re.I), "gana_chariot", "bounty.poc_generate"),
+    (re.compile(r"\b(bounty.*report|report.*generat|submission.*report|finding.*report)\b", re.I), "gana_wall", "bounty.report_generate"),
     # ── Error Pattern Library ──
     (re.compile(r"\b(pattern.*lookup|lookup.*error.*pattern|check.*known.*error)\b", re.I), "gana_hairy_head", "pattern.lookup"),
     (re.compile(r"\b(pattern.*avoid|avoid.*pattern|what.*pitfalls|what.*errors.*expect)\b", re.I), "gana_hairy_head", "pattern.avoid"),

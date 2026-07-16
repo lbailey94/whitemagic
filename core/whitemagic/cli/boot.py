@@ -339,8 +339,11 @@ def register_all_commands(
         main_group, "holo", "whitemagic.cli.holo_commands", "holo_cli", cli_name="holo"
     )
 
-    # 16. Init
+    # 16. Init + Onboard
     register_optional(main_group, "init", "whitemagic.cli.init_command", "init_command")
+    register_optional(
+        main_group, "onboard", "whitemagic.cli.init_command", "onboard_command"
+    )
 
     # 16b. Dream Cycle
     register_optional(

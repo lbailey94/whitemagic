@@ -140,6 +140,10 @@ class RateLimiter:
 
         Returns None if allowed, or a dict with error info if blocked.
         """
+        import os as _os
+        if _os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+            return None  # Bypass rate limiting in benchmark mode
+
         self._total_checked += 1
 
         # Fast pre-check: Rust atomic rate limiter (lock-free, sub-μs)
