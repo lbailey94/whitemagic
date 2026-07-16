@@ -114,6 +114,52 @@ class RetrievalIndexCache:
                 del self._cache[k]
             return len(expired)
 
+    def warm_galaxy(self, user_id: str, galaxy: str) -> bool:
+        """Pre-warm a galaxy's retrieval index cache.
+
+        Called by the consciousness loop to proactively load indexes
+        for galaxies likely to be queried, reducing cold-start latency.
+
+        Returns True if a new entry was created, False if already cached.
+        """
+        existing = self.get(user_id, galaxy)
+        if existing is not None:
+            return False
+
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            backend = um._get_galaxy_backend(galaxy)
+            if backend is None:
+                return False
+
+            entry: dict[str, Any] = {
+                "hnsw_index": None,
+                "hnsw_ids": None,
+                "holographic_index": None,
+            }
+
+            # Try to build HNSW index for this galaxy
+            try:
+                from whitemagic.core.memory.galaxy_hnsw import get_galaxy_hnsw_manager
+                manager = get_galaxy_hnsw_manager()
+                # Just ensure the index is loaded
+                manager._get_or_create_index(galaxy)
+                entry["hnsw_index"] = "loaded"
+            except Exception:
+                pass
+
+            self.put(user_id, galaxy, entry)
+            logger.debug("Cache warmed for %s/%s", user_id, galaxy)
+            return True
+        except Exception as e:
+            logger.debug("Cache warm failed for %s/%s: %s", user_id, galaxy, e)
+            return False
+
+    def warm_galaxies(self, user_id: str, galaxies: list[str]) -> dict[str, bool]:
+        """Warm multiple galaxies in batch. Returns per-galaxy success map."""
+        return {g: self.warm_galaxy(user_id, g) for g in galaxies}
+
 
 # Singleton
 _instance: RetrievalIndexCache | None = None

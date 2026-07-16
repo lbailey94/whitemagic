@@ -221,6 +221,36 @@ class SQLiteBackend:
                 """)
                 logger.info("FTS5 vtable rebuilt successfully")
 
+            # 4b. Migrate old external-content FTS schema to standalone schema
+            fts_schema_row = conn.execute(
+                "SELECT sql FROM sqlite_master WHERE name='memories_fts' AND type='table'"
+            ).fetchone()
+            if fts_schema_row and "content='memories'" in fts_schema_row[0]:
+                logger.info("Migrating old external-content FTS to standalone schema")
+                conn.execute("PRAGMA writable_schema=ON")
+                conn.execute("DELETE FROM sqlite_master WHERE name LIKE 'memories_fts%'")
+                conn.execute("PRAGMA writable_schema=OFF")
+                conn.execute("""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+                        id UNINDEXED,
+                        title,
+                        content,
+                        tags_text
+                    )
+                """)
+                # Reindex all existing memories
+                rows = conn.execute("SELECT id, title, content FROM memories").fetchall()
+                for row in rows:
+                    tags_row = conn.execute(
+                        "SELECT group_concat(tag, ' ') FROM tags WHERE memory_id = ?", (row[0],)
+                    ).fetchone()
+                    tags_text = tags_row[0] if tags_row and tags_row[0] else ""
+                    conn.execute(
+                        "INSERT INTO memories_fts (id, title, content, tags_text) VALUES (?, ?, ?, ?)",
+                        (row[0], row[1] or "", row[2] or "", tags_text),
+                    )
+                logger.info("FTS migrated and reindexed %d memories", len(rows))
+
             # 5. Holographic Coordinates table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS holographic_coords (
@@ -520,15 +550,25 @@ class SQLiteBackend:
             rebuilt = 0
             for i in range(0, len(missing), batch_size):
                 batch = missing[i:i + batch_size]
-                for row in batch:
-                    tag_rows = conn.execute(
-                        "SELECT tag FROM tags WHERE memory_id = ?", (row["id"],)
-                    ).fetchall()
-                    tags_text = " ".join(r["tag"] for r in tag_rows)
-                    conn.execute(
-                        "INSERT OR REPLACE INTO memories_fts (id, title, content, tags_text) VALUES (?, ?, ?, ?)",
-                        (row["id"], row["title"] or "", str(row["content"] or ""), tags_text),
-                    )
+                batch_ids = [row["id"] for row in batch]
+                placeholders = ",".join(["?"] * len(batch_ids))
+
+                # Batch-fetch all tags for this batch in one query
+                tag_map: dict[str, str] = {}
+                tag_rows = conn.execute(
+                    f"""SELECT memory_id, GROUP_CONCAT(tag, ' ') AS tags_text
+                        FROM tags WHERE memory_id IN ({placeholders})
+                        GROUP BY memory_id""",
+                    batch_ids,
+                ).fetchall()
+                for tr in tag_rows:
+                    tag_map[tr["memory_id"]] = tr["tags_text"] or ""
+
+                conn.executemany(
+                    "INSERT OR REPLACE INTO memories_fts (id, title, content, tags_text) VALUES (?, ?, ?, ?)",
+                    [(row["id"], row["title"] or "", str(row["content"] or ""), tag_map.get(row["id"], ""))
+                     for row in batch],
+                )
                 conn.commit()
                 rebuilt += len(batch)
                 logger.info("FTS rebuild: %d/%d", rebuilt, len(missing))
@@ -547,7 +587,7 @@ class SQLiteBackend:
                 fts_query = query.strip()
                 # Sanitize FTS5-unsafe characters (brackets, quotes, colons, etc.)
                 # FTS5 treats : as column filter, , as syntax, etc.
-                for ch in r'[]{}()^~*:,;\/?!.\'\"':
+                for ch in r'[]{}()^~*:,;\/?!.\'\"-':
                     fts_query = fts_query.replace(ch, ' ')
                 # Remove FTS5 column names that could be interpreted as column filters
                 fts5_columns = {"content", "title", "tags", "metadata", "galaxy", "id", "existing", "directed", "memory_type", "importance"}
@@ -563,9 +603,34 @@ class SQLiteBackend:
                 keyword_query = None
                 if " " in fts_query and not (fts_query.startswith('"') and fts_query.endswith('"')):
                     fts5_reserved = {"OR", "AND", "NOT", "NEAR"}
-                    keywords = [k for k in fts_query.split() if k and k.upper() not in fts5_reserved and k.lower() not in fts5_columns]
+                    # Remove common English stopwords to prevent OR query flooding
+                    # with irrelevant matches (e.g. "is" matching 90% of memories)
+                    _stopwords = {
+                        "a", "an", "the", "is", "are", "was", "were", "be", "been",
+                        "being", "have", "has", "had", "do", "does", "did", "will",
+                        "would", "could", "should", "may", "might", "must", "shall",
+                        "can", "need", "dare", "ought", "used", "to", "of", "in",
+                        "for", "on", "with", "at", "by", "from", "as", "into",
+                        "through", "during", "before", "after", "above", "below",
+                        "up", "down", "out", "off", "over", "under", "again",
+                        "further", "then", "once", "here", "there", "when", "where",
+                        "why", "how", "all", "each", "few", "more", "most", "other",
+                        "some", "such", "no", "nor", "not", "only", "own", "same",
+                        "so", "than", "too", "very", "just", "also", "about", "tell",
+                        "me", "what", "which", "who", "whom", "this", "that", "these",
+                        "those", "i", "you", "he", "she", "it", "we", "they", "and",
+                        "or", "but", "if", "because", "while", "whereas", "explain",
+                        "describe", "define", "give", "show", "list",
+                    }
+                    keywords = [
+                        k for k in fts_query.split()
+                        if k and k.upper() not in fts5_reserved
+                        and k.lower() not in fts5_columns
+                        and k.lower() not in _stopwords
+                    ]
                     if keywords:
                         phrase_query = f'"{fts_query}"'
+                        and_query = " AND ".join(keywords)
                         keyword_query = " OR ".join(keywords)
 
                 if phrase_query:
@@ -574,11 +639,33 @@ class SQLiteBackend:
                     if phrase_count > 0:
                         fts_query = phrase_query
                     else:
-                        fts_query = keyword_query or phrase_query
+                        # AND-first strategy: require all keywords to match.
+                        # This prevents single-keyword matches (e.g. only the
+                        # category word) from outranking multi-keyword matches.
+                        # Falls back to OR if AND yields too few results.
+                        and_count = conn.execute(test_sql, [and_query]).fetchone()[0] if and_query else 0
+                        if and_count >= limit:
+                            fts_query = and_query
+                        else:
+                            fts_query = keyword_query or and_query or phrase_query
                 # Single word or already quoted — use as-is
 
-                sql = """
-                    SELECT m.*, fts.rank
+                # Build match-count expression for OR queries to prioritize
+                # memories matching more keywords (multi-keyword matches > single)
+                match_count_expr = "0"
+                if " OR " in fts_query and " AND " not in fts_query:
+                    individual_keywords = [k.strip().strip('"') for k in fts_query.split(" OR ")]
+                    count_terms = []
+                    for kw in individual_keywords:
+                        if kw:
+                            count_terms.append(
+                                f"CASE WHEN m.content LIKE '%{kw}%' OR m.title LIKE '%{kw}%' THEN 1 ELSE 0 END"
+                            )
+                    if count_terms:
+                        match_count_expr = " + ".join(count_terms)
+
+                sql = f"""
+                    SELECT m.*, fts.rank, ({match_count_expr}) as match_count
                     FROM memories m
                     JOIN (
                         SELECT id, rank
@@ -605,11 +692,12 @@ class SQLiteBackend:
                     params.extend(tags)
                     params.append(len(tags))
 
-                # Order by FTS rank (relevance) weighted by galactic proximity
-                # FTS5 ranks are negative (more negative = better match), so use ABS
-                # ABS(rank) * (0.5 + galactic_distance): lower = better
-                # Core memories (distance≈0) get multiplier 0.5, edge (distance≈1) gets 1.5
-                sql += " ORDER BY (ABS(fts.rank) * (0.5 + COALESCE(m.galactic_distance, 0.5))) ASC, m.importance DESC LIMIT ?"
+                # Order by keyword match count (more matches = better) then FTS rank
+                # with additive galactic proximity penalty.
+                # FTS5 ranks are negative (more negative = better match).
+                # Adding galactic_distance as a penalty: core (gd≈0) gets no penalty,
+                # edge (gd≈1) gets +1.0 — a strong edge match still beats a weak core match.
+                sql += " ORDER BY match_count DESC, (fts.rank + COALESCE(m.galactic_distance, 0.0)) ASC, m.importance DESC LIMIT ?"
                 params.append(limit)
 
             else:
@@ -635,7 +723,114 @@ class SQLiteBackend:
                 params.append(limit)
 
             rows = conn.execute(sql, params).fetchall()
-            return self._batch_hydrate(rows, conn)
+            memories = self._batch_hydrate(rows, conn)
+
+            # Semantic re-ranking: when a text query was used and embeddings
+            # are available, re-rank FTS5 candidates by blending lexical rank
+            # with embedding cosine similarity. This fixes cases where FTS5
+            # ranks a rare-but-irrelevant keyword match above a relevant
+            # subject match (e.g. "Explain epigenetics in mathematics" where
+            # "mathematics" has higher IDF than "epigenetics").
+            if query and len(memories) > 1:
+                memories = self._semantic_rerank(query, memories)
+
+            return memories
+
+    def _semantic_rerank(self, query: str, memories: list[Memory]) -> list[Memory]:
+        """Re-rank FTS5 candidates by semantic similarity + entity boost.
+
+        FTS5 pre-filters candidates by keyword match; within that set,
+        embedding cosine similarity is the dominant signal. This fixes
+        cases where FTS5 ranks a rare-but-irrelevant keyword match above
+        a relevant subject match (e.g. "Explain epigenetics in mathematics"
+        where "mathematics" has higher IDF than "epigenetics").
+
+        Entity boost: proper nouns / capitalized words shared between query
+        and memory content get a score bump, mimicking Mem0's entity-linking
+        improvement (71.4 → 92.5 on LoCoMo).
+
+        Falls back to original order if embeddings unavailable.
+        """
+        try:
+            from whitemagic.core.memory.embeddings import get_embedding_engine
+            engine = get_embedding_engine()
+            query_vec = engine.encode(query)
+            if query_vec is None:
+                return memories
+        except Exception:
+            return memories
+
+        # Extract entities from query (capitalized words, multi-word proper nouns)
+        query_entities = self._extract_entities(query)
+
+        scored: list[tuple[float, int, Memory]] = []
+        for i, mem in enumerate(memories):
+            sem_score = 0.0
+            try:
+                cached = engine.get_cached_embedding(mem.id)
+                if cached is not None:
+                    from whitemagic.core.memory.embeddings import cosine_similarity
+                    sem_score = cosine_similarity(query_vec, cached)
+            except Exception:
+                pass
+
+            # Entity boost: +0.15 per shared entity, capped at +0.3
+            if query_entities:
+                content_lower = str(mem.content).lower()
+                entity_matches = sum(
+                    1 for e in query_entities if e.lower() in content_lower
+                )
+                entity_boost = min(0.3, entity_matches * 0.15)
+                sem_score += entity_boost
+                if hasattr(mem, "metadata"):
+                    mem.metadata["entity_matches"] = entity_matches
+                    mem.metadata["entity_boost"] = round(entity_boost, 4)
+
+            # Store semantic score for cross-encoder blending
+            if hasattr(mem, "metadata"):
+                mem.metadata["similarity_score"] = round(sem_score, 6)
+
+            scored.append((sem_score, -i, mem))
+
+        scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
+        return [m for _, _, m in scored]
+
+    @staticmethod
+    def _extract_entities(text: str) -> list[str]:
+        """Extract entity-like tokens from text.
+
+        Identifies capitalized words and multi-word proper nouns.
+        Filters common sentence-start words to reduce false positives.
+        """
+        import re
+
+        # Common false positives at sentence starts
+        _stop = {
+            "The", "A", "An", "This", "That", "These", "Those", "It", "Is",
+            "Are", "Was", "Were", "Do", "Does", "Did", "Will", "Would", "Can",
+            "Could", "Should", "May", "Might", "How", "What", "Why", "When",
+            "Where", "Who", "Which", "In", "On", "At", "To", "For", "Of",
+            "With", "And", "Or", "But", "Not", "From", "By", "As", "So",
+            "If", "Then", "Else", "When", "While", "About", "Into", "Over",
+        }
+
+        # Match capitalized words (2+ chars) and multi-word capitalized sequences
+        # e.g., "New York", "John Smith", "Apple Inc"
+        patterns = [
+            r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b',  # Multi-word: "New York"
+            r'\b[A-Z][a-z]{2,}\b',                   # Single: "Python", "Alice"
+        ]
+
+        entities: list[str] = []
+        seen: set[str] = set()
+        for pattern in patterns:
+            for match in re.finditer(pattern, text):
+                entity = match.group()
+                if entity not in seen and entity not in _stop:
+                    seen.add(entity)
+                    entities.append(entity)
+
+        return entities
 
     def get_weakest_memories(self, limit: int = 100) -> list[Memory]:
         """Retrieve memories with the lowest neuro_score first."""
@@ -850,6 +1045,45 @@ class SQLiteBackend:
                     (score, datetime.now().isoformat(), memory_id),
                 )
             return True
+
+    def batch_update_retention_scores(self, updates: list[tuple[str, float]]) -> int:
+        """Batch update retention scores for many memories.
+
+        Args:
+            updates: list of (memory_id, score) tuples
+        Returns:
+            Number of rows updated
+        """
+        if not updates:
+            return 0
+        now = datetime.now().isoformat()
+        with self.pool.connection() as conn:
+            with conn:
+                conn.executemany(
+                    "UPDATE memories SET retention_score = ?, last_retention_sweep = ? WHERE id = ?",
+                    [(score, now, mid) for mid, score in updates],
+                )
+            return len(updates)
+
+    def batch_archive_to_edge(self, memory_ids: list[str], galactic_distance: float = 0.90) -> int:
+        """Batch archive multiple memories to the galactic edge.
+
+        Args:
+            memory_ids: list of memory IDs to archive
+            galactic_distance: distance to set (0.0=core, 1.0=edge)
+        Returns:
+            Number of rows updated
+        """
+        if not memory_ids:
+            return 0
+        distance = max(0.0, min(1.0, galactic_distance))
+        with self.pool.connection() as conn:
+            with conn:
+                conn.executemany(
+                    "UPDATE memories SET galactic_distance = ? WHERE id = ?",
+                    [(distance, mid) for mid in memory_ids],
+                )
+            return len(memory_ids)
 
     def batch_update_galactic(self, updates: list) -> int:
         """Batch update galactic_distance and retention_score for many memories.

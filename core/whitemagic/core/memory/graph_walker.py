@@ -83,6 +83,27 @@ class WalkResult:
             all_nodes.update(path.nodes)
         return all_nodes - seeds
 
+    def evidence_chains(self) -> dict[str, list[str]]:
+        """Recover evidence chains for each discovered memory.
+
+        For each discovered memory ID, returns the chain of memory IDs
+        from a seed to that memory, representing the reasoning path.
+
+        Returns:
+            Dict mapping discovered_id → list of memory IDs forming the evidence chain.
+        """
+        chains: dict[str, list[str]] = {}
+        seeds = set(self.seed_ids)
+        # Sort paths by score (best first) so we keep the strongest evidence chain
+        sorted_paths = sorted(self.paths, key=lambda p: p.total_score, reverse=True)
+        for path in sorted_paths:
+            for node_id in path.nodes:
+                if node_id in seeds:
+                    continue
+                if node_id not in chains:
+                    chains[node_id] = list(path.nodes)
+        return chains
+
 
 @dataclass
 class Neighbor:
@@ -249,6 +270,39 @@ class GraphWalker:
         pr_normalized = min(1.0, pagerank * 100)
         return w_g * galactic_proximity + w_n * neuro_score + w_p * pr_normalized
 
+    def _get_neighbor_count(self, memory_id: str, pool: Any) -> int:
+        """Get the number of outgoing edges for a memory (degree)."""
+        try:
+            with pool.connection() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM associations WHERE source_id = ? AND strength >= ?",
+                    (memory_id, self._min_strength),
+                ).fetchone()
+                return row[0] if row else 0
+        except Exception:
+            return 0
+
+    def _hub_penalty(self, neighbor: Neighbor, pool: Any) -> float:
+        """Query-aware hub node downweighting.
+
+        Nodes with many connections (hubs) are generic and less informative
+        for specific queries. Penalize them proportionally to their degree.
+
+        Returns a multiplier in [0.5, 1.0]:
+          - degree 0-5: 1.0 (no penalty)
+          - degree 5-20: linear decay from 1.0 to 0.8
+          - degree 20+: linear decay from 0.8 to 0.5 (floor)
+        """
+        try:
+            degree = self._get_neighbor_count(neighbor.memory_id, pool)
+        except Exception:
+            return 1.0
+        if degree <= 5:
+            return 1.0
+        if degree <= 20:
+            return 1.0 - 0.2 * (degree - 5) / 15.0
+        return max(0.5, 0.8 - 0.3 * min(1.0, (degree - 20) / 50.0))
+
     def _transition_score(
         self,
         neighbor: Neighbor,
@@ -258,6 +312,7 @@ class GraphWalker:
         neighbor_embedding: list[float] | None = None,
         prev_created_at: str | None = None,
         enforce_causality: bool = False,
+        pool: Any = None,
     ) -> float:
         """Compute transition probability for an edge.
 
@@ -316,12 +371,18 @@ class GraphWalker:
         if max_traversals > 0 and neighbor.traversal_count > 0:
             staleness = min(1.0, neighbor.traversal_count / max(1, max_traversals))
 
+        # Hub penalty: downweight generic hub nodes (query-aware)
+        hub_mult = 1.0
+        if pool is not None:
+            hub_mult = self._hub_penalty(neighbor, pool)
+
         score = (
             (semantic_sim ** self._semantic_sigma)
             * strength
             * (gravity ** self._gravity_alpha)
             * recency
             * ((1.0 - staleness) ** self._staleness_beta)
+            * hub_mult
         )
         return float(max(0.0001, score))
 
@@ -418,6 +479,7 @@ class GraphWalker:
                         neighbor_embedding=n_embed,
                         prev_created_at=prev_created,
                         enforce_causality=enforce_causality,
+                        pool=pool,
                     )
                     if score > 0:
                         scored.append((n, score))

@@ -33,6 +33,7 @@ class RetrievalStage(StrEnum):
     SPATIAL_RANKING = "spatial_ranking"
     ENTITY_BOOST = "entity_boost"
     CONSTELLATION_BOOST = "constellation_boost"
+    GRAPH_WALK = "graph_walk"
     RERANKING = "reranking"
 
 
@@ -65,6 +66,7 @@ class CandidateScore:
     spatial_score: float = 0.0
     entity_score: float = 0.0
     constellation_score: float = 0.0
+    graph_score: float = 0.0
     rerank_adjustment: float = 0.0
     final_score: float = 0.0
     galaxy: str = ""
@@ -89,8 +91,13 @@ class QueryProfile:
     spatial_weight: float = 0.5
     entity_boost_weight: float = 0.3
     constellation_boost: float = 0.3
+    graph_walk_weight: float = 0.4
+    graph_walk_hops: int = 2
+    graph_walk_top_k: int = 10
     diversity_bonus: float = 0.05
     rerank: bool = True
+    cross_encoder: bool = True
+    spreading_activation: bool = False
     include_skills: bool = True
     include_cold: bool = False
     rrf_k: int = 60
@@ -100,6 +107,7 @@ class QueryProfile:
     axis_weights: dict[str, float] | None = None
     min_similarity: float = 0.25
     constellation_threshold: float = 0.25
+    temporal_filter: bool = False
 
 
 @dataclass

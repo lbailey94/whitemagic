@@ -241,6 +241,39 @@ class PatternEngine:
             f.write("\n")
 
 
+    def persist_to_galaxy(self, report: PatternReport) -> dict[str, int]:
+        """Store extracted patterns to the knowledge galaxy.
+        
+        Returns counts of stored patterns by type.
+        """
+        try:
+            from whitemagic.core.memory.unified import get_unified_memory
+            um = get_unified_memory()
+            counts = {"solution": 0, "anti_pattern": 0, "heuristic": 0, "optimization": 0}
+            
+            for pattern_list, ptype in [
+                (report.solutions, "solution"),
+                (report.anti_patterns, "anti_pattern"),
+                (report.heuristics, "heuristic"),
+                (report.optimizations, "optimization"),
+            ]:
+                for p in pattern_list:
+                    um.store(
+                        title=f"PATTERN [{ptype}]: {p.title}",
+                        content=p.description,
+                        tags={"pattern", ptype, "auto_generated"},
+                        importance=p.confidence,
+                        galaxy="knowledge",
+                        memory_type="LONG_TERM",
+                    )
+                    counts[ptype] += 1
+            
+            return counts
+        except Exception as e:
+            logger.error("Pattern persist failed: %s", e, exc_info=True)
+            return {"error": 1}
+
+
 # Global instance
 _engine = None
 

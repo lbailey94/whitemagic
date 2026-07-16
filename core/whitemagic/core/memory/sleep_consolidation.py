@@ -244,33 +244,45 @@ class SleepConsolidation:
                 dst_conn = safe_connect(target_db, timeout=10)
                 dst_cols = [c[1] for c in dst_conn.execute("PRAGMA table_info(memories)").fetchall()]
 
-                filtered_rows = []
-                for row in rows:
-                    existing = dst_conn.execute(
-                        "SELECT 1 FROM memories WHERE id = ? OR (content_hash = ? AND content_hash IS NOT NULL)",
-                        (row["id"], row["content_hash"]),
-                    ).fetchone()
-                    if not existing:
-                        filtered_rows.append(row)
+                # Load existing IDs and content_hashes into sets for O(1) dedup
+                existing_ids: set[str] = set()
+                existing_hashes: set[str] = set()
+                for er in dst_conn.execute("SELECT id, content_hash FROM memories").fetchall():
+                    existing_ids.add(str(er["id"]))
+                    ch = er["content_hash"]
+                    if ch:
+                        existing_hashes.add(str(ch))
+
+                filtered_rows = [
+                    row for row in rows
+                    if str(row["id"]) not in existing_ids
+                    and (not row["content_hash"] or str(row["content_hash"]) not in existing_hashes)
+                ]
                 rows = filtered_rows
 
-                # Copy memories to target
-                for row in rows:
-                    full_row = src_conn.execute(
-                        "SELECT * FROM memories WHERE id = ?", (row["id"],)
-                    ).fetchone()
-                    if full_row:
+                # Batch-fetch full rows from source and batch-insert into target
+                if rows:
+                    src_ids = [row["id"] for row in rows]
+                    placeholders = ",".join(["?"] * len(src_ids))
+                    full_rows = src_conn.execute(
+                        f"SELECT * FROM memories WHERE id IN ({placeholders})",
+                        src_ids,
+                    ).fetchall()
+
+                    insert_cols = [c for c in dst_cols if c in dict(full_rows[0])]
+                    col_list = ",".join(insert_cols)
+                    col_placeholders = ",".join(["?"] * len(insert_cols))
+                    insert_sql = f"INSERT OR IGNORE INTO memories ({col_list}) VALUES ({col_placeholders})"
+
+                    batch_data = []
+                    for full_row in full_rows:
                         row_dict = dict(full_row)
-                        filtered = {k: v for k, v in row_dict.items() if k in dst_cols}
-                        col_names = list(filtered.keys())
-                        placeholders = ",".join(["?"] * len(col_names))
-                        try:
-                            dst_conn.execute(
-                                f"INSERT OR IGNORE INTO memories ({','.join(col_names)}) VALUES ({placeholders})",
-                                [filtered[c] for c in col_names],
-                            )
-                        except Exception as e:
-                            logger.debug("Consolidation insert failed: %s", e)
+                        batch_data.append([row_dict[c] for c in insert_cols])
+
+                    try:
+                        dst_conn.executemany(insert_sql, batch_data)
+                    except Exception as e:
+                        logger.debug("Consolidation batch insert failed: %s", e)
 
                 dst_conn.commit()
                 dst_conn.close()
@@ -278,15 +290,18 @@ class SleepConsolidation:
                 # In dry run, still filter against target for accurate reporting
                 try:
                     dst_conn = safe_connect(target_db, timeout=10)
-                    filtered_rows = []
-                    for row in rows:
-                        existing = dst_conn.execute(
-                            "SELECT 1 FROM memories WHERE id = ? OR (content_hash = ? AND content_hash IS NOT NULL)",
-                            (row["id"], row["content_hash"]),
-                        ).fetchone()
-                        if not existing:
-                            filtered_rows.append(row)
-                    rows = filtered_rows
+                    existing_ids = set()
+                    existing_hashes = set()
+                    for er in dst_conn.execute("SELECT id, content_hash FROM memories").fetchall():
+                        existing_ids.add(str(er["id"]))
+                        ch = er["content_hash"]
+                        if ch:
+                            existing_hashes.add(str(ch))
+                    rows = [
+                        row for row in rows
+                        if str(row["id"]) not in existing_ids
+                        and (not row["content_hash"] or str(row["content_hash"]) not in existing_hashes)
+                    ]
                     dst_conn.close()
                 except Exception:
                     logger.debug("Ignored error in sleep_consolidation.py:290")

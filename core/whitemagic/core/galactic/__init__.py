@@ -703,44 +703,43 @@ def substrate_health() -> dict[str, Any]:
                 out["total_akashic_seeds"] = 0
         out["status"] = "alive"
 
-        # Aggregate from galaxy DBs if monolith counts are low (post-migration)
-        if out["total_memories"] < 100 or out["total_associations"] == 0:
-            galaxy_dir = path.parent.parent / "users" / "local" / "galaxies"
-            if not galaxy_dir.exists():
-                galaxy_dir = path.parent / "galaxies"
-            if galaxy_dir.exists():
-                for gdir in galaxy_dir.iterdir():
-                    if not gdir.is_dir():
-                        continue
-                    gdb = gdir / "whitemagic.db"
-                    if not gdb.exists() or gdb == path:
-                        continue
+        # Always aggregate from galaxy DBs (multi-galaxy architecture)
+        galaxy_dir = path.parent.parent / "users" / "local" / "galaxies"
+        if not galaxy_dir.exists():
+            galaxy_dir = path.parent / "galaxies"
+        if galaxy_dir.exists():
+            for gdir in galaxy_dir.iterdir():
+                if not gdir.is_dir():
+                    continue
+                gdb = gdir / "whitemagic.db"
+                if not gdb.exists() or gdb == path:
+                    continue
+                try:
+                    gconn = safe_connect(str(gdb), timeout=3.0)
+                    out["total_memories"] += gconn.execute(
+                        "SELECT COUNT(*) FROM memories"
+                    ).fetchone()[0]
                     try:
-                        gconn = safe_connect(str(gdb), timeout=3.0)
-                        out["total_memories"] += gconn.execute(
-                            "SELECT COUNT(*) FROM memories"
+                        out["total_associations"] += gconn.execute(
+                            "SELECT COUNT(*) FROM associations"
                         ).fetchone()[0]
-                        try:
-                            out["total_associations"] += gconn.execute(
-                                "SELECT COUNT(*) FROM associations"
-                            ).fetchone()[0]
-                        except sqlite3.OperationalError:
-                            logger.debug("Ignored Exception in __init__.py:727")
-                        try:
-                            out["total_embeddings"] += gconn.execute(
-                                "SELECT COUNT(*) FROM memory_embeddings"
-                            ).fetchone()[0]
-                        except sqlite3.OperationalError:
-                            logger.debug("Ignored Exception in __init__.py:733")
-                        try:
-                            out["total_dharma_audits"] += gconn.execute(
-                                "SELECT COUNT(*) FROM dharma_audit"
-                            ).fetchone()[0]
-                        except sqlite3.OperationalError:
-                            logger.debug("Ignored Exception in __init__.py:739")
-                        gconn.close()
-                    except Exception:
-                        continue
+                    except sqlite3.OperationalError:
+                        logger.debug("Ignored Exception in __init__.py:727")
+                    try:
+                        out["total_embeddings"] += gconn.execute(
+                            "SELECT COUNT(*) FROM memory_embeddings"
+                        ).fetchone()[0]
+                    except sqlite3.OperationalError:
+                        logger.debug("Ignored Exception in __init__.py:733")
+                    try:
+                        out["total_dharma_audits"] += gconn.execute(
+                            "SELECT COUNT(*) FROM dharma_audit"
+                        ).fetchone()[0]
+                    except sqlite3.OperationalError:
+                        logger.debug("Ignored Exception in __init__.py:739")
+                    gconn.close()
+                except Exception:
+                    continue
     except sqlite3.DatabaseError as e:
         out["status"] = "error"
         out["error"] = str(e)

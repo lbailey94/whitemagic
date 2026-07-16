@@ -171,6 +171,33 @@ class SearchQueryPlanner:
             cs.semantic_score = profile.semantic_weight / (profile.rrf_k + rank + 1)
             cs.channels.add("semantic")
 
+        # Per-galaxy HNSW semantic search (parallel, RRF-merged)
+        try:
+            from whitemagic.core.memory.galaxy_hnsw import get_galaxy_hnsw_manager
+            from whitemagic.core.memory.embeddings import get_embedding_engine
+            engine = get_embedding_engine()
+            if engine.available():
+                query_vec = engine.encode(query)
+                hnsw_manager = get_galaxy_hnsw_manager()
+                hnsw_results = hnsw_manager.cross_galaxy_rrf(
+                    query_vector=query_vec,
+                    k=limit * profile.over_fetch_ratio,
+                    rrf_k=profile.rrf_k,
+                )
+                for rank, (mid, rrf_score) in enumerate(hnsw_results):
+                    if mid not in all_memories:
+                        recalled = galaxy_backend.recall(mid)
+                        if recalled:
+                            all_memories[mid] = recalled
+                    cs = scores.setdefault(mid, CandidateScore(memory_id=mid))
+                    # HNSW contributes to semantic score via RRF
+                    hnsw_score = profile.semantic_weight * 0.5 * rrf_score
+                    if hnsw_score > cs.semantic_score:
+                        cs.semantic_score = hnsw_score
+                    cs.channels.add("hnsw")
+        except (ImportError, ModuleNotFoundError, Exception) as e:
+            logger.debug("Per-galaxy HNSW search skipped: %s", e)
+
         for rank, hit in enumerate(spatial_hits):
             mid = hit.memory_id
             cs = scores.setdefault(mid, CandidateScore(memory_id=mid))
@@ -277,6 +304,74 @@ class SearchQueryPlanner:
         )
         result.stage_timings.append(st_constellation)
 
+        # ── Stage 4: Graph walk (multi-hop association traversal) ────
+        t0 = now_ms()
+        if profile.graph_walk_weight > 0 and scores:
+            try:
+                from whitemagic.core.memory.graph_walker import GraphWalker
+
+                walker = GraphWalker(self._memory)
+                # Use top lexical+semantic results as seeds
+                seed_ids = sorted(
+                    scores.keys(),
+                    key=lambda mid: scores[mid].lexical_score + scores[mid].semantic_score,
+                    reverse=True,
+                )[:5]
+
+                if seed_ids:
+                    walk_result = walker.walk(
+                        seed_ids=seed_ids,
+                        hops=profile.graph_walk_hops,
+                        top_k=profile.graph_walk_top_k,
+                    )
+
+                    # Apply graph walk scores to candidates
+                    for rank, path in enumerate(walk_result.paths):
+                        for node_id in path.nodes:
+                            mid = node_id if isinstance(node_id, str) else str(node_id)
+                            if mid not in all_memories:
+                                recalled = galaxy_backend.recall(mid)
+                                if recalled:
+                                    all_memories[mid] = recalled
+                            cs = scores.setdefault(mid, CandidateScore(memory_id=mid))
+                            cs.graph_score = profile.graph_walk_weight / (profile.rrf_k + rank + 1)
+                            cs.channels.add("graph")
+
+                    # Spreading activation as additional candidate channel
+                    if profile.spreading_activation:
+                        try:
+                            from whitemagic.core.memory.spreading_activation import get_spreading_activation
+                            sa_engine = get_spreading_activation()
+                            sa_result = sa_engine.spread(
+                                seed_ids=seed_ids,
+                                max_hops=profile.graph_walk_hops,
+                                min_activation=0.15,
+                            )
+                            for rank, primed in enumerate(sa_result.primed):
+                                mid = primed.memory_id
+                                if mid not in all_memories:
+                                    recalled = galaxy_backend.recall(mid)
+                                    if recalled:
+                                        all_memories[mid] = recalled
+                                cs = scores.setdefault(mid, CandidateScore(memory_id=mid))
+                                # Spreading activation score: activation * graph_walk_weight
+                                sa_score = primed.activation * profile.graph_walk_weight * 0.5
+                                cs.graph_score = max(cs.graph_score, sa_score / (profile.rrf_k + rank + 1))
+                                cs.channels.add("spreading_activation")
+                        except (ImportError, ModuleNotFoundError, Exception) as e:
+                            logger.debug("Spreading activation channel skipped: %s", e)
+            except Exception as e:
+                logger.debug("Planned graph walk failed: %s", e, exc_info=True)
+                result.degraded_stages.append(RetrievalStage.GRAPH_WALK.value)
+        st_graph = StageTiming(
+            stage=RetrievalStage.GRAPH_WALK,
+            duration_ms=elapsed_ms(t0),
+            candidates_in=len(scores),
+            candidates_out=len(scores),
+            error=RetrievalStage.GRAPH_WALK.value if result.degraded_stages and result.degraded_stages[-1] == RetrievalStage.GRAPH_WALK.value else None,
+        )
+        result.stage_timings.append(st_graph)
+
         # ── Compute final RRF scores ─────────────────────────────────
         for cs in scores.values():
             cs.final_score = (
@@ -285,6 +380,7 @@ class SearchQueryPlanner:
                 + cs.spatial_score
                 + cs.entity_score
                 + cs.constellation_score
+                + cs.graph_score
             )
 
         # Sort by final score
@@ -308,6 +404,7 @@ class SearchQueryPlanner:
                     "spatial": round(cs.spatial_score, 6),
                     "entity": round(cs.entity_score, 6),
                     "constellation": round(cs.constellation_score, 6),
+                    "graph": round(cs.graph_score, 6),
                 }
                 results.append(mem)
 
@@ -320,6 +417,14 @@ class SearchQueryPlanner:
             except Exception as e:
                 logger.debug("Planned reranking failed: %s", e, exc_info=True)
                 result.degraded_stages.append(RetrievalStage.RERANKING.value)
+
+            # Cross-encoder reranking (optional, 0-token)
+            if profile.cross_encoder:
+                try:
+                    from whitemagic.core.memory.cross_encoder_reranker import rerank_cross_encoder
+                    results = rerank_cross_encoder(query, results)
+                except (ImportError, ModuleNotFoundError, Exception) as e:
+                    logger.debug("Cross-encoder reranking skipped: %s", e)
         st_rerank = StageTiming(
             stage=RetrievalStage.RERANKING,
             duration_ms=elapsed_ms(t0),
@@ -328,6 +433,13 @@ class SearchQueryPlanner:
             error=RetrievalStage.RERANKING.value if result.degraded_stages and result.degraded_stages[-1] == RetrievalStage.RERANKING.value else None,
         )
         result.stage_timings.append(st_rerank)
+
+        # ── Cognitive search bias (working memory + citta state) ──────
+        try:
+            from whitemagic.core.memory.search_bias import apply_search_bias
+            results = apply_search_bias(query, results)
+        except (ImportError, ModuleNotFoundError, Exception) as e:
+            logger.debug("Search bias skipped: %s", e)
 
         # Trim to final limit
         results = results[:limit]

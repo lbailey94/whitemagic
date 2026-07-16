@@ -84,25 +84,19 @@ except ImportError:
 # rollback-journal mode, concurrent access can corrupt the database.
 # This helper ensures every connection uses consistent settings.
 
-_WAL_PRAGMAS = (
-    ("PRAGMA journal_mode=WAL",),
-    ("PRAGMA synchronous=NORMAL",),
-    ("PRAGMA busy_timeout=5000",),
-    ("PRAGMA temp_store=MEMORY",),
-    # mmap the database file — OS page-cache handles RAM, SQLite avoids
-    # double-buffering.  256MB covers all 22 galaxy DBs (largest ~23MB).
-    ("PRAGMA mmap_size=268435456",),
-    # Page cache: 65536 pages × 4KB = 256MB for hot data
-    ("PRAGMA cache_size=-65536",),
-)
+_WAL_PRAGMA_SCRIPT = ";".join([
+    "PRAGMA journal_mode=WAL",
+    "PRAGMA synchronous=NORMAL",
+    "PRAGMA busy_timeout=5000",
+    "PRAGMA temp_store=MEMORY",
+    "PRAGMA mmap_size=268435456",
+    "PRAGMA cache_size=-65536",
+    "PRAGMA trusted_schema=OFF",
+])
 
-# Security pragmas — defend against schema-level attacks (CVE-2025-7709 class)
-# trusted_schema=OFF prevents triggers/views/CHECK constraints from invoking
-# functions with side effects when loaded from a potentially corrupted DB file.
-# See: https://sqlite.org/security.html §9a
-_SECURITY_PRAGMAS = (
-    ("PRAGMA trusted_schema=OFF",),
-)
+_WAL_PRAGMA_SCRIPT_READONLY = ";".join([
+    "PRAGMA trusted_schema=OFF",
+])
 
 
 def safe_connect(
@@ -141,26 +135,16 @@ def safe_connect(
                 conn = sqlite3.connect(db_path, timeout=timeout, uri=uri, **kwargs)
             conn.row_factory = sqlite3.Row
             if not read_only:
-                for pragma, in _WAL_PRAGMAS:
-                    try:
-                        conn.execute(pragma)
-                    except sqlite3.OperationalError:
-                        logger.debug("Ignored Exception in db_manager.py:147")
-                for pragma, in _SECURITY_PRAGMAS:
-                    try:
-                        conn.execute(pragma)
-                    except (sqlite3.OperationalError, sqlite3.NotSupportedError):
-                        logger.debug("Ignored  in db_manager.py:152")
+                try:
+                    conn.executescript(_WAL_PRAGMA_SCRIPT)
+                except (sqlite3.OperationalError, sqlite3.NotSupportedError):
+                    logger.debug("Ignored PRAGMA error in safe_connect")
             else:
                 try:
+                    conn.executescript(_WAL_PRAGMA_SCRIPT_READONLY)
                     conn.execute(f"PRAGMA busy_timeout={int(timeout * 1000)}")
-                except sqlite3.OperationalError:
-                    logger.debug("Ignored Exception in db_manager.py:157")
-                for pragma, in _SECURITY_PRAGMAS:
-                    try:
-                        conn.execute(pragma)
-                    except (sqlite3.OperationalError, sqlite3.NotSupportedError):
-                        logger.debug("Ignored  in db_manager.py:162")
+                except (sqlite3.OperationalError, sqlite3.NotSupportedError):
+                    logger.debug("Ignored PRAGMA error in safe_connect readonly")
             return conn
         except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
             if _is_transient_error(e) and attempt < retries:
@@ -194,7 +178,7 @@ def pooled_connection(db_path: str | None = None) -> Generator[sqlite3.Connectio
 class ConnectionPool:
     """Thread-safe SQLite connection pool."""
 
-    def __init__(self, db_path: str, max_connections: int = 10) -> None:
+    def __init__(self, db_path: str, max_connections: int = 5) -> None:
         self.db_path = db_path
         self.max_connections = max_connections
         self._pool: queue.Queue[sqlite3.Connection] = queue.Queue(maxsize=max_connections)
@@ -217,24 +201,18 @@ class ConnectionPool:
             logger.debug("SQLCipher encryption active for %s", self.db_path)
         else:
             conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
-        # P6a: Memory-mapped I/O — 256MB mmap window for read-heavy workloads
-        # Bypasses read() syscalls entirely; OS page cache serves data directly
-        conn.execute("PRAGMA mmap_size=268435456")
-        # P6b: 64MB page cache (negative = KB, so -65536 = 64MB)
-        # Default is ~2MB; larger cache avoids re-reading hot pages
-        conn.execute("PRAGMA cache_size=-65536")
-        # P6c: Temp tables and indices in RAM (no temp file I/O)
-        conn.execute("PRAGMA temp_store=MEMORY")
-        # P6d: Busy timeout for write contention under WAL
-        conn.execute("PRAGMA busy_timeout=5000")
-        # P6f: WAL auto-checkpoint at 1000 pages (~4MB) for predictable checkpoint timing
-        # Default is 1000, but explicit setting avoids environment-dependent defaults
-        conn.execute("PRAGMA wal_autocheckpoint=1000")
-        # P6e: Foreign keys for referential integrity
-        conn.execute("PRAGMA foreign_keys=ON")
-        # Row factory for dictionary-like access
+        conn.executescript(";".join([
+            "PRAGMA journal_mode=WAL",
+            "PRAGMA synchronous=NORMAL",
+            "PRAGMA mmap_size=268435456",
+            "PRAGMA cache_size=-65536",
+            "PRAGMA temp_store=MEMORY",
+            "PRAGMA busy_timeout=5000",
+            "PRAGMA wal_autocheckpoint=1000",
+            "PRAGMA foreign_keys=ON",
+            "PRAGMA trusted_schema=OFF",
+            "PRAGMA journal_size_limit=67108864",
+        ]))
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -351,7 +329,7 @@ def get_db_pool(db_path: str, max_connections: int = 5) -> ConnectionPool:
         return _pools[db_path]
 
 
-async def get_db_pool_async(db_path: str, max_connections: int = 10) -> ConnectionPool:
+async def get_db_pool_async(db_path: str, max_connections: int = 5) -> ConnectionPool:
     """Get or create a connection pool for a specific database asynchronously."""
     async with _async_registry_lock:
         if db_path not in _pools:

@@ -135,9 +135,9 @@ class LazyMemoryStore:
                   content_preview, str(file_path)))
 
             # Index tags
-            for tag in tags:
-                conn.execute("INSERT INTO tags (memory_id, tag) VALUES (?, ?)",
-                           (memory_id, tag))
+            if tags:
+                conn.executemany("INSERT INTO tags (memory_id, tag) VALUES (?, ?)",
+                                 [(memory_id, tag) for tag in tags])
 
         return memory_id
 
@@ -183,7 +183,9 @@ class LazyMemoryStore:
         with safe_connect(self.db_path) as conn:
             cursor = conn.execute("""
                 SELECT m.id, m.memory_type, m.created_at, m.importance,
-                       m.content_preview, m.file_path
+                       m.content_preview, m.file_path,
+                       (SELECT GROUP_CONCAT(t2.tag, '\x1f') FROM tags t2
+                        WHERE t2.memory_id = m.id) AS all_tags
                 FROM memories m
                 JOIN tags t ON m.id = t.memory_id
                 WHERE t.tag = ?
@@ -193,9 +195,7 @@ class LazyMemoryStore:
 
             results = []
             for row in cursor:
-                tag_cursor = conn.execute(
-                    "SELECT tag FROM tags WHERE memory_id = ?", (row[0],))
-                tags = [t[0] for t in tag_cursor]
+                tags = row[6].split('\x1f') if row[6] else []
 
                 results.append(MemoryMetadata(
                     id=row[0],
@@ -214,19 +214,19 @@ class LazyMemoryStore:
         """Search memories by importance threshold"""
         with safe_connect(self.db_path) as conn:
             cursor = conn.execute("""
-                SELECT id, memory_type, created_at, importance,
-                       content_preview, file_path
-                FROM memories
-                WHERE importance >= ?
-                ORDER BY importance DESC
+                SELECT m.id, m.memory_type, m.created_at, m.importance,
+                       m.content_preview, m.file_path,
+                       (SELECT GROUP_CONCAT(t.tag, '\x1f') FROM tags t
+                        WHERE t.memory_id = m.id) AS all_tags
+                FROM memories m
+                WHERE m.importance >= ?
+                ORDER BY m.importance DESC
                 LIMIT ?
             """, (min_importance, limit))
 
             results = []
             for row in cursor:
-                tag_cursor = conn.execute(
-                    "SELECT tag FROM tags WHERE memory_id = ?", (row[0],))
-                tags = [t[0] for t in tag_cursor]
+                tags = row[6].split('\x1f') if row[6] else []
 
                 results.append(MemoryMetadata(
                     id=row[0],

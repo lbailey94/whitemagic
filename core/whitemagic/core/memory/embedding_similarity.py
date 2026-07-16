@@ -23,25 +23,39 @@ def batch_cosine_similarity(query: list[float], vectors: list[list[float]]) -> l
 
 
 def batch_cosine_similarity_numpy(query: Any, vectors: Any, pre_normalized: bool = False) -> Any:
-    """NumPy-accelerated batch cosine similarity (fallback to pure Python)."""
+    """NumPy-accelerated batch cosine similarity (fallback to pure Python).
+
+    Tries Rust AVX2+FMA path first (zero-copy numpy, GIL-released),
+    falls back to NumPy dot product, then pure Python.
+    """
     try:
         import numpy as _np
         q = _np.asarray(query, dtype=_np.float32)
         v = _np.asarray(vectors, dtype=_np.float32)
         if v.ndim == 1:
             v = v.reshape(1, -1)
+
+        # Fast path: Rust AVX2+FMA (zero-copy via numpy PyO3)
+        if pre_normalized and v.ndim == 2:
+            try:
+                from whitemagic_rust import inference as _inf
+                q_contig = _np.ascontiguousarray(q)
+                v_contig = _np.ascontiguousarray(v)
+                if q_contig.dtype == _np.float32 and v_contig.dtype == _np.float32:
+                    return _inf.py_batch_cosine_numpy(q_contig, v_contig)
+            except (ImportError, Exception):
+                pass
+
         if pre_normalized:
-            # Vectors are already unit-normalized — just dot product
             scores = v @ q
         else:
             q_norm = _np.linalg.norm(q)
             v_norms = _np.linalg.norm(v, axis=1)
             denom = v_norms * q_norm
-            denom[denom == 0] = 1.0  # avoid division by zero
+            denom[denom == 0] = 1.0
             scores = (v @ q) / denom
         return scores
     except ImportError:
-        # Fallback when numpy is not available
         q = query.tolist() if hasattr(query, "tolist") else list(query)
         vs = vectors.tolist() if hasattr(vectors, "tolist") else [list(vx) for vx in vectors]
         return batch_cosine_similarity(q, vs)

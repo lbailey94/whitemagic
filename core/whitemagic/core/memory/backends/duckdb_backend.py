@@ -146,8 +146,10 @@ class DuckDBBackend(BaseBackend):
         # Update tags
         conn.execute("DELETE FROM tags WHERE memory_id = ?", [memory.id])
         if memory.tags:
-            for tag in memory.tags:
-                conn.execute("INSERT INTO tags (memory_id, tag) VALUES (?, ?)", [memory.id, tag])
+            conn.executemany(
+                "INSERT INTO tags (memory_id, tag) VALUES (?, ?)",
+                [[memory.id, tag] for tag in memory.tags],
+            )
 
         return memory.id
 
@@ -248,10 +250,10 @@ class DuckDBBackend(BaseBackend):
 
         # Sync tags
         tag_rows = sqlite_conn.execute("SELECT * FROM tags").fetchall()
-        for row in tag_rows:
-            conn.execute(
+        if tag_rows:
+            conn.executemany(
                 "INSERT INTO tags (memory_id, tag) VALUES (?, ?)",
-                [row["memory_id"], row["tag"]],
+                [[row["memory_id"], row["tag"]] for row in tag_rows],
             )
 
         sqlite_conn.close()

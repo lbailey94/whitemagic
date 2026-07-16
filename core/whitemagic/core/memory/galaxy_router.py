@@ -72,18 +72,19 @@ class GalaxyRouter:
     Usage:
         router = GalaxyRouter()
         galaxy = router.route("recursive_improvement_loop", metadata={"source": "ril"})
-        # galaxy == "self_learning"
+        # galaxy == "knowledge"
 
         memory = unified.store(content, galaxy=galaxy)
     """
 
     # Subsystem → default galaxy mapping
     SUBSYSTEM_MAP: dict[str, str] = {
-        # Self-learning galaxy
-        "recursive_improvement_loop": "self_learning",
-        "pattern_miner": "self_learning",
-        "kaizen_engine": "self_learning",
-        "guideline_evolution": "self_learning",
+        # Knowledge galaxy (consolidated learning, patterns, wisdom)
+        "recursive_improvement_loop": "knowledge",
+        "pattern_miner": "knowledge",
+        "kaizen_engine": "knowledge",
+        "guideline_evolution": "knowledge",
+        "autonomous_learner": "knowledge",
 
         # Self-discovery galaxy
         "emergence_engine": "self_discovery",
@@ -117,7 +118,7 @@ class GalaxyRouter:
         "researcher": "universal",
         "knowledge_graph": "universal",
         # v23.4: Additional subsystem mappings
-        "consolidation": "self_learning",
+        "consolidation": "knowledge",
         "bridge_synthesizer": "self_discovery",
         "session_crystallizer": "insight",
         "entropy_scorer": "universal",
@@ -125,8 +126,7 @@ class GalaxyRouter:
         "unified_orchestrator": "universal",
         "oms": "universal",
         "archaeology": "universal",
-        "homeostatic_loop": "self_learning",
-        "autonomous_learner": "self_learning",
+        "homeostatic_loop": "knowledge",
         # v24: Codebase self-model → codex galaxy
         "codebase_scanner": "codex",
         "codebase_self_model": "codex",

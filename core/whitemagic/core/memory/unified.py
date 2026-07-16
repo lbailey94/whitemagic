@@ -610,6 +610,45 @@ class UnifiedMemory:
         results = self._galaxy_backend.search(query=query, tags=tags, memory_type=memory_type,
                                  min_importance=min_importance, limit=limit, galaxy=galaxy)
 
+        # Cross-encoder reranking (0-token, heuristic fallback)
+        # Applies fine-grained lexical+semantic scoring on top of FTS5+bi-encoder results.
+        # This is especially helpful for multi-turn conversations where multiple memories
+        # match the same keywords but only one contains the specific answer.
+        if query and len(results) > 1:
+            try:
+                from whitemagic.core.memory.cross_encoder_reranker import rerank_cross_encoder
+                results = rerank_cross_encoder(query, results, top_k=limit)
+            except (ImportError, ModuleNotFoundError, Exception) as e:
+                logger.debug("Cross-encoder reranking skipped: %s", e)
+
+        # Answer-aware retrieval (0-token, heuristic)
+        # Boosts results likely to contain the answer by checking entity+topic co-occurrence.
+        # Runs a secondary FTS5 search focused on entity terms from the query.
+        if query and len(results) > 1:
+            try:
+                from whitemagic.core.memory.answer_aware import answer_aware_search
+                results = answer_aware_search(
+                    query, results, backend=self._galaxy_backend, galaxy=galaxy,
+                )
+            except (ImportError, ModuleNotFoundError, Exception) as e:
+                logger.debug("Answer-aware retrieval skipped: %s", e)
+
+        # Multi-hop aggregation (0-token, heuristic)
+        # Two-pass search: uses hop-1 results as seeds for hop-2 search.
+        # Fixes multi-hop questions like "What team is the person on project X on?"
+        if query and len(results) > 1:
+            try:
+                from whitemagic.core.memory.multi_hop import multi_hop_search
+                results = multi_hop_search(
+                    query, results, backend=self._galaxy_backend, galaxy=galaxy,
+                    max_results=limit * 2,
+                )
+            except (ImportError, ModuleNotFoundError, Exception) as e:
+                logger.debug("Multi-hop aggregation skipped: %s", e)
+
+        # Trim to final limit after all post-processing
+        results = results[:limit]
+
         # Phase 2: Filter results by user namespace if context is provided
         if memory_context is not None and results:
             ctx_user = memory_context.user_id
@@ -785,6 +824,7 @@ class UnifiedMemory:
         include_cold: bool = False,
         axis_weights: dict[str, float] | None = None,
         entity_boost_weight: float = 0.3,
+        graph_walk_weight: float = 0.4,
         rerank: bool = True,
         include_skills: bool = True,
         use_planner: bool = True,
@@ -834,6 +874,7 @@ class UnifiedMemory:
                 semantic_weight=semantic_weight,
                 spatial_weight=spatial_weight,
                 entity_boost_weight=entity_boost_weight,
+                graph_walk_weight=graph_walk_weight,
                 rerank=rerank,
                 include_skills=include_skills,
                 include_cold=include_cold,

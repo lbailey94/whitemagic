@@ -266,6 +266,17 @@ def rerank_results(
             + lexical_weight * lex_precision
         )
 
+        # FAMA temporal scoring (0-token, optional)
+        try:
+            from whitemagic.core.memory.temporal_kg import get_temporal_kg
+            tkg = get_temporal_kg()
+            fama = tkg.fama_score(mem.id)
+            if fama != 0.0:
+                adjustment += 0.10 * fama
+                mem.metadata["fama_score"] = round(fama, 4)
+        except (ImportError, ModuleNotFoundError, Exception):
+            pass
+
         final_score = rrf_score * (1.0 + adjustment)
 
         # Store rerank metadata

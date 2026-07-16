@@ -107,6 +107,17 @@ class HRREngine:
         a_arr = self._to_array(a)
         b_arr = self._to_array(b)
 
+        # Fast path: Rust FFT via PyO3 (42x faster than NumPy FFT for batches)
+        try:
+            from whitemagic_rust import inference as _inf
+            q = np.ascontiguousarray(a_arr.reshape(1, -1))
+            r = np.ascontiguousarray(b_arr)
+            out = _inf.py_batch_circular_convolution_numpy(q, r)
+            return cast(np.ndarray, out[0])
+        except (ImportError, Exception):
+            pass
+
+        # Legacy SIMD path
         try:
             from whitemagic.core.acceleration.simd_holographic import (
                 circular_convolution,
@@ -127,6 +138,20 @@ class HRREngine:
         bound_arr = self._to_array(bound)
         b_arr = self._to_array(b)
 
+        # Fast path: Rust FFT via PyO3
+        # Circular correlation = convolution with circular-reversed b
+        # For real b: conj(FFT(b)) = FFT(circular_reverse(b))
+        # circular_reverse(b)[0] = b[0], circular_reverse(b)[n] = b[N-n]
+        try:
+            from whitemagic_rust import inference as _inf
+            q = np.ascontiguousarray(bound_arr.reshape(1, -1))
+            r_rev = np.ascontiguousarray(np.roll(b_arr[::-1], 1).copy())
+            out = _inf.py_batch_circular_convolution_numpy(q, r_rev)
+            return cast(np.ndarray, out[0])
+        except (ImportError, Exception):
+            pass
+
+        # Legacy SIMD path
         try:
             from whitemagic.core.acceleration.simd_holographic import (
                 circular_correlation,

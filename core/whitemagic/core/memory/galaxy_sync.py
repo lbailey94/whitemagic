@@ -211,11 +211,33 @@ def merge_remote_memory(remote_memory_data: dict[str, Any]) -> dict[str, Any]:
         winner = um._lww_resolve(local, remote)
         won_by = "local" if winner is local else "remote"
 
+        # Haskell merge safety validation
+        merge_safety: dict[str, Any] | None = None
+        try:
+            from whitemagic.core.acceleration.haskell_interface import HaskellBridge
+            hs = HaskellBridge()
+            if hs.available:
+                merge_safety = hs.validate_merge_safety(
+                    local={"version": local.version, "agent_id": local.agent_id, "content": local.content},
+                    remote={"version": remote.version, "agent_id": remote.agent_id, "content": remote.content},
+                    winner=won_by,
+                )
+                if not merge_safety.get("safe", True):
+                    logger.warning(
+                        "Merge safety violation for %s: %s",
+                        memory_id, merge_safety.get("violations", []),
+                    )
+        except (ImportError, ModuleNotFoundError, Exception) as e:
+            logger.debug("Haskell merge safety check skipped: %s", e)
+
         if winner is remote:
             # Apply remote update locally
             um.update_memory(memory_id, {"content": remote.content}, agent_id=remote.agent_id)
 
-        return {"success": True, "winner": won_by, "memory_id": memory_id}
+        result: dict[str, Any] = {"success": True, "winner": won_by, "memory_id": memory_id}
+        if merge_safety:
+            result["merge_safety"] = merge_safety
+        return result
     except Exception as e:
         logger.debug("merge_remote_memory failed: %s", e, exc_info=True)
         return {"success": False, "error": str(e)}

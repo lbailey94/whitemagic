@@ -116,7 +116,8 @@ def _recency_signal(mem: Memory) -> RetentionSignal:
     recall_count = mem.recall_count
 
     # Exponential recency decay (half-life = memory's own half_life_days)
-    recency = 0.5 ** (days_since / max(mem.half_life_days, 1.0))
+    half_life = mem.half_life_days if mem.half_life_days is not None else 30.0
+    recency = 0.5 ** (days_since / max(half_life, 1.0))
 
     # Frequency bonus (log scale, capped)
     freq_bonus = min(0.3, math.log1p(recall_count) * 0.05)
@@ -297,6 +298,9 @@ class RetentionEngine:
                 logger.debug("Unified memory unavailable for persistence: %s", e, exc_info=True)
 
         report = SweepReport()
+        archive_ids: list[str] = []
+        retention_updates: list[tuple[str, float]] = []
+
         for mem in memories:
             verdict = self.evaluate(mem)
             report.total_evaluated += 1
@@ -314,12 +318,18 @@ class RetentionEngine:
                 report.archived += 1
                 # Rotate to galactic edge — NEVER delete
                 mem.neuro_score = max(mem.min_score, mem.neuro_score * 0.5)
-                if backend:
-                    backend.archive_to_edge(mem.id, galactic_distance=0.90)
+                archive_ids.append(mem.id)
 
-            # Persist retention score if requested
-            if persist and backend:
-                backend.update_retention_score(mem.id, verdict.score)
+            # Collect retention score for batch persist
+            if persist:
+                retention_updates.append((mem.id, verdict.score))
+
+        # Batch persist to backend
+        if backend:
+            if archive_ids:
+                backend.batch_archive_to_edge(archive_ids, galactic_distance=0.90)
+            if persist and retention_updates:
+                backend.batch_update_retention_scores(retention_updates)
 
         self._total_sweeps += 1
         logger.info(
