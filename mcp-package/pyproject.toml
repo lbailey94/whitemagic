@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whitemagic-mcp"
-version = "25.0.0"
+version = "25.0.1"
 description = "WhiteMagic MCP Server — 829 callable tools, 6D holographic memory, 14 galaxies, Dharma governance, fastembed semantic search"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,7 +26,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "whitemagic>=25.0.0",
+    "whitemagic>=25.0.1",
     "mcp>=1.0.0",
     "fastembed>=0.2.0",
 ]
