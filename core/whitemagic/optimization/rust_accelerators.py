@@ -675,6 +675,39 @@ def sqlite_export_for_mining(
         return None
 
 
+def sqlite_hybrid_search(
+    db_path: str,
+    query: str,
+    query_embedding: list[float],
+    dim: int = 384,
+    limit: int = 20,
+    min_importance: float = 0.0,
+    fts_weight: float = 0.4,
+    cosine_weight: float = 0.4,
+    galactic_weight: float = 0.2,
+) -> list[dict[str, Any]] | None:
+    """Hybrid FTS5 + embedding cosine search in one Rust call.
+
+    Combines full-text search, embedding cosine similarity, and galactic
+    distance weighting in a single call — eliminates Python N+1 queries.
+
+    Returns:
+        List of search result dicts with fts_score, cosine_score, combined_score, or None.
+    """
+    if not _RUST_V131:
+        return None
+    try:
+        result_json = _rs.sqlite_hybrid_search(
+            db_path, query, query_embedding, dim, limit,
+            min_importance, fts_weight, cosine_weight, galactic_weight,
+        )
+        parsed: list[dict[str, Any]] = json.loads(result_json)
+        return parsed
+    except Exception as e:
+        logger.debug("Rust SQLite hybrid search failed: %s", e)
+        return None
+
+
 _RUST_SEARCH = False
 try:
     if _rs is not None and hasattr(_rs, "search_build_index"):

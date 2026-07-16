@@ -1,7 +1,7 @@
 {
   "name": "whitemagic",
   "display_name": "WhiteMagic Core",
-  "description": "AI memory, cognitive upgrades, and more — 829 callable tools via single wm meta-tool (28 Gana in PRAT mode, 801 in classic), 10-galaxy holographic memory, Dharma ethical governance, MandalaOS compartments, citta stream, session recording. MIT-licensed, local-first, free forever.",
+  "description": "AI memory, cognitive upgrades, and more — 848 callable tools via single wm meta-tool (28 Gana in PRAT mode, 820 in classic), 10-galaxy holographic memory, Dharma ethical governance, MandalaOS compartments, citta stream, session recording. MIT-licensed, local-first, free forever.",
   "version": "25.0.0",
   "protocol_version": "2025-11-25",
   "homepage": "https://github.com/lbailey94/whitemagic",
@@ -48,7 +48,7 @@
     }
   },
   "tool_count": 1,
-  "nested_tool_count": 801,
+  "nested_tool_count": 820,
   "requirements": {
     "python": ">=3.11",
     "optional": {

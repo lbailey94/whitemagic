@@ -154,6 +154,7 @@ class ResonanceEngine:
         self._tree: Any = None
         self._coord_map: dict[str, tuple[float, ...]] = {}
         self._memory_ids: list[str] = []
+        self._memory_galaxies: dict[str, str] = {}
 
     def _get_conn(self) -> sqlite3.Connection:
         if not self._db_path:
@@ -165,32 +166,50 @@ class ResonanceEngine:
         return conn
 
     def _build_tree(self) -> None:
-        """Build KD-tree from holographic coordinates."""
+        """Build KD-tree from holographic coordinates across ALL galaxies."""
         if not _HAS_SCIPY:
             logger.warning("scipy not available; KD-tree disabled")
             return
-        conn = self._get_conn()
-        try:
-            rows = conn.execute(
-                "SELECT memory_id, x, y, z, w, v FROM holographic_coords"
-            ).fetchall()
-
-            if not rows:
-                logger.warning("No holographic coordinates found")
-                return
-
-            points = []
-            for row in rows:
-                mid = row["memory_id"]
-                coords = (row["x"], row["y"], row["z"], row["w"], row["v"])
-                self._coord_map[mid] = coords
-                self._memory_ids.append(mid)
-                points.append(coords)
-
-            self._tree = cKDTree(np.array(points))
-            logger.info("🌳 KD-tree built: %s memories, 5D space", len(points))
-        finally:
-            conn.close()
+        
+        from whitemagic.core.memory.galaxy_db_scanner import scan_all_coords
+        
+        all_coords = scan_all_coords()
+        if not all_coords:
+            # Fallback: try monolithic DB
+            conn = self._get_conn()
+            try:
+                rows = conn.execute(
+                    "SELECT memory_id, x, y, z, w, COALESCE(v, 0.5) FROM holographic_coords"
+                ).fetchall()
+                if not rows:
+                    logger.warning("No holographic coordinates found")
+                    return
+                points = []
+                for row in rows:
+                    mid = row["memory_id"]
+                    coords = (row["x"], row["y"], row["z"], row["w"], row["v"])
+                    self._coord_map[mid] = coords
+                    self._memory_ids.append(mid)
+                    self._memory_galaxies[mid] = "default"
+                    points.append(coords)
+                self._tree = cKDTree(np.array(points))
+                logger.info("🌳 KD-tree built: %s memories, 5D space (monolithic fallback)", len(points))
+            finally:
+                conn.close()
+            return
+        
+        points = []
+        for mid, (gname, coords) in all_coords.items():
+            # Use first 5 dims (x, y, z, w, v)
+            c5 = coords[:5]
+            self._coord_map[mid] = c5
+            self._memory_ids.append(mid)
+            self._memory_galaxies[mid] = gname
+            points.append(c5)
+        
+        self._tree = cKDTree(np.array(points))
+        logger.info("🌳 KD-tree built: %s memories, 5D space (multi-galaxy: %d galaxies)",
+                     len(points), len(set(self._memory_galaxies.values())))
 
     @staticmethod
     def galactic_zone_frequency(galactic_distance: float) -> float:
@@ -719,79 +738,70 @@ class ResonanceEngine:
         if self._tree is None:
             return {"status": "error", "message": "No coordinates available"}
 
-        conn = self._get_conn()
-        try:
-            created = 0
-            skipped = 0
+        from whitemagic.core.memory.galaxy_db_scanner import insert_association
+        
+        created = 0
+        skipped = 0
+        cross_galaxy = 0
 
-            for i, mid in enumerate(self._memory_ids):
-                if created >= limit:
-                    break
+        for i, mid in enumerate(self._memory_ids):
+            if created >= limit:
+                break
 
-                point = self._tree.data[i]
-                indices = self._tree.query_ball_point(point, r=radius)
+            point = self._tree.data[i]
+            indices = self._tree.query_ball_point(point, r=radius)
+            source_galaxy = self._memory_galaxies.get(mid, "default")
 
-                for idx in indices:
-                    other_mid = self._memory_ids[idx]
-                    if other_mid == mid:
-                        continue
+            for idx in indices:
+                other_mid = self._memory_ids[idx]
+                if other_mid == mid:
+                    continue
 
-                    dist = float(np.linalg.norm(point - self._tree.data[idx]))
-                    strength = max(min_strength, 1.0 - dist)
+                dist = float(np.linalg.norm(point - self._tree.data[idx]))
+                strength = max(min_strength, 1.0 - dist)
 
-                    if strength < min_strength:
-                        skipped += 1
-                        continue
+                if strength < min_strength:
+                    skipped += 1
+                    continue
 
-                    if not dry_run:
-                        existing = conn.execute(
-                            "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
-                            (mid, other_mid),
-                        ).fetchone()[0]
+                target_galaxy = self._memory_galaxies.get(other_mid, "default")
+                edge_type = "cross_galaxy" if source_galaxy != target_galaxy else "intra_galaxy"
 
-                        if existing == 0:
-                            try:
-                                conn.execute(
-                                    """INSERT INTO associations
-                                       (source_id, target_id, association_type, strength)
-                                       VALUES (?, ?, ?, ?)""",
-                                    (
-                                        mid,
-                                        other_mid,
-                                        "holographic_proximity",
-                                        round(strength, 3),
-                                    ),
-                                )
-                                created += 1
-                            except sqlite3.IntegrityError:
-                                skipped += 1
-                        else:
-                            skipped += 1
-                    else:
-                        created += 1
-
-                if (i + 1) % 500 == 0:
-                    if not dry_run:
-                        conn.commit()
-                    logger.info(
-                        "  Progress: %s/%s (%s created)",
-                        i + 1,
-                        len(self._memory_ids),
-                        created,
+                if not dry_run:
+                    ok = insert_association(
+                        source_galaxy, mid, other_mid,
+                        "holographic_proximity", round(strength, 3), edge_type
                     )
+                    if ok:
+                        created += 1
+                        if edge_type == "cross_galaxy":
+                            cross_galaxy += 1
+                            # Also insert reverse edge in target galaxy
+                            insert_association(
+                                target_galaxy, other_mid, mid,
+                                "holographic_proximity", round(strength, 3), edge_type
+                            )
+                    else:
+                        skipped += 1
+                else:
+                    created += 1
+                    if edge_type == "cross_galaxy":
+                        cross_galaxy += 1
 
-            if not dry_run:
-                conn.commit()
+            if (i + 1) % 5000 == 0:
+                logger.info(
+                    "  Progress: %s/%s (%s created, %s cross-galaxy)",
+                    i + 1, len(self._memory_ids), created, cross_galaxy,
+                )
 
-            return {
-                "status": "success",
-                "associations_created": created,
-                "associations_skipped": skipped,
-                "radius": radius,
-                "min_strength": min_strength,
-            }
-        finally:
-            conn.close()
+        return {
+            "status": "success",
+            "associations_created": created,
+            "associations_skipped": skipped,
+            "cross_galaxy_edges": cross_galaxy,
+            "radius": radius,
+            "min_strength": min_strength,
+        }
 
     def get_stats(self) -> dict[str, Any]:
         """Get resonance engine statistics."""

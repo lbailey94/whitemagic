@@ -15,13 +15,5 @@ except NameError:
     def extract_patterns_from_content(
         samples: list[str], threshold: float = 0.1
     ) -> tuple:
-        """Stub pattern extraction."""
-        return (
-            [],  # patterns
-            [],  # anomalies
-            [],  # solutions
-            [],  # insights
-            [],  # risks
-            [],  # opportunities
-            [],  # relationships
-        )
+        """Stub pattern extraction — returns empty result matching Rust signature."""
+        return (0, 0, [], [], [], [], 0.0)

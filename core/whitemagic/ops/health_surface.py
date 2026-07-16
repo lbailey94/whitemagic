@@ -21,6 +21,7 @@ Usage::
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import asdict, dataclass, field
 from importlib.util import find_spec
@@ -172,6 +173,15 @@ class HealthSurface:
         health = ComponentHealth(name="native_bridges")
 
         bridges: dict[str, str] = {}
+
+        # Skip polyglot bridge imports if WM_SKIP_POLYGLOT is set (prevents subprocess hangs)
+        if os.environ.get("WM_SKIP_POLYGLOT"):
+            health.details["bridges"] = {}
+            health.details["available"] = 0
+            health.details["total"] = 6
+            health.status = "degraded"
+            health.error = "Polyglot bridges skipped (WM_SKIP_POLYGLOT=1)"
+            return health
 
         # Check each polyglot bridge
         bridge_specs = [

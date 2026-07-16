@@ -239,3 +239,54 @@ def get_telemetry() -> Telemetry:
     if _telemetry is None:
         _telemetry = Telemetry()
     return _telemetry
+
+
+def rollup_to_galaxy() -> dict[str, Any]:
+    """Write a periodic summary of telemetry stats to the telemetry galaxy.
+    
+    Called periodically (e.g. hourly) to maintain a curated record of system
+    performance in the telemetry galaxy, replacing the old raw-event model.
+    """
+    import uuid
+    from datetime import datetime, timezone
+    
+    tel = get_telemetry()
+    summary = tel.get_summary()
+    
+    try:
+        from whitemagic.core.memory.unified import get_unified_memory
+        um = get_unified_memory()
+        now = datetime.now(timezone.utc).isoformat()
+        
+        content_parts = [
+            f"Telemetry Rollup — {now}",
+            f"Total calls: {summary.get('total_calls', 0)}",
+            f"Success rate: {summary.get('success_rate', 0):.2%}",
+            f"Avg latency: {summary.get('avg_latency_ms', 0):.1f}ms",
+            f"P50 latency: {summary.get('p50_latency_ms', 0):.1f}ms",
+            f"P90 latency: {summary.get('p90_latency_ms', 0):.1f}ms",
+            f"Throughput: {summary.get('throughput_cps', 0):.1f} cps",
+            f"Errors: {summary.get('error_count', 0)}",
+            f"Context reuse: {summary.get('context_reuse', {}).get('reuse_rate', 0):.2%}",
+        ]
+        
+        top_tools = summary.get("top_tools", [])
+        if top_tools:
+            content_parts.append("\nTop tools:")
+            for t in top_tools[:5]:
+                content_parts.append(f"  {t.get('tool','?')}: {t.get('calls',0)} calls, avg={t.get('avg_ms',0):.1f}ms")
+        
+        content = "\n".join(content_parts)
+        
+        um.store(
+            title=f"Telemetry Rollup {now[:13]}",
+            content=content,
+            tags={"telemetry", "rollup", "auto_generated"},
+            importance=0.5,
+            galaxy="telemetry",
+            memory_type="LONG_TERM",
+        )
+        return {"status": "success", "summary": summary}
+    except Exception as e:
+        logger.debug("Telemetry rollup failed: %s", e, exc_info=True)
+        return {"status": "error", "reason": str(e)}

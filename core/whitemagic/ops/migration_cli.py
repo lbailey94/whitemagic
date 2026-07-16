@@ -25,6 +25,8 @@ import sqlite3
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+from whitemagic.core.memory.db_manager import safe_connect
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -145,8 +147,7 @@ class MigrationCLI:
         )
 
         try:
-            conn = sqlite3.connect(str(db_path), timeout=5.0)
-            conn.row_factory = sqlite3.Row
+            conn = safe_connect(str(db_path), timeout=5.0)
 
             # Memory count
             try:
@@ -249,7 +250,7 @@ class MigrationCLI:
             result.snapshot_path = str(snapshot_path)
 
         try:
-            conn = sqlite3.connect(str(db_path), timeout=10.0)
+            conn = safe_connect(str(db_path), timeout=10.0)
 
             # Check integrity
             rows = conn.execute("PRAGMA integrity_check").fetchall()
@@ -300,7 +301,7 @@ class MigrationCLI:
             return result
 
         try:
-            conn = sqlite3.connect(str(db_path), timeout=10.0)
+            conn = safe_connect(str(db_path), timeout=10.0)
 
             # Find FTS5 tables
             tables = [r[0] for r in conn.execute(
@@ -351,8 +352,7 @@ class MigrationCLI:
             return result
 
         try:
-            conn = sqlite3.connect(str(db_path), timeout=10.0)
-            conn.row_factory = sqlite3.Row
+            conn = safe_connect(str(db_path), timeout=10.0)
 
             rows = conn.execute("SELECT * FROM memories").fetchall()
             memories = [dict(r) for r in rows]

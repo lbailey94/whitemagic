@@ -301,6 +301,21 @@ def _ensure_init() -> None:
         except Exception:
             logger.debug("Current state injection skipped", exc_info=True)
 
+        # ── Auto-start cognitive action scheduler ──
+        if os.environ.get("WM_AUTO_SCHEDULER", "0") in ("1", "true", "yes"):
+            try:
+                from whitemagic.core.consciousness.cognitive_action_loop import (
+                    get_action_loop,
+                )
+
+                _action_loop = get_action_loop()
+                _interval = float(os.environ.get("WM_SCHEDULER_INTERVAL", "300"))
+                _max_actions = int(os.environ.get("WM_SCHEDULER_MAX_ACTIONS", "3"))
+                _action_loop.start_scheduler(interval_s=_interval, max_actions=_max_actions)
+                logger.info("Cognitive action scheduler started (interval=%ss, max_actions=%d)", _interval, _max_actions)
+            except Exception as e:
+                logger.debug("Auto-scheduler start failed: %s", e, exc_info=True)
+
         _INITIALISED = True
 
 
@@ -1705,6 +1720,12 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
     except Exception as e:
         logger.debug("Auto-optimizer init failed: %s", e, exc_info=True)
 
+    # ── Cognitive action scheduler status ──
+    if os.environ.get("WM_AUTO_SCHEDULER", "0") in ("1", "true", "yes"):
+        print("  Cognitive scheduler: ENABLED", file=sys.stderr)
+    else:
+        print("  Cognitive scheduler: disabled (set WM_AUTO_SCHEDULER=1 to enable)", file=sys.stderr)
+
     async with transport.connect() as (read_stream, write_stream):
         try:
             await asyncio.gather(
@@ -1731,6 +1752,14 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
                     _dual_manager.stop_all()
                 except Exception:
                     logger.debug("Ignored error in run_mcp_lean.py:1710")
+            # Stop cognitive action scheduler if running
+            try:
+                from whitemagic.core.consciousness.cognitive_action_loop import get_action_loop
+                _loop = get_action_loop()
+                if _loop._scheduler_thread is not None:
+                    _loop.stop_scheduler()
+            except Exception:
+                logger.debug("Scheduler stop failed")
             # Shutdown all supervised native bridges
             try:
                 from whitemagic.core.acceleration.process_supervisor import shutdown_all
