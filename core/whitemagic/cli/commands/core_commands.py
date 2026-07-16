@@ -433,12 +433,16 @@ def quickstart_command(ctx, json_output: bool) -> None:
         tools = health.get("details", {}).get("runtime", {}).get("surface_counts", {}).get("callable_tools", "?")
         click.echo(f"\n  1. Health: v{ver}, {tools} tools — {health.get('status')}\n")
 
-    # Step 2: Create a memory
+    # Step 2: Create a memory (skip embeddings for speed — fresh install doesn't have model cached)
     mem = call_tool(
         "create_memory",
         title="Quickstart Memory",
         content="WhiteMagic quickstart ran successfully. This memory proves the system works.",
         tags=["quickstart", "test"],
+        auto_embed=False,
+        enable_surprise_gate=False,
+        enable_entity_extraction=False,
+        enable_holographic_index=False,
     )
     steps.append({"step": "create_memory", "status": mem.get("status", "error")})
     if not json_output:

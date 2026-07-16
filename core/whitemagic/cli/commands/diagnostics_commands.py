@@ -339,7 +339,7 @@ def doctor_command(ctx, fix: bool) -> None:
         if "db" in data:
             db = data["db"]
             lines.append(
-                f"[bold]DB:[/bold] {db.get('memory_count', '?')} memories, {db.get('size_mb', '?')} MB"
+                f"[bold]DB:[/bold] {db.get('total_memories', db.get('memory_count', 0))} memories, {db.get('total_size_mb', db.get('size_mb', 0))} MB"
             )
 
         rust_ok = data.get("rust", {}).get("available", False)

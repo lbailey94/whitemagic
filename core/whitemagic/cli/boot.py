@@ -44,6 +44,10 @@ def bootstrap_env_from_argv(argv: list[str]) -> None:
     if "--silent-init" in argv or "--json" in argv:
         os.environ["WM_SILENT_INIT"] = "1"
 
+    # Suppress verbose logging in CLI mode unless explicitly debugging
+    if not os.getenv("WM_DEBUG"):
+        logging.getLogger("whitemagic").setLevel(logging.WARNING)
+
 
 def register_all_commands(
     main_group, get_memory, status_command_ref, json_dumps_ref
