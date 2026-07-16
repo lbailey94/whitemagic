@@ -29,22 +29,34 @@ def _call_tool(name: str, **kwargs: Any) -> dict[str, Any]:
 def benchmark_add_memories(
     memories: list[dict[str, str]],
     galaxy: str = "benchmark",
-) -> dict[str, float]:
-    """Benchmark adding memories. Returns timing stats."""
+) -> tuple[dict[str, float], dict[str, str]]:
+    """Benchmark adding memories. Returns timing stats and ID mapping.
+
+    Returns (stats, id_map) where id_map maps dataset IDs (mem_0000) to
+    actual memory UUIDs returned by create_memory.
+    """
     latencies = []
+    id_map: dict[str, str] = {}
 
     for mem in memories:
         start = time.perf_counter()
-        _call_tool(
+        result = _call_tool(
             "create_memory",
+            title=mem["id"],
             content=mem["content"],
             galaxy=galaxy,
             tags=mem["tags"],
         )
         latencies.append((time.perf_counter() - start) * 1000)
 
+        actual_id = None
+        if isinstance(result, dict):
+            actual_id = result.get("memory_id") or result.get("details", {}).get("memory_id")
+        if actual_id:
+            id_map[mem["id"]] = actual_id
+
     latencies.sort()
-    return {
+    stats = {
         "count": len(latencies),
         "total_ms": sum(latencies),
         "p50_ms": latencies[len(latencies) // 2],
@@ -52,6 +64,7 @@ def benchmark_add_memories(
         "p99_ms": latencies[int(len(latencies) * 0.99)],
         "throughput_ops_sec": len(latencies) / (sum(latencies) / 1000) if sum(latencies) > 0 else 0,
     }
+    return stats, id_map
 
 
 def benchmark_search(
@@ -87,16 +100,30 @@ def benchmark_recall(
     queries: list[dict[str, str | list[str]]],
     galaxy: str = "benchmark",
     limit: int = 10,
-) -> dict[str, float]:
-    """Benchmark recall quality. Returns recall@K and MRR."""
+    id_map: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Benchmark recall quality. Returns recall@K, MRR, and per-query data.
+
+    If id_map is provided, expected dataset IDs (mem_0000) are translated to
+    actual memory UUIDs before matching against search results.
+    """
     recall_at_1 = 0
     recall_at_5 = 0
     recall_at_10 = 0
     mrr_sum = 0.0
     total = 0
+    per_query: list[dict[str, float]] = []
 
     for q in queries:
-        expected = set(q.get("expected_ids", []))
+        expected_ds = set(q.get("expected_ids", []))
+        if not expected_ds:
+            continue
+
+        # Translate dataset IDs to actual UUIDs if mapping available
+        if id_map:
+            expected = {id_map[ds_id] for ds_id in expected_ds if ds_id in id_map}
+        else:
+            expected = expected_ds
         if not expected:
             continue
 
@@ -109,7 +136,8 @@ def benchmark_recall(
 
         retrieved_ids = []
         if result.get("status") == "success":
-            data = result.get("data", result.get("results", []))
+            details = result.get("details", {})
+            data = details.get("memories", details.get("data", details.get("results", [])))
             if isinstance(data, list):
                 for item in data:
                     if isinstance(item, dict):
@@ -117,17 +145,27 @@ def benchmark_recall(
                         retrieved_ids.append(rid)
 
         retrieved_set = set(retrieved_ids)
-        if retrieved_set & expected:
-            recall_at_10 += 1
-        if len(retrieved_set & expected) >= min(1, len(expected)):
-            recall_at_1 += 1
-        if len(retrieved_set & expected) >= min(5, len(expected)):
-            recall_at_5 += 1
-
+        # Recall@K: at least one expected ID appears in top K results
+        match_ranks = [i + 1 for i, rid in enumerate(retrieved_ids) if rid in expected]
+        q_r1 = 1.0 if any(r <= 1 for r in match_ranks) else 0.0
+        q_r5 = 1.0 if any(r <= 5 for r in match_ranks) else 0.0
+        q_r10 = 1.0 if match_ranks else 0.0
+        q_mrr = 0.0
         for rank, rid in enumerate(retrieved_ids, 1):
             if rid in expected:
-                mrr_sum += 1.0 / rank
+                q_mrr = 1.0 / rank
                 break
+
+        recall_at_1 += q_r1
+        recall_at_5 += q_r5
+        recall_at_10 += q_r10
+        mrr_sum += q_mrr
+        per_query.append({
+            "recall_at_1": q_r1,
+            "recall_at_5": q_r5,
+            "recall_at_10": q_r10,
+            "mrr": q_mrr,
+        })
 
         total += 1
 
@@ -137,6 +175,7 @@ def benchmark_recall(
         "recall_at_5": recall_at_5 / total if total > 0 else 0,
         "recall_at_10": recall_at_10 / total if total > 0 else 0,
         "mrr": mrr_sum / total if total > 0 else 0,
+        "per_query": per_query,
     }
 
 
@@ -150,10 +189,18 @@ def run_benchmark(
     memories = generate_dataset(num_memories=num_memories)
     queries = generate_queries(num_queries=num_queries)
 
+    # Ensure the benchmark galaxy exists
+    try:
+        _call_tool("galaxy.create", name=galaxy)
+        print(f"  Galaxy '{galaxy}' created/confirmed")
+    except Exception:
+        pass
+
     print("Benchmarking add_memories...")
-    add_stats = benchmark_add_memories(memories, galaxy=galaxy)
+    add_stats, id_map = benchmark_add_memories(memories, galaxy=galaxy)
     print(f"  {add_stats['count']} memories added in {add_stats['total_ms']:.1f}ms "
           f"({add_stats['throughput_ops_sec']:.1f} ops/sec)")
+    print(f"  {len(id_map)}/{len(memories)} IDs mapped")
 
     print("Benchmarking search...")
     search_stats = benchmark_search(queries, galaxy=galaxy)
@@ -161,7 +208,7 @@ def run_benchmark(
           f"({search_stats['throughput_ops_sec']:.1f} ops/sec)")
 
     print("Benchmarking recall quality...")
-    recall_stats = benchmark_recall(queries, galaxy=galaxy)
+    recall_stats = benchmark_recall(queries, galaxy=galaxy, id_map=id_map)
     print(f"  recall@1: {recall_stats['recall_at_1']:.2%}")
     print(f"  recall@5: {recall_stats['recall_at_5']:.2%}")
     print(f"  recall@10: {recall_stats['recall_at_10']:.2%}")

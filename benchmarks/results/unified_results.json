@@ -1,0 +1,590 @@
+{
+  "internal": {
+    "system": "whitemagic",
+    "add": {
+      "count": 100,
+      "total_ms": 68427.11858986877,
+      "p50_ms": 520.3316010010894,
+      "p95_ms": 787.8688159980811,
+      "p99_ms": 14848.625150014414,
+      "throughput_ops_sec": 1.4614088984130609
+    },
+    "search": {
+      "count": 50,
+      "total_ms": 31272.32370810816,
+      "p50_ms": 617.1659659885336,
+      "p95_ms": 886.0412770009134,
+      "p99_ms": 896.6500640090089,
+      "throughput_ops_sec": 1.5988578420552804
+    },
+    "recall": {
+      "total_queries": 50,
+      "recall_at_1": 0.94,
+      "recall_at_5": 0.98,
+      "recall_at_10": 0.98,
+      "mrr": 0.95,
+      "per_query": [
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 0.0,
+          "recall_at_5": 0.0,
+          "recall_at_10": 0.0,
+          "mrr": 0.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.25
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 0.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.25
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        },
+        {
+          "recall_at_1": 1.0,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0
+        }
+      ]
+    }
+  },
+  "locomo": {
+    "system": "whitemagic",
+    "benchmark": "locomo",
+    "num_conversations": 20,
+    "total_turns": 620,
+    "total_qa_pairs": 100,
+    "timestamp": "2026-07-16T17:30:38Z",
+    "ingest": {
+      "count": 620,
+      "p50_ms": 588.3713150105905,
+      "p95_ms": 958.5260900203139,
+      "throughput_ops_sec": 1.5730132923944393
+    },
+    "search": {
+      "count": 100,
+      "p50_ms": 689.0542919863947,
+      "p95_ms": 891.8369130115025,
+      "p99_ms": 1520.9499720076565
+    },
+    "recall": {
+      "total_queries": 100,
+      "recall_at_1": 0.2,
+      "recall_at_5": 0.92,
+      "recall_at_10": 1.0,
+      "mrr": 0.4640357142857144
+    },
+    "category_breakdown": {
+      "detail_recall": {
+        "total": 100,
+        "recall_at_1": 0.2,
+        "recall_at_5": 0.92,
+        "recall_at_10": 1.0
+      }
+    },
+    "tokens": {
+      "tokens_per_query": 0,
+      "llm_calls": 0,
+      "search_method": "FTS5 BM25 + FastEmbed semantic reranking"
+    }
+  },
+  "longmemeval": {
+    "system": "whitemagic",
+    "benchmark": "longmemeval",
+    "num_sessions": 10,
+    "total_turns": 210,
+    "total_questions": 50,
+    "timestamp": "2026-07-16T17:33:51Z",
+    "ingest": {
+      "count": 210,
+      "p50_ms": 705.4642539878841,
+      "p95_ms": 929.9929090193473
+    },
+    "search": {
+      "count": 50,
+      "p50_ms": 771.6593599761836,
+      "p95_ms": 1118.99748101132,
+      "p99_ms": 1164.5494539989159
+    },
+    "recall": {
+      "total_queries": 50,
+      "recall_at_1": 0.96,
+      "recall_at_5": 1.0,
+      "recall_at_10": 1.0,
+      "mrr": 0.9733333333333334
+    },
+    "category_breakdown": {
+      "detail_recall": {
+        "total": 48,
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "recall_at_10": 1.0
+      },
+      "preference": {
+        "total": 2,
+        "recall_at_1": 0.0,
+        "recall_at_5": 1.0,
+        "recall_at_10": 1.0
+      }
+    },
+    "tokens": {
+      "tokens_per_query": 0,
+      "llm_calls": 0
+    }
+  },
+  "beam": {
+    "system": "whitemagic",
+    "benchmark": "beam",
+    "total_memories": 250,
+    "total_queries": 100,
+    "timestamp": "2026-07-16T17:37:57Z",
+    "ingest_time_s": 174.24,
+    "overall_accuracy": 0.69,
+    "type_breakdown": {
+      "abstention": {
+        "total": 26,
+        "accuracy": 1.0
+      },
+      "multi_hop": {
+        "total": 31,
+        "accuracy": 0.0
+      },
+      "single_hop": {
+        "total": 25,
+        "accuracy": 1.0
+      },
+      "temporal": {
+        "total": 18,
+        "accuracy": 1.0
+      }
+    },
+    "search": {
+      "count": 100,
+      "p50_ms": 674.0781950065866,
+      "p95_ms": 959.1442209784873,
+      "p99_ms": 1502.8815330006182
+    },
+    "tokens": {
+      "tokens_per_query": 0,
+      "llm_calls": 0
+    }
+  },
+  "abstention": {
+    "system": "whitemagic",
+    "benchmark": "abstention",
+    "num_memories": 500,
+    "num_relevant_queries": 100,
+    "num_irrelevant_queries": 100,
+    "timestamp": "2026-07-16T17:47:07Z",
+    "metrics": {
+      "true_positive_rate": 0.76,
+      "false_positive_rate": 0.07,
+      "abstention_accuracy": 0.93,
+      "precision": 0.9157,
+      "f1_score": 0.8306,
+      "true_positives": 76,
+      "false_negatives": 24,
+      "false_positives": 7,
+      "true_negatives": 93
+    },
+    "search": {
+      "count": 200,
+      "p50_ms": 829.3954149994534,
+      "p95_ms": 1086.7503070039675,
+      "p99_ms": 1553.4931360161863
+    },
+    "tokens": {
+      "tokens_per_query": 0,
+      "llm_calls": 0
+    },
+    "note": "FPR measures how often the system returns results for completely irrelevant queries. Lower FPR = better abstention. Currently, FTS5 will return results for any query with keyword overlap. A relevance threshold gate (Gap D) is needed to enable proper abstention."
+  },
+  "_statistical": {
+    "bootstrap_cis": {
+      "recall_at_1": {
+        "metric": "recall_at_1",
+        "mean": 0.94,
+        "ci_lower": 0.86,
+        "ci_upper": 1.0,
+        "ci_width": 0.14,
+        "n_samples": 50,
+        "n_bootstrap": 1000,
+        "confidence": 0.95
+      },
+      "recall_at_5": {
+        "metric": "recall_at_5",
+        "mean": 0.98,
+        "ci_lower": 0.94,
+        "ci_upper": 1.0,
+        "ci_width": 0.06,
+        "n_samples": 50,
+        "n_bootstrap": 1000,
+        "confidence": 0.95
+      },
+      "recall_at_10": {
+        "metric": "recall_at_10",
+        "mean": 0.98,
+        "ci_lower": 0.94,
+        "ci_upper": 1.0,
+        "ci_width": 0.06,
+        "n_samples": 50,
+        "n_bootstrap": 1000,
+        "confidence": 0.95
+      },
+      "mrr": {
+        "metric": "mrr",
+        "mean": 0.95,
+        "ci_lower": 0.89,
+        "ci_upper": 1.0,
+        "ci_width": 0.11,
+        "n_samples": 50,
+        "n_bootstrap": 1000,
+        "confidence": 0.95
+      }
+    },
+    "judge_fpr": {
+      "fpr": 0.058,
+      "mean_random_recall": 0.0058,
+      "num_probes": 500,
+      "probe_size": 50,
+      "interpretation": "Random chance produces recall > 0 in 5.8% of probes. Mean random recall: 0.0058. Any system recall below 0.0116 may be noise."
+    }
+  },
+  "custom": {
+    "holographic_spatial": {
+      "name": "holographic_spatial_recall",
+      "num_memories": 50,
+      "num_queries": 20,
+      "mean_recall": 0.5787,
+      "spatial_boost": 0.0787,
+      "latency_ms": 0.1
+    },
+    "cross_galaxy": {
+      "name": "cross_galaxy_federation",
+      "galaxies": [
+        "codex",
+        "knowledge",
+        "research",
+        "citta",
+        "sessions"
+      ],
+      "num_queries": 30,
+      "single_galaxy_mean": 0.3962,
+      "federated_mean": 0.5577,
+      "improvement": 0.1615,
+      "latency_ms": 0.0
+    },
+    "dream_consolidation": {
+      "name": "dream_consolidation_associations",
+      "num_queries": 20,
+      "pre_consolidation_mean": 0.2702,
+      "post_consolidation_mean": 0.3819,
+      "improvement": 0.1117,
+      "latency_ms": 0.0
+    },
+    "working_memory_bias": {
+      "name": "working_memory_attention_bias",
+      "num_queries": 25,
+      "unbiased_mean": 0.5095,
+      "biased_mean": 0.5735,
+      "improvement": 0.064,
+      "latency_ms": 0.0
+    },
+    "citta_personalization": {
+      "name": "citta_personalized_search",
+      "num_queries": 25,
+      "unpersonalized_mean": 0.4833,
+      "personalized_mean": 0.5335,
+      "improvement": 0.0502,
+      "latency_ms": 0.0
+    },
+    "forgetting_accuracy": {
+      "name": "forgetting_accuracy",
+      "num_queries": 30,
+      "num_superseded_per_query": 3,
+      "true_exclusion_rate": 0.8883,
+      "false_inclusion_rate": 0.1027,
+      "fama_score": 0.8883,
+      "latency_ms": 0.0
+    }
+  }
+}

@@ -94,13 +94,14 @@ def generate_dataset(
 def generate_queries(
     num_queries: int = 100,
     seed: int = SEED + 1,
+    dataset_seed: int = SEED,
 ) -> list[dict[str, str | list[str]]]:
     """Generate test queries with known correct answers.
 
     Returns list of dicts with keys: query, expected_ids (relevant memory IDs).
     """
     rng = random.Random(seed)
-    dataset = generate_dataset(seed=seed)
+    dataset = generate_dataset(seed=dataset_seed)
 
     queries = []
     query_templates = [
