@@ -270,6 +270,32 @@ class CittaTrajectory:
             for i in range(len(self.vectors) - 1)
         ]
 
+    def normalized_velocity(self) -> list[float]:
+        """Step-to-step distances with per-subspace normalization.
+
+        Each subspace (coherence 8D, depth 4D, emotion 2D, neuro 2D)
+        contributes equally to the normalized distance. This prevents
+        the depth one-hot encoding from dominating the metric.
+        """
+        if len(self.vectors) < 2:
+            return []
+        norms = []
+        for i in range(len(self.vectors) - 1):
+            a, b = self.vectors[i], self.vectors[i + 1]
+            coh_d = a.subspace_distance(b, COHERENCE_RANGE)
+            depth_d = a.subspace_distance(b, DEPTH_RANGE)
+            emo_d = a.subspace_distance(b, EMOTION_RANGE)
+            neuro_d = a.subspace_distance(b, NEURO_RANGE)
+            # Normalize: each subspace contributes 0 or 1 (depth one-hot
+            # gives sqrt(2) when changing, so divide by sqrt(2))
+            import math
+            coh_norm = coh_d / math.sqrt(8)  # max possible in 8D
+            depth_norm = depth_d / math.sqrt(2)  # max for one-hot change
+            emo_norm = emo_d / math.sqrt(2)  # max for 2D
+            neuro_norm = neuro_d / math.sqrt(2)  # max for 2D
+            norms.append(coh_norm + depth_norm + emo_norm + neuro_norm)
+        return norms
+
     def avg_velocity(self) -> float:
         """Average step distance across the trajectory."""
         v = self.velocity()
@@ -280,7 +306,7 @@ class CittaTrajectory:
         v = self.velocity()
         return max(v) if v else 0.0
 
-    def ignition_events(self, threshold: float = 2.0) -> list[dict[str, Any]]:
+    def ignition_events(self, threshold: float = 1.2) -> list[dict[str, Any]]:
         """Detect ignition events — sudden large movements in citta-space.
 
         In Global Workspace Theory, "ignition" is the moment when a
@@ -295,7 +321,7 @@ class CittaTrajectory:
             List of ignition event dicts with position, distance, and
             preceding/following vectors.
         """
-        vels = self.velocity()
+        vels = self.normalized_velocity()
         if not vels:
             return []
         avg = sum(vels) / len(vels)

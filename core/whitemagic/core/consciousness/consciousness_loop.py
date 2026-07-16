@@ -655,11 +655,12 @@ class ConsciousnessLoop:
             self._stop_event.wait(timeout=wait_s)
 
     def _maybe_warm_caches(self) -> None:
-        """Flush stale cache entries and run auto_tune_ttls() during idle periods.
+        """Flush stale cache entries and warm retrieval indexes during idle periods.
 
         This is a lightweight maintenance task that runs on the cache_warming
-        interval. It removes expired entries and collects TTL tuning recommendations
-        without blocking the main loop.
+        interval. It removes expired entries, collects TTL tuning recommendations,
+        and proactively warms retrieval index caches for galaxies likely to be
+        queried based on working memory state.
         """
         try:
             from whitemagic.core.memory.cache_registry import get_cache_registry
@@ -671,6 +672,35 @@ class ConsciousnessLoop:
             reg.auto_tune_ttls()
         except Exception as e:
             logger.debug("Cache warming skipped: %s", e)
+
+        # Proactively warm retrieval index caches for active galaxies
+        try:
+            from whitemagic.core.memory.retrieval_cache import get_retrieval_cache
+            from whitemagic.core.intelligence.working_memory import get_working_memory
+
+            wm = get_working_memory()
+            cache = get_retrieval_cache()
+
+            # Determine which galaxies to warm based on working memory contents
+            active_galaxies: set[str] = set()
+            for chunk_id in wm.get_active_ids():
+                try:
+                    from whitemagic.core.memory.unified import get_unified_memory
+                    um = get_unified_memory()
+                    mem = um.recall(chunk_id)
+                    if mem and hasattr(mem, "galaxy") and mem.galaxy:
+                        active_galaxies.add(mem.galaxy)
+                except Exception:
+                    continue
+
+            # Always warm core galaxies
+            active_galaxies.update({"codex", "universal", "knowledge"})
+
+            # Warm up to 5 galaxies to avoid excessive I/O
+            for galaxy in list(active_galaxies)[:5]:
+                cache.warm_galaxy("default", galaxy)
+        except Exception as e:
+            logger.debug("Retrieval cache warming skipped: %s", e)
 
     def _advance_citta(self) -> None:
         """Advance the citta stream with current system telemetry."""

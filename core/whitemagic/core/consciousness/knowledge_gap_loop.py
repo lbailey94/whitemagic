@@ -92,7 +92,7 @@ class KnowledgeGapActionLoop:
                             gap_id=f"ril_gap_{hyp.id}",
                             description=hyp.description,
                             gap_type="missing_strategy",
-                            galaxy="self_learning",
+                            galaxy="knowledge",
                             priority=hyp.novelty_score,
                         )
                         gap.proposed_action = self._propose_action(gap)
@@ -182,7 +182,7 @@ class KnowledgeGapActionLoop:
     def _extract_galaxy(self, description: str) -> str:
         """Extract galaxy name from gap description."""
         desc_lower = description.lower()
-        for galaxy in ["citta", "codex", "insight", "self_learning", "self_discovery",
+        for galaxy in ["citta", "codex", "insight", "knowledge", "self_discovery",
                         "creative_solutions", "oracle", "universal", "sessions"]:
             if galaxy in desc_lower:
                 return galaxy

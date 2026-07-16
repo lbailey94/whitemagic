@@ -588,6 +588,39 @@ class DreamCycle:
         except (ImportError, ModuleNotFoundError):
             logger.debug("Optional dependency unavailable: ImportError")
 
+        # Julia drift detection — check for galaxy memory distribution shifts
+        try:
+            from whitemagic.core.acceleration.julia_bridge import julia_detect_galaxy_drift
+            from whitemagic.core.memory.unified import get_unified_memory
+
+            um = get_unified_memory()
+            # Sample importance and distances from the universal galaxy
+            stats = um.stats() if hasattr(um, "stats") else {}
+            current_importance = stats.get("importance_distribution", [])
+            current_distances = stats.get("distance_distribution", [])
+
+            if current_importance and current_distances:
+                # Use last snapshot as baseline (or current if no baseline)
+                baseline_imp = getattr(self, "_drift_baseline_importance", current_importance)
+                baseline_dist = getattr(self, "_drift_baseline_distances", current_distances)
+
+                drift_result = julia_detect_galaxy_drift(
+                    baseline_importance=baseline_imp,
+                    current_importance=current_importance,
+                    baseline_distances=baseline_dist,
+                    current_distances=current_distances,
+                )
+
+                if drift_result:
+                    result["galaxy_drift"] = drift_result
+                    # Update baseline for next cycle
+                    self._drift_baseline_importance = current_importance
+                    self._drift_baseline_distances = current_distances
+        except (ImportError, ModuleNotFoundError):
+            logger.debug("Julia drift detection unavailable")
+        except Exception as e:
+            logger.debug("Galaxy drift detection failed: %s", e)
+
         return result
 
     def _dream_serendipity(self) -> dict[str, Any]:
@@ -1710,6 +1743,95 @@ class DreamCycle:
                 "cancelled_phases": [p.value for p in self._cancelled_phases],
                 "phase_jobs": self.get_phase_jobs(),
             }
+
+    def trigger_cycle(self, reason: str = "manual") -> dict[str, Any]:
+        """Run all dream phases synchronously — on-demand consolidation.
+
+        Executes every registered dream phase in order, collecting results.
+        Used by guna balance correction when tamasic deficit is detected.
+        """
+        results: dict[str, Any] = {"reason": reason, "phases": [], "total": 0}
+        start = time.perf_counter()
+
+        # Phase 4.2: Capture pre-dream emergence baseline for feedback comparison
+        try:
+            from whitemagic.config.paths import galaxy_db_path
+            from whitemagic.core.memory.db_manager import safe_connect
+            kdb = galaxy_db_path("knowledge")
+            if kdb.exists():
+                conn = safe_connect(str(kdb), read_only=True)
+                try:
+                    results["pre_dream_emergence_count"] = conn.execute(
+                        "SELECT COUNT(*) FROM emergence_insights"
+                    ).fetchone()[0]
+                except Exception:
+                    results["pre_dream_emergence_count"] = 0
+                conn.close()
+        except Exception:
+            results["pre_dream_emergence_count"] = 0
+
+        for phase in self._phases:
+            job = self._phase_handlers.get(phase)
+            if job is None:
+                continue
+            phase_start = time.perf_counter()
+            report = DreamReport(
+                phase=phase,
+                started_at=datetime.now().isoformat(),
+            )
+            try:
+                report.details = job.handler()
+            except Exception as e:
+                report.success = False
+                report.error = str(e)
+                logger.debug("Triggered dream phase %s error: %s", phase.value, e, exc_info=True)
+            report.duration_ms = (time.perf_counter() - phase_start) * 1000
+
+            with self._lock:
+                self._total_cycles += 1
+                self._history.append(report)
+
+            self._emit_event(f"DREAM_PHASE_{phase.value.upper()}", report.to_dict())
+            results["phases"].append({
+                "phase": phase.value,
+                "success": report.success,
+                "duration_ms": round(report.duration_ms, 1),
+                "error": report.error,
+            })
+            results["total"] += 1
+
+        results["duration_ms"] = round((time.perf_counter() - start) * 1000, 1)
+        logger.info("Triggered dream cycle (%s): %d phases in %.0fms", reason, results["total"], results["duration_ms"])
+
+        # Phase 4.2: Dream cycle → emergence feedback
+        # Run emergence scan after dream and compare to pre-dream baseline
+        try:
+            from whitemagic.config.paths import galaxy_db_path
+            from whitemagic.core.memory.db_manager import safe_connect
+            kdb = galaxy_db_path("knowledge")
+            post_dream_count = 0
+            if kdb.exists():
+                conn = safe_connect(str(kdb), read_only=True)
+                try:
+                    post_dream_count = conn.execute("SELECT COUNT(*) FROM emergence_insights").fetchone()[0]
+                except Exception:
+                    pass
+                conn.close()
+
+            pre_dream_count = results.get("pre_dream_emergence_count", 0)
+            new_insights = post_dream_count - pre_dream_count
+            results["emergence_feedback"] = {
+                "pre_dream_count": pre_dream_count,
+                "post_dream_count": post_dream_count,
+                "new_insights": new_insights,
+                "effective": new_insights > 0,
+            }
+            if new_insights > 0:
+                logger.info("Dream cycle produced %d new emergence insights", new_insights)
+        except Exception:
+            logger.debug("Dream → emergence feedback check failed", exc_info=True)
+
+        return results
 
 
 _dream_cycle: DreamCycle | None = None

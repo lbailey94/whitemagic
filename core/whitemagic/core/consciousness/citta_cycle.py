@@ -122,6 +122,7 @@ class CittaCycle:
         self._last_depth: str = "surface"
         self._persist_counter: int = 0
         self._trajectory: CittaTrajectory = CittaTrajectory()
+        self._last_ignition_check: int = 0
         self._load_stream()
 
     def advance(
@@ -147,11 +148,60 @@ class CittaCycle:
         if neuro_signals is None:
             neuro_signals = _get_neuro_enrichment()
 
+        # Pull per-dimension coherence scores for richer vector geometry
+        coherence_scores: dict[str, float] | None = None
+        try:
+            from whitemagic.core.consciousness.coherence import get_coherence_metric
+            cm = get_coherence_metric()
+            if cm.scores and any(v > 0 for v in cm.scores.values()):
+                # Scale per-dimension scores by the moment's coherence scalar
+                # and introduce per-dimension variation based on moment properties
+                # so the 8D subspace has true geometric diversity
+                scale = max(0.0, min(1.0, float(coherence)))
+                base = {k: v * scale for k, v in cm.scores.items()}
+                
+                # Per-dimension modulation based on moment properties
+                # emotional_attunement: higher for non-neutral tones
+                tone_lower = emotional_tone.lower()
+                if tone_lower not in ("neutral", "calm", "clear"):
+                    base["emotional_attunement"] = min(1.0, base["emotional_attunement"] * 1.15)
+                else:
+                    base["emotional_attunement"] = base["emotional_attunement"] * 0.85
+                
+                # context_continuity: higher for flow/dream depths
+                if depth_layer in ("flow", "dream"):
+                    base["context_continuity"] = min(1.0, base["context_continuity"] * 1.2)
+                else:
+                    base["context_continuity"] = base["context_continuity"] * 0.8
+                
+                # capability_awareness: varies with tool type
+                if tool and "bridge" in tool.lower():
+                    base["capability_awareness"] = min(1.0, base["capability_awareness"] * 1.1)
+                elif tool and "scan" in tool.lower():
+                    base["capability_awareness"] = min(1.0, base["capability_awareness"] * 1.05)
+                
+                # goal_alignment: higher for determined/engaged tones
+                if tone_lower in ("determined", "engaged", "active"):
+                    base["goal_alignment"] = min(1.0, base["goal_alignment"] * 1.1)
+                
+                # temporal_orientation: lower for dream depth (time distortion)
+                if depth_layer == "dream":
+                    base["temporal_orientation"] = base["temporal_orientation"] * 0.7
+                
+                # relationship_awareness: higher for cross-galaxy operations
+                if operation and "bridge" in operation.lower():
+                    base["relationship_awareness"] = min(1.0, base["relationship_awareness"] * 1.15)
+                
+                coherence_scores = base
+        except Exception:
+            pass
+
         vec = CittaVector.from_moment(
             coherence=coherence,
             depth_layer=depth_layer,
             emotional_tone=emotional_tone,
             neuro_signals=neuro_signals,
+            coherence_scores=coherence_scores,
         )
 
         moment = CittaMoment(
@@ -176,6 +226,13 @@ class CittaCycle:
             self._coherence_history.append(coherence)
             self._trajectory.append(vec)
 
+            # Feed emotional tone to guna balance system
+            try:
+                from whitemagic.core.consciousness.guna_balance import get_guna_balance
+                get_guna_balance().record_tone(emotional_tone)
+            except Exception:
+                pass
+
             # Track depth transitions
             depth_changed = False
             if depth_layer != self._last_depth:
@@ -194,6 +251,9 @@ class CittaCycle:
             self._persist_counter += 1
             if self._persist_counter >= _PERSIST_INTERVAL or depth_changed:
                 self._persist_stream()
+
+        # Phase 4.1: Check for ignition clusters and trigger action loop if threshold exceeded
+        self._check_ignition_trigger()
 
         return moment
 
@@ -302,12 +362,45 @@ class CittaCycle:
             self._last_depth = "surface"
             self._persist_counter = 0
             self._trajectory = CittaTrajectory()
+            self._last_ignition_check = 0
             # Clear the persisted stream file
             try:
                 _STREAM_FILE.parent.mkdir(parents=True, exist_ok=True)
                 _STREAM_FILE.write_text("")
             except OSError:
                 logger.debug("Ignored OSError in citta_cycle.py:309")
+
+    def _check_ignition_trigger(self) -> None:
+        """Check for ignition clusters and trigger action loop if threshold exceeded.
+
+        After every 20 citta advances, check if 5+ ignition events are present
+        in the trajectory. If so, trigger a single action loop cycle to
+        self-correct in real-time during active sessions.
+        """
+        with self._lock:
+            pos = self._current_position
+            last_check = getattr(self, "_last_ignition_check", 0)
+            if pos - last_check < 20:
+                return
+            self._last_ignition_check = pos
+
+            try:
+                ignitions = self._trajectory.ignition_events()
+            except Exception:
+                return
+
+            if len(ignitions) >= 5:
+                logger.info(
+                    "Citta ignition cluster detected (%d events) — triggering action loop",
+                    len(ignitions),
+                )
+                try:
+                    from whitemagic.core.consciousness.cognitive_action_loop import get_action_loop
+                    loop = get_action_loop()
+                    if not loop._scheduler_running:
+                        loop.run_cycle(max_actions=1)
+                except Exception:
+                    logger.debug("Action loop trigger from citta failed", exc_info=True)
 
     def _persist_stream(self) -> None:
         """Persist the full stream to JSONL for cross-session continuity."""
