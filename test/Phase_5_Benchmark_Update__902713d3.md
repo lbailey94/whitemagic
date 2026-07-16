@@ -2439,3 +2439,116 @@ Still progressing — at `swarm.analyze`. Let me keep waiting.
 
 === MESSAGE 701 - Tool ===
 [CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 702 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 703 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 704 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 705 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 706 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 707 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 708 - Assistant ===
+Seems stuck in a dream/cycle loop. Let me check if we're still processing tools or if the benchmark is hung.
+
+=== MESSAGE 709 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 710 - Assistant ===
+Memory at 88% and the system seems to be in a homeostatic loop rather than processing tools. Let me check if there's any tool progress output:
+
+=== MESSAGE 711 - Tool ===
+[CORTEX_STEP_TYPE_READ_TERMINAL]
+
+=== MESSAGE 712 - Tool ===
+[CORTEX_STEP_TYPE_COMMAND_STATUS]
+
+=== MESSAGE 713 - Assistant ===
+The benchmark finished! Let me get the full output to see the results:
+
+=== MESSAGE 714 - Tool ===
+[CORTEX_STEP_TYPE_RUN_COMMAND]
+
+=== MESSAGE 715 - Assistant ===
+**Results are in!** Let me get the full summary:
+
+=== MESSAGE 716 - Tool ===
+[CORTEX_STEP_TYPE_RUN_COMMAND]
+
+=== MESSAGE 717 - Assistant ===
+## Benchmark Results
+
+| Metric | Count | Rate |
+|--------|-------|------|
+| **Total** | 816 | — |
+| **Success** | 770 | 94.48% |
+| **Expected fails** | 30 | — |
+| **Unexpected errors** | 2 | — |
+| **Timeouts** | 13 | — |
+| **Skipped** | 1 | — |
+| **Adjusted rate** | — | **98.16%** |
+
+### Issues to fix
+
+**2 unexpected errors:**
+- `llama.chat` — 500 from llama-server (likely context overflow or concurrent request issue)
+- `windsurf.full_steps` — HTTP 500 error
+
+**13 timeouts** (need longer timeouts or should be expected fails):
+- `kaizen_analyze` / `kaizen_apply_fixes` — 180s not enough (full system scan)
+- `llama.agent` / `llama.generate` — 60s not enough (LLM inference is slow)
+- `model.optimize` — 60s not enough (needs LLM)
+- [war_room.execute](file:///home/lucas/Desktop/WHITEMAGIC/core/whitemagic/shelter/manager.py:460:4-582:9) — 60s not enough (clone deployment)
+- `codegenome.generate` / `corpus_callosum.debate` — 60s not enough
+- `windsurf.sync` — 60s not enough
+- `bitnet_infer` — 30s not enough
+- `ensemble.query` / `immune_heal` / `memory.lifecycle_sweep` — need more timeout
+
+**Browser tools** — all 6 failed with "All connection attempts failed" (Playwright can't connect — likely needs a browser launch first)
+
+Want me to fix these issues — increase timeouts for the compute-heavy tools, add browser session initialization, and add the 2 unexpected errors as expected fails? Or would you prefer a different approach?
+
+=== MESSAGE 718 - User ===
+Let's update our benchmark perfection strategy doc, and call it a night for now.
+
+=== MESSAGE 719 - Tool ===
+[CORTEX_STEP_TYPE_VIEW_FILE]
+
+=== MESSAGE 720 - Tool ===
+[CORTEX_STEP_TYPE_VIEW_FILE]
+
+=== MESSAGE 721 - Tool ===
+[CORTEX_STEP_TYPE_CODE_ACTION]
+
+=== MESSAGE 722 - Assistant ===
+Doc updated. Here's the summary:
+
+## Session 5 Summary
+
+**Progress**: 93.9% → **98.16% adjusted** (first full benchmark run)
+
+**What we did:**
+- Installed Playwright+chromium, Halmos, started llama-server, enabled BitNet
+- Un-skipped 47/48 tools (only `grimoire_cast` remains — deprecated)
+- Fixed 5 handler bugs (Docker flags, Rust SIMD, shelter auto-create, broker timeout)
+- Set timeouts for all compute-heavy tools (60-180s)
+- Ran the first full benchmark across all 816 tools
+
+**Results**: 770 success, 30 expected_fail, 2 unexpected, 13 timeouts, 1 skipped
+
+**Next session (Session 6) priorities:**
+1. Fix 2 unexpected errors (llama.chat 500, windsurf.full_steps 500)
+2. Address 13 timeouts (increase or classify as expected)
+3. Fix browser tools (need session init), OMS fixture file, fragment path bug
+
+Good night!
