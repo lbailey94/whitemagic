@@ -194,25 +194,25 @@ class TestTemporalForecastDB:
     def test_seed_validated_claims_inserts_all(self, tmp_db: TemporalForecastDB):
         result = tmp_db.seed_validated_claims()
         assert (
-            result["inserted"] == 35
-        )  # 30 validated + 4 pending + 1 expired = 35 total
+            result["inserted"] == 36
+        )  # 32 validated + 3 pending + 1 expired = 36 total
 
     def test_seed_syncs_existing_rows(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         second = tmp_db.seed_validated_claims()
-        # YAML is source of truth — second call updates all 35 rows to match
+        # YAML is source of truth — second call updates all 36 rows to match
         assert second["inserted"] == 0
-        assert second["updated"] == 35
+        assert second["updated"] == 36
         assert second["removed"] == 0
 
     def test_summary_after_seed(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         s = tmp_db.summary()
-        assert s["total"] == 35
-        assert s["validated"] == 30
-        assert s["pending"] == 4
+        assert s["total"] == 36
+        assert s["validated"] == 32
+        assert s["pending"] == 3
         assert s["falsified"] == 0
-        assert s["total_points"] > 510  # known: 600+
+        assert s["total_points"] > 700  # known: 757
         assert s["avg_lead_weeks"] > 20
 
     def test_summary_brier_score_after_seed(self, tmp_db: TemporalForecastDB):
@@ -242,10 +242,10 @@ class TestTemporalForecastDB:
         tmp_db.seed_validated_claims()
         all_preds = tmp_db.all_predictions()
         assert isinstance(all_preds, list)
-        assert len(all_preds) == 35
+        assert len(all_preds) == 36
 
     def test_total_points_matches_known_score(self, tmp_db: TemporalForecastDB):
         tmp_db.seed_validated_claims()
         s = tmp_db.summary()
-        # Known from validation history: 600+ points
-        assert s["total_points"] >= 600
+        # Known from validation history: 757 points
+        assert s["total_points"] >= 700

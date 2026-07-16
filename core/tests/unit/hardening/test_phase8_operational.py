@@ -21,6 +21,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
+
 # -- WI 1: Deterministic Replay --
 
 class TestReplayRecorder:

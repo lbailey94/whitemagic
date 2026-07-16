@@ -111,16 +111,16 @@ class TestDreamStateGalaxyWiring(unittest.TestCase):
 
 
 class TestAutonomousLearnerGalaxyWiring(unittest.TestCase):
-    """Autonomous learner should route to self_learning galaxy."""
+    """Autonomous learner should route to knowledge galaxy."""
 
     def test_learner_has_galaxy(self):
         filepath = _SRC / "core/patterns/pattern_consciousness/autonomous_learner.py"
         calls = _extract_galaxy_args(filepath)
         galaxy_calls = [g for _, g in calls if g is not None]
         self.assertIn(
-            "self_learning",
+            "knowledge",
             galaxy_calls,
-            "autonomous_learner.py must route store() to self_learning galaxy",
+            "autonomous_learner.py must route store() to knowledge galaxy",
         )
         # All 3 store calls should have galaxy
         self.assertEqual(

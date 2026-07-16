@@ -611,8 +611,10 @@ class TestPolyglotBridges(unittest.TestCase):
         )
         # Cycle check should still work (via PyO3 or Python DFS)
         self.assertTrue(bus._check_cascade_safety())
-        # Haskell backend should be False or a working backend
-        self.assertIn(bus._haskell_backend, (None, False))
+        # Haskell backend should be None/False (unavailable) or a working backend
+        if bus._haskell_backend not in (None, False):
+            self.assertTrue(callable(getattr(bus._haskell_backend, "call", None)),
+                            "Haskell backend should be a valid cascade backend")
 
     def test_koka_graceful_degradation(self):
         """Koka backend should gracefully degrade when unavailable."""
@@ -628,8 +630,10 @@ class TestPolyglotBridges(unittest.TestCase):
         )
         # Should still cascade even if Koka is unavailable
         self.assertEqual(bus.total_emissions, 2)
-        # Koka backend should be False or a working backend
-        self.assertIn(bus._koka_backend, (None, False))
+        # Koka backend should be None/False (unavailable) or a working backend
+        if bus._koka_backend not in (None, False):
+            self.assertTrue(callable(getattr(bus._koka_backend, "post_cascade", None)),
+                            "Koka backend should be a valid post-cascade backend")
 
     def test_class_level_availability_cache(self):
         """Class-level availability cache should prevent re-discovery."""

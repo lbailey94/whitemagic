@@ -82,6 +82,12 @@ class TestSemanticCache:
 
     def test_cache_hit_short_circuits(self):
         """On cache hit, should return cached result without dispatching."""
+        # Reset unified cache singleton so it picks up patched CACHE_DIR
+        import whitemagic.core.cache.unified_cache_bridge as _ucb
+        _ucb._unified_cache = None
+        import whitemagic.tools.middleware as _mw
+        _mw._semantic_cache_cached = False
+
         with tempfile.TemporaryDirectory() as tmpdir:
             # Pre-populate cache using the SAME filename the middleware uses
             from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache

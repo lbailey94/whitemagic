@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import os
 from unittest.mock import MagicMock, patch
+
+os.environ.setdefault("WM_SKIP_CONSCIOUSNESS_OBSERVE", "1")
+os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 
 from whitemagic.core.evolution.recursive_loop import (
     ImprovementCycle,
@@ -45,6 +49,16 @@ _mock_emergence = MagicMock()
 _mock_emergence.scan_for_emergence.return_value = []
 _mock_insight = MagicMock()
 _mock_insight.generate_briefing.return_value = MagicMock(items=[])
+_mock_guna = MagicMock()
+_mock_guna.measure.return_value = MagicMock(
+    balanced=True, correction_action=None, dominant_guna="sattvic",
+    deficits={}, surpluses={}, sattvic_ratio=0.5, rajasic_ratio=0.3, tamasic_ratio=0.2,
+    to_dict=lambda: {"balanced": True},
+)
+_mock_citta = MagicMock()
+_mock_citta.get_trajectory.return_value = MagicMock(
+    vectors=[], ignition_events=lambda: [],
+)
 
 
 def _patch_engines():
@@ -65,6 +79,15 @@ def _patch_engines():
         patch(
             "whitemagic.core.intelligence.insight_pipeline.InsightPipeline",
             return_value=_mock_insight,
+        ),
+        # Skip guna/citta — unmocked they hit real SQLite/consciousness state
+        patch(
+            "whitemagic.core.consciousness.guna_balance.get_guna_balance",
+            return_value=_mock_guna,
+        ),
+        patch(
+            "whitemagic.core.consciousness.citta_cycle.get_citta_cycle",
+            return_value=_mock_citta,
         ),
         # Skip HRR + embedding operations (loads MiniLM model, ~2-3s)
         patch(
@@ -145,6 +168,12 @@ class TestRecursiveImprovementLoop:
     def teardown_method(self):
         for p in getattr(self, "_patches", []):
             p.stop()
+        # Close Rust evolution bridge subprocess to prevent pipe corruption across tests
+        try:
+            from whitemagic.core.evolution._rust_bridge import close as _close_rust_bridge
+            _close_rust_bridge()
+        except Exception:
+            pass
 
     def test_init(self):
         assert self.loop._cycle_count == 0
@@ -320,6 +349,11 @@ class TestAutomatedOutcomeDetection:
     def teardown_method(self):
         for p in getattr(self, "_patches", []):
             p.stop()
+        try:
+            from whitemagic.core.evolution._rust_bridge import close as _close_rust_bridge
+            _close_rust_bridge()
+        except Exception:
+            pass
 
     def test_hypothesis_has_verification_fields(self):
         hyp = ImprovementHypothesis(
@@ -403,6 +437,11 @@ class TestSurprisalDrivenExploration:
     def teardown_method(self):
         for p in getattr(self, "_patches", []):
             p.stop()
+        try:
+            from whitemagic.core.evolution._rust_bridge import close as _close_rust_bridge
+            _close_rust_bridge()
+        except Exception:
+            pass
 
     def test_surprise_gate_init_none(self):
         assert self.loop._surprise_gate is None

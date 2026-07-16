@@ -26,7 +26,7 @@ class TestKnowledgeGapActionLoop:
     def test_extract_galaxy(self):
         loop = KnowledgeGapActionLoop()
         assert loop._extract_galaxy("Galaxy 'citta' is empty") == "citta"
-        assert loop._extract_galaxy("Galaxy 'self_learning' needs work") == "self_learning"
+        assert loop._extract_galaxy("Galaxy 'knowledge' needs work") == "knowledge"
         assert loop._extract_galaxy("Something about unknown stuff") == "universal"
 
     def test_propose_action(self):

@@ -87,7 +87,7 @@ class TestGalaxyRouter(unittest.TestCase):
     def test_route_subsystem_mapping(self):
         # Known subsystems map to correct galaxies
         self.assertEqual(
-            self.router.route("recursive_improvement_loop"), "self_learning"
+            self.router.route("recursive_improvement_loop"), "knowledge"
         )
         self.assertEqual(self.router.route("emergence_engine"), "self_discovery")
         self.assertEqual(self.router.route("insight_pipeline"), "insight")
