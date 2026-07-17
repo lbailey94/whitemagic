@@ -24,6 +24,11 @@
 
 ## 3. LoCoMo Benchmark (20 conversations)
 
+> **Improvement note (2026-07-16)**: R@1 improved from 20% → 57% (2.85x) via:
+> 1. Dataset fix: 18 topic-specific detail pools replaced 10 shared details
+> 2. Per-topic summary memories: one summary per topic per conversation
+> 3. Conversation-aware reranker: 4-signal heuristic (answer-type, grouping, turn-position, semantic tiebreaker)
+
 - **Recall@1**: 57.00%
 - **Recall@5**: 97.00%
 - **Recall@10**: 100.00%
@@ -81,6 +86,20 @@
 - **TP**: 76 | **FN**: 24 | **FP**: 7 | **TN**: 93
 
 > **Note**: Abstention gate is now active (threshold=0.12). FPR measures how often irrelevant queries still return results above threshold.
+
+---
+
+## 7. HologramEval (5D Holographic Memory Evaluation)
+
+> **Status**: Adapter implemented (`hologrameval_adapter.py`, 470 lines). Run scheduled for 2026-07-17.
+
+Tests 5D holographic positioning with 6 query types:
+- **Semantic**: topic cluster retrieval (y-axis)
+- **Emotional**: emotional context matching (z-axis)
+- **Importance**: high-importance ranking (v-axis)
+- **Temporal**: recency-weighted retrieval (x-axis)
+- **Substring**: standard recall (control group)
+- **Combined**: multi-dimensional (semantic + importance)
 
 ---
 
