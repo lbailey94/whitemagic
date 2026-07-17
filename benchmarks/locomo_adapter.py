@@ -53,6 +53,91 @@ def _call_tool(name: str, **kwargs: Any) -> dict[str, Any]:
     return call_tool(name, **kwargs)
 
 
+TOPICS = [
+    "project deadlines", "team dynamics", "career goals",
+    "weekend plans", "travel destinations", "book recommendations",
+    "technology trends", "health and fitness", "financial planning",
+    "home improvement", "cooking recipes", "music preferences",
+    "education plans", "startup ideas", "research directions",
+    "office politics", "client relationships", "product launches",
+]
+
+TOPIC_DETAILS = {
+    "project deadlines": [
+        "the deadline is next Friday", "the report is due in two weeks",
+        "the sprint ends on Thursday", "the milestone is March 15th",
+    ],
+    "team dynamics": [
+        "the team has 8 members", "Sarah joined the team last week",
+        "there was a conflict between two developers", "the team decided to use agile",
+    ],
+    "career goals": [
+        "she wants to become a tech lead", "he is aiming for a promotion by Q3",
+        "she plans to switch to management", "he is considering a job change",
+    ],
+    "weekend plans": [
+        "going hiking on Saturday", "visiting the new art exhibition",
+        "having dinner with family", "attending a jazz concert",
+    ],
+    "travel destinations": [
+        "planning a trip to Japan in spring", "considering a beach vacation in Bali",
+        "booking a flight to Iceland", "exploring Portugal in summer",
+    ],
+    "book recommendations": [
+        "recommended 'Designing Data-Intensive Applications'", "suggested 'The Pragmatic Programmer'",
+        "mentioned 'Thinking in Systems'", "liked 'Accelerando' by Charles Stross",
+    ],
+    "technology trends": [
+        "excited about Rust's growing adoption", "interested in WebAssembly for edge computing",
+        "watching the LLM agent framework space", "exploring local-first software patterns",
+    ],
+    "health and fitness": [
+        "started a new running routine", "trying intermittent fasting",
+        "joined a climbing gym", "tracking sleep with a new device",
+    ],
+    "financial planning": [
+        "the budget is $50,000", "the budget was approved yesterday",
+        "considering index fund investing", "setting up an emergency fund",
+    ],
+    "home improvement": [
+        "renovating the kitchen next month", "installed smart lighting",
+        "planning a garden redesign", "repainting the living room",
+    ],
+    "cooking recipes": [
+        "learned a new pasta recipe", "tried making sushi at home",
+        "perfected the sourdough bread", "discovered a great curry technique",
+    ],
+    "music preferences": [
+        "been listening to a lot of jazz", "discovered a great synthwave playlist",
+        "went to a classical concert", "started learning the guitar",
+    ],
+    "education plans": [
+        "enrolled in a machine learning course", "considering an MBA program",
+        "taking online classes on systems design", "learning Japanese on Duolingo",
+    ],
+    "startup ideas": [
+        "pitching an AI code review tool", "building a memory engine for agents",
+        "exploring decentralized identity", "working on a local search product",
+    ],
+    "research directions": [
+        "exploring holographic memory representations", "studying polyglot acceleration patterns",
+        "researching consciousness models for AI", "investigating ethical governance frameworks",
+    ],
+    "office politics": [
+        "there was a disagreement about the roadmap", "the engineering team pushed back on scope",
+        "management changed the priority list", "a new VP joined last week",
+    ],
+    "client relationships": [
+        "the client prefers email communication", "the client asked for a demo next Tuesday",
+        "the client wants to extend the contract", "the client raised concerns about timeline",
+    ],
+    "product launches": [
+        "launching v2.0 in September", "the beta is live for 50 users",
+        "planning a public release in Q4", "the launch was delayed by two weeks",
+    ],
+}
+
+
 def generate_synthetic_locomo(
     num_conversations: int = 20,
     turns_per_conversation: int = 30,
@@ -73,92 +158,6 @@ def generate_synthetic_locomo(
         ("Dave", "researcher", "Tokyo", "cycling", "Korean food"),
         ("Eve", "designer", "Paris", "photography", "French food"),
     ]
-
-    TOPICS = [
-        "project deadlines", "team dynamics", "career goals",
-        "weekend plans", "travel destinations", "book recommendations",
-        "technology trends", "health and fitness", "financial planning",
-        "home improvement", "cooking recipes", "music preferences",
-        "education plans", "startup ideas", "research directions",
-        "office politics", "client relationships", "product launches",
-    ]
-
-    # Topic-specific details so FTS5 can distinguish turns about different topics.
-    # Each topic has its own pool of details — no cross-topic collision.
-    TOPIC_DETAILS = {
-        "project deadlines": [
-            "the deadline is next Friday", "the report is due in two weeks",
-            "the sprint ends on Thursday", "the milestone is March 15th",
-        ],
-        "team dynamics": [
-            "the team has 8 members", "Sarah joined the team last week",
-            "there was a conflict between two developers", "the team decided to use agile",
-        ],
-        "career goals": [
-            "she wants to become a tech lead", "he is aiming for a promotion by Q3",
-            "she plans to switch to management", "he is considering a job change",
-        ],
-        "weekend plans": [
-            "going hiking on Saturday", "visiting the new art exhibition",
-            "having dinner with family", "attending a jazz concert",
-        ],
-        "travel destinations": [
-            "planning a trip to Japan in spring", "considering a beach vacation in Bali",
-            "booking a flight to Iceland", "exploring Portugal in summer",
-        ],
-        "book recommendations": [
-            "recommended 'Designing Data-Intensive Applications'", "suggested 'The Pragmatic Programmer'",
-            "mentioned 'Thinking in Systems'", "liked 'Accelerando' by Charles Stross",
-        ],
-        "technology trends": [
-            "excited about Rust's growing adoption", "interested in WebAssembly for edge computing",
-            "watching the LLM agent framework space", "exploring local-first software patterns",
-        ],
-        "health and fitness": [
-            "started a new running routine", "trying intermittent fasting",
-            "joined a climbing gym", "tracking sleep with a new device",
-        ],
-        "financial planning": [
-            "the budget is $50,000", "the budget was approved yesterday",
-            "considering index fund investing", "setting up an emergency fund",
-        ],
-        "home improvement": [
-            "renovating the kitchen next month", "installed smart lighting",
-            "planning a garden redesign", "repainting the living room",
-        ],
-        "cooking recipes": [
-            "learned a new pasta recipe", "tried making sushi at home",
-            "perfected the sourdough bread", "discovered a great curry technique",
-        ],
-        "music preferences": [
-            "been listening to a lot of jazz", "discovered a great synthwave playlist",
-            "went to a classical concert", "started learning the guitar",
-        ],
-        "education plans": [
-            "enrolled in a machine learning course", "considering an MBA program",
-            "taking online classes on systems design", "learning Japanese on Duolingo",
-        ],
-        "startup ideas": [
-            "pitching an AI code review tool", "building a memory engine for agents",
-            "exploring decentralized identity", "working on a local search product",
-        ],
-        "research directions": [
-            "exploring holographic memory representations", "studying polyglot acceleration patterns",
-            "researching consciousness models for AI", "investigating ethical governance frameworks",
-        ],
-        "office politics": [
-            "there was a disagreement about the roadmap", "the engineering team pushed back on scope",
-            "management changed the priority list", "a new VP joined last week",
-        ],
-        "client relationships": [
-            "the client prefers email communication", "the client asked for a demo next Tuesday",
-            "the client wants to extend the contract", "the client raised concerns about timeline",
-        ],
-        "product launches": [
-            "launching v2.0 in September", "the beta is live for 50 users",
-            "planning a public release in Q4", "the launch was delayed by two weeks",
-        ],
-    }
 
     conversations = []
 
@@ -268,23 +267,37 @@ def run_locomo_benchmark(
             if actual_id:
                 id_map[f"{conv_id}_turn_{ti}"] = actual_id
 
-        # Store conversation-level summary (0-token, structural compression)
-        # Concatenates user turns which typically contain the factual content
-        # that QA pairs ask about. This helps multi-hop and open-domain queries
-        # where the answer spans multiple turns.
-        user_facts = [
-            t["content"] for t in conv["turns"]
-            if t["role"] == "user" and len(t["content"]) > 20
-        ]
-        if user_facts:
-            summary_content = " | ".join(user_facts[:20])  # Cap at 20 turns
+        # Store per-topic summary memories (0-token, structural compression)
+        # Instead of one big summary, create one per topic mentioned in the conversation.
+        # This gives FTS5 a high-density, topic-focused memory that ranks at position 1
+        # for topic-specific queries like "What did Alice say about team dynamics?"
+        topic_facts: dict[str, list[str]] = {}
+        for t in conv["turns"]:
+            if t["role"] != "user" or len(t["content"]) < 20:
+                continue
+            # Extract topic from the turn content
+            # Format: "I was talking with {name} about {topic}. They mentioned {detail}."
+            content = t["content"]
+            if " about " in content:
+                parts = content.split(" about ", 1)
+                if len(parts) == 2:
+                    rest = parts[1]
+                    if ". They mentioned " in rest:
+                        topic = rest.split(". They mentioned ", 1)[0].strip()
+                        if topic and topic in TOPIC_DETAILS:
+                            topic_facts.setdefault(topic, []).append(content)
+
+        for topic, facts in topic_facts.items():
+            if not facts:
+                continue
+            topic_summary = " | ".join(facts)
             t0 = time.perf_counter()
             result = _call_tool(
                 "create_memory",
-                title=f"{conv_id}_summary",
-                content=summary_content,
+                title=f"{conv_id}_summary_{topic}",
+                content=topic_summary,
                 galaxy=galaxy,
-                tags=["summary", conv_id],
+                tags=["summary", conv_id, topic],
             )
             ingest_latencies.append((time.perf_counter() - t0) * 1000)
             total_turns += 1
@@ -293,7 +306,7 @@ def run_locomo_benchmark(
             if isinstance(result, dict):
                 actual_id = result.get("memory_id") or result.get("details", {}).get("memory_id")
             if actual_id:
-                id_map[f"{conv_id}_summary"] = actual_id
+                id_map[f"{conv_id}_summary_{topic}"] = actual_id
 
     ingest_latencies.sort()
     print(f"  {total_turns} turns ingested in {sum(ingest_latencies) / 1000:.1f}s")

@@ -1,6 +1,6 @@
 # WhiteMagic Memory Benchmark Report
 
-**Date**: 2026-07-17 02:46:05 UTC
+**Date**: 2026-07-17 03:26:00 UTC
 **Platform**: Linux x86_64
 **Python**: 3.12.3
 
@@ -18,25 +18,25 @@
 - **Recall@5**: 100.00%
 - **Recall@10**: 100.00%
 - **MRR**: 0.9567
-- **Search p50**: 113.8ms
-- **Search p95**: 1146.1ms
+- **Search p50**: 189.5ms
+- **Search p95**: 1370.1ms
 - **Add throughput**: 2 ops/sec
 
 ## 3. LoCoMo Benchmark (20 conversations)
 
-- **Recall@1**: 40.00%
-- **Recall@5**: 98.00%
+- **Recall@1**: 57.00%
+- **Recall@5**: 97.00%
 - **Recall@10**: 100.00%
-- **MRR**: 0.6122
-- **Total turns**: 620
+- **MRR**: 0.7143
+- **Total turns**: 780
 - **Total QA pairs**: 100
-- **Search p50**: 308.4ms
+- **Search p50**: 186.2ms
 
 ### Category Breakdown
 
 | Category | Total | Recall@1 | Recall@5 | Recall@10 |
 |----------|-------|----------|----------|-----------|
-| detail_recall | 100 | 40.00% | 98.00% | 100.00% |
+| detail_recall | 100 | 57.00% | 97.00% | 100.00% |
 
 ## 4. LongMemEval Benchmark (10 sessions)
 
@@ -46,7 +46,7 @@
 - **MRR**: 0.9733
 - **Total turns**: 210
 - **Total questions**: 50
-- **Search p50**: 330.4ms
+- **Search p50**: 158.4ms
 
 ### Category Breakdown
 
@@ -60,7 +60,7 @@
 - **Overall Accuracy**: 98.00%
 - **Total Memories**: 250
 - **Total Queries**: 100
-- **Search p50**: 112.6ms
+- **Search p50**: 452.0ms
 
 ### Type Breakdown
 
@@ -89,7 +89,7 @@
 | System | Benchmark | Recall@1 | Recall@5 | MRR | Tokens/Query |
 |--------|-----------|----------|----------|-----|--------------|
 | WhiteMagic | Internal (100 mem) | 94.00% | 100.00% | 0.9567 | 0 |
-| WhiteMagic | LoCoMo | 40.00% | 98.00% | 0.6122 | 0 |
+| WhiteMagic | LoCoMo | 57.00% | 97.00% | 0.7143 | 0 |
 | WhiteMagic | LongMemEval | 96.00% | 100.00% | 0.9733 | 0 |
 | WhiteMagic | BEAM | 98.00% | — | — | 0 |
 | Mem0 (2026) | LoCoMo | 92.5% | — | — | ~7,000 |
