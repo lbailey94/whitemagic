@@ -79,20 +79,86 @@ def generate_synthetic_locomo(
         "weekend plans", "travel destinations", "book recommendations",
         "technology trends", "health and fitness", "financial planning",
         "home improvement", "cooking recipes", "music preferences",
+        "education plans", "startup ideas", "research directions",
+        "office politics", "client relationships", "product launches",
     ]
 
-    DETAILS = [
-        "the deadline is next Friday",
-        "the budget is $50,000",
-        "the team has 8 members",
-        "the meeting is at 3 PM",
-        "the report is due in two weeks",
-        "the client prefers email communication",
-        "the project uses Python and Rust",
-        "the deployment is on AWS",
-        "the budget was approved yesterday",
-        "the conference is in October",
-    ]
+    # Topic-specific details so FTS5 can distinguish turns about different topics.
+    # Each topic has its own pool of details — no cross-topic collision.
+    TOPIC_DETAILS = {
+        "project deadlines": [
+            "the deadline is next Friday", "the report is due in two weeks",
+            "the sprint ends on Thursday", "the milestone is March 15th",
+        ],
+        "team dynamics": [
+            "the team has 8 members", "Sarah joined the team last week",
+            "there was a conflict between two developers", "the team decided to use agile",
+        ],
+        "career goals": [
+            "she wants to become a tech lead", "he is aiming for a promotion by Q3",
+            "she plans to switch to management", "he is considering a job change",
+        ],
+        "weekend plans": [
+            "going hiking on Saturday", "visiting the new art exhibition",
+            "having dinner with family", "attending a jazz concert",
+        ],
+        "travel destinations": [
+            "planning a trip to Japan in spring", "considering a beach vacation in Bali",
+            "booking a flight to Iceland", "exploring Portugal in summer",
+        ],
+        "book recommendations": [
+            "recommended 'Designing Data-Intensive Applications'", "suggested 'The Pragmatic Programmer'",
+            "mentioned 'Thinking in Systems'", "liked 'Accelerando' by Charles Stross",
+        ],
+        "technology trends": [
+            "excited about Rust's growing adoption", "interested in WebAssembly for edge computing",
+            "watching the LLM agent framework space", "exploring local-first software patterns",
+        ],
+        "health and fitness": [
+            "started a new running routine", "trying intermittent fasting",
+            "joined a climbing gym", "tracking sleep with a new device",
+        ],
+        "financial planning": [
+            "the budget is $50,000", "the budget was approved yesterday",
+            "considering index fund investing", "setting up an emergency fund",
+        ],
+        "home improvement": [
+            "renovating the kitchen next month", "installed smart lighting",
+            "planning a garden redesign", "repainting the living room",
+        ],
+        "cooking recipes": [
+            "learned a new pasta recipe", "tried making sushi at home",
+            "perfected the sourdough bread", "discovered a great curry technique",
+        ],
+        "music preferences": [
+            "been listening to a lot of jazz", "discovered a great synthwave playlist",
+            "went to a classical concert", "started learning the guitar",
+        ],
+        "education plans": [
+            "enrolled in a machine learning course", "considering an MBA program",
+            "taking online classes on systems design", "learning Japanese on Duolingo",
+        ],
+        "startup ideas": [
+            "pitching an AI code review tool", "building a memory engine for agents",
+            "exploring decentralized identity", "working on a local search product",
+        ],
+        "research directions": [
+            "exploring holographic memory representations", "studying polyglot acceleration patterns",
+            "researching consciousness models for AI", "investigating ethical governance frameworks",
+        ],
+        "office politics": [
+            "there was a disagreement about the roadmap", "the engineering team pushed back on scope",
+            "management changed the priority list", "a new VP joined last week",
+        ],
+        "client relationships": [
+            "the client prefers email communication", "the client asked for a demo next Tuesday",
+            "the client wants to extend the contract", "the client raised concerns about timeline",
+        ],
+        "product launches": [
+            "launching v2.0 in September", "the beta is live for 50 users",
+            "planning a public release in Q4", "the launch was delayed by two weeks",
+        ],
+    }
 
     conversations = []
 
@@ -103,9 +169,13 @@ def generate_synthetic_locomo(
         turns = []
         facts_mentioned: list[dict[str, str]] = []
 
+        # Shuffle topics so each conversation has a different topic order
+        conv_topics = TOPICS[:]
+        rng.shuffle(conv_topics)
+
         for ti in range(turns_per_conversation):
-            topic = rng.choice(TOPICS)
-            detail = rng.choice(DETAILS)
+            topic = conv_topics[ti % len(conv_topics)]
+            detail = rng.choice(TOPIC_DETAILS[topic])
 
             if ti % 2 == 0:
                 content = f"I was talking with {name} about {topic}. They mentioned {detail}."

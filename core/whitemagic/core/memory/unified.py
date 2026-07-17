@@ -646,6 +646,16 @@ class UnifiedMemory:
             except (ImportError, ModuleNotFoundError, Exception) as e:
                 logger.debug("Multi-hop aggregation skipped: %s", e)
 
+        # Conversation-aware reranking (0-token, heuristic)
+        # Boosts results from dominant conversation, matches answer-type markers,
+        # weights by turn position, and uses semantic tiebreaking.
+        if query and len(results) > 1:
+            try:
+                from whitemagic.core.memory.conversation_reranker import conversation_rerank
+                results = conversation_rerank(query, results, limit=limit)
+            except (ImportError, ModuleNotFoundError, Exception) as e:
+                logger.debug("Conversation reranking skipped: %s", e)
+
         # Trim to final limit after all post-processing
         results = results[:limit]
 
