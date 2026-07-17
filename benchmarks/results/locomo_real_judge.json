@@ -1,0 +1,49 @@
+{
+  "recall": {
+    "recall_at_1": 0.1555891238670695,
+    "recall_at_5": 0.4078549848942598,
+    "mrr": 0.26048929810259114,
+    "total_questions": 1986,
+    "correct_at_1": 309,
+    "correct_at_5": 810
+  },
+  "category_results": {
+    "multi_hop": {
+      "total": 321,
+      "correct_1": 48,
+      "correct_5": 96
+    },
+    "temporal": {
+      "total": 96,
+      "correct_1": 3,
+      "correct_5": 11
+    },
+    "single_hop": {
+      "total": 282,
+      "correct_1": 23,
+      "correct_5": 52
+    },
+    "commonsense": {
+      "total": 841,
+      "correct_1": 149,
+      "correct_5": 425
+    },
+    "adversarial": {
+      "total": 446,
+      "correct_1": 86,
+      "correct_5": 226
+    }
+  },
+  "latency": {
+    "median_ms": 212.47076988220215,
+    "p50_ms": 212.47076988220215,
+    "p95_ms": 732.8202724456787
+  },
+  "evaluation_method": "llm_judge",
+  "ingestion": {
+    "total_turns": 5882,
+    "total_summaries": 272,
+    "ingestion_time_s": 62.654122829437256,
+    "num_conversations": 10
+  }
+}

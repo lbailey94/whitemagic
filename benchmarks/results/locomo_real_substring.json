@@ -1,0 +1,49 @@
+{
+  "recall": {
+    "recall_at_1": 0.08257804632426989,
+    "recall_at_5": 0.21651560926485397,
+    "mrr": 0.13581998593327899,
+    "total_questions": 1986,
+    "correct_at_1": 164,
+    "correct_at_5": 430
+  },
+  "category_results": {
+    "multi_hop": {
+      "total": 321,
+      "correct_1": 9,
+      "correct_5": 22
+    },
+    "temporal": {
+      "total": 96,
+      "correct_1": 0,
+      "correct_5": 6
+    },
+    "single_hop": {
+      "total": 282,
+      "correct_1": 3,
+      "correct_5": 14
+    },
+    "commonsense": {
+      "total": 841,
+      "correct_1": 96,
+      "correct_5": 253
+    },
+    "adversarial": {
+      "total": 446,
+      "correct_1": 56,
+      "correct_5": 135
+    }
+  },
+  "latency": {
+    "median_ms": 151.015043258667,
+    "p50_ms": 151.015043258667,
+    "p95_ms": 347.21875190734863
+  },
+  "evaluation_method": "substring",
+  "ingestion": {
+    "total_turns": 5882,
+    "total_summaries": 272,
+    "ingestion_time_s": 36.497241497039795,
+    "num_conversations": 10
+  }
+}
