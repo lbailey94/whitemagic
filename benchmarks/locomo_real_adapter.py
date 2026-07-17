@@ -320,10 +320,15 @@ def evaluate_qa(
     memory_store: Any,
     qa_pairs: list[dict],
     galaxy: str = "locomo_real",
+    extra_galaxies: list[str] | None = None,
     limit: int = 10,
     use_judge: bool = False,
 ) -> dict[str, Any]:
-    """Evaluate QA pairs against the memory store."""
+    """Evaluate QA pairs against the memory store.
+
+    Args:
+        extra_galaxies: Additional galaxies to search and merge results from.
+    """
     correct_at_1 = 0
     correct_at_5 = 0
     reciprocal_ranks = []
@@ -341,7 +346,14 @@ def evaluate_qa(
         category_results[category]["total"] += 1
 
         t0 = time.time()
+        # Search primary galaxy
         results = memory_store.search_hybrid(question, galaxy=galaxy, limit=limit)
+        # Search extra galaxies and merge
+        if extra_galaxies:
+            for eg in extra_galaxies:
+                extra_results = memory_store.search_hybrid(question, galaxy=eg, limit=limit)
+                # Interleave: put structured facts at the end (they're supplements)
+                results = results + extra_results
         latency_ms = (time.time() - t0) * 1000
         latencies.append(latency_ms)
 
@@ -403,6 +415,7 @@ def run_real_locomo_benchmark(
     max_conversations: int | None = None,
     max_qa_per_conv: int | None = None,
     use_judge: bool = False,
+    structured: bool = False,
 ) -> dict[str, Any]:
     """Run the real LoCoMo benchmark.
 
@@ -411,6 +424,7 @@ def run_real_locomo_benchmark(
         max_conversations: Limit number of conversations (for quick runs)
         max_qa_per_conv: Limit QA pairs per conversation
         use_judge: Use LLM-as-judge instead of substring matching
+        structured: Use domain-structured persona extraction (0-token)
 
     Returns benchmark results dict.
     """
@@ -431,7 +445,7 @@ def run_real_locomo_benchmark(
     # Ingest all conversations
     total_turns = 0
     total_summaries = 0
-    total_observations = 0
+    total_facts = 0
     ingestion_start = time.time()
 
     for sample in dataset:
@@ -440,8 +454,24 @@ def run_real_locomo_benchmark(
         total_turns += t
         total_summaries += s
 
+        # Structured fact extraction
+        if structured:
+            from benchmarks.persona_extractor import (
+                extract_facts_from_conversation,
+                ingest_structured_facts,
+                get_domain_stats,
+            )
+            turns = extract_turns(sample.get("conversation", {}))
+            facts = extract_facts_from_conversation(turns, conv_id=str(sample_id))
+            # Store in separate galaxy to avoid diluting raw turn ranking
+            ingested = ingest_structured_facts(store, facts, conv_id=str(sample_id), galaxy="locomo_structured")
+            total_facts += ingested
+
     ingestion_time = time.time() - ingestion_start
-    print(f"  {total_turns} turns + {total_summaries} summaries ingested in {ingestion_time:.1f}s")
+    if structured:
+        print(f"  {total_turns} turns + {total_summaries} summaries + {total_facts} structured facts in {ingestion_time:.1f}s")
+    else:
+        print(f"  {total_turns} turns + {total_summaries} summaries ingested in {ingestion_time:.1f}s")
 
     # Collect all QA pairs
     all_qa = []
@@ -452,18 +482,25 @@ def run_real_locomo_benchmark(
             qa_pairs = qa_pairs[:max_qa_per_conv]
         all_qa.extend(qa_pairs)
 
-    print(f"  Evaluating {len(all_qa)} QA pairs ({'LLM judge' if use_judge else 'substring'} matching)...")
+    method = "llm_judge" if use_judge else "substring"
+    if structured:
+        method += "+structured"
+    print(f"  Evaluating {len(all_qa)} QA pairs ({method} matching)...")
 
     # Evaluate
-    results = evaluate_qa(store, all_qa, galaxy=galaxy, use_judge=use_judge)
+    extra_galaxies = ["locomo_structured"] if structured else None
+    results = evaluate_qa(store, all_qa, galaxy=galaxy, extra_galaxies=extra_galaxies, use_judge=use_judge)
 
     # Add ingestion stats
     results["ingestion"] = {
         "total_turns": total_turns,
         "total_summaries": total_summaries,
+        "total_facts": total_facts,
         "ingestion_time_s": ingestion_time,
         "num_conversations": len(dataset),
+        "structured": structured,
     }
+    results["evaluation_method"] = method
 
     # Print summary
     r = results["recall"]

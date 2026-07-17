@@ -355,7 +355,7 @@ def generate_report(all_results: dict[str, Any]) -> str:
 BENCH_GALAXIES = [
     "benchmark", "locomo_bench", "longmemeval_bench",
     "beam_bench", "abstention_bench", "hologram_bench",
-    "locomo_real",
+    "locomo_real", "locomo_structured",
 ]
 
 
