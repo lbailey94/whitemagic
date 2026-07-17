@@ -239,6 +239,29 @@ def generate_report(all_results: dict[str, Any]) -> str:
             lines.append(f"| {cat} | {cd['total']} | {r1:.2%} | {r5:.2%} |")
         lines.append("")
 
+    # LoCoMo-Plus
+    if "locomo_plus" in all_results and "error" not in all_results["locomo_plus"]:
+        r = all_results["locomo_plus"]
+        rec = r.get("recall", {})
+        lines.extend([
+            "## 9. LoCoMo-Plus (Cognitive Memory Benchmark, 50 queries)",
+            "",
+            f"- **Recall@1**: {rec.get('recall_at_1', 0):.2%}",
+            f"- **Recall@5**: {rec.get('recall_at_5', 0):.2%}",
+            f"- **MRR**: {rec.get('mrr', 0):.4f}",
+            f"- **Total Queries**: {r.get('total_queries', 0)}",
+            f"- **Median Latency**: {r.get('latency', {}).get('median_ms', 0):.1f}ms",
+            f"- **Ingested**: {r.get('ingestion', {}).get('total_memories', 0)} memories",
+            "",
+            "### Cognitive Query Type Breakdown",
+            "",
+            "| Query Type | Total | R@1 | R@5 |",
+            "|-----------|-------|-----|-----|",
+        ])
+        for q_type, bd in sorted(r.get("type_breakdown", {}).items()):
+            lines.append(f"| {q_type} | {bd['total']} | {bd['accuracy']:.2%} | {bd['recall_5']:.2%} |")
+        lines.append("")
+
     # Comparison table
     lines.extend([
         "---",
@@ -270,6 +293,9 @@ def generate_report(all_results: dict[str, Any]) -> str:
     if "locomo_real" in all_results and "error" not in all_results["locomo_real"]:
         r = all_results["locomo_real"]["recall"]
         lines.append(f"| WhiteMagic | Real LoCoMo | {r['recall_at_1']:.2%} | {r['recall_at_5']:.2%} | {r['mrr']:.4f} | 0 |")
+    if "locomo_plus" in all_results and "error" not in all_results["locomo_plus"]:
+        r = all_results["locomo_plus"]["recall"]
+        lines.append(f"| WhiteMagic | LoCoMo-Plus | {r['recall_at_1']:.2%} | {r['recall_at_5']:.2%} | {r['mrr']:.4f} | 0 |")
 
     lines.extend([
         "| Synthius-Mem (2026) | LoCoMo | 94.37% | — | — | ~5,000 |",
@@ -355,7 +381,7 @@ def generate_report(all_results: dict[str, Any]) -> str:
 BENCH_GALAXIES = [
     "benchmark", "locomo_bench", "longmemeval_bench",
     "beam_bench", "abstention_bench", "hologram_bench",
-    "locomo_real", "locomo_structured",
+    "locomo_real", "locomo_structured", "locomo_plus",
 ]
 
 
@@ -399,6 +425,7 @@ def main() -> None:
     parser.add_argument("--skip-abstention", action="store_true", help="Skip abstention benchmark")
     parser.add_argument("--skip-hologrameval", action="store_true", help="Skip HologramEval benchmark")
     parser.add_argument("--skip-locomo-real", action="store_true", help="Skip real LoCoMo benchmark")
+    parser.add_argument("--skip-locomo-plus", action="store_true", help="Skip LoCoMo-Plus cognitive benchmark")
     parser.add_argument("--skip-custom", action="store_true", help="Skip custom benchmarks (Section 7.3)")
     parser.add_argument("--scale", choices=["10k", "50k", "100k"], default="10k", help="Scale benchmark size")
     parser.add_argument("--output-dir", default="benchmarks/results", help="Output directory")
@@ -494,6 +521,16 @@ def main() -> None:
         except Exception as e:
             print(f"  FAILED: {e}")
             all_results["locomo_real"] = {"error": str(e)}
+
+    if not args.skip_locomo_plus:
+        print("\n--- LoCoMo-Plus Cognitive Memory Benchmark ---")
+        try:
+            from benchmarks.locomo_plus_adapter import generate_synthetic_locomo_plus, run_locomo_plus_benchmark
+            lp_dataset = generate_synthetic_locomo_plus()
+            all_results["locomo_plus"] = run_locomo_plus_benchmark(dataset=lp_dataset)
+        except Exception as e:
+            print(f"  FAILED: {e}")
+            all_results["locomo_plus"] = {"error": str(e)}
 
     # Statistical rigor: bootstrap CIs and judge FPR
     print("\n--- Statistical Rigor (Bootstrap CIs + Judge FPR) ---")

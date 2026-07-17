@@ -905,3 +905,30 @@ Category improvements: adversarial +10.5pp (19% → 30%), commonsense +9.5pp (18
 **Gap analysis**: 72pp gap vs SOTA (94.37%). Root cause: SOTA systems use LLM generation to synthesize answers from retrieved context (~5K tokens/query). WhiteMagic returns raw memory content and checks substring/key-term match at 0 tokens/query. R@5 = 46.27% shows retrieval is finding relevant content in nearly half of questions — the bottleneck is answer extraction, not retrieval. Adding an LLM generation layer (RAG) on top of zero-token retrieval is the clearest path to closing the gap.
 
 **Key insight**: WhiteMagic's 0-token retrieval (R@5 = 46.27%) vs SOTA's 5K-token pipeline (R@1 = 94.37%) is not an apples-to-apples comparison. The retrieval quality is competitive; the evaluation methodology differs. A fair comparison requires either (a) adding LLM generation to WhiteMagic, or (b) evaluating SOTA systems on raw retrieval without generation.
+
+#### 8.7.6 LoCoMo-Plus (Cognitive Memory Benchmark) — IMPLEMENTED
+
+WhiteMagic-designed benchmark testing cognitive capabilities beyond LoCoMo's fact retrieval. 8 query types, 50 queries, 103 memories, 3 personas × 5 sessions.
+
+`locomo_plus_adapter.py` (623 lines):
+
+| Query Type | Description | R@1 | R@5 | Count |
+|-----------|-------------|-----|-----|-------|
+| importance_weighted | Which values matter most? | **50.00%** | 83.33% | 6 |
+| social_graph | Who is X to Y? | **40.00%** | 100.00% | 5 |
+| emotional_context | How was X feeling? | 13.33% | 26.67% | 15 |
+| cross_conversation | Synthesize across sessions | 0.00% | 66.67% | 3 |
+| goal_inference | What is X trying to achieve? | 0.00% | 66.67% | 6 |
+| contradiction_detection | Identify preference change | 0.00% | 33.33% | 3 |
+| preference_drift | Track preference evolution | 0.00% | 22.22% | 9 |
+| temporal_reasoning | When did X happen? | 0.00% | 0.00% | 3 |
+
+**Overall**: R@1=14.00%, R@5=46.00%, MRR=0.2520, 0 tokens/query.
+
+**Key findings**:
+- Structured facts (goals, values, social connections) are retrievable at high accuracy (50% R@1) because they're ingested as explicit high-importance memories
+- Temporal reasoning and preference drift fail at R@1 — these require cross-session reasoning that flat retrieval can't provide
+- Emotional context has low R@1 (13%) because emotion labels are metadata, not content — search_hybrid can't filter on emotional_valence
+- R@5 = 46% shows relevant content is being found, but ranking needs improvement
+
+**Design insight**: LoCoMo-Plus exposes the cognitive gap — the difference between finding a fact (LoCoMo) and reasoning about a person's cognitive state (LoCoMo-Plus). This gap is the frontier for memory system research.
