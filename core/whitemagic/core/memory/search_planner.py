@@ -342,8 +342,22 @@ class SearchQueryPlanner:
                         try:
                             from whitemagic.core.memory.spreading_activation import get_spreading_activation
                             sa_engine = get_spreading_activation()
+                            # Build galaxy_db_paths map for cross-galaxy traversal
+                            galaxy_db_paths: dict[str, str] = {}
+                            try:
+                                from pathlib import Path as _Path
+                                _galaxies_dir = _Path.home() / ".whitemagic/users/local/galaxies"
+                                if _galaxies_dir.exists():
+                                    for _gd in _galaxies_dir.iterdir():
+                                        if _gd.is_dir():
+                                            _dbp = _gd / "whitemagic.db"
+                                            if _dbp.exists():
+                                                galaxy_db_paths[_gd.name] = str(_dbp)
+                            except Exception:
+                                pass
                             sa_result = sa_engine.spread(
                                 seed_ids=seed_ids,
+                                galaxy_db_paths=galaxy_db_paths if galaxy_db_paths else None,
                                 max_hops=profile.graph_walk_hops,
                                 min_activation=0.15,
                             )

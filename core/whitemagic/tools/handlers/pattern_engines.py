@@ -170,32 +170,29 @@ def handle_emergence_status(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_association_mine(**kwargs: Any) -> dict[str, Any]:
-    """Mine associations from memory content."""
+    """Mine associations from memory content using keyword overlap."""
     try:
-        from whitemagic.core.intelligence.synthesis.association_miner import (
-            AssociationMiner,
-        )
+        from whitemagic.core.memory.association_miner import AssociationMiner
 
+        sample_size = kwargs.get("sample_size", 200)
         miner = AssociationMiner()
-
-        memory_ids = kwargs.get("memory_ids", [])
-        batch_size = kwargs.get("batch_size", 100)
-
-        associations = miner.mine_associations(
-            memory_ids=memory_ids, batch_size=batch_size
-        )
+        report = miner.mine(sample_size=sample_size)
+        result = report.to_dict()
         return {
             "status": "success",
-            "associations_found": len(associations),
-            "associations": associations[:50],  # Limit output
-            "sample_size": len(memory_ids) if memory_ids else "all",
+            "associations_found": result["links_proposed"],
+            "associations_created": result["links_created"],
+            "pairs_evaluated": result["pairs_evaluated"],
+            "memories_sampled": result["memories_sampled"],
+            "duration_ms": result["duration_ms"],
+            "top_proposals": result["top_proposals"],
         }
     except ImportError:
         return {
             "status": "success",
             "associations_found": 0,
             "associations": [],
-            "note": "Association miner archived",
+            "note": "Association miner not available",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -204,28 +201,36 @@ def handle_association_mine(**kwargs: Any) -> dict[str, Any]:
 def handle_association_mine_semantic(**kwargs: Any) -> dict[str, Any]:
     """Mine semantic associations using embeddings."""
     try:
-        from whitemagic.core.intelligence.synthesis.association_miner import (
-            SemanticAssociationMiner,
+        from whitemagic.core.memory.association_miner import AssociationMiner
+
+        min_similarity = kwargs.get("min_similarity", 0.5)
+        strong_threshold = kwargs.get("strong_threshold", 0.7)
+        max_proposals = kwargs.get("max_proposals", 100)
+        persist = kwargs.get("persist", True)
+
+        miner = AssociationMiner()
+        report = miner.mine_semantic(
+            min_similarity=min_similarity,
+            strong_threshold=strong_threshold,
+            max_proposals=max_proposals,
+            persist=persist,
         )
-
-        miner = SemanticAssociationMiner()
-
-        query = kwargs.get("query", "")
-        top_k = kwargs.get("top_k", 10)
-
-        associations = miner.find_semantic_associations(query=query, top_k=top_k)
+        result = report.to_dict()
         return {
             "status": "success",
-            "associations_found": len(associations),
-            "associations": associations,
-            "query": query,
+            "associations_found": result["links_proposed"],
+            "associations_created": result["links_created"],
+            "pairs_evaluated": result["pairs_evaluated"],
+            "memories_sampled": result["memories_sampled"],
+            "duration_ms": result["duration_ms"],
+            "top_proposals": result["top_proposals"],
         }
     except ImportError:
         return {
             "status": "success",
             "associations_found": 0,
             "associations": [],
-            "note": "Semantic association miner archived",
+            "note": "Semantic association miner not available",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}

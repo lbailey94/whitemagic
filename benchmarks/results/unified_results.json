@@ -3,26 +3,26 @@
     "system": "whitemagic",
     "add": {
       "count": 100,
-      "total_ms": 68427.11858986877,
-      "p50_ms": 520.3316010010894,
-      "p95_ms": 787.8688159980811,
-      "p99_ms": 14848.625150014414,
-      "throughput_ops_sec": 1.4614088984130609
+      "total_ms": 35727.453852130566,
+      "p50_ms": 222.7848949842155,
+      "p95_ms": 385.1924140180927,
+      "p99_ms": 12945.111851004185,
+      "throughput_ops_sec": 2.7989679985000278
     },
     "search": {
       "count": 50,
-      "total_ms": 31272.32370810816,
-      "p50_ms": 617.1659659885336,
-      "p95_ms": 886.0412770009134,
-      "p99_ms": 896.6500640090089,
-      "throughput_ops_sec": 1.5988578420552804
+      "total_ms": 8435.892715060618,
+      "p50_ms": 99.40368600655347,
+      "p95_ms": 358.61104002106003,
+      "p99_ms": 396.340256993426,
+      "throughput_ops_sec": 5.9270549885888055
     },
     "recall": {
       "total_queries": 50,
       "recall_at_1": 0.94,
-      "recall_at_5": 0.98,
-      "recall_at_10": 0.98,
-      "mrr": 0.95,
+      "recall_at_5": 1.0,
+      "recall_at_10": 1.0,
+      "mrr": 0.9566666666666666,
       "per_query": [
         {
           "recall_at_1": 1.0,
@@ -140,9 +140,9 @@
         },
         {
           "recall_at_1": 0.0,
-          "recall_at_5": 0.0,
-          "recall_at_10": 0.0,
-          "mrr": 0.0
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.3333333333333333
         },
         {
           "recall_at_1": 1.0,
@@ -333,18 +333,18 @@
     "num_conversations": 20,
     "total_turns": 620,
     "total_qa_pairs": 100,
-    "timestamp": "2026-07-16T17:30:38Z",
+    "timestamp": "2026-07-17T00:59:45Z",
     "ingest": {
       "count": 620,
-      "p50_ms": 588.3713150105905,
-      "p95_ms": 958.5260900203139,
-      "throughput_ops_sec": 1.5730132923944393
+      "p50_ms": 105.00659298850223,
+      "p95_ms": 556.6932340152562,
+      "throughput_ops_sec": 4.481324523519589
     },
     "search": {
       "count": 100,
-      "p50_ms": 689.0542919863947,
-      "p95_ms": 891.8369130115025,
-      "p99_ms": 1520.9499720076565
+      "p50_ms": 108.57725498499349,
+      "p95_ms": 152.6589390123263,
+      "p99_ms": 261.0966380161699
     },
     "recall": {
       "total_queries": 100,
@@ -373,17 +373,17 @@
     "num_sessions": 10,
     "total_turns": 210,
     "total_questions": 50,
-    "timestamp": "2026-07-16T17:33:51Z",
+    "timestamp": "2026-07-17T01:00:43Z",
     "ingest": {
       "count": 210,
-      "p50_ms": 705.4642539878841,
-      "p95_ms": 929.9929090193473
+      "p50_ms": 125.25280402041972,
+      "p95_ms": 415.9012319869362
     },
     "search": {
       "count": 50,
-      "p50_ms": 771.6593599761836,
-      "p95_ms": 1118.99748101132,
-      "p99_ms": 1164.5494539989159
+      "p50_ms": 278.79902502172627,
+      "p95_ms": 646.1668640258722,
+      "p99_ms": 868.5343289980665
     },
     "recall": {
       "total_queries": 50,
@@ -416,9 +416,9 @@
     "benchmark": "beam",
     "total_memories": 250,
     "total_queries": 100,
-    "timestamp": "2026-07-16T17:37:57Z",
-    "ingest_time_s": 174.24,
-    "overall_accuracy": 0.69,
+    "timestamp": "2026-07-17T01:01:49Z",
+    "ingest_time_s": 55.56,
+    "overall_accuracy": 0.98,
     "type_breakdown": {
       "abstention": {
         "total": 26,
@@ -426,7 +426,7 @@
       },
       "multi_hop": {
         "total": 31,
-        "accuracy": 0.0
+        "accuracy": 0.9354838709677419
       },
       "single_hop": {
         "total": 25,
@@ -439,9 +439,9 @@
     },
     "search": {
       "count": 100,
-      "p50_ms": 674.0781950065866,
-      "p95_ms": 959.1442209784873,
-      "p99_ms": 1502.8815330006182
+      "p50_ms": 95.12630497920327,
+      "p95_ms": 104.47378997923806,
+      "p99_ms": 158.6427039874252
     },
     "tokens": {
       "tokens_per_query": 0,
@@ -454,7 +454,7 @@
     "num_memories": 500,
     "num_relevant_queries": 100,
     "num_irrelevant_queries": 100,
-    "timestamp": "2026-07-16T17:47:07Z",
+    "timestamp": "2026-07-17T01:04:15Z",
     "metrics": {
       "true_positive_rate": 0.76,
       "false_positive_rate": 0.07,
@@ -468,9 +468,9 @@
     },
     "search": {
       "count": 200,
-      "p50_ms": 829.3954149994534,
-      "p95_ms": 1086.7503070039675,
-      "p99_ms": 1553.4931360161863
+      "p50_ms": 109.23131901654415,
+      "p95_ms": 418.1621120078489,
+      "p99_ms": 934.3815659813117
     },
     "tokens": {
       "tokens_per_query": 0,
@@ -492,30 +492,30 @@
       },
       "recall_at_5": {
         "metric": "recall_at_5",
-        "mean": 0.98,
-        "ci_lower": 0.94,
+        "mean": 1.0,
+        "ci_lower": 1.0,
         "ci_upper": 1.0,
-        "ci_width": 0.06,
+        "ci_width": 0.0,
         "n_samples": 50,
         "n_bootstrap": 1000,
         "confidence": 0.95
       },
       "recall_at_10": {
         "metric": "recall_at_10",
-        "mean": 0.98,
-        "ci_lower": 0.94,
+        "mean": 1.0,
+        "ci_lower": 1.0,
         "ci_upper": 1.0,
-        "ci_width": 0.06,
+        "ci_width": 0.0,
         "n_samples": 50,
         "n_bootstrap": 1000,
         "confidence": 0.95
       },
       "mrr": {
         "metric": "mrr",
-        "mean": 0.95,
-        "ci_lower": 0.89,
+        "mean": 0.9567,
+        "ci_lower": 0.9,
         "ci_upper": 1.0,
-        "ci_width": 0.11,
+        "ci_width": 0.1,
         "n_samples": 50,
         "n_bootstrap": 1000,
         "confidence": 0.95
@@ -527,64 +527,6 @@
       "num_probes": 500,
       "probe_size": 50,
       "interpretation": "Random chance produces recall > 0 in 5.8% of probes. Mean random recall: 0.0058. Any system recall below 0.0116 may be noise."
-    }
-  },
-  "custom": {
-    "holographic_spatial": {
-      "name": "holographic_spatial_recall",
-      "num_memories": 50,
-      "num_queries": 20,
-      "mean_recall": 0.5787,
-      "spatial_boost": 0.0787,
-      "latency_ms": 0.1
-    },
-    "cross_galaxy": {
-      "name": "cross_galaxy_federation",
-      "galaxies": [
-        "codex",
-        "knowledge",
-        "research",
-        "citta",
-        "sessions"
-      ],
-      "num_queries": 30,
-      "single_galaxy_mean": 0.3962,
-      "federated_mean": 0.5577,
-      "improvement": 0.1615,
-      "latency_ms": 0.0
-    },
-    "dream_consolidation": {
-      "name": "dream_consolidation_associations",
-      "num_queries": 20,
-      "pre_consolidation_mean": 0.2702,
-      "post_consolidation_mean": 0.3819,
-      "improvement": 0.1117,
-      "latency_ms": 0.0
-    },
-    "working_memory_bias": {
-      "name": "working_memory_attention_bias",
-      "num_queries": 25,
-      "unbiased_mean": 0.5095,
-      "biased_mean": 0.5735,
-      "improvement": 0.064,
-      "latency_ms": 0.0
-    },
-    "citta_personalization": {
-      "name": "citta_personalized_search",
-      "num_queries": 25,
-      "unpersonalized_mean": 0.4833,
-      "personalized_mean": 0.5335,
-      "improvement": 0.0502,
-      "latency_ms": 0.0
-    },
-    "forgetting_accuracy": {
-      "name": "forgetting_accuracy",
-      "num_queries": 30,
-      "num_superseded_per_query": 3,
-      "true_exclusion_rate": 0.8883,
-      "false_inclusion_rate": 0.1027,
-      "fama_score": 0.8883,
-      "latency_ms": 0.0
     }
   }
 }

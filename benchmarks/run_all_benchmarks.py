@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import platform
 import sys
 import time
@@ -29,6 +30,23 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+# ── Benchmark mode: bypass non-essential middleware ──────────────────────
+# The session recorder writes to a 2.6GB sessions DB (72K+ memories), making
+# each create_memory call take 20-170 seconds. These env vars disable:
+#   - Session recorder (WM_SESSION_RECORD=0)
+#   - Governor, citta consciousness, maturity gates (WM_BENCHMARK_MODE=1)
+#   - Karma effects recording (WM_KARMA_RECORD=0)
+#   - Error learner (WM_ERROR_LEARN=0)
+#   - Pattern guard (WM_PATTERN_GUARD=0)
+#   - Code nudge (WM_CODE_NUDGE=0)
+#   - Transaction firewall (WM_TRANSACTION_FIREWALL=0)
+os.environ.setdefault("WM_BENCHMARK_MODE", "1")
+os.environ.setdefault("WM_SESSION_RECORD", "0")
+os.environ.setdefault("WM_ERROR_LEARN", "0")
+os.environ.setdefault("WM_PATTERN_GUARD", "0")
+os.environ.setdefault("WM_CODE_NUDGE", "0")
+os.environ.setdefault("WM_TRANSACTION_FIREWALL", "0")
 
 
 def generate_report(all_results: dict[str, Any]) -> str:

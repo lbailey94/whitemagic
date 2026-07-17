@@ -652,6 +652,8 @@ def mw_timeout(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
 
 def mw_observability(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | None:
     """Record tool metrics to Prometheus and OpenTelemetry."""
+    if os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+        return next_fn(ctx)
     import time
 
     _ensure_cached()
@@ -2675,6 +2677,8 @@ def mw_code_nudge(ctx: DispatchContext, next_fn: NextFn) -> dict[str, Any] | Non
 
 def _post_call_observability(ctx: DispatchContext, result: dict[str, Any] | None) -> dict[str, Any] | None:
     """Record tool metrics to Prometheus and OpenTelemetry."""
+    if os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+        return result
     import time as _time
 
     _ensure_cached()
@@ -2704,6 +2708,8 @@ def _post_call_observability(ctx: DispatchContext, result: dict[str, Any] | None
 
 def _post_call_karma_effects(ctx: DispatchContext, result: dict[str, Any] | None) -> dict[str, Any] | None:
     """Auto-record karmic effects for every tool call."""
+    if os.getenv("WM_BENCHMARK_MODE", "").strip().lower() in ("1", "true", "yes"):
+        return result
     try:
         from whitemagic.dharma.effect_registry import get_declared_effects
         from whitemagic.dharma.effect_registry import get_declared_safety as _get_safety

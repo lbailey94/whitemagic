@@ -156,7 +156,20 @@ class GraphWalker:
         self._pagerank_cache_time: float = 0.0
 
     def _get_neighbors(self, memory_id: str, pool: Any) -> list[Neighbor]:
-        """Load all outgoing association edges for a memory, including target neuro_score."""
+        """Load all outgoing association edges for a memory, including target neuro_score.
+
+        Routes to the correct per-galaxy DB. The default pool may connect to
+        a different galaxy than where the memory's associations are stored,
+        so we try the default pool first, then fall back to scanning galaxy DBs.
+        """
+        rows = self._query_neighbors(memory_id, pool)
+        if rows:
+            return rows
+        # Fallback: try per-galaxy DBs
+        return self._get_neighbors_from_galaxies(memory_id)
+
+    def _query_neighbors(self, memory_id: str, pool: Any) -> list[Neighbor]:
+        """Query neighbors from a specific connection pool."""
         try:
             with pool.connection() as conn:
                 conn.row_factory = sqlite3.Row
@@ -192,6 +205,58 @@ class GraphWalker:
         except Exception as e:
             logger.debug("GraphWalker: failed to load neighbors for %s: %s", memory_id, e)
             return []
+
+    def _get_neighbors_from_galaxies(self, memory_id: str) -> list[Neighbor]:
+        """Fallback: scan per-galaxy DBs for this memory's associations."""
+        try:
+            from pathlib import Path
+            galaxies_dir = Path.home() / ".whitemagic/users/local/galaxies"
+            if not galaxies_dir.exists():
+                return []
+            for galaxy_dir in galaxies_dir.iterdir():
+                if not galaxy_dir.is_dir():
+                    continue
+                db_path = galaxy_dir / "whitemagic.db"
+                if not db_path.exists():
+                    continue
+                conn = sqlite3.connect(str(db_path), timeout=5)
+                conn.row_factory = sqlite3.Row
+                try:
+                    rows = conn.execute(
+                        """SELECT a.target_id, a.strength,
+                                  COALESCE(a.direction, 'undirected') as direction,
+                                  COALESCE(a.relation_type, 'associated_with') as relation_type,
+                                  COALESCE(a.edge_type, 'semantic') as edge_type,
+                                  COALESCE(a.traversal_count, 0) as traversal_count,
+                                  a.created_at, a.last_traversed_at,
+                                  COALESCE(m.neuro_score, 1.0) as neuro_score
+                           FROM associations a
+                           LEFT JOIN memories m ON a.target_id = m.id
+                           WHERE a.source_id = ? AND a.strength >= ?
+                           ORDER BY a.strength DESC
+                           LIMIT 50""",
+                        (memory_id, self._min_strength),
+                    ).fetchall()
+                    if rows:
+                        return [
+                            Neighbor(
+                                memory_id=row["target_id"],
+                                strength=row["strength"],
+                                direction=row["direction"],
+                                relation_type=row["relation_type"],
+                                edge_type=row["edge_type"],
+                                traversal_count=row["traversal_count"],
+                                created_at=row["created_at"],
+                                last_traversed_at=row["last_traversed_at"],
+                                neuro_score=row["neuro_score"],
+                            )
+                            for row in rows
+                        ]
+                finally:
+                    conn.close()
+        except Exception as e:
+            logger.debug("GraphWalker: galaxy fallback failed for %s: %s", memory_id, e)
+        return []
 
     def _get_galactic_distance(self, memory_id: str, pool: Any) -> float:
         """Get galactic distance for gravity calculation."""

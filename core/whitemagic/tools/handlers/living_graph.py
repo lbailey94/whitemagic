@@ -240,32 +240,36 @@ def handle_hybrid_recall(**kwargs: Any) -> dict[str, Any]:
 
 
 def handle_graph_walk(**kwargs: Any) -> dict[str, Any]:
-    """Walk the knowledge graph from a starting node."""
+    """Walk the association graph from seed memory IDs.
+
+    Uses GraphWalker for multi-hop weighted traversal of the association graph.
+    Returns traversal paths with edge weights, relation types, and evidence chains.
+    """
+    seed_ids = kwargs.get("seed_ids") or kwargs.get("start_node")
+    hops = kwargs.get("hops", kwargs.get("steps", 2))
+    top_k = kwargs.get("top_k", 10)
+
+    if not seed_ids:
+        return {"status": "error", "error": "seed_ids or start_node required"}
+
+    if isinstance(seed_ids, str):
+        seed_ids = [seed_ids]
+
     try:
-        from whitemagic.core.intelligence.graph_engine import GraphEngine
+        from whitemagic.core.memory.graph_walker import GraphWalker
 
-        start_node = kwargs.get("start_node")
-        steps = kwargs.get("steps", 10)
-
-        if not start_node:
-            return {"status": "error", "error": "start_node required"}
-
-        engine = GraphEngine()
-        path = engine.graph_walk(start=start_node, steps=steps)
+        walker = GraphWalker()
+        result = walker.walk(seed_ids=seed_ids, hops=hops, top_k=top_k)
 
         return {
             "status": "success",
-            "start_node": start_node,
-            "steps": steps,
-            "path": path,
-        }
-    except ImportError:
-        return {
-            "status": "success",
-            "start_node": kwargs.get("start_node"),
-            "steps": kwargs.get("steps", 10),
-            "path": [],
-            "note": "GraphEngine archived - graph walk not available",
+            "seed_ids": seed_ids,
+            "hops": hops,
+            "paths_explored": result.paths_explored,
+            "unique_nodes_visited": result.unique_nodes_visited,
+            "paths": [p.to_dict() for p in result.paths],
+            "evidence_chains": dict(list(result.evidence_chains().items())[:20]) if result.evidence_chains() else {},
+            "duration_ms": result.duration_ms,
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}

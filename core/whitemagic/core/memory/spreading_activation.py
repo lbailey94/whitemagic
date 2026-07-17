@@ -126,6 +126,26 @@ class SpreadingActivation:
         self._total_spreads = 0
         self._total_nodes_activated = 0
         self._total_cross_galaxy = 0
+        self._mem_galaxy_cache: dict[str, tuple[str, str]] = {}  # mid -> (galaxy, title)
+        self._cache_built = False
+
+    def _build_mem_galaxy_cache(self, galaxy_db_paths: dict[str, str]) -> None:
+        """Build a memory_id -> (galaxy, title) index from all galaxy DBs."""
+        if self._cache_built and self._mem_galaxy_cache:
+            return
+        self._mem_galaxy_cache.clear()
+        for galaxy_name, db_path in galaxy_db_paths.items():
+            try:
+                conn = safe_connect(db_path, timeout=5)
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute("SELECT id, title FROM memories").fetchall()
+                for r in rows:
+                    self._mem_galaxy_cache[r["id"]] = (galaxy_name, r["title"] or "")
+                conn.close()
+            except Exception as e:
+                logger.debug("Cache build failed for %s: %s", galaxy_name, e)
+        self._cache_built = True
+        logger.debug("Mem-galaxy cache: %d entries", len(self._mem_galaxy_cache))
 
     def spread(
         self,
@@ -155,6 +175,10 @@ class SpreadingActivation:
         d = decay if decay is not None else self._decay
         cgf = cross_galaxy_factor if cross_galaxy_factor is not None else self._cross_galaxy_factor
         threshold = min_activation if min_activation is not None else self._min_activation
+
+        # Build memory→galaxy cache for fast lookups
+        if galaxy_db_paths:
+            self._build_mem_galaxy_cache(galaxy_db_paths)
 
         # Priority queue: (-activation, counter, node)
         # Using negative activation because heapq is a min-heap
@@ -265,6 +289,9 @@ class SpreadingActivation:
         galaxy_db_paths: dict[str, str] | None,
     ) -> tuple[str, str]:
         """Look up a memory's galaxy and title across all galaxy DBs."""
+        # Fast path: check cache first
+        if self._cache_built and memory_id in self._mem_galaxy_cache:
+            return self._mem_galaxy_cache[memory_id]
         if galaxy_db_paths:
             for galaxy_name, db_path in galaxy_db_paths.items():
                 try:
@@ -275,7 +302,9 @@ class SpreadingActivation:
                     ).fetchone()
                     conn.close()
                     if row:
-                        return galaxy_name, row["title"] or ""
+                        result = (galaxy_name, row["title"] or "")
+                        self._mem_galaxy_cache[memory_id] = result
+                        return result
                 except Exception:
                     logger.debug("Ignored error in spreading_activation.py:278")
         return "", ""
@@ -325,20 +354,25 @@ class SpreadingActivation:
         for nid, strength, found_in_galaxy in raw_neighbors:
             resolved_galaxy = ""
             resolved_title = ""
-            for galaxy_name, db_path in galaxy_db_paths.items():
-                try:
-                    conn = safe_connect(db_path, timeout=5)
-                    conn.row_factory = sqlite3.Row
-                    row = conn.execute(
-                        "SELECT title FROM memories WHERE id = ?", (nid,)
-                    ).fetchone()
-                    conn.close()
-                    if row:
-                        resolved_galaxy = galaxy_name
-                        resolved_title = row["title"] or ""
-                        break
-                except Exception:
-                    logger.debug("Ignored error in spreading_activation.py:339")
+            # Fast path: check cache
+            if self._cache_built and nid in self._mem_galaxy_cache:
+                resolved_galaxy, resolved_title = self._mem_galaxy_cache[nid]
+            else:
+                for galaxy_name, db_path in galaxy_db_paths.items():
+                    try:
+                        conn = safe_connect(db_path, timeout=5)
+                        conn.row_factory = sqlite3.Row
+                        row = conn.execute(
+                            "SELECT title FROM memories WHERE id = ?", (nid,)
+                        ).fetchone()
+                        conn.close()
+                        if row:
+                            resolved_galaxy = galaxy_name
+                            resolved_title = row["title"] or ""
+                            self._mem_galaxy_cache[nid] = (resolved_galaxy, resolved_title)
+                            break
+                    except Exception:
+                        logger.debug("Ignored error in spreading_activation.py:339")
 
             # If not found in any galaxy, use the galaxy where the association was found
             if not resolved_galaxy:

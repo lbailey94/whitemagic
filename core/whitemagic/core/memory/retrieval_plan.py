@@ -97,7 +97,7 @@ class QueryProfile:
     diversity_bonus: float = 0.05
     rerank: bool = True
     cross_encoder: bool = True
-    spreading_activation: bool = False
+    spreading_activation: bool = True
     include_skills: bool = True
     include_cold: bool = False
     rrf_k: int = 60
