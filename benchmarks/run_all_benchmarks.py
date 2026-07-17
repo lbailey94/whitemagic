@@ -212,6 +212,33 @@ def generate_report(all_results: dict[str, Any]) -> str:
             lines.append(f"| {q_type} | {bd['total']} | {bd['accuracy']:.2%} |")
         lines.append("")
 
+    # Real LoCoMo
+    if "locomo_real" in all_results and "error" not in all_results["locomo_real"]:
+        r = all_results["locomo_real"]
+        rec = r.get("recall", {})
+        lines.extend([
+            "## 8. Real LoCoMo (snap-research dataset, 1,986 questions)",
+            "",
+            f"- **Recall@1**: {rec.get('recall_at_1', 0):.2%}",
+            f"- **Recall@5**: {rec.get('recall_at_5', 0):.2%}",
+            f"- **MRR**: {rec.get('mrr', 0):.4f}",
+            f"- **Total Questions**: {rec.get('total_questions', 0)}",
+            f"- **Median Latency**: {r.get('latency', {}).get('median_ms', 0):.1f}ms",
+            f"- **Evaluation**: {r.get('evaluation_method', 'unknown')}",
+            f"- **Ingested**: {r.get('ingestion', {}).get('total_turns', 0)} turns, "
+            f"{r.get('ingestion', {}).get('total_summaries', 0)} summaries",
+            "",
+            "### Category Breakdown",
+            "",
+            "| Category | Total | R@1 | R@5 |",
+            "|----------|-------|-----|-----|",
+        ])
+        for cat, cd in sorted(r.get("category_results", {}).items()):
+            r1 = cd["correct_1"] / cd["total"] if cd["total"] > 0 else 0
+            r5 = cd["correct_5"] / cd["total"] if cd["total"] > 0 else 0
+            lines.append(f"| {cat} | {cd['total']} | {r1:.2%} | {r5:.2%} |")
+        lines.append("")
+
     # Comparison table
     lines.extend([
         "---",
@@ -240,9 +267,15 @@ def generate_report(all_results: dict[str, Any]) -> str:
     if "hologrameval" in all_results and "error" not in all_results["hologrameval"]:
         r = all_results["hologrameval"]
         lines.append(f"| WhiteMagic | HologramEval | {r.get('overall_accuracy', 0):.2%} | — | — | 0 |")
+    if "locomo_real" in all_results and "error" not in all_results["locomo_real"]:
+        r = all_results["locomo_real"]["recall"]
+        lines.append(f"| WhiteMagic | Real LoCoMo | {r['recall_at_1']:.2%} | {r['recall_at_5']:.2%} | {r['mrr']:.4f} | 0 |")
 
     lines.extend([
-        "| Mem0 (2026) | LoCoMo | 92.5% | — | — | ~7,000 |",
+        "| Synthius-Mem (2026) | LoCoMo | 94.37% | — | — | ~5,000 |",
+        "| Mem0 v3 (Apr 2026) | LoCoMo | 92.5% | — | — | ~7,000 |",
+        "| Mem0 v3 (Apr 2026) | LongMemEval | 94.4% | — | — | ~6,800 |",
+        "| OpenDB (2026) | LongMemEval | 93.6% | 100% | — | 0 |",
         "| MemGPT | LoCoMo | ~80% | — | — | ~5,000 |",
         "",
         "## Statistical Rigor",
@@ -322,6 +355,7 @@ def generate_report(all_results: dict[str, Any]) -> str:
 BENCH_GALAXIES = [
     "benchmark", "locomo_bench", "longmemeval_bench",
     "beam_bench", "abstention_bench", "hologram_bench",
+    "locomo_real",
 ]
 
 
@@ -364,6 +398,7 @@ def main() -> None:
     parser.add_argument("--skip-beam", action="store_true", help="Skip BEAM benchmark")
     parser.add_argument("--skip-abstention", action="store_true", help="Skip abstention benchmark")
     parser.add_argument("--skip-hologrameval", action="store_true", help="Skip HologramEval benchmark")
+    parser.add_argument("--skip-locomo-real", action="store_true", help="Skip real LoCoMo benchmark")
     parser.add_argument("--skip-custom", action="store_true", help="Skip custom benchmarks (Section 7.3)")
     parser.add_argument("--scale", choices=["10k", "50k", "100k"], default="10k", help="Scale benchmark size")
     parser.add_argument("--output-dir", default="benchmarks/results", help="Output directory")
@@ -450,6 +485,15 @@ def main() -> None:
         except Exception as e:
             print(f"  FAILED: {e}")
             all_results["hologrameval"] = {"error": str(e)}
+
+    if not args.skip_locomo_real:
+        print("\n--- Real LoCoMo Benchmark (snap-research dataset) ---")
+        try:
+            from benchmarks.locomo_real_adapter import run_real_locomo_benchmark
+            all_results["locomo_real"] = run_real_locomo_benchmark(use_judge=True)
+        except Exception as e:
+            print(f"  FAILED: {e}")
+            all_results["locomo_real"] = {"error": str(e)}
 
     # Statistical rigor: bootstrap CIs and judge FPR
     print("\n--- Statistical Rigor (Bootstrap CIs + Judge FPR) ---")
