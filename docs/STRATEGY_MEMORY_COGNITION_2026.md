@@ -755,48 +755,99 @@ Build WhiteMagic-specific benchmarks that test capabilities no competitor has:
 1. Multi-hop aggregation (§8.3.2) — two-pass search that uses hop-1 results as seeds for hop-2
 2. Graph walk traversal — already implemented in `graph_walker.py` but not wired into the benchmark search path (benchmarks call `search_memories` directly, bypassing the search planner)
 
-### 8.4 Deferred Improvements (Post-Phase 2)
+### 8.4 Answer-Aware Retrieval & Multi-Hop Aggregation (Implemented 2026-07-16)
 
-The following improvements are designed but deferred until after Phase 2 (BEAM + LongMemEval-V2) to avoid premature optimization:
+#### 8.4.1 Answer-Aware Retrieval — `answer_aware.py` (224 lines)
 
-#### 8.3.1 Answer-Aware Retrieval
+**Problem**: LoCoMo Recall@1 stuck at 20% because FTS5 ranks individual turns higher than summary memories due to keyword density.
 
-**Problem**: LoCoMo Recall@1 stuck at 20% because FTS5 ranks individual turns higher than summary memories due to keyword density. The answer text is present but not ranked first.
+**Implementation**: 6 regex patterns extract entity + topic from natural language questions ("What did Alice say about machine learning?" → entity=Alice, topic=machine learning). Secondary FTS5 search for entity + topic terms, merged via dedup. Content-boosted reranking promotes results containing both entity and topic (0.15–0.30 boost). Guards: only activates for NL question patterns, no-op for synthetic queries. 16 unit tests.
 
-**Design**: A hybrid retrieval mode that combines:
-- **Query-based search** (current): FTS5 + semantic + cross-encoder
-- **Answer-hint search**: When the query contains specific entity references (e.g., "What did Alice say about..."), extract the entity and run a secondary FTS5 search with just the entity terms, then merge via RRF
-- **Content-boosted reranking**: After initial retrieval, check if retrieved results contain substrings that match likely answer patterns (dates, names, quantities) and boost those results
+**Files**: `core/whitemagic/core/memory/answer_aware.py`, integrated at `unified.py:624-634`
 
-**Implementation**: ~80 lines in `sqlite_backend.py` search method + ~40 lines in a new `answer_aware.py` module.
+#### 8.4.2 Multi-Hop Aggregation — `multi_hop.py` (163 lines)
 
-#### 8.3.2 Multi-Hop Aggregation
+**Problem**: Multi-hop questions ("What team is the person working on project Eta on?") require combining facts across memories. Single FTS5 search misses hop-2 results.
 
-**Problem**: Some LoCoMo/LongMemEval questions require combining facts from multiple turns (e.g., "What did Alice think about X after she learned Y?"). Current retrieval returns individual turns, not aggregated evidence.
+**Implementation**: Two-pass search — extracts entities from top-3 hop-1 results (capitalized proper nouns + `entity_NNN` IDs), runs 1 secondary FTS5 search (reduced from 3 for latency), merges via RRF with primary boost. Question-pattern guard: only activates for NL questions starting with what/who/which/where/when/why/how. 12 unit tests.
 
-**Design**: A post-retrieval aggregation step:
-1. Retrieve top-K results as usual
-2. Extract entities from each result
-3. If results share entities, merge their content into an "evidence chain"
-4. Rerank evidence chains by combined relevance + entity coherence
-5. Return both individual memories and aggregated chains
+**Files**: `core/whitemagic/core/memory/multi_hop.py`, integrated at `unified.py:636-646`
 
-**Implementation**: ~60 lines in a new `multi_hop.py` module, wired into `unified.py` search as an optional post-processing step. Uses existing `graph_engine.py` for entity graph traversal.
+#### 8.4.3 Benchmark Mode Bypass — 200x Speedup
 
-#### 8.3.3 Hybrid Text + Semantic Search
+**Root cause**: Session recorder middleware writes to 2.6GB sessions DB (72K+ memories). Each `create_memory` took 20–170s (59s avg). Full benchmark suite took 3+ hours.
 
-**Problem**: Pure FTS5 misses semantically related but lexically different matches. Pure semantic misses exact keyword matches.
+**Fix**: `run_all_benchmarks.py` now sets `WM_BENCHMARK_MODE=1`, `WM_SESSION_RECORD=0`, `WM_ERROR_LEARN=0`, `WM_PATTERN_GUARD=0`, `WM_CODE_NUDGE=0`, `WM_TRANSACTION_FIREWALL=0` at import. Added `WM_BENCHMARK_MODE` bypass to `mw_observability`, `_post_call_karma_effects`, `_post_call_observability` in middleware. Result: **59s → 0.3s avg per create_memory (200x)**. Full suite: **~5 min**.
 
-**Design**: Run FTS5 and semantic search in parallel, merge via RRF (already partially implemented in `search_planner.py`), but add a third channel: **exact substring search** for high-confidence entity matches. This ensures that when a query mentions "Alice" and a memory contains "Alice", the match is guaranteed regardless of FTS5 tokenization or embedding distance.
+### 8.5 Phase 2.5 Benchmark Results (2026-07-17 01:04 UTC)
 
-**Implementation**: ~30 lines in `sqlite_backend.py` to add substring search channel, ~20 lines in `search_planner.py` to merge the third channel.
+| Benchmark | recall@1 | recall@5 | recall@10 | MRR | p50 latency |
+|-----------|----------|----------|-----------|-----|-------------|
+| Internal (100 mem) | **94%** | 100% | 100% | 0.9567 | 99ms |
+| LoCoMo (620 turns) | **20%** | 92% | 100% | 0.4640 | 109ms |
+| LongMemEval (210 turns) | **96%** | 100% | 100% | 0.9733 | 279ms |
+| BEAM (250 mem, 100 queries) | **98%** overall | — | — | — | 95ms |
 
-### 8.5 Rationale for Deferral
+**BEAM breakdown**: abstention 100% (26q), multi_hop 93.55% (31q), temporal 100% (18q), single_hop 100% (25q)
 
-Phase 2 (BEAM + LongMemEval-V2) will reveal:
-- Whether the Recall@1 problem is specific to synthetic LoCoMo data or persists with real conversations
-- What question types (temporal, preference, knowledge) are hardest
-- Whether BEAM's temporal evolution tests show different failure patterns
-- Whether multi-hop is needed for LongMemEval-V2's preference questions (currently 0% Recall@1 on 2 preference questions)
+**Abstention**: TPR 76%, FPR 7%, Precision 91.57%, F1 0.8306 (threshold=0.12)
 
-Building answer-aware and multi-hop now, without these insights, risks solving the wrong problem.
+**Statistical rigor**: Bootstrap 95% CI for recall@1: [0.86, 1.00]. Judge FPR: 5.8%.
+
+### 8.6 Analysis & Implications
+
+#### What worked
+
+- **Internal recall@1 restored to 94%** — the multi-hop question-pattern guard prevented synthetic query reordering. The original FTS5 ranking was already correct for single-hop queries; multi-hop only helps for NL questions.
+- **BEAM multi_hop held at 93.55%** — the 2-pass search finds hop-2 results for 29/31 queries. The 2 remaining misses require semantic reasoning (the answer term is not a keyword in any memory).
+- **LongMemEval at 96%** — strong performance on detail_recall (100%). The 2 preference questions remain at 0% recall@1 (but 100% recall@5), confirming that preference questions need aggregation, not just retrieval.
+- **0 tokens/query, <110ms p50** — all benchmarks run with zero LLM calls and sub-110ms median latency.
+
+#### What didn't work
+
+- **LoCoMo recall@1 still at 20%** — answer-aware retrieval didn't help because LoCoMo queries are conversational ("What did Alice say about Y?") and the answer text doesn't co-occur with entity terms in the same memory. The issue is structural: LoCoMo stores individual conversation turns, but the answer to "What did Alice say about machine learning?" might span 3 turns. FTS5 finds the right turn at rank 5 (92% recall@5) but not at rank 1.
+- **BEAM multi_hop 2 misses** — the answer (e.g., "data") is not a searchable keyword that leads to the hop-2 memory. This requires either semantic similarity search or graph traversal using the 14.4M associations.
+
+#### Root cause of LoCoMo R@1 stagnation
+
+The problem is **ranking, not retrieval** — the correct memory is in the top 5 (92% recall@5) but not at position 1. FTS5 BM25 ranks by keyword density, so a turn that mentions "machine learning" 3 times ranks higher than the turn where Alice actually states her opinion. The cross-encoder reranking helps (without it, recall@1 was lower) but can't fully solve this because the query and answer turn may have low lexical overlap.
+
+**Potential fixes** (future work):
+1. **Conversation-aware ranking**: boost memories that are part of the same conversation as a high-scoring result
+2. **Answer-type detection**: identify if the query asks for an opinion vs a fact, and boost memories containing opinion markers
+3. **Summary memory injection**: create summary memories per conversation and rank them alongside individual turns
+4. **Semantic similarity boost**: use embedding cosine similarity as a tiebreaker when BM25 scores are close
+
+### 8.7 Memory System Refinement Roadmap
+
+Based on Phase 2.5 results, the following refinements are prioritized:
+
+#### 8.7.1 LoCoMo R@1 Fix (High Priority)
+
+The 20% → 92% gap between recall@1 and recall@5 is a ranking problem. Approaches:
+- **Conversation-grouped reranking**: when a result from conversation X ranks high, boost other results from the same conversation
+- **Query-type classification**: detect opinion/fact/preference questions and apply different ranking weights
+- **Turn-position weighting**: in conversational data, later turns in a topic thread often contain the answer
+
+#### 8.7.2 BEAM Multi-Hop 2 Misses (Medium Priority)
+
+The 2 remaining misses (93.55% → 100%) need semantic graph traversal:
+- Wire `GraphWalker` into the benchmark search path (currently benchmarks call `search_memories` directly, bypassing `SearchQueryPlanner`'s graph walk stage)
+- Use the 14.4M galactic associations to find hop-2 memories via entity graph traversal
+- This requires the `SearchQueryPlanner` pipeline to be benchmark-compatible
+
+#### 8.7.3 LongMemEval-V2 Upgrade (Next Phase)
+
+Upgrade the LongMemEval adapter to use the V2 dataset with:
+- More sessions (50+ vs 10)
+- Preference question expansion (currently only 2 questions, both missed at R@1)
+- Multi-session questions requiring cross-session aggregation
+
+#### 8.7.4 HologramEval Design (Future)
+
+A benchmark that tests WhiteMagic's unique capabilities:
+- 6D holographic coordinate accuracy
+- Cross-galaxy retrieval (queries that span sessions → codex → research)
+- Association-guided search (using 14.4M associations for multi-hop)
+- Temporal evolution with galactic lifecycle (Core → Far Edge migration)
+- Citta-informed retrieval (emotional valence affecting search ranking)
