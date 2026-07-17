@@ -160,6 +160,8 @@ def generate_synthetic_locomo(
     ]
 
     conversations = []
+    used_person_topics: set[tuple[str, str]] = set()
+    used_details: set[tuple[str, str, str]] = set()  # (person, topic, detail)
 
     for ci in range(num_conversations):
         person = rng.choice(PERSONS)
@@ -168,26 +170,37 @@ def generate_synthetic_locomo(
         turns = []
         facts_mentioned: list[dict[str, str]] = []
 
-        # Shuffle topics so each conversation has a different topic order
-        conv_topics = TOPICS[:]
-        rng.shuffle(conv_topics)
+        # Select 5-6 topics for this conversation, ensuring unique person-topic pairs
+        available_topics = [t for t in TOPICS if (name, t) not in used_person_topics]
+        if not available_topics:
+            # All person-topic pairs exhausted, reset for this person
+            available_topics = TOPICS[:]
+            used_person_topics = {(p, t) for (p, t) in used_person_topics if p != name}
 
-        for ti in range(turns_per_conversation):
-            topic = conv_topics[ti % len(conv_topics)]
-            detail = rng.choice(TOPIC_DETAILS[topic])
+        rng.shuffle(available_topics)
+        topics_per_conv = min(5 + rng.randint(0, 2), len(available_topics))
+        conv_topics = available_topics[:topics_per_conv]
 
-            if ti % 2 == 0:
-                content = f"I was talking with {name} about {topic}. They mentioned {detail}."
-                turns.append({"role": "user", "content": content})
-                facts_mentioned.append({
-                    "fact": f"{name} mentioned {detail} regarding {topic}",
-                    "detail": detail,
-                    "topic": topic,
-                    "person": name,
-                })
-            else:
-                content = f"That's interesting about {topic}. Can you tell me more about {detail}?"
-                turns.append({"role": "assistant", "content": content})
+        for topic in conv_topics:
+            used_person_topics.add((name, topic))
+            # Pick a detail not yet used for this person-topic
+            available_details = [d for d in TOPIC_DETAILS[topic] if (name, topic, d) not in used_details]
+            if not available_details:
+                available_details = TOPIC_DETAILS[topic]
+            detail = rng.choice(available_details)
+            used_details.add((name, topic, detail))
+
+            content = f"I was talking with {name} about {topic}. They mentioned {detail}."
+            turns.append({"role": "user", "content": content})
+            facts_mentioned.append({
+                "fact": f"{name} mentioned {detail} regarding {topic}",
+                "detail": detail,
+                "topic": topic,
+                "person": name,
+            })
+
+            # Add assistant response
+            turns.append({"role": "assistant", "content": f"That's interesting about {topic}. Can you tell me more about {detail}?"})
 
         # Generate QA pairs from mentioned facts
         qa_pairs = []

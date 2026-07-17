@@ -97,6 +97,7 @@ def generate_synthetic_longmemeval_v2(
     }
 
     sessions = []
+    used_user_topics: set[tuple[str, str]] = set()
 
     for si in range(num_sessions):
         profile = rng.choice(USER_PROFILES)
@@ -120,7 +121,12 @@ def generate_synthetic_longmemeval_v2(
 
         used_topics: set[str] = set()
         for ti in range(turns_per_session - len(turns)):
-            topic = rng.choice(SESSION_TOPICS)
+            # V2: ensure unique user-topic pairs across sessions
+            available = [t for t in SESSION_TOPICS if (name, t) not in used_user_topics]
+            if not available:
+                break  # all topics exhausted for this user
+            topic = rng.choice(available)
+            used_user_topics.add((name, topic))
             # V2: use topic-specific details
             topic_detail = rng.choice(TOPIC_FACTS.get(topic, [f"discussed {topic} with {name}'s team"]))
             if ti % 2 == 0:
@@ -191,14 +197,15 @@ def generate_synthetic_longmemeval_v2(
                 })
 
         # V2: Add temporal reasoning question
+        # Answer is the detail discussed, not the session ID (which isn't in any memory)
         if used_topics:
             topic = rng.choice(list(used_topics))
-            q = f"In which session did {name} discuss {topic}?"
             matching = [f for f in facts if f.get("topic") == topic]
             if matching:
+                q = f"What was the key takeaway from {name}'s {topic} session?"
                 questions.append({
                     "question": q,
-                    "answer": f"session_{si:04d}",
+                    "answer": matching[0]["detail"],
                     "category": "temporal",
                     "session_index": si,
                 })

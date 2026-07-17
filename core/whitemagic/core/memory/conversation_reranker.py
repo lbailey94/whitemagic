@@ -62,6 +62,17 @@ W_CONV_GROUP = 0.08
 W_ANSWER_TYPE = 0.12
 W_TURN_POSITION = 0.05
 W_SEMANTIC = 0.10
+W_ENTITY = 0.15        # boost when query entity (person name) appears in content
+W_SUMMARY = 0.06       # boost summary memories over raw turns
+W_EMBED_TIEBREAK = 0.03  # small embedding cosine tiebreaker for close scores
+
+# Common person names for entity extraction
+_NAME_RE = re.compile(
+    r"\b(?:What did|What (?:is|was)|What are|What were|"
+    r"How does|How did|What about|"
+    r"In which session did)\s+"
+    r"([A-Z][a-z]+)\b"
+)
 
 
 def detect_answer_type(query: str) -> str:
@@ -109,6 +120,47 @@ def _extract_turn_idx(mem: Any) -> int | None:
     return int(m.group(1)) if m else None
 
 
+def _extract_query_entities(query: str) -> set[str]:
+    """Extract person names and capitalized entities from the query."""
+    entities: set[str] = set()
+    for m in _NAME_RE.finditer(query):
+        name = m.group(1)
+        if name not in {"What", "How", "The", "Which", "In", "Did"}:
+            entities.add(name.lower())
+    return entities
+
+
+def _is_summary(mem: Any) -> bool:
+    """Check if a memory is a summary (tagged 'summary' or title contains 'summary')."""
+    tags = getattr(mem, "tags", None)
+    if tags and "summary" in tags:
+        return True
+    title = getattr(mem, "title", None)
+    if title and "summary" in str(title).lower():
+        return True
+    return False
+
+
+def _get_embedding(mem: Any) -> list[float] | None:
+    """Get embedding vector from memory if available."""
+    md = getattr(mem, "metadata", None)
+    if md:
+        emb = md.get("embedding") or md.get("embedding_vector")
+        if emb and isinstance(emb, (list, tuple)) and len(emb) > 0:
+            return list(emb)
+    return None
+
+
+def _cosine_sim(a: list[float], b: list[float]) -> float:
+    """Compute cosine similarity between two vectors."""
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(y * y for y in b) ** 0.5
+    if na == 0 or nb == 0:
+        return 0.0
+    return dot / (na * nb)
+
+
 def _get_base_score(mem: Any, idx: int) -> float:
     md = getattr(mem, "metadata", None)
     if md:
@@ -142,6 +194,9 @@ def conversation_rerank(
     markers = {"opinion": _OPINION_MARKERS, "preference": _PREFERENCE_MARKERS,
                "fact": _FACT_MARKERS}.get(atype, set())
 
+    # Extract entities from query for entity-aware boosting
+    query_entities = _extract_query_entities(query)
+
     # Find dominant conversation
     conv_best: dict[str, float] = {}
     for mem in results:
@@ -159,6 +214,21 @@ def conversation_rerank(
         ti = _extract_turn_idx(mem)
         if ti is not None and ti > max_turn:
             max_turn = ti
+
+    # Compute embedding similarity for tiebreaking (if embeddings available)
+    embed_sims: dict[int, float] = {}
+    query_emb = None
+    # Try to get query embedding from the first result's metadata (if stored)
+    for mem in results:
+        md = getattr(mem, "metadata", None)
+        if md and md.get("_query_embedding"):
+            query_emb = md["_query_embedding"]
+            break
+    if query_emb:
+        for idx, mem in enumerate(results):
+            mem_emb = _get_embedding(mem)
+            if mem_emb:
+                embed_sims[idx] = _cosine_sim(query_emb, mem_emb)
 
     scored: list[tuple[float, int, Any]] = []
     for idx, mem in enumerate(results):
@@ -178,7 +248,25 @@ def conversation_rerank(
 
         sem_bonus = W_SEMANTIC * base
 
-        final = base + conv_bonus + type_bonus + turn_bonus + sem_bonus
+        # Entity-aware boosting: if query mentions a person name, boost
+        # memories whose content contains that name
+        entity_bonus = 0.0
+        if query_entities:
+            content_lower = str(getattr(mem, "content", "")).lower()
+            for entity in query_entities:
+                if entity in content_lower:
+                    entity_bonus += W_ENTITY
+                    break  # one match is enough
+
+        # Summary-preference bias: summaries are higher density, boost them
+        summary_bonus = W_SUMMARY if _is_summary(mem) else 0.0
+
+        # Embedding cosine tiebreaker: small bonus for high embedding similarity
+        embed_bonus = 0.0
+        if idx in embed_sims:
+            embed_bonus = W_EMBED_TIEBREAK * embed_sims[idx]
+
+        final = base + conv_bonus + type_bonus + turn_bonus + sem_bonus + entity_bonus + summary_bonus + embed_bonus
         mem.metadata["conv_rerank_score"] = round(final, 6)
         mem.metadata["answer_type"] = atype
         scored.append((final, -idx, mem))
