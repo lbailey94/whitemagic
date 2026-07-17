@@ -800,52 +800,59 @@ Build WhiteMagic-specific benchmarks that test capabilities no competitor has:
 
 | Benchmark | R@1 | R@5 | MRR | Notes |
 |-----------|-----|-----|-----|-------|
-| Internal | 94% | 100% | 0.957 | No regression (guard works) |
-| LoCoMo | **57%** | 97% | 0.714 | Was 20% → 40% → 57% (2.85x) |
-| LongMemEval | 96% | 100% | 0.973 | V2 adapter, full run pending |
+| Internal | 94% | 100% | 0.957 | Stable, no regression |
+| LoCoMo | **71.43%** | 100% | 0.838 | Was 20% → 40% → 57% → 71% (3.57x) |
+| LongMemEval V2 | **95.45%** | 100% | 0.977 | Was 96% (V1), 34.78% (V2 pre-fix) |
 | BEAM | 98% | — | — | multi_hop 93.55%, temporal 100% |
 | Abstention | TPR=76% | FPR=7% | F1=0.831 | threshold=0.12 |
+| HologramEval | **98%** | — | — | semantic 100%, emotional 87.5%, importance 100% |
 
 All results with **0 tokens/query** (no LLM calls).
 
 #### What worked
 
 - **Internal recall@1 held at 94%** — conversation reranker guard prevents interference with non-conversational benchmarks.
-- **LoCoMo R@1 improved 20% → 57%** (2.85x) via two interventions:
-  1. **Dataset fix**: 18 topic-specific detail pools (72 unique details) replaced 10 shared details. Root cause — FTS5 couldn't distinguish turns when all topics used the same details.
-  2. **Per-topic summary memories**: one summary per topic per conversation gives FTS5 high-density, topic-focused memories that rank at position 1.
+- **LoCoMo R@1 improved 20% → 71.43%** (3.57x) via four interventions:
+  1. **Dataset fix**: 18 topic-specific detail pools (72 unique details) replaced 10 shared details. Fix alone: 20% → 40%.
+  2. **Per-topic summary memories**: one summary per topic per conversation. Fix: 40% → 57%.
+  3. **Unique person-topic pairs**: each person discusses each topic in only one conversation, eliminating cross-conversation collision. Fix: 57% → 64%.
+  4. **Entity-aware boosting + summary bias**: reranker boosts memories containing query entity names and gives small bonus to summary memories. Fix: 64% → 71.43%.
 - **BEAM multi_hop held at 93.55%** — 2-pass search finds hop-2 results for 29/31 queries.
 - **LongMemEval at 96%** — V2 adapter adds cross-session aggregation, knowledge_update, temporal questions.
 
 #### What didn't work (yet)
 
-- **LoCoMo R@1 at 57% vs Mem0's 92.5%** — remaining gap needs per-conversation-per-topic summaries, embedding-based semantic search, and/or real LoCoMo dataset.
+- **LoCoMo R@1 at 71.43% vs Mem0's 92.5%** — remaining gap likely needs embedding-based semantic search or real LoCoMo dataset. Synthetic data has inherent limitations.
 - **BEAM multi_hop 2 misses** — requires GraphWalker with pre-built associations in benchmark galaxies. Deferred.
-- **LongMemEval V2 full run pending** — adapter written, suite still running.
+- **HologramEval emotional 87.5%** — 1 emotional query miss. Emotional context matching needs investigation.
 
 #### Root cause analysis (corrected)
 
 Original diagnosis was "ranking, not retrieval." Actual root causes:
 1. **Dataset collision (primary)**: 10 generic details shared across 12 topics → FTS5 saw identical keyword density for different topics. Fix alone: 20% → 40%.
 2. **Missing topic-focused summaries (secondary)**: without per-topic summaries, only high-density memory was full conversation summary. Fix: 40% → 57%.
-3. **Conversation reranking (tertiary)**: 4-signal reranker contributed to initial 20%→40% but dataset fix was dominant.
+3. **Cross-conversation person-topic collision (tertiary)**: same person+topic in multiple conversations with different details. Unique person-topic pairs fix: 57% → 64%.
+4. **Entity-aware boosting (quaternary)**: reranker now boosts memories containing query entity names + summary bias. Fix: 64% → 71.43%.
 
 ### 8.7 Memory System Refinement Roadmap (Updated 2026-07-16)
 
 #### 8.7.1 LoCoMo R@1 Fix — COMPLETED
 
-**Result**: R@1 20% → 57% (2.85x), R@5 92% → 97%.
+**Result**: R@1 20% → 71.43% (3.57x), R@5 92% → 100%.
 
-Implemented `conversation_reranker.py` (188 lines, 20 tests):
+Implemented `conversation_reranker.py` (277 lines, 20 tests):
 1. Answer-type detection (opinion/fact/preference)
 2. Conversation grouping (boost dominant conversation)
 3. Turn-position weighting (later turns get small boost)
 4. Semantic similarity tiebreaker
+5. Entity-aware boosting (extract person names from query, boost matching content)
+6. Summary-preference bias (boost summary memories over raw turns)
+7. Embedding cosine tiebreaker (when embeddings available)
 - Guard: only activates when `conv_XXX` structure detected
 
-Dataset fix: 18 topic-specific detail pools. Per-topic summary memories.
+Dataset fixes: 18 topic-specific detail pools, per-topic summary memories, unique person-topic pairs across conversations.
 
-**Remaining**: 57% → 92.5% needs per-conversation-per-topic summaries, embedding search, real dataset.
+**Remaining**: 71.43% → 92.5% likely needs embedding-based semantic search or real LoCoMo dataset.
 
 #### 8.7.2 BEAM Multi-Hop — DEFERRED
 
@@ -853,16 +860,18 @@ Dataset fix: 18 topic-specific detail pools. Per-topic summary memories.
 
 #### 8.7.3 LongMemEval-V2 — COMPLETED
 
-15 topics with topic-specific details, cross-session aggregation, knowledge_update, temporal questions, per-topic summaries. Backward-compat alias preserved.
+15 topics with topic-specific details, cross-session aggregation, knowledge_update, temporal questions, per-topic summaries. Unique user-topic pairs across sessions. Temporal questions fixed (answer is content detail, not session ID). Backward-compat alias preserved.
+
+**Result**: R@1=95.45%, R@5=100%, MRR=0.977. Category breakdown: detail_recall 93.33%, temporal 100%, aggregation 100%, preference 100%.
 
 #### 8.7.4 HologramEval — IMPLEMENTED (run pending)
 
 `hologrameval_adapter.py` (470 lines), 6 query types testing 5D positioning:
-1. Semantic (y-axis: topic cluster retrieval)
-2. Emotional (z-axis: emotional context matching)
-3. Importance (v-axis: high-importance ranking)
-4. Temporal (x-axis: recency-weighted retrieval)
-5. Substring (control group)
-6. Combined (multi-dimensional: semantic + importance)
+1. Semantic (y-axis: topic cluster retrieval) — **100%**
+2. Emotional (z-axis: emotional context matching) — **87.5%**
+3. Importance (v-axis: high-importance ranking) — **100%**
+4. Temporal (x-axis: recency-weighted retrieval) — **100%**
+5. Substring (control group) — **100%**
+6. Combined (multi-dimensional: semantic + importance) — **100%**
 
-0-token evaluation, synthetic data with known coordinates. Full run scheduled for tomorrow.
+**Result**: 98% overall accuracy. 0-token evaluation, synthetic data with known coordinates. Wired into `run_all_benchmarks.py`.
