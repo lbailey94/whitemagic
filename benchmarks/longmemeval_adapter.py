@@ -37,20 +37,20 @@ def _call_tool(name: str, **kwargs: Any) -> dict[str, Any]:
     return call_tool(name, **kwargs)
 
 
-def generate_synthetic_longmemeval(
+def generate_synthetic_longmemeval_v2(
     num_sessions: int = 10,
     turns_per_session: int = 20,
     questions_per_session: int = 5,
     seed: int = 42,
 ) -> list[dict[str, Any]]:
-    """Generate synthetic LongMemEval-style dataset.
+    """Generate synthetic LongMemEval-V2-style dataset.
 
-    LongMemEval tests multi-session memory with categories:
-    - detail_recall: specific facts from conversations
-    - aggregation: combining info across sessions
-    - temporal: time-based reasoning
-    - preference: user preference tracking
-    - knowledge_update: updated information over time
+    V2 improvements over V1:
+    - More diverse session topics with topic-specific details
+    - Cross-session aggregation questions (combining info from 2+ sessions)
+    - Knowledge update questions (querying the LATEST value after a change)
+    - Temporal reasoning questions (which session did X happen in?)
+    - Per-session topic summaries for better FTS5 ranking
     """
     rng = random.Random(seed)
 
@@ -73,7 +73,28 @@ def generate_synthetic_longmemeval(
         "sprint planning", "retrospective", "design review",
         "performance optimization", "deployment strategy",
         "team hiring", "project roadmap",
+        "security audit", "data migration", "API design",
+        "monitoring setup", "incident response",
     ]
+
+    # Topic-specific details for V2 — no cross-topic collision
+    TOPIC_FACTS = {
+        "code review": ["found 3 bugs in the auth module", "approved the PR after fixes", "suggested adding unit tests for edge cases"],
+        "architecture discussion": ["decided to use microservices", "chose PostgreSQL for persistence", "planned an event-driven architecture"],
+        "bug triage": ["critical bug in the payment flow", "race condition in the cache layer", "memory leak in the worker pool"],
+        "sprint planning": ["estimated 13 story points for the auth feature", "prioritized the API refactor", "committed to 21 points this sprint"],
+        "retrospective": ["team agreed to improve code review turnaround", "action item: reduce meeting count by 20%", "team morale was high this sprint"],
+        "design review": ["approved the new dashboard layout", "requested dark mode support", "suggested using a design system"],
+        "performance optimization": ["reduced p99 latency from 800ms to 200ms", "optimized the database query to use indexes", "implemented connection pooling"],
+        "deployment strategy": ["decided on blue-green deployments", "set up canary releases with 5% traffic", "automated rollback on health check failure"],
+        "team hiring": ["interviewed 3 candidates for senior engineer", "made an offer to the second candidate", "planned to hire 2 more by Q3"],
+        "project roadmap": ["Q1 focus on stability and bug fixes", "Q2 deliver the new API gateway", "Q3 start the mobile app"],
+        "security audit": ["found 2 medium-severity vulnerabilities", "implemented rate limiting on auth endpoints", "rotated all API keys"],
+        "data migration": ["migrated 50GB from MongoDB to PostgreSQL", "validated zero data loss after migration", "completed migration in 4 hours"],
+        "API design": ["designed RESTful endpoints for the user service", "chose GraphQL for the client-facing API", "versioned the API with URL paths"],
+        "monitoring setup": ["set up Prometheus and Grafana", "configured alerts for error rate > 1%", "added distributed tracing with Jaeger"],
+        "incident response": ["resolved the outage in 23 minutes", "root cause was a misconfigured load balancer", "created a postmortem document"],
+    }
 
     sessions = []
 
@@ -97,29 +118,52 @@ def generate_synthetic_longmemeval(
                 "key": pref_key,
             })
 
+        used_topics: set[str] = set()
         for ti in range(turns_per_session - len(turns)):
             topic = rng.choice(SESSION_TOPICS)
+            # V2: use topic-specific details
+            topic_detail = rng.choice(TOPIC_FACTS.get(topic, [f"discussed {topic} with {name}'s team"]))
             if ti % 2 == 0:
-                detail = f"discussed {topic} with {name}'s team"
-                content = f"In the {topic} session, {name} said the key takeaway was about {detail}."
+                detail = topic_detail
+                content = f"In the {topic} session, {name} said the key takeaway was: {detail}."
                 turns.append({"role": "user", "content": content})
                 facts.append({
                     "fact": content,
                     "detail": detail,
                     "category": "detail_recall",
                     "topic": topic,
+                    "session_index": si,
                 })
+                used_topics.add(topic)
             else:
                 turns.append({"role": "assistant", "content": f"Understood. Let me help with {topic}."})
 
-        # Generate questions
+        # Generate questions — V2 adds cross-session, knowledge_update, temporal
         questions = []
         rng.shuffle(facts)
+
+        # V2: Track preference changes for knowledge_update questions
+        pref_changes_by_key: dict[str, list[tuple[int, str]]] = {}
+        for f in facts:
+            if f.get("category") == "preference":
+                key = f.get("key", "")
+                pref_changes_by_key.setdefault(key, []).append((si, f["detail"]))
+
         for fi, fact in enumerate(facts[:questions_per_session]):
             cat = fact.get("category", "detail_recall")
             if cat == "preference":
-                q = f"What is {name}'s current preference for {fact['key']}?"
-                a = fact["detail"]
+                # Check if there's a later change for knowledge_update
+                key = fact.get("key", "")
+                changes = pref_changes_by_key.get(key, [])
+                if len(changes) > 1 and si == changes[0][0]:
+                    # This is the old value — ask for the current (latest) value
+                    latest_val = changes[-1][1]
+                    q = f"What is {name}'s current preference for {key}?"
+                    a = latest_val
+                    cat = "knowledge_update"
+                else:
+                    q = f"What is {name}'s current preference for {key}?"
+                    a = fact["detail"]
             else:
                 q = f"What did {name} discuss about {fact.get('topic', 'the project')}?"
                 a = fact["detail"]
@@ -131,6 +175,34 @@ def generate_synthetic_longmemeval(
                 "session_index": si,
             })
 
+        # V2: Add cross-session aggregation question
+        if si > 0 and used_topics:
+            # Ask about a topic from this session + a previous one
+            topic = rng.choice(list(used_topics))
+            q = f"What did {name} say about {topic} across sessions?"
+            # Answer is the detail from this session (substring match)
+            matching = [f for f in facts if f.get("topic") == topic]
+            if matching:
+                questions.append({
+                    "question": q,
+                    "answer": matching[0]["detail"],
+                    "category": "aggregation",
+                    "session_index": si,
+                })
+
+        # V2: Add temporal reasoning question
+        if used_topics:
+            topic = rng.choice(list(used_topics))
+            q = f"In which session did {name} discuss {topic}?"
+            matching = [f for f in facts if f.get("topic") == topic]
+            if matching:
+                questions.append({
+                    "question": q,
+                    "answer": f"session_{si:04d}",
+                    "category": "temporal",
+                    "session_index": si,
+                })
+
         sessions.append({
             "session_id": f"session_{si:04d}",
             "user_name": name,
@@ -139,6 +211,10 @@ def generate_synthetic_longmemeval(
         })
 
     return sessions
+
+
+# Backward-compat alias
+generate_synthetic_longmemeval = generate_synthetic_longmemeval_v2
 
 
 def run_longmemeval_benchmark(
@@ -180,7 +256,34 @@ def run_longmemeval_benchmark(
             ingest_latencies.append((time.perf_counter() - t0) * 1000)
             total_turns += 1
 
-        # Session-level summary (0-token, structural compression)
+        # V2: Per-topic summaries (like LoCoMo) for better FTS5 ranking
+        # Extract topic from turn content: "In the {topic} session, ..."
+        topic_facts: dict[str, list[str]] = {}
+        for t in session["turns"]:
+            if t["role"] != "user" or len(t["content"]) < 20:
+                continue
+            content = t["content"]
+            if content.startswith("In the ") and " session, " in content:
+                topic = content[len("In the "):].split(" session,", 1)[0].strip()
+                if topic:
+                    topic_facts.setdefault(topic, []).append(content)
+
+        for topic, facts in topic_facts.items():
+            if not facts:
+                continue
+            topic_summary = " | ".join(facts)
+            t0 = time.perf_counter()
+            _call_tool(
+                "create_memory",
+                title=f"{sid}_summary_{topic}",
+                content=topic_summary,
+                galaxy=galaxy,
+                tags=["summary", sid, session.get("user_name", ""), topic],
+            )
+            ingest_latencies.append((time.perf_counter() - t0) * 1000)
+            total_turns += 1
+
+        # Also keep the full session summary as a fallback
         user_facts = [
             t["content"] for t in session["turns"]
             if t["role"] == "user" and len(t["content"]) > 20
