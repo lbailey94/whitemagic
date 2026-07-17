@@ -1,6 +1,6 @@
 # WhiteMagic Memory Benchmark Report
 
-**Date**: 2026-07-17 03:26:00 UTC
+**Date**: 2026-07-17 13:54:01 UTC
 **Platform**: Linux x86_64
 **Python**: 3.12.3
 
@@ -18,16 +18,11 @@
 - **Recall@5**: 100.00%
 - **Recall@10**: 100.00%
 - **MRR**: 0.9567
-- **Search p50**: 189.5ms
-- **Search p95**: 1370.1ms
-- **Add throughput**: 2 ops/sec
+- **Search p50**: 241.1ms
+- **Search p95**: 546.6ms
+- **Add throughput**: 3 ops/sec
 
 ## 3. LoCoMo Benchmark (20 conversations)
-
-> **Improvement note (2026-07-16)**: R@1 improved from 20% → 57% (2.85x) via:
-> 1. Dataset fix: 18 topic-specific detail pools replaced 10 shared details
-> 2. Per-topic summary memories: one summary per topic per conversation
-> 3. Conversation-aware reranker: 4-signal heuristic (answer-type, grouping, turn-position, semantic tiebreaker)
 
 - **Recall@1**: 57.00%
 - **Recall@5**: 97.00%
@@ -35,7 +30,7 @@
 - **MRR**: 0.7143
 - **Total turns**: 780
 - **Total QA pairs**: 100
-- **Search p50**: 186.2ms
+- **Search p50**: 206.6ms
 
 ### Category Breakdown
 
@@ -45,27 +40,28 @@
 
 ## 4. LongMemEval Benchmark (10 sessions)
 
-- **Recall@1**: 96.00%
-- **Recall@5**: 100.00%
-- **Recall@10**: 100.00%
-- **MRR**: 0.9733
-- **Total turns**: 210
-- **Total questions**: 50
-- **Search p50**: 158.4ms
+- **Recall@1**: 34.78%
+- **Recall@5**: 81.16%
+- **Recall@10**: 81.16%
+- **MRR**: 0.5273
+- **Total turns**: 277
+- **Total questions**: 69
+- **Search p50**: 283.1ms
 
 ### Category Breakdown
 
 | Category | Total | Recall@1 | Recall@5 | Recall@10 |
 |----------|-------|----------|----------|-----------|
-| detail_recall | 48 | 100.00% | 100.00% | 100.00% |
-| preference | 2 | 0.00% | 100.00% | 100.00% |
+| detail_recall | 50 | 36.00% | 94.00% | 94.00% |
+| temporal | 10 | 0.00% | 0.00% | 0.00% |
+| aggregation | 9 | 66.67% | 100.00% | 100.00% |
 
 ## 5. BEAM Benchmark (multi-hop, temporal, abstention)
 
 - **Overall Accuracy**: 98.00%
 - **Total Memories**: 250
 - **Total Queries**: 100
-- **Search p50**: 452.0ms
+- **Search p50**: 227.2ms
 
 ### Type Breakdown
 
@@ -87,19 +83,23 @@
 
 > **Note**: Abstention gate is now active (threshold=0.12). FPR measures how often irrelevant queries still return results above threshold.
 
----
-
 ## 7. HologramEval (5D Holographic Memory Evaluation)
 
-> **Status**: Adapter implemented (`hologrameval_adapter.py`, 470 lines). Run scheduled for 2026-07-17.
+- **Overall Accuracy**: 98.00%
+- **Total Memories**: 100
+- **Total Queries**: 50
+- **Search p50**: 246.9ms
 
-Tests 5D holographic positioning with 6 query types:
-- **Semantic**: topic cluster retrieval (y-axis)
-- **Emotional**: emotional context matching (z-axis)
-- **Importance**: high-importance ranking (v-axis)
-- **Temporal**: recency-weighted retrieval (x-axis)
-- **Substring**: standard recall (control group)
-- **Combined**: multi-dimensional (semantic + importance)
+### Type Breakdown
+
+| Type | Total | Accuracy |
+|------|-------|----------|
+| semantic | 8 | 100.00% |
+| emotional | 8 | 87.50% |
+| importance | 8 | 100.00% |
+| temporal | 8 | 100.00% |
+| substring | 8 | 100.00% |
+| combined | 10 | 100.00% |
 
 ---
 
@@ -109,8 +109,9 @@ Tests 5D holographic positioning with 6 query types:
 |--------|-----------|----------|----------|-----|--------------|
 | WhiteMagic | Internal (100 mem) | 94.00% | 100.00% | 0.9567 | 0 |
 | WhiteMagic | LoCoMo | 57.00% | 97.00% | 0.7143 | 0 |
-| WhiteMagic | LongMemEval | 96.00% | 100.00% | 0.9733 | 0 |
+| WhiteMagic | LongMemEval | 34.78% | 81.16% | 0.5273 | 0 |
 | WhiteMagic | BEAM | 98.00% | — | — | 0 |
+| WhiteMagic | HologramEval | 98.00% | — | — | 0 |
 | Mem0 (2026) | LoCoMo | 92.5% | — | — | ~7,000 |
 | MemGPT | LoCoMo | ~80% | — | — | ~5,000 |
 

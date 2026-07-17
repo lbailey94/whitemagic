@@ -3,19 +3,19 @@
     "system": "whitemagic",
     "add": {
       "count": 100,
-      "total_ms": 60697.691740089795,
-      "p50_ms": 459.9933779973071,
-      "p95_ms": 1150.9040280070622,
-      "p99_ms": 10533.041899994714,
-      "throughput_ops_sec": 1.6475091083892355
+      "total_ms": 31309.487292999846,
+      "p50_ms": 176.45104700000047,
+      "p95_ms": 576.9092840000098,
+      "p99_ms": 8427.157147000002,
+      "throughput_ops_sec": 3.193920074901959
     },
     "search": {
       "count": 50,
-      "total_ms": 29420.15176208224,
-      "p50_ms": 189.48290799744427,
-      "p95_ms": 1370.1416309922934,
-      "p99_ms": 11346.591301000444,
-      "throughput_ops_sec": 1.6995153663497349
+      "total_ms": 13902.34867799967,
+      "p50_ms": 241.09306399998331,
+      "p95_ms": 546.5802469999517,
+      "p99_ms": 1034.200362999968,
+      "throughput_ops_sec": 3.596514600380043
     },
     "recall": {
       "total_queries": 50,
@@ -333,18 +333,18 @@
     "num_conversations": 20,
     "total_turns": 780,
     "total_qa_pairs": 100,
-    "timestamp": "2026-07-17T03:14:55Z",
+    "timestamp": "2026-07-17T13:47:01Z",
     "ingest": {
       "count": 780,
-      "p50_ms": 208.877016993938,
-      "p95_ms": 1002.4754039768595,
-      "throughput_ops_sec": 2.7837085149645984
+      "p50_ms": 198.73466499996084,
+      "p95_ms": 455.0554900000634,
+      "throughput_ops_sec": 4.000484848423885
     },
     "search": {
       "count": 100,
-      "p50_ms": 186.23090200708248,
-      "p95_ms": 910.9334909881,
-      "p99_ms": 3068.845919013256
+      "p50_ms": 206.58779200005029,
+      "p95_ms": 517.8453639999816,
+      "p99_ms": 859.9361410000483
     },
     "recall": {
       "total_queries": 100,
@@ -371,37 +371,43 @@
     "system": "whitemagic",
     "benchmark": "longmemeval",
     "num_sessions": 10,
-    "total_turns": 210,
-    "total_questions": 50,
-    "timestamp": "2026-07-17T03:16:38Z",
+    "total_turns": 277,
+    "total_questions": 69,
+    "timestamp": "2026-07-17T13:48:45Z",
     "ingest": {
-      "count": 210,
-      "p50_ms": 375.69499798701145,
-      "p95_ms": 974.2918479896616
+      "count": 277,
+      "p50_ms": 218.52862299999742,
+      "p95_ms": 443.30976799994914
     },
     "search": {
-      "count": 50,
-      "p50_ms": 158.42276200419292,
-      "p95_ms": 269.4392550038174,
-      "p99_ms": 835.5444989865646
+      "count": 69,
+      "p50_ms": 283.1011389999958,
+      "p95_ms": 1180.4518970000117,
+      "p99_ms": 1715.7578280000507
     },
     "recall": {
-      "total_queries": 50,
-      "recall_at_1": 0.96,
-      "recall_at_5": 1.0,
-      "recall_at_10": 1.0,
-      "mrr": 0.9733333333333334
+      "total_queries": 69,
+      "recall_at_1": 0.34782608695652173,
+      "recall_at_5": 0.8115942028985508,
+      "recall_at_10": 0.8115942028985508,
+      "mrr": 0.5272946859903382
     },
     "category_breakdown": {
       "detail_recall": {
-        "total": 48,
-        "recall_at_1": 1.0,
-        "recall_at_5": 1.0,
-        "recall_at_10": 1.0
+        "total": 50,
+        "recall_at_1": 0.36,
+        "recall_at_5": 0.94,
+        "recall_at_10": 0.94
       },
-      "preference": {
-        "total": 2,
+      "temporal": {
+        "total": 10,
         "recall_at_1": 0.0,
+        "recall_at_5": 0.0,
+        "recall_at_10": 0.0
+      },
+      "aggregation": {
+        "total": 9,
+        "recall_at_1": 0.6666666666666666,
         "recall_at_5": 1.0,
         "recall_at_10": 1.0
       }
@@ -416,8 +422,8 @@
     "benchmark": "beam",
     "total_memories": 250,
     "total_queries": 100,
-    "timestamp": "2026-07-17T03:19:54Z",
-    "ingest_time_s": 134.54,
+    "timestamp": "2026-07-17T13:50:09Z",
+    "ingest_time_s": 54.61,
     "overall_accuracy": 0.98,
     "type_breakdown": {
       "abstention": {
@@ -439,9 +445,9 @@
     },
     "search": {
       "count": 100,
-      "p50_ms": 452.0366520155221,
-      "p95_ms": 1658.5418790054973,
-      "p99_ms": 3946.6221049951855
+      "p50_ms": 227.2025190000022,
+      "p95_ms": 1015.6485750000002,
+      "p99_ms": 1549.131285000044
     },
     "tokens": {
       "tokens_per_query": 0,
@@ -454,7 +460,7 @@
     "num_memories": 500,
     "num_relevant_queries": 100,
     "num_irrelevant_queries": 100,
-    "timestamp": "2026-07-17T03:26:00Z",
+    "timestamp": "2026-07-17T13:53:08Z",
     "metrics": {
       "true_positive_rate": 0.76,
       "false_positive_rate": 0.07,
@@ -468,15 +474,59 @@
     },
     "search": {
       "count": 200,
-      "p50_ms": 244.33984700590372,
-      "p95_ms": 1242.030111985514,
-      "p99_ms": 5620.4309570021
+      "p50_ms": 212.3536859999149,
+      "p95_ms": 377.15113299987024,
+      "p99_ms": 772.7373689999695
     },
     "tokens": {
       "tokens_per_query": 0,
       "llm_calls": 0
     },
     "note": "FPR measures how often the system returns results for completely irrelevant queries. Lower FPR = better abstention. Currently, FTS5 will return results for any query with keyword overlap. A relevance threshold gate (Gap D) is needed to enable proper abstention."
+  },
+  "hologrameval": {
+    "system": "whitemagic",
+    "benchmark": "hologrameval",
+    "total_memories": 100,
+    "total_queries": 50,
+    "timestamp": "2026-07-17T13:54:01Z",
+    "ingest_time_s": 38.36,
+    "overall_accuracy": 0.98,
+    "type_breakdown": {
+      "semantic": {
+        "total": 8,
+        "accuracy": 1.0
+      },
+      "emotional": {
+        "total": 8,
+        "accuracy": 0.875
+      },
+      "importance": {
+        "total": 8,
+        "accuracy": 1.0
+      },
+      "temporal": {
+        "total": 8,
+        "accuracy": 1.0
+      },
+      "substring": {
+        "total": 8,
+        "accuracy": 1.0
+      },
+      "combined": {
+        "total": 10,
+        "accuracy": 1.0
+      }
+    },
+    "search": {
+      "count": 50,
+      "p50_ms": 246.9411060001221,
+      "p95_ms": 447.8212229998917
+    },
+    "tokens": {
+      "tokens_per_query": 0,
+      "llm_calls": 0
+    }
   },
   "_statistical": {
     "bootstrap_cis": {

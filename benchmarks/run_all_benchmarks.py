@@ -192,6 +192,26 @@ def generate_report(all_results: dict[str, Any]) -> str:
             "",
         ])
 
+    # HologramEval
+    if "hologrameval" in all_results and "error" not in all_results["hologrameval"]:
+        r = all_results["hologrameval"]
+        lines.extend([
+            "## 7. HologramEval (5D Holographic Memory Evaluation)",
+            "",
+            f"- **Overall Accuracy**: {r.get('overall_accuracy', 0):.2%}",
+            f"- **Total Memories**: {r.get('total_memories', 0)}",
+            f"- **Total Queries**: {r.get('total_queries', 0)}",
+            f"- **Search p50**: {r.get('search', {}).get('p50_ms', 0):.1f}ms",
+            "",
+            "### Type Breakdown",
+            "",
+            "| Type | Total | Accuracy |",
+            "|------|-------|----------|",
+        ])
+        for q_type, bd in r.get("type_breakdown", {}).items():
+            lines.append(f"| {q_type} | {bd['total']} | {bd['accuracy']:.2%} |")
+        lines.append("")
+
     # Comparison table
     lines.extend([
         "---",
@@ -217,6 +237,9 @@ def generate_report(all_results: dict[str, Any]) -> str:
     if "beam" in all_results and "error" not in all_results["beam"]:
         r = all_results["beam"]
         lines.append(f"| WhiteMagic | BEAM | {r.get('overall_accuracy', 0):.2%} | — | — | 0 |")
+    if "hologrameval" in all_results and "error" not in all_results["hologrameval"]:
+        r = all_results["hologrameval"]
+        lines.append(f"| WhiteMagic | HologramEval | {r.get('overall_accuracy', 0):.2%} | — | — | 0 |")
 
     lines.extend([
         "| Mem0 (2026) | LoCoMo | 92.5% | — | — | ~7,000 |",
@@ -298,7 +321,7 @@ def generate_report(all_results: dict[str, Any]) -> str:
 
 BENCH_GALAXIES = [
     "benchmark", "locomo_bench", "longmemeval_bench",
-    "beam_bench", "abstention_bench",
+    "beam_bench", "abstention_bench", "hologram_bench",
 ]
 
 
@@ -340,6 +363,7 @@ def main() -> None:
     parser.add_argument("--skip-longmemeval", action="store_true", help="Skip LongMemEval benchmark")
     parser.add_argument("--skip-beam", action="store_true", help="Skip BEAM benchmark")
     parser.add_argument("--skip-abstention", action="store_true", help="Skip abstention benchmark")
+    parser.add_argument("--skip-hologrameval", action="store_true", help="Skip HologramEval benchmark")
     parser.add_argument("--skip-custom", action="store_true", help="Skip custom benchmarks (Section 7.3)")
     parser.add_argument("--scale", choices=["10k", "50k", "100k"], default="10k", help="Scale benchmark size")
     parser.add_argument("--output-dir", default="benchmarks/results", help="Output directory")
@@ -416,6 +440,16 @@ def main() -> None:
         except Exception as e:
             print(f"  FAILED: {e}")
             all_results["abstention"] = {"error": str(e)}
+
+    if not args.skip_hologrameval:
+        print("\n--- HologramEval Benchmark ---")
+        try:
+            from benchmarks.hologrameval_adapter import generate_synthetic_hologrameval, run_hologrameval_benchmark
+            holo_dataset = generate_synthetic_hologrameval(num_memories=100, num_queries=50)
+            all_results["hologrameval"] = run_hologrameval_benchmark(dataset=holo_dataset)
+        except Exception as e:
+            print(f"  FAILED: {e}")
+            all_results["hologrameval"] = {"error": str(e)}
 
     # Statistical rigor: bootstrap CIs and judge FPR
     print("\n--- Statistical Rigor (Bootstrap CIs + Judge FPR) ---")
