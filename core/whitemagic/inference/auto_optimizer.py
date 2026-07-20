@@ -343,11 +343,32 @@ class BackgroundOptimizer:
         """Load previously saved optimal config and apply to active backend.
 
         Called on first inference tool call. Returns True if config was
-        loaded and applied.
+        loaded and applied. Also applies hardware-aware tuning from the
+        InferenceTuner on first call.
         """
         if self._opt_config_loaded:
             return False
         self._opt_config_loaded = True
+
+        # Apply hardware-aware tuning first (before saved optimal overrides)
+        try:
+            from whitemagic.inference.inference_tuner import get_inference_tuner
+
+            tuner = get_inference_tuner()
+            from whitemagic.inference.router import (
+                _get_large_backend,
+                _get_small_backend,
+            )
+
+            small = _get_small_backend()
+            if small is not None:
+                tuner.apply_to_llama_config(small._config)
+            large = _get_large_backend()
+            if large is not None:
+                tuner.apply_to_llama_config(large._config)
+            tuner.save_cache()
+        except Exception as e:
+            logger.debug("Inference tuner apply on startup skipped: %s", e)
 
         optimal = ModelAutoOptimizer.load_optimal_config()
         if optimal is None:

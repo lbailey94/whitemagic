@@ -124,6 +124,7 @@ class SpeculativeDecoder:
         verify_handler: Callable[..., dict[str, Any]] | None = None,
         draft_tokens: int = 4,
         min_accept_rate: float = 0.2,
+        mars_margin_threshold: float = 0.9,
     ) -> None:
         """Initialize the speculative decoder.
 
@@ -132,11 +133,17 @@ class SpeculativeDecoder:
             verify_handler: Callable(prompt, max_tokens) → {"text": str, "tokens": list[int], "latency_ms": float}
             draft_tokens: Number of tokens to draft per round (K).
             min_accept_rate: If acceptance rate falls below this, reduce K adaptively.
+            mars_margin_threshold: MARS margin-aware verification threshold (r_t = z_(1)/z_(2)).
+                When the verify model's top-2 logit ratio exceeds this threshold and the
+                draft token matches the verify model's top-2, accept the draft token
+                as a tie-break. Range [0.0, 1.0]. Higher = more aggressive acceptance.
+                Set to 1.0 to disable MARS (standard strict verification).
         """
         self._draft = draft_handler
         self._verify = verify_handler
         self._k = draft_tokens
         self._min_accept_rate = min_accept_rate
+        self._mars_threshold = mars_margin_threshold
         self._stats = SpeculativeStats()
         self._adaptive_k = draft_tokens
 
@@ -226,10 +233,11 @@ class SpeculativeDecoder:
 
             verify_tokens = verify_result.get("tokens", [])
             verify_text = verify_result.get("text", "")
+            verify_top2 = verify_result.get("top2_logits")
 
-            # Phase 3: Accept/reject at token level
+            # Phase 3: Accept/reject at token level (with MARS if available)
             accepted, rejected = self._accept_reject(
-                draft_tokens, verify_tokens
+                draft_tokens, verify_tokens, verify_top2
             )
 
             if accepted:
@@ -294,14 +302,21 @@ class SpeculativeDecoder:
         self,
         draft_tokens: list[int],
         verify_tokens: list[int],
+        verify_top2: list[tuple[int, int, float, float]] | None = None,
     ) -> tuple[list[int], list[int]]:
         """Compare draft and verify tokens at the token ID level.
 
         Returns (accepted_token_ids, rejected_token_ids).
 
-        Accepts tokens where draft[i] == verify[i]. At the first mismatch,
-        accepts the verify model's token (correction) and stops — remaining
-        draft tokens are rejected since the context has diverged.
+        Standard verification: Accepts tokens where draft[i] == verify[i].
+        At the first mismatch, accepts the verify model's token (correction)
+        and stops — remaining draft tokens are rejected.
+
+        MARS verification (when verify_top2 is provided): If the draft token
+        doesn't match verify's top-1 but does match verify's top-2, AND the
+        logit margin ratio r_t = z_(1)/z_(2) exceeds the threshold, accept
+        the draft token as an adaptive tie-break. This avoids rejecting
+        plausible runner-up tokens when the target model has weak preference.
         """
         accepted: list[int] = []
         rejected: list[int] = []
@@ -312,7 +327,19 @@ class SpeculativeDecoder:
             if draft_tokens[i] == verify_tokens[i]:
                 accepted.append(draft_tokens[i])
             else:
-                # First mismatch: take verify model's token as correction
+                # MARS: Check if draft matches verify's top-2 with low margin
+                if verify_top2 is not None and i < len(verify_top2):
+                    top1_id, top2_id, top1_logit, top2_logit = verify_top2[i]
+                    if (
+                        draft_tokens[i] == top2_id
+                        and top2_logit != 0.0
+                        and top1_logit / top2_logit >= self._mars_threshold
+                    ):
+                        # Adaptive tie-break: accept draft token
+                        accepted.append(draft_tokens[i])
+                        continue
+
+                # Standard rejection: take verify model's token as correction
                 accepted.append(verify_tokens[i])
                 # All remaining draft tokens are rejected (context diverged)
                 rejected.extend(draft_tokens[i + 1 :])

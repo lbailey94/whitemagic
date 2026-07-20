@@ -189,12 +189,16 @@ pub fn ternary_gemv(
 
     #[cfg(target_arch = "x86_64")]
     {
+        // Dispatch strategy (4-tier, hardware-adaptive):
+        // - AVX-512 VNNI + k >= 128: dpbusd kernel (256 ops/cycle) — highest throughput
+        // - AVX2 + k >= 128: I2_S kernel (maddubs, int8 activations) — high throughput
+        // - AVX2 + k >= 64:  madd_epi16 kernel (int16) — good throughput, better precision
+        // - AVX2 + k < 64:   T-MAC LUT (float) — best precision for small dims
+        // - No SIMD: scalar fallback
+        if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512vnni") && k >= 128 {
+            return unsafe { ternary_gemv_avx512_vnni(weights_packed, activations, m, k) };
+        }
         if is_x86_feature_detected!("avx2") {
-            // SAFETY: AVX2 feature was detected at runtime.
-            // Dispatch strategy (3-tier):
-            // - k >= 128: I2_S kernel (maddubs, int8 activations) — highest throughput
-            // - k >= 64:  madd_epi16 kernel (int16) — good throughput, better precision
-            // - k < 64:   T-MAC LUT (float) — best precision for small dims
             if k >= 128 {
                 return unsafe { ternary_gemv_i2s_avx2(weights_packed, activations, m, k) };
             }
@@ -510,6 +514,109 @@ unsafe fn ternary_gemv_i2s_avx2(
 
         // Bias correction: we added 128 to each activation, so the raw sum includes
         // 128 * sum(weights). Subtract this to get the true dot product.
+        int_sum -= 128i64 * weight_sum as i64;
+
+        output[i] = (int_sum as f32) * inv_scale;
+    }
+
+    output
+}
+
+/// AVX-512 VNNI ternary GEMV using _mm512_dpbusd_epi32.
+///
+/// Uses the same unsigned bias trick as the I2_S AVX2 kernel but with 512-bit
+/// ZMM registers, processing 64 elements per dpbusd instruction vs 32 per
+/// maddubs. This gives 2x throughput over AVX2 on hardware with AVX-512 VNNI
+/// (Intel Ice Lake+, AMD Zen 4+).
+///
+/// dpbusd_epi32: 64 pairs of (uint8 × sint8) → 16 int32 (with horizontal sum)
+/// This combines multiply + horizontal sum in one instruction, eliminating
+/// the separate madd_epi16 pass needed in the AVX2 I2_S kernel.
+///
+/// SAFETY: Caller must ensure AVX-512 F and VNNI are available.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f")]
+#[target_feature(enable = "avx512vnni")]
+unsafe fn ternary_gemv_avx512_vnni(
+    weights_packed: &[u32],
+    activations: &[f32],
+    m: usize,
+    k: usize,
+) -> Vec<f32> {
+    let mut output = vec![0.0f32; m];
+    let words_per_row = (k + 15) / 16;
+
+    // Quantize activations to int8 with dynamic scaling, then add 128 → uint8
+    let mut max_abs: f32 = 0.0;
+    for j in 0..k {
+        let abs = activations[j].abs();
+        if abs > max_abs {
+            max_abs = abs;
+        }
+    }
+    let scale = if max_abs > 0.0 { 127.0 / max_abs } else { 1.0 };
+    let inv_scale = if max_abs > 0.0 { max_abs / 127.0 } else { 0.0 };
+
+    // Pre-quantize all activations to uint8 (int8 + 128 bias)
+    let mut act_u8 = vec![128u8; k];
+    for j in 0..k {
+        let q = (activations[j] * scale) as i32;
+        let q_clamped = q.clamp(-127, 127);
+        act_u8[j] = (q_clamped + 128) as u8;
+    }
+
+    for i in 0..m {
+        let mut acc = _mm512_setzero_si512(); // 16x int32 accumulator
+        let mut weight_sum: i32 = 0;
+
+        // Process 64 elements at a time (4 words × 16 ternary values each)
+        let words_per_chunk = 4; // 4 × 16 = 64 elements per ZMM load
+        let chunks = (words_per_row + words_per_chunk - 1) / words_per_chunk;
+
+        for chunk_idx in 0..chunks {
+            let mut w_i8 = [0i8; 64];
+            let mut a_u8 = [0u8; 64];
+
+            for w_off in 0..words_per_chunk {
+                let w = chunk_idx * words_per_chunk + w_off;
+                if w >= words_per_row {
+                    break;
+                }
+                let word = weights_packed[i * words_per_row + w];
+                let base = w * 16;
+
+                for j in 0..16 {
+                    let idx = base + j;
+                    if idx >= k {
+                        break;
+                    }
+                    let bits = ((word >> (j * 2)) & 0b11) as i8;
+                    let w_val = match bits {
+                        0b01 => 1i8,
+                        0b10 => -1i8,
+                        _ => 0i8,
+                    };
+                    let slot = w_off * 16 + j;
+                    w_i8[slot] = w_val;
+                    a_u8[slot] = act_u8[idx];
+                    weight_sum += w_val as i32;
+                }
+            }
+
+            // Load 64 uint8 activations and 64 sint8 weights into ZMM registers
+            let a_vec = _mm512_loadu_si512(a_u8.as_ptr() as *const i8);
+            let w_vec = _mm512_loadu_si512(w_i8.as_ptr() as *const i8);
+
+            // dpbusd: 64 pairs of (uint8 × sint8) → 16 int32 (horizontally summed)
+            acc = _mm512_add_epi32(acc, _mm512_dpbusd_epi32(_mm512_setzero_si512(), a_vec, w_vec));
+        }
+
+        // Horizontal sum of 16 int32 values
+        let mut tmp = [0i32; 16];
+        _mm512_storeu_si512(tmp.as_mut_ptr() as *mut i8, acc);
+        let mut int_sum: i64 = tmp.iter().map(|&x| x as i64).sum();
+
+        // Bias correction: subtract 128 * sum(weights)
         int_sum -= 128i64 * weight_sum as i64;
 
         output[i] = (int_sum as f32) * inv_scale;

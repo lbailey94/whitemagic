@@ -442,6 +442,67 @@ class AmbientSensorium:
         }
 
 
+class InferenceHardwareSensor:
+    """Monitors inference hardware capabilities and kernel selection.
+
+    Reports CPU ISA tier, SIMD width, selected ternary kernel, and
+    speculative decoding parameters as ambient signals. This gives the
+    consciousness loop awareness of the inference hardware state.
+    """
+
+    source_name = "inference_hardware"
+
+    def is_available(self) -> bool:
+        return True
+
+    def read(self) -> list[AmbientSignal]:
+        signals: list[AmbientSignal] = []
+        try:
+            from whitemagic.inference.inference_tuner import get_inference_tuner
+
+            tuner = get_inference_tuner()
+            report = tuner.report
+
+            # CPU ISA tier as a categorical signal
+            tier_map = {"AMX": 5.0, "VNNI": 4.0, "AVX512": 3.0, "AVX2": 2.0, "SSE4": 1.0, "SCALAR": 0.0}
+            signals.append(
+                AmbientSignal(
+                    source=self.source_name,
+                    signal_type="inference_tier",
+                    value=tier_map.get(report.inference_tier, 0.0),
+                    confidence=1.0,
+                    metadata={
+                        "tier": report.inference_tier,
+                        "simd_width": report.simd_width_bits,
+                        "kernel": report.selected_kernel,
+                    },
+                )
+            )
+
+            # Constrained hardware flag
+            signals.append(
+                AmbientSignal(
+                    source=self.source_name,
+                    signal_type="hw_constrained",
+                    value=1.0 if report.is_constrained else 0.0,
+                    confidence=1.0,
+                )
+            )
+
+            # CPU threads available for inference
+            signals.append(
+                AmbientSignal(
+                    source=self.source_name,
+                    signal_type="inference_threads",
+                    value=float(report.cpu_threads),
+                    confidence=1.0,
+                )
+            )
+        except Exception as e:
+            logger.debug("InferenceHardwareSensor read failed: %s", e)
+        return signals
+
+
 # ── Singleton ────────────────────────────────────────────────────────
 
 _sensorium: AmbientSensorium | None = None
@@ -456,4 +517,5 @@ def get_ambient_sensorium() -> AmbientSensorium:
         _sensorium.add_source(UserPatternSensor())
         _sensorium.add_source(TemporalSensor())
         _sensorium.add_source(EnvironmentSensor())
+        _sensorium.add_source(InferenceHardwareSensor())
     return _sensorium
