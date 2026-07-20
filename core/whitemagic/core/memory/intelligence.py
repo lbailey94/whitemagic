@@ -87,13 +87,13 @@ def get_hrr_engine() -> HRREngine:
     """
     Get the hrr engine.
 
+    Delegates to the canonical implementation in hrr.py (thread-safe, dimension-aware).
+
     Returns:
         HRREngine
     """
-    global _hrr
-    if _hrr is None:
-        _hrr = HRREngine()
-    return _hrr
+    from whitemagic.core.memory.hrr import get_hrr_engine as _canonical
+    return _canonical()
 
 def get_memory_lifecycle() -> MemoryLifecycle:
     """

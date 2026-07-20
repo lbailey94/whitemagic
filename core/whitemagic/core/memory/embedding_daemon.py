@@ -202,6 +202,9 @@ class EmbeddingDaemon:
             name="EmbeddingDaemon"
         )
         self._thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("embedding_daemon", self._thread, stop_fn=self.stop, owner=__name__)
         logger.info("EmbeddingDaemon started (batch_size=%s, poll=%ss)", self.batch_size, self.poll_interval, exc_info=True)
 
     def stop(self) -> None:
@@ -216,6 +219,9 @@ class EmbeddingDaemon:
         if self._thread:
             self._thread.join(timeout=10.0)
 
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("embedding_daemon")
         logger.info("EmbeddingDaemon stopped (total_embedded=%s)", self._stats.total_embedded, exc_info=True)
 
     def _run_loop(self) -> None:

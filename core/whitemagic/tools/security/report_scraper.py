@@ -16,7 +16,8 @@ def _get_state_root() -> Path:
     root = os.environ.get("WM_STATE_ROOT", "")
     if root:
         return Path(root)
-    return Path.home() / ".whitemagic"
+    from whitemagic.config.paths import get_state_root as _get_wm_root
+    return _get_wm_root()
 
 
 @dataclass

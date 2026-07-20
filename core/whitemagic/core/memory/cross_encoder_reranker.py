@@ -91,7 +91,12 @@ def _compute_semantic_density(query: str, content: str) -> float:
                      "by", "as", "this", "that", "these", "those", "it", "its",
                      "be", "been", "being", "have", "has", "had", "do", "does",
                      "did", "will", "would", "could", "should", "may", "might",
-                     "can", "about", "what", "how", "why", "when", "where", "who"}
+                     "can", "about", "what", "how", "why", "when", "where", "who",
+                     "research", "recent", "advances", "historical", "understanding",
+                     "application", "key", "principle", "study", "studies",
+                     "analysis", "review", "overview", "introduction", "summary",
+                     "concept", "role", "theory", "theoretical", "practical",
+                     "framework", "frameworks", "fundamental", "crucial"}
     meaningful = query_words - stopword_like
     if not meaningful:
         return 0.0
@@ -107,8 +112,19 @@ def _heuristic_cross_score(query: str, content: str) -> float:
     - Trigram overlap (15%)
     - Semantic density (30%)
     """
-    # Unigram overlap
-    q_words = set(query.lower().split())
+    # Unigram overlap (excluding stopwords so distinctive terms dominate)
+    _stop = {"the", "a", "an", "is", "are", "was", "were", "in", "on",
+             "at", "to", "for", "of", "with", "and", "or", "not", "from",
+             "by", "as", "this", "that", "these", "those", "it", "its",
+             "be", "been", "being", "have", "has", "had", "do", "does",
+             "did", "will", "would", "could", "should", "may", "might",
+             "can", "about", "what", "how", "why", "when", "where", "who",
+             "research", "recent", "advances", "historical", "understanding",
+             "application", "key", "principle", "study", "studies",
+             "analysis", "review", "overview", "introduction", "summary",
+             "concept", "role", "theory", "theoretical", "practical",
+             "framework", "frameworks", "fundamental", "crucial"}
+    q_words = set(query.lower().split()) - _stop
     c_words = set(content.lower().split())
     unigram = len(q_words & c_words) / len(q_words) if q_words else 0.0
 
@@ -116,7 +132,7 @@ def _heuristic_cross_score(query: str, content: str) -> float:
     trigram = _compute_trigram_overlap(query, content)
     density = _compute_semantic_density(query, content)
 
-    return 0.30 * unigram + 0.25 * bigram + 0.15 * trigram + 0.30 * density
+    return 0.40 * unigram + 0.10 * bigram + 0.05 * trigram + 0.45 * density
 
 
 # Blend weights: how much to trust cross-encoder vs bi-encoder

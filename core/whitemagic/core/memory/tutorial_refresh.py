@@ -11,7 +11,7 @@ can query naturally.
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -470,7 +470,7 @@ def seed_tutorial(force: bool = False) -> dict[str, Any]:
     from whitemagic.config.paths import galaxy_db_path
 
     db_path = galaxy_db_path("tutorial")
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     try:
         from whitemagic import __version__

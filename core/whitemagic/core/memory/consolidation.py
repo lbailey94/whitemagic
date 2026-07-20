@@ -1070,6 +1070,9 @@ class ConsolidationDaemon:
         self._thread = threading.Thread(target=self._run_loop, daemon=True, name="wm-consolidation")
         self._thread.start()
         self._started = True
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("consolidation_daemon", self._thread, stop_fn=self.stop, owner=__name__)
         logger.info("ConsolidationDaemon started (interval=%ds)", self._interval)
 
     def stop(self) -> None:
@@ -1080,6 +1083,9 @@ class ConsolidationDaemon:
         if self._thread:
             self._thread.join(timeout=5)
         self._started = False
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("consolidation_daemon")
         logger.info("ConsolidationDaemon stopped")
 
     def _run_loop(self) -> None:

@@ -69,6 +69,18 @@ class BaseBackend(ABC):
         ...
 
     # Optional methods — backends can override for better performance
+    def batch_recall(self, memory_ids: list[str]) -> dict[str, Memory]:
+        """Recall multiple memories by ID. Default: loop over recall().
+
+        Backends should override with a single SQL query for efficiency.
+        """
+        result: dict[str, Memory] = {}
+        for mid in memory_ids:
+            mem = self.recall(mid)
+            if mem is not None:
+                result[mid] = mem
+        return result
+
     def find_by_content_hash(self, content_hash: str) -> str | None:
         """Find a memory ID by content hash. Returns None if not found."""
         return None

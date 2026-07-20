@@ -23,26 +23,15 @@ class SQLiteSchemaManager:
     def auto_backup(self) -> None:
         """Create a pre-migration backup of the database if it has data.
 
-        Keeps at most 3 backups (rotated by suffix).  Backups are named
-        ``<db>.bak.1`` through ``<db>.bak.3`` with ``.bak.1`` being the
-        most recent.  Only runs when the DB file already exists and is
-        non-empty, to avoid creating empty backup files on first launch.
+        Keeps a single backup at ``<db>.bak.1``.  Only runs when the DB
+        file already exists and is non-empty, to avoid creating empty
+        backup files on first launch.
         """
         import shutil
 
         src = Path(self.db_path)
         if not src.exists() or src.stat().st_size == 0:
             return
-
-        # Rotate: .bak.2 -> .bak.3, .bak.1 -> .bak.2, current -> .bak.1
-        for i in (2, 1):
-            old = src.with_suffix(f"{src.suffix}.bak.{i}")
-            new = src.with_suffix(f"{src.suffix}.bak.{i + 1}")
-            if old.exists():
-                try:
-                    shutil.move(str(old), str(new))
-                except OSError:
-                    logger.debug("Swallowed exception", exc_info=True)
 
         dst = src.with_suffix(f"{src.suffix}.bak.1")
         try:

@@ -505,6 +505,14 @@ class UnifiedMemory:
 
         return memory
 
+    def batch_recall(self, memory_ids: list[str]) -> dict[str, Memory]:
+        """Recall multiple memories by ID in bounded queries.
+
+        Delegates to galaxy_backend.batch_recall for efficient batch retrieval.
+        Does not apply galactic distance promotion (use individual recall() for that).
+        """
+        return self._galaxy_backend.batch_recall(memory_ids)
+
     def update_memory(self, memory_id: str, updates: dict[str, Any],
                        agent_id: str = "", expected_version: int | None = None,
                        memory_context: Any = None) -> dict[str, Any]:
@@ -616,7 +624,9 @@ class UnifiedMemory:
         # match the same keywords but only one contains the specific answer.
         if query and len(results) > 1:
             try:
-                from whitemagic.core.memory.cross_encoder_reranker import rerank_cross_encoder
+                from whitemagic.core.memory.cross_encoder_reranker import (
+                    rerank_cross_encoder,
+                )
                 results = rerank_cross_encoder(query, results, top_k=limit)
             except (ImportError, ModuleNotFoundError, Exception) as e:
                 logger.debug("Cross-encoder reranking skipped: %s", e)
@@ -651,7 +661,9 @@ class UnifiedMemory:
         # weights by turn position, and uses semantic tiebreaking.
         if query and len(results) > 1:
             try:
-                from whitemagic.core.memory.conversation_reranker import conversation_rerank
+                from whitemagic.core.memory.conversation_reranker import (
+                    conversation_rerank,
+                )
                 results = conversation_rerank(query, results, limit=limit)
             except (ImportError, ModuleNotFoundError, Exception) as e:
                 logger.debug("Conversation reranking skipped: %s", e)

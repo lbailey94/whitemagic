@@ -250,7 +250,7 @@ class PatternEngine:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             counts = {"solution": 0, "anti_pattern": 0, "heuristic": 0, "optimization": 0}
-            
+
             for pattern_list, ptype in [
                 (report.solutions, "solution"),
                 (report.anti_patterns, "anti_pattern"),
@@ -267,7 +267,7 @@ class PatternEngine:
                         memory_type="LONG_TERM",
                     )
                     counts[ptype] += 1
-            
+
             return counts
         except Exception as e:
             logger.error("Pattern persist failed: %s", e, exc_info=True)

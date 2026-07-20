@@ -84,7 +84,6 @@ class AbstentionGate:
         """Compute semantic similarity between query and content."""
         try:
             from whitemagic.core.memory.embeddings import (
-                cosine_similarity,
                 get_embedding_engine,
             )
             engine = get_embedding_engine()

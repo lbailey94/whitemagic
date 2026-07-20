@@ -30,12 +30,20 @@ class RetrievalIndexCache:
       - ``hnsw_ids``: ID list aligned with HNSW index
       - ``holographic_index``: SpatialIndex5D or None
       - ``created_at``: Monotonic timestamp for TTL
+
+    Telemetry counters:
+      - ``hits``: get() calls that returned a valid entry
+      - ``misses``: get() calls that returned None
+      - ``warmed``: successful warm_galaxy() calls
+      - ``warm_failures``: failed warm_galaxy() calls
+      - ``evictions``: entries removed by invalidate or TTL expiry
     """
 
     def __init__(self, ttl_seconds: float = _DEFAULT_TTL) -> None:
         self._cache: dict[str, dict[str, Any]] = {}
         self._lock = threading.RLock()
         self._ttl = ttl_seconds
+        self._telemetry = {"hits": 0, "misses": 0, "warmed": 0, "warm_failures": 0, "evictions": 0}
 
     def _key(self, user_id: str, galaxy: str) -> str:
         return f"{user_id}/{galaxy}"
@@ -46,10 +54,14 @@ class RetrievalIndexCache:
         with self._lock:
             entry = self._cache.get(key)
             if entry is None:
+                self._telemetry["misses"] += 1
                 return None
             if time.monotonic() - entry["created_at"] > self._ttl:
                 del self._cache[key]
+                self._telemetry["evictions"] += 1
+                self._telemetry["misses"] += 1
                 return None
+            self._telemetry["hits"] += 1
             return entry
 
     def put(self, user_id: str, galaxy: str, entry: dict[str, Any]) -> None:
@@ -67,6 +79,7 @@ class RetrievalIndexCache:
         with self._lock:
             if key in self._cache:
                 del self._cache[key]
+                self._telemetry["evictions"] += 1
                 logger.debug("RetrievalIndexCache invalidated: %s", key)
                 return True
             return False
@@ -78,17 +91,19 @@ class RetrievalIndexCache:
             keys = [k for k in self._cache if k.startswith(prefix)]
             for k in keys:
                 del self._cache[k]
+            self._telemetry["evictions"] += len(keys)
             return len(keys)
 
     def invalidate_all(self) -> int:
         """Invalidate all entries. Returns count removed."""
         with self._lock:
             count = len(self._cache)
+            self._telemetry["evictions"] += count
             self._cache.clear()
             return count
 
     def stats(self) -> dict[str, Any]:
-        """Return cache statistics."""
+        """Return cache statistics including telemetry counters."""
         with self._lock:
             now = time.monotonic()
             valid = sum(
@@ -100,6 +115,7 @@ class RetrievalIndexCache:
                 "valid_entries": valid,
                 "expired_entries": len(self._cache) - valid,
                 "ttl_seconds": self._ttl,
+                **self._telemetry,
             }
 
     def prune_expired(self) -> int:
@@ -112,12 +128,13 @@ class RetrievalIndexCache:
             ]
             for k in expired:
                 del self._cache[k]
+            self._telemetry["evictions"] += len(expired)
             return len(expired)
 
     def warm_galaxy(self, user_id: str, galaxy: str) -> bool:
         """Pre-warm a galaxy's retrieval index cache.
 
-        Called by the consciousness loop to proactively load indexes
+        Called by the consciousness loop to proactively load HNSW indexes
         for galaxies likely to be queried, reducing cold-start latency.
 
         Returns True if a new entry was created, False if already cached.
@@ -127,32 +144,25 @@ class RetrievalIndexCache:
             return False
 
         try:
-            from whitemagic.core.memory.unified import get_unified_memory
-            um = get_unified_memory()
-            backend = um._get_galaxy_backend(galaxy)
-            if backend is None:
+            from whitemagic.core.memory.galaxy_hnsw import get_galaxy_hnsw_manager
+            manager = get_galaxy_hnsw_manager()
+            index = manager._get_or_create_index(galaxy)
+            if index is None:
+                self._telemetry["warm_failures"] += 1
                 return False
 
             entry: dict[str, Any] = {
-                "hnsw_index": None,
+                "hnsw_index": index,
                 "hnsw_ids": None,
                 "holographic_index": None,
             }
 
-            # Try to build HNSW index for this galaxy
-            try:
-                from whitemagic.core.memory.galaxy_hnsw import get_galaxy_hnsw_manager
-                manager = get_galaxy_hnsw_manager()
-                # Just ensure the index is loaded
-                manager._get_or_create_index(galaxy)
-                entry["hnsw_index"] = "loaded"
-            except Exception:
-                pass
-
             self.put(user_id, galaxy, entry)
+            self._telemetry["warmed"] += 1
             logger.debug("Cache warmed for %s/%s", user_id, galaxy)
             return True
         except Exception as e:
+            self._telemetry["warm_failures"] += 1
             logger.debug("Cache warm failed for %s/%s: %s", user_id, galaxy, e)
             return False
 

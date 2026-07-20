@@ -210,7 +210,9 @@ class GraphWalker:
         """Fallback: scan per-galaxy DBs for this memory's associations."""
         try:
             from pathlib import Path
-            galaxies_dir = Path.home() / ".whitemagic/users/local/galaxies"
+
+            from whitemagic.config.paths import get_state_root
+            galaxies_dir = Path(get_state_root()) / "users" / "local" / "galaxies"
             if not galaxies_dir.exists():
                 return []
             for galaxy_dir in galaxies_dir.iterdir():
@@ -219,7 +221,8 @@ class GraphWalker:
                 db_path = galaxy_dir / "whitemagic.db"
                 if not db_path.exists():
                     continue
-                conn = sqlite3.connect(str(db_path), timeout=5)
+                from whitemagic.core.memory.db_manager import safe_connect
+                conn = safe_connect(str(db_path), timeout=5)
                 conn.row_factory = sqlite3.Row
                 try:
                     rows = conn.execute(

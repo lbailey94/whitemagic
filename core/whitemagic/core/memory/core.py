@@ -86,12 +86,10 @@ def get_memory_manager() -> MemoryManager:
     """
     Get the memory manager.
 
+    Delegates to the canonical implementation in manager.py.
+
     Returns:
         MemoryManager
     """
-    global _manager
-    if _manager is None:
-        from whitemagic.config.paths import DB_PATH
-        backend = SQLiteBackend(str(DB_PATH))
-        _manager = MemoryManager(backend)
-    return _manager
+    from whitemagic.core.memory.manager import get_memory_manager as _canonical
+    return _canonical()

@@ -23,6 +23,29 @@ from whitemagic.core.memory.unified_types import Memory, MemoryType
 logger = logging.getLogger(__name__)
 
 
+def _probe_db_for_id(db_file: Path, memory_id: str) -> bool:
+    """Lightweight read-only existence check for a memory ID.
+
+    Opens the galaxy DB directly (read-only) instead of constructing a
+    full SQLiteBackend — backend init runs schema checks and potentially a
+    full-file pre-migration backup, which is far too expensive to run for
+    every on-disk galaxy during a recall miss.
+    """
+    try:
+        from whitemagic.core.memory.db_manager import safe_connect
+
+        conn = safe_connect(str(db_file), read_only=True)
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM memories WHERE id = ? LIMIT 1", (memory_id,)
+            ).fetchone()
+            return row is not None
+        finally:
+            conn.close()
+    except (sqlite3.Error, OSError):
+        return False
+
+
 class GalaxyAwareBackend:
     """Routes memory operations to per-galaxy SQLite databases.
 
@@ -187,18 +210,76 @@ class GalaxyAwareBackend:
                     if not galaxy_dir.is_dir():
                         continue
                     gname = galaxy_dir.name
-                    if gname in self._galaxy_backends:
+                    if f"{self._user_id}/{gname}" in self._galaxy_backends:
                         continue  # Already checked
                     db_file = galaxy_dir / "whitemagic.db"
-                    if db_file.exists():
-                        backend = self._get_galaxy_backend(gname)
-                        result = backend.recall(memory_id)
-                        if result:
-                            return result
+                    if not db_file.exists():
+                        continue
+                    # Probe BEFORE constructing a backend: SQLiteBackend init
+                    # runs migrations/backup which is very expensive for large
+                    # DBs. A recall miss should never pay that cost (found
+                    # 2026-07-19: reinforce-path recalls spent ~33s building
+                    # backends for sessions/codex/benchmark, blowing the 30s
+                    # dispatch timeout).
+                    if not _probe_db_for_id(db_file, memory_id):
+                        continue
+                    backend = self._get_galaxy_backend(gname)
+                    result = backend.recall(memory_id)
+                    if result:
+                        return result
         except Exception:
             logger.debug("Ignored error in galaxy_router.py:198")
 
         return None
+
+    def batch_recall(self, memory_ids: list[str]) -> dict[str, Memory]:
+        """Recall multiple memories by ID in bounded queries.
+
+        Queries each backend once with all candidate IDs, eliminating
+        the N+1 pattern of per-candidate recall() calls.
+        """
+        if not memory_ids:
+            return {}
+
+        found: dict[str, Memory] = {}
+        remaining = set(memory_ids)
+
+        # Default backend first
+        if remaining:
+            result = self._get_default_backend().batch_recall(list(remaining))
+            found.update(result)
+            remaining -= set(result.keys())
+
+        # All cached galaxy backends
+        for backend in self._galaxy_backends.values():
+            if not remaining:
+                break
+            result = backend.batch_recall(list(remaining))
+            found.update(result)
+            remaining -= set(result.keys())
+
+        # Check for galaxy DBs on disk that aren't cached yet
+        if remaining:
+            try:
+                if self._galaxies_dir.exists():
+                    for galaxy_dir in self._galaxies_dir.iterdir():
+                        if not galaxy_dir.is_dir():
+                            continue
+                        gname = galaxy_dir.name
+                        if gname in self._galaxy_backends:
+                            continue
+                        db_file = galaxy_dir / "whitemagic.db"
+                        if db_file.exists():
+                            backend = self._get_galaxy_backend(gname)
+                            result = backend.batch_recall(list(remaining))
+                            found.update(result)
+                            remaining -= set(result.keys())
+                            if not remaining:
+                                break
+            except Exception:
+                logger.debug("Ignored error in galaxy_router batch_recall")
+
+        return found
 
     def search(
         self,

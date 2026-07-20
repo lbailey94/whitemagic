@@ -8,8 +8,9 @@ where modules only read from a single database.
 
 import logging
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from whitemagic.core.memory.db_manager import safe_connect
 
@@ -31,7 +32,7 @@ def list_galaxy_dbs() -> list[tuple[str, Path]]:
     gd = get_galaxy_db_dir()
     if not gd.exists():
         return []
-    
+
     result = []
     for d in sorted(gd.iterdir()):
         if not d.is_dir():
@@ -61,7 +62,7 @@ def scan_all_coords() -> dict[str, tuple[str, tuple[float, ...]]]:
                     "SELECT memory_id, x, y, z, w, COALESCE(v, 0.5) FROM holographic_coords"
                 ).fetchall()
                 rows = [(r[0], r[1], r[2], r[3], r[4], r[5], 0.5) for r in rows]
-            
+
             for row in rows:
                 mid = row[0]
                 coords = tuple(row[1:])
@@ -69,7 +70,7 @@ def scan_all_coords() -> dict[str, tuple[str, tuple[float, ...]]]:
             conn.close()
         except Exception as e:
             logger.debug("Failed to read coords from %s: %s", gname, e)
-    
+
     return result
 
 
@@ -102,7 +103,7 @@ def iter_galaxy_memories(galaxy_name: str, batch_size: int = 1000) -> Iterator[d
     conn = get_galaxy_conn(galaxy_name)
     if conn is None:
         return
-    
+
     try:
         cols = [c[1] for c in conn.execute("PRAGMA table_info(memories)").fetchall()]
         offset = 0
@@ -125,7 +126,7 @@ def insert_association(galaxy_name: str, source_id: str, target_id: str,
     conn = get_galaxy_conn(galaxy_name)
     if conn is None:
         return False
-    
+
     try:
         # Ensure edge_type column exists
         try:
@@ -135,15 +136,15 @@ def insert_association(galaxy_name: str, source_id: str, target_id: str,
                 conn.execute("ALTER TABLE associations ADD COLUMN edge_type TEXT DEFAULT 'intra_galaxy'")
             except sqlite3.OperationalError:
                 pass  # Column might already exist
-        
+
         existing = conn.execute(
             "SELECT COUNT(*) FROM associations WHERE source_id = ? AND target_id = ?",
             (source_id, target_id),
         ).fetchone()[0]
-        
+
         if existing > 0:
             return False
-        
+
         try:
             conn.execute(
                 "INSERT OR IGNORE INTO associations (source_id, target_id, relation_type, strength, edge_type) VALUES (?, ?, ?, ?, ?)",

@@ -15,6 +15,41 @@ from whitemagic.utils.core import parse_datetime
 
 logger = logging.getLogger(__name__)
 
+# Schema surface managed by _init_db (kept in sync with the DDL below).
+# Used by _schema_current() to decide whether a pre-migration backup is
+# actually needed.
+_EXPECTED_MEMORIES_COLUMNS: frozenset[str] = frozenset(
+    {
+        "id", "content", "memory_type", "created_at", "updated_at",
+        "accessed_at", "access_count", "emotional_valence", "importance",
+        "neuro_score", "novelty_score", "recall_count", "half_life_days",
+        "is_protected", "metadata", "title", "galactic_distance",
+        "retention_score", "last_retention_sweep", "content_hash",
+        "event_time", "ingestion_time", "is_private", "model_exclude",
+        "galaxy", "source_trust", "version", "agent_id", "garden",
+    }
+)
+_EXPECTED_TABLES: frozenset[str] = frozenset(
+    {
+        "memories", "tags", "associations", "memories_fts",
+        "holographic_coords", "constellation_membership",
+        "akashic_seeds", "dharma_audit",
+    }
+)
+_EXPECTED_INDEXES: frozenset[str] = frozenset(
+    {
+        "idx_tags_tag", "idx_memories_garden", "idx_assoc_direction",
+        "idx_assoc_edge_type", "idx_assoc_source", "idx_assoc_strength",
+        "idx_assoc_target", "idx_constellation_name", "idx_dharma_timestamp",
+        "idx_memories_accessed", "idx_memories_content_hash",
+        "idx_memories_created_at", "idx_memories_galactic",
+        "idx_memories_galaxy", "idx_memories_importance", "idx_memories_neuro",
+        "idx_memories_protected", "idx_memories_type",
+        "idx_memories_updated_at", "idx_tags_composite",
+    }
+)
+
+
 class SQLiteBackend:
     """SQLite backend for UnifiedMemory.
     Replaces JSON file storage with a single SQLite database.
@@ -44,26 +79,15 @@ class SQLiteBackend:
     def _auto_backup(self) -> None:
         """Create a pre-migration backup of the database if it has data.
 
-        Keeps at most 3 backups (rotated by suffix).  Backups are named
-        ``<db>.bak.1`` through ``<db>.bak.3`` with ``.bak.1`` being the
-        most recent.  Only runs when the DB file already exists and is
-        non-empty, to avoid creating empty backup files on first launch.
+        Keeps a single backup at ``<db>.bak.1``.  Only runs when the DB
+        file already exists and is non-empty, to avoid creating empty
+        backup files on first launch.
         """
         import shutil
 
         src = Path(self.db_path)
         if not src.exists() or src.stat().st_size == 0:
             return
-
-        # Rotate: .bak.2 → .bak.3, .bak.1 → .bak.2, current → .bak.1
-        for i in (2, 1):
-            old = src.with_suffix(f"{src.suffix}.bak.{i}")
-            new = src.with_suffix(f"{src.suffix}.bak.{i + 1}")
-            if old.exists():
-                try:
-                    shutil.move(str(old), str(new))
-                except OSError:
-                    logger.debug("Swallowed exception", exc_info=True)
 
         dst = src.with_suffix(f"{src.suffix}.bak.1")
         try:
@@ -72,6 +96,35 @@ class SQLiteBackend:
         except OSError as exc:
             logger.warning("Could not create backup %s: %s", dst, exc)
 
+    def _schema_current(self, conn: Any) -> bool:
+        """True if the DB schema already matches everything _init_db manages.
+
+        Cheap PRAGMA/sqlite_master reads only. Used to gate the
+        pre-migration backup: when the schema is current, _init_db executes
+        only idempotent no-ops (CREATE ... IF NOT EXISTS) and no backup is
+        needed. Previously the backup ran unconditionally on EVERY backend
+        construction — copying multi-GB database files (sessions: 1.2GB ≈
+        25s) on every cold init, which pushed memory stores past the 30s
+        dispatch timeout (2026-07-19 timeouts).
+        """
+        try:
+            # table_xinfo (not table_info): generated VIRTUAL columns like
+            # `garden` are hidden from table_info.
+            existing_columns = {
+                row[1] for row in conn.execute("PRAGMA table_xinfo(memories)")
+            }
+            if not _EXPECTED_MEMORIES_COLUMNS <= existing_columns:
+                return False
+            existing_objects = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type IN ('table', 'index')"
+                )
+            }
+            return (_EXPECTED_TABLES | _EXPECTED_INDEXES) <= existing_objects
+        except sqlite3.Error:
+            return False  # unreadable schema -> treat as needing migration
+
     def _init_db(self) -> None:
         """Initialize database schema and handle migrations.
 
@@ -79,7 +132,16 @@ class SQLiteBackend:
         PRAGMAs (WAL, mmap_size, cache_size, temp_store, etc.) are
         set centrally in db_manager.ConnectionPool._create_connection().
         """
-        self._auto_backup()
+        # Only back up when a schema change will actually be applied —
+        # the backup protects against migration mishaps, and copying a
+        # multi-GB file when nothing will change is pure hot-path cost.
+        try:
+            with self.pool.connection() as conn:
+                schema_current = self._schema_current(conn)
+        except sqlite3.Error:
+            schema_current = False
+        if not schema_current:
+            self._auto_backup()
         # Periodic integrity check — catches corruption early before it propagates
         integrity = check_db_integrity(str(self.db_path))
         if integrity not in ("ok", "ok (cached)"):
@@ -136,6 +198,14 @@ class SQLiteBackend:
                 "source_trust": "TEXT DEFAULT 'user'",  # v24: provenance tracking (user/tool_output/web/inferred)
                 "version": "INTEGER DEFAULT 0",  # v25: multi-agent cache coherence
                 "agent_id": "TEXT DEFAULT ''",  # v25: multi-agent cache coherence
+                # Legacy-table safety nets: present in the base CREATE TABLE
+                # but absent from old minimal schemas (only `id` is truly
+                # existential). Without these, index creation on legacy DBs
+                # crashed with "no such column".
+                "importance": "REAL DEFAULT 0.5",
+                "title": "TEXT",
+                "content": "TEXT",
+                "created_at": "TEXT",
             }
 
             for col_name, col_type in new_columns.items():
@@ -462,6 +532,117 @@ class SQLiteBackend:
         if cold and cold is not False:
             return self._recall_from_pool(cold, memory_id)
         return None
+
+    def batch_recall(self, memory_ids: list[str]) -> dict[str, Memory]:
+        """Recall multiple memories by ID in a single query per pool.
+
+        Eliminates N+1 recall() calls by using IN (...) clauses.
+        """
+        if not memory_ids:
+            return {}
+
+        found: dict[str, Memory] = {}
+        remaining = set(memory_ids)
+
+        # Hot DB
+        if remaining:
+            result = self._batch_recall_from_pool(self.pool, list(remaining))
+            found.update(result)
+            remaining -= set(result.keys())
+
+        # Cold storage fallback
+        if remaining:
+            cold = self._get_cold_pool()
+            if cold and cold is not False:
+                result = self._batch_recall_from_pool(cold, list(remaining))
+                found.update(result)
+
+        return found
+
+    def _batch_recall_from_pool(self, pool: Any, ids: list[str]) -> dict[str, Memory]:
+        """Batch recall from a specific DB pool using IN clause."""
+        if not ids:
+            return {}
+
+        result: dict[str, Memory] = {}
+        # Process in chunks of 500 to avoid SQLite parameter limits
+        chunk_size = 500
+        for i in range(0, len(ids), chunk_size):
+            chunk = ids[i:i + chunk_size]
+            placeholders = ",".join("?" * len(chunk))
+            with pool.connection() as conn:
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    f"SELECT * FROM memories WHERE id IN ({placeholders})",
+                    chunk,
+                ).fetchall()
+
+                if not rows:
+                    continue
+
+                found_ids = {r["id"] for r in rows}
+
+                # Batch fetch tags for all found memories
+                found_ids_list = list(found_ids)
+                tag_placeholders = ",".join("?" * len(found_ids_list))
+                tag_rows = conn.execute(
+                    f"SELECT memory_id, tag FROM tags WHERE memory_id IN ({tag_placeholders})",
+                    found_ids_list,
+                ).fetchall()
+                tags_map: dict[str, set[str]] = {}
+                for tr in tag_rows:
+                    tags_map.setdefault(tr["memory_id"], set()).add(tr["tag"])
+
+                # Batch fetch associations for all found memories
+                assoc_rows = conn.execute(
+                    f"SELECT source_id, target_id, strength FROM associations WHERE source_id IN ({tag_placeholders})",
+                    found_ids_list,
+                ).fetchall()
+                assoc_map: dict[str, dict[str, float]] = {}
+                for ar in assoc_rows:
+                    assoc_map.setdefault(ar["source_id"], {})[ar["target_id"]] = ar["strength"]
+
+                for row in rows:
+                    mid = row["id"]
+                    tags = tags_map.get(mid, set())
+                    associations = assoc_map.get(mid, {})
+
+                    content = row["content"]
+                    if isinstance(content, str) and (content.startswith("{") or content.startswith("[")):
+                        try:
+                            content = json.loads(content)
+                        except Exception:
+                            pass
+
+                    result[mid] = Memory(
+                        id=row["id"],
+                        content=content,
+                        memory_type=getattr(MemoryType, row["memory_type"], MemoryType.SHORT_TERM),
+                        title=row["title"],
+                        created_at=parse_datetime(row["created_at"]),
+                        accessed_at=parse_datetime(row["accessed_at"]),
+                        access_count=row["access_count"],
+                        tags=tags,
+                        associations=associations,
+                        emotional_valence=row["emotional_valence"],
+                        importance=row["importance"],
+                        neuro_score=row["neuro_score"] if "neuro_score" in row.keys() else 1.0,
+                        novelty_score=row["novelty_score"] if "novelty_score" in row.keys() else 1.0,
+                        recall_count=row["recall_count"] if "recall_count" in row.keys() else 0,
+                        half_life_days=row["half_life_days"] if "half_life_days" in row.keys() else 30.0,
+                        is_protected=bool(row["is_protected"]) if "is_protected" in row.keys() else False,
+                        is_private=bool(row["is_private"]) if "is_private" in row.keys() else False,
+                        model_exclude=bool(row["model_exclude"]) if "model_exclude" in row.keys() else False,
+                        galactic_distance=row["galactic_distance"] if "galactic_distance" in row.keys() else 0.0,
+                        retention_score=row["retention_score"] if "retention_score" in row.keys() else 0.5,
+                        last_retention_sweep=parse_datetime(row["last_retention_sweep"]) if "last_retention_sweep" in row.keys() and row["last_retention_sweep"] else None,
+                        galaxy=row["galaxy"] if "galaxy" in row.keys() else "universal",
+                        metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+                        version=row["version"] if "version" in row.keys() else 0,
+                        agent_id=row["agent_id"] if "agent_id" in row.keys() else "",
+                    )
+
+        return result
 
     def _recall_from_pool(self, pool: Any, memory_id: str) -> Memory | None:
         """Retrieve a memory by ID from a specific DB pool."""

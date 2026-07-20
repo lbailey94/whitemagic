@@ -28,8 +28,8 @@ def _is_sync_enabled() -> bool:
     """Check if galaxy sync is enabled (Redis must be available)."""
     if os.environ.get("WM_SILENT_INIT") == "1":
         return False
-    from whitemagic.tools.handlers.broker import _resolve_redis_url
-    redis_url = _resolve_redis_url()
+    from whitemagic.core.ports import resolve_redis_url
+    redis_url = resolve_redis_url()
     if redis_url:
         return True
     import socket
@@ -68,7 +68,7 @@ def publish_galaxy_event(
         return False
 
     try:
-        from whitemagic.tools.handlers.broker import _get_broker, _run
+        from whitemagic.core.ports import get_broker, run
 
         channel = _galaxy_channel(user_id, galaxy_name)
         message = {
@@ -79,12 +79,12 @@ def publish_galaxy_event(
         }
 
         async def _do() -> str:
-            broker = await _get_broker()
+            broker = await get_broker()
             return await broker.publish(channel, message)
 
         coro = _do()
         try:
-            _run(coro)
+            run(coro)
         except Exception:
             coro.close()
             raise
@@ -114,15 +114,15 @@ def start_galaxy_sync_listener(
         return None
 
     try:
-        from whitemagic.tools.handlers.broker import _get_broker, _run
+        from whitemagic.core.ports import get_broker, run
 
         channel = _galaxy_channel(user_id, galaxy_name)
 
         async def _do() -> Any:
-            broker = await _get_broker()
+            broker = await get_broker()
             return await broker.subscribe(channel)
 
-        pubsub = _run(_do())
+        pubsub = run(_do())
         logger.info("Subscribed to galaxy sync channel: %s", channel)
         return pubsub
     except Exception as e:
@@ -144,15 +144,15 @@ def stop_galaxy_sync_listener(user_id: str, galaxy_name: str | None = None) -> b
         return False
 
     try:
-        from whitemagic.tools.handlers.broker import _get_broker, _run
+        from whitemagic.core.ports import get_broker, run
 
         channel = _galaxy_channel(user_id, galaxy_name)
 
         async def _do() -> None:
-            broker = await _get_broker()
+            broker = await get_broker()
             await broker.unsubscribe(channel)
 
-        _run(_do())
+        run(_do())
         logger.info("Unsubscribed from galaxy sync channel: %s", channel)
         return True
     except Exception as e:

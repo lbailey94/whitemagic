@@ -45,6 +45,9 @@ class DecayDaemon:
         self._running = True
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("decay_daemon", self._thread, stop_fn=self.stop, owner=__name__)
         logger.info("Decay daemon started")
 
     def stop(self) -> None:
@@ -52,6 +55,9 @@ class DecayDaemon:
         self._running = False
         if self._thread:
             self._thread.join(timeout=5.0)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("decay_daemon")
         logger.info("Decay daemon stopped")
 
     def _run_loop(self) -> None:

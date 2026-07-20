@@ -35,11 +35,11 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from whitemagic.core.memory.db_manager import safe_connect
 from whitemagic.config.paths import WM_ROOT
+from whitemagic.core.memory.db_manager import safe_connect
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class TemporalKnowledgeGraph:
             logger.warning("Failed to init temporal KG DB: %s", e)
 
     def _now_iso(self) -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     def assert_fact(
         self,
@@ -309,7 +309,7 @@ class TemporalKnowledgeGraph:
             if not rows:
                 return 0.0  # No temporal facts → neutral
 
-            ref_time = datetime.fromisoformat(reference_time) if reference_time else datetime.now(timezone.utc)
+            ref_time = datetime.fromisoformat(reference_time) if reference_time else datetime.now(UTC)
 
             total_adjustment = 0.0
             for row in rows:

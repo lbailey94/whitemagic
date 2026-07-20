@@ -113,14 +113,16 @@ class SearchQueryPlanner:
                     min_similarity=profile.min_similarity,
                     include_cold=profile.include_cold,
                 )
-                for hit in semantic_hits:
-                    mid = hit["memory_id"]
-                    if mid not in all_memories:
-                        recalled = galaxy_backend.recall(mid)
-                        if recalled:
+                missing_ids = [hit["memory_id"] for hit in semantic_hits if hit["memory_id"] not in all_memories]
+                if missing_ids:
+                    batch = galaxy_backend.batch_recall(missing_ids)
+                    for hit in semantic_hits:
+                        mid = hit["memory_id"]
+                        if mid in batch and mid not in all_memories:
+                            mem = batch[mid]
                             if hit.get("source") == "cold":
-                                recalled.metadata["storage_tier"] = "cold"
-                            all_memories[mid] = recalled
+                                mem.metadata["storage_tier"] = "cold"
+                            all_memories[mid] = mem
         except Exception as e:
             logger.debug("Planned semantic search failed: %s", e, exc_info=True)
             result.degraded_stages.append(RetrievalStage.SEMANTIC_RANKING.value)
@@ -141,12 +143,12 @@ class SearchQueryPlanner:
                     {"content": query}, k=limit * profile.over_fetch_ratio,
                     weights=profile.axis_weights,
                 )
-                for hit in spatial_hits:
-                    mid = hit.memory_id
-                    if mid not in all_memories:
-                        recalled = galaxy_backend.recall(mid)
-                        if recalled:
-                            all_memories[mid] = recalled
+                missing_ids = [hit.memory_id for hit in spatial_hits if hit.memory_id not in all_memories]
+                if missing_ids:
+                    batch = galaxy_backend.batch_recall(missing_ids)
+                    for mid, mem in batch.items():
+                        if mid not in all_memories:
+                            all_memories[mid] = mem
             except Exception as e:
                 logger.debug("Planned spatial search failed: %s", e, exc_info=True)
                 result.degraded_stages.append(RetrievalStage.SPATIAL_RANKING.value)
@@ -173,8 +175,8 @@ class SearchQueryPlanner:
 
         # Per-galaxy HNSW semantic search (parallel, RRF-merged)
         try:
-            from whitemagic.core.memory.galaxy_hnsw import get_galaxy_hnsw_manager
             from whitemagic.core.memory.embeddings import get_embedding_engine
+            from whitemagic.core.memory.galaxy_hnsw import get_galaxy_hnsw_manager
             engine = get_embedding_engine()
             if engine.available():
                 query_vec = engine.encode(query)
@@ -184,11 +186,11 @@ class SearchQueryPlanner:
                     k=limit * profile.over_fetch_ratio,
                     rrf_k=profile.rrf_k,
                 )
+                missing_ids = [mid for mid, _ in hnsw_results if mid not in all_memories]
+                if missing_ids:
+                    batch = galaxy_backend.batch_recall(missing_ids)
+                    all_memories.update(batch)
                 for rank, (mid, rrf_score) in enumerate(hnsw_results):
-                    if mid not in all_memories:
-                        recalled = galaxy_backend.recall(mid)
-                        if recalled:
-                            all_memories[mid] = recalled
                     cs = scores.setdefault(mid, CandidateScore(memory_id=mid))
                     # HNSW contributes to semantic score via RRF
                     hnsw_score = profile.semantic_weight * 0.5 * rrf_score
@@ -237,15 +239,16 @@ class SearchQueryPlanner:
                         backend=galaxy_backend,
                     )
                     # Apply boosts to candidate scores
+                    new_entity_ids = [mid for mid in boosted if mid not in all_memories]
+                    if new_entity_ids:
+                        entity_batch = galaxy_backend.batch_recall(new_entity_ids)
+                        all_memories.update(entity_batch)
                     for mid, boost_val in boosted.items():
                         cs = scores.get(mid)
                         if cs is None:
                             # New candidate from entity graph
                             cs = CandidateScore(memory_id=mid)
                             scores[mid] = cs
-                            recalled = galaxy_backend.recall(mid)
-                            if recalled:
-                                all_memories[mid] = recalled
                         # Entity boost is the delta above the base RRF
                         base = rrf_dict.get(mid, 0.0)
                         cs.entity_score = boost_val - base
@@ -326,13 +329,18 @@ class SearchQueryPlanner:
                     )
 
                     # Apply graph walk scores to candidates
-                    for rank, path in enumerate(walk_result.paths):
+                    graph_missing = []
+                    for path in walk_result.paths:
                         for node_id in path.nodes:
                             mid = node_id if isinstance(node_id, str) else str(node_id)
                             if mid not in all_memories:
-                                recalled = galaxy_backend.recall(mid)
-                                if recalled:
-                                    all_memories[mid] = recalled
+                                graph_missing.append(mid)
+                    if graph_missing:
+                        graph_batch = galaxy_backend.batch_recall(list(set(graph_missing)))
+                        all_memories.update(graph_batch)
+                    for rank, path in enumerate(walk_result.paths):
+                        for node_id in path.nodes:
+                            mid = node_id if isinstance(node_id, str) else str(node_id)
                             cs = scores.setdefault(mid, CandidateScore(memory_id=mid))
                             cs.graph_score = profile.graph_walk_weight / (profile.rrf_k + rank + 1)
                             cs.channels.add("graph")
@@ -340,19 +348,35 @@ class SearchQueryPlanner:
                     # Spreading activation as additional candidate channel
                     if profile.spreading_activation:
                         try:
-                            from whitemagic.core.memory.spreading_activation import get_spreading_activation
+                            from whitemagic.core.memory.spreading_activation import (
+                                get_spreading_activation,
+                            )
                             sa_engine = get_spreading_activation()
                             # Build galaxy_db_paths map for cross-galaxy traversal
+                            # When galaxy is restricted, only include that galaxy to avoid noise
                             galaxy_db_paths: dict[str, str] = {}
                             try:
                                 from pathlib import Path as _Path
-                                _galaxies_dir = _Path.home() / ".whitemagic/users/local/galaxies"
+
+                                from whitemagic.config.paths import (
+                                    get_state_root as _get_wm_root,
+                                )
+                                _galaxies_dir = _Path(_get_wm_root()) / "users" / "local" / "galaxies"
                                 if _galaxies_dir.exists():
                                     for _gd in _galaxies_dir.iterdir():
                                         if _gd.is_dir():
                                             _dbp = _gd / "whitemagic.db"
                                             if _dbp.exists():
-                                                galaxy_db_paths[_gd.name] = str(_dbp)
+                                                _gname = _gd.name
+                                                # Skip benchmark/eval galaxies to prevent noise
+                                                if _gname in ('benchmark', 'abstention_bench', 'beam_bench',
+                                                              'locomo_bench', 'longmemeval_bench', 'default',
+                                                              'translation'):
+                                                    continue
+                                                # If galaxy restriction is set, only include that galaxy
+                                                if galaxy and _gname != galaxy:
+                                                    continue
+                                                galaxy_db_paths[_gname] = str(_dbp)
                             except Exception:
                                 pass
                             sa_result = sa_engine.spread(
@@ -361,12 +385,12 @@ class SearchQueryPlanner:
                                 max_hops=profile.graph_walk_hops,
                                 min_activation=0.15,
                             )
+                            sa_missing = [p.memory_id for p in sa_result.primed if p.memory_id not in all_memories]
+                            if sa_missing:
+                                sa_batch = galaxy_backend.batch_recall(list(set(sa_missing)))
+                                all_memories.update(sa_batch)
                             for rank, primed in enumerate(sa_result.primed):
                                 mid = primed.memory_id
-                                if mid not in all_memories:
-                                    recalled = galaxy_backend.recall(mid)
-                                    if recalled:
-                                        all_memories[mid] = recalled
                                 cs = scores.setdefault(mid, CandidateScore(memory_id=mid))
                                 # Spreading activation score: activation * graph_walk_weight
                                 sa_score = primed.activation * profile.graph_walk_weight * 0.5
@@ -435,7 +459,9 @@ class SearchQueryPlanner:
             # Cross-encoder reranking (optional, 0-token)
             if profile.cross_encoder:
                 try:
-                    from whitemagic.core.memory.cross_encoder_reranker import rerank_cross_encoder
+                    from whitemagic.core.memory.cross_encoder_reranker import (
+                        rerank_cross_encoder,
+                    )
                     results = rerank_cross_encoder(query, results)
                 except (ImportError, ModuleNotFoundError, Exception) as e:
                     logger.debug("Cross-encoder reranking skipped: %s", e)

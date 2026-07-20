@@ -50,6 +50,14 @@ class MemoryBackendProtocol(Protocol):
         """Recall a single memory by ID. Returns None if not found."""
         ...
 
+    def batch_recall(self, memory_ids: list[str]) -> dict[str, Memory]:
+        """Recall multiple memories by ID in a single query.
+
+        Returns a dict mapping found memory_id -> Memory.
+        IDs not found are omitted from the result.
+        """
+        ...
+
     def search(
         self,
         query: str = "",

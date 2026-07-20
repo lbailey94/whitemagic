@@ -242,13 +242,13 @@ def get_embedding_engine() -> EmbeddingEngine:
     """
     Get the embedding engine.
 
+    Delegates to the canonical implementation in embeddings.py (user-scoped).
+
     Returns:
         EmbeddingEngine
     """
-    global _embeddings
-    if _embeddings is None:
-        _embeddings = EmbeddingEngine()
-    return _embeddings
+    from whitemagic.core.memory.embeddings import get_embedding_engine as _canonical
+    return _canonical()
 
 def get_vector_search() -> VectorSearch:
     """

@@ -140,7 +140,7 @@ def multi_hop_search(
     if not secondary_results:
         return results
 
-    # Merge via simple RRF: primary results get rank bonus
+    # Merge via pure RRF: primary results get rank bonus
     # RRF score = 1 / (k + rank) with k=60
     rrf_k = 60
     all_results = results + secondary_results
@@ -151,18 +151,9 @@ def multi_hop_search(
         is_primary = rank < len(results)
         rrf_score = 1.0 / (rrf_k + rank + 1)
         if is_primary:
-            rrf_score *= 1.5  # Boost primary results
+            rrf_score *= 2.0  # Boost primary results
 
-        # Blend with existing similarity/blended score
-        existing_score = 0.0
-        if hasattr(mem, "metadata"):
-            existing_score = mem.metadata.get(
-                "blended_score",
-                mem.metadata.get("similarity_score", 0.0),
-            )
-
-        final_score = rrf_score + existing_score * 0.3
-        scored.append((final_score, rank, mem))
+        scored.append((rrf_score, rank, mem))
 
     scored.sort(key=lambda x: (x[0], -x[1]), reverse=True)
     return [m for _, _, m in scored[:max_results]]

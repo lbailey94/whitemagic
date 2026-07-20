@@ -76,8 +76,16 @@ def extract_answer_hints(query: str) -> dict[str, str]:
                 return hints
 
     # Fallback: extract capitalized entities as hints
+    # But exclude common non-entity words that appear capitalized at sentence start
+    _FALLBACK_EXCLUDE = _NON_ENTITIES | {
+        "research", "recent", "advances", "historical", "understanding",
+        "application", "key", "principle", "influence", "impact",
+        "role", "analysis", "study", "studies", "review", "overview",
+        "introduction", "summary", "conclusion", "method", "approach",
+        "result", "results", "discussion", "background", "abstract",
+    }
     entities = re.findall(r"\b[A-Z][a-z]{2,}\b", query)
-    entities = [e for e in entities if e.lower() not in _NON_ENTITIES]
+    entities = [e for e in entities if e.lower() not in _FALLBACK_EXCLUDE]
     if entities:
         return {"entity": entities[0]}
 
