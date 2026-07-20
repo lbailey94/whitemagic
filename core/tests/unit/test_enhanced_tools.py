@@ -342,7 +342,13 @@ class TestAlchemicalLoop:
 
     @pytest.fixture(autouse=True)
     def _mock_heavy_ops(self):
-        """Mock rabbit_hole and filter_research to avoid 8s+ tool dispatch."""
+        """Mock rabbit_hole and filter_research to avoid 8s+ tool dispatch.
+
+        _mine_associations is mocked too: it runs a real memory search whose
+        cross-encoder torch rerank crashes/times out under xdist CPU
+        contention (AGENTS.md test purity: mock heavy engines at the class
+        boundary).
+        """
         with patch(
             "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._call_rabbit_hole",
             new_callable=AsyncMock,
@@ -351,6 +357,10 @@ class TestAlchemicalLoop:
             "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._filter_research",
             new_callable=AsyncMock,
             return_value={"filtered": [], "count": 0},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._mine_associations",
+            new_callable=AsyncMock,
+            return_value={"associations": [], "count": 0},
         ):
             yield
 
