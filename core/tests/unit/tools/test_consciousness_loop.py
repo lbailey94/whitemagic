@@ -25,6 +25,20 @@ def _reset_singleton():
     mod._loop = old
 
 
+def _wait_for(predicate, timeout_s: float = 12.0) -> bool:
+    """Poll predicate every 0.1s until true or deadline (< 15s pytest-timeout).
+
+    Fixed sleeps are flaky under xdist CPU contention (AGENTS.md flaky
+    policy: proper waits, not fixed timings).
+    """
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.1)
+    return predicate()
+
+
 @pytest.fixture
 def fast_config():
     """Config with very short intervals for testing."""
@@ -137,8 +151,7 @@ class TestConsciousnessLoop:
         assert loop._running is True
         assert loop._thread is not None
         assert loop._thread.is_alive()
-        time.sleep(1.5)
-        assert loop._stats.citta_ticks > 0
+        assert _wait_for(lambda: loop._stats.citta_ticks > 0)
         loop.stop()
         assert loop._running is False
 
@@ -153,17 +166,15 @@ class TestConsciousnessLoop:
     def test_citta_advancement(self, _reset_singleton, fast_config):
         loop = ConsciousnessLoop(config=fast_config)
         loop.start()
-        time.sleep(1.5)
+        assert _wait_for(lambda: loop._stats.citta_ticks > 0)
         loop.stop()
-        assert loop._stats.citta_ticks > 0
         assert loop._stats.last_citta_coherence > 0.0
 
     def test_citta_persist(self, _reset_singleton, fast_config):
         loop = ConsciousnessLoop(config=fast_config)
         loop.start()
-        time.sleep(1.5)
+        assert _wait_for(lambda: loop._stats.citta_checkpoints > 0)
         loop.stop()
-        assert loop._stats.citta_checkpoints > 0
 
     def test_touch_does_not_crash(self, _reset_singleton, fast_config):
         loop = ConsciousnessLoop(config=fast_config)
@@ -241,7 +252,15 @@ class TestMetaEngine:
         )
         loop = ConsciousnessLoop(config=config)
         loop.start()
-        time.sleep(3.0)
+        # Poll for the first T2 tick with a generous deadline instead of a
+        # fixed sleep: under xdist CPU contention the loop thread may be
+        # starved well past the nominal 0.5s interval (AGENTS.md flaky
+        # policy: proper waits, not fixed timings).
+        deadline = time.monotonic() + 12.0  # < 15s default pytest-timeout
+        while time.monotonic() < deadline:
+            if loop._stats.health_checks > 0 or loop._stats.emergence_scans > 0:
+                break
+            time.sleep(0.1)
         loop.stop()
         # At least one T2 tick should have fired
         assert loop._stats.health_checks > 0 or loop._stats.emergence_scans > 0
