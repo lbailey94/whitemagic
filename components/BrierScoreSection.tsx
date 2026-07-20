@@ -18,7 +18,7 @@ export function BrierScoreSection() {
 
         <div>
           <p className="mb-2 font-mono text-xs uppercase tracking-widest text-lavender">
-            Brier scoring · updated June 5, 2026
+            Brier scoring · updated July 17, 2026
           </p>
           <h2 className="font-head text-2xl font-semibold tracking-tight text-ink md:text-3xl">
             Calibration against the gold standard.
@@ -108,7 +108,7 @@ export function BrierScoreSection() {
         <div className="rounded-2xl border border-dashed border-border bg-surface-alt p-5 text-sm text-muted">
           <p className="mb-1 font-mono text-xs uppercase tracking-widest text-lavender">Calibration caveat</p>
           <p>
-            All 18 closed predictions resolved <em>positive</em> (outcome = 1). This means the Brier decomposition
+            All 23 closed predictions resolved <em>positive</em> (outcome = 1). This means the Brier decomposition
             cannot compute meaningful resolution or uncertainty — there is no variance in outcomes to measure against.
             The Brier score is therefore driven entirely by reliability: how close your confidence levels were to 1.0.
             A negative calibration gap (−0.283) indicates you were systematically <strong>underconfident</strong> —

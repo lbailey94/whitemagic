@@ -11,7 +11,7 @@ interface FirmRow {
 }
 
 const FIRMS: FirmRow[] = [
-  { name: "WhiteMagic Labs (solo, $0 budget)", avgLead: "~24.9 wks", resources: "Personal hardware + free AI APIs", crossDomain: true, score: "940", highlight: true },
+  { name: "WhiteMagic Labs (solo, $0 budget)", avgLead: "~26.2 wks", resources: "Personal hardware + free AI APIs", crossDomain: true, score: "1,126", highlight: true },
   { name: "Gartner Hype Cycle", avgLead: "12–52 wks", resources: "$5B+/yr, 2,000+ analysts", crossDomain: false, score: "~200 est." },
   { name: "RAND Corporation", avgLead: "4–12 wks", resources: "$350M+/yr, 1,900+ analysts", crossDomain: false, score: "~120 est." },
   { name: "Good Judgment Superforecasters", avgLead: "1–6 wks", resources: "IARPA funding, trained teams", crossDomain: false, score: "~50 est." },
@@ -19,10 +19,10 @@ const FIRMS: FirmRow[] = [
 ];
 
 const STATS = [
-  { icon: Award, label: "Prescience score", value: "940", sub: "1 point per validated week of lead time" },
-  { icon: Clock, label: "Avg lead time", value: "24.9 wks", sub: "per validated claim" },
-  { icon: TrendingUp, label: "Validated claims", value: "38", sub: "with independently verifiable sources" },
-  { icon: Users, label: "Pending ceiling", value: "970+", sub: "if all remaining claims validate" },
+  { icon: Award, label: "Prescience score", value: "1,126", sub: "1 point = 1 validated week · over 21 years cumulative" },
+  { icon: Clock, label: "Avg lead time", value: "26.2 wks", sub: "per validated claim" },
+  { icon: TrendingUp, label: "Validated claims", value: "43", sub: "with independently verifiable sources" },
+  { icon: Users, label: "Pending ceiling", value: "1,400+", sub: "if all remaining claims validate" },
 ];
 
 export function PrescienceScore() {
@@ -33,7 +33,7 @@ export function PrescienceScore() {
         {/* Heading */}
         <div>
           <p className="mb-2 font-mono text-xs uppercase tracking-widest text-lavender">
-            Prescience score · updated July 16, 2026
+            Prescience score · updated July 17, 2026
           </p>
           <h2 className="font-head text-2xl font-semibold tracking-tight text-ink md:text-3xl">
             Lead-time scoring: 1 validated week = 1 point.

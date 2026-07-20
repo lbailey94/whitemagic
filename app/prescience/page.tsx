@@ -12,7 +12,7 @@ import {
 export const metadata = {
   title: "Convergence Audit — WhiteMagic Labs",
   description:
-    `38 validated claims. 940 prescience points. Stated Brier Index ${STATED_BRIER_INDEX}%; behavioral recalibration ${BEHAVIORAL_BRIER_INDEX}%. A complete, independently verifiable cross-domain forecasting track record with source evidence. Not to be confused with AllenAI's PreScience benchmark for scientific contribution forecasting.`,
+    `43 validated claims. 1,126 prescience points. Stated Brier Index ${STATED_BRIER_INDEX}%; behavioral recalibration ${BEHAVIORAL_BRIER_INDEX}%. A complete, independently verifiable cross-domain forecasting track record with source evidence. Not to be confused with AllenAI's PreScience benchmark for scientific contribution forecasting.`,
 };
 
 export default function PresciencePage() {
@@ -48,7 +48,7 @@ export default function PresciencePage() {
         <div className="mx-auto max-w-3xl space-y-6">
           <div>
             <p className="mb-2 font-mono text-xs uppercase tracking-widest text-lavender">
-              Validated claims · 30
+              Validated claims · 43
             </p>
             <h2 className="font-head text-2xl font-semibold tracking-tight text-ink md:text-3xl">
               The audit trail.
