@@ -1,0 +1,83 @@
+[importlinter]
+root_package = whitemagic
+
+[importlinter:contract:core-must-not-import-tools]
+name = Core must not import tools
+type = forbidden
+source_modules =
+    whitemagic.core
+forbidden_modules =
+    whitemagic.tools
+# Baseline of existing core→tools violations as of 2026-07-19.
+# All 34 direct core→tools imports have been migrated to core/ports.py
+# (the designated bridge point). Only ports.py entries + indirect chains remain.
+ignore_imports =
+    # --- sanctioned port module ---
+    # core.ports is the ONE place where core may touch tools, by design.
+    whitemagic.core.ports -> whitemagic.tools.unified_api
+    whitemagic.core.ports -> whitemagic.tools.handlers.broker
+    whitemagic.core.ports -> whitemagic.tools.dispatch_table
+    whitemagic.core.ports -> whitemagic.tools.handlers.llama_tools
+    whitemagic.core.ports -> whitemagic.tools.handlers.tool_bandit
+    whitemagic.core.ports -> whitemagic.tools.strata
+    whitemagic.core.ports -> whitemagic.tools.security.contest_pipeline
+    whitemagic.core.ports -> whitemagic.tools.security.strata_mitre_map
+    whitemagic.core.ports -> whitemagic.tools.middleware
+    whitemagic.core.ports -> whitemagic.tools.tool_surface
+    whitemagic.core.ports -> whitemagic.tools.handlers.scratchpad
+    whitemagic.core.ports -> whitemagic.tools.circuit_breaker
+    whitemagic.core.ports -> whitemagic.tools.registry
+    whitemagic.core.ports -> whitemagic.tools.prat_mappings
+    whitemagic.core.ports -> whitemagic.tools.prat_resonance
+    whitemagic.core.ports -> whitemagic.tools.prat_router
+    # --- indirect (core -> non-tools -> tools) ---
+    whitemagic.core.intake.media_processor -> whitemagic.inference.llama_cpp
+    whitemagic.core.intelligence.entity_extractor -> whitemagic.inference.llama_cpp
+    whitemagic.core.consciousness.consciousness_loop -> whitemagic.harmony.homeostatic_loop
+    whitemagic.core.fusions -> whitemagic.harmony.homeostatic_loop
+    whitemagic.core.orchestration.session_startup -> whitemagic.harmony.homeostatic_loop
+    whitemagic.core.consciousness.council -> whitemagic.interfaces.chat
+    whitemagic.core.orchestration.session_startup -> whitemagic.interfaces.api.routes.dashboard_api
+    whitemagic.core.bridge.adaptive -> whitemagic.cascade.context_synthesizer
+    whitemagic.core.bridge.benchmark -> whitemagic.benchmarks.performance_suite
+    whitemagic.core.bridge.reasoning -> whitemagic.edge.thought_clones_async
+    whitemagic.core.ganas.southern_quadrant -> whitemagic.cascade.context_synthesizer
+    whitemagic.core.bridge.adaptive -> whitemagic.cascade.adaptive_portal
+    whitemagic.core.consciousness.session_health -> whitemagic.homeostasis
+    whitemagic.core.intelligence.bicameral -> whitemagic.edge.thought_clones_async
+    whitemagic.core.intelligence.bicameral -> whitemagic.inference.local_llm
+    whitemagic.core.memory.bridge_synthesizer -> whitemagic.inference.local_llm
+    whitemagic.core.ganas.southern_quadrant -> whitemagic.cascade.adaptive_portal
+    whitemagic.core.immune.defense -> whitemagic.homeostasis
+    whitemagic.core.memory.embeddings -> whitemagic.inference.local_embedder
+    whitemagic.core.orchestration.conductor -> whitemagic.edge.thought_clones_async
+    whitemagic.core.intelligence.self_improvement -> whitemagic.codegenome.vault
+    whitemagic.core.orchestration.session_startup -> whitemagic.cycle_engine
+    whitemagic.core.bridge.dharma -> whitemagic.dharma
+    whitemagic.core.consciousness.consciousness_loop -> whitemagic.oracle.wisdom_synthesis
+    whitemagic.core.intelligence.alchemical_loop -> whitemagic.codegenome.vault
+    whitemagic.core.bridge.philosophy -> whitemagic.dharma
+    whitemagic.core.bridge.sutra_bridge -> whitemagic.dharma
+    whitemagic.core.consciousness.knowledge_gap_loop -> whitemagic.codegenome.vault
+
+# NOTE (2026-07-19): The layered-architecture contract is DISABLED — it was
+# permanently broken (flags all ~60 baselined core→tools edges; its ignore list
+# covered only 6) and the check script's grep pattern silently ignored its
+# violations, making it a false gate that trained alert fatigue.
+# REINTRODUCTION CONDITION: re-enable when the forbidden contract's
+# ignore_imports baseline above drains to near zero (P4.1 completion).
+#
+# [importlinter:contract:layered-architecture]
+# name = Layered architecture
+# type = layers
+# layers =
+#     whitemagic.tools
+#     whitemagic.core
+#     whitemagic.utils
+#     whitemagic.config
+# ignore_imports =
+#     whitemagic.config -> whitemagic
+#     whitemagic.config.manager -> whitemagic.utils.fast_json
+#     whitemagic.utils.shared_patterns -> whitemagic.core.resonance.gan_ying_async
+#     whitemagic.utils.event_emit -> whitemagic.core.resonance
+#     whitemagic.utils.gan_ying_connect -> whitemagic.core.resonance.gan_ying

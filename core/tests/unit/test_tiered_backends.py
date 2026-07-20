@@ -10,16 +10,15 @@ from whitemagic.core.memory.unified_types import Memory, MemoryType
 
 
 @pytest.fixture()
-def tmp_galaxy_backend(tmp_path: Path) -> GalaxyAwareBackend:
+def tmp_galaxy_backend(tmp_path: Path, monkeypatch) -> GalaxyAwareBackend:
     """Create a GalaxyAwareBackend with a temp default DB."""
     default_db = tmp_path / "default" / "whitemagic.db"
     default_db.parent.mkdir(parents=True, exist_ok=True)
     # Set WM_STATE_ROOT so galaxy dirs go to temp
-    os.environ["WM_STATE_ROOT"] = str(tmp_path / "wm_state")
+    monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path / "wm_state"))
     backend = GalaxyAwareBackend(default_db)
     yield backend
     backend.close()
-    os.environ.pop("WM_STATE_ROOT", None)
 
 
 @pytest.fixture()

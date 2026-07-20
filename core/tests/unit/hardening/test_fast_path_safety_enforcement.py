@@ -70,29 +70,29 @@ class TestFastPathEligibleProperty:
         assert td.fast_path_eligible is False
 
     def test_fast_path_true_no_safety_not_eligible(self):
-        """fast_path=True but no fast_path_safety → NOT eligible."""
-        td = self._make_td(fast_path=True, fast_path_safety=None)
-        assert td.fast_path_eligible is False
+        """fast_path=True but no fast_path_safety → construction fails (P1.3 strict)."""
+        with pytest.raises(ValueError, match="fast_path_safety"):
+            self._make_td(fast_path=True, fast_path_safety=None)
 
     def test_fast_path_true_write_safety_not_eligible(self):
-        """fast_path=True but safety=WRITE → NOT eligible."""
+        """fast_path=True but safety=WRITE → construction fails (P1.3 strict)."""
         from whitemagic.tools.tool_types import FastPathSafety, ToolSafety
-        td = self._make_td(
-            fast_path=True,
-            safety=ToolSafety.WRITE,
-            fast_path_safety=FastPathSafety(),
-        )
-        assert td.fast_path_eligible is False
+        with pytest.raises(ValueError, match="READ safety"):
+            self._make_td(
+                fast_path=True,
+                safety=ToolSafety.WRITE,
+                fast_path_safety=FastPathSafety(),
+            )
 
     def test_fast_path_true_delete_safety_not_eligible(self):
-        """fast_path=True but safety=DELETE → NOT eligible."""
+        """fast_path=True but safety=DELETE → construction fails (P1.3 strict)."""
         from whitemagic.tools.tool_types import FastPathSafety, ToolSafety
-        td = self._make_td(
-            fast_path=True,
-            safety=ToolSafety.DELETE,
-            fast_path_safety=FastPathSafety(),
-        )
-        assert td.fast_path_eligible is False
+        with pytest.raises(ValueError, match="READ safety"):
+            self._make_td(
+                fast_path=True,
+                safety=ToolSafety.DELETE,
+                fast_path_safety=FastPathSafety(),
+            )
 
     def test_fast_path_true_read_with_safety_eligible(self):
         """fast_path=True, safety=READ, fast_path_safety all satisfied → eligible."""

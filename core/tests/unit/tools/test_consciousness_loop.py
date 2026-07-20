@@ -220,9 +220,9 @@ class TestMetaEngine:
         assert loop._stats.health_checks == 0
         assert loop._stats.emergence_scans == 0
 
-    def test_meta_fast_enabled(self, _reset_singleton, tmp_path):
+    def test_meta_fast_enabled(self, _reset_singleton, tmp_path, monkeypatch):
         """Meta engine T2 should run when enabled with short intervals."""
-        os.environ["WM_STATE_ROOT"] = str(tmp_path)
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         config = LoopConfig(
             citta_interval_s=10.0,
             meta_fast_interval_s=0.5,
@@ -245,7 +245,6 @@ class TestMetaEngine:
         loop.stop()
         # At least one T2 tick should have fired
         assert loop._stats.health_checks > 0 or loop._stats.emergence_scans > 0
-        os.environ.pop("WM_STATE_ROOT", None)
 
     def test_status_includes_meta_config(self, _reset_singleton, fast_config):
         """Status should include meta engine config fields."""
@@ -270,9 +269,9 @@ class TestMetaEngine:
         assert loop._stats.checkin_flags == 1
         assert loop._stats.last_checkin_reason == "test_reason"
 
-    def test_persist_insight_does_not_crash(self, _reset_singleton, fast_config, tmp_path):
+    def test_persist_insight_does_not_crash(self, _reset_singleton, fast_config, tmp_path, monkeypatch):
         """_persist_insight should handle errors gracefully."""
-        os.environ["WM_STATE_ROOT"] = str(tmp_path)
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         loop = ConsciousnessLoop(config=fast_config)
         loop._persist_insight(
             title="test insight",
@@ -282,7 +281,6 @@ class TestMetaEngine:
             novelty=0.6,
         )
         # Should not raise, may or may not succeed depending on memory init
-        os.environ.pop("WM_STATE_ROOT", None)
 
     def test_propose_to_workspace_does_not_crash(self, _reset_singleton, fast_config):
         """_propose_to_workspace should handle errors gracefully."""

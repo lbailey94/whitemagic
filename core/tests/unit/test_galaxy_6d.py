@@ -145,6 +145,7 @@ class TestGalaxyRouterStats(unittest.TestCase):
     def setUpClass(cls):
         cls.tmpdir = tempfile.mkdtemp(prefix="wm_galaxy_db_")
         cls.db_path = os.path.join(cls.tmpdir, "test_galaxy.db")
+        cls._old_state_root = os.environ.get("WM_STATE_ROOT")
         os.environ["WM_STATE_ROOT"] = cls.tmpdir
 
     @classmethod
@@ -152,6 +153,10 @@ class TestGalaxyRouterStats(unittest.TestCase):
         import shutil
 
         shutil.rmtree(cls.tmpdir, ignore_errors=True)
+        if cls._old_state_root is not None:
+            os.environ["WM_STATE_ROOT"] = cls._old_state_root
+        else:
+            os.environ.pop("WM_STATE_ROOT", None)
 
     def test_galaxy_stats_returns_dict(self):
         """Test that get_galaxy_stats returns a properly structured dict."""

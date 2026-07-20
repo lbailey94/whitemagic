@@ -60,7 +60,12 @@ class TestFastPathRegistryMetadata:
 
     def test_tool_definition_has_fast_path_field(self):
         """ToolDefinition should have a fast_path boolean field."""
-        from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
+        from whitemagic.tools.tool_types import (
+            FastPathSafety,
+            ToolCategory,
+            ToolDefinition,
+            ToolSafety,
+        )
         td = ToolDefinition(
             name="test.tool",
             description="test",
@@ -68,6 +73,7 @@ class TestFastPathRegistryMetadata:
             safety=ToolSafety.READ,
             input_schema={},
             fast_path=True,
+            fast_path_safety=FastPathSafety(),
         )
         assert td.fast_path is True
 

@@ -10,6 +10,10 @@ Tests:
 import json
 import time
 
+import pytest
+
+pytestmark = [pytest.mark.core, pytest.mark.contract, pytest.mark.bridge]
+
 from whitemagic.optimization.polyglot_router import get_router
 from whitemagic.tools.unified_api import call_tool
 

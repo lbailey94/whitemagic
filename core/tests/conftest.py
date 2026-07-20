@@ -68,14 +68,30 @@ from whitemagic.config.paths import ensure_paths  # noqa: E402
 
 ensure_paths()
 
+# Pre-configure logging so the baseline state includes WhiteMagic handlers.
+# Without this, the first test that imports a module calling get_logger()
+# triggers setup_logging(), which adds handlers to the root logger and
+# pytest-hygiene reports the delta as a leak.
+from whitemagic.logging_config import setup_logging  # noqa: E402
+
+setup_logging(level="WARNING")
+
 
 def _stop_background_daemons():
     """Stop any running background daemon threads before resetting singletons.
 
-    Without this, daemon threads (EmbeddingDaemon, DecayDaemon, RapidCognition,
-    GanYingBus global worker) accumulate across tests and eventually cause
-    hangs when the thread pool or event loop is saturated.
+    Uses the centralized WorkerRegistry to stop all registered workers,
+    then falls back to the manual list for legacy unregistered daemons.
     """
+    # Phase 1: Stop all workers registered with the WorkerRegistry
+    try:
+        from whitemagic.core.worker_registry import stop_all_workers
+
+        stop_all_workers(timeout=5.0)
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Phase 2: Legacy daemons not yet registered with WorkerRegistry
     _daemon_specs = [
         ("whitemagic.core.memory.embedding_daemon", "get_embedding_daemon"),
         ("whitemagic.core.memory.neural.decay_daemon", "get_daemon"),
@@ -142,119 +158,16 @@ def _stop_background_daemons():
 def _reset_singletons():
     """Reset all known singletons so each test session starts clean.
 
-    Now uses the centralized singleton registry from whitemagic.utils.singleton
-    for automated tracking. Manual list is kept as fallback for legacy singletons.
+    Delegates to the centralized SingletonRegistry which handles both
+    factory-based singletons and legacy module-attribute singletons.
     """
     # Stop background daemon threads BEFORE nulling references
     _stop_background_daemons()
 
-    # Try the new centralized registry first
-    try:
-        from whitemagic.utils.singleton import reset_all_singletons
+    # Reset all singletons via the centralized registry
+    from whitemagic.utils.singleton_registry import reset_all_singletons
 
-        reset_all_singletons()
-    except ImportError:
-        pass
-
-    # Fallback: manually reset known singletons (for legacy code)
-    _singleton_modules = [
-        # --- Memory subsystem ---
-        ("whitemagic.core.memory.unified", "_unified_memory"),
-        ("whitemagic.core.memory.galactic_map", "_map_instance"),
-        ("whitemagic.core.memory.consolidation", "_consolidator"),
-        ("whitemagic.core.memory.lifecycle", "_manager"),
-        ("whitemagic.core.memory.mindful_forgetting", "_forgetting"),
-        ("whitemagic.core.memory.holographic", "_holographic_memory"),
-        ("whitemagic.core.memory.constellations", "_detector_instance"),
-        ("whitemagic.core.memory.association_miner", "_miner_instance"),
-        ("whitemagic.core.memory.session_crystallizer", "_crystallizer"),
-        # v14.0 Living Graph
-        ("whitemagic.core.memory.graph_walker", "_walker"),
-        ("whitemagic.core.memory.graph_engine", "_engine"),
-        ("whitemagic.core.memory.surprise_gate", "_gate"),
-        ("whitemagic.core.memory.bridge_synthesizer", "_synthesizer"),
-        # --- Background daemons (stop called above, now null the refs) ---
-        ("whitemagic.core.memory.neural.decay_daemon", "_daemon"),
-        ("whitemagic.core.intelligence.learning.rapid_cognition", "_instance"),
-        # --- Resonance / scheduling ---
-        ("whitemagic.core.resonance.salience_arbiter", "_arbiter"),
-        ("whitemagic.core.resonance.temporal_scheduler", "_scheduler"),
-        ("whitemagic.core.resonance._consolidated", "_bus"),
-        ("whitemagic.core.resonance.gan_ying_enhanced", "_bus"),
-        # --- Harmony / governance ---
-        ("whitemagic.harmony.vector", "_harmony_vector"),
-        ("whitemagic.harmony.homeostatic_loop", "_loop"),
-        ("whitemagic.harmony.anomaly_detector", "_detector"),
-        ("whitemagic.dharma.karma_ledger", "_ledger"),
-        # --- Tools / dispatch ---
-        ("whitemagic.tools.dependency_graph", "_graph"),
-        ("whitemagic.tools.circuit_breaker", "_registry"),
-        ("whitemagic.tools.rate_limiter", "_instance"),
-        ("whitemagic.tools.tool_permissions", "_registry_instance"),
-        ("whitemagic.tools.sandbox", "_sandbox"),
-        ("whitemagic.tools.speculative_prefetch", "_prefetcher"),
-        ("whitemagic.tools.handlers.broker", "_BROKER_INSTANCE"),
-        # --- Cache ---
-        ("whitemagic.cache.redis", "_redis_cache"),
-        # --- Intelligence ---
-        ("whitemagic.core.intelligence.knowledge_graph", "_kg"),
-        ("whitemagic.core.intelligence.bicameral", "_reasoner"),
-        ("whitemagic.core.intelligence.emotion_drive", "_drive"),
-        ("whitemagic.core.intelligence.self_model", "_model"),
-        # --- Dreaming ---
-        ("whitemagic.core.dreaming.dream_cycle", "_dream_cycle"),
-        # --- Consciousness subsystem ---
-        ("whitemagic.core.consciousness.citta_cycle", "_cycle"),
-        ("whitemagic.core.consciousness.citta_cycle", "_always_on"),
-        ("whitemagic.core.consciousness.citta_cycle", "_replay_delivered"),
-        ("whitemagic.core.consciousness.coherence", "_coherence"),
-        ("whitemagic.core.consciousness.coherence", "_smarana"),
-        ("whitemagic.core.consciousness.guna_balance", "_guna_balance"),
-        ("whitemagic.core.consciousness.consciousness_loop", "_loop"),
-        ("whitemagic.core.consciousness.possibility_explorer", "_explorer"),
-        ("whitemagic.core.consciousness.meta_galaxy", "_meta_galaxy"),
-        ("whitemagic.core.consciousness.knowledge_gap_loop", "_kg_loop"),
-        ("whitemagic.core.consciousness.prediction_calibration", "_calibration"),
-        ("whitemagic.core.consciousness.apotheosis_engine", "_apotheosis_engine"),
-        # --- Evolution ---
-        ("whitemagic.core.evolution.recursive_loop", "_loop"),
-        # --- Intelligence / inference ---
-        ("whitemagic.core.inference.router", "_router"),
-        # --- Memory / scanning ---
-        ("whitemagic.core.memory.codebase_scanner", "_scanner"),
-        # --- Pattern Consciousness ---
-        (
-            "whitemagic.core.patterns.pattern_consciousness.resonance_cascade",
-            "_orchestrator",
-        ),
-        # --- Mesh ---
-        ("whitemagic.mesh.awareness", "_awareness"),
-        # --- Intelligence / Session / Monitoring ---
-        ("whitemagic.core.intelligence.researcher", "_researcher"),
-        ("whitemagic.core.intelligence.omni.skill_forge", "_forge"),
-        ("whitemagic.core.memory.session_recorder", "_recorder"),
-        ("whitemagic.core.monitoring.tool_usage_tracker", "_tracker"),
-        # --- Cache ---
-        ("whitemagic.core.cache.unified_cache_bridge", "_unified_cache"),
-        # --- PRAT resonance state ---
-        ("whitemagic.tools.prat_resonance", "_state"),
-    ]
-    for mod_name, attr_name in _singleton_modules:
-        mod = sys.modules.get(mod_name)
-        if mod and hasattr(mod, attr_name):
-            setattr(mod, attr_name, None)
-
-    # Reset class-level _instance singletons (__new__-based pattern)
-    # These aren't caught by the module-level _var = None pattern above
-    for mod_name, cls_name in (
-        ("whitemagic.core.consciousness.dharma", "DharmaProtocol"),
-        ("whitemagic.core.nervous_system", "NervousSystem"),
-    ):
-        mod = sys.modules.get(mod_name)
-        if mod and hasattr(mod, cls_name):
-            cls = getattr(mod, cls_name)
-            if hasattr(cls, "_instance"):
-                cls._instance = None
+    reset_all_singletons()
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -265,7 +178,11 @@ def _reset_all_singletons():
     Karma ledger, Harmony Vector, Cascade Protocols) between every test.
     Tests needing fresh state within a module can use the fresh_state_root
     fixture or call _reset_singletons() explicitly.
+
+    Resets on both setup and teardown so that pytest-randomly interleaving
+    tests across modules doesn't leak state in either direction.
     """
+    _reset_singletons()
     yield
     _reset_singletons()
 
@@ -468,3 +385,105 @@ def pytest_sessionfinish(session, exitstatus):
     if _progress_bar is not None:
         _progress_bar.finish()
         _progress_bar = None
+
+
+# ---------------------------------------------------------------------------
+# Hygiene cleanup — restores global state mutated by import-time side effects.
+#
+# pytest-hygiene --hygiene-strict detects leaks of logging handlers, sys.path
+# entries, warnings.filters, and non-daemon threads.  These leaks occur because
+# importing whitemagic modules triggers setup_logging(), sys.path.append() for
+# polyglot bridges, and warnings.filterwarnings() calls.  The fixture below
+# snapshots these global states before each test and restores them after.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _hygiene_global_state_cleanup():
+    """Save/restore global state to satisfy pytest-hygiene --hygiene-strict.
+
+    Handles four categories of import-time side effects:
+    1. Logging: root logger level + handlers
+    2. sys.path: module search path entries
+    3. warnings.filters: warning filter list
+    4. Threads: tool-dispatch executor threads
+    """
+    import logging
+    import warnings
+
+    root_logger = logging.getLogger()
+    _saved_level = root_logger.level
+    _saved_handlers = list(root_logger.handlers)
+    _saved_path = list(sys.path)
+    _saved_filters = list(warnings.filters)
+
+    yield
+
+    # Restore logging state
+    root_logger.setLevel(_saved_level)
+    root_logger.handlers = _saved_handlers
+
+    # Restore sys.path
+    sys.path[:] = _saved_path
+
+    # Restore warnings filters
+    warnings.filters[:] = _saved_filters
+
+    # Shutdown the tool-dispatch ThreadPoolExecutor to kill leaked threads,
+    # then recreate it so subsequent tests can use it.
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+
+        from whitemagic.tools import unified_api
+
+        unified_api._TOOL_DISPATCH_EXECUTOR.shutdown(
+            wait=False, cancel_futures=True
+        )
+        unified_api._TOOL_DISPATCH_EXECUTOR = ThreadPoolExecutor(
+            max_workers=8, thread_name_prefix="tool-dispatch"
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Repo-state guard — detects tests that modify the working tree.
+#
+# Artifact-producing suites (security scans, codegen, benchmarks) can
+# accidentally write to the repo instead of tmp_path. This fixture
+# snapshots the git status before and after each module and warns
+# if new untracked or modified files appear.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True, scope="module")
+def _repo_state_guard():
+    """Snapshot git status before/after each module to detect unintended
+    working-tree modifications by artifact-producing tests."""
+    import subprocess
+
+    def _git_status():
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True, text=True, timeout=5,
+                cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            )
+            return set(result.stdout.strip().split("\n")) if result.stdout.strip() else set()
+        except Exception:
+            return set()
+
+    before = _git_status()
+    yield
+    after = _git_status()
+    new_changes = after - before
+    # Filter out __pycache__ and .pyc changes (pytest artifact)
+    real_changes = {
+        c for c in new_changes
+        if "__pycache__" not in c and ".pyc" not in c and ".pytest_cache" not in c
+    }
+    if real_changes:
+        import warnings
+        warnings.warn(
+            f"Test module modified the working tree ({len(real_changes)} files): "
+            + ", ".join(sorted(real_changes)[:5]),
+            stacklevel=2,
+        )

@@ -14,6 +14,8 @@ fixed immediately before merging.
 
 import pytest
 
+pytestmark = [pytest.mark.core, pytest.mark.contract]
+
 # =============================================================================
 # P0-001: Tool Registry Contract
 # =============================================================================
@@ -175,8 +177,12 @@ class TestToolDispatchContract:
         from whitemagic.tools.dispatch_table import DISPATCH_TABLE
 
         assert len(DISPATCH_TABLE) > 0, "DISPATCH_TABLE is empty"
-        assert len(DISPATCH_TABLE) >= 50, (
-            f"DISPATCH_TABLE suspiciously small: {len(DISPATCH_TABLE)} tools"
+        # No-shrink baseline — tools are added, not removed.
+        # If tools are intentionally removed, update this baseline.
+        BASELINE = 750
+        assert len(DISPATCH_TABLE) >= BASELINE, (
+            f"DISPATCH_TABLE shrank below baseline {BASELINE}: {len(DISPATCH_TABLE)} tools. "
+            f"If tools were intentionally removed, update BASELINE."
         )
 
     def test_core_tools_have_handlers(self):

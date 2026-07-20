@@ -166,8 +166,8 @@ class TestGalaxyAwareBackendNamespaceKeying:
             with mock.patch('whitemagic.core.memory.backends.galaxy_router.SQLiteBackend'):
                 try:
                     backend._get_galaxy_backend("test_galaxy")
-                except Exception:
-                    pass
+                except (TypeError, ValueError, RuntimeError, AttributeError):
+                    pass  # Expected — mocked SQLiteBackend can't initialize
         # Check that the cache key includes user_id
         for key in backend._galaxy_backends:
             assert key.startswith("alice/"), f"Cache key '{key}' should start with 'alice/'"

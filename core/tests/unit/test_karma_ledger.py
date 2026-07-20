@@ -310,16 +310,11 @@ class TestKarmaLedgerSigning:
 
 
 class TestGetKarmaLedger:
-    def test_singleton_returns_same_instance(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            os.environ["WM_STATE_ROOT"] = tmpdir
-            try:
-                l1 = get_karma_ledger()
-                l2 = get_karma_ledger()
-                assert l1 is l2
-            finally:
-                if "WM_STATE_ROOT" in os.environ:
-                    del os.environ["WM_STATE_ROOT"]
+    def test_singleton_returns_same_instance(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
+        l1 = get_karma_ledger()
+        l2 = get_karma_ledger()
+        assert l1 is l2
 
 
 class TestEffectSignature:

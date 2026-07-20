@@ -73,6 +73,15 @@ KNOWN_BACKEND_CONSUMERS: list[str] = [
     "whitemagic.tools.introspection",
     "whitemagic.tools.speculative_prefetch",
     "whitemagic.tools.strata.context",
+    "whitemagic.core.memory.backends.protocol",
+    "whitemagic.core.storage.polyglot_db",
+    "whitemagic.interfaces.unified_tui",
+    "whitemagic.ops.replay",
+    "whitemagic.tools.handlers.llama_tools",
+    "whitemagic.tools.handlers.wm_read",
+    "whitemagic.core.consciousness.council",
+    "whitemagic.core.memory.backends.duckdb_backend",
+    "whitemagic.core.memory.backends.postgres_backend",
 ]
 
 
@@ -102,7 +111,7 @@ class TestBackendInventory:
         return consumers
 
     def test_known_consumers_match_actual(self, actual_backend_consumers):
-        """The known list must cover all actual .backend consumers."""
+        """The known list must cover all actual .backend consumers exactly."""
         known_set = set(KNOWN_BACKEND_CONSUMERS)
         missing = actual_backend_consumers - known_set
         # Print what's missing for debugging
@@ -110,8 +119,7 @@ class TestBackendInventory:
             print("\nNew .backend consumers found not in KNOWN_BACKEND_CONSUMERS:")
             for m in sorted(missing):
                 print(f"  - {m}")
-        # Allow some drift but flag it
-        assert len(missing) <= 10, (
+        assert len(missing) == 0, (
             f"{len(missing)} new .backend consumers found that are not in the "
             f"known inventory. Add them to KNOWN_BACKEND_CONSUMERS."
         )
@@ -126,10 +134,12 @@ class TestBackendInventory:
                 failures.append(f"{module_name}: {e}")
         assert not failures, f"Failed to import known consumers: {failures}"
 
-    def test_consumer_count_reasonable(self):
-        """Sanity check: we expect at least 30 consumers."""
-        assert len(KNOWN_BACKEND_CONSUMERS) >= 30, (
-            f"Expected at least 30 known .backend consumers, got {len(KNOWN_BACKEND_CONSUMERS)}"
+    def test_consumer_count_no_shrinkage(self):
+        """The inventory must not shrink — consumers are only added, never removed."""
+        BASELINE_COUNT = 64  # No-shrink baseline (2026-07-19)
+        assert len(KNOWN_BACKEND_CONSUMERS) >= BASELINE_COUNT, (
+            f"KNOWN_BACKEND_CONSUMERS shrank from baseline {BASELINE_COUNT} to "
+            f"{len(KNOWN_BACKEND_CONSUMERS)}. If consumers were removed, update BASELINE_COUNT."
         )
 
     def test_inventory_documented(self):
