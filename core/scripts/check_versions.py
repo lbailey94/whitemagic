@@ -11,6 +11,8 @@ from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
 
 ROOT = Path(__file__).parent.parent.parent
 CANONICAL_FILE = ROOT / "core" / "VERSION"
@@ -164,10 +166,10 @@ for ref in REFERENCES:
                     mismatches.append((ref, version, line.strip()))
 
 if mismatches:
-    logger.debug("\nERROR: Version mismatches found:")
+    logger.error("Version mismatches found:")
     for ref, version, line in mismatches:
-        logger.debug(f"  {ref}: found '{version}' in line: {line[:80]}...")
+        logger.error(f"  {ref}: found '{version}' in line: {line[:80]}...")
     sys.exit(1)
 
-logger.debug("\n✓ All references agree on canonical version")
+logger.info("All references agree on canonical version %s", CANONICAL)
 sys.exit(0)

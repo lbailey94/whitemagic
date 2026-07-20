@@ -2,10 +2,10 @@
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-25.0.0-purple.svg)](core/VERSION)
+[![Version](https://img.shields.io/badge/version-25.0.1-purple.svg)](core/VERSION)
 [![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 
-**v25.0.0** — **829 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
+**v25.0.1** — **829 callable tools** · **28 Gana meta-tools** · **10-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
 
 ## What it is
 

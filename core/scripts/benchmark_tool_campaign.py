@@ -329,6 +329,19 @@ TOOL_CUSTOM_ARGS: dict[str, dict[str, Any]] = {
     "bitnet_infer": {"prompt": "Say hello", "_timeout_s": 30.0},
     "bitnet_status": {},
     "model.optimize": {"_timeout_s": 60.0},
+    # ── Security tools (Gaps 1-6) ──
+    "nmap_scan": {"target": "127.0.0.1", "scan_type": "quick", "_timeout_s": 30.0},
+    "sqlmap_scan": {"target": "http://example.com", "_timeout_s": 30.0},
+    "hydra_brute": {"target": "127.0.0.1", "service": "ssh", "_timeout_s": 30.0},
+    "nikto_scan": {"target": "http://example.com", "_timeout_s": 30.0},
+    "ffuf_fuzz": {"target": "http://example.com", "_timeout_s": 30.0},
+    "nuclei_scan": {"target": "http://example.com", "_timeout_s": 30.0},
+    "redteam.autonomous": {"target": "127.0.0.1", "scope": "recon", "_timeout_s": 30.0},
+    "redteam.status": {},
+    "agent_redteam.run": {"tests": "prompt_injection", "_timeout_s": 30.0},
+    "agent_redteam.status": {},
+    "attack_cell.execute": {"target": "127.0.0.1", "scope": "recon", "_timeout_s": 30.0},
+    "attack_cell.status": {},
 }
 
 
@@ -499,6 +512,7 @@ def _is_expected_failure(result: dict[str, Any]) -> bool:
         "no previous version",  # skill.rollback on skill without version history
         "migration failed",  # galaxy.migrate to non-existent galaxy
         "review not found",  # dharma.resolve_review on non-existent review
+        "is not installed",  # Dynamic testing CLI tools (nmap, sqlmap, etc.)
     )
     if any(p in err for p in expected_phrases):
         return True

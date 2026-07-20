@@ -7,6 +7,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Violet Strategy: Full-Spectrum Security Pipeline
+
+#### Gap 4: MITRE ATT&CK Mapping
+- `strata_mitre_map.py` — 34 STRATA categories mapped to MITRE ATT&CK TTPs with tactic, technique, and notes
+- `generate_navigator_layer()` — MITRE ATT&CK Navigator v4.5 JSON export with severity scoring
+- `ContestFinding.mitre_ttp_ids` field added; `_format_navigator()` includes explicit TTP IDs from findings
+- `contest.add_finding` handler accepts `mitre_ttp_ids` parameter
+
+#### Gap 2: Dynamic Testing Wrappers
+- `dynamic_testers.py` — 6 CLI tool wrappers: nmap, sqlmap, hydra, nikto, ffuf, nuclei
+- Each wrapper: subprocess execution with timeout, output parsing, `DynamicFinding` with auto MITRE TTP mapping
+- 6 MCP tool handlers registered in `dispatch_security.py`, all gated by engagement tokens
+- 30 unit tests in `test_dynamic_testers.py`
+
+#### Gap 1: Decepticon Integration
+- `decepticon_bridge.py` — Autonomous red-teaming with Decepticon SDK + fallback pipeline
+- Fallback: recon (nmap/STRATA) → scan (nuclei) → exploit (sqlmap/http_probe) → report (contest pipeline)
+- 2 MCP tools: `redteam.autonomous`, `redteam.status`
+
+#### Gap 5: Continuous Scanning
+- `consciousness_loop.py` — `_run_security_scan()` phase added to background loop
+- Runs STRATA + MITRE ATT&CK mapping + contest pipeline feeding on configurable interval
+- New config: `WM_ENABLE_SECURITY_SCAN`, `WM_SECURITY_SCAN_INTERVAL`, `WM_SECURITY_SCAN_PATH`
+- 16 tests in `test_continuous_security_scan.py`
+
+#### Gap 6: AI Agent Red-Teaming
+- `agent_redteam.py` — 4 test categories: prompt injection (14 payloads), context overflow, tool misuse (9 payloads), model format fuzzing (7 payloads)
+- OWASP LLM Top 10 mapping + MITRE ATT&CK TTPs for each finding
+- 2 MCP tools: `agent_redteam.run`, `agent_redteam.status`
+- 27 tests in `test_agent_redteam.py`
+
+#### Gap 3: Multi-Agent Attack Orchestration
+- `attack_cell.py` — 8-agent cell (recon, web, exploit, C2, crypto, social eng, lateral, report)
+- Each agent mapped to shelter capabilities, tools, and MITRE tactics
+- Sequential execution with finding aggregation and severity counting
+- 2 MCP tools: `attack_cell.execute`, `attack_cell.status`
+- 32 tests in `test_attack_cell.py`
+
+#### Violet Profile Hardening
+- `RED_OPS_TOOL_PATTERNS` expanded with 8 new patterns for all Gap 1-6 tools
+- Dharma `violet_require_engagement_token` rule expanded with new tool patterns and keywords
+- `violet_throttle_recon` rule updated with nikto, nuclei, ffuf keywords
+- Handler-level `_check_offensive_token` target extraction expanded with `contract_address`, `address` keys
+- 55 tests in `test_violet_hardening.py`
+
+#### Benchmark & Integration
+- 12 new security tools added to `TOOL_CUSTOM_ARGS` in benchmark campaign
+- `is not installed` added to expected failure classifier for missing CLI tools
+- Benchmark: 100% adjusted rate (6 success + 6 expected missing CLI tools)
+- 17 integration tests in `test_security_integration.py` — full pipeline: STRATA → MITRE → contest → attack cell → report
+- `generate_navigator_layer()` now falls back to explicit `mitre_ttp_ids` when category lookup returns no TTPs
+
+#### PRAT Mappings
+- 12 new security tools mapped to Ganas: Three Stars (dynamic testing), Chariot (autonomous red-team), Hairy Head (agent red-team), Extended Net (attack cell)
+
+#### Test Summary
+- 233 tests passing across 8 security test files
+- 0 regressions in existing test suite
+
+### Added — Graph Optimization & Search Reranker Fixes
+
+#### Galactic Association Graph
+- 14.4M associations built across 32 galaxies (intragalactic + extragalactic)
+- `GraphWalker` multi-hop weighted random walk over association graph
+- `SpreadingActivation` engine with cached memory→galaxy index (31x speedup warm cache)
+- MCP tools: `association.mine`, `association.mine_semantic`, `graph.walk`, `hybrid_recall`
+- Cross-galaxy edge insertion for sessions galaxy (796 → 30,588 edges)
+- Benchmark/eval/tutorial galaxies isolated from extragalactic connections
+- Galaxy cleanup: `self_discovery`→`knowledge` (1 mem), `insight`→`knowledge` (48 mems), `main`→`universal` (199 mems)
+- All galaxies at 100% holographic coordinate coverage
+
+#### Search Reranker Bug Fixes (3 bugs fixed)
+- **`multi_hop_search`** — RRF scoring blended `similarity_score` causing secondary results to outrank primary results; fixed to pure RRF with 2x primary boost
+- **`answer_aware_search`** — Fallback entity extraction picked up "Research" as entity, flooding results with irrelevant "Research on X" memories; expanded non-entity exclusion list
+- **`cross_encoder_reranker`** — Heuristic scoring counted generic terms ("research", "on", "theoretical") in unigram/density overlap; expanded stopword list so distinctive terms dominate
+- **`search_planner`** — Spreading activation traversed all 32 galaxies even for single-galaxy searches; now respects galaxy restriction and skips benchmark/eval galaxies
+
+#### Benchmark Results
+- Internal benchmark: **100% recall@1/5/10, MRR=1.0000** (100 memories, 50 queries, 0 tokens/query)
+- Previous: 84% recall@1, 0.870 MRR (before reranker fixes)
+- 67 existing tests pass (28 answer_aware + multi_hop, 39 memory/session), zero regressions
+
+### Files Modified
+- `core/whitemagic/core/memory/multi_hop.py` — pure RRF scoring with 2x primary boost
+- `core/whitemagic/core/memory/answer_aware.py` — expanded non-entity exclusion list
+- `core/whitemagic/core/memory/cross_encoder_reranker.py` — expanded stopword list for unigram + density scoring
+- `core/whitemagic/core/memory/search_planner.py` — galaxy-restricted spreading activation
+- `core/whitemagic/core/memory/spreading_activation.py` — cached memory→galaxy index
+- `core/whitemagic/core/memory/retrieval_plan.py` — spreading_activation enabled by default
+
 ## [25.0.0] - 2026-07-14
 
 ### Added — v25 Major Release

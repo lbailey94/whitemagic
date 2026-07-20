@@ -24,6 +24,19 @@ core/docs/internal_audit.py
 # === Internal tooling state ===
 .desloppify/
 
+# === Internal strategy docs ===
+STRATEGY_CODEBASE_PERFECTION_2026.md
+content/research/
+
+# === Internal build artifacts ===
+crytic-export/
+
+# === Internal content (not public-facing) ===
+articles/
+demos/
+eval/
+store/
+
 # === Deployment config (contains project IDs) ===
 .vercel/
 .env.production

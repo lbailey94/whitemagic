@@ -1,11 +1,11 @@
 # WhiteMagic — AI Memory, Cognitive Upgrades, and More
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-25.0.0-purple.svg)](core/VERSION)
+[![Version](https://img.shields.io/badge/version-25.0.1-purple.svg)](core/VERSION)
 [![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 
-**829 callable tools** · **28 Gana meta-tools** · **14-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
+**860 callable tools** · **28 Gana meta-tools** · **14-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
 
 ## What it is
 
@@ -77,7 +77,7 @@ call_tool("gnosis", compact=True)
 |------|---------|---------------|----------|
 | Seed | `WM_MCP_PRAT=2` (default) | 1 (`wm` meta-tool) | New agents, minimal token usage |
 | PRAT | `WM_MCP_PRAT=1` | 28 Gana meta-tools | Advanced agents, structured access |
-| Classic | `WM_MCP_PRAT=0` | 801 dispatch tools | Direct tool access, debugging |
+| Classic | `WM_MCP_PRAT=0` | 832 dispatch tools | Direct tool access, debugging |
 
 > **New?** Start with Seed mode — your agent gets a single `wm` tool that intelligently routes to all 829 tools. No token waste.
 
@@ -121,7 +121,7 @@ call_tool("gnosis", compact=True)
 ## Stats
 
 - **6,902 tests** passing, 0 failures
-- **829 callable tools** across 801 dispatch entries + 28 Gana meta-tools
+- **860 callable tools** across 832 dispatch entries + 28 Gana meta-tools
 - **49,413 memories** in production (14 galaxies)
 - **7 polyglot languages**: Rust, Haskell, Elixir, Go, Zig, Julia, Koka
 - **MIT-licensed**, no telemetry, no API keys

@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 25.0.0 (AGENTS.md revision 25.0.0)
-**Last Updated**: 2026-07-14
+**Version**: 25.0.1 (AGENTS.md revision 25.0.1)
+**Last Updated**: 2026-07-19
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -58,7 +58,7 @@ If tests fail on entry, **stop and fix the baseline before making changes**.
 ```
 WHITEMAGIC/
 ├── core/                    # Python package (shipped to PyPI)
-│   ├── whitemagic/          # Main source (~720 Python files)
+│   ├── whitemagic/          # Main source (~1,573 Python files, 425k lines)
 │   │   ├── tools/           # Tool registry, dispatch, handlers
 │   │   ├── core/            # Memory, intelligence, resonance
 │   │   ├── interfaces/      # API, dashboard, CLI
@@ -150,7 +150,7 @@ python -m pytest tests/unit/ -q --durations=10 --durations-min=1.0 --timeout=30
 - No individual unit test should exceed **5s** without an explicit `@pytest.mark.skip` reason.
 - No individual integration test should exceed **15s** without an explicit skip reason.
 - If suite runtime grows >10% without explanation, investigate before merging.
-- Track suite runtime in `SESSION_SUMMARY.md` to spot trends across sessions.
+- Track suite runtime in session memory or `docs/PROJECT_STATE.md` to spot trends across sessions.
 
 ### Test Purity
 
@@ -182,7 +182,7 @@ Silent retries mask real bugs. The 3 `test_recursive_loop` failures that were ma
 
 1. Read the failure message carefully.
 2. Check if the failure is in code you touched.
-3. If not, check `docs/message_board/SESSION_SUMMARY.md` for known issues.
+3. If not, check `docs/PROJECT_STATE.md` for known issues.
 4. If the failure is new, **revert your change** and investigate.
 5. If a test hangs (no output for >30s), check for event loop leaks or subprocess waits — see §8 Hot Path Review.
 
@@ -353,7 +353,7 @@ Code that runs during `call_tool` dispatch, event emission, or per-test setup is
 | `core/whitemagic/tools/unified_api.py` | Tool contract | Envelope changes |
 | `core/whitemagic/config/paths.py` | Path resolution | State root changes |
 | `core/pyproject.toml` | Package config | Dependency changes |
-| `docs/message_board/SESSION_SUMMARY.md` | Latest session log | Handoff/context |
+| `docs/PROJECT_STATE.md` | Project state & generated facts | Drift checks, handoff/context |
 | `STUB_REGISTRY.md` | Technical debt tracker | Before/after adding placeholders |
 | `core/tests/conftest.py` | Test fixtures & singleton resets | Test failures, state leakage |
 | `core/tests/unit/test_recursive_loop.py` | Reference test mocking | Writing unit tests for heavy modules |
@@ -418,7 +418,7 @@ date '+%s'  # epoch end timestamp — subtract start epoch to get exact seconds
 ```
 
 - **Duration** (actual vs expected; derive from epoch timestamps)
-- **Test run time** (how long did the test suite take? Track in `SESSION_SUMMARY.md` to spot trends.)
+- **Test run time** (how long did the test suite take? Track in session memory or `docs/PROJECT_STATE.md` to spot trends.)
 - **What was surprising** (unexpected friction, archive recovery needed, etc.)
 - **What took longer than expected and why**
 - **Technical debt created** (stubs, TODOs, deferred refactors — add to `STUB_REGISTRY.md`)
@@ -435,12 +435,12 @@ Use `date +%s` (or `date '+%s'`) for epoch seconds. Record these explicitly:
 - **Per phase**: Before and after each phase gate.
 - **Per objective**: Before and after each objective, including sub-tasks.
 
-This gives measurable progress data and calibrates time-dilation bias. Store the start/end timestamps in session memory or `SESSION_SUMMARY.md` so they compound across sessions.
+This gives measurable progress data and calibrates time-dilation bias. Store the start/end timestamps in session memory so they compound across sessions.
 
 ### Why This Matters for WhiteMagic
 
 - **Archive reconnaissance** can take 5-15 minutes per module. Timing reveals which modules need upstream recovery.
-- **Test suite runtime** is a metric. If it grows, investigate before merging. Track it in `SESSION_SUMMARY.md` to spot trends across sessions.
+- **Test suite runtime** is a metric. If it grows, investigate before merging. Track it in session memory to spot trends across sessions.
 - **Doc drift checks** (~5s) should never be skipped. If they fail, fix before commit.
 - **Memory subsystem changes** require stress tests. Timing these helps estimate risk for future memory work.
 - **Session timing data accumulates**. After 10 sessions, patterns emerge: "memory subsystem changes always take 2x estimated" → adjust estimates. "Archive recovery for module X takes 15 min" → budget for it.
@@ -486,7 +486,7 @@ date '+%s'  # epoch start
 3. **"This might take hours" is not a reason to stop.** It is a reason to start. The fastest way to know how long something takes is to begin.
 4. **Scope creep is the real risk, not time.** If a task grows beyond its original scope, summarize what changed and ask the user. Do not pre-emptively shrink scope based on time anxiety.
 5. **Batch aggressively.** When you have momentum and the tools are warm, tackle the next item in the backlog immediately. Context-switching between sessions costs more than pushing through a batch.
-6. **Track your accuracy.** In `SESSION_SUMMARY.md`, record estimated vs actual time for each phase. After 5+ data points, patterns emerge. If your estimates are consistently 3-5x too high, adjust your internal model.
+6. **Track your accuracy.** In session memory, record estimated vs actual time for each phase. After 5+ data points, patterns emerge. If your estimates are consistently 3-5x too high, adjust your internal model.
 
 **The depth gauge and time dilation systems in WhiteMagic exist precisely because AI agents underperform when they self-censor based on inflated effort estimates. Use them. Trust the epoch clock, not your gut.**
 
@@ -508,7 +508,7 @@ date '+%s'  # epoch start
 
 Every session produces:
 - Working code + passing tests
-- Updated `docs/message_board/SESSION_SUMMARY.md`
+- Updated `docs/PROJECT_STATE.md` (via `scripts/generate_facts.py`)
 - If grimoire-affecting: updated `grimoire/TRUTH_TABLE.md`
 - If architecture-affecting: updated `AGENTS.md`
 

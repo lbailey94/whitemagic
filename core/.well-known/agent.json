@@ -2,7 +2,7 @@
   "name": "WhiteMagic",
   "description": "AI memory, cognitive upgrades, and more — 829 MCP tools (28 Gana meta-tools in seed mode, 801 nested tools), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, MandalaOS compartments, and polyglot accelerators in 7 languages (Rust, Zig, Julia, Elixir, Haskell, Koka, Go). Free and open (MIT). Local-first, no telemetry. See mcp-registry.json for current tool count.",
   "url": "https://github.com/lbailey94/whitemagic",
-  "version": "25.0.0",
+  "version": "25.0.1",
   "provider": {
     "organization": "WhiteMagic Contributors",
     "url": "https://github.com/lbailey94/whitemagic"

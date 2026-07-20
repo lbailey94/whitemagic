@@ -35,12 +35,12 @@ WARNINGS: list[str] = []
 
 def error(msg: str) -> None:
     ERRORS.append(msg)
-    logger.debug("  ❌ %s", msg)
+    logger.error("  ❌ %s", msg)
 
 
 def warn(msg: str) -> None:
     WARNINGS.append(msg)
-    logger.debug("  ⚠️  %s", msg)
+    logger.warning("  ⚠️  %s", msg)
 
 
 def ok(msg: str) -> None:
@@ -444,6 +444,9 @@ def check_doc_gitignore_hygiene() -> None:
 
 # Main
 def main() -> int:
+    # Output goes through the logging module — configure it or failures
+    # are silent (found 2026-07-20: drift errors existed but printed nothing).
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     logger.debug("=" * 60)
     logger.debug("WhiteMagic Doc Drift Detector")
     logger.debug("=" * 60)
@@ -465,13 +468,13 @@ def main() -> int:
 
     logger.debug("\n" + "=" * 60)
     if ERRORS:
-        logger.debug(f"RESULT: {len(ERRORS)} error(s), {len(WARNINGS)} warning(s)")
+        logger.error(f"RESULT: {len(ERRORS)} error(s), {len(WARNINGS)} warning(s)")
         return 1
     elif WARNINGS:
-        logger.debug(f"RESULT: 0 errors, {len(WARNINGS)} warning(s)")
+        logger.warning(f"RESULT: 0 errors, {len(WARNINGS)} warning(s)")
         return 0
     else:
-        logger.debug("RESULT: All checks passed — documentation is in sync.")
+        logger.info("RESULT: All checks passed — documentation is in sync.")
         return 0
 
 

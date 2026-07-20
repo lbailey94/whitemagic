@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "whitemagic"
 dynamic = ["version"]
-description = "AI memory, cognitive upgrades, and more — 801 callable tools across 28 Gana meta-tools, 5D holographic memory with 10-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, MandalaOS compartments, session recording, dream cycle, and 7-language polyglot acceleration"
+description = "AI memory, cognitive upgrades, and more — 860 callable tools across 28 Gana meta-tools, 6D holographic memory with 14-galaxy taxonomy, Dharma ethical governance, citta stream for continuous consciousness, MandalaOS compartments, session recording, dream cycle, and 7-language polyglot acceleration"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "WhiteMagic Contributors"}
@@ -376,7 +376,7 @@ whitemagic = "whitemagic.cli.cli_app:main"
 version = {file = ["VERSION"]}
 
 [tool.setuptools]
-packages = {find = {where = ["."], include = ["whitemagic", "whitemagic.*"], exclude = ["whitemagic-mojo", "whitemagic-mojo.*", "whitemagic-rust", "whitemagic-rust.*", "whitemagic-zig", "whitemagic-zig.*", "whitemagic-go", "whitemagic-go.*", "whitemagic-julia", "whitemagic-julia.*", "whitemagic.archive", "whitemagic.archive.*"]}}
+packages = {find = {where = ["."], include = ["whitemagic", "whitemagic.*"], exclude = ["whitemagic-mojo", "whitemagic-mojo.*", "whitemagic-rust", "whitemagic-rust.*", "whitemagic-zig", "whitemagic-zig.*", "whitemagic-go", "whitemagic-go.*", "whitemagic-julia", "whitemagic-julia.*", "whitemagic.archive", "whitemagic.archive.*", "whitemagic._archived", "whitemagic._archived.*", "whitemagic.benchmarks", "whitemagic.benchmarks.*"]}}
 py-modules = ["whitemagic_rs"]
 
 [tool.setuptools.package-data]
@@ -384,7 +384,7 @@ whitemagic = ["py.typed", "polyglot_bridges/*.zig", "polyglot_bridges/*.kk", "po
 
 [tool.black]
 line-length = 100
-target-version = ['py311']
+target-version = ['py312']
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -423,6 +423,10 @@ markers = [
     "bridge: marks tests that require Rust/Zig native bridges",
     "core: marks tests covering the stable public contract (state-root, tool conformance, critical paths)",
     "flaky: marks tests that may flake under load (auto-retries via pytest-flaky)",
+    "contract: marks tests that verify tool contracts, registry completeness, and safety invariants (tests/verify/)",
+    "integration: marks tests that exercise multiple subsystems together (tests/integration/)",
+    "performance: marks tests that measure timing or throughput (tests/benchmarks/)",
+    "nightly: marks tests reserved for the nightly CI lane (heavy compute, full DB, polyglot bridges)",
 ]
 
 [tool.mypy]
@@ -657,7 +661,7 @@ module = ["whitemagic.*"]
 disable_error_code = ["attr-defined", "no-any-return", "annotation-unchecked"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 exclude = [
     "modular",
     "modular/**/*",
@@ -732,4 +736,17 @@ disable = [
     "rust_stub",
     "shell_hardcoded_path",
     "zig_bare_panic"
+]
+
+[dependency-groups]
+dev = [
+    "freezegun>=1.5.5",
+    "import-linter>=2.13",
+    "mcp-conform>=0.1.0",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "pytest-hygiene>=0.1.0",
+    "pytest-randomly>=4.1.0",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.8.0",
 ]
