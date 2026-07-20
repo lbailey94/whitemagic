@@ -12,6 +12,7 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 
 _tmpdir = tempfile.mkdtemp(prefix="wm_p4_")
 os.environ.setdefault("WM_STATE_ROOT", _tmpdir)
@@ -24,6 +25,14 @@ os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
 
 class TestDiLoCo:
     """Tests for DiLoCo distributed training coordinator."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_dilo_co(self):
+        """Reset DiLoCo coordinator before each test to prevent state leakage."""
+        import whitemagic.mesh.dilo_co as _mod
+        _mod._coordinator = None
+        yield
+        _mod._coordinator = None
 
     def test_init_and_status(self):
         from whitemagic.mesh.dilo_co import get_dilo_co
@@ -135,6 +144,17 @@ class TestDiLoCo:
 class TestWarpMarketplace:
     """Tests for the P2P warp preset marketplace."""
 
+    @pytest.fixture(autouse=True)
+    def _reset_warp_singletons(self):
+        """Reset WarpMarketplace and WarpManager before each test."""
+        from whitemagic.agents.warps import WarpManager
+        from whitemagic.mesh.warp_marketplace import WarpMarketplace
+        WarpManager._instance = None
+        WarpMarketplace._instance = None
+        yield
+        WarpManager._instance = None
+        WarpMarketplace._instance = None
+
     def test_publish_and_status(self):
         from whitemagic.mesh.warp_marketplace import get_warp_marketplace
 
@@ -164,6 +184,20 @@ class TestWarpMarketplace:
         from whitemagic.mesh.warp_marketplace import get_warp_marketplace
 
         mp = get_warp_marketplace()
+        # Publish a warp first so discover has something to find
+        mp.publish(
+            warp_name="test_research_warp",
+            warp_data={
+                "name": "test_research_warp",
+                "description": "A test warp for research",
+                "tools_allowed": ["memory_create", "search"],
+                "inference_tier": "local_small",
+                "research_domains": ["cognitive"],
+                "execution_mode": "autonomous",
+            },
+            author_id="test_agent",
+            description="Test warp for integration testing",
+        )
         result = mp.discover(query="research")
         assert result["status"] == "success"
         assert result["total"] >= 1

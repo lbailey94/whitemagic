@@ -211,14 +211,21 @@ class GalaxyHNSWManager:
             query_vector, galaxies=galaxies, k=k * 3, ef=ef,
         )
 
-        # RRF fusion
+        # RRF fusion — track best similarity score as tiebreaker
         rrf_scores: dict[str, float] = {}
+        best_sim: dict[str, float] = {}
         for galaxy, hits in per_galaxy.items():
-            for rank, (mid, _score) in enumerate(hits):
+            for rank, (mid, score) in enumerate(hits):
                 rrf_scores[mid] = rrf_scores.get(mid, 0.0) + 1.0 / (rrf_k + rank + 1)
+                if score > best_sim.get(mid, -1.0):
+                    best_sim[mid] = score
 
-        # Sort by RRF score
-        sorted_results = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+        # Sort by RRF score, then by similarity score as tiebreaker
+        sorted_results = sorted(
+            rrf_scores.items(),
+            key=lambda x: (x[1], best_sim.get(x[0], 0.0)),
+            reverse=True,
+        )
         return sorted_results[:k]
 
     def save_galaxy(self, galaxy: str) -> bool:

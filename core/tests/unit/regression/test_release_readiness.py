@@ -109,50 +109,61 @@ class TestH1_VersionDrift:
         assert os.path.exists(version_path)
 
     def test_version_file_content(self):
-        """core/VERSION should contain 25.0.0."""
+        """core/VERSION should match repo root VERSION."""
         version_path = os.path.join(REPO_ROOT, "core", "VERSION")
+        root_version_path = os.path.join(REPO_ROOT, "VERSION")
         with open(version_path) as f:
             content = f.read().strip()
-        assert content == "25.0.0"
+        with open(root_version_path) as f:
+            root_content = f.read().strip()
+        assert content == root_content
 
     def test_pyproject_version(self):
-        """core/pyproject.toml should reference version 25.0.0 (dynamic or static)."""
+        """core/pyproject.toml should use dynamic version from VERSION file."""
         pyproject_path = os.path.join(REPO_ROOT, "core", "pyproject.toml")
         with open(pyproject_path) as f:
             content = f.read()
         # pyproject.toml uses dynamic version from VERSION file
-        assert 'dynamic = ["version"]' in content or 'version = "25.0.0"' in content
+        assert 'dynamic = ["version"]' in content
 
     def test_core_readme_version(self):
-        """core/README.md should reference v25.0.0."""
+        """core/README.md should reference the current version."""
+        with open(os.path.join(REPO_ROOT, "VERSION")) as f:
+            expected = f.read().strip()
         readme_path = os.path.join(REPO_ROOT, "core", "README.md")
         with open(readme_path) as f:
             content = f.read()
-        assert "v25.0.0" in content
+        assert f"v{expected}" in content
         assert "v21.0.0" not in content
 
     def test_agent_json_version(self):
-        """core/.well-known/agent.json should have version 25.0.0."""
+        """core/.well-known/agent.json should have the current version."""
+        with open(os.path.join(REPO_ROOT, "VERSION")) as f:
+            expected = f.read().strip()
         agent_path = os.path.join(REPO_ROOT, "core", ".well-known", "agent.json")
         with open(agent_path) as f:
             content = f.read()
-        assert '"version": "25.0.0"' in content
+        assert f'"version": "{expected}"' in content
         assert '"version": "21.0.0"' not in content
 
     def test_cargo_toml_version(self):
-        """core/whitemagic-rust/Cargo.toml should have version 25.0.0."""
+        """core/whitemagic-rust/Cargo.toml should have the current version."""
+        with open(os.path.join(REPO_ROOT, "VERSION")) as f:
+            expected = f.read().strip()
         cargo_path = os.path.join(REPO_ROOT, "core", "whitemagic-rust", "Cargo.toml")
         with open(cargo_path) as f:
             content = f.read()
-        assert 'version = "25.0.0"' in content
+        assert f'version = "{expected}"' in content
         assert 'version = "21.0.0"' not in content
 
     def test_polyglot_status_version(self):
-        """polyglot/STATUS.md should reference v25.0.0."""
+        """polyglot/STATUS.md should reference the current version."""
+        with open(os.path.join(REPO_ROOT, "VERSION")) as f:
+            expected = f.read().strip()
         status_path = os.path.join(REPO_ROOT, "polyglot", "STATUS.md")
         with open(status_path) as f:
             content = f.read()
-        assert "v25.0.0" in content
+        assert f"v{expected}" in content
         assert "v21.0.0" not in content
 
 
