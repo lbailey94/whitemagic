@@ -5,6 +5,7 @@ These tests validate the handler logic and the tool contract integration
 without requiring external services (Redis, llama.cpp).
 """
 
+import pytest
 from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
@@ -413,6 +414,19 @@ class TestLlamaTools:
 class TestCallToolIntegration:
     """Test that new tools work through the call_tool contract."""
 
+    @pytest.fixture(autouse=True)
+    def _reset_memory_singleton(self, tmp_path, monkeypatch):
+        """Reset unified memory singleton so each test gets a fresh DB.
+
+        Without this, the module-scoped conftest fixture leaves a cached
+        UnifiedMemory pointing at a different WM_STATE_ROOT, causing
+        order-dependent failures when tests run in random order.
+        """
+        from whitemagic.core.memory.unified import reset_singleton as _reset_um
+        _reset_um()
+        yield
+        _reset_um()
+
     def test_task_distribute_via_call_tool(self, tmp_path, monkeypatch):
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
         import whitemagic.config.paths as paths_mod
@@ -471,6 +485,14 @@ class TestCallToolIntegration:
 
 class TestKarmaRecord:
     """Test karma_record handler and its dispatch integration."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_memory_singleton(self, tmp_path, monkeypatch):
+        """Reset unified memory singleton so each test gets a fresh DB."""
+        from whitemagic.core.memory.unified import reset_singleton as _reset_um
+        _reset_um()
+        yield
+        _reset_um()
 
     def test_karma_record_creates_entry(self, tmp_path, monkeypatch):
         monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))

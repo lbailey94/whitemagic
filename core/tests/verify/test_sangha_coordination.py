@@ -5,6 +5,8 @@ Tests distributed locking and heartbeating between multiple simulated agents.
 
 import pytest
 
+pytestmark = [pytest.mark.core, pytest.mark.contract]
+
 rich = pytest.importorskip("rich")
 
 import time

@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.performance
+
 import asyncio
 import logging
 import random

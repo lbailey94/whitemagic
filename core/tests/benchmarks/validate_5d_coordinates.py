@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.performance
+
 """5D Coordinate Validation — Measure overlap between 5D spatial and semantic search.
 
 This script validates the 5D coordinate system by:

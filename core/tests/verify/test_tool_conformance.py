@@ -1,6 +1,6 @@
 import pytest
 
-pytestmark = pytest.mark.core  # Entire module is core contract validation
+pytestmark = [pytest.mark.core, pytest.mark.contract]
 
 from whitemagic.tools.dispatch_table import DISPATCH_TABLE
 from whitemagic.tools.envelope import is_enveloped
@@ -59,19 +59,24 @@ def test_gana_tools_are_stable(gana_name):
     )
 
 
-def test_non_gana_tools_not_stable_by_default():
-    """Dispatch-only tools (not explicitly promoted) must not be STABLE.
+def test_non_gana_stable_tools_are_promoted():
+    """Non-Gana STABLE tools must be in the canonical stable_surface set.
 
-    STABLE is a deliberate promotion — it must not leak to auto-synthesized
-    tools. This test ensures no dispatch-table tool accidentally inherits STABLE.
+    Implements P1.5 option B: Ganas plus promoted foundational tools.
+    The canonical list is in stable_surface.py — no tool may be STABLE
+    without being either a Gana or in STABLE_TOOL_NAMES.
     """
+    from whitemagic.tools.stable_surface import STABLE_TOOL_NAMES
+
     violations = [
         t.name
         for t in TOOL_REGISTRY
-        if not t.name.startswith("gana_") and t.stability == ToolStability.STABLE
+        if not t.name.startswith("gana_")
+        and t.stability == ToolStability.STABLE
+        and t.name not in STABLE_TOOL_NAMES
     ]
     assert violations == [], (
-        f"Non-Gana tools must not be STABLE without explicit promotion: {violations}"
+        f"Non-Gana STABLE tools not in stable_surface.py: {violations}"
     )
 
 
@@ -82,7 +87,11 @@ def test_surface_counts_includes_stability_breakdown():
     by_stability = counts["by_stability"]
     for tier in ToolStability:
         assert tier.value in by_stability, f"by_stability missing tier '{tier.value}'"
-    assert by_stability[ToolStability.STABLE.value] == len(GANA_NAMES), (
-        f"Expected {len(GANA_NAMES)} STABLE tools (one per Gana), "
+    from whitemagic.tools.stable_surface import STABLE_TOOL_NAMES
+
+    expected_stable = len(GANA_NAMES) + len(STABLE_TOOL_NAMES)
+    assert by_stability[ToolStability.STABLE.value] == expected_stable, (
+        f"Expected {expected_stable} STABLE tools "
+        f"({len(GANA_NAMES)} Ganas + {len(STABLE_TOOL_NAMES)} promoted), "
         f"got {by_stability[ToolStability.STABLE.value]}"
     )

@@ -275,17 +275,21 @@ class TestStableToolsSmoke:
                     f"Tool {tool_name} raised unexpected {e.__class__.__name__}: {e}"
                 )
 
-    def test_stable_tool_count(self):
-        """Verify we're testing a reasonable number of stable tools."""
-        assert len(ALL_STABLE_TOOLS) >= 25, (
-            f"Only {len(ALL_STABLE_TOOLS)} stable tools found, expected at least 25"
+    def test_stable_tool_count_no_shrinkage(self):
+        """Verify stable tool count hasn't shrunk from baseline."""
+        BASELINE = 25  # No-shrink baseline (2026-07-19)
+        assert len(ALL_STABLE_TOOLS) >= BASELINE, (
+            f"Stable tools shrank from baseline {BASELINE} to {len(ALL_STABLE_TOOLS)}. "
+            f"If tools were intentionally removed, update BASELINE."
         )
 
     def test_all_stable_tools_have_minimal_args(self):
         """Every stable tool should have minimal args defined for the smoke test."""
         missing = [t for t in ALL_STABLE_TOOLS if t not in MINIMAL_ARGS]
-        # Tools without explicit args default to {} — that's fine for no-arg tools
-        # but we should at least be aware of which ones use the default
-        if missing:
-            # Check if they can work with no args (they're likely no-arg tools)
-            pass  # No failure — empty args is valid for no-arg tools
+        # Tools without explicit args default to {} — valid for no-arg tools
+        # but they must be explicitly listed in the no-arg allowlist
+        NO_ARG_TOOLS = frozenset()  # Add no-arg tools here as they're identified
+        unlisted = [t for t in missing if t not in NO_ARG_TOOLS]
+        assert not unlisted, (
+            f"Stable tools missing from MINIMAL_ARGS and not in no-arg allowlist: {unlisted}"
+        )

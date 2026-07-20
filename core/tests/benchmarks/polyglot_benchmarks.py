@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.performance
+
 """Performance benchmarking suite for polyglot operations.
 
 Benchmarks performance across:

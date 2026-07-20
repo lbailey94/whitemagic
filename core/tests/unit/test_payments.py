@@ -129,12 +129,15 @@ class TestTipRoute:
     @pytest.mark.asyncio
     async def test_tip_status_when_disabled(self):
         """tip_status should return enabled=False when wallet is not configured."""
+        from whitemagic.core.economy import wallet_manager as wm_mod
         from whitemagic.interfaces.api.routes.tip import tip_status
 
         with patch.dict(os.environ, {}, clear=True):
+            wm_mod._wallet_manager = None
             result = await tip_status()
             assert result["status"] == "success"
             assert result["data"]["enabled"] is False
+            wm_mod._wallet_manager = None
 
     @pytest.mark.asyncio
     async def test_tip_status_when_enabled(self):

@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 try:
     from whitemagic.benchmarks.agentdojo_defense import _evaluate_tool
 

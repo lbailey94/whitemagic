@@ -1,3 +1,7 @@
+
+import pytest
+
+pytestmark = pytest.mark.integration
 """Integration tests: every tool category returns a valid envelope."""
 
 import sys

@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.performance
+
 #!/usr/bin/env python3
 import sys
 import time

@@ -178,8 +178,11 @@ class TestFullResearchPipeline:
         try:
             result = swarm.tick()
             assert result is None or hasattr(result, "campaign_name")
-        except Exception:
-            pass  # Resilient — should not crash
+        except (ValueError, RuntimeError, TypeError) as e:
+            # These are expected when autoswarm has no campaigns configured
+            assert "campaign" in str(e).lower() or "config" in str(e).lower() or "no" in str(e).lower(), (
+                f"Unexpected error from autoswarm tick: {e}"
+            )
 
     def test_consciousness_loop_config_integration(self):
         """Test that consciousness loop config properly loads autoswarm settings."""

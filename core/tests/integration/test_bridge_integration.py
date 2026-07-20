@@ -8,6 +8,10 @@ Tests the "Parallel Magic" components:
 3. AdaptiveParallelExecutor (Python)
 """
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 import asyncio
 import logging
 import time

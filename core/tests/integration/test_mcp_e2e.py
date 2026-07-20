@@ -34,6 +34,7 @@ except ImportError:
     HAS_MCP = False
 
 pytestmark = pytest.mark.skipif(not HAS_MCP, reason="mcp SDK not installed")
+pytestmark_integration = pytest.mark.integration
 
 
 # ── Environment setup ───────────────────────────────────────────────────

@@ -5,6 +5,8 @@ Validates that the solver selects optimal nodes while respecting causal/dharmic 
 
 import pytest
 
+pytestmark = [pytest.mark.core, pytest.mark.contract]
+
 rich = pytest.importorskip("rich")
 
 import time

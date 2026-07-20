@@ -8,6 +8,8 @@ import os
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 from whitemagic.core.memory.unified_types import Memory, MemoryType
 
 

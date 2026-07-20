@@ -4,6 +4,10 @@ Unified Cross-Language Test Suite for WhiteMagic Q3
 Tests all 9 language SDKs with standardized test vectors.
 """
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 import json
 import subprocess
 import sys

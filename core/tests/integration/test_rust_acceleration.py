@@ -1,5 +1,9 @@
 """Integration tests: Rust acceleration vs Python fallback."""
 
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.bridge]
+
 import os
 import sys
 from pathlib import Path

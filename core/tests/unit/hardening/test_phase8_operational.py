@@ -405,6 +405,33 @@ class TestMigrationCLI:
 class TestHealthSurface:
     """Tests for HealthSurface."""
 
+    @pytest.fixture(autouse=True)
+    def _reset_memory_for_health(self, tmp_path, monkeypatch):
+        """Reset UnifiedMemory and WM_STATE_ROOT so _check_memory_backends
+        doesn't hang on stale SQLite connections or deleted directories."""
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
+        try:
+            import whitemagic.core.memory.unified as _um
+            for inst in list(_um._unified_memory_instances.values()):
+                try:
+                    inst.close()
+                except Exception:
+                    pass
+            _um._unified_memory_instances.clear()
+        except ImportError:
+            pass
+        yield
+        try:
+            import whitemagic.core.memory.unified as _um
+            for inst in list(_um._unified_memory_instances.values()):
+                try:
+                    inst.close()
+                except Exception:
+                    pass
+            _um._unified_memory_instances.clear()
+        except ImportError:
+            pass
+
     def test_collect_returns_report(self):
         from whitemagic.ops.health_surface import HealthSurface
 
@@ -528,8 +555,21 @@ class TestPropertyBasedFuzz:
         results = cli.inspect(user_id="test")
         assert isinstance(results, list)
 
-    def test_health_surface_collect_idempotent(self):
+    def test_health_surface_collect_idempotent(self, tmp_path, monkeypatch):
         """Health surface can be collected multiple times safely."""
+        # Reset UnifiedMemory and WM_STATE_ROOT to prevent stale connection hangs
+        monkeypatch.setenv("WM_STATE_ROOT", str(tmp_path))
+        try:
+            import whitemagic.core.memory.unified as _um
+            for inst in list(_um._unified_memory_instances.values()):
+                try:
+                    inst.close()
+                except Exception:
+                    pass
+            _um._unified_memory_instances.clear()
+        except ImportError:
+            pass
+
         from whitemagic.ops.health_surface import HealthSurface
 
         surface = HealthSurface()

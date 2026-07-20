@@ -3,6 +3,10 @@ Tests for Round 2 improvements: Gnosis portals, Agent Registry,
 Vote Outcome Tracking, Pipelines, Temporal classification, Circuit Breaker overrides.
 """
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 
 # ---------------------------------------------------------------------------
 # Agent Registry Tests

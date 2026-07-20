@@ -13,6 +13,8 @@ import os
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 # Ensure test isolation
 os.environ.setdefault("WM_SILENT_INIT", "1")
 os.environ.setdefault("WM_SKIP_HOLO_INDEX", "1")

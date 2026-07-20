@@ -1,3 +1,7 @@
+
+import pytest
+
+pytestmark = pytest.mark.integration, pytest.mark.bridge
 import os
 import random
 import string

@@ -15,6 +15,20 @@ from whitemagic.agents.warps import Warp, get_warp_manager
 @pytest.fixture
 def manager():
     """Get a fresh WarpManager instance."""
+    from whitemagic.agents.warps import WarpManager
+    # Reset UnifiedMemory so _load_from_memory doesn't find warps
+    # persisted by other test modules
+    try:
+        import whitemagic.core.memory.unified as _um
+        for inst in list(_um._unified_memory_instances.values()):
+            try:
+                inst.close()
+            except Exception:
+                pass
+        _um._unified_memory_instances.clear()
+    except ImportError:
+        pass
+    WarpManager._instance = None
     return get_warp_manager()
 
 

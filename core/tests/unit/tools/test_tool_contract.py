@@ -17,7 +17,20 @@ def _isolated_state_root(monkeypatch, tmp_path):
     (tmp_path / "memory").mkdir(parents=True, exist_ok=True)
     # Reset unified memory singleton so it picks up new paths
     import whitemagic.core.memory.unified as _unified
-    _unified._unified_memory = None
+    # Close existing instances to release SQLite connections
+    for inst in list(_unified._unified_memory_instances.values()):
+        try:
+            inst.close()
+        except Exception:
+            pass
+    _unified._unified_memory_instances.clear()
+    # Reset self-model so error-rate predictions from previous tests
+    # don't cause the guardian to block write tools
+    try:
+        import whitemagic.core.intelligence.self_model as _sm
+        _sm._instance = None
+    except ImportError:
+        pass
     # Reset galactic module cached connections
     try:
         import whitemagic.core.galactic as _galactic
@@ -29,7 +42,12 @@ def _isolated_state_root(monkeypatch, tmp_path):
     except ImportError:
         pass
     yield
-    _unified._unified_memory = None
+    for inst in list(_unified._unified_memory_instances.values()):
+        try:
+            inst.close()
+        except Exception:
+            pass
+    _unified._unified_memory_instances.clear()
 
 
 def _assert_envelope_shape(out: dict) -> None:

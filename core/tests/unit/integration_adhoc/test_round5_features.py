@@ -482,10 +482,20 @@ class TestDispatchPipeline(unittest.TestCase):
 
     def test_compact_mode_in_pipeline(self):
         """_compact=true triggers compact response post-processing."""
+        # Reset self-model so error-rate predictions from other tests
+        # don't interfere with dispatch
+        try:
+            import whitemagic.core.intelligence.self_model as _sm
+            _sm._instance = None
+        except ImportError:
+            pass
+
         from whitemagic.tools.dispatch_table import dispatch
 
-        result_full = dispatch("capabilities")
-        result_compact = dispatch("capabilities", _compact=True)
+        # Force full pipeline so _compact is actually processed
+        # (capabilities is normally fast-pathed, bypassing compact middleware)
+        result_full = dispatch("capabilities", _force_full_pipeline=True)
+        result_compact = dispatch("capabilities", _compact=True, _force_full_pipeline=True)
         # Compact result should be a dict (compact post-processing applied)
         self.assertIsInstance(result_compact, dict)
         # Compact should have same or fewer total chars when serialized

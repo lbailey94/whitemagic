@@ -15,6 +15,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 from whitemagic.core.dreaming.dream_cycle import (
     DreamCycle,
     DreamPhase,
