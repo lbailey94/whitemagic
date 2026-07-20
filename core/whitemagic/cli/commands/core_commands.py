@@ -435,7 +435,10 @@ def quickstart_command(ctx, json_output: bool) -> None:
         click.echo(f"\n  1. Health: v{ver}, {tools} tools — {health.get('status')}\n")
 
     # Step 2: Search the tutorial galaxy (proves memory system works + shows useful content)
-    from whitemagic.core.memory.tutorial_refresh import auto_seed_if_needed, is_tutorial_seeded
+    from whitemagic.core.memory.tutorial_refresh import (
+        auto_seed_if_needed,
+        is_tutorial_seeded,
+    )
 
     if not is_tutorial_seeded():
         auto_seed_if_needed()
@@ -482,7 +485,10 @@ def quickstart_command(ctx, json_output: bool) -> None:
 @click.pass_context
 def tutorial_command(ctx, topic: str) -> None:
     """Guided tour of WhiteMagic from the tutorial galaxy."""
-    from whitemagic.core.memory.tutorial_refresh import auto_seed_if_needed, is_tutorial_seeded
+    from whitemagic.core.memory.tutorial_refresh import (
+        auto_seed_if_needed,
+        is_tutorial_seeded,
+    )
 
     if not is_tutorial_seeded():
         click.echo("\n  Seeding tutorial galaxy...\n")
@@ -504,7 +510,7 @@ def tutorial_command(ctx, topic: str) -> None:
         click.echo(f"\n  No tutorials found for '{topic}'. Try: memory, governance, dream, modes, cli\n")
         return
 
-    click.echo(f"\n  WhiteMagic Tutorial\n")
+    click.echo("\n  WhiteMagic Tutorial\n")
     for hit in hits:
         title = hit.get("title", "?")
         content = hit.get("content", hit.get("preview", ""))

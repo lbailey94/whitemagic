@@ -408,12 +408,18 @@ class AmbientSensorium:
         self._running = True
         self._thread = threading.Thread(target=self._poll_loop, daemon=True)
         self._thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("ambient_sensorium", self._thread, stop_fn=self.stop_background, owner=__name__)
 
     def stop_background(self) -> None:
         """Stop background polling."""
         self._running = False
         if self._thread:
             self._thread.join(timeout=5.0)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("ambient_sensorium")
 
     def _poll_loop(self) -> None:
         while self._running:

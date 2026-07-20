@@ -21,7 +21,6 @@ from __future__ import annotations
 import logging
 import time
 from typing import Any
-from urllib.parse import quote
 
 from whitemagic.agents.bounty_connector import ExternalBounty
 
@@ -126,7 +125,7 @@ class ImmunefiPlatform:
                 ecosystems = [ecosystems]
 
             # Build required capabilities from languages
-            required_caps = [f"solidity_analysis" if "Solidity" in languages else "code_analysis"]
+            required_caps = ["solidity_analysis" if "Solidity" in languages else "code_analysis"]
             if "JavaScript" in languages or "Typescript" in languages:
                 required_caps.append("web_analysis")
 
@@ -341,7 +340,6 @@ class SherlockPlatform:
     def _parse_contest(self, item: dict[str, Any]) -> ExternalBounty:
         title = item.get("title", item.get("name", item.get("protocol", "Unknown")))
         reward = float(item.get("prize_pool", item.get("prizePool", item.get("reward", 0))) or 0)
-        start_date = item.get("start_date", item.get("startDate", ""))
         end_date = item.get("end_date", item.get("endDate", ""))
         deadline = _parse_iso_date(end_date) if end_date else None
         contest_id = item.get("id", item.get("contest_id", ""))
@@ -915,7 +913,6 @@ class AlgoraPlatform:
         title = item.get("title", item.get("issue_title", "Unknown"))
         reward = float(item.get("amount", item.get("reward", 0)) or 0)
         issue_url = item.get("url", item.get("html_url", ""))
-        repo = item.get("repo", item.get("repository", ""))
 
         return ExternalBounty(
             platform=self.platform_name,

@@ -55,9 +55,9 @@ def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
         # ct with boost status, dominant element, and boost factor.
     """
     try:
-        from whitemagic.tools.prat_resonance import _get_meta
+        from whitemagic.core.ports import get_prat_meta
 
-        meta = _get_meta(gana_name)
+        meta = get_prat_meta(gana_name)
         quadrant = meta.get("quadrant", "Unknown")
 
         dominant_element, element_energy = _get_dominant_element()

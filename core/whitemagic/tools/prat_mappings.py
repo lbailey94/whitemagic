@@ -969,6 +969,48 @@ TOOL_TO_GANA: dict[str, str] = {
     "pattern.list": "gana_hairy_head",
     "pattern.summary": "gana_hairy_head",
     "pattern.ingest": "gana_hairy_head",
+    # ── Violet Strategy: Security Tools (Gaps 1-6) ──
+    # Dynamic Testing → Three Stars (judgment & synthesis / offensive scanning)
+    "nmap_scan": "gana_three_stars",
+    "sqlmap_scan": "gana_three_stars",
+    "hydra_brute": "gana_three_stars",
+    "nikto_scan": "gana_three_stars",
+    "ffuf_fuzz": "gana_three_stars",
+    "nuclei_scan": "gana_three_stars",
+    # Autonomous Red-Teaming → Chariot (mobility & exploration / autonomous ops)
+    "redteam.autonomous": "gana_chariot",
+    "redteam.status": "gana_chariot",
+    # AI Agent Red-Teaming → Hairy Head (anomaly detection / agent security)
+    "agent_redteam.run": "gana_hairy_head",
+    "agent_redteam.status": "gana_hairy_head",
+    # Multi-Agent Attack Orchestration → Extended Net (coordinated multi-agent)
+    "attack_cell.execute": "gana_extended_net",
+    "attack_cell.status": "gana_extended_net",
+    # ── v25: Remaining unmapped dispatch tools → Gana mappings ──
+    # Bounty platform tools → Abundance (regeneration / bounty economy)
+    "bounty.deadlines": "gana_abundance",
+    "bounty.earnings": "gana_abundance",
+    "bounty.huntr_mfv": "gana_abundance",
+    "bounty.match": "gana_abundance",
+    "bounty.opportunities": "gana_abundance",
+    "bounty.platforms": "gana_abundance",
+    "bounty.register_agent": "gana_abundance",
+    "bounty.scan_platform": "gana_abundance",
+    "bounty.stats": "gana_abundance",
+    # Citta ignitions → Ghost (introspection / citta stream)
+    "citta.ignitions": "gana_ghost",
+    # Cognitive loops → Dipper (strategy / cognitive modes)
+    "cognitive.action_loop": "gana_dipper",
+    # Cognitive patterns → Extended Net (pattern connectivity)
+    "cognitive.patterns": "gana_extended_net",
+    # Cognitive signals → Ghost (introspection / self-model)
+    "cognitive.signals": "gana_ghost",
+    # Emergence insights → Extended Net (pattern connectivity / emergence)
+    "emergence.insights": "gana_extended_net",
+    # Guna correction → Ghost (introspection / guna balance)
+    "guna.correct": "gana_ghost",
+    # STRATA model security → Chariot (codebase analysis)
+    "strata.model_security": "gana_chariot",
 }
 
 # Reverse: Gana → list of nested tools

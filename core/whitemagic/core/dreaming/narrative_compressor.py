@@ -423,9 +423,7 @@ class NarrativeCompressor:
         Tries llama.cpp first, falls back to template.
         """
         try:
-            from whitemagic.tools.handlers.llama_tools import (
-                handle_llama_generate as _llama_generate,
-            )
+            from whitemagic.core.ports import handle_llama_generate as _llama_generate
 
             evidence_text = "\n".join(contents[:10])
             tags_text = ", ".join(sorted(cluster.shared_tags)[:10])

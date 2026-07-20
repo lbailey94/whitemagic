@@ -762,7 +762,7 @@ class CapabilityDiscoveryEngine:
 
         for tool_name in capability.tools_involved:
             try:
-                from whitemagic.tools.dispatch_table import dispatch
+                from whitemagic.core.ports import dispatch
 
                 start = _time.perf_counter()
                 result = dispatch(tool_name, _probe=True)

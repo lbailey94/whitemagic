@@ -170,9 +170,9 @@ class ResonanceEngine:
         if not _HAS_SCIPY:
             logger.warning("scipy not available; KD-tree disabled")
             return
-        
+
         from whitemagic.core.memory.galaxy_db_scanner import scan_all_coords
-        
+
         all_coords = scan_all_coords()
         if not all_coords:
             # Fallback: try monolithic DB
@@ -197,7 +197,7 @@ class ResonanceEngine:
             finally:
                 conn.close()
             return
-        
+
         points = []
         for mid, (gname, coords) in all_coords.items():
             # Use first 5 dims (x, y, z, w, v)
@@ -206,7 +206,7 @@ class ResonanceEngine:
             self._memory_ids.append(mid)
             self._memory_galaxies[mid] = gname
             points.append(c5)
-        
+
         self._tree = cKDTree(np.array(points))
         logger.info("🌳 KD-tree built: %s memories, 5D space (multi-galaxy: %d galaxies)",
                      len(points), len(set(self._memory_galaxies.values())))
@@ -739,7 +739,7 @@ class ResonanceEngine:
             return {"status": "error", "message": "No coordinates available"}
 
         from whitemagic.core.memory.galaxy_db_scanner import insert_association
-        
+
         created = 0
         skipped = 0
         cross_galaxy = 0

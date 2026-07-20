@@ -26,7 +26,8 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.intelligence.knowledge_graph import get_knowledge_graph
-        from whitemagic.tools.prat_router import TOOL_TO_GANA
+        from whitemagic.core.ports import get_prat_router_tool_to_gana
+        TOOL_TO_GANA = get_prat_router_tool_to_gana()
 
         kg = get_knowledge_graph()
 

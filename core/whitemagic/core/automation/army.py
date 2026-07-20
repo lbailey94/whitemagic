@@ -169,9 +169,9 @@ class AutonomousArmyManager:
         # Emit Gan Ying event for audit trail
         if pruned:
             try:
-                from whitemagic.tools.unified_api import _emit_gan_ying
+                from whitemagic.core.ports import emit_gan_ying
 
-                _emit_gan_ying(
+                emit_gan_ying(
                     "ARMY_PRUNING",
                     {
                         "pruned_count": len(pruned),

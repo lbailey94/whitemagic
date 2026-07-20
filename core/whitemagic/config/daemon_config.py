@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 """Daemon configuration — single source of truth for WhiteMagic settings.
 
 All defaults are local-only. No telemetry, no cloud, no mesh unless
@@ -181,8 +180,14 @@ def load_config() -> DaemonConfig:
                     config.inference_backend = inf["backend"]
                 if "model" in inf:
                     config.inference_model = inf["model"]
-        except Exception:
-            logger.debug("Ignored Exception in daemon_config.py:184")
+        except (OSError, KeyError, TypeError, ValueError) as e:
+            logger.debug("Config load error in daemon_config: %s", e)
+        except Exception as e:
+            import yaml
+            if isinstance(e, yaml.YAMLError):
+                logger.debug("YAML parse error in daemon_config: %s", e)
+            else:
+                raise
 
     return config
 

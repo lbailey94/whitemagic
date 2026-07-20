@@ -25,6 +25,10 @@ _OFFENSIVE_HANDLER_TOOLS: frozenset[str] = frozenset({
     "echidna_fuzz", "echidna_status",
     "formal_verify", "formal_verify_status",
     "poc_generate", "poc_verify",
+    "nmap_scan", "sqlmap_scan", "hydra_brute",
+    "nikto_scan", "ffuf_fuzz", "nuclei_scan",
+    "redteam_autonomous", "agent_redteam_run",
+    "attack_cell_execute",
 })
 
 
@@ -57,7 +61,7 @@ def _check_offensive_token(tool_name: str, kwargs: dict[str, Any]) -> dict[str, 
             }
 
         target = ""
-        for key in ("target", "host", "ip", "url", "domain", "endpoint", "rpc_url", "base_url"):
+        for key in ("target", "host", "ip", "url", "domain", "endpoint", "rpc_url", "base_url", "contract_address", "address"):
             val = kwargs.get(key)
             if isinstance(val, str) and val:
                 target = val
@@ -227,9 +231,10 @@ def handle_contest_add_finding(**kwargs: Any) -> dict[str, Any]:
         impact=kwargs.get("impact", ""),
         proof_of_concept=kwargs.get("proof_of_concept", ""),
         mitigation=kwargs.get("mitigation", ""),
+        mitre_ttp_ids=kwargs.get("mitre_ttp_ids"),
     )
     if finding:
-        return {"status": "added", "finding_id": finding.finding_id, "dedup_hash": finding.dedup_hash}
+        return {"status": "added", "finding_id": finding.finding_id, "dedup_hash": finding.dedup_hash, "mitre_ttp_ids": finding.mitre_ttp_ids}
     return {"status": "duplicate", "finding_id": None}
 
 
@@ -636,3 +641,151 @@ def handle_slither_status(**kwargs: Any) -> dict[str, Any]:
     except Exception:
         version = "unknown"
     return {"available": True, "path": slither_bin, "version": version}
+
+
+# ── Dynamic Testing Tool handlers (Gap 2) ──────────────────────────────────
+
+def handle_nmap_scan(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("nmap_scan", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.dynamic_testers import run_nmap
+    return run_nmap(
+        target=kwargs.get("target", ""),
+        scan_type=kwargs.get("scan_type", "service"),
+        ports=kwargs.get("ports", ""),
+        timeout=kwargs.get("timeout", 120),
+    )
+
+
+def handle_sqlmap_scan(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("sqlmap_scan", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.dynamic_testers import run_sqlmap
+    return run_sqlmap(
+        url=kwargs.get("url", ""),
+        method=kwargs.get("method", "GET"),
+        data=kwargs.get("data", ""),
+        param=kwargs.get("param", ""),
+        cookie=kwargs.get("cookie", ""),
+        level=kwargs.get("level", 1),
+        risk=kwargs.get("risk", 1),
+        timeout=kwargs.get("timeout", 180),
+    )
+
+
+def handle_hydra_brute(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("hydra_brute", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.dynamic_testers import run_hydra
+    return run_hydra(
+        target=kwargs.get("target", ""),
+        service=kwargs.get("service", "ssh"),
+        userlist=kwargs.get("userlist", ""),
+        passlist=kwargs.get("passlist", ""),
+        user=kwargs.get("user", ""),
+        timeout=kwargs.get("timeout", 120),
+    )
+
+
+def handle_nikto_scan(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("nikto_scan", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.dynamic_testers import run_nikto
+    return run_nikto(
+        target=kwargs.get("target", ""),
+        port=kwargs.get("port", 80),
+        timeout=kwargs.get("timeout", 120),
+    )
+
+
+def handle_ffuf_fuzz(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("ffuf_fuzz", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.dynamic_testers import run_ffuf
+    return run_ffuf(
+        url=kwargs.get("url", ""),
+        wordlist=kwargs.get("wordlist", ""),
+        mode=kwargs.get("mode", "dir"),
+        timeout=kwargs.get("timeout", 120),
+    )
+
+
+def handle_nuclei_scan(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("nuclei_scan", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.dynamic_testers import run_nuclei
+    return run_nuclei(
+        target=kwargs.get("target", ""),
+        templates=kwargs.get("templates", ""),
+        severity=kwargs.get("severity", ""),
+        timeout=kwargs.get("timeout", 120),
+    )
+
+
+# ── Decepticon / Autonomous Red-Teaming handlers (Gap 1) ───────────────────
+
+def handle_redteam_autonomous(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("redteam_autonomous", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.decepticon_bridge import run_autonomous_redteam
+    return run_autonomous_redteam(
+        target=kwargs.get("target", ""),
+        scope=kwargs.get("scope", "recon,scan,exploit,report"),
+        engagement_token_id=kwargs.get("_engagement_token_id", ""),
+        timeout=kwargs.get("timeout", 300),
+    )
+
+
+def handle_redteam_status(**kwargs: Any) -> dict[str, Any]:
+    from whitemagic.tools.security.decepticon_bridge import decepticon_status
+    return decepticon_status()
+
+
+# ── AI Agent Red-Teaming handlers (Gap 6) ──────────────────────────────────
+
+def handle_agent_redteam_run(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("agent_redteam_run", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.agent_redteam import run_agent_redteam_suite
+    tests = kwargs.get("tests")
+    if isinstance(tests, str):
+        tests = [t.strip() for t in tests.split(",")]
+    return run_agent_redteam_suite(
+        agent_handler=None,  # No live agent in handler — returns payloads
+        model_loader=None,
+        tests=tests,
+    )
+
+
+def handle_agent_redteam_status(**kwargs: Any) -> dict[str, Any]:
+    from whitemagic.tools.security.agent_redteam import agent_redteam_status
+    return agent_redteam_status()
+
+
+# ── Multi-Agent Attack Orchestration handlers (Gap 3) ──────────────────────
+
+def handle_attack_cell_execute(**kwargs: Any) -> dict[str, Any]:
+    _err = _check_offensive_token("attack_cell_execute", kwargs)
+    if _err:
+        return _err
+    from whitemagic.tools.security.attack_cell import AttackCell
+    cell = AttackCell(
+        target=kwargs.get("target", ""),
+        scope=kwargs.get("scope", "recon,web,exploit,report"),
+        engagement_token_id=kwargs.get("_engagement_token_id", ""),
+    )
+    result = cell.execute()
+    return result.summary()
+
+
+def handle_attack_cell_status(**kwargs: Any) -> dict[str, Any]:
+    from whitemagic.tools.security.attack_cell import attack_cell_status
+    return attack_cell_status()

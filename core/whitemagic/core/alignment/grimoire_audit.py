@@ -44,9 +44,9 @@ class GrimoireAuditor:
 
         # 1. Count actual registered MCP tools from the dispatch table
         try:
-            from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+            from whitemagic.core.ports import get_dispatch_table
 
-            for tool_name in DISPATCH_TABLE:
+            for tool_name in get_dispatch_table():
                 category = self._categorize_tool(tool_name)
                 spells.append(
                     Spell(

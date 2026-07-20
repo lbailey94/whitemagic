@@ -226,7 +226,9 @@ class ConfigManager:
 
         # Default to WM_STATE_ROOT; avoid writing config into the repo.
         self.config_dir = config_dir or WM_ROOT
-        self.environment = Environment(os.getenv("WHITEMAGIC_ENV", "development"))
+        self.environment = Environment(
+            os.getenv("WHITEMAGIC_ENV") or os.getenv("WM_ENV", "development")
+        )
         self._config: WhiteMagicConfig | None = None
         self._sources: list[ConfigSource] = []
 
@@ -336,23 +338,31 @@ class ConfigManager:
         return None  # Ensure we always return a value
 
     def _load_env_vars(self) -> None:
-        """Load configuration from environment variables."""
+        """Load configuration from environment variables.
+
+        Accepts both ``WHITEMAGIC_*`` and ``WM_*`` prefixes for all mapped
+        variables. ``WM_*`` is the preferred short prefix; ``WHITEMAGIC_*``
+        remains as a compatibility alias.
+        """
         env_config: dict[str, Any] = {}
 
-        # Map environment variables to config keys
+        # Map environment variables to config keys.
+        # Each entry: (primary_env_var, alias_env_var, config_path)
         env_mappings = {
-            "WHITEMAGIC_SECRET_KEY": ("security", "secret_key"),
-            "WHITEMAGIC_DATABASE_URL": ("database", "url"),
-            "WHITEMAGIC_REDIS_URL": ("redis", "url"),
-            "WHITEMAGIC_API_HOST": ("api", "host"),
-            "WHITEMAGIC_API_PORT": ("api", "port"),
-            "WHITEMAGIC_LOG_LEVEL": ("logging", "level"),
-            "WHITEMAGIC_DEBUG": ("debug",),
-            "WHITEMAGIC_DATA_DIR": ("data_dir",),
+            "WHITEMAGIC_SECRET_KEY": ("WM_SECRET_KEY", ("security", "secret_key")),
+            "WHITEMAGIC_DATABASE_URL": ("WM_DATABASE_URL", ("database", "url")),
+            "WHITEMAGIC_REDIS_URL": ("WM_REDIS_URL", ("redis", "url")),
+            "WHITEMAGIC_API_HOST": ("WM_API_HOST", ("api", "host")),
+            "WHITEMAGIC_API_PORT": ("WM_API_PORT", ("api", "port")),
+            "WHITEMAGIC_LOG_LEVEL": ("WM_LOG_LEVEL", ("logging", "level")),
+            "WHITEMAGIC_DEBUG": ("WM_DEBUG", ("debug",)),
+            "WHITEMAGIC_DATA_DIR": ("WM_DATA_DIR", ("data_dir",)),
         }
 
-        for env_var, config_path in env_mappings.items():
+        for env_var, (alias_var, config_path) in env_mappings.items():
             raw_value = os.getenv(env_var)
+            if raw_value is None:
+                raw_value = os.getenv(alias_var)
             if raw_value is not None:
                 # Navigate to the nested location
                 current = env_config

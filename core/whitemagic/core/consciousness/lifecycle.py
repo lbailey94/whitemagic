@@ -146,6 +146,9 @@ class SleepScheduler:
                 target=self._run_loop, daemon=True, name="sleep-scheduler"
             )
             self._thread.start()
+            from whitemagic.core.worker_registry import register_worker
+
+            register_worker("sleep_scheduler", self._thread, stop_fn=self.stop, owner=__name__)
             logger.info("Sleep scheduler started (sleep=%s, wake=%s)",
                         self._config.sleep_time, self._config.wake_time)
 
@@ -154,6 +157,9 @@ class SleepScheduler:
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=2)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("sleep_scheduler")
 
     def _run_loop(self) -> None:
         """Main loop — checks time and transitions states."""
@@ -232,21 +238,21 @@ class SleepScheduler:
         """
         # Consolidation
         try:
-            from whitemagic.tools.unified_api import call_tool
+            from whitemagic.core.ports import call_tool
             call_tool("consolidation.run")
         except Exception as e:
             logger.debug("Consolidation during maintenance failed: %s", e)
 
         # Ripple decay
         try:
-            from whitemagic.tools.unified_api import call_tool
+            from whitemagic.core.ports import call_tool
             call_tool("ripple.decay")
         except Exception as e:
             logger.debug("Ripple decay during maintenance failed: %s", e)
 
         # Metaplasticity decay
         try:
-            from whitemagic.tools.unified_api import call_tool
+            from whitemagic.core.ports import call_tool
             call_tool("metaplasticity.decay")
         except Exception as e:
             logger.debug("Metaplasticity decay during maintenance failed: %s", e)
@@ -270,7 +276,7 @@ class SleepScheduler:
         # Backup — export memories and config
         if os.getenv("WM_MAINTENANCE_BACKUP", "1") != "0":
             try:
-                from whitemagic.tools.unified_api import call_tool
+                from whitemagic.core.ports import call_tool
                 call_tool("export_memories", format="json")
                 logger.info("Memory backup completed during maintenance")
             except Exception as e:
@@ -430,7 +436,7 @@ class WakeOnBoot:
         """Gather messages from other agents received while away."""
         messages: list[dict[str, Any]] = []
         try:
-            from whitemagic.tools.unified_api import call_tool
+            from whitemagic.core.ports import call_tool
             result = call_tool("broker.history", channel="sangha", limit=20)
             if result.get("status") == "success":
                 history = result.get("details", {}).get("messages", [])
@@ -573,7 +579,7 @@ class ProactiveGreeting:
     def _gather_agent_messages(continuity: dict[str, Any]) -> list[dict[str, Any]]:
         """Gather agent messages for the greeting."""
         try:
-            from whitemagic.tools.unified_api import call_tool
+            from whitemagic.core.ports import call_tool
             result = call_tool("broker.history", channel="sangha", limit=20)
             if result.get("status") == "success":
                 history = result.get("details", {}).get("messages", [])

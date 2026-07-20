@@ -113,6 +113,9 @@ class VolitionLoop:
                 target=self._run_loop, daemon=True, name="volition-loop"
             )
             self._thread.start()
+            from whitemagic.core.worker_registry import register_worker
+
+            register_worker("volition_loop", self._thread, stop_fn=self.stop, owner=__name__)
             logger.info("Volition loop started (idle threshold: %.0fs)", self._idle_threshold)
 
     def stop(self) -> None:
@@ -120,6 +123,9 @@ class VolitionLoop:
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=2)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("volition_loop")
 
     def _run_loop(self) -> None:
         """Main volition loop."""

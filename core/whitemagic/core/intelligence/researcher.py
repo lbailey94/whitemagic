@@ -497,9 +497,7 @@ class JITResearcher:
     ) -> str | None:
         """Attempt LLM-based synthesis via llama-server."""
         try:
-            from whitemagic.tools.handlers.llama_tools import (
-                handle_llama_generate as _llama_generate,
-            )
+            from whitemagic.core.ports import handle_llama_generate as _llama_generate
 
             evidence_text = "\n".join(
                 f"- [{e.get('title', 'untitled')}]: {e.get('content', '')[:200]}"

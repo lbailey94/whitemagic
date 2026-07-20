@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 """Dream Cycle — Background Processing During Idle Time.
 =====================================================
 Inspired by biological sleep: the brain consolidates memories, prunes
@@ -178,6 +177,9 @@ class DreamCycle:
                 name="dream-cycle",
             )
             self._thread.start()
+            from whitemagic.core.worker_registry import register_worker
+
+            register_worker("dream_cycle", self._thread, stop_fn=self.stop, owner=__name__)
             logger.info(
                 "🌙 Dream Cycle started (idle threshold: %.0fs)", self._idle_threshold
             )
@@ -196,6 +198,9 @@ class DreamCycle:
 
         if self._thread:
             self._thread.join(timeout=5)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("dream_cycle")
         logger.info("☀️ Dream Cycle stopped")
 
     def touch(self) -> None:
@@ -210,7 +215,7 @@ class DreamCycle:
                 # Use Redis or a shared state check to notify Elixir
                 # or the bridge will handle the signal.
                 pass
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Operation failed: %s", e)
                 pass
 
@@ -228,7 +233,7 @@ class DreamCycle:
                     depth_layer="surface",
                     emotional_tone="sattvic",
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in dream_cycle.py:193")
 
     def _run_loop(self) -> None:
@@ -282,7 +287,7 @@ class DreamCycle:
                 report.details = {"skipped": True, "reason": f"No handler for phase {phase.value}"}
             else:
                 report.details = job.handler()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             report.success = False
             report.error = str(e)
             logger.debug("Dream phase %s error: %s", phase.value, e, exc_info=True)
@@ -313,7 +318,7 @@ class DreamCycle:
                 emotional_tone="tamasic",
                 duration_ms=report.duration_ms,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in dream_cycle.py:292")
 
         # WI 9: Re-measure coherence after dream phase — dreams consolidate
@@ -328,10 +333,10 @@ class DreamCycle:
                 from whitemagic.core.memory.unified import get_unified_memory
 
                 mem_count = len(get_unified_memory().list_recent(limit=50))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 mem_count = 0
             metric.measure(memories_accessible=mem_count)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in dream_cycle.py:310")
 
     def _get_core_access(self) -> Any:
@@ -406,7 +411,7 @@ class DreamCycle:
                                 "INSERT OR IGNORE INTO tags (memory_id, tag) VALUES (?, ?)",
                                 [(row["id"], tag) for tag in auto_tags],
                             )
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001
                             logger.debug("Operation failed: %s", e)
                             pass
                         tagged_count += 1
@@ -500,7 +505,7 @@ class DreamCycle:
                         ),
                         "status": merge_result.get("status", "unknown"),
                     }
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     result["auto_merge"] = {"status": "skipped", "reason": str(e)}
 
                 # 6. Orphan cleanup (clean if count is small, report if large)
@@ -535,7 +540,7 @@ class DreamCycle:
         # 8. Seed germination scan — find dormant polyglot seeds
         try:
             result["seed_scan"] = self._seed_scan_dormant()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result["seed_scan"] = {"skipped": True, "reason": str(e)}
 
         return result
@@ -558,7 +563,7 @@ class DreamCycle:
                     "promotions": report.promotions,
                 }
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result["consolidation_error"] = str(e)
 
         # Cross-galaxy association mining (v24: auto-discover cross-galaxy links)
@@ -573,7 +578,7 @@ class DreamCycle:
                 "associations_created": cg_report.associations_created,
                 "duration_ms": round(cg_report.duration_ms, 1),
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Cross-galaxy mining in dream cycle failed: %s", e)
             result["cross_galaxy_mining"] = {"error": str(e)}
 
@@ -590,7 +595,9 @@ class DreamCycle:
 
         # Julia drift detection — check for galaxy memory distribution shifts
         try:
-            from whitemagic.core.acceleration.julia_bridge import julia_detect_galaxy_drift
+            from whitemagic.core.acceleration.julia_bridge import (
+                julia_detect_galaxy_drift,
+            )
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
@@ -618,7 +625,7 @@ class DreamCycle:
                     self._drift_baseline_distances = current_distances
         except (ImportError, ModuleNotFoundError):
             logger.debug("Julia drift detection unavailable")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Galaxy drift detection failed: %s", e)
 
         return result
@@ -654,9 +661,9 @@ class DreamCycle:
                     insights = synth.synthesize_from_bridges(bridges, top_n=3)
                     result["bridge_insights"] = [i.to_dict() for i in insights]
                     result["insights_generated"] = len(insights)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     result["synthesis_error"] = str(e)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result["graph_error"] = str(e)
 
         # Standard association mining (fallback + complement)
@@ -685,7 +692,7 @@ class DreamCycle:
                     "connections": connections,
                 }
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result["mining_error"] = str(e)
 
         # Cross-constellation bridge discovery via CoreAccessLayer
@@ -699,7 +706,7 @@ class DreamCycle:
                         f"{b['constellation_1']} <-> {b['constellation_2']}"
                         for b in bridges_cal[:3]
                     ]
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Operation failed: %s", e)
                 pass
 
@@ -716,7 +723,7 @@ class DreamCycle:
                 result["cross_domain_collisions"] = len(collisions)
                 result["top_collisions"] = [c.to_dict() for c in collisions[:3]]
                 result["collision_detector_stats"] = detector.get_stats()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Cross-domain collision detection failed: %s", e)
 
         return result
@@ -769,7 +776,7 @@ class DreamCycle:
                             )
                             inhibited = len(ec_params)
                     result["edges_inhibited_for_nodes"] = inhibited
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     result["inhibition_error"] = str(e)
 
             if echo_chambers:
@@ -791,11 +798,11 @@ class DreamCycle:
                 communities = engine.detect_communities()
                 result["communities_detected"] = len(communities)
                 result["largest_community"] = communities[0].size if communities else 0
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Operation failed: %s", e)
                 pass
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result["governance_error"] = str(e)
 
         return result
@@ -815,7 +822,7 @@ class DreamCycle:
             nc = get_narrative_compressor()
             result = nc.compress(max_clusters=3, sample_limit=200)
             return cast(dict[str, Any], result.to_dict())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"skipped": True, "reason": str(e)}
 
     def _dream_kaizen(self) -> dict[str, Any]:
@@ -931,7 +938,7 @@ class DreamCycle:
                 "constellation_merges": merge_result.get("merges", 0),
                 **self._run_recursive_improvement(),
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {
                 "skipped": True,
                 "reason": str(e),
@@ -958,7 +965,7 @@ class DreamCycle:
                 "improvement_recommendations": len(cycle.top_recommendations),
                 "improvement_duration_ms": round(cycle.duration_ms, 1),
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(
                 "Recursive improvement loop failed in dream: %s", e, exc_info=True
             )
@@ -985,7 +992,7 @@ class DreamCycle:
                     "calibration_gap": summary.get("calibration_gap", 0.0),
                     "brier_skill_score": summary.get("brier_skill_score", 0.0),
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Calibration data unavailable for oracle: %s", e)
 
             # Calculate Bayesian adjustment factor
@@ -1034,7 +1041,7 @@ class DreamCycle:
                 "suggestion_count": len(suggestions),
                 "calibration": calibration,
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"skipped": True, "reason": str(e)}
 
     def _dream_decay(self) -> dict[str, Any]:
@@ -1048,7 +1055,7 @@ class DreamCycle:
                 "swept": True,
                 "details": result if isinstance(result, dict) else str(result),
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"skipped": True, "reason": str(e)}
 
     # v17.0: New dream phases for Intelligence Amplification
@@ -1082,7 +1089,7 @@ class DreamCycle:
             result["merges"] = merge_count
             result["suggested_merges"] = merge_count
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"skipped": True, "reason": str(e)}
 
     def _dream_prediction(self) -> dict[str, Any]:
@@ -1174,7 +1181,7 @@ class DreamCycle:
                         resolved_count += 1
 
                 result["oracle_claims_resolved"] = resolved_count
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("Oracle claim auto-resolution skipped: %s", exc)
                 result["oracle_claims_resolved"] = 0
 
@@ -1214,7 +1221,7 @@ class DreamCycle:
                     if rows and rows["cnt"] > 0:
                         return True
             return False
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("Oracle action evidence check failed: %s", exc)
             return False
 
@@ -1293,7 +1300,7 @@ class DreamCycle:
         # Seed fitness benchmark — update polyglot seed fitness scores
         try:
             result["seed_benchmark"] = self._seed_benchmark_fitness()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result["seed_benchmark"] = {"skipped": True, "reason": str(e)}
 
         return result
@@ -1351,7 +1358,7 @@ class DreamCycle:
                 )
 
             return {"dormant": dormant, "count": len(dormant)}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"skipped": True, "reason": str(e)}
 
     def _seed_benchmark_fitness(self) -> dict[str, Any]:
@@ -1406,7 +1413,7 @@ class DreamCycle:
                                     whitemagic_rs.simd_cosine_similarity(vec_a, vec_b)
                                 )
                             native_time = _time.time() - start
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.debug("Swallowed exception", exc_info=True)
 
                 if native_time is not None and native_time > 0:
@@ -1453,7 +1460,7 @@ class DreamCycle:
                 "benchmarked": benchmarked,
                 "python_baseline_ms": round(py_time * 1000, 2),
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"skipped": True, "reason": str(e)}
 
     def _dream_harmonize(self) -> dict[str, Any]:
@@ -1610,12 +1617,12 @@ class DreamCycle:
                             importance=0.6,
                             galaxy="dreams",
                         )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored Exception in dream_cycle.py:1552")
 
         except (ImportError, ModuleNotFoundError) as e:
             result["reason"] = str(e)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result["skipped"] = True
             result["reason"] = str(e)
 
@@ -1664,10 +1671,10 @@ class DreamCycle:
                         galaxy="creative_solutions",
                     )
                     persisted += 1
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.debug("Operation failed: %s", e)
                     pass
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to persist dream insights: %s", e, exc_info=True)
         return persisted
 
@@ -1764,10 +1771,10 @@ class DreamCycle:
                     results["pre_dream_emergence_count"] = conn.execute(
                         "SELECT COUNT(*) FROM emergence_insights"
                     ).fetchone()[0]
-                except Exception:
+                except Exception:  # noqa: BLE001
                     results["pre_dream_emergence_count"] = 0
                 conn.close()
-        except Exception:
+        except Exception:  # noqa: BLE001
             results["pre_dream_emergence_count"] = 0
 
         for phase in self._phases:
@@ -1781,7 +1788,7 @@ class DreamCycle:
             )
             try:
                 report.details = job.handler()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 report.success = False
                 report.error = str(e)
                 logger.debug("Triggered dream phase %s error: %s", phase.value, e, exc_info=True)
@@ -1814,7 +1821,7 @@ class DreamCycle:
                 conn = safe_connect(str(kdb), read_only=True)
                 try:
                     post_dream_count = conn.execute("SELECT COUNT(*) FROM emergence_insights").fetchone()[0]
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
                 conn.close()
 
@@ -1828,7 +1835,7 @@ class DreamCycle:
             }
             if new_insights > 0:
                 logger.info("Dream cycle produced %d new emergence insights", new_insights)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Dream → emergence feedback check failed", exc_info=True)
 
         return results

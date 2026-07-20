@@ -850,8 +850,6 @@ def handle_emergence_insights(**kwargs: Any) -> dict[str, Any]:
         min_confidence: Minimum confidence threshold (default 0.0).
     """
     try:
-        import sqlite3
-        from pathlib import Path
 
         limit = int(kwargs.get("limit", 20))
         source = kwargs.get("source")

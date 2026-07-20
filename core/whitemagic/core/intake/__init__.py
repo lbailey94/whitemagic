@@ -301,6 +301,9 @@ class HolographicIntake:
 
         self._thread = threading.Thread(target=daemon_loop, daemon=True)
         self._thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("intake_daemon", self._thread, stop_fn=self.stop_daemon, owner=__name__)
         return True
 
     def stop_daemon(self) -> None:
@@ -309,6 +312,9 @@ class HolographicIntake:
         if self._thread:
             self._thread.join(timeout=5)
         self._thread = None
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("intake_daemon")
 
     def get_status(self) -> dict[str, Any]:
         """Get daemon status."""

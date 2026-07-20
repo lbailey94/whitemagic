@@ -10,9 +10,9 @@ T = TypeVar("T")
 
 
 def _emit(event_type: str, data: dict[str, Any]) -> None:
-    from whitemagic.tools.unified_api import _emit_gan_ying
+    from whitemagic.core.ports import emit_gan_ying
 
-    _emit_gan_ying(event_type, data)
+    emit_gan_ying(event_type, data)
 
 
 

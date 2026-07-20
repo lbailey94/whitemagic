@@ -38,10 +38,9 @@ NextFn = None
 def _ensure_types():
     global DispatchContext, NextFn
     if DispatchContext is None:
-        from whitemagic.tools.middleware import DispatchContext as _DC
-        from whitemagic.tools.middleware import NextFn as _NF
-        DispatchContext = _DC
-        NextFn = _NF
+        from whitemagic.core.ports import get_dispatch_context, get_next_fn
+        DispatchContext = get_dispatch_context()
+        NextFn = get_next_fn()
 
 
 def _estimate_tokens(text: Any) -> int:

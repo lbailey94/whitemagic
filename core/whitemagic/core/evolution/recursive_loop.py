@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 def _get_tool_bandit():
     """Deferred import to avoid circular dependency."""
-    from whitemagic.tools.handlers.tool_bandit import get_tool_bandit
+    from whitemagic.core.ports import get_tool_bandit
     return get_tool_bandit()
 
 
@@ -650,7 +650,9 @@ class RecursiveImprovementLoop:
         def _run_insight() -> tuple[str, dict[str, Any]]:
             out: dict[str, Any] = {}
             try:
-                from whitemagic.core.intelligence.insight_pipeline import InsightPipeline
+                from whitemagic.core.intelligence.insight_pipeline import (
+                    InsightPipeline,
+                )
 
                 pipeline = InsightPipeline()
                 briefing = pipeline.generate_briefing()

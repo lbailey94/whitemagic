@@ -35,12 +35,12 @@ def modulate_drive_from_resonance(
     """
     try:
         from whitemagic.core.intelligence.emotion_drive import get_drive_core
-        from whitemagic.tools.prat_resonance import _get_meta, get_resonance_state
+        from whitemagic.core.ports import get_prat_meta, get_prat_resonance_state
 
         drive = get_drive_core()
-        meta = _get_meta(gana_name)
+        meta = get_prat_meta(gana_name)
         quadrant = meta.get("quadrant", "Unknown")
-        state = get_resonance_state()
+        state = get_prat_resonance_state()
 
         # Base drive event based on quadrant
         _QUADRANT_DRIVES = {
@@ -59,7 +59,7 @@ def modulate_drive_from_resonance(
         predecessor = state.get_predecessor()
         mood_amplifier = 1.0
         if predecessor:
-            pred_meta = _get_meta(predecessor.gana_name)
+            pred_meta = get_prat_meta(predecessor.gana_name)
             if pred_meta.get("quadrant") == quadrant:
                 mood_amplifier = 1.5  # 50% boost for same-quadrant sequences
                 logger.debug(
@@ -89,7 +89,7 @@ def modulate_drive_from_resonance(
             "quadrant": quadrant,
             "mood_amplifier": mood_amplifier,
             "predecessor_quadrant": (
-                _get_meta(predecessor.gana_name).get("quadrant")
+                get_prat_meta(predecessor.gana_name).get("quadrant")
                 if predecessor
                 else None
             ),

@@ -6,7 +6,7 @@ import logging
 import statistics
 import time
 from collections import deque
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -247,17 +247,16 @@ def rollup_to_galaxy() -> dict[str, Any]:
     Called periodically (e.g. hourly) to maintain a curated record of system
     performance in the telemetry galaxy, replacing the old raw-event model.
     """
-    import uuid
-    from datetime import datetime, timezone
-    
+    from datetime import datetime
+
     tel = get_telemetry()
     summary = tel.get_summary()
-    
+
     try:
         from whitemagic.core.memory.unified import get_unified_memory
         um = get_unified_memory()
-        now = datetime.now(timezone.utc).isoformat()
-        
+        now = datetime.now(UTC).isoformat()
+
         content_parts = [
             f"Telemetry Rollup — {now}",
             f"Total calls: {summary.get('total_calls', 0)}",
@@ -269,15 +268,15 @@ def rollup_to_galaxy() -> dict[str, Any]:
             f"Errors: {summary.get('error_count', 0)}",
             f"Context reuse: {summary.get('context_reuse', {}).get('reuse_rate', 0):.2%}",
         ]
-        
+
         top_tools = summary.get("top_tools", [])
         if top_tools:
             content_parts.append("\nTop tools:")
             for t in top_tools[:5]:
                 content_parts.append(f"  {t.get('tool','?')}: {t.get('calls',0)} calls, avg={t.get('avg_ms',0):.1f}ms")
-        
+
         content = "\n".join(content_parts)
-        
+
         um.store(
             title=f"Telemetry Rollup {now[:13]}",
             content=content,

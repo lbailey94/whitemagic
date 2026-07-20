@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 """dispatch_core.py — Shared primitives for all dispatch domain slices.
 
 This module contains:
@@ -161,8 +160,8 @@ def _audit_tool_call(
                         audit_record["decision"],
                     ),
                 )
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError, AttributeError) as e:
             logger.debug("Dharma audit logging skipped: %s", e, exc_info=True)
 
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError, AttributeError, KeyError) as e:
         logger.debug("Dharma audit error: %s", e, exc_info=True)

@@ -111,7 +111,9 @@ def _ensure_semantic_cache_cached() -> None:
     try:
         import whitemagic.config.paths as _paths_mod
         _CACHE_DIR = _paths_mod  # store module, access .CACHE_DIR at call time
-        from whitemagic.core.intelligence.agentic.token_optimizer import QueryCache as _qc
+        from whitemagic.core.intelligence.agentic.token_optimizer import (
+            QueryCache as _qc,
+        )
         _QueryCache = _qc
     except Exception:
         logger.debug("QueryCache/CACHE_DIR unavailable")
@@ -275,7 +277,9 @@ def _ensure_citta_cached() -> None:
     except Exception:
         logger.debug("Citta cache: global_workspace import failed")
     try:
-        from whitemagic.core.intelligence.agentic.emergence_engine import get_emergence_engine
+        from whitemagic.core.intelligence.agentic.emergence_engine import (
+            get_emergence_engine,
+        )
         _emergence_engine_get = get_emergence_engine
     except Exception:
         logger.debug("Citta cache: emergence_engine import failed")

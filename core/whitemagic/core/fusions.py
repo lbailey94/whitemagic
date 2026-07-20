@@ -48,7 +48,8 @@ def kg_suggest_next_gana(current_tool: str) -> dict[str, Any]:
     """
     try:
         from whitemagic.core.intelligence.knowledge_graph import get_knowledge_graph
-        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+        from whitemagic.core.ports import get_tool_to_gana
+        TOOL_TO_GANA = get_tool_to_gana()
 
         kg = get_knowledge_graph()
         relations = kg.query_entity(current_tool)
@@ -96,12 +97,12 @@ def modulate_drive_from_resonance(
     """Modulates the Emotion/Drive Core based on which Gana was invoked."""
     try:
         from whitemagic.core.intelligence.emotion_drive import get_drive_core
-        from whitemagic.tools.prat_resonance import _get_meta, get_resonance_state
+        from whitemagic.core.ports import get_prat_meta, get_prat_resonance_state
 
         drive = get_drive_core()
-        meta = _get_meta(gana_name)
+        meta = get_prat_meta(gana_name)
         quadrant = meta.get("quadrant", "Unknown")
-        state = get_resonance_state()
+        state = get_prat_resonance_state()
 
         _QUADRANT_DRIVES = {
             "East": ("curiosity", 0.03, "TOOL_SUCCESS"),
@@ -117,7 +118,7 @@ def modulate_drive_from_resonance(
         mood_amplifier = (
             1.5
             if predecessor
-            and _get_meta(predecessor.gana_name).get("quadrant") == quadrant
+            and get_prat_meta(predecessor.gana_name).get("quadrant") == quadrant
             else 1.0
         )
         delta = base_delta * mood_amplifier
@@ -237,9 +238,9 @@ def _get_dominant_element() -> tuple:
 def get_wuxing_quadrant_boost(gana_name: str) -> dict[str, Any]:
     """Check if the current Wu Xing elemental phase amplifies the Gana's quadrant."""
     try:
-        from whitemagic.tools.prat_resonance import _get_meta
+        from whitemagic.core.ports import get_prat_meta
 
-        meta = _get_meta(gana_name)
+        meta = get_prat_meta(gana_name)
         quadrant = meta.get("quadrant", "Unknown")
         dominant_element, element_energy = _get_dominant_element()
         _ELEMENT_TO_QUADRANT = {
@@ -799,9 +800,9 @@ def prat_auto_chain_detect(
     count, and the resonance depth from the PRAT state.
     """
     try:
-        from whitemagic.tools.prat_resonance import _GANA_META, get_resonance_state
+        from whitemagic.core.ports import get_gana_meta, get_prat_resonance_state
 
-        state = get_resonance_state()
+        state = get_prat_resonance_state()
         history = state.get_recent_history(limit=10)
 
         # Count consecutive same-gana calls from the end of history
@@ -814,6 +815,7 @@ def prat_auto_chain_detect(
 
         chain_detected = consecutive >= 3
 
+        _GANA_META = get_gana_meta()
         meta = _GANA_META.get(gana_name, (0, "Unknown", "unknown", None, "?", "?"))
         quadrant = meta[1] if isinstance(meta, tuple) else "Unknown"
 
@@ -1062,7 +1064,7 @@ def session_memory_enrich(session_id: str = "", query: str = "") -> dict[str, An
     """
     try:
         from whitemagic.core.memory.manager import MemoryManager
-        from whitemagic.tools.handlers.scratchpad import handle_scratchpad
+        from whitemagic.core.ports import handle_scratchpad
 
         mgr = MemoryManager()
         search_query = query or session_id
@@ -1234,9 +1236,9 @@ def grimoire_resonance_suggest(current_gana: str = "") -> dict[str, Any]:
     which Gana chapter to enter next.
     """
     try:
-        from whitemagic.tools.prat_resonance import get_resonance_state
+        from whitemagic.core.ports import get_prat_resonance_state
 
-        state = get_resonance_state()
+        state = get_prat_resonance_state()
         history = state.get_recent_history(limit=5)
 
         # Count recent Gana usage

@@ -10,11 +10,10 @@ Detects emergent phenomena in the memory system:
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from whitemagic.core.memory.db_manager import safe_connect
@@ -226,10 +225,10 @@ class EmergenceEngine:
 
     def _persist_insights(self, insights: list[EmergenceInsight]) -> None:
         """Persist emergence insights to the knowledge galaxy."""
-        from pathlib import Path
-        from datetime import datetime, timezone
-        from whitemagic.core.memory.db_manager import safe_connect
+        from datetime import datetime
+
         from whitemagic.config.paths import galaxy_db_path
+        from whitemagic.core.memory.db_manager import safe_connect
 
         db = galaxy_db_path("knowledge")
         if not db.exists():
@@ -249,16 +248,12 @@ class EmergenceEngine:
             )
         """)
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         rows = []
         skipped = 0
         for ins in insights:
             import json as _json
-            # Compute content_hash for deduplication
-            content_key = f"{ins.source}:{ins.title}:{ins.description[:200]}"
-            content_hash = hashlib.sha256(content_key.encode()).hexdigest()[:16]
-
-            # Check if an insight with the same hash already exists
+            # Check if an insight with the same content already exists
             existing = conn.execute(
                 "SELECT 1 FROM emergence_insights WHERE id = ? OR "
                 "(source = ? AND title = ? AND description = ?)",

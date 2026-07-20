@@ -163,4 +163,20 @@ DISPATCH_SECURITY: dict[str, Callable[..., dict[str, Any]]] = {
     # Slither Integration
     "slither.scan": LazyHandler("security_tools", "handle_slither_scan"),
     "slither.status": LazyHandler("security_tools", "handle_slither_status"),
+    # Dynamic Testing Tools (Gap 2)
+    "nmap_scan": LazyHandler("security_tools", "handle_nmap_scan"),
+    "sqlmap_scan": LazyHandler("security_tools", "handle_sqlmap_scan"),
+    "hydra_brute": LazyHandler("security_tools", "handle_hydra_brute"),
+    "nikto_scan": LazyHandler("security_tools", "handle_nikto_scan"),
+    "ffuf_fuzz": LazyHandler("security_tools", "handle_ffuf_fuzz"),
+    "nuclei_scan": LazyHandler("security_tools", "handle_nuclei_scan"),
+    # Decepticon / Autonomous Red-Teaming (Gap 1)
+    "redteam.autonomous": LazyHandler("security_tools", "handle_redteam_autonomous"),
+    "redteam.status": LazyHandler("security_tools", "handle_redteam_status"),
+    # AI Agent Red-Teaming (Gap 6)
+    "agent_redteam.run": LazyHandler("security_tools", "handle_agent_redteam_run"),
+    "agent_redteam.status": LazyHandler("security_tools", "handle_agent_redteam_status"),
+    # Multi-Agent Attack Orchestration (Gap 3)
+    "attack_cell.execute": LazyHandler("security_tools", "handle_attack_cell_execute"),
+    "attack_cell.status": LazyHandler("security_tools", "handle_attack_cell_status"),
 }

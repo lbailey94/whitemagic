@@ -27,8 +27,10 @@ class AsyncCompat:
             from whitemagic.config.concurrency import IO_WORKERS
 
             cls._executor = ThreadPoolExecutor(max_workers=IO_WORKERS)
-            # Register shutdown hook to cleanup resources
             atexit.register(cls.shutdown_executor)
+            from whitemagic.core.worker_registry import register_worker
+
+            register_worker("async_compat_executor", stop_fn=cls.shutdown_executor, owner=__name__)
         return cls._executor
 
     @classmethod
@@ -37,6 +39,9 @@ class AsyncCompat:
         if cls._executor is not None:
             cls._executor.shutdown(wait=True)
             cls._executor = None
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("async_compat_executor")
 
 
 def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any, T]]:

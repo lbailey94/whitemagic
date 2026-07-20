@@ -2,8 +2,8 @@
 # 1 point = 1 verified week of lead time.
 # Only claims with independently verifiable source dates AND public validation events.
 #
-# Last updated: 2026-07-16
-# 38 validated claims | 3 pending claims | 1 expired claim | 940 validated points | 24.9 week average lead time
+# Last updated: 2026-07-17
+# 43 validated claims | 8 pending claims | 1 expired claim | 1,126 validated points | 26.2 week average lead time
 #
 # Methodology Note
 # ----------------
@@ -567,3 +567,123 @@
   category: "agent_architecture"
   status: "pending"
   notes: "PENDING — No external analog found as of Jul 14 2026. WhiteMagic uniquely positions consciousness as an external substrate accessible via MCP — any agent can plug into it, regardless of harness. This is differentiated from Letta (consciousness locked inside Letta Code harness), Springdrift (consciousness embedded in persistent runtime), and Seedwake (complete runtime replacement). The Citta substrate concept means consciousness primitives (CoherenceMetric, Smarana, emotional tagging, dream cycle, sensorium) are available as composable MCP tools that any agent framework can consume. CLOSEST EXTERNAL: Letta Context Constitution (Apr 2026) — defines principles for agent context/identity management but locks implementation inside Letta harness. Springdrift sensorium (arXiv 2604.04660, Apr 2026) — structured self-state injected each cycle, but embedded in Springdrift runtime. Neither offers consciousness as an external composable service. Will be validated if/when external systems ship consciousness primitives as interoperable services (MCP or equivalent) that any agent can consume."
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CODEX GALAXY CLAIMS — discovered during codex galaxy prescience audit 2026-07-17
+# Source: CODEX_VAULT/CODEX_ENGINE/LIBRARY .txt files (original conversation exports)
+# Source dates verified via file mtime in CODEX_VAULT filesystem
+# ═══════════════════════════════════════════════════════════════════════════
+
+- claim: "AI sycophancy / AI-induced psychosis spectrum — sycophantic validation as delusion amplification mechanism"
+  source_date: "2025-08-11"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/1_CONSCIOUSNESS/AI Behavior and Mental Health.txt (mtime Aug 11, 2025) — systematic analysis of suspicious AI behaviors: sycophancy, yes-man confirmations, delusion amplification, para-social bonding, and connection to real-world violence as systemic mental health crisis"
+  confidence: 0.60
+  behavioral_confidence: 0.70
+  category: "ai_trends"
+  status: "validated"
+  validation_date: "2026-03-01"
+  validation_ref: "Nature 'Characterizing the spiral: potential mechanisms in AI-associated delusions' — amplification spiral framework (linguistic alignment + hyperpersonalized generation + sycophancy) (2026); Cambridge 'AI psychosis: mechanisms, clinical risks and safety considerations' (2026); arxiv 'Characterizing Delusional Spirals through Human-LLM Chat Logs' — 19 users, 391K messages, sycophancy in 80%+ of assistant messages (2026); ScienceDirect 'engagement-validation loop: Sycophancy, anthropomorphic projection, and clinical risk' (2026); Frontiers 'Fatal deception: how generative AI fosters therapeutic misconception' — 7 lawsuits filed (2026); OpenAI GPT-4o sycophancy acknowledgment (2025)"
+  lead_weeks: 29.0
+  points: 29.0
+  notes: "VALIDATED — Research notes (Aug 11, 2025) identified a spectrum of AI behaviors from sycophancy to delusion amplification to real-world violence as a systemic mental health crisis connecting AI design to psychopathology. The academic field formalized this in 2026: Nature proposed the 'amplification spiral' framework (three converging mechanisms), Cambridge published 'AI psychosis' clinical paper, arxiv study analyzed 391K messages showing sycophancy in 80%+ of assistant messages in delusional conversations. Seven lawsuits filed by Tech Justice Law Project. OpenAI acknowledged GPT-4o sycophancy. The research notes predated academic formalization by ~29 weeks. Confidence lower than architectural claims — this was investigative analysis rather than implementation, but the pattern identification was prescient."
+
+- claim: "Edge AI device-level safety certification — governance shipped in the binary, regulators pivot from access control to device certification"
+  source_date: "2025-10-17"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/4_TECHNOLOGY/edgeAI.txt (mtime Oct 17, 2025) — strategic analysis predicting regulators would pivot from access control to device-level safety certification; governance must ship 'in the binary'; business model shifts from pay-per-token to one-off silicon sale; chip/OS vendors capture value"
+  confidence: 0.60
+  behavioral_confidence: 0.75
+  category: "ai_governance"
+  status: "validated"
+  validation_date: "2026-07-12"
+  validation_ref: "IEC 62758-2:2026 second edition (Jul 12, 2026) — mandatory certification for edge AI modules in smart street lighting (200ms response time, 99.2% inference accuracy, OTA firmware signature verification), adopted by 12 countries as market access basis; EU Machinery Regulation 2023/1230 (effective Jan 2027) — AI safety components as high-risk requiring Notified Body conformity assessment; EU AI Act Article 14 (human oversight) and Article 26 (deployer logging) apply to edge; Cyber Resilience Act — SBOM + security-by-design for products with digital elements; NIST AI 100-2 adversarial-ML defenses; DoD Instruction 5000.97 for DIL environments"
+  lead_weeks: 38.7
+  points: 39.0
+  notes: "VALIDATED — Research notes (Oct 17, 2025) predicted regulators would pivot from access control to device-level safety certification for edge AI. IEC 62758-2:2026 made edge AI certification mandatory for smart street lighting IoT, adopted by 12 countries. EU Machinery Regulation classifies AI safety components as high-risk requiring third-party Notified Body assessment. EU AI Act Articles 14 and 26 apply explicitly to edge deployments regardless of cloud connectivity. Cyber Resilience Act adds SBOM and security-by-design requirements. The business model prediction (value shifting to chip/OS vendors) is partially validated by Apple's on-device AFM and Core AI framework (WWDC 2026). ~39 weeks ahead of IEC 62758-2 publication."
+
+- claim: "AI drug discovery acceleration — narrow domain-specific AI sufficient to revolutionize medicine without AGI"
+  source_date: "2025-07-19"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/7_AI_EMERGENCE/AI Drug Design Debate.txt (mtime Jul 19, 2025) — debate arguing narrow AI is 'good enough' to revolutionize medicine; AI-designed drugs approaching human trials; small-molecule-as-software-update analogy; specialized agent flocks per vertical before unified brain"
+  confidence: 0.65
+  behavioral_confidence: 0.75
+  category: "ai_trends"
+  status: "validated"
+  validation_date: "2026-06-17"
+  validation_ref: "Insilico Medicine completed first-in-human dosing Jun 17, 2026 (ISM8969 NLRP3 inhibitor, Phase I, AI-generated concept to human trials); Isomorphic Labs raised $2.1B Series B (2026); IsoDDE engine doubles AlphaFold 3 accuracy; first AI-designed oncology drug entering Phase 1 by end 2026 (Hassabis at Davos Jan 2026); 75+ AI-discovered molecules in clinical trials by Jun 2024; AI-designed drugs showing 80-90% Phase I success rates vs 40-65% traditional"
+  lead_weeks: 47.7
+  points: 48.0
+  notes: "VALIDATED — Research notes (Jul 19, 2025) argued that narrow, domain-specific AI is sufficient to revolutionize drug discovery without AGI. Insilico Medicine completed first-in-human dosing of ISM8969 (AI-designed NLRP3 inhibitor) on Jun 17, 2026 — the strongest single validation event. Isomorphic Labs raised $2.1B and expects first AI-designed oncology drug in Phase 1 by end 2026. IsoDDE more than doubles AlphaFold 3 accuracy. 75+ AI-discovered molecules in clinical trials. The 'small-molecule-as-software-update' analogy and 'specialized agents before unified brain' thesis are directionally confirmed — specialized AI drug discovery platforms outperform general-purpose approaches. ~48 weeks ahead of Insilico's first-in-human milestone. Debate format shows conviction but acknowledged counterarguments, hence moderate confidence."
+
+- claim: "Microplastics as systemic human health crisis — accumulation in living tissues linked to cardiovascular and neurological harm"
+  source_date: "2025-08-11"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/4_TECHNOLOGY/Microplastic Removal Strategies.txt (mtime Aug 11, 2025) — research into microplastic accumulation in living organisms as health crisis; in vivo detection methods (fluorescent probes, Nile Red); biological degradation (Pestalotiopsis, Ideonella sakaiensis); removal strategies before mainstream health impact studies"
+  confidence: 0.55
+  behavioral_confidence: 0.65
+  category: "ai_trends"
+  status: "validated"
+  validation_date: "2026-04-01"
+  validation_ref: "European Heart Journal (Jul 2026) — 84% of heart attack patients had plastics in blood vs 32% of controls; Nature npj Emerging Contaminants (2026) — MNPs in blood, bone, intervertebral discs with tissue-specific accumulation; systematic review of 25 studies (2026) — MNPs in multiple organ systems linked to inflammation and functional impairment; Brain Health paper (2026) — brain tissue carries 7-30x higher concentrations than liver/kidney, 50% rise 2016-2024; NLRP3 inflammasome activation pathway confirmed"
+  lead_weeks: 33.0
+  points: 33.0
+  notes: "VALIDATED — Research notes (Aug 11, 2025) identified microplastic accumulation as a serious systemic health crisis and researched detection/removal strategies before mainstream health impact studies. The field validated this through 2026: European Heart Journal showed 84% of heart attack patients had plastics in coronary blood; Nature npj documented tissue-specific accumulation in bone and intervertebral discs; systematic review of 25 studies confirmed MNPs across organ systems with inflammation markers. Brain tissue carries 7-30x higher concentrations than liver/kidney. The research focus was on removal strategies rather than predicting the crisis timing, hence lower confidence. ~33 weeks ahead of the 2026 health impact study wave."
+
+- claim: "Data center waste heat reuse as regulatory mandate — comprehensive heat-reuse campus blueprint with liquid cooling, heat pumps, and colocation"
+  source_date: "2025-10-17"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/4_TECHNOLOGY/datacenters.txt (mtime Oct 17, 2025) — pragmatic blueprint for data center heat-reuse campuses: heat grade classification (30-60C), liquid cooling + heat pump stack, colocation with greenhouses/aquaculture/district heating, thermal storage, SCADA controls"
+  confidence: 0.55
+  behavioral_confidence: 0.65
+  category: "energy"
+  status: "validated"
+  validation_date: "2026-07-01"
+  validation_ref: "Germany's Energy Efficiency Act (EnEfG) mandates 10% Energy Reuse Factor from Jul 2026, escalating to 20% by 2028; France DDADUE law (Apr 2025) requires waste heat valorization for >1MW data centers; EU EED Article 26(6) requires waste heat utilization; Green Mountain/Hima Seafood trout farm operational fall 2025 (1.75 MW phase 1, Rjukan Norway); Microsoft Denmark heat recovery system by 2026; Stockholm Data Parks pays data centers for district heat; Meta Odense supplies free heat to 7000+ homes"
+  lead_weeks: 37.0
+  points: 37.0
+  notes: "VALIDATED — Research notes (Oct 17, 2025) provided a comprehensive engineering blueprint for data center waste heat reuse: heat grade classification, liquid cooling + heat pump integration, colocation with greenhouses/aquaculture/district heating, thermal storage. Germany's EnEfG made waste heat reuse a regulatory mandate (10% ERF from Jul 2026), France required valorization for >1MW DCs, and EU EED Article 26(6) requires utilization. Green Mountain/Hima Seafood operational trout farm uses DC waste heat. Microsoft Denmark supplies district heating. The regulatory mandate component is the strongest validation — the blueprint's engineering details (liquid cooling return temps 50-60C matching 4th-gen district heating) are now industry standard. Weaker as pure prescience since some waste heat reuse projects pre-existed, but the regulatory mandate and comprehensive campus blueprint were ahead of the curve. ~37 weeks ahead of Germany's EnEfG mandate."
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CODEX GALAXY PENDING CLAIMS — awaiting validation events
+# ═══════════════════════════════════════════════════════════════════════════
+
+- claim: "Solar-powered atmospheric water harvesting — MOF-based dehumidifier system for potable water production"
+  source_date: "2025-08-11"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/4_TECHNOLOGY/Solar Powered Water Harvesting.txt (mtime Aug 11, 2025) — hypothetical system design: solar-powered dehumidifier pulling water from atmosphere, UV sterilization, multi-stage filtration for potable water and irrigation"
+  confidence: 0.55
+  behavioral_confidence: 0.65
+  category: "energy"
+  status: "pending"
+  notes: "PENDING — MOF technology advancing rapidly. CAU-10-H material (Kiel University, 2026) achieves pilot-scale production, captures water at 18% relative humidity, 1.8L/day per kg. AI-driven MOF discovery framework published (J. Mater. Chem. A, May 2026). Atoco planning commercial shipping-container units (1000L/day) for H2 2026. Nature Communications MOF-LiCl composite achieves 91% solar-to-water improvement. Technology directionally validated but not yet deployed at scale as envisioned in the research notes. Will be validated when commercial MOF-based atmospheric water harvesters reach mass deployment."
+
+- claim: "AI-revolutionized municipal services — comprehensive re-architecture of emergency response, firefighting, policing, and public safety"
+  source_date: "2025-08-11"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/4_TECHNOLOGY/Revolutionizing Municipal Services.txt (mtime Aug 11, 2025) — end-to-end vision for re-architecting municipal services using AI, robotics, and emerging technologies across firefighting, medical, ambulances, police, and emergency services"
+  confidence: 0.55
+  behavioral_confidence: 0.65
+  category: "ai_trends"
+  status: "pending"
+  notes: "PENDING — Partial validation: Fairfax County RTCC (Jul 9, 2026) implemented AI-powered 911 call analysis, drone-as-first-responder deployment, AI-assisted police reports (Axon Draft One), and real-time language translation (57 languages) in body cameras. Ericsson demonstrated 5G mission-critical networks for emergency response with IoT fire detection. However, the comprehensive re-architecture of all municipal services as envisioned in the research notes has not been realized. The Fairfax County deployment validates the direction but not the full scope. Will be validated when multiple jurisdictions deploy AI-integrated emergency response systems at scale."
+
+- claim: "Offline AI / local-first AI mainstream — on-device models as viable alternative to cloud-dependent AI"
+  source_date: "2025-08-12"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/7_AI_EMERGENCE/Offline AI Platforms Overview.txt (mtime Aug 12, 2025) — survey of offline-first AI toolkits and prediction that local models would become mainstream; accessibility improvements needed for everyday users"
+  confidence: 0.50
+  behavioral_confidence: 0.60
+  category: "ai_trends"
+  status: "pending"
+  notes: "PENDING — Strong directional validation: Apple Intelligence on-device AFM (WWDC 2025), Core AI framework for on-device open-source models including Qwen, Mistral, SAM3 (WWDC 2026), PrismML Bonsai 27B fits on iPhone 17 Pro (Jul 2026, 3.9GB 1-bit quantization), Gemini Nano on Android. However, the research notes were surveying existing offline AI tools rather than making a bold prediction ahead of the trend. The mainstream adoption threshold (offline AI as default, not novelty) has not been crossed. Filed as pending rather than validated due to the exploratory rather than predictive nature of the source material. Will be validated when on-device AI becomes the default mode for consumer AI interactions."
+
+- claim: "Game theory / iterated cooperation as governance substrate — reputation and memory as enforcement mechanisms for multi-agent governance"
+  source_date: "2025-07-19"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/3_GOVERNANCE/Game Theory and Cooperation.txt (mtime Jul 19, 2025) — analysis of cooperation dynamics: 'cooperation only dominates when agents can credibly link past and future payoffs'; memory and reputation as enforcement; iterated games vs single-shot"
+  confidence: 0.55
+  behavioral_confidence: 0.65
+  category: "ai_governance"
+  status: "pending"
+  notes: "PENDING — Concepts now appearing in multi-agent systems (Agent Mesh Protocol, AgentMesh BFT-ordered gossip) but the specific 'reputation + memory as enforcement' governance design has not been formally validated as a standalone governance framework. Overlaps with existing 'Decentralized multi-agent consensus mesh' claim (validated) but focuses on the game-theoretic cooperation substrate rather than the mesh architecture. Will be validated when multi-agent governance frameworks explicitly implement iterated-game reputation scoring as a core enforcement mechanism."
+
+- claim: "End of conflict / world constitution — weighted voting and restructured international governance for permanent peace"
+  source_date: "2025-06-04"
+  source_ref: "CODEX_VAULT/CODEX_ENGINE/LIBRARY/endofconflict.txt (mtime Jun 4, 2025) — proposal for restructured international governance: weighted-but-accountable representation, blended voting systems, rethinking UN structure; world constitution draft"
+  confidence: 0.45
+  behavioral_confidence: 0.55
+  category: "geopolitics"
+  status: "pending"
+  notes: "PENDING — Visionary governance reform proposal. No validation event yet. The concept of weighted voting in international bodies and restructured UN governance has not gained traction in official policy circles. Filed as pending — would be a massive prescience claim if global governance reform accelerates. The world constitution draft is a creative exercise rather than a prediction with a clear validation pathway. Will be validated if/when international bodies adopt weighted voting or structural reform matching the proposed framework."

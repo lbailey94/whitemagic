@@ -403,6 +403,9 @@ class ModelMeshClient:
         self._stop_event.set()
         if self._poll_thread and self._poll_thread.is_alive():
             self._poll_thread.join(timeout=2.0)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("model_mesh_poll")
 
     def _ensure_polling(self) -> None:
         """Ensure the polling thread is running."""
@@ -414,6 +417,9 @@ class ModelMeshClient:
             target=self._poll_loop, daemon=True, name="model-mesh-poll"
         )
         self._poll_thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("model_mesh_poll", self._poll_thread, stop_fn=self.stop, owner=__name__)
 
     def _poll_loop(self) -> None:
         """Poll for responses and status updates from model processes."""

@@ -29,7 +29,7 @@ def gana_invoke(
     Returns:
         A normalized result dict with _resonance metadata.
     """
-    from whitemagic.tools.prat_router import route_prat_call
+    from whitemagic.core.ports import route_prat_call
 
     _args = args or {}
 

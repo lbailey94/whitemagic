@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 import logging
 import os
 
@@ -223,7 +222,7 @@ def register_all_commands(
                 infer_fallback_group.add_command(infer_local_status)
         except ImportError:
             logger.debug("Optional dependency unavailable: ImportError")
-        except Exception as e:
+        except (AttributeError, TypeError) as e:
             logger.debug(
                 "Unexpected error loading local inference commands: %s",
                 e,
@@ -246,7 +245,7 @@ def register_all_commands(
                 main_group.commands["infer"].add_command(infer_local_status)
         except ImportError:
             logger.debug("Optional dependency unavailable: ImportError")
-        except Exception as e:
+        except (AttributeError, TypeError) as e:
             logger.debug(
                 "Unexpected error loading local inference commands: %s",
                 e,

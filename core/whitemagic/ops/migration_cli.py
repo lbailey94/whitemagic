@@ -25,9 +25,9 @@ import sqlite3
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any
 
 from whitemagic.core.memory.db_manager import safe_connect
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

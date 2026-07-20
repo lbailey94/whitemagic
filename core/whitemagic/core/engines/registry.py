@@ -583,8 +583,9 @@ def get_garden_for_tool(tool_name: str) -> str | None:
         Garden name or None if the tool has no Gana mapping.
     """
     try:
-        from whitemagic.tools.prat_mappings import TOOL_TO_GANA
+        from whitemagic.core.ports import get_tool_to_gana
 
+        TOOL_TO_GANA = get_tool_to_gana()
         gana = TOOL_TO_GANA.get(tool_name)
         if gana is None:
             return None

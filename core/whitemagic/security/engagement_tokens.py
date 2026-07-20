@@ -196,6 +196,14 @@ RED_OPS_TOOL_PATTERNS: list[str] = [
     "nmap_*", "recon_*", "vuln_*", "poc_*",
     "foundry_*", "http_probe_*", "api_state_*",
     "echidna_*", "formal_verify", "formal_verify_*",
+    # Dynamic testing tools (Gap 2)
+    "sqlmap_*", "hydra_*", "nikto_*", "ffuf_*", "nuclei_*",
+    # Autonomous red-teaming (Gap 1)
+    "redteam_*",
+    # AI agent red-teaming (Gap 6)
+    "agent_redteam_*",
+    # Multi-agent attack orchestration (Gap 3)
+    "attack_cell_*",
 ]
 
 

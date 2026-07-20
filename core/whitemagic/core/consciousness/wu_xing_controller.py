@@ -40,11 +40,11 @@ import logging
 import os
 import threading
 import time
-from typing import Any, Callable
-
-from whitemagic.wu_xing import Element
+from collections.abc import Callable
+from typing import Any
 
 from whitemagic.core.consciousness.hexagram_state import HexagramState
+from whitemagic.wu_xing import Element
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +162,9 @@ class WuXingPhaseController:
             daemon=True,
         )
         self._thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("wuxing_controller", self._thread, stop_fn=self.stop, owner=__name__)
         logger.info(
             "Wu Xing phase controller started (initial phase: %s)",
             self._current_phase.value,
@@ -176,6 +179,9 @@ class WuXingPhaseController:
         if self._thread is not None:
             self._thread.join(timeout=5.0)
             self._thread = None
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("wuxing_controller")
         logger.info("Wu Xing phase controller stopped (completed %d phases)", self._phase_count)
 
     def get_active_trigrams(self) -> set[str]:
@@ -268,8 +274,13 @@ class WuXingPhaseController:
 
         # Emit to Gan Ying Bus if available
         try:
-            from whitemagic.core.resonance.gan_ying import get_bus, EventType, ResonanceEvent
             from datetime import datetime
+
+            from whitemagic.core.resonance.gan_ying import (
+                EventType,
+                ResonanceEvent,
+                get_bus,
+            )
 
             bus = get_bus()
             bus.emit(
@@ -305,7 +316,9 @@ def get_wu_xing_controller() -> WuXingPhaseController:
     if _instance is None:
         with _instance_lock:
             if _instance is None:
-                from whitemagic.core.consciousness.hexagram_state import get_hexagram_state
+                from whitemagic.core.consciousness.hexagram_state import (
+                    get_hexagram_state,
+                )
 
                 _instance = WuXingPhaseController(get_hexagram_state())
     return _instance

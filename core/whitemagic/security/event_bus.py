@@ -249,6 +249,9 @@ class SecurityEventBus:
                 target=self._redis_listen, daemon=True, name="sec-event-bus-redis"
             )
             self._redis_thread.start()
+            from whitemagic.core.worker_registry import register_worker
+
+            register_worker("sec_event_bus_redis", self._redis_thread, stop_fn=self.stop_redis, owner=__name__)
             logger.info("SecurityEventBus: Redis connected at %s", url[:30])
             return True
         except ImportError:
@@ -287,6 +290,22 @@ class SecurityEventBus:
                         logger.debug("Ignored error in event_bus.py:285")
         except Exception as e:
             logger.debug("Redis listener stopped: %s", e)
+
+    def stop_redis(self) -> None:
+        """Stop the Redis subscriber thread and close connections."""
+        self._redis_enabled = False
+        if self._redis_thread and self._redis_thread.is_alive():
+            self._redis_thread.join(timeout=2.0)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("sec_event_bus_redis")
+        try:
+            if self._redis_sub:
+                self._redis_sub.close()
+            if self._redis_pub:
+                self._redis_pub.close()
+        except Exception:
+            pass
 
 
 # ── Singleton ────────────────────────────────────────────────────────────

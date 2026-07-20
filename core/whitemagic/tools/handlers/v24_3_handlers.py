@@ -496,8 +496,9 @@ def handle_bounty_match(**kwargs: Any) -> dict[str, Any]:
 
 def handle_bounty_deadlines(**kwargs: Any) -> dict[str, Any]:
     """Get upcoming bounty deadlines across all platforms, sorted by urgency."""
-    from whitemagic.agents.bounty_platforms import scan_all_platforms
     import time
+
+    from whitemagic.agents.bounty_platforms import scan_all_platforms
 
     limit = int(kwargs.get("limit", 30))
     days_ahead = int(kwargs.get("days_ahead", 30))
@@ -596,19 +597,20 @@ def handle_bounty_earnings(**kwargs: Any) -> dict[str, Any]:
 def handle_strata_model_security(**kwargs: Any) -> dict[str, Any]:
     """Run STRATA model file format security checker on a project path."""
     from pathlib import Path
-    from whitemagic.tools.strata.file_index import FileIndex
+
     from whitemagic.tools.strata.checkers.model_security import (
-        check_unsafe_pickle_deserialization,
-        check_unsafe_torch_load,
-        check_unsafe_keras_load,
         check_hf_trust_remote_code,
         check_model_path_traversal,
-        check_pickle_reduce_exploit,
-        check_unsafe_yaml_in_model_config,
-        check_onnx_unsafe_load,
         check_numpy_unsafe_load,
+        check_onnx_unsafe_load,
         check_pickle_files_in_repo,
+        check_pickle_reduce_exploit,
+        check_unsafe_keras_load,
+        check_unsafe_pickle_deserialization,
+        check_unsafe_torch_load,
+        check_unsafe_yaml_in_model_config,
     )
+    from whitemagic.tools.strata.file_index import FileIndex
 
     project_path_str = kwargs.get("project_path", "")
     if not project_path_str:
@@ -663,7 +665,8 @@ def handle_bounty_huntr_mfv(**kwargs: Any) -> dict[str, Any]:
     """List huntr.com MFV (Model File Format) bounties mapped to STRATA checker patterns."""
     from whitemagic.agents.bounty_platforms import HuntrPlatform
 
-    _cache._data.pop("huntr", None) if kwargs.get("refresh", False) else None
+    if kwargs.get("refresh", False):
+        pass  # Cache refresh — HuntrPlatform creates fresh instance each call
     platform = HuntrPlatform()
     bounties = platform.scan_bounties(limit=60)
 

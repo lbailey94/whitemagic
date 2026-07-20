@@ -297,7 +297,7 @@ class SkillForge:
         try:
             import asyncio
 
-            from whitemagic.tools.handlers.llama_tools import _generate
+            from whitemagic.core.ports import llama_generate as _generate
 
             steps_desc = ", ".join(f"{s.mansion}/{s.operation}" for s in chain.steps)
             prompt = (

@@ -379,7 +379,9 @@ class WarpManager:
             results = um.search(query=f"warp {name}", limit=5, galaxy="codex")
             for mem in results:
                 if "warp_data" in mem.metadata:
-                    return Warp.from_dict(mem.metadata["warp_data"])
+                    warp = Warp.from_dict(mem.metadata["warp_data"])
+                    if warp.name == name:
+                        return warp
         except Exception as e:
             logger.debug("Warp load from memory: %s", e, exc_info=True)
         return None

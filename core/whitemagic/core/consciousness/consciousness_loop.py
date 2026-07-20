@@ -204,6 +204,10 @@ class LoopConfig:
     # Cache warming on idle
     enable_cache_warming: bool = True
     cache_warming_interval_s: float = 300.0
+    # v24.4: Continuous security scanning (Gap 5)
+    enable_security_scan: bool = False
+    security_scan_interval_s: float = 600.0
+    security_scan_path: str = ""  # auto-detect if empty
     # Frequency mode
     mode: CittaMode = CittaMode.NORMAL
     # Emotional tone override (used by citta advancement)
@@ -252,6 +256,9 @@ class LoopConfig:
             checkin_novelty_threshold=_get_float("WM_CHECKIN_NOVELTY_THRESHOLD", 0.8),
             checkin_contention_threshold=_get_float("WM_CHECKIN_CONTENTION_THRESHOLD", 0.6),
             mode=CittaMode(os.environ.get("WM_CITTA_MODE", "normal")),
+            enable_security_scan=_get_bool("WM_ENABLE_SECURITY_SCAN", False),
+            security_scan_interval_s=_get_float("WM_SECURITY_SCAN_INTERVAL", 600.0),
+            security_scan_path=os.environ.get("WM_SECURITY_SCAN_PATH", ""),
         )
 
     @classmethod
@@ -323,6 +330,10 @@ class LoopStats:
     # Frequency mode tracking
     last_mode: str = "normal"
     mode_changes: int = 0
+    # v24.4: Security scanning
+    security_scans: int = 0
+    last_security_findings: int = 0
+    last_security_ttps: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -369,6 +380,9 @@ class LoopStats:
             "total_uptime_s": round(self.total_uptime_s, 1),
             "last_mode": self.last_mode,
             "mode_changes": self.mode_changes,
+            "security_scans": self.security_scans,
+            "last_security_findings": self.last_security_findings,
+            "last_security_ttps": self.last_security_ttps,
         }
 
 
@@ -395,6 +409,7 @@ class ConsciousnessLoop:
         self._last_autoswarm = 0.0
         self._last_mesh_sync = 0.0
         self._last_cache_warm = 0.0
+        self._last_security_scan = 0.0
         self._dream_started = False
         self._homeostatic_attached = False
         self._lock = threading.RLock()
@@ -419,6 +434,9 @@ class ConsciousnessLoop:
                 name="consciousness-loop",
             )
             self._thread.start()
+            from whitemagic.core.worker_registry import register_worker
+
+            register_worker("consciousness_loop", self._thread, stop_fn=self.stop, owner=__name__)
             logger.info(
                 "Consciousness loop started (citta=%ss, dream_idle=%ss, homeostatic=%ss)",
                 self._config.citta_interval_s,
@@ -453,6 +471,9 @@ class ConsciousnessLoop:
 
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=5.0)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("consciousness_loop")
         logger.info("Consciousness loop stopped")
 
     def set_mode(self, mode: CittaMode) -> dict[str, Any]:
@@ -638,6 +659,14 @@ class ConsciousnessLoop:
                     self._maybe_warm_caches()
                     self._last_cache_warm = now
 
+                # v24.4: Continuous security scanning (Gap 5)
+                if (
+                    self._config.enable_security_scan
+                    and now - self._last_security_scan >= self._config.security_scan_interval_s
+                ):
+                    self._run_security_scan()
+                    self._last_security_scan = now
+
             except Exception as e:
                 self._stats.last_error = str(e)
                 logger.debug("Consciousness loop error: %s", e, exc_info=True)
@@ -650,6 +679,7 @@ class ConsciousnessLoop:
                 self._last_meta_deep + self._config.meta_deep_interval_s,
                 self._last_autoswarm + self._config.autoswarm_interval_s,
                 self._last_mesh_sync + self._config.mesh_sync_interval_s,
+                self._last_security_scan + self._config.security_scan_interval_s,
             )
             wait_s = max(0.05, min(next_deadline - now, 5.0))
             self._stop_event.wait(timeout=wait_s)
@@ -675,8 +705,8 @@ class ConsciousnessLoop:
 
         # Proactively warm retrieval index caches for active galaxies
         try:
-            from whitemagic.core.memory.retrieval_cache import get_retrieval_cache
             from whitemagic.core.intelligence.working_memory import get_working_memory
+            from whitemagic.core.memory.retrieval_cache import get_retrieval_cache
 
             wm = get_working_memory()
             cache = get_retrieval_cache()
@@ -701,6 +731,71 @@ class ConsciousnessLoop:
                 cache.warm_galaxy("default", galaxy)
         except Exception as e:
             logger.debug("Retrieval cache warming skipped: %s", e)
+
+    def _run_security_scan(self) -> None:
+        """Run a continuous security scan using STRATA + MITRE ATT&CK mapping.
+
+        This phase:
+        1. Runs STRATA security checkers on the configured path
+        2. Maps findings to MITRE ATT&CK TTPs
+        3. Feeds findings into the contest pipeline for tracking
+        4. Updates stats for observability
+        """
+        try:
+            from pathlib import Path
+
+            # Determine scan path
+            scan_path = self._config.security_scan_path
+            if not scan_path:
+                # Auto-detect: use core whitemagic directory
+                scan_path = str(Path(__file__).resolve().parent.parent.parent.parent)
+                if not Path(scan_path, "AGENTS.md").exists():
+                    return
+
+            from whitemagic.core.ports import get_strata
+            Strata = get_strata()
+            strata = Strata(scan_path)
+            findings = strata.analyze(incremental=True)
+
+            # Convert to dicts for mapping
+            finding_dicts = [
+                {
+                    "severity": f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+                    "category": f.category,
+                    "file": f.file,
+                    "line": f.line,
+                    "message": f.message,
+                    "suggestion": f.suggestion or "",
+                }
+                for f in findings
+            ]
+
+            # Map to MITRE ATT&CK TTPs
+            from whitemagic.core.ports import map_strata_mitre
+            mapped = map_strata_mitre(finding_dicts)
+
+            # Feed into contest pipeline for tracking
+            if mapped:
+                from whitemagic.core.ports import get_contest_pipeline
+                pipeline = get_contest_pipeline()
+                pipeline.add_from_strata(finding_dicts)
+
+            # Update stats
+            self._stats.security_scans += 1
+            self._stats.last_security_findings = len(mapped)
+            self._stats.last_security_ttps = len({
+                ttp_id for m in mapped for ttp_id in m["ttp_ids"]
+            })
+
+            if mapped:
+                logger.info(
+                    "Security scan: %d findings, %d TTPs mapped",
+                    len(mapped),
+                    self._stats.last_security_ttps,
+                )
+
+        except Exception as e:
+            logger.debug("Security scan skipped: %s", e, exc_info=True)
 
     def _advance_citta(self) -> None:
         """Advance the citta stream with current system telemetry."""

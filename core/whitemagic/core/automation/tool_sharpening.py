@@ -43,16 +43,16 @@ class ToolSharpening:
     def _sharpen_mcp(self) -> dict[str, Any]:
         """Check MCP tool registry is up to date."""
         try:
-            from whitemagic.tools.dispatch_table import DISPATCH_TABLE
+            from whitemagic.core.ports import get_dispatch_table
 
-            return {"status": "ok", "tools": len(DISPATCH_TABLE)}
+            return {"status": "ok", "tools": len(get_dispatch_table())}
         except Exception as e:
             return {"status": "error", "error": str(e)}
 
     def _sharpen_dispatch(self) -> dict[str, Any]:
         """Check dispatch table consistency."""
         try:
-            from whitemagic.tools.registry import get_registry
+            from whitemagic.core.ports import get_registry
 
             reg = get_registry()
             return {

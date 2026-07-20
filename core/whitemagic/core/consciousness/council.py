@@ -274,6 +274,9 @@ class DreamLane:
             target=self._run_loop, daemon=True, name="dream-lane"
         )
         self._thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("dream_lane", self._thread, stop_fn=self.stop, owner=__name__)
         logger.info("Dream lane started")
 
     def stop(self) -> None:
@@ -281,6 +284,9 @@ class DreamLane:
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=2)
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("dream_lane")
 
     def _run_loop(self) -> None:
         """Main dream lane loop."""
@@ -342,7 +348,7 @@ class DreamLane:
     def _save_artifact(self, artifact: dict[str, Any]) -> None:
         """Save a dream artifact to memory."""
         try:
-            from whitemagic.tools.unified_api import call_tool
+            from whitemagic.core.ports import call_tool
             call_tool(
                 "create_memory",
                 content=artifact.get("response", ""),

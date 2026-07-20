@@ -166,7 +166,7 @@ class BackgroundWorker:
     def _karma_log(self, action: str, target: str, result: dict[str, Any]) -> None:
         """Log a background operation to the karma ledger."""
         try:
-            from whitemagic.tools.unified_api import call_tool
+            from whitemagic.core.ports import call_tool
             call_tool(
                 "karma.record",
                 action=f"background:{action}",

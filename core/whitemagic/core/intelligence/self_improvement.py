@@ -257,13 +257,14 @@ class SelfImprovementPipeline:
     def _run_strata(self, code: str) -> dict[str, Any]:
         """Run STRATA static analysis on generated code."""
         try:
-            from whitemagic.tools.strata import Strata
+            from whitemagic.core.ports import get_strata
 
             # Write code to temp file for analysis
             with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
                 f.write(code)
                 temp_path = f.name
 
+            Strata = get_strata()
             strata = Strata(Path(temp_path))
             report = strata.analyze()
 

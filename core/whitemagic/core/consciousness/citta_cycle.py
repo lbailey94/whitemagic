@@ -159,7 +159,7 @@ class CittaCycle:
                 # so the 8D subspace has true geometric diversity
                 scale = max(0.0, min(1.0, float(coherence)))
                 base = {k: v * scale for k, v in cm.scores.items()}
-                
+
                 # Per-dimension modulation based on moment properties
                 # emotional_attunement: higher for non-neutral tones
                 tone_lower = emotional_tone.lower()
@@ -167,31 +167,31 @@ class CittaCycle:
                     base["emotional_attunement"] = min(1.0, base["emotional_attunement"] * 1.15)
                 else:
                     base["emotional_attunement"] = base["emotional_attunement"] * 0.85
-                
+
                 # context_continuity: higher for flow/dream depths
                 if depth_layer in ("flow", "dream"):
                     base["context_continuity"] = min(1.0, base["context_continuity"] * 1.2)
                 else:
                     base["context_continuity"] = base["context_continuity"] * 0.8
-                
+
                 # capability_awareness: varies with tool type
                 if tool and "bridge" in tool.lower():
                     base["capability_awareness"] = min(1.0, base["capability_awareness"] * 1.1)
                 elif tool and "scan" in tool.lower():
                     base["capability_awareness"] = min(1.0, base["capability_awareness"] * 1.05)
-                
+
                 # goal_alignment: higher for determined/engaged tones
                 if tone_lower in ("determined", "engaged", "active"):
                     base["goal_alignment"] = min(1.0, base["goal_alignment"] * 1.1)
-                
+
                 # temporal_orientation: lower for dream depth (time distortion)
                 if depth_layer == "dream":
                     base["temporal_orientation"] = base["temporal_orientation"] * 0.7
-                
+
                 # relationship_awareness: higher for cross-galaxy operations
                 if operation and "bridge" in operation.lower():
                     base["relationship_awareness"] = min(1.0, base["relationship_awareness"] * 1.15)
-                
+
                 coherence_scores = base
         except Exception:
             pass
@@ -395,7 +395,9 @@ class CittaCycle:
                     len(ignitions),
                 )
                 try:
-                    from whitemagic.core.consciousness.cognitive_action_loop import get_action_loop
+                    from whitemagic.core.consciousness.cognitive_action_loop import (
+                        get_action_loop,
+                    )
                     loop = get_action_loop()
                     if not loop._scheduler_running:
                         loop.run_cycle(max_actions=1)
@@ -569,6 +571,9 @@ class CittaAlwaysOn:
             self._running = True
             self._thread = threading.Thread(target=self._loop, daemon=True)
             self._thread.start()
+            from whitemagic.core.worker_registry import register_worker
+
+            register_worker("citta_heartbeat", self._thread, stop_fn=self.stop, owner=__name__)
 
     def stop(self) -> None:
         """Stop the heartbeat thread."""
@@ -577,6 +582,9 @@ class CittaAlwaysOn:
             if self._thread:
                 self._thread.join(timeout=2.0)
                 self._thread = None
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("citta_heartbeat")
 
     def is_running(self) -> bool:
         return self._running

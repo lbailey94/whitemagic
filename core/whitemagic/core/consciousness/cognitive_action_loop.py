@@ -22,16 +22,12 @@ Usage:
 
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
-import sqlite3
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 from whitemagic.core.memory.db_manager import safe_connect
@@ -169,7 +165,7 @@ class SignalWeightTracker:
                     updated_at TEXT
                 )
             """)
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             for source, stats in self._source_stats.items():
                 conn.execute(
                     "INSERT OR REPLACE INTO signal_weights "
@@ -305,7 +301,7 @@ class CognitiveActionLoop:
 
         result = ActionCycleResult(
             cycle_id=cycle_id,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             signals_collected=len(signals),
             actions_executed=len(outcomes),
             outcomes=outcomes,
@@ -457,7 +453,9 @@ class CognitiveActionLoop:
 
         # 6. Knowledge gaps (Phase 4.3)
         try:
-            from whitemagic.core.consciousness.knowledge_gap_loop import KnowledgeGapActionLoop
+            from whitemagic.core.consciousness.knowledge_gap_loop import (
+                KnowledgeGapActionLoop,
+            )
             gap_loop = KnowledgeGapActionLoop()
             gaps = gap_loop.detect_gaps()
             for gap in gaps[:3]:  # Top 3 gaps
@@ -537,14 +535,18 @@ class CognitiveActionLoop:
                 executed = True
 
             elif signal.action == "trigger_self_directed_attention":
-                from whitemagic.core.consciousness.consciousness_loop import get_consciousness_loop
+                from whitemagic.core.consciousness.consciousness_loop import (
+                    get_consciousness_loop,
+                )
                 loop = get_consciousness_loop()
                 if loop._running:
                     loop._tick_t2()
                 executed = True
 
             elif signal.action == "trigger_active_processing":
-                from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+                from whitemagic.core.intelligence.agentic.emergence_engine import (
+                    EmergenceEngine,
+                )
                 EmergenceEngine().scan_for_emergence()
                 executed = True
 
@@ -556,7 +558,9 @@ class CognitiveActionLoop:
                 executed = True
 
             elif signal.action == "trigger_emergence_scan":
-                from whitemagic.core.intelligence.agentic.emergence_engine import EmergenceEngine
+                from whitemagic.core.intelligence.agentic.emergence_engine import (
+                    EmergenceEngine,
+                )
                 EmergenceEngine().scan_for_emergence()
                 executed = True
 
@@ -569,12 +573,13 @@ class CognitiveActionLoop:
             elif signal.action == "review_insight":
                 # Surface the insight as a knowledge galaxy memory for future reference
                 try:
-                    from whitemagic.config.paths import galaxy_db_path
                     import uuid as _uuid
+
+                    from whitemagic.config.paths import galaxy_db_path
                     kdb = galaxy_db_path("knowledge")
                     conn = safe_connect(str(kdb))
                     mid = str(_uuid.uuid4())
-                    now = datetime.now(timezone.utc).isoformat()
+                    now = datetime.now(UTC).isoformat()
                     conn.execute(
                         "INSERT INTO memories (id, content, title, importance, created_at, updated_at, memory_type) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -606,13 +611,14 @@ class CognitiveActionLoop:
             elif signal.action == "surface_pattern":
                 # Persist the pattern to knowledge galaxy for future reference
                 try:
-                    from whitemagic.config.paths import galaxy_db_path
                     import uuid as _uuid2
+
+                    from whitemagic.config.paths import galaxy_db_path
                     kdb = galaxy_db_path("knowledge")
                     ptype = signal.metadata.get("pattern_type", "unknown")
                     conn = safe_connect(str(kdb))
                     mid = str(_uuid2.uuid4())
-                    now = datetime.now(timezone.utc).isoformat()
+                    now = datetime.now(UTC).isoformat()
                     conn.execute(
                         "INSERT INTO memories (id, content, title, importance, created_at, updated_at, memory_type) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -766,7 +772,7 @@ class CognitiveActionLoop:
             """)
 
             import json as _json
-            now = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(UTC).isoformat()
             rows = []
             for o in outcomes:
                 rows.append((
@@ -812,6 +818,9 @@ class CognitiveActionLoop:
             target=self._scheduler_loop, daemon=True, name="cognitive-action-loop"
         )
         self._scheduler_thread.start()
+        from whitemagic.core.worker_registry import register_worker
+
+        register_worker("cognitive_action_loop", self._scheduler_thread, stop_fn=self.stop_scheduler, owner=__name__)
         logger.info("Cognitive action loop scheduler started (interval=%.0fs)", interval_s)
 
     def stop_scheduler(self) -> None:
@@ -820,6 +829,9 @@ class CognitiveActionLoop:
         if self._scheduler_thread:
             self._scheduler_thread.join(timeout=5)
             self._scheduler_thread = None
+        from whitemagic.core.worker_registry import unregister_worker
+
+        unregister_worker("cognitive_action_loop")
         logger.info("Cognitive action loop scheduler stopped")
 
     def _scheduler_loop(self) -> None:

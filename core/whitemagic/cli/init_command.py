@@ -740,7 +740,7 @@ def init_command(
                 click.echo(f"    ✅ Health: v{ver}, {tools} tools")
                 steps_ok += 1
             else:
-                click.echo(f"    ❌ Health check failed")
+                click.echo("    ❌ Health check failed")
                 steps_fail += 1
 
             # Memory round-trip
@@ -754,7 +754,7 @@ def init_command(
                 click.echo("    ✅ Memory: store works")
                 steps_ok += 1
             else:
-                click.echo(f"    ❌ Memory store failed")
+                click.echo("    ❌ Memory store failed")
                 steps_fail += 1
 
             # Search
@@ -783,7 +783,7 @@ def init_command(
     click.echo("    wm doctor                     # System health check")
     click.echo("    wm recall 'init'              # Search your memories")
     if ingest_result:
-        click.echo(f"    wm recall 'knowledge'           # Search ingested notes")
+        click.echo("    wm recall 'knowledge'           # Search ingested notes")
     click.echo()
     click.echo("  For AI agents:")
     click.echo("    ./run.sh                      # Launch MCP server")

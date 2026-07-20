@@ -131,7 +131,7 @@ def _check_seed() -> list[GateResult]:
 
     # Tool surfaces
     try:
-        from whitemagic.tools.tool_surface import get_surface_counts
+        from whitemagic.core.ports import get_surface_counts
 
         counts = get_surface_counts()
         count = counts.get("dispatch_tools", 0)

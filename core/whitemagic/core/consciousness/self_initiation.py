@@ -199,7 +199,7 @@ def _dharma_gate(item: WorkItem) -> bool:
         return True
 
     try:
-        from whitemagic.tools.unified_api import call_tool
+        from whitemagic.core.ports import call_tool
         result = call_tool("governor.validate", tool=item.handler, params=item.params)
         approved = result.get("status") == "success"
         item.dharma_approved = approved
@@ -213,7 +213,7 @@ def _dharma_gate(item: WorkItem) -> bool:
 def _karma_log(item: WorkItem, outcome: str) -> None:
     """Log a work item execution to the karma ledger."""
     try:
-        from whitemagic.tools.unified_api import call_tool
+        from whitemagic.core.ports import call_tool
         call_tool(
             "karma.record",
             action=f"self_initiation:{item.action_type or 'task'}",

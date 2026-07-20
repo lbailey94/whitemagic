@@ -834,7 +834,7 @@ class SessionStartupOrchestrator:
             Returns:
                 None
             """
-            from whitemagic.tools.circuit_breaker import get_breaker_registry
+            from whitemagic.core.ports import get_breaker_registry
 
             reg = get_breaker_registry()
             logger.info(

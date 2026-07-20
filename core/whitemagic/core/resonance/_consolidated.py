@@ -1,4 +1,3 @@
-# ruff: noqa: BLE001
 # Copyright 2026 WhiteMagic Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,7 +58,7 @@ def _global_worker_loop() -> None:
             _GLOBAL_ASYNC_QUEUE.task_done()
         except queue.Empty:
             continue
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Error in GanYingBus global async worker: %s", e)
 
 
@@ -503,7 +502,7 @@ class GanYingBus:
             safe = _wc.is_safe(py_triggers)
             self._cycle_check_cache = safe
             return safe
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
 
         # Tier 2: Rust cascade bridge (JSON stdio, faster than Haskell)
@@ -574,7 +573,7 @@ class GanYingBus:
                 backend.call("ping", timeout=0.5)
                 self._rust_cascade_backend = backend
                 GanYingBus._rust_cascade_available = True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self._rust_cascade_backend = False
                 GanYingBus._rust_cascade_available = False
                 return False
@@ -596,7 +595,7 @@ class GanYingBus:
             safe = result.get("result", {}).get("safe", True)
             self._cycle_check_cache = safe
             return True
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._rust_cascade_backend = False
             return False
 
@@ -631,7 +630,7 @@ class GanYingBus:
                 backend.call("ping", timeout=0.5)
                 self._haskell_backend = backend
                 GanYingBus._haskell_available = True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self._haskell_backend = False
                 GanYingBus._haskell_available = False
                 return False
@@ -653,7 +652,7 @@ class GanYingBus:
             safe = result.get("result", {}).get("safe", True)
             self._cycle_check_cache = safe
             return True
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._haskell_backend = False
             return False
 
@@ -680,7 +679,7 @@ class GanYingBus:
                 if t.condition is None
             ]
             return _wc.detect_cycles(py_triggers)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
 
         # Python fallback
@@ -788,14 +787,14 @@ class GanYingBus:
         for listener in listeners:
             try:
                 listener(event)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Listener dispatch failed: %s", e)
 
         # Dispatch to catch-all listeners
         for listener in self._all_listeners:
             try:
                 listener(event)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Catch-all listener dispatch failed: %s", e)
 
         # Process cascade triggers (if enabled)
@@ -828,7 +827,7 @@ class GanYingBus:
                 try:
                     if not trigger.condition(event):
                         continue
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
 
             # Respect max cascade depth
@@ -899,7 +898,7 @@ class GanYingBus:
             backend.call("ping", timeout=0.5)
             self._koka_backend = backend
             GanYingBus._koka_available = True
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._koka_backend = False
             GanYingBus._koka_available = False
 
@@ -941,7 +940,7 @@ class GanYingBus:
             quadrants = q_result.get("result", {})
 
             return {"activation": activation, **quadrants}
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._koka_backend = False
             return None
 
@@ -981,7 +980,7 @@ class GanYingBus:
 
                 _wc.is_safe([])
                 self._cascade_backend = _wc
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self._cascade_backend = False  # Mark as unavailable
                 return False
 
@@ -1044,7 +1043,7 @@ class GanYingBus:
                 self.emit(cascaded)
 
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("PyO3 cascade backend failed, falling back: %s", e)
             self._cascade_backend = False
             return False
@@ -1068,7 +1067,7 @@ def get_bus() -> GanYingBus:
             from whitemagic.core.resonance.cascade_protocols import CascadeProtocols
 
             CascadeProtocols.init_all_cascades()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Cascade protocols initialization deferred: %s", e)
         # Set up Redis broker forwarding for distributed event propagation
         # Skip in test environments to prevent DB connection pool exhaustion
@@ -1101,9 +1100,9 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
             # Cache Redis availability — check at most once per 30s
             now = _time.monotonic()
             if _redis_available is None or (now - _redis_check_time) > 30.0:
-                from whitemagic.tools.handlers.broker import _resolve_redis_url
+                from whitemagic.core.ports import resolve_redis_url
 
-                redis_url = _resolve_redis_url()
+                redis_url = resolve_redis_url()
                 if redis_url:
                     # URL-based (Railway / cloud) — skip socket probe, just try connecting
                     _redis_available = True
@@ -1125,10 +1124,10 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
             if not _redis_available:
                 return  # Redis unavailable — silent fallback
 
-            from whitemagic.tools.handlers.broker import _get_broker, _run
+            from whitemagic.core.ports import get_broker, run
 
             async def _publish() -> None:
-                broker = await _get_broker()
+                broker = await get_broker()
                 await broker.publish(
                     "ganying",
                     {
@@ -1141,7 +1140,7 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
 
             coro = _publish()
             try:
-                _run(coro)
+                run(coro)
             except (RuntimeError, ConnectionError, OSError) as e:
                 # Redis async client can raise RuntimeError when no event loop
                 # is available, or ConnectionError when Redis isn't responding.
@@ -1151,10 +1150,10 @@ def _setup_broker_forwarding(bus: GanYingBus) -> None:
                 logger.debug("Redis broker unavailable, caching failure: %s", e)
                 # Ensure coroutine is closed to prevent 'never awaited' warnings
                 coro.close()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 # Ensure coroutine is closed to prevent 'never awaited' warnings
                 coro.close()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in _consolidated.py:1149")
 
     bus.listen_all(_forward_to_broker)

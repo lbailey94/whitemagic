@@ -256,13 +256,15 @@ class KaizenEngine:
         paths, and 80+ other checks across 15 languages.
         """
         try:
-            from whitemagic.tools.strata import FindingSeverity, Strata
+            from whitemagic.core.ports import get_finding_severity, get_strata
 
             # Determine the WhiteMagic core path
             core_path = str(Path(__file__).parent.parent.parent.parent.parent)
             if not Path(core_path, "AGENTS.md").exists():
                 return []
 
+            Strata = get_strata()
+            FindingSeverity = get_finding_severity()
             strata = Strata(core_path)
             findings = strata.analyze(parallel=True, incremental=True)
 

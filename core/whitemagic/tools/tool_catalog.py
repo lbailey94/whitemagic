@@ -224,22 +224,32 @@ def synthesize_callable_tool_definitions(
             )
             continue
 
-        # Default to READ safety for dispatch-only tools without authored definitions.
-        # Name-pattern inference was removed (Phase 7 WI 8): safety must be declared
-        # in registry_defs/, not inferred from tool name prefixes.
+        # Default to UNCLASSIFIED safety for dispatch-only tools without authored
+        # definitions. This is the fail-closed principle (P1.2): missing metadata
+        # must never default to READ. UNCLASSIFIED tools cannot enter safe/fast
+        # paths and are treated conservatively by permissions, effects, and the
+        # governor. Add a ToolDefinition in registry_defs/ to declare explicit
+        # safety.
         # Exception: tools in WRITE_TOOLS (dispatch_core.py) get WRITE safety.
         from whitemagic.tools.dispatch_core import WRITE_TOOLS
 
         inferred_safety = (
-            ToolSafety.WRITE if name in WRITE_TOOLS else ToolSafety.READ
+            ToolSafety.WRITE if name in WRITE_TOOLS else ToolSafety.UNCLASSIFIED
         )
         _logger = logging.getLogger(__name__)
-        _logger.debug(
-            "Tool %s has no authored definition — defaulting to %s safety. "
-            "Add a ToolDefinition in registry_defs/ to declare explicit safety.",
-            name,
-            inferred_safety.value,
-        )
+        if inferred_safety == ToolSafety.UNCLASSIFIED:
+            _logger.warning(
+                "Tool %s has no authored definition — assigned UNCLASSIFIED safety. "
+                "Add a ToolDefinition in registry_defs/ to declare explicit safety.",
+                name,
+            )
+        else:
+            _logger.debug(
+                "Tool %s has no authored definition — defaulting to %s safety. "
+                "Add a ToolDefinition in registry_defs/ to declare explicit safety.",
+                name,
+                inferred_safety.value,
+            )
 
         defs.append(
             ToolDefinition(

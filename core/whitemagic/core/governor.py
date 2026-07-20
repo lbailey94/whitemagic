@@ -303,7 +303,7 @@ class Governor:
         self._validation_count += 1
 
         # 1. Fetch tool definition from registry
-        from whitemagic.tools.registry import get_tool
+        from whitemagic.core.ports import get_tool
 
         tool_def = get_tool(tool_name)
 

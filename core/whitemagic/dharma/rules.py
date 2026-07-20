@@ -353,8 +353,8 @@ rules:
     severity: 1.0
     explain: "Violet profile — offensive security actions require a valid scope-of-engagement token. Set one via the engagement_token tool."
     profile: violet
-    keyword_patterns: ["exploit", "pentest", "attack", "fuzz", "brute", "inject", "payload", "reverse_shell", "escalat"]
-    tool_patterns: ["red_*", "pentest_*", "exploit_*", "fuzz_*"]
+    keyword_patterns: ["exploit", "pentest", "attack", "fuzz", "brute", "inject", "payload", "reverse_shell", "escalat", "sqlmap", "hydra", "nikto", "ffuf", "nuclei", "redteam", "attack_cell", "agent_redteam"]
+    tool_patterns: ["red_*", "pentest_*", "exploit_*", "fuzz_*", "brute_*", "nmap_*", "recon_*", "vuln_*", "poc_*", "foundry_*", "http_probe_*", "api_state_*", "echidna_*", "formal_verify*", "sqlmap_*", "hydra_*", "nikto_*", "ffuf_*", "nuclei_*", "redteam_*", "agent_redteam_*", "attack_cell_*"]
 
   - name: violet_log_blue_ops
     description: Log all defensive/scanning operations in blue-ops ledger
@@ -388,7 +388,7 @@ rules:
     severity: 0.4
     explain: "Violet profile — reconnaissance operations are rate-limited to avoid detection and ensure responsible scanning."
     profile: violet
-    keyword_patterns: ["nmap", "recon", "enumerate", "discover", "fingerprint", "portscan"]
+    keyword_patterns: ["nmap", "recon", "enumerate", "discover", "fingerprint", "portscan", "nikto", "nuclei", "ffuf"]
 
   - name: tier2_block_untrusted_taint
     description: Block actions carrying untrusted taint at L2+
