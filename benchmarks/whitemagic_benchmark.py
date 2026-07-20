@@ -18,6 +18,7 @@ if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
 
 from benchmarks.dataset import generate_dataset, generate_queries
+from benchmarks.relevance_metrics import compute_query_metrics, aggregate_metrics, to_dict
 
 
 def _call_tool(name: str, **kwargs: Any) -> dict[str, Any]:
@@ -97,34 +98,30 @@ def benchmark_search(
 
 
 def benchmark_recall(
-    queries: list[dict[str, str | list[str]]],
+    queries: list[dict[str, Any]],
     galaxy: str = "benchmark",
     limit: int = 10,
     id_map: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Benchmark recall quality. Returns recall@K, MRR, and per-query data.
+    """Benchmark recall quality using label-based relevance.
 
-    If id_map is provided, expected dataset IDs (mem_0000) are translated to
-    actual memory UUIDs before matching against search results.
+    Uses relevance_labels (subject/category) for scale-invariant metrics.
+    If id_map is provided, it's used to map retrieved UUIDs back to dataset IDs
+    for label lookup.
     """
-    recall_at_1 = 0
-    recall_at_5 = 0
-    recall_at_10 = 0
-    mrr_sum = 0.0
-    total = 0
-    per_query: list[dict[str, float]] = []
+    # Build reverse map: actual UUID → dataset ID
+    rev_map = {v: k for k, v in id_map.items()} if id_map else {}
+
+    # Build dataset label index: dataset_id → labels
+    dataset = generate_dataset()
+    id_to_labels = {m["id"]: {"subject": m["subject"], "category": m["category"]} for m in dataset}
+
+    query_results = []
 
     for q in queries:
-        expected_ds = set(q.get("expected_ids", []))
-        if not expected_ds:
-            continue
-
-        # Translate dataset IDs to actual UUIDs if mapping available
-        if id_map:
-            expected = {id_map[ds_id] for ds_id in expected_ds if ds_id in id_map}
-        else:
-            expected = expected_ds
-        if not expected:
+        relevance_labels = q.get("relevance_labels")
+        relevant_count = q.get("relevant_count", 0)
+        if not relevance_labels or relevant_count == 0:
             continue
 
         result = _call_tool(
@@ -144,39 +141,24 @@ def benchmark_recall(
                         rid = item.get("id", item.get("memory_id", ""))
                         retrieved_ids.append(rid)
 
-        retrieved_set = set(retrieved_ids)
-        # Recall@K: at least one expected ID appears in top K results
-        match_ranks = [i + 1 for i, rid in enumerate(retrieved_ids) if rid in expected]
-        q_r1 = 1.0 if any(r <= 1 for r in match_ranks) else 0.0
-        q_r5 = 1.0 if any(r <= 5 for r in match_ranks) else 0.0
-        q_r10 = 1.0 if match_ranks else 0.0
-        q_mrr = 0.0
-        for rank, rid in enumerate(retrieved_ids, 1):
-            if rid in expected:
-                q_mrr = 1.0 / rank
-                break
+        # Map retrieved UUIDs back to dataset IDs for label lookup
+        retrieved_labels = []
+        for rid in retrieved_ids:
+            ds_id = rev_map.get(rid, rid)
+            retrieved_labels.append(id_to_labels.get(ds_id, {}))
 
-        recall_at_1 += q_r1
-        recall_at_5 += q_r5
-        recall_at_10 += q_r10
-        mrr_sum += q_mrr
-        per_query.append({
-            "recall_at_1": q_r1,
-            "recall_at_5": q_r5,
-            "recall_at_10": q_r10,
-            "mrr": q_mrr,
-        })
+        qr = compute_query_metrics(
+            query_id=q["id"],
+            query=q["query"],
+            relevance_labels=relevance_labels,
+            retrieved_ids=retrieved_ids,
+            retrieved_labels=retrieved_labels,
+            relevant_count=relevant_count,
+        )
+        query_results.append(qr)
 
-        total += 1
-
-    return {
-        "total_queries": total,
-        "recall_at_1": recall_at_1 / total if total > 0 else 0,
-        "recall_at_5": recall_at_5 / total if total > 0 else 0,
-        "recall_at_10": recall_at_10 / total if total > 0 else 0,
-        "mrr": mrr_sum / total if total > 0 else 0,
-        "per_query": per_query,
-    }
+    agg = aggregate_metrics(query_results)
+    return to_dict(agg)
 
 
 def run_benchmark(

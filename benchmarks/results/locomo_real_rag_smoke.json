@@ -1,0 +1,415 @@
+{
+  "recall": {
+    "recall_at_1": 0.4,
+    "recall_at_5": 0.4,
+    "mrr": 0.4,
+    "total_questions": 30,
+    "correct_at_1": 12,
+    "correct_at_5": 12,
+    "accuracy": 0.4
+  },
+  "category_results": {
+    "multi_hop": {
+      "total": 18,
+      "correct": 7
+    },
+    "temporal": {
+      "total": 2,
+      "correct": 2
+    },
+    "single_hop": {
+      "total": 8,
+      "correct": 2
+    },
+    "commonsense": {
+      "total": 2,
+      "correct": 1
+    }
+  },
+  "latency": {
+    "median_ms": 28888.034105300903,
+    "p50_ms": 28888.034105300903,
+    "p95_ms": 44270.206451416016
+  },
+  "evaluation_method": "rag+llm_judge+structured",
+  "tokens_per_query": 1121.7,
+  "total_tokens": 33651,
+  "llm_calls": 60,
+  "llm_available": true,
+  "retrieval_limit": 20,
+  "adversarial": {
+    "total": 0,
+    "correct": 0,
+    "robustness": 0
+  },
+  "per_query": [
+    {
+      "question": "When did Caroline go to the LGBTQ support group?",
+      "gold_answer": "7 May 2023",
+      "predicted": "[1] locomo_conv-26_session_1_summary: Caroline and Melanie had a conversation on 8 May 2023 at 1:56 pm. Caroline mentioned that she attended an LGBTQ support group and was inspired by the transgender stories she heard.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 44270.206451416016,
+      "tokens": 1460,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When did Melanie paint a sunrise?",
+      "gold_answer": 2022,
+      "predicted": "[8] locomo_conv-26_biography_Melanie_location_8932: Melanie location last weekend.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 36428.94792556763,
+      "tokens": 1205,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "What fields would Caroline be likely to pursue in her educaton?",
+      "gold_answer": "Psychology, counseling certification",
+      "predicted": "Based on the conversation context, Caroline would likely pursue fields such as:\n\n1. Counseling or mental health\n2. Working in LGBTQ support or advocacy\n3. Working in mental health or therapy\n\nThese fields align with her expressed interests and goals, such as working with trans people, attending LGBTQ support groups, and pursuing a career in counseling and mental health.",
+      "correct": true,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 36905.99012374878,
+      "tokens": 1424,
+      "abstained": false,
+      "category": "temporal"
+    },
+    {
+      "question": "What did Caroline research?",
+      "gold_answer": "Adoption agencies",
+      "predicted": "Caroline researched adoption agencies.",
+      "correct": false,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 30557.058095932007,
+      "tokens": 1076,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "What is Caroline's identity?",
+      "gold_answer": "Transgender woman",
+      "predicted": "Based on the provided memory context, Caroline's identity appears to be related to her gender identity and expression. She expresses herself as being herself, embracing her identity, and using art to express her experiences and emotions.",
+      "correct": true,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 27131.95514678955,
+      "tokens": 1289,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "When did Melanie run a charity race?",
+      "gold_answer": "The sunday before 25 May 2023",
+      "predicted": "May 25, 2023",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 18237.36882209778,
+      "tokens": 916,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When is Melanie planning on going camping?",
+      "gold_answer": "June 2023",
+      "predicted": "[3] locomo_conv-26_psychometrics_Melanie_feeling_1069: Melanie feeling inspired by autumn so I'm planning a few. (Source: I'm feeling inspired by autumn so I'm planning a few. You got any cool art projects coming up?)",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 28946.10071182251,
+      "tokens": 823,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "What is Caroline's relationship status?",
+      "gold_answer": "Single",
+      "predicted": "[1] locomo_conv-26_session_16_summary: Caroline was in a relationship with Melanie.",
+      "correct": false,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 18824.527978897095,
+      "tokens": 796,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "When did Caroline give a speech at a school?",
+      "gold_answer": "The week before 9 June 2023",
+      "predicted": "[4] locomo_conv-26_session_3_summary: Caroline and Melanie had a conversation at 7:55 pm on 9 June, 2023. Caroline shared about her school event last week where she talked about her transgender journey and encouraged students to get involved in the LGBTQ community.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 22960.285186767578,
+      "tokens": 877,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When did Caroline meet up with her friends, family, and mentors?",
+      "gold_answer": "The week before 9 June 2023",
+      "predicted": "[1] locomo_conv-26_session_3_summary: Caroline met up last week.",
+      "correct": true,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 40617.81930923462,
+      "tokens": 1274,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "How long has Caroline had her current group of friends for?",
+      "gold_answer": "4 years",
+      "predicted": "I don't know.",
+      "correct": true,
+      "method": "rag+structured+decomposed",
+      "query_type": "multi_hop",
+      "latency_ms": 30441.880226135254,
+      "tokens": 1349,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "Where did Caroline move from 4 years ago?",
+      "gold_answer": "Sweden",
+      "predicted": "[3] Caroline moved from 1176.",
+      "correct": false,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 15089.014053344727,
+      "tokens": 700,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "How long ago was Caroline's 18th birthday?",
+      "gold_answer": "10 years ago",
+      "predicted": "Caroline's 18th birthday was 10 years ago.",
+      "correct": true,
+      "method": "rag+structured+decomposed+temporal",
+      "query_type": "multi_hop",
+      "latency_ms": 27673.904418945312,
+      "tokens": 899,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "What career path has Caroline decided to persue?",
+      "gold_answer": "counseling or mental health for Transgender people",
+      "predicted": "Caroline has decided to pursue a career in counseling and mental health, specifically working with trans people.",
+      "correct": false,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 29476.75633430481,
+      "tokens": 1004,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "Would Caroline still want to pursue counseling as a career if she hadn't received support growing up?",
+      "gold_answer": "Likely no",
+      "predicted": "I don't know.",
+      "correct": true,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 28849.98345375061,
+      "tokens": 1179,
+      "abstained": false,
+      "category": "temporal"
+    },
+    {
+      "question": "When Jon has lost his job as a banker?",
+      "gold_answer": "19 January, 2023",
+      "predicted": "[1] locomo_conv-30_session_1_summary: Gina and Jon met at 4:04 pm on 20 January, 2023. Jon lost his job as a banker and planned to start a dance studio because of his passion for dancing.",
+      "correct": true,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 25265.65980911255,
+      "tokens": 961,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When Gina has lost her job at Door Dash?",
+      "gold_answer": "January, 2023",
+      "predicted": "I don't know.",
+      "correct": true,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 14940.54388999939,
+      "tokens": 955,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "How do Jon and Gina both like to destress?",
+      "gold_answer": "by dancing",
+      "predicted": "[1] Jon likes to destress by dancing, while Gina likes to destress by dancing as well.",
+      "correct": false,
+      "method": "rag+structured+decomposed",
+      "query_type": "multi_hop",
+      "latency_ms": 40785.63690185547,
+      "tokens": 1677,
+      "abstained": false,
+      "category": "commonsense"
+    },
+    {
+      "question": "What do Jon and Gina both have in common?",
+      "gold_answer": "They lost their jobs and decided to start their own businesses.",
+      "predicted": "They both have a passion for dance.",
+      "correct": false,
+      "method": "rag+structured+decomposed",
+      "query_type": "multi_hop",
+      "latency_ms": 34605.610847473145,
+      "tokens": 1592,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "Why did Jon decide to start his dance studio?",
+      "gold_answer": "He lost his job and decided to start his own business to share his passion.",
+      "predicted": "Jon decided to start his dance studio because he lost his job as a banker and planned to start a dance studio because of his passion for dancing.",
+      "correct": true,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 28888.034105300903,
+      "tokens": 1214,
+      "abstained": false,
+      "category": "commonsense"
+    },
+    {
+      "question": "What Jon thinks the ideal dance studio should look like?",
+      "gold_answer": "By the water, with natural light and Marley flooring",
+      "predicted": "Jon thinks the ideal dance studio should have great natural light.",
+      "correct": true,
+      "method": "rag+structured",
+      "query_type": "single_hop",
+      "latency_ms": 32508.18681716919,
+      "tokens": 997,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "When is Jon's group performing at a festival?",
+      "gold_answer": "February, 2023",
+      "predicted": "[7] locomo_conv-50_session_24_summary: Calvin and Dave caught up at 10:11 am on 19 October, 2023.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 16743.520736694336,
+      "tokens": 976,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When did Gina launch an ad campaign for her store?",
+      "gold_answer": "29 January, 2023",
+      "predicted": "[2] locomo_conv-30_session_2_summary: Gina and Jon had a conversation at 2:32 pm on 29 January, 2023.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 24992.210149765015,
+      "tokens": 1128,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When was Jon in Paris?",
+      "gold_answer": "28 January 2023",
+      "predicted": "[1] locomo_conv-30_session_2_summary: Gina and Jon had a conversation at 2:32 pm on 29 January, 2023.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 24623.91948699951,
+      "tokens": 927,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "Which city have both Jean and John visited?",
+      "gold_answer": "Rome",
+      "predicted": "New York City.",
+      "correct": false,
+      "method": "rag+structured+decomposed",
+      "query_type": "multi_hop",
+      "latency_ms": 29526.442766189575,
+      "tokens": 1259,
+      "abstained": false,
+      "category": "single_hop"
+    },
+    {
+      "question": "When did Gina team up with a local artist for some cool designs?",
+      "gold_answer": "February, 2023",
+      "predicted": "[2] locomo_conv-43_session_11_D11:3",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 18528.768062591553,
+      "tokens": 712,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When did Gina get her tattoo?",
+      "gold_answer": "A few years ago",
+      "predicted": "[8] locomo_conv-44_session_15_summary: Audrey, at 9:58 pm on 16 August, 2023, excitedly told Andrew she got a tattoo of her four dogs.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 25686.859130859375,
+      "tokens": 1270,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When did Jon start to go to the gym?",
+      "gold_answer": "March, 2023",
+      "predicted": "[1] locomo_conv-30_session_12_summary: Gina and Jon caught up at 7:18 pm on 27 May, 2023.",
+      "correct": false,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 19942.53706932068,
+      "tokens": 948,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When did Gina open her online clothing store?",
+      "gold_answer": "16 March, 2023",
+      "predicted": "Gina opened her online clothing store in 2023.",
+      "correct": true,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 33045.273542404175,
+      "tokens": 1142,
+      "abstained": false,
+      "category": "multi_hop"
+    },
+    {
+      "question": "When did Jon start expanding his studio's social media presence?",
+      "gold_answer": "April, 2023",
+      "predicted": "[1] locomo_conv-30_session_8_summary: Gina and Jon caught up at 7:18 pm on 27 May, 2023. Gina shared her excitement about getting a fashion internship with an international company, while Jon congratulated her and talked about his business plans. Jon mentioned reading \"The Lean Startup\" for tips, and they discussed ideas for his dance studio. Jon showed Gina his whiteboard of ideas and plans. They spoke about the importance of staying organized and motivated. Jon shared his struggles with finding investors but emphasized his determination. Gina encouraged Jon to keep learning and growing. Jon appreciated her support and vowed to persevere. Gina cheered him on, emphasizing the importance of overcoming obstacles. The conversation highlighted their support for each other's goals and aspirations.\n\n[2] locomo_conv-30_session_12_summary: Gina and Jon caught up at 7:18 pm on 27 May, 2023. Gina shared her excitement about getting a fashion internship with an international company, while Jon congratulated her and talked about his business plans. Jon mentioned reading \"The Lean Startup\" for tips, and they discussed ideas for his dance studio. Jon showed Gina his whiteboard of ideas and plans. They spoke about the importance of staying organized and",
+      "correct": true,
+      "method": "rag+structured+temporal",
+      "query_type": "temporal",
+      "latency_ms": 46147.857904434204,
+      "tokens": 1622,
+      "abstained": false,
+      "category": "multi_hop"
+    }
+  ],
+  "ingestion": {
+    "total_turns": 788,
+    "total_summaries": 38,
+    "total_facts": 386,
+    "ingestion_time_s": 19.237316608428955,
+    "num_conversations": 2,
+    "structured": true
+  }
+}

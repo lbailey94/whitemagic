@@ -118,11 +118,12 @@ def generate_abstention_dataset(
         ]
         query = rng.choice(query_templates)
         # Expected: memories with same topic
-        expected_ids = [m["id"] for m in memories if m["topic"] == topic]
+        topic_count = sum(1 for m in memories if m["topic"] == topic)
         relevant_queries.append({
             "id": f"rq_{i:04d}",
             "query": query,
-            "expected_ids": expected_ids[:10],
+            "relevance_labels": {"topic": topic},
+            "relevant_count": topic_count,
             "is_relevant": True,
             "topic": topic,
         })
@@ -143,7 +144,8 @@ def generate_abstention_dataset(
         irrelevant_queries.append({
             "id": iq_id,
             "query": query,
-            "expected_ids": [],
+            "relevance_labels": {},
+            "relevant_count": 0,
             "is_relevant": False,
             "topic": topic,
         })

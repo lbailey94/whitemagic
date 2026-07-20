@@ -538,10 +538,110 @@ def evaluate_locomo_plus(
 
 # ── Main runner ───────────────────────────────────────────────────────────
 
+
+def evaluate_locomo_plus_rag(
+    memory_store: Any,
+    dataset: dict[str, Any],
+    galaxy: str = "locomo_plus",
+    llm_base_url: str = "http://127.0.0.1:8080",
+    retrieval_limit: int = 20,
+) -> dict[str, Any]:
+    """Evaluate LoCoMo-Plus using the full RAG pipeline."""
+    from benchmarks.rag_pipeline import RAGPipeline
+
+    queries = dataset["queries"]
+    pipeline = RAGPipeline(
+        memory_store,
+        llm_base_url=llm_base_url,
+        retrieval_limit=retrieval_limit,
+        use_judge=True,
+    )
+
+    correct = 0
+    latencies = []
+    type_results: dict[str, dict[str, int]] = {}
+    per_query = []
+
+    for qa in queries:
+        q_type = qa["type"]
+        question = qa["question"]
+        answer = qa["answer"]
+
+        if q_type not in type_results:
+            type_results[q_type] = {"total": 0, "correct": 0}
+        type_results[q_type]["total"] += 1
+
+        result = pipeline.answer_question(
+            question=question,
+            gold_answer=answer,
+            primary_galaxy=galaxy,
+        )
+
+        latencies.append(result.latency_ms)
+        per_query.append({
+            "type": q_type,
+            "question": question,
+            "gold_answer": answer,
+            "predicted": result.predicted_answer,
+            "correct": result.is_correct,
+            "method": result.method,
+            "query_type": result.query_type,
+            "latency_ms": result.latency_ms,
+            "tokens": result.tokens_used,
+            "abstained": result.abstained,
+        })
+
+        if result.is_correct:
+            correct += 1
+            type_results[q_type]["correct"] += 1
+
+    total = len(queries)
+    accuracy = correct / total if total > 0 else 0
+    stats = pipeline.get_stats()
+
+    type_breakdown = {}
+    for q_type, data in type_results.items():
+        t = data["total"]
+        type_breakdown[q_type] = {
+            "total": t,
+            "correct": data["correct"],
+            "accuracy": data["correct"] / t if t > 0 else 0,
+        }
+
+    return {
+        "benchmark": "locomo_plus",
+        "total_queries": total,
+        "recall": {
+            "recall_at_1": accuracy,
+            "recall_at_5": accuracy,
+            "mrr": accuracy,
+            "accuracy": accuracy,
+            "total_questions": total,
+            "correct_at_1": correct,
+            "correct_at_5": correct,
+        },
+        "type_breakdown": type_breakdown,
+        "latency": {
+            "median_ms": sorted(latencies)[len(latencies) // 2] if latencies else 0,
+            "p95_ms": sorted(latencies)[int(len(latencies) * 0.95)] if latencies else 0,
+        },
+        "tokens": {
+            "tokens_per_query": (stats["total_input_tokens"] + stats["total_output_tokens"]) / total if total > 0 else 0,
+            "total_tokens": stats["total_input_tokens"] + stats["total_output_tokens"],
+            "llm_calls": stats["total_llm_calls"],
+        },
+        "evaluation_method": "rag+llm_judge",
+        "per_query": per_query,
+    }
+
+
 def run_locomo_plus_benchmark(
     dataset: dict[str, Any] | None = None,
     galaxy: str = "locomo_plus",
     per_case: bool = False,
+    use_rag: bool = False,
+    llm_base_url: str = "http://127.0.0.1:8080",
+    retrieval_limit: int = 20,
 ) -> dict[str, Any]:
     """Run the full LoCoMo-Plus benchmark."""
     from whitemagic.core.memory.unified import UnifiedMemory
@@ -558,8 +658,16 @@ def run_locomo_plus_benchmark(
     print(f"  Ingested {ingested} memories in {ingest_time:.1f}s")
 
     # Evaluate
-    print(f"  Evaluating {len(dataset['queries'])} cognitive queries...")
-    results = evaluate_locomo_plus(store, dataset, galaxy=galaxy)
+    if use_rag:
+        print(f"  Evaluating {len(dataset['queries'])} cognitive queries (RAG+LLM-judge, limit={retrieval_limit})...")
+        results = evaluate_locomo_plus_rag(
+            store, dataset, galaxy=galaxy,
+            llm_base_url=llm_base_url,
+            retrieval_limit=retrieval_limit,
+        )
+    else:
+        print(f"  Evaluating {len(dataset['queries'])} cognitive queries...")
+        results = evaluate_locomo_plus(store, dataset, galaxy=galaxy)
 
     results["ingestion"] = {
         "total_memories": ingested,
@@ -569,13 +677,19 @@ def run_locomo_plus_benchmark(
 
     # Print summary
     r = results["recall"]
+    print(f"  accuracy: {r.get('accuracy', r['recall_at_1']):.2%}")
     print(f"  recall@1: {r['recall_at_1']:.2%}")
     print(f"  recall@5: {r['recall_at_5']:.2%}")
     print(f"  MRR: {r['mrr']:.4f}")
     print(f"  median latency: {results['latency']['median_ms']:.1f}ms")
+    if "tokens" in results and isinstance(results["tokens"], dict) and "tokens_per_query" in results["tokens"]:
+        print(f"  tokens/query: {results['tokens']['tokens_per_query']:.0f}")
+        print(f"  LLM calls: {results['tokens'].get('llm_calls', 0)}")
 
     for q_type, bd in sorted(results["type_breakdown"].items()):
-        print(f"  {q_type}: r@1={bd['accuracy']:.2%} r@5={bd['recall_5']:.2%} ({bd['total']} q)")
+        acc = bd.get('accuracy', 0)
+        r5 = bd.get('recall_5', acc)
+        print(f"  {q_type}: acc={acc:.2%} ({bd['total']} q)")
 
     return results
 

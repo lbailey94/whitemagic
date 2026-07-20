@@ -410,12 +410,126 @@ def evaluate_qa(
     }
 
 
+
+def evaluate_qa_rag(
+    memory_store: Any,
+    qa_pairs: list[dict],
+    galaxy: str = "locomo_real",
+    extra_galaxies: list[str] | None = None,
+    llm_base_url: str = "http://127.0.0.1:8080",
+    retrieval_limit: int = 20,
+) -> dict[str, Any]:
+    """Evaluate QA pairs using the full RAG pipeline (all 3 tiers).
+
+    Instead of substring matching on retrieved content, this:
+    1. Retrieves top-K memories (with RRF fusion across galaxies)
+    2. Feeds them to an LLM for answer generation
+    3. Uses LLM-as-judge for correctness evaluation
+    """
+    from benchmarks.rag_pipeline import RAGPipeline
+
+    pipeline = RAGPipeline(
+        memory_store,
+        llm_base_url=llm_base_url,
+        retrieval_limit=retrieval_limit,
+        use_judge=True,
+    )
+
+    correct = 0
+    latencies = []
+    category_results: dict[str, dict[str, int]] = {}
+    per_query = []
+    adversarial_correct = 0
+    adversarial_total = 0
+
+    for qa in qa_pairs:
+        question = qa["question"]
+        answer = qa["answer"]
+        category = qa.get("category_name", "unknown")
+        is_adv = "adversarial" in category.lower() or "false" in category.lower()
+
+        if category not in category_results:
+            category_results[category] = {"total": 0, "correct": 0}
+        category_results[category]["total"] += 1
+
+        if is_adv:
+            adversarial_total += 1
+
+        result = pipeline.answer_question(
+            question=question,
+            gold_answer=answer,
+            primary_galaxy=galaxy,
+            extra_galaxies=extra_galaxies,
+            is_adversarial_q=is_adv,
+        )
+
+        latencies.append(result.latency_ms)
+        per_query.append({
+            "question": question,
+            "gold_answer": answer,
+            "predicted": result.predicted_answer,
+            "correct": result.is_correct,
+            "method": result.method,
+            "query_type": result.query_type,
+            "latency_ms": result.latency_ms,
+            "tokens": result.tokens_used,
+            "abstained": result.abstained,
+            "category": category,
+        })
+
+        if result.is_correct:
+            correct += 1
+            category_results[category]["correct"] += 1
+            if is_adv:
+                adversarial_correct += 1
+
+    total = len(qa_pairs)
+    accuracy = correct / total if total > 0 else 0
+    median_latency = sorted(latencies)[len(latencies) // 2] if latencies else 0
+    p95_latency = sorted(latencies)[int(len(latencies) * 0.95)] if latencies else 0
+
+    stats = pipeline.get_stats()
+
+    return {
+        "recall": {
+            "recall_at_1": accuracy,
+            "recall_at_5": accuracy,
+            "mrr": accuracy,
+            "total_questions": total,
+            "correct_at_1": correct,
+            "correct_at_5": correct,
+            "accuracy": accuracy,
+        },
+        "category_results": category_results,
+        "latency": {
+            "median_ms": median_latency,
+            "p50_ms": median_latency,
+            "p95_ms": p95_latency,
+        },
+        "evaluation_method": "rag+llm_judge",
+        "tokens_per_query": (stats["total_input_tokens"] + stats["total_output_tokens"]) / total if total > 0 else 0,
+        "total_tokens": stats["total_input_tokens"] + stats["total_output_tokens"],
+        "llm_calls": stats["total_llm_calls"],
+        "llm_available": stats["llm_available"],
+        "retrieval_limit": retrieval_limit,
+        "adversarial": {
+            "total": adversarial_total,
+            "correct": adversarial_correct,
+            "robustness": adversarial_correct / adversarial_total if adversarial_total > 0 else 0,
+        },
+        "per_query": per_query,
+    }
+
+
 def run_real_locomo_benchmark(
     dataset_path: str | Path = "benchmarks/data/locomo10.json",
     max_conversations: int | None = None,
     max_qa_per_conv: int | None = None,
     use_judge: bool = False,
     structured: bool = False,
+    use_rag: bool = False,
+    llm_base_url: str = "http://127.0.0.1:8080",
+    retrieval_limit: int = 20,
 ) -> dict[str, Any]:
     """Run the real LoCoMo benchmark.
 
@@ -425,6 +539,9 @@ def run_real_locomo_benchmark(
         max_qa_per_conv: Limit QA pairs per conversation
         use_judge: Use LLM-as-judge instead of substring matching
         structured: Use domain-structured persona extraction (0-token)
+    use_rag: Use full RAG pipeline (LLM generation + LLM-as-judge)
+    llm_base_url: llama-server URL for RAG mode
+    retrieval_limit: Number of memories to retrieve per query
 
     Returns benchmark results dict.
     """
@@ -482,14 +599,25 @@ def run_real_locomo_benchmark(
             qa_pairs = qa_pairs[:max_qa_per_conv]
         all_qa.extend(qa_pairs)
 
-    method = "llm_judge" if use_judge else "substring"
-    if structured:
-        method += "+structured"
-    print(f"  Evaluating {len(all_qa)} QA pairs ({method} matching)...")
-
-    # Evaluate
     extra_galaxies = ["locomo_structured"] if structured else None
-    results = evaluate_qa(store, all_qa, galaxy=galaxy, extra_galaxies=extra_galaxies, use_judge=use_judge)
+
+    if use_rag:
+        method = "rag+llm_judge"
+        if structured:
+            method += "+structured"
+        print(f"  Evaluating {len(all_qa)} QA pairs ({method}, limit={retrieval_limit})...")
+        results = evaluate_qa_rag(
+            store, all_qa, galaxy=galaxy,
+            extra_galaxies=extra_galaxies,
+            llm_base_url=llm_base_url,
+            retrieval_limit=retrieval_limit,
+        )
+    else:
+        method = "llm_judge" if use_judge else "substring"
+        if structured:
+            method += "+structured"
+        print(f"  Evaluating {len(all_qa)} QA pairs ({method} matching)...")
+        results = evaluate_qa(store, all_qa, galaxy=galaxy, extra_galaxies=extra_galaxies, use_judge=use_judge)
 
     # Add ingestion stats
     results["ingestion"] = {
@@ -504,15 +632,25 @@ def run_real_locomo_benchmark(
 
     # Print summary
     r = results["recall"]
+    print(f"  accuracy: {r.get('accuracy', r['recall_at_1']):.2%}")
     print(f"  recall@1: {r['recall_at_1']:.2%}")
     print(f"  recall@5: {r['recall_at_5']:.2%}")
     print(f"  MRR: {r['mrr']:.4f}")
     print(f"  median latency: {results['latency']['median_ms']:.1f}ms")
+    if "tokens_per_query" in results:
+        print(f"  tokens/query: {results['tokens_per_query']:.0f}")
+        print(f"  LLM calls: {results.get('llm_calls', 0)}")
+    if "adversarial" in results and results["adversarial"]["total"] > 0:
+        print(f"  adversarial robustness: {results['adversarial']['robustness']:.2%} ({results['adversarial']['correct']}/{results['adversarial']['total']})")
 
     # Print category breakdown
     for cat, cat_data in sorted(results["category_results"].items()):
-        r1 = cat_data["correct_1"] / cat_data["total"] if cat_data["total"] > 0 else 0
-        r5 = cat_data["correct_5"] / cat_data["total"] if cat_data["total"] > 0 else 0
-        print(f"  {cat}: r@1={r1:.2%} r@5={r5:.2%} ({cat_data['total']} q)")
+        if "correct" in cat_data:
+            acc = cat_data["correct"] / cat_data["total"] if cat_data["total"] > 0 else 0
+            print(f"  {cat}: acc={acc:.2%} ({cat_data['total']} q)")
+        else:
+            r1 = cat_data["correct_1"] / cat_data["total"] if cat_data["total"] > 0 else 0
+            r5 = cat_data["correct_5"] / cat_data["total"] if cat_data["total"] > 0 else 0
+            print(f"  {cat}: r@1={r1:.2%} r@5={r5:.2%} ({cat_data['total']} q)")
 
     return results

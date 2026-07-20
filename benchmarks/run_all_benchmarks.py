@@ -292,10 +292,12 @@ def generate_report(all_results: dict[str, Any]) -> str:
         lines.append(f"| WhiteMagic | HologramEval | {r.get('overall_accuracy', 0):.2%} | — | — | 0 |")
     if "locomo_real" in all_results and "error" not in all_results["locomo_real"]:
         r = all_results["locomo_real"]["recall"]
-        lines.append(f"| WhiteMagic | Real LoCoMo | {r['recall_at_1']:.2%} | {r['recall_at_5']:.2%} | {r['mrr']:.4f} | 0 |")
+        tpq = all_results["locomo_real"].get("tokens_per_query", 0)
+        lines.append(f"| WhiteMagic | Real LoCoMo | {r.get('accuracy', r['recall_at_1']):.2%} | {r['recall_at_5']:.2%} | {r['mrr']:.4f} | {tpq:.0f} |")
     if "locomo_plus" in all_results and "error" not in all_results["locomo_plus"]:
         r = all_results["locomo_plus"]["recall"]
-        lines.append(f"| WhiteMagic | LoCoMo-Plus | {r['recall_at_1']:.2%} | {r['recall_at_5']:.2%} | {r['mrr']:.4f} | 0 |")
+        tpq = all_results["locomo_plus"].get("tokens", {}).get("tokens_per_query", 0) if isinstance(all_results["locomo_plus"].get("tokens"), dict) else 0
+        lines.append(f"| WhiteMagic | LoCoMo-Plus | {r.get('accuracy', r['recall_at_1']):.2%} | {r['recall_at_5']:.2%} | {r['mrr']:.4f} | {tpq:.0f} |")
 
     lines.extend([
         "| Synthius-Mem (2026) | LoCoMo | 94.37% | — | — | ~5,000 |",
@@ -517,7 +519,10 @@ def main() -> None:
         print("\n--- Real LoCoMo Benchmark (snap-research dataset) ---")
         try:
             from benchmarks.locomo_real_adapter import run_real_locomo_benchmark
-            all_results["locomo_real"] = run_real_locomo_benchmark(use_judge=True)
+            all_results["locomo_real"] = run_real_locomo_benchmark(
+                use_judge=True, structured=True, use_rag=True,
+                llm_base_url="http://127.0.0.1:8080", retrieval_limit=20,
+            )
         except Exception as e:
             print(f"  FAILED: {e}")
             all_results["locomo_real"] = {"error": str(e)}
@@ -527,7 +532,10 @@ def main() -> None:
         try:
             from benchmarks.locomo_plus_adapter import generate_synthetic_locomo_plus, run_locomo_plus_benchmark
             lp_dataset = generate_synthetic_locomo_plus()
-            all_results["locomo_plus"] = run_locomo_plus_benchmark(dataset=lp_dataset)
+            all_results["locomo_plus"] = run_locomo_plus_benchmark(
+                dataset=lp_dataset, use_rag=True,
+                llm_base_url="http://127.0.0.1:8080", retrieval_limit=20,
+            )
         except Exception as e:
             print(f"  FAILED: {e}")
             all_results["locomo_plus"] = {"error": str(e)}

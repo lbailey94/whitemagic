@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import random
 from pathlib import Path
+from typing import Any
 
 SEED = 42
 NUM_MEMORIES = 1000
@@ -95,13 +96,23 @@ def generate_queries(
     num_queries: int = 100,
     seed: int = SEED + 1,
     dataset_seed: int = SEED,
-) -> list[dict[str, str | list[str]]]:
-    """Generate test queries with known correct answers.
+) -> list[dict[str, Any]]:
+    """Generate test queries with label-based ground truth.
 
-    Returns list of dicts with keys: query, expected_ids (relevant memory IDs).
+    Returns list of dicts with: id, query, relevance_labels, relevant_count.
+    relevance_labels is a dict like {"subject": "entropy"} or
+    {"category": "physics"} — any memory matching ALL labels is relevant.
+    relevant_count is the total number of relevant memories (not capped).
     """
     rng = random.Random(seed)
     dataset = generate_dataset(seed=dataset_seed)
+
+    # Build label → count index
+    subject_counts: dict[str, int] = {}
+    cat_counts: dict[str, int] = {}
+    for m in dataset:
+        subject_counts[m["subject"]] = subject_counts.get(m["subject"], 0) + 1
+        cat_counts[m["category"]] = cat_counts.get(m["category"], 0) + 1
 
     queries = []
     query_templates = [
@@ -117,16 +128,22 @@ def generate_queries(
         if match_key == "subject":
             subj = rng.choice(SUBJECTS)
             query = template.format(subject=subj, category=rng.choice(CATEGORIES))
-            expected = [m["id"] for m in dataset if m["subject"] == subj]
+            relevance_labels = {"subject": subj}
+            relevant_count = subject_counts.get(subj, 0)
         else:
             cat = rng.choice(CATEGORIES)
             query = template.format(category=cat, subject=rng.choice(SUBJECTS))
-            expected = [m["id"] for m in dataset if m["category"] == cat]
+            relevance_labels = {"category": cat}
+            relevant_count = cat_counts.get(cat, 0)
+
+        if relevant_count == 0:
+            continue
 
         queries.append({
             "id": f"q_{i:03d}",
             "query": query,
-            "expected_ids": expected[:10],
+            "relevance_labels": relevance_labels,
+            "relevant_count": relevant_count,
         })
 
     return queries
