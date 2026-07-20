@@ -6,11 +6,43 @@ import tempfile
 
 import pytest
 
-# Set temp state root BEFORE any whitemagic imports
-_tmp = tempfile.mkdtemp(prefix="wm_cb_test_")
-os.environ["WM_STATE_ROOT"] = _tmp
-os.environ["WM_SILENT_INIT"] = "1"
-os.environ["WM_SKIP_POLYGLOT"] = "1"
+# NOTE: WM_STATE_ROOT is provided by tests/conftest.py (fresh temp dir per
+# xdist worker). Do NOT hard-assign it here — a module-level override at
+# collection time pollutes every other test module sharing the worker.
+os.environ.setdefault("WM_SILENT_INIT", "1")
+os.environ.setdefault("WM_SKIP_POLYGLOT", "1")
+
+
+class _UnavailableEmbeddingEngine:
+    """Test double: embedding engine that reports itself unavailable.
+
+    Prevents HuggingFace model downloads/weight loads during unit tests
+    (AGENTS.md test purity: never load ML models). Semantic recall then
+    falls back to BM25/FTS5, which is exactly what these tests exercise.
+    """
+
+    def available(self, *args, **kwargs):
+        return False
+
+
+@pytest.fixture(autouse=True)
+def _no_embedding_model(monkeypatch):
+    """Patch get_embedding_engine so no HF model is ever loaded."""
+    fake = _UnavailableEmbeddingEngine()
+
+    def _fake_get_engine(*args, **kwargs):
+        return fake
+
+    monkeypatch.setattr(
+        "whitemagic.core.memory.embeddings.get_embedding_engine",
+        _fake_get_engine,
+    )
+    # Cross-encoder rerank loads a torch model (slow; >30s under xdist CPU
+    # contention). Returning None keeps the heuristic rerank path active.
+    monkeypatch.setattr(
+        "whitemagic.core.memory.cross_encoder_reranker._get_cross_encoder_model",
+        lambda: None,
+    )
 
 
 @pytest.fixture(scope="module")
