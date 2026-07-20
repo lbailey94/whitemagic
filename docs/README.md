@@ -4,7 +4,7 @@
 
 ---
 
-## Documentation Structure (v24.2.0)
+## Documentation Structure (v25.1.0)
 
 ### 📚 Public Documentation (`docs/public/`)
 

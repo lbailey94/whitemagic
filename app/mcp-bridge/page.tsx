@@ -5,7 +5,7 @@ import { WM_FACTS } from "@/lib/facts";
 
 export const metadata: Metadata = {
   title: "Get Started — WhiteMagic",
-  description: "Install WhiteMagic in 60 seconds. pip install whitemagic[mcp] — 614 tools, 10-galaxy memory, Dharma governance, consciousness primitives. MIT-licensed.",
+  description: "Install WhiteMagic in 60 seconds. pip install whitemagic[mcp] — 860 tools, 14-galaxy memory, Dharma governance, consciousness primitives. MIT-licensed.",
 };
 
 export default function McpBridgePage() {
@@ -14,7 +14,7 @@ export default function McpBridgePage() {
       <PageHeader
         eyebrow="Get Started"
         title="60 seconds to persistent memory."
-        lede="Your AI agent gets 614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, and consciousness primitives. Every future session can recall what you stored."
+        lede="Your AI agent gets 860 callable tools, 14-galaxy holographic memory, Dharma ethical governance, and consciousness primitives. Every future session can recall what you stored."
       />
 
       <section className="container-site py-12">
@@ -122,8 +122,8 @@ wm tools                     # list all tools`}
           {/* What you get */}
           <h2 className="mb-4 font-head text-2xl font-semibold text-ink">What you get</h2>
           <ul className="mb-8 space-y-2 text-sm text-muted">
-            <li><strong className="text-ink">614 callable tools</strong> across 28 Gana meta-tools</li>
-            <li><strong className="text-ink">10-galaxy memory</strong> with 5D holographic coordinates, FTS5 + HNSW search</li>
+            <li><strong className="text-ink">860 callable tools</strong> across 28 Gana meta-tools</li>
+            <li><strong className="text-ink">14-galaxy memory</strong> with 6D holographic coordinates, FTS5 + HNSW search</li>
             <li><strong className="text-ink">Dharma governance</strong> — YAML-driven policy, Karma ledger, 8-stage pipeline</li>
             <li><strong className="text-ink">Citta stream</strong> — continuous consciousness, emotional steering, self-directed attention</li>
             <li><strong className="text-ink">Session recording</strong> — progressive recall, cross-session continuity</li>

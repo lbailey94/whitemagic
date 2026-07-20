@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   title: "WhiteMagic — Cognitive Operating System for AI Agents",
   description:
-    "614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first, free forever.",
+    "860 callable tools, 14-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first, free forever.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "WhiteMagic — Cognitive Operating System for AI Agents",
     description:
-      "Other memory systems store data. WhiteMagic gives AI a mind. 614 tools, 10-galaxy memory, ethical governance, consciousness primitives. MIT-licensed.",
+      "Other memory systems store data. WhiteMagic gives AI a mind. 860 tools, 14-galaxy memory, ethical governance, consciousness primitives. MIT-licensed.",
     type: "website",
     url: "https://whitemagic.dev",
     siteName: "WhiteMagic",
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "WhiteMagic — Cognitive OS for AI Agents",
     description:
-      "614 tools, 10-galaxy memory, Dharma governance, citta stream. MIT-licensed, local-first.",
+      "860 tools, 14-galaxy memory, Dharma governance, citta stream. MIT-licensed, local-first.",
   },
   robots: {
     index: true,

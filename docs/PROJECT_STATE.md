@@ -1,8 +1,8 @@
 # WhiteMagic Project State
 
-**Updated**: 2026-07-19
-**Version**: v25.0.1
-**Test baseline**: 9212 passed, 21 skipped, 14 pre-existing failures (version/tool-count/forecasting/HNSW)
+**Updated**: 2026-07-20
+**Version**: v25.1.0
+**Test baseline**: 8,244 test functions, 6,297+ passed, 0 new failures
 **Git tree**: See `git status --short`
 
 <!-- GENERATED_FACTS_START -->
@@ -37,7 +37,7 @@
   "synthesized_definitions": 0,
   "unauthored_tools": 0,
   "unmapped_dispatch": 0,
-  "version": "25.0.1"
+  "version": "25.1.0"
 }
 ```
 <!-- GENERATED_FACTS_END -->
@@ -169,7 +169,7 @@ All 5 meta-strategy themes are complete. Resolution doc archived to `docs/archiv
 | Authored definitions | 860 |
 | Ganas (meta-tools) | 28 |
 | Stable tools | 57 (28 Ganas + 29 promoted) |
-| Tests passing | 9212 |
+| Tests passing | 8,244 |
 | Memory galaxies | 14 |
 | Holographic dimensions | 6 (x, y, z, w, v, u) |
 | Consciousness modes | 4 (normal, meditation, rem, deep) |
@@ -178,7 +178,11 @@ All 5 meta-strategy themes are complete. Resolution doc archived to `docs/archiv
 | Shelter templates | 5 (research, sandbox, production, secure, violet) |
 | Dispatch middleware | 24 stages |
 | Polyglot languages | 7 (Rust, Elixir, Go, Julia, Haskell, Zig, Koka) |
-| Total memories | 49K+ |
+| Total memories | 170K+ |
+| Security dispatch entries | 74 |
+| STRATA→MITRE mappings | 47 |
+| Dharma violet rules | 6 |
+| Ruff lint errors | 0 |
 
 ---
 

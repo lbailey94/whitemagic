@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 25.0.1 (AGENTS.md revision 25.0.1)
-**Last Updated**: 2026-07-19
+**Version**: 25.1.0 (AGENTS.md revision 25.1.0)
+**Last Updated**: 2026-07-20
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -11,10 +11,11 @@
 WhiteMagic is a **cognitive operating system** for agentic AI — not merely a memory tool. It provides:
 
 - Persistent memory with 6D holographic coordinates and galactic lifecycle
-- 759 callable tools across 756 dispatch entries + 28 Gana meta-tools (PRAT) + 3 state tools
+- 860 callable tools across 832 dispatch entries + 28 Gana meta-tools (PRAT) + 3 state tools
 - 8-stage dispatch pipeline with Dharma ethical governance
+- Full-spectrum cybersecurity pipeline: 12 red team systems, 17 blue team modules, 6 Dharma violet rules, 47 STRATA→MITRE ATT&CK mappings
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Koka, Julia)
-- v22.2.0 release baseline: 2,216 passing tests, 0 failures
+- v25.1.0: Violet Security Release — 832 dispatch entries (74 security-related), 8,244 test functions, 170K+ memories across 14 galaxies, 0 ruff lint errors; FTS5 trigger bug fixed across 20 galaxy DBs, DB maintenance 42% size reduction, session sync 6,243 turns recorded
 - v23.0.0: test suite optimized from 823s → 119s (6.9x); integration suite from 642s → 23s (27.7x); 3 flaky tests fixed by mocking heavy engines; AGENTS.md process refinements (test purity, hot path review, ruff linting, flaky test ban)
 - v23.1.0: integration test hangs fixed (stale GanYingBus singleton root cause); full suite 2,526 passed, 0 failed, ~105s; 4 compiled binaries removed from git; gitignore cleanup
 - v23.2.0: Mojo removed (8→7 polyglot languages); multi-user galaxy isolation (per-user SQLite namespaces, local profiles, X-User-Id header); real-time sync via Redis (galaxy lifecycle events on user-scoped channels, REDIS_URL env var support); Rust SIMD expansion (batch Euclidean distance, batch dot product, batch top-k) + RustCascadeBackend wired into GanYingBus; browser-first PWA substrate (MemoryStore, DharmaEngine, KarmaLedger, GnosisSnapshot in WASM, LocalTransport in TypeScript SDK, PWA shell with service worker); full suite 2,589 passed, 0 failed, ~110s
@@ -39,7 +40,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 cd <path-to-whitemagic>
 source .venv/bin/activate
 
-# 2. Verify test baseline (current: 5697 passed, 3 skipped, 0 new failures)
+# 2. Verify test baseline (current: 8244 test functions, 6297+ passed, 0 new failures)
 cd core && python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 --ignore=tests/archive --ignore=tests/archive_polyglot --ignore=tests/legacy --ignore=tests/adhoc --ignore=tests/verify -q --timeout=30
 
 # 3. Verify doc drift

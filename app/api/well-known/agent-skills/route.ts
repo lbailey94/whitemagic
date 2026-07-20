@@ -73,9 +73,9 @@ const CATEGORY_DESCRIPTIONS: Record<
     tags: ["session", "handoff", "checkpoint"],
   },
   memory: {
-    name: "5D holographic memory",
+    name: "6D holographic memory",
     description:
-      "memory_create, memory_read, memory_update, memory_delete, memory_list, memory_search, parallel_search, manage_memories. 5D holographic coordinates (x, y, z, w, v).",
+      "memory_create, memory_read, memory_update, memory_delete, memory_list, memory_search, parallel_search, manage_memories. 6D holographic coordinates (x, y, z, w, v).",
     tags: ["memory", "5d", "holographic", "search"],
   },
   garden: {

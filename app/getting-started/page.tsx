@@ -59,7 +59,7 @@ mem.store(
     importance=0.8,
     tags=["deadline", "deployment"]
 )`,
-    explanation: "Memories are stored with 5D holographic coordinates: temporal, semantic, emotional, relational, and importance. The system automatically assigns coordinates based on content analysis.",
+    explanation: "Memories are stored with 6D holographic coordinates: temporal, semantic, emotional, relational, and importance. The system automatically assigns coordinates based on content analysis.",
   },
   {
     num: 4,
@@ -244,7 +244,7 @@ interface QA {
 const FAQ: QA[] = [
   {
     q: "How is WhiteMagic different from Mem0?",
-    a: "Mem0 gives your AI a notepad. WhiteMagic gives your AI a mind. Mem0 is a hosted cloud API that stores and retrieves text via vector search. WhiteMagic is a local-first cognitive operating system with 5D holographic memory, ethical governance (Dharma engine + Karma ledger), 8-phase dream cycle consolidation, consciousness primitives (citta stream, coherence metrics), and 614 callable tools. Mem0 is faster to integrate if you just need basic memory. WhiteMagic is for agents that need to think, remember, govern themselves, and grow.",
+    a: "Mem0 gives your AI a notepad. WhiteMagic gives your AI a mind. Mem0 is a hosted cloud API that stores and retrieves text via vector search. WhiteMagic is a local-first cognitive operating system with 6D holographic memory, ethical governance (Dharma engine + Karma ledger), 8-phase dream cycle consolidation, consciousness primitives (citta stream, coherence metrics), and 860 callable tools. Mem0 is faster to integrate if you just need basic memory. WhiteMagic is for agents that need to think, remember, govern themselves, and grow.",
     links: [{ href: "/benchmarks", label: "Full comparison &rarr;" }],
   },
   {

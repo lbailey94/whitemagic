@@ -5,7 +5,7 @@ import { ArrowRight, Book, Shield, Brain, Database, Zap, Code, Terminal } from "
 
 export const metadata = {
   title: "Docs — WhiteMagic",
-  description: "WhiteMagic v24.0.1 documentation — 614 callable tools, 10-galaxy memory, Dharma governance, citta stream, 7 polyglot accelerators. MIT-licensed, local-first.",
+  description: "WhiteMagic v25.1.0 documentation — 860 callable tools, 14-galaxy memory, Dharma governance, citta stream, 7 polyglot accelerators. MIT-licensed, local-first.",
 };
 
 const DOC_SECTIONS = [
@@ -22,7 +22,7 @@ const DOC_SECTIONS = [
   {
     icon: Database,
     title: "Memory System",
-    description: "10-galaxy taxonomy, 5D holographic coordinates, FTS5 + HNSW search, galactic lifecycle, session recording.",
+    description: "14-galaxy taxonomy, 6D holographic coordinates, FTS5 + HNSW search, galactic lifecycle, session recording.",
     links: [
       { label: "Memory Architecture", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/architecture/" },
       { label: "Galaxy Taxonomy", href: "https://github.com/lbailey94/whitemagic/blob/main/AI_PRIMARY.md" },
@@ -61,7 +61,7 @@ const DOC_SECTIONS = [
   {
     icon: Code,
     title: "API Reference",
-    description: "614 callable tools, 28 Gana meta-tools, Python API, CLI, MCP server.",
+    description: "860 callable tools, 28 Gana meta-tools, Python API, CLI, MCP server.",
     links: [
       { label: "AI Primary Spec", href: "https://github.com/lbailey94/whitemagic/blob/main/AI_PRIMARY.md" },
       { label: "PRAT Guide", href: "https://github.com/lbailey94/whitemagic/blob/main/docs/PRAT_GUIDE.md" },
@@ -75,7 +75,7 @@ export default function OpenSourcePage() {
     <>
       <PageHeader
         eyebrow="Documentation"
-        title="WhiteMagic v24.0.1"
+        title="WhiteMagic v25.1.0"
         lede={`${WM_FACT_TEXT.toolSurface}. ${WM_FACT_TEXT.testSuite}. ${WM_FACT_TEXT.memorySurface}. 7 polyglot accelerators. MIT-licensed, local-first.`}
       />
 

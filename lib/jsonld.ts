@@ -21,7 +21,7 @@ export function organizationLd(): Record<string, unknown> {
     url: SITE_URL,
     logo: `${SITE_URL}/opengraph-image`,
     description:
-      "Cognitive operating system for AI agents — 614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first.",
+      "Cognitive operating system for AI agents — 860 callable tools, 14-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness. MIT-licensed, local-first.",
   };
 }
 
@@ -55,7 +55,7 @@ export function personLd(): Record<string, unknown> {
       "Machine consciousness and continuous awareness",
       "Citta stream architecture for AI agents",
       "Dream cycle memory consolidation",
-      "Holographic memory with 5D coordinates",
+      "Holographic memory with 6D coordinates",
       "Gratitude-driven agent economics",
     ],
   };
@@ -104,7 +104,7 @@ export function softwareApplicationLd(): Record<string, unknown> {
     name: "WhiteMagic",
     applicationCategory: "DeveloperApplication",
     operatingSystem: "Cross-platform",
-    description: "Cognitive operating system for AI agents — 614 callable tools, 10-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness.",
+    description: "Cognitive operating system for AI agents — 860 callable tools, 14-galaxy holographic memory, Dharma ethical governance, citta stream for continuous consciousness.",
     url: SITE_URL,
     downloadUrl: "https://pypi.org/project/whitemagic/",
     installUrl: "https://pypi.org/project/whitemagic/",

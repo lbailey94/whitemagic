@@ -224,26 +224,18 @@ class TestEmbeddingPipeline:
 
     def test_memory_store_and_recall(self):
         """Store a memory and recall it via unified API."""
-        from whitemagic.tools.unified_api import call_tool
+        from whitemagic.tools.unified_api import _dispatch_tool, call_tool
 
-        # Pre-warm cold-start paths OUTSIDE the timed dispatch windows.
-        # Cold HF model load (~10-60s download) and the semantic-defense
-        # corpus embedding init run inside the 20s dispatch timeout
-        # otherwise, making this test flaky under xdist (fresh worker).
+        # Pre-warm each dispatch path UNTIMED (synchronous, no timeout
+        # wrapper) before its timed counterpart. Cold `import torch` +
+        # MiniLM weight load (~20-45s under xdist CPU contention) fires on
+        # first use inside the 20s dispatch timeout otherwise — flaky.
         try:
-            from whitemagic.core.memory.embeddings import get_embedding_engine
-
-            engine = get_embedding_engine()
-            if engine.available():
-                engine.encode_batch(["warmup"])
+            _dispatch_tool(
+                "create_memory", title="warmup", content="warmup", type="short_term"
+            )
         except Exception:  # noqa: BLE001
-            pass  # engine unavailable → search falls back to FTS5
-        try:
-            from whitemagic.security.semantic_defense import combined_semantic_check
-
-            combined_semantic_check("warmup")  # force corpus embedding init
-        except Exception:  # noqa: BLE001
-            pass  # semantic defense unavailable → sanitizer degrades gracefully
+            pass  # warm best-effort; assertions below use the real calls
 
         # Store
         out = call_tool(
@@ -256,6 +248,11 @@ class TestEmbeddingPipeline:
         assert out["status"] == "success"
         mem_id = out.get("details", {}).get("memory_id")
         assert mem_id is not None
+
+        try:
+            _dispatch_tool("search_memories", query="warmup", limit=1)
+        except Exception:  # noqa: BLE001
+            pass
 
         # Recall
         out = call_tool("search_memories", query="embedding pipeline test", limit=5)

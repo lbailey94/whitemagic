@@ -1,7 +1,7 @@
 # WhiteMagic Release Readiness Review Checklist
 
-**Version**: 25.0.1
-**Date**: 2026-07-19
+**Version**: 25.1.0
+**Date**: 2026-07-20
 
 This checklist must be completed before any major or minor release. All items must be checked or explicitly waived with justification.
 
@@ -10,7 +10,7 @@ This checklist must be completed before any major or minor release. All items mu
 - [ ] **Tool registry complete**: `scripts/check_stubs.py` passes with zero structural stubs
 - [ ] **Dispatch table complete**: `unmapped_dispatch = 0` in generated facts
 - [ ] **Unauthored tools = 0**: All tools have authored definitions
-- [ ] **PRAT mappings complete**: All 860 tools mapped to 28 Ganas
+- [ ] **PRAT mappings complete**: All 860 tools mapped to 28 Ganas (830 PRAT entries)
 - [ ] **Safety classification**: Every tool has READ/WRITE/DELETE classification
 - [ ] **Stability classification**: Every tool has STABLE/OPTIONAL/EXPERIMENTAL
 - [ ] **MCP annotations**: Every tool has readOnlyHint, destructiveHint, idempotentHint, openWorldHint, title
@@ -30,12 +30,18 @@ This checklist must be completed before any major or minor release. All items mu
 
 - [ ] **Dharma profiles**: default, violet, sandbox, production, secure all functional
 - [ ] **Karma ledger**: Effect recording works for every tool call
-- [ ] **Engagement tokens**: Red-ops tools blocked without valid token (violet profile)
-- [ ] **Model signing**: Unsigned models blocked under violet profile
-- [ ] **Transaction firewall**: Spend limits enforced
+- [ ] **Engagement tokens**: Red-ops tools blocked without valid token (violet profile) — 238 tokens issued, defense-in-depth at middleware + handler level
+- [ ] **Model signing**: Unsigned models blocked under violet profile — 4 registered models (2 verified, 1 unverified, 1 blocked)
+- [ ] **Transaction firewall**: Spend limits enforced, per-agent rate limiting
 - [ ] **WASM verification**: Checksum verification passes (if WM_WASM_VERIFY=1)
 - [ ] **Audit signing**: Ed25519 key generation and verification functional
-- [ ] **MCP integrity**: Tool definitions match between registry and dispatch
+- [ ] **MCP integrity**: Tool definitions match between registry and dispatch — baseline 860 tools, 0 drift events
+- [ ] **STRATA→MITRE mapping**: 47 security checker categories mapped to ATT&CK TTPs
+- [ ] **Dharma violet rules**: 6 governance rules (token requirement, blue-ops logging, model load, exfiltration block, recon throttle, jailbreak block)
+- [ ] **Semantic defense**: Ensemble voting operational
+- [ ] **Canary tokens**: Active canaries for exfiltration detection
+- [ ] **Hermit Crab**: Withdrawal-based access control with ledger
+- [ ] **Adaptive defense**: Attack variant generation + defense loop
 
 ## 4. CI and Testing
 
@@ -43,7 +49,7 @@ This checklist must be completed before any major or minor release. All items mu
 - [ ] **Lane B (PR integration)**: Full test suite passes
 - [ ] **Lane C (Nightly)**: Coverage report generated, reproducible build verified
 - [ ] **False-green gates**: No new `continue-on-error` on blocking jobs
-- [ ] **Test count**: 9212+ tests passing, 0 new failures
+- [ ] **Test count**: 8,244+ test functions, 0 new failures
 - [ ] **Flaky tests**: Zero flaky tests (all tests pass with random ordering)
 - [ ] **Coverage**: Critical packages ≥75% branch, high-risk ≥65% branch
 

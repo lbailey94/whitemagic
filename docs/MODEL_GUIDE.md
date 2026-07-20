@@ -1,12 +1,12 @@
 # WhiteMagic Model Guide
 
-**Version**: 25.0.1
+**Version**: 25.1.0
 
 ## For AI Agents Using WhiteMagic
 
 ### Quick Start (MCP)
 
-Connect your AI agent to WhiteMagic via MCP. All 860 tools are collapsed into 28 Gana meta-tools for efficient context usage.
+Connect your AI agent to WhiteMagic via MCP. All 860 callable tools are collapsed into 28 Gana meta-tools for efficient context usage.
 
 ```
 # stdio

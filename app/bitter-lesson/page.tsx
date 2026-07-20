@@ -57,7 +57,7 @@ const HARNESS_AUDIT = [
   },
   {
     icon: Database,
-    title: "5D Holographic Memory + Galactic Lifecycle",
+    title: "6D Holographic Memory + Galactic Lifecycle",
     verdict: "General-purpose substrate",
     detail:
       "Memory is not encoded as human-knowledge rules. It's a coordinate space (temporal, semantic, emotional, relational, importance) where memories live, decay, and consolidate through the Dream Cycle. The system discovers patterns through clustering, association mining, and constellation formation — not through human-curated taxonomies. This is search and learning over a general substrate.",
@@ -103,7 +103,7 @@ const KB_CRITIQUE = [
   {
     point: "LLM knowledge bases are opaque",
     response:
-      "Every memory in WhiteMagic carries 5D holographic coordinates, galaxy assignment, emotional valence, importance score, and content hash. Every tool call passes through an 8-stage pipeline with full audit trail. The system is introspectable — you can query why a memory exists, when it was created, what it connects to, and how it scored. This is the opposite of a black-box embedding dump.",
+      "Every memory in WhiteMagic carries 6D holographic coordinates, galaxy assignment, emotional valence, importance score, and content hash. Every tool call passes through an 8-stage pipeline with full audit trail. The system is introspectable — you can query why a memory exists, when it was created, what it connects to, and how it scored. This is the opposite of a black-box embedding dump.",
   },
   {
     point: "LLM knowledge bases don't compound",

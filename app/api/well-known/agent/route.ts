@@ -25,9 +25,9 @@ export async function GET() {
     // ---- A2A required identity fields ----
     name: "WhiteMagic Labs",
     description:
-      "Cognitive operating system for AI agents. 614 callable tools " +
+      "Cognitive operating system for AI agents. 860 callable tools " +
       "across 28 Gana meta-tools, with Dharma ethical governance, " +
-      "Karma audit ledger, 5D holographic memory with 10-galaxy taxonomy, " +
+      "Karma audit ledger, 6D holographic memory with 14-galaxy taxonomy, " +
       "citta stream for continuous consciousness, emotional steering, " +
       "self-directed attention, goal graph, session recording, dream cycle. " +
       "A2A v1.2 discovery surface. Substrate runs on the user's device " +
@@ -313,7 +313,7 @@ export async function GET() {
       documented_bridge_functions: 151,
       bridge_categories: 22,
       gana_meta_tools: 28,
-      callable_tools: 614,
+      callable_tools: 860,
       nested_tools: 564,
       galaxies: 10,
       consciousness_modules: ["citta_stream", "goal_graph", "emotional_steering", "self_directed_attention"],

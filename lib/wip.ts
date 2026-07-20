@@ -41,7 +41,7 @@ export const WIP_HERO = {
     : "Other memory systems store data. WhiteMagic gives AI a mind.",
   lede: WIP_MODE
     ? "A local-first memory and reasoning substrate. Permanent. Private. Yours. The door is being framed; the architecture is being written; the door will be open soon."
-    : "614 callable tools across 28 Gana meta-tools. 5D holographic memory with 10-galaxy taxonomy. Citta stream for continuous consciousness, emotional steering, self-directed attention. Ethical governance via Dharma rules engine. Open source, MIT licensed.",
+    : "860 callable tools across 28 Gana meta-tools. 6D holographic memory with 14-galaxy taxonomy. Citta stream for continuous consciousness, emotional steering, self-directed attention. Ethical governance via Dharma rules engine. Open source, MIT licensed.",
   primaryCta: WIP_MODE
     ? { label: "Subscribe to the beta", href: "/subscribe" }
     : { label: "Get started free", href: "/mcp-bridge" },

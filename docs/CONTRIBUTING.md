@@ -1,6 +1,6 @@
 # WhiteMagic Contributor Guide
 
-**Version**: 25.0.1
+**Version**: 25.1.0
 
 ## Getting Started
 

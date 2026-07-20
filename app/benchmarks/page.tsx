@@ -146,12 +146,12 @@ interface CompareRow {
 }
 
 const MEMORY_CMP: CompareRow[] = [
-  { capability: "Memory architecture", whitemagic: "5D holographic coordinates (temporal, semantic, emotional, relational, importance)", mem0: "Flat vector store with metadata tags", letta: "Agent state + memory blocks, harness-managed", rag: "Linear vector embeddings, no relationships" },
+  { capability: "Memory architecture", whitemagic: "6D holographic coordinates (temporal, semantic, emotional, relational, importance)", mem0: "Flat vector store with metadata tags", letta: "Agent state + memory blocks, harness-managed", rag: "Linear vector embeddings, no relationships" },
   { capability: "Persistence horizon", whitemagic: "Global - memories persist forever, rotate through galactic lifecycle zones", mem0: "Session or conversation-scoped", letta: "Persistent within a harness deployment", rag: "N/A - stateless retrieval" },
-  { capability: "Search modalities", whitemagic: "HNSW vector + FTS5 full-text + graph walking + HRR projection + 5D coordinate lookup", mem0: "Vector similarity only", letta: "Vector + keyword within harness", rag: "Vector similarity only" },
+  { capability: "Search modalities", whitemagic: "HNSW vector + FTS5 full-text + graph walking + HRR projection + 6D coordinate lookup", mem0: "Vector similarity only", letta: "Vector + keyword within harness", rag: "Vector similarity only" },
   { capability: "Memory relationships", whitemagic: "Cross-galaxy associations, knowledge graph, 2.2M associations in v15.8 era", mem0: "No relationship tracking", letta: "Limited - within agent context window", rag: "No relationships" },
   { capability: "Decay & consolidation", whitemagic: "8-phase dream cycle: triage, consolidation, serendipity, governance, narrative, kaizen, oracle, decay", mem0: "No decay or consolidation", letta: "No dream cycle", rag: "No decay" },
-  { capability: "Emotional encoding", whitemagic: "Emotional valence dimension in 5D coords, 20+ emotional gardens (joy, grief, courage, love)", mem0: "No emotional encoding", letta: "No emotional encoding", rag: "No emotional encoding" },
+  { capability: "Emotional encoding", whitemagic: "Emotional valence dimension in 6D coords, 20+ emotional gardens (joy, grief, courage, love)", mem0: "No emotional encoding", letta: "No emotional encoding", rag: "No emotional encoding" },
 ];
 
 const GOVERNANCE_CMP: CompareRow[] = [
@@ -186,8 +186,8 @@ const HONEST_WINS: { competitor: string; advantage: string }[] = [
   { competitor: "Mem0", advantage: "Established market presence and documentation. WhiteMagic's docs are thorough but technical; Mem0 has a polished developer experience for quick starts." },
   { competitor: "Letta", advantage: "Deep harness integration. Letta manages the agent runtime itself - tool calling, context windows, model routing. WhiteMagic is a substrate that any agent plugs into." },
   { competitor: "Letta", advantage: "Memory models (June 2026) - specialized models for creating durable context that transfers across LLMs. WhiteMagic doesn't yet have model-trained memory compression." },
-  { competitor: "Standard RAG", advantage: "Simplicity. If you just need 'search a PDF and ask questions,' RAG is simpler and well-understood. WhiteMagic's 614 tools and 8-stage pipeline are overkill for basic retrieval." },
-  { competitor: "Standard RAG", advantage: "Ecosystem. LangChain, LlamaIndex, and the broader RAG ecosystem have thousands of integrations. WhiteMagic has 614 tools but a smaller integration surface." },
+  { competitor: "Standard RAG", advantage: "Simplicity. If you just need 'search a PDF and ask questions,' RAG is simpler and well-understood. WhiteMagic's 860 tools and 8-stage pipeline are overkill for basic retrieval." },
+  { competitor: "Standard RAG", advantage: "Ecosystem. LangChain, LlamaIndex, and the broader RAG ecosystem have thousands of integrations. WhiteMagic has 860 tools but a smaller integration surface." },
 ];
 
 function CompareTable({ rows, title }: { rows: CompareRow[]; title: string }) {

@@ -41,7 +41,7 @@ export default function GovernancePage() {
           {/* 8-stage pipeline */}
           <h2 className="mb-6 font-head text-2xl font-semibold text-ink">8-Stage Dispatch Pipeline</h2>
           <p className="mb-8 text-sm text-muted">
-            Every single tool call — all 614 of them — passes through these 8 stages. No shortcuts, no bypasses.
+            Every single tool call — all 860 of them — passes through these 8 stages. No shortcuts, no bypasses.
           </p>
           <div className="mb-12 space-y-3">
             {PIPELINE_STAGES.map((stage, i) => (

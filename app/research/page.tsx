@@ -12,11 +12,11 @@ const RESEARCH_AREAS = [
   {
     icon: Database,
     title: "Holographic Memory",
-    description: "5D coordinate system (emotional, temporal, associative, importance, novelty) for memory storage. 10-galaxy taxonomy with galactic lifecycle — nothing deleted, only rotated outward. FTS5 + HNSW hybrid search.",
+    description: "6D coordinate system (emotional, temporal, associative, importance, novelty) for memory storage. 14-galaxy taxonomy with galactic lifecycle — nothing deleted, only rotated outward. FTS5 + HNSW hybrid search.",
     status: "Shipped",
     details: [
       "10 galaxies: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal",
-      "49,486 memories in production",
+      "170,000+ memories in production",
       "2,853 cross-galaxy associations",
       "0.26ms HNSW search latency",
     ],

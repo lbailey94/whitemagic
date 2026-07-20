@@ -308,7 +308,7 @@ export default function PerformancePage() {
           <p className="text-sm leading-relaxed text-muted">
             Benchmarks conducted on {WM_FACTS.benchmarkDate} using 50 iterations
             per tool with 5 warmup calls. Tests run on production hardware with
-            all 614 tools loaded. Full benchmark suite available at{" "}
+            all 860 tools loaded. Full benchmark suite available at{" "}
             <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-xs text-fg">
               core/benchmark_results/benchmark_report.md
             </code>

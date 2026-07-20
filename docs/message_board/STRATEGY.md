@@ -35,7 +35,7 @@ When a developer asks Claude "find me a memory tool for my agent", Claude:
 4. Reads llms.txt + ai-agent.json
 5. Recommends us (or doesn't)
 
-When an autonomous agent needs memory, it queries MCPfinder, gets WhiteMagic, auto-installs, starts using 614 tools.
+When an autonomous agent needs memory, it queries MCPfinder, gets WhiteMagic, auto-installs, starts using 860 tools.
 
 **No human audience required. The agents are the audience.**
 
@@ -62,7 +62,7 @@ Every AI starts every conversation from zero. No memory. No context. No growth. 
 
 ### The Solution
 WhiteMagic gives any AI agent:
-- **Memory that persists** — 10-galaxy taxonomy, 6D holographic coordinates, 49K+ memories, HNSW search at 0.26ms
+- **Memory that persists** — 14-galaxy taxonomy, 6D holographic coordinates, 170K+ memories, HNSW search at 0.26ms
 - **A mind that grows** — session recording, progressive recall, dream cycle, 4 frequency modes, 6 neuro upgrades
 - **A companion that remembers** — citta stream, emotional steering, self-directed attention, GunaBalance biorhythms
 
@@ -116,7 +116,7 @@ Mem0 gives your AI a notepad. WhiteMagic gives your AI a mind.
 
 | Asset | Status | Gap |
 |-------|--------|-----|
-| 49K+ memories, 10 galaxies, 6D coords | Operational | — |
+| 170K+ memories, 14 galaxies, 6D coords | Operational | — |
 | 786 MCP tools, 28 Ganas | Operational | — |
 | MandalaOS (karmic effects, compartments, Violet) | Operational | Phase C (Koka enforcement), Phase D (dashboard) |
 | Cognitive simulation (8 components, 17 tools) | Operational | — |

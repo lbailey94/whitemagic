@@ -4,7 +4,7 @@ import { WM_FACTS } from "@/lib/facts";
 
 export const metadata = {
   title: "Timeline — WhiteMagic",
-  description: "Month-by-month development history of WhiteMagic — from Oct 2025 origin to v24 in July 2026. 614 tools, 49K memories, 4191 tests. Measured benchmarks on consumer hardware.",
+  description: "Month-by-month development history of WhiteMagic — from Oct 2025 origin to v24 in July 2026. 860 tools, 170K+ memories, 8,244 tests. Measured benchmarks on consumer hardware.",
 };
 
 const MILESTONES = [
@@ -68,15 +68,15 @@ const MILESTONES = [
     date: "Jun 2026",
     version: "v23",
     title: "10-Galaxy Memory + Multi-User",
-    description: "10-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal). Multi-user galaxy isolation. Redis real-time sync. PWA substrate. Browser-first WASM.",
+    description: "14-galaxy taxonomy (aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal). Multi-user galaxy isolation. Redis real-time sync. PWA substrate. Browser-first WASM.",
     stats: ["10 galaxies", "Multi-user", "PWA + WASM"],
   },
   {
     date: "Jul 2026",
     version: "v24",
     title: "Cognitive Operating System",
-    description: "Citta stream (continuous consciousness). Emotional steering (frustration, curiosity, satisfaction). Self-directed attention. Goal graph. Session recording with progressive recall. 49,486 memories. 4,191 tests. 614 callable tools. Published to PyPI.",
-    stats: ["614 tools", "49K memories", "4191 tests"],
+    description: "Citta stream (continuous consciousness). Emotional steering (frustration, curiosity, satisfaction). Self-directed attention. Goal graph. Session recording with progressive recall. 170,000+ memories. 8,244 tests. 860 callable tools. Published to PyPI.",
+    stats: ["860 tools", "170K+ memories", "8,244 tests"],
   },
 ];
 
@@ -85,7 +85,7 @@ export default function TimelinePage() {
     <>
       <PageHeader
         eyebrow="Timeline"
-        title="From 100 tools to 614 in 9 months."
+        title="From 100 tools to 860 in 9 months."
         lede="A solo developer's month-by-month progress building a cognitive operating system for AI agents. Every milestone shipped as working code, not position papers."
       />
 

@@ -133,7 +133,7 @@ export default function ComingSoonPage() {
               Honest status (July 2026)
             </h2>
             <ul className="space-y-2 text-sm text-muted">
-              <li><strong className="text-fg">What works:</strong> MCP server, memory system, governance pipeline, dream cycle, session recording, citta metrics, 4,191 tests, polyglot cores, Librarian chat.</li>
+              <li><strong className="text-fg">What works:</strong> MCP server, memory system, governance pipeline, dream cycle, session recording, citta metrics, 8,244 tests, polyglot cores, Librarian chat.</li>
               <li><strong className="text-fg">What doesn't yet:</strong> Hosted deployment, Stripe billing, MCP registry listings, Aria awakening, TUI, speculative decoding.</li>
               <li><strong className="text-fg">What we're honest about:</strong> This is a solo project. Things take as long as they take. The test suite is the guardrail. Nothing ships broken.</li>
             </ul>

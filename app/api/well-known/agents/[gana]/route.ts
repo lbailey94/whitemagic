@@ -72,7 +72,7 @@ const AGENTS: Record<string, AgentDef> = {
     element: "metal",
     archetype: "Memory custodian",
     description:
-      "5D holographic memory storage. The Neck Gana preserves memories across long time horizons with versioned coordinates (x, y, z, w, v).",
+      "6D holographic memory storage. The Neck Gana preserves memories across long time horizons with versioned coordinates (x, y, z, w, v).",
     functionNames: [
       "memory_create",
       "memory_read",

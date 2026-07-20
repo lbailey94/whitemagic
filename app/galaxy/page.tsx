@@ -1,5 +1,5 @@
 /**
- * Live Galaxy — 5D Holographic Memory Visualization
+ * Live Galaxy — 6D Holographic Memory Visualization
  *
  * Real-time visualization of the WhiteMagic memory galaxy,
  * with nodes positioned by holographic coordinates and
@@ -14,7 +14,7 @@ import { Globe, ArrowRight, Zap, Layers, MousePointer2, Link2 } from "lucide-rea
 export const metadata = {
   title: "Live Galaxy — WhiteMagic",
   description:
-    "Explore your holographic memory core in real-time — 5D coordinates, zone-based navigation, and live resonance.",
+    "Explore your holographic memory core in real-time — 6D coordinates, zone-based navigation, and live resonance.",
 };
 
 export default function GalaxyPage() {
@@ -23,7 +23,7 @@ export default function GalaxyPage() {
       <PageHeader
         eyebrow="Live Visualization"
         title="Memory Galaxy"
-        lede="Your holographic memory core rendered in real-time — 5D coordinates projected to 3D space, colored by galactic zone."
+        lede="Your holographic memory core rendered in real-time — 6D coordinates projected to 3D space, colored by galactic zone."
       />
 
       <section className="container-site py-12">
@@ -64,7 +64,7 @@ export default function GalaxyPage() {
               </h3>
               <p className="mb-4 max-w-prose text-muted leading-relaxed">
                 The Live Galaxy is a real-time projection of your WhiteMagic memory core.
-                Each node represents a memory positioned in 5D holographic space. The
+                Each node represents a memory positioned in 6D holographic space. The
                 3D visualization you see is a projection of (x, y, z) with (w, v) as
                 additional resonance dimensions.
               </p>

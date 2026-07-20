@@ -146,12 +146,12 @@ export const LIBRARIAN_BRIDGE_TOOLS: BridgeToolDef[] = [
     },
   },
 
-  // ─── Memory (5D holographic) ───────────────────────────────
+  // ─── Memory (6D holographic) ───────────────────────────────
   {
     functionName: "memory_search",
     category: "memory",
     description:
-      "Search 5D holographic memory by query. Returns memory IDs + similarity scores. Use when the user asks 'find memories about X'.",
+      "Search 6D holographic memory by query. Returns memory IDs + similarity scores. Use when the user asks 'find memories about X'.",
     parameters: {
       type: "object",
       properties: {

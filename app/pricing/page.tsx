@@ -31,9 +31,9 @@ export default function PricingPage() {
             </h2>
             <p className="mb-4 text-sm text-muted">Forever</p>
             <ul className="space-y-2 text-sm text-muted">
-              <li>614 callable tools</li>
+              <li>860 callable tools</li>
               <li>28 Gana meta-tools</li>
-              <li>10-galaxy memory system</li>
+              <li>14-galaxy memory system</li>
               <li>Dharma governance engine</li>
               <li>Citta stream + consciousness</li>
               <li>Session recording + replay</li>

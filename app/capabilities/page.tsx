@@ -39,7 +39,7 @@ const USE_CASES: UseCase[] = [
   { domain: "Forecasting & prediction markets", fit: "Best fit", why: "MC calibration engine, Brier scoring, prescience tracking, Beta posterior updates. The system doesn't just make predictions — it scores its own accuracy and improves over time." },
   { domain: "Healthcare data analysis", fit: "Best fit", why: "Local-first (HIPAA), ethical governance, surprise detection for anomalies, probabilistic tracking for patient cohorts. No data leaves the machine." },
   { domain: "Cybersecurity", fit: "Adjacent", why: "Surprise gate (anomaly detection), knowledge graph (attack patterns), local inference. Architecture is ideal but no specific security tooling yet." },
-  { domain: "Legal tech", fit: "Adjacent", why: "Dharma governance, audit trail, memory with 5D coordinates. Needs legal-specific knowledge graph seeds." },
+  { domain: "Legal tech", fit: "Adjacent", why: "Dharma governance, audit trail, memory with 6D coordinates. Needs legal-specific knowledge graph seeds." },
   { domain: "Education technology", fit: "Adjacent", why: "Agent loop (tutoring), bandit (learns what works for each student), surprise gate (tracks what's novel for each learner)." },
 ];
 
@@ -47,13 +47,13 @@ const NOT_FIT = [
   "High-throughput real-time trading — the dispatch pipeline has 8 stages of governance overhead (~42 microseconds per decision). HFT needs sub-microsecond.",
   "Massive-scale web services — designed for single-machine or small-cluster deployment, not horizontally-scaled cloud infrastructure.",
   "Image/video generation — ternary kernels accelerate inference, not diffusion. The architecture is text-and-reasoning focused.",
-  "Simple CRUD applications — the 614-tool dispatch pipeline is overkill for basic data management.",
+  "Simple CRUD applications — the 860-tool dispatch pipeline is overkill for basic data management.",
 ];
 
 export const metadata = {
   title: "Capabilities — WhiteMagic Labs",
   description:
-    `The engineering behind the vision: 5D holographic memory, galactic lifecycle, dream cycle consolidation, Dharma governance, Karma audit, ${WM_FACT_TEXT.mcpSurface}, polyglot accelerators, and more.`,
+    `The engineering behind the vision: 6D holographic memory, galactic lifecycle, dream cycle consolidation, Dharma governance, Karma audit, ${WM_FACT_TEXT.mcpSurface}, polyglot accelerators, and more.`,
 };
 
 interface Capability {
@@ -66,8 +66,8 @@ interface Capability {
 const CAPABILITIES: Capability[] = [
   {
     category: "Memory",
-    title: "5D Holographic Coordinates",
-    body: "Every memory placed in a mathematically precise 5D space: logic and emotion, micro and macro, time, gravity, vitality.",
+    title: "6D Holographic Coordinates",
+    body: "Every memory placed in a mathematically precise 6D space: logic and emotion, micro and macro, time, gravity, vitality.",
     detail:
       "No flat key-value store. Memories have position, weight, and relationship. The coordinate system enables holographic lookup — find by similarity, not just by key.",
   },
@@ -90,7 +90,7 @@ const CAPABILITIES: Capability[] = [
     title: "Living Knowledge Graph",
     body: "Hybrid recall fuses semantic search, graph walking, HRR look-ahead projection, and holographic lookup.",
     detail:
-      "No single retrieval strategy. The system combines four approaches: vector similarity, graph traversal, holographic reduced representation, and 5D coordinate lookup. Each fills gaps the others miss.",
+      "No single retrieval strategy. The system combines four approaches: vector similarity, graph traversal, holographic reduced representation, and 6D coordinate lookup. Each fills gaps the others miss.",
   },
   {
     category: "Governance",
@@ -354,8 +354,8 @@ export default function CapabilitiesPage() {
             </h2>
             <p className="mb-4 max-w-prose text-muted">
               The architecture above is real — the code exists, the {WM_FACTS.testsPassing} tests pass,
-              the pipeline runs. v24.0.1 ships {WM_FACTS.callableTools} callable tools, {WM_FACTS.memories} memories,
-              10-galaxy taxonomy, HNSW vector search at 0.26ms, session recording with progressive recall,
+              the pipeline runs. v25.1.0 ships {WM_FACTS.callableTools} callable tools, {WM_FACTS.memories} memories,
+              14-galaxy taxonomy, HNSW vector search at 0.26ms, session recording with progressive recall,
               citta stream for continuous consciousness, emotional steering, and self-directed attention.
             </p>
             <p className="mb-6 max-w-prose text-muted">

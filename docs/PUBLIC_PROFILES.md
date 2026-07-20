@@ -1,7 +1,7 @@
 # WhiteMagic Public Profiles
 
-**Version**: 25.0.1
-**Updated**: 2026-07-19
+**Version**: 25.1.0
+**Updated**: 2026-07-20
 
 WhiteMagic supports five installation profiles, each with different dependencies and capabilities. Profiles are selected via pip extras.
 
@@ -31,6 +31,9 @@ WhiteMagic supports five installation profiles, each with different dependencies
 **Includes everything in Core, plus**:
 - MCP server (stdio + Streamable HTTP transport)
 - 860 callable tools via 28 Gana meta-tools
+- 74 security dispatch entries (12 red team systems, 17 blue team modules)
+- 47 STRATA→MITRE ATT&CK category mappings
+- 6 Dharma violet governance rules
 - MCP annotation compliance (readOnlyHint, destructiveHint, idempotentHint, openWorldHint)
 - Lazy imports for <1s handshake
 
@@ -84,13 +87,14 @@ WhiteMagic supports five installation profiles, each with different dependencies
 **Install**: `pip install whitemagic[mcp,ai,violet]`
 
 **Includes everything in Local AI, plus**:
-- Security assessment tools (nmap, nikto, nuclei, pentest)
-- Engagement token enforcement (ROE Gate pattern)
+- **Red Team (12 systems)**: Attack Cell (8-agent), Agent Red Team, Dynamic Testers (nmap, sqlmap, hydra, nikto, ffuf, nuclei), Decepticon Bridge, HTTP Probes, Foundry Bridge, Echidna Fuzzer, Formal Verifier, PoC Pipeline, Contest Pipeline (8 platforms), Bounty Platform (6 adapters)
+- **Blue Team (17 modules)**: Engagement Tokens, Dharma Governance, Transaction Firewall, WASM Verifier, Semantic Defense, Tool Gating, Input Sanitizer, Security Event Bus, Canary Tokens, Hermit Crab, MCP Integrity, Model Signing, Audit Signing, Sandbox, Vault, Adaptive Defense, Security Monitor
+- **STRATA→MITRE ATT&CK**: 47 security checker categories mapped to MITRE TTPs
+- **Dharma Violet Rules**: 6 governance rules (token requirement, blue-ops logging, model load warnings, exfiltration blocking, recon throttling, jailbreak blocking)
+- Violet shelter template (purple-team operations)
+- Engagement token enforcement (ROE Gate pattern, defense-in-depth at middleware + handler level)
 - PoC pipeline governance
 - Model signing verification
-- Transaction firewall
-- Violet shelter template (purple-team operations)
-- Hermit Crab sandbox
 - Audit signing (Ed25519)
 
 **Requires**: Explicit `WM_VIOLET_ENABLED=1` environment variable

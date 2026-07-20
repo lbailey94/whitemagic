@@ -124,7 +124,7 @@ export const FIELD_CONCLUSIONS: FieldConclusion[] = [
   },
   {
     title: "Memory is substrate, not the product headline.",
-    body: "Persistent memory remains important, but major platforms are absorbing basic memory features. WhiteMagic's public positioning should keep 5D memory as a foundation for governance, continuity, and audit rather than sell memory alone.",
+    body: "Persistent memory remains important, but major platforms are absorbing basic memory features. WhiteMagic's public positioning should keep 6D memory as a foundation for governance, continuity, and audit rather than sell memory alone.",
   },
   {
     title: "Payments belong behind voluntary contribution and readiness assessment.",

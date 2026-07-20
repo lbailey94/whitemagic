@@ -2,10 +2,10 @@
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-25.0.1-purple.svg)](core/VERSION)
+[![Version](https://img.shields.io/badge/version-25.1.0-purple.svg)](core/VERSION)
 [![PyPI](https://img.shields.io/pypi/v/whitemagic)](https://pypi.org/project/whitemagic/)
 
-**860 callable tools** · **28 Gana meta-tools** · **14-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration**
+**860 callable tools** · **28 Gana meta-tools** · **14-galaxy memory** · **Dharma governance** · **Citta stream** · **MandalaOS compartments** · **7-language polyglot acceleration** · **Violet security pipeline**
 
 ## What it is
 
@@ -19,6 +19,7 @@ WhiteMagic gives your AI agent persistent memory, cognitive upgrades, and more �
 - **Continuous consciousness** — citta stream with coherence tracking, emotional steering (frustration, curiosity, satisfaction), self-directed attention, goal graph
 - **Ethical governance** — Dharma rules engine (3 profiles, graduated actions), Karma side-effect ledger, 8-stage dispatch pipeline
 - **Self-awareness** — gnosis introspection, capability matrix, homeostatic loop, dream cycle (12-phase memory consolidation)
+- **Cybersecurity pipeline** — 12 red team systems (Attack Cell, Dynamic Testers, Decepticon, Agent Red Team), 17 blue team modules (Engagement Tokens, Transaction Firewall, WASM Verifier, Semantic Defense), 47 STRATA→MITRE ATT&CK mappings, 6 Dharma violet governance rules
 - **Polyglot acceleration** — Rust, Haskell, Elixir, Go, Zig, Julia, Koka (graceful Python fallback)
 
 MIT-licensed. Local-first. No telemetry. No API keys. Your data never leaves your machine.
