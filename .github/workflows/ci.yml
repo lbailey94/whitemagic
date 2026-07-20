@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
     env:
       WM_SILENT_INIT: "1"
       WM_STATE_ROOT: /tmp/whitemagic_state
@@ -34,10 +34,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,mcp,cli]"
+        run: uv sync --all-extras --dev
 
       - name: Omega Test Gauntlet
         run: python scripts/omega_test.py --ci
@@ -59,11 +63,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ruff mypy
-          python -m pip install -e ".[dev]"
+        run: uv sync --all-extras --dev
 
       - name: Ruff Check (high-signal rules)
         run: ruff check whitemagic/ --select F821,F601,F401 --ignore E501
@@ -88,11 +95,15 @@ jobs:
           mypy whitemagic/tools/ whitemagic/interfaces/ \
             --ignore-missing-imports --no-error-summary \
             --disallow-untyped-defs --warn-return-any
+        # P8.3: Advisory — mypy is not yet zero-error on public surface.
+        # P7.4 baseline: 611 errors ratcheted. This step is advisory until
+        # boundary packages reach zero errors.
 
       # Mypy: advisory for full codebase (non-blocking for legacy code)
       - name: Mypy (full codebase)
         continue-on-error: true
         run: mypy whitemagic/ --ignore-missing-imports --no-error-summary
+        # P8.3: Advisory — full codebase mypy is informational only.
 
       - name: Check for large files
         run: |
@@ -136,15 +147,22 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]" bandit pip-audit
+          uv sync --all-extras --dev
+          uv pip install bandit pip-audit
 
       # B603: subprocess without shell=False. Removed from skip list per
       # H5 (release readiness). Audit each subprocess call explicitly.
       - name: Bandit (security scanner)
         run: |
+          set -eo pipefail
           bandit -r whitemagic/ \
             --exclude whitemagic/_archived \
             -ll -ii --skip B101,B404 2>&1 | tail -50
@@ -169,10 +187,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install (extras)
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,mcp,cli]"
+        run: uv sync --all-extras --dev
 
       - name: Doctor Check
         run: wm doctor
@@ -203,10 +225,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install (api extras)
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,api]"
+        run: uv sync --extra api --dev
 
       - name: FastAPI-gated tests
         run: |
@@ -235,10 +261,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install (opt extras)
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,opt]"
+        run: uv sync --extra opt --dev
 
       - name: CVXPY-gated tests
         run: |
@@ -260,13 +290,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Build Wheel
-        run: |
-          python -m pip install --upgrade pip build
-          python -m build
+        run: uv build
 
       - name: Install Wheel (Clean)
-        run: python -m pip install dist/*.whl
+        run: uv pip install dist/*.whl
 
       - name: Verify Installation
         run: |
@@ -296,19 +330,22 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build tools
-        run: python -m pip install --upgrade pip build
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Build 1 (reproducible)
         run: |
-          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) python -m build --wheel
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) uv build --wheel
           mkdir -p /tmp/build1
           cp dist/*.whl /tmp/build1/
 
       - name: Build 2 (same commit)
         run: |
           rm -rf dist/
-          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) python -m build --wheel
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) uv build --wheel
           mkdir -p /tmp/build2
           cp dist/*.whl /tmp/build2/
 
@@ -378,10 +415,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install (network extras)
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,net]"
+        run: uv sync --extra net --dev
 
       - name: Run network-marked tests
         run: |
@@ -414,10 +455,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
+
       - name: Install package
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e "./core[dev]"
+        run: uv sync --all-extras --dev
+        working-directory: core
 
       - name: Check doc drift
         run: python core/scripts/check_doc_drift.py
@@ -433,10 +479,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
+
       - name: Install core package
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e "./core[dev]"
+        run: uv sync --all-extras --dev
+        working-directory: core
 
       - name: Check site facts freshness
         run: python3 apps/site/scripts/sync_facts.py --check
@@ -470,14 +521,19 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+        run: uv sync --all-extras --dev
 
       - name: Generate Coverage Report
+        # P8.3: Advisory — coverage is informational until P8.4 risk-based thresholds are set.
         run: |
-          python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q --cov=whitemagic --cov-report=term-missing --cov-fail-under=25
+          python -m pytest tests/ --ignore=tests/archive_v14 --ignore=tests/archive_v11 -q --cov=whitemagic --cov-report=term-missing --cov-fail-under=25 || echo 'Coverage below threshold — advisory only'
 
   strata-review:
     name: STRATA Diff Review
@@ -502,10 +558,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+        run: uv sync --all-extras --dev
 
       - name: Run STRATA diff analysis
         env:

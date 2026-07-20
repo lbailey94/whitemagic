@@ -32,7 +32,14 @@ jobs:
         run: |
           solc-select install 0.8.20
           solc-select use 0.8.20
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
       - name: Run Slither on Solidity files
+        # P8.3: Advisory — Slither findings are informational. Solidity is
+        # not a primary language for WhiteMagic; findings are reviewed manually.
         run: |
           # Find all .sol files and run Slither
           SOL_FILES=$(find . -name "*.sol" -not -path "*/node_modules/*" -not -path "*/.git/*" | head -50)
@@ -43,12 +50,12 @@ jobs:
           echo "Found Solidity files:"
           echo "$SOL_FILES"
           # Run Slither with JSON output
-          slither . --json - --exclude-informational --exclude-optimization 2>&1 || true
+          slither . --json - --exclude-informational --exclude-optimization 2>&1 || echo 'Slither found issues — advisory only'
         continue-on-error: true
       - name: Run STRATA security checkers
         working-directory: core
         run: |
-          pip install -e .
+          uv sync --all-extras --dev
           python -c "
           from pathlib import Path
           from whitemagic.tools.strata.checkers import get_checkers

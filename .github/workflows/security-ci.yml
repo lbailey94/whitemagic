@@ -9,7 +9,7 @@ on:
       - 'lib/**'
       - 'package.json'
       - 'package-lock.json'
-      - 'requirements-lock.txt'
+      - 'core/uv.lock'
   push:
     branches: [main, develop]
     paths:
@@ -27,9 +27,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
       - name: Install dependencies
-        run: |
-          pip install -e core/ -q
+        working-directory: core
+        run: uv sync --all-extras --dev
       - name: Run STRATA Solidity checkers
         run: |
           python -m whitemagic.tools.strata --checkers solidity,solidity_security --path core/ --format json --output strata_solidity.json
@@ -62,8 +67,10 @@ jobs:
         run: |
           detect-secrets scan --all-files --exclude-files '.git/.*' --exclude-files 'node_modules/.*' --exclude-files '.venv/.*' --exclude-files 'core/.venv/.*' --output secrets-baseline.json
       - name: Audit secrets baseline
+        # P8.3: Advisory — unaudited secrets are informational, not blocking.
+        # Once baseline is fully audited, remove || true and make blocking.
         run: |
-          detect-secrets audit secrets-baseline.json --report --fail-on-unaudited || true
+          detect-secrets audit secrets-baseline.json --report --fail-on-unaudited || echo 'Unaudited secrets detected — advisory only'
       - name: Upload secrets baseline
         if: always()
         uses: actions/upload-artifact@v4
@@ -82,15 +89,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install pip-audit
-        run: pip install pip-audit
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
       - name: Check Python dependencies
+        # P8.3: Advisory — pip-audit is informational. Vulnerabilities are
+        # reviewed manually before release (Lane D).
+        working-directory: core
         run: |
-          pip-audit -r core/requirements-lock.txt --format json -o pip-audit.json || true
+          uv sync --all-extras --dev
+          uv pip install pip-audit
+          pip-audit --format json -o pip-audit.json || echo 'pip-audit found vulnerabilities — advisory only'
       - name: Check Node dependencies
+        # P8.3: Advisory — npm audit is informational.
         run: |
-          npm audit --json > npm-audit.json || true
-        continue-on-error: true
+          npm audit --json > npm-audit.json || echo 'npm audit found vulnerabilities — advisory only'
       - name: Upload audit results
         if: always()
         uses: actions/upload-artifact@v4
@@ -108,8 +123,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
       - name: Install dependencies
-        run: pip install -e core/ -q
+        working-directory: core
+        run: uv sync --all-extras --dev
       - name: Verify MCP integrity
         run: |
           python -c "
@@ -130,8 +151,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
       - name: Install dependencies
-        run: pip install -e core/ -q
+        working-directory: core
+        run: uv sync --all-extras --dev
       - name: Check AuditSigner key
         run: |
           python -c "
@@ -155,10 +182,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "core/uv.lock"
       - name: Install dependencies
-        run: |
-          pip install -e core/ -q
-          pip install pytest pytest-timeout pytest-xdist -q
+        working-directory: core
+        run: uv sync --all-extras --dev
       - name: Run security assessment tests
         run: |
           cd core && python -m pytest tests/unit/test_security_assessment_phase*.py tests/unit/test_violet_gaps.py --timeout=30 -q
