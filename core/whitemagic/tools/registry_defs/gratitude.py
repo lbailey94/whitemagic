@@ -6,7 +6,7 @@ Tools:
   - gratitude.benefits: Check agent gratitude benefits
 """
 
-from whitemagic.tools.registry import ToolCategory, ToolDefinition, ToolSafety
+from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
 
 TOOLS = [
     ToolDefinition(

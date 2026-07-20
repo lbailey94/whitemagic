@@ -7,7 +7,7 @@ Tools:
   - memory.rent: Pay for temporary access to a specialized galaxy
 """
 
-from whitemagic.tools.registry import ToolCategory, ToolDefinition, ToolSafety
+from whitemagic.tools.tool_types import ToolCategory, ToolDefinition, ToolSafety
 
 TOOLS = [
     ToolDefinition(

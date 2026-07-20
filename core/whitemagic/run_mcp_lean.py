@@ -487,9 +487,16 @@ def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
     Matryoshka description: each Gana shown as hanzi→name▸domain with its
     nested tool set in compact form.  Full grimoire discoverable via
     wm(thought='help') or wm(route='schema:gana_name').
+
+    Tool counts are generated from the canonical registry/dispatch ground
+    truth (never hand-maintained). Annotations are aggregated truthfully
+    over every tool wm can route to.
     """
+    from whitemagic.tools.annotations import aggregate_annotations, resolve_annotations
     from whitemagic.tools.tool_catalog import (
         GANA_NAMES,
+        collect_authored_tool_definitions,
+        get_dispatch_tool_names,
         get_gana_nested_tools,
     )
 
@@ -503,9 +510,13 @@ def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
         gana_lines.append(f"  {icon}{gana}:{tool_sample}{count}")
     grimoire_block = "\n".join(gana_lines)
 
+    # Generated counts (P2.2: facts from one source)
+    dispatch_count = len(get_dispatch_tool_names())
+    nested_count = len({t for tools in nested.values() for t in tools})
+
     desc = (
-        "[WM] WhiteMagic — 678-tool cognitive OS. "
-        "28 Gana meta-tools (Lunar Mansions) routing to 678 nested tools:\n\n"
+        f"[WM] WhiteMagic — {dispatch_count}-tool cognitive OS. "
+        f"28 Gana meta-tools (Lunar Mansions) routing to {nested_count} nested tools:\n\n"
         + grimoire_block + "\n\n"
         "Usage: wm(route='gana_name.tool', args={...}) — explicit\n"
         "       wm(thought='natural language request') — auto-route + classify\n"
@@ -513,9 +524,25 @@ def _wm_tool_def() -> types.Tool:  # type: ignore[name-defined]
         "       wm(route='schema:gana_name') — nested tool enum for that Gana"
     )
 
+    # Truthful annotation aggregation over every routable tool (P9.3):
+    # wm can route to writes, deletes, and network tools, so the honest
+    # hints are readOnly=False / destructive=True / idempotent=False /
+    # openWorld=True. Clients may allowlist wm once rather than per-route.
+    all_defs = collect_authored_tool_definitions()
+    wm_annotations = aggregate_annotations(
+        "wm", [resolve_annotations(t) for t in all_defs]
+    )
+
     return types.Tool(
         name="wm",
+        title="WhiteMagic Cognitive OS",
         description=desc,
+        annotations=types.ToolAnnotations(
+            readOnlyHint=wm_annotations.read_only,
+            destructiveHint=wm_annotations.destructive,
+            idempotentHint=wm_annotations.idempotent,
+            openWorldHint=wm_annotations.open_world,
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -557,12 +584,35 @@ async def list_tools() -> list[types.Tool]:  # type: ignore[name-defined]
         return [_wm_tool_def()]
 
     tools: list[types.Tool] = []  # type: ignore[name-defined]
+    # Resolve nested tool definitions once for per-Gana annotation aggregation
+    from whitemagic.tools.annotations import aggregate_annotations, resolve_annotations
+    from whitemagic.tools.tool_catalog import collect_authored_tool_definitions
+
+    _defs_by_name = {t.name: t for t in collect_authored_tool_definitions()}
+
     for name in _GANA_NAMES:
         desc = _GANA_SHORT_DESC.get(name, f"Gana {name}")
+        # Aggregate annotations from this Gana's nested tools (P9.3):
+        # a Gana is only as safe as its most permissive nested tool.
+        nested_defs = [
+            _defs_by_name[n]
+            for n in _GANA_TOOLS.get(name, [])
+            if n in _defs_by_name
+        ]
+        gana_ann = aggregate_annotations(
+            name, [resolve_annotations(d) for d in nested_defs]
+        )
         kwargs: dict[str, Any] = {
             "name": name,
+            "title": gana_ann.title,
             "description": desc,
             "inputSchema": _schema_for_gana(name),
+            "annotations": types.ToolAnnotations(
+                readOnlyHint=gana_ann.read_only,
+                destructiveHint=gana_ann.destructive,
+                idempotentHint=gana_ann.idempotent,
+                openWorldHint=gana_ann.open_world,
+            ),
         }
         icons = _icon_for_gana(name)
         if icons:
@@ -1434,31 +1484,90 @@ async def main_stdio() -> None:
 
     # Graceful shutdown mechanism
     shutdown_event = asyncio.Event()
+    _stdin_transport: asyncio.BaseTransport | None = None
 
-    def signal_handler(signum, frame):
-        """Handle SIGTERM/SIGINT for graceful shutdown."""
-        sig_name = signal.Signals(signum).name
+    def _arm_shutdown_watchdog(timeout_s: float = 25.0) -> None:
+        """Last-resort bound on graceful shutdown (P3.1 bounded cleanup).
+
+        Background cognition (dream cycle, ONNX embedding chains) can be
+        mid-flight when SIGTERM arrives; worker joins are individually
+        bounded but the sequence can still stall. If the graceful path has
+        not completed within ``timeout_s``, force process exit.
+        """
+
+        def _watchdog() -> None:
+            logger.error(
+                "Graceful shutdown exceeded %.0fs — forcing exit", timeout_s
+            )
+            os._exit(1)
+
+        timer = threading.Timer(timeout_s, _watchdog)
+        timer.daemon = True
+        timer.start()
+
+    def _on_signal(sig: signal.Signals) -> None:
         logger.warning(
-            "Received %s, initiating graceful shutdown...", sig_name, exc_info=True
+            "Received %s, initiating graceful shutdown...", sig.name, exc_info=True
         )
         shutdown_event.set()
+        _arm_shutdown_watchdog()
 
-    # Register signal handlers
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
+    # Register signal handlers. IMPORTANT: a plain signal.signal() handler
+    # calling asyncio.Event.set() does NOT write to the loop's self-pipe,
+    # so an event loop parked in select() may never wake to observe the
+    # shutdown (observed as a flaky SIGTERM hang, 2026-07-19). asyncio's
+    # native add_signal_handler wakes the loop via the wakeup fd.
+    _loop = asyncio.get_running_loop()
+    try:
+        for _sig in (signal.SIGTERM, signal.SIGINT):
+            _loop.add_signal_handler(_sig, _on_signal, _sig)
+    except NotImplementedError:  # pragma: no cover — Windows
+        def signal_handler(signum, frame):
+            """Handle SIGTERM/SIGINT for graceful shutdown (threadsafe)."""
+            sig = signal.Signals(signum)
+            _loop.call_soon_threadsafe(_on_signal, sig)
+
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
 
     async def stdin_reader() -> None:
         """Read newline-delimited JSON-RPC from stdin and forward to MCP stream."""
+        from whitemagic.mcp.conformance import check_session_message
+
+        nonlocal _stdin_transport
+        loop = asyncio.get_running_loop()
+        try:
+            # Properly async stdin: cancellable on shutdown (SIGTERM fix).
+            # The previous thread-based readline() left a blocked executor
+            # thread that asyncio.run() waits on forever at finalize time
+            # when stdin stays open and idle (shutdown_default_executor).
+            reader = asyncio.StreamReader()
+            _stdin_transport, _ = await loop.connect_read_pipe(
+                lambda: asyncio.StreamReaderProtocol(reader), sys.stdin
+            )
+            readline = reader.readline
+        except (NotImplementedError, OSError):  # pragma: no cover — non-POSIX
+            # Fallback: thread-based read. EOF shutdown still works on these
+            # platforms; SIGTERM with idle stdin may require SIGKILL.
+            async def readline() -> bytes:  # type: ignore[no-redef]
+                return await asyncio.to_thread(sys.stdin.buffer.readline)
+
         async with read_stream_writer:
             while not shutdown_event.is_set():
                 try:
-                    raw = await asyncio.to_thread(sys.stdin.buffer.readline)
+                    raw = await readline()
                     if not raw:
                         logger.info("stdin closed, shutting down")
                         shutdown_event.set()
                         break
                     line = raw.decode("utf-8")
                     message = types.JSONRPCMessage.model_validate_json(line)
+                    # JSON-RPC conformance: answer unknown-method requests with
+                    # -32601 here; the SDK session layer maps them to -32602.
+                    short_circuit = check_session_message(SessionMessage(message))
+                    if short_circuit is not None:
+                        await write_stream.send(short_circuit)
+                        continue
                     await read_stream_writer.send(SessionMessage(message))
                 except Exception as exc:
                     if not shutdown_event.is_set():
@@ -1576,6 +1685,11 @@ async def main_stdio() -> None:
     finally:
         logger.info("Cleaning up MCP server tasks...")
         shutdown_event.set()
+        if _stdin_transport is not None:
+            try:
+                _stdin_transport.close()
+            except Exception as e:
+                logger.debug("stdin transport close failed: %s", e)
         stdin_task.cancel()
         stdout_task.cancel()
         shutdown_task.cancel()
@@ -1649,6 +1763,8 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
             "http://127.0.0.1",
         ]
 
+    from whitemagic.mcp.conformance import UnknownMethodASGIMiddleware
+
     app = Starlette(
         routes=[Mount("/mcp", app=transport.handle_request)],
         middleware=[
@@ -1658,7 +1774,10 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
                 allow_methods=["GET", "POST", "OPTIONS"],
                 allow_headers=["Content-Type", "Mcp-Session-Id", "Authorization"],
                 allow_credentials=True,
-            )
+            ),
+            # JSON-RPC conformance: -32601 for unknown-method requests
+            # (the SDK session layer maps them to -32602 otherwise).
+            Middleware(UnknownMethodASGIMiddleware),
         ],
     )
 
@@ -1763,7 +1882,9 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
                     logger.debug("Ignored error in run_mcp_lean.py:1710")
             # Stop cognitive action scheduler if running
             try:
-                from whitemagic.core.consciousness.cognitive_action_loop import get_action_loop
+                from whitemagic.core.consciousness.cognitive_action_loop import (
+                    get_action_loop,
+                )
                 _loop = get_action_loop()
                 if _loop._scheduler_thread is not None:
                     _loop.stop_scheduler()

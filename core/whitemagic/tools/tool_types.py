@@ -4,6 +4,8 @@ Extracted to avoid circular imports between registry.py and
 domain definition files in registry_defs/.
 """
 
+import hashlib
+import json
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -61,18 +63,23 @@ class ToolCategory(StrEnum):
 
 
 class ToolSafety(StrEnum):
-    """ToolSafety: tool safety.
-
-    Enumeration.
+    """ToolSafety: tool safety classification.
 
     Members:
         READ
         WRITE
-        DELETE"""
+        DELETE
+        UNCLASSIFIED
+
+    UNCLASSIFIED is assigned to dispatch-only tools that lack authored
+    ToolDefinitions. Such tools cannot enter safe/fast paths and are
+    treated conservatively by permissions, effects, and the governor.
+    """
 
     READ = "read"
     WRITE = "write"
     DELETE = "delete"
+    UNCLASSIFIED = "unclassified"
 
 
 class ToolStability(StrEnum):
@@ -122,9 +129,55 @@ class FastPathSafety:
         )
 
 
+@dataclass(frozen=True)
+class McpAnnotations:
+    """MCP spec annotations for a tool (2025-03-26 revision).
+
+    All fields default to ``None`` meaning "not declared" — the MCP client
+    then assumes worst case. Explicit values should be preferred wherever
+    derivable (see ``whitemagic.tools.annotations``).
+
+    - ``title``: Human-readable display name.
+    - ``read_only``: Tool does not modify its environment (readOnlyHint).
+    - ``destructive``: Tool may perform destructive updates (destructiveHint).
+      Only meaningful when ``read_only`` is False.
+    - ``idempotent``: Repeated calls with the same arguments have no
+      additional effect (idempotentHint). Only meaningful when
+      ``read_only`` is False.
+    - ``open_world``: Tool interacts with external entities beyond the
+      local environment, e.g. network calls (openWorldHint).
+    """
+
+    title: str | None = None
+    read_only: bool | None = None
+    destructive: bool | None = None
+    idempotent: bool | None = None
+    open_world: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to MCP ToolAnnotations wire format (None fields omitted)."""
+        out: dict[str, Any] = {}
+        if self.title is not None:
+            out["title"] = self.title
+        if self.read_only is not None:
+            out["readOnlyHint"] = self.read_only
+        if self.destructive is not None:
+            out["destructiveHint"] = self.destructive
+        if self.idempotent is not None:
+            out["idempotentHint"] = self.idempotent
+        if self.open_world is not None:
+            out["openWorldHint"] = self.open_world
+        return out
+
+
 @dataclass
 class ToolDefinition:
-    """Definition of a WhiteMagic tool."""
+    """Definition of a WhiteMagic tool.
+
+    This is the authoritative tool metadata structure. All other modules
+    (stable_contract.py, canonical.py, stable_surface.py) must eventually
+    be consolidated into ToolDefinition fields (P1.4).
+    """
 
     name: str
     description: str
@@ -139,6 +192,30 @@ class ToolDefinition:
     stability: ToolStability = ToolStability.OPTIONAL
     fast_path: bool = False  # Phase 3: registry-declared fast-path eligibility
     fast_path_safety: FastPathSafety | None = None  # Phase 3: safety declarations
+    aliases: tuple[str, ...] = ()  # P1.3: explicit alias modeling
+    since_version: str | None = None  # P1.3: version when first stabilized
+    annotations: McpAnnotations | None = None  # P9.3: explicit MCP annotation overrides
+
+    def __post_init__(self) -> None:
+        """Validate construction invariants (P1.3 strict construction)."""
+        if not self.name or not self.name.strip():
+            raise ValueError(f"ToolDefinition.name must be non-empty, got: {self.name!r}")
+        if not self.description or not self.description.strip():
+            raise ValueError(f"ToolDefinition.description must be non-empty for {self.name!r}")
+        if self.safety == ToolSafety.UNCLASSIFIED and self.stability == ToolStability.STABLE:
+            raise ValueError(
+                f"ToolDefinition '{self.name}' cannot be STABLE with UNCLASSIFIED safety. "
+                f"STABLE tools must have explicit safety declarations."
+            )
+        if self.fast_path and self.safety != ToolSafety.READ:
+            raise ValueError(
+                f"ToolDefinition '{self.name}' has fast_path=True but safety={self.safety.value}. "
+                f"Fast-path requires READ safety."
+            )
+        if self.fast_path and self.fast_path_safety is None:
+            raise ValueError(
+                f"ToolDefinition '{self.name}' has fast_path=True but no fast_path_safety declaration."
+            )
 
     @property
     def risk_level(self) -> str:
@@ -153,12 +230,15 @@ class ToolDefinition:
         if self.safety == ToolSafety.DELETE:
             return str(RiskLevel.DANGEROUS.name)
 
-        if self.category == ToolCategory.SYSTEM and self.safety != ToolSafety.READ:
+        if self.category == ToolCategory.SYSTEM and self.safety not in (
+            ToolSafety.READ,
+            ToolSafety.UNCLASSIFIED,
+        ):
             # Most system operations are risky
             return str(RiskLevel.DANGEROUS.name)
 
-        # 3. CAUTION (Writes)
-        if self.safety == ToolSafety.WRITE:
+        # 3. CAUTION (Writes, unclassified)
+        if self.safety in (ToolSafety.WRITE, ToolSafety.UNCLASSIFIED):
             return str(RiskLevel.CAUTION.name)
 
         # 4. SAFE defaults (Read)
@@ -176,14 +256,19 @@ class ToolDefinition:
         }
 
     def to_mcp_tool(self) -> dict[str, Any]:
-        """Convert to MCP tool format."""
+        """Convert to MCP tool format (annotations resolved via derivation policy)."""
         safety_suffix = (
             "" if self.safety == ToolSafety.READ else f" | {self.safety.value.upper()}"
         )
+        from whitemagic.tools.annotations import resolve_annotations
+
+        resolved = resolve_annotations(self)
         return {
             "name": self.name,
+            "title": resolved.title,
             "description": f"[{self.category.value.upper()}{safety_suffix}] {self.description}",
             "inputSchema": self.input_schema,
+            "annotations": resolved.to_dict(),
             "stability": self.stability.value,
         }
 
@@ -215,4 +300,47 @@ class ToolDefinition:
             "input_schema": self.input_schema,
             "fast_path": self.fast_path,
             "fast_path_eligible": self.fast_path_eligible,
+            "aliases": list(self.aliases),
+            "since_version": self.since_version,
+            "annotations": self.annotations.to_dict() if self.annotations else None,
         }
+
+    def to_snapshot(self) -> dict[str, Any]:
+        """Produce a deterministic serialization snapshot for CI/docs (P1.3).
+
+        The snapshot is sorted by key and includes all fields. The content_hash
+        enables detecting drift between registry versions.
+        """
+        payload = {
+            "aliases": sorted(self.aliases),
+            "category": self.category.value,
+            "description": self.description,
+            "element": self.element,
+            "fast_path": self.fast_path,
+            "fast_path_eligible": self.fast_path_eligible,
+            "fast_path_safety": (
+                {
+                    "no_network": self.fast_path_safety.no_network,
+                    "no_policy_dependent_behavior": self.fast_path_safety.no_policy_dependent_behavior,
+                    "no_secrets": self.fast_path_safety.no_secrets,
+                    "no_user_sensitive_output": self.fast_path_safety.no_user_sensitive_output,
+                    "no_writes": self.fast_path_safety.no_writes,
+                }
+                if self.fast_path_safety
+                else None
+            ),
+            "gana": self.gana,
+            "garden": self.garden,
+            "input_schema": self.input_schema,
+            "name": self.name,
+            "permissions": sorted(self.permissions),
+            "quadrant": self.quadrant,
+            "safety": self.safety.value,
+            "since_version": self.since_version,
+            "stability": self.stability.value,
+        }
+        canonical_json = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+        payload["content_hash"] = hashlib.sha256(
+            canonical_json.encode("utf-8")
+        ).hexdigest()[:16]
+        return payload
