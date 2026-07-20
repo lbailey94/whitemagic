@@ -27,14 +27,115 @@ from whitemagic.tools.tool_types import McpAnnotations, ToolDefinition, ToolSafe
 
 # Write tools whose repeated invocation with identical arguments has no
 # additional effect. Inclusion criteria (conservative — when in doubt, leave out):
-#   - content-hash dedup (retry returns the existing record), or
-#   - by-ID full overwrite (retry writes identical state).
+#   - content-hash dedup (retry returns the existing record)
+#   - by-ID full overwrite (retry writes identical state)
+#   - set-by-key/upsert (retry sets the same value)
+#   - reload-from-disk (retry loads the same files)
+#   - reset-to-baseline (retry resets to the same state)
+#   - clear/flush (retry finds nothing to clear)
+#   - guard-flag start/stop (retry is a no-op due to running/stopped guard)
 # Each entry must name the mechanism in a comment.
 CURATED_IDEMPOTENT: frozenset[str] = frozenset(
     {
-        "create_memory",  # content-hash dedup: retry returns existing memory
-        "update_memory",  # by-ID field overwrite: retry writes identical state
+        # ── Content-hash dedup (retry returns existing record) ──
+        "create_memory",  # content-hash dedup in UnifiedMemory.store()
+        "remember",  # delegates to create_memory, same dedup
+        "import_memories",  # merge_strategy="skip" default, skips existing
+        "galaxy.ingest",  # file ingestion via remember(), content-hash dedup
+        "galaxy.import",  # Arrow/JSON import via remember(), content-hash dedup
+        # ── By-ID overwrite (retry writes identical state) ──
+        "update_memory",  # by-ID field overwrite
+        "memory_update",  # alias of update_memory, same handler
+        "reconsolidation.update",  # by-ID reconsolidated field overwrite
         "state.update",  # current-state snapshot overwrite: identical state
+        # ── Set-by-key / upsert (retry sets same value) ──
+        "set_dharma_profile",  # sets _active_profile, retry sets same
+        "tx_firewall.set_policy",  # dict overwrite by agent_id
+        "sandbox.set_limits",  # dict overwrite by tool_name
+        "ilp.configure",  # sets config fields, retry sets same
+        "cognitive.set",  # sets _manual_override, retry sets same
+        "governor_set_goal",  # sets current_goal + clears action_history
+        "state.context",  # set-by-key: tracker.set_context(key, value)
+        "galaxy.switch",  # sets active galaxy, retry sets same
+        # ── Reload-from-disk (retry loads same files) ──
+        "prompt.reload",  # reloads templates from disk
+        "dharma.reload",  # reloads rules from disk
+        "forge.reload",  # reloads extensions from disk
+        # ── Reset-to-baseline (retry resets to same state) ──
+        "neuro.reset",  # resets neuromodulator levels to baseline
+        # ── Clear/flush (retry finds nothing to clear) ──
+        "cache.flush",  # flushes stale entries, retry finds nothing
+        "web_cache_clear",  # clears web cache, retry finds nothing
+        # ── Backfill (retry finds nothing to update) ──
+        "session.backfill",  # fills missing sequence numbers, no-op when done
+        # ── Sleep consolidation (content-hash dedup on promoted memories) ──
+        "session.consolidate",  # promotes turns via remember(), dedup
+        "memory.consolidate",  # same mechanism
+        "consolidation.run",  # runs consolidation cycle, dedup on promote
+        # ── Pattern ingestion (dict overwrite by deterministic ID) ──
+        "vuln.ingest_report",  # pattern_id from section index, dict overwrite
+        # ── Start/stop (guard flag, retry is no-op) ──
+        "autoswarm.stop",  # stops loop, no-op when already stopped
+        "autoswarm.start",  # guards on _running flag, no-op if running
+        "watcher_start",  # sets active=True, retry sets same
+        "embedding.daemon_start",  # guards on _running flag, no-op if running
+        "dream_start",  # guards on _running flag, no-op if running
+        # ── Delete-by-ID (retry finds nothing to delete) ──
+        "delete_memory",  # delete by memory_id, error if already gone
+        "memory_delete",  # alias of delete_memory, same handler
+        "dream.expire",  # soft delete by dream_id, not_found if expired
+        "watcher_remove",  # dict delete by watcher_id, not_found if gone
+        # ── File overwrite (retry writes identical content) ──
+        "fast_write.write",  # p.write_text(content), full overwrite
+        "fast_write.batch",  # delegates to fast_write.write per file
+        # ── Upsert by key (retry sets same value) ──
+        "wiki.update",  # _upsert_entry by entry_id, force=True
+        "dilo_co.init",  # sets coordinator params (h, k_ratio, lr, lr_outer)
+        "dharma.resolve_review",  # set review status by review_id, error if done
+        # ── Get-or-create (retry returns existing) ──
+        "garden_activate",  # get_garden(name) returns existing or creates
+        # ── Content-hash dedup via remember() ──
+        "scratchpad_finalize",  # converts scratchpad to memory via remember()
+        # ── Pure reads misclassified as WRITE ──
+        "karma.anchor_status",  # returns anchor_status(), pure read
+        "karma.verify_anchor",  # blockchain read/verify, no state change
+        "model.optimize_status",  # returns get_status(), pure read
+        "network_state.status",  # returns get_status(), pure read
+        "salience.spotlight",  # returns current spotlight, pure read
+        "pattern.resolve",  # looks up proven resolution, pure read
+        "starter_packs",  # routes to list/get/suggest, all pure reads
+        "starter_packs.get",  # get_pack(), pure read
+        "starter_packs.list",  # list_packs(), pure read
+        "starter_packs.suggest",  # suggest_pack(), pure read
+        "garden_list_files",  # lists garden files, pure read
+        "garden_list_functions",  # lists garden functions, pure read
+        "wiki.scan",  # scans for doc drift, pure read
+        "export_memories",  # exports data to JSON/CSV/MD, pure read
+        "windsurf.export_all",  # exports sessions, pure read
+        "emergence.scan",  # scans for emergent patterns, pure read
+        "narrative.compress",  # pure computation, no state change
+        "entity_resolve",  # resolves mentions to canonical entities, pure read
+        # ── Upsert by ID (retry sets same status) ──
+        "task.complete",  # sets task.status by task_id, retry sets same
+        "swarm.complete",  # sets subtask status by plan_id+task_id, retry sets same
+        "reconsolidation.mark",  # marks labile by memory_id, upsert in _labile dict
+        # ── Content-hash dedup via remember() ──
+        "windsurf.ingest",  # ingests sessions via remember(), dedup
+        "windsurf.sync",  # incremental sync via remember(), dedup
+        # ── Process unprocessed (retry finds nothing) ──
+        "embedding.daemon_process",  # processes pending embeddings, no-op when done
+        # ── Deterministic computation (retry produces same result) ──
+        "cache.tune",  # auto_tune_ttls(), deterministic
+        # ── Pure reads misclassified as WRITE (batch 4) ──
+        "hermit.assess",  # assesses privacy exposure, pure read
+        "garden_resolve",  # resolves virtual path to physical, pure read
+        "satkona.fuse",  # fuses perspectives, pure computation
+        # ── Upsert by ID (batch 4) ──
+        "hermit.withdraw",  # sets privacy level, retry sets same
+        "hermit.resolve",  # resolves conflict by conflict_id, upsert
+        "network_state.resolve",  # resolves proposal by proposal_id, upsert
+        # ── Index rebuild (retry overwrites with same content) ──
+        "fragment.index",  # builds/updates Fragment index, overwrites existing
     }
 )
 

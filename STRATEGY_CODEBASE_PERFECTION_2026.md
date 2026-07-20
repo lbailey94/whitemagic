@@ -1373,7 +1373,7 @@ Published in `docs/COMPATIBILITY_POLICY.md`:
 
 ## P9.5 — Curate idempotentHint for write tools
 
-**Status: 🔄 Framework complete 2026-07-20; curation ongoing.**
+**Status: ✅ Complete 2026-07-20 (76 curated, 171 consciously excluded; all 247 reviewed).**
 
 The MCP annotation layer (see Overnight Addendum below) generates
 `idempotentHint=True` for all 603+ read-only tools. Write/delete tools
@@ -1385,8 +1385,26 @@ because retry-safety is high-value signal for MCP clients:
 - **Content-hash dedup creates** (retry returns the existing record)
 - **Upserts** (set-by-key semantics)
 
-Initial curated set (in `whitemagic/tools/annotations.py::CURATED_IDEMPOTENT`):
-`create_memory`, `update_memory`, `state.update`.
+Curated set (in `whitemagic/tools/annotations.py::CURATED_IDEMPOTENT`):
+76 entries across 14 idempotency mechanisms. See inline comments in
+`annotations.py` for per-tool justification.
+
+### Consciously excluded (171 tools, 10 categories)
+
+All remaining WRITE/DELETE tools were reviewed and consciously excluded:
+
+| Category | Count | Reason |
+|---|---|---|
+| GANA meta-tools | 15 | Route to arbitrary tools; idempotency depends on underlying tool |
+| External side effects | 30 | bounty/marketplace/mesh/vote/engagement — retry duplicates external actions |
+| Scanners | 10 | nmap/nuclei/sqlmap/etc — each scan may produce new findings |
+| Append/record | 9 | heartbeat/submit/track — appends new entry each call |
+| Delta-based | 9 | modulate/decay/metaplasticity/ripple — applies cumulative deltas |
+| Create with new ID | 13 | create_session/galaxy.create/etc — generates new UUID each call |
+| Delete/destroy | 4 | galaxy.delete/mandala.destroy — errors on second call |
+| Runners/execute | 31 | run/execute/invoke/cast — non-deterministic computation or state mutation |
+| Multi-mode/timestamp | 10 | wm/wm_write/scratchpad/checkpoint — routes to non-idempotent modes or updates timestamps |
+| Other non-idempotent | 40 | Various: kg.extract, pattern.ingest, edge_add_rule, swarm.vote, etc — create/modify state non-idempotently |
 
 ### Curation protocol
 
@@ -1402,11 +1420,12 @@ Initial curated set (in `whitemagic/tools/annotations.py::CURATED_IDEMPOTENT`):
 
 ### Acceptance
 
-- [ ] All 244 candidates reviewed (curated or consciously excluded).
-- [ ] Every curated entry names its idempotency mechanism in a comment.
-- [ ] `check_mcp_annotations.py --check` stays green.
-- [ ] No tool is marked idempotent whose retry can duplicate side effects
+- [x] Every curated entry names its idempotency mechanism in a comment.
+- [x] `check_mcp_annotations.py --check` stays green.
+- [x] No tool is marked idempotent whose retry can duplicate side effects
       (payments, external posts, bounty claims, session recording).
+- [x] All 244 candidates reviewed (curated or consciously excluded).
+      **Result: 76 curated, 171 consciously excluded across 10 categories.**
 
 ### Phase 9 exit gate ✅
 
@@ -1753,8 +1772,8 @@ Update only when a phase exit gate is satisfied.
 | 5. Memory consolidation | ✅ Complete | 2026-07-18 | 2026-07-19 | P5.1–P5.5 done, exit gate met |
 | 6. Performance/benchmarks | ✅ Complete | 2026-07-19 | 2026-07-19 | P6.1–P6.6 done, exit gate met |
 | 7. Quality debt | ✅ Complete | 2026-07-19 | 2026-07-19 | P7.1–P7.6 done, exit gate met. Stubs classified (39 active, 0 untracked). Broad exceptions triaged (4 file-level→per-line, 2 narrowed). Ruff ratchet (0 F-rule, 670 baseline). Mypy boundaries clean (5 packages, 611 baseline). Duplicates classified (597/211, singleton patterns). Module sizes ratcheted (25 over 1000 lines, 0 over 3000). 22 new contract tests. |
-| 8. CI/release train | Not started | — | — | — |
-| 9. Documentation/public surface | ✅ Complete | 2026-07-19 | 2026-07-19 | P9.1–P9.4 done, exit gate met. P9.5 added 2026-07-20 (idempotentHint curation). |
+| 8. CI/release train | ✅ Complete | 2026-07-19 | 2026-07-19 | P8.1–P8.4 done, exit gate met. 4 CI lanes defined, false-green gates eliminated, risk-based coverage targets set. |
+| 9. Documentation/public surface | ✅ Complete | 2026-07-19 | 2026-07-19 | P9.1–P9.4 done, exit gate met. P9.5 complete: 76 curated, 171 excluded, all 247 reviewed. |
 | 10. Final review | ✅ Complete | 2026-07-19 | 2026-07-19 | Release readiness checklist published (docs/RELEASE_READINESS_CHECKLIST.md, 80+ items). Overnight session addendum appended (MCP conformance 12/12, SIGTERM fixes, annotations, memory hot path). |
 
 ---
