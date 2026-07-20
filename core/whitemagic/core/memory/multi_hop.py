@@ -134,7 +134,7 @@ def multi_hop_search(
                     mem.metadata["multi_hop_seed_query"] = sq
                     secondary_results.append(mem)
                     existing_ids.add(mem.id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Multi-hop secondary search failed: %s", e)
 
     if not secondary_results:

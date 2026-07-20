@@ -102,7 +102,7 @@ class HRRBridge:
                 ]
                 results.sort(key=lambda x: x["similarity"], reverse=True)
                 return results
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("Rust synergy_for failed, falling back: %s", exc)
 
         # Python fallback
@@ -130,7 +130,7 @@ class HRRBridge:
         if self._available:
             try:
                 return float(_wmr.hexagram_interaction_score_py(kw1, kw2))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("Rust interaction_score failed, falling back: %s", exc)
 
         vectors = _get_py_vectors()
@@ -151,7 +151,7 @@ class HRRBridge:
                 v1 = _wmr.hexagram_hrr_by_number_py(kw1)
                 v2 = _wmr.hexagram_hrr_by_number_py(kw2)
                 return list(_wmr.hexagram_superpose_py(v1, v2))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("Rust superpose failed, falling back: %s", exc)
 
         # Python fallback: element-wise average
@@ -169,7 +169,7 @@ class HRRBridge:
         if self._available:
             try:
                 return list(_wmr.hexagram_interaction_matrix_py())
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("Rust interaction_matrix failed, falling back: %s", exc)
 
         # Python fallback
@@ -192,7 +192,7 @@ class HRRBridge:
         if self._available:
             try:
                 return list(_wmr.hexagram_hrr_by_number_py(king_wen))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("Rust hexagram_vector failed, falling back: %s", exc)
 
         vectors = _get_py_vectors()

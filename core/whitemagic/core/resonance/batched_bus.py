@@ -162,7 +162,7 @@ class BatchedGanYingBus(GanYingBus):
                     # Standard listener - call for each event
                     for event in events:
                         listener(event)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 # Don't let one listener break the whole batch
                 from logging import getLogger
 

@@ -47,7 +47,7 @@ def _get_alchemical_phase(wu_xing: str) -> str:
     try:
         from .symbolic_hrr import get_symbolic_hrr
         return get_symbolic_hrr().alchemical_phase(wu_xing)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return _WUXING_TO_ALCHEMY.get(wu_xing, "")
 
 
@@ -56,7 +56,7 @@ def _get_modality_dynamic(modality: str) -> str:
     try:
         from .symbolic_hrr import get_symbolic_hrr
         return get_symbolic_hrr().modality_dynamic(modality)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return _MODALITY_TO_ICHING.get(modality, "")
 
 # Zodiac element → Ifá leg significance
@@ -228,7 +228,7 @@ class OracleSynthesizer:
             try:
                 bridge = get_hrr_bridge()
                 hrr_resonances = bridge.synergy_for(primary_hexagram, threshold=0.3)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("HRR synergy query failed: %s", exc)
                 hrr_resonances = []
 
@@ -252,7 +252,7 @@ class OracleSynthesizer:
                 from .llm_interpreter import get_oracle_interpreter
                 interpreter = get_oracle_interpreter()
                 result.llm_interpretation = interpreter.interpret(result, oracle_output.get("question", ""))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("LLM interpretation failed: %s", exc)
 
         return result
@@ -293,7 +293,7 @@ class OracleSynthesizer:
                 ).date().isoformat(),
             )
             return [claim_id]
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("Oracle claim creation failed: %s", exc)
             return []
 

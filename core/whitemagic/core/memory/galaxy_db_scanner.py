@@ -25,7 +25,7 @@ def get_galaxy_db_dir() -> Path:
 
 def list_galaxy_dbs() -> list[tuple[str, Path]]:
     """List all galaxy databases on disk.
-    
+
     Returns:
         List of (galaxy_name, db_path) tuples.
     """
@@ -45,7 +45,7 @@ def list_galaxy_dbs() -> list[tuple[str, Path]]:
 
 def scan_all_coords() -> dict[str, tuple[str, tuple[float, ...]]]:
     """Read holographic coordinates from ALL galaxy DBs.
-    
+
     Returns:
         Dict mapping memory_id → (galaxy_name, (x, y, z, w, v[, u]))
     """
@@ -68,7 +68,7 @@ def scan_all_coords() -> dict[str, tuple[str, tuple[float, ...]]]:
                 coords = tuple(row[1:])
                 result[mid] = (gname, coords)
             conn.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to read coords from %s: %s", gname, e)
 
     return result
@@ -83,7 +83,7 @@ def count_all_memories() -> int:
             count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
             total += count
             conn.close()
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
     return total
 
@@ -157,7 +157,7 @@ def insert_association(galaxy_name: str, source_id: str, target_id: str,
             )
         conn.commit()
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Failed to insert association in %s: %s", galaxy_name, e)
         return False
     finally:

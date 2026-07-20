@@ -205,7 +205,7 @@ def _save_session(base_path: Path, session: dict[str, Any]) -> None:
     path.write_text(_json_dumps(session, indent=2), encoding="utf-8")
 
 
-def _run_async(coro: Coroutine[Any, Any, T]) -> T:
+def _run_async(coro: Coroutine[Any, Any, T]) -> T:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Run an async coroutine safely, handling event loop conflicts.
 
     Uses a shared executor when an event loop is already running to avoid
@@ -381,10 +381,10 @@ def _dispatch_tool_with_timeout(tool_name: str, timeout_s: float, **kwargs: Any)
 _DEAD_CODE_REMOVED = True  # Marker for grep-ability
 
 
-from whitemagic.tools.canonical import (
+from whitemagic.tools.canonical import (  # noqa: E402  # conditional/late import
     _TOOL_ALIASES,  # noqa: F401 — re-exported for backward compat
 )
-from whitemagic.tools.canonical import (
+from whitemagic.tools.canonical import (  # noqa: E402  # conditional/late import
     canonical_tool_name as _canonical_tool_name,
 )
 

@@ -146,7 +146,7 @@ class WorldModelBuilder:
                 # Extract simple entities from document
                 self._extract_entities(world, doc, i)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Seed ingestion failed (non-fatal): %s", e, exc_info=True)
 
     def _extract_entities(self, world: WorldModel, doc: str, doc_idx: int) -> None:
@@ -225,7 +225,7 @@ class WorldModelBuilder:
             snapshot = um.galaxy_snapshot(galaxy=source.galaxy)
             branch_galaxy = f"simulation/{branch_name}"
             um.galaxy_restore(snapshot, target_galaxy=branch_galaxy, merge=True)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("World branch failed (non-fatal): %s", e, exc_info=True)
 
         branch = self.create_world(

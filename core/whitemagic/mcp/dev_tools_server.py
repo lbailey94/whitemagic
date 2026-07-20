@@ -230,7 +230,7 @@ class DevToolsServer:
             return {"error": f"Unknown tool: {name}"}
         try:
             return handler(**arguments)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Tool %s failed: %s", name, e)
             return {"error": str(e)}
 
@@ -316,7 +316,7 @@ class DevToolsServer:
                         })
                         if len(matches) >= 100:
                             return {"matches": matches, "truncated": True, "count": len(matches)}
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
         return {"matches": matches, "count": len(matches)}
@@ -370,7 +370,7 @@ class DevToolsServer:
                     "body_truncated": len(content) > 10000,
                     "elapsed_ms": round(elapsed * 1000, 1),
                 }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             elapsed = time.perf_counter() - start
             return {"error": str(e), "elapsed_ms": round(elapsed * 1000, 1)}
 
@@ -391,7 +391,7 @@ class DevToolsServer:
                     "content_type": content_type,
                     "elapsed_ms": round(elapsed * 1000, 1),
                 }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             elapsed = time.perf_counter() - start
             return {
                 "url": url,
@@ -476,7 +476,7 @@ class DevToolsServer:
             return {"findings": results, "count": len(results) if isinstance(results, list) else 0}
         except ImportError:
             return {"error": "STRATA not available. Install with: pip install whitemagic[strata]"}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"error": str(e)}
 
     def _handle_env_get(self, name: str) -> dict[str, Any]:
@@ -595,7 +595,7 @@ def _run_jsonrpc(server: DevToolsServer) -> None:
             else:
                 response = {"jsonrpc": "2.0", "id": req.get("id"), "error": {"code": -32601, "message": "Method not found"}}
             print(json.dumps(response), flush=True)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32603, "message": str(e)}}), flush=True)
 
 

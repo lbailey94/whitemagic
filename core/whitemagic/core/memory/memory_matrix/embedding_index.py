@@ -88,7 +88,7 @@ class EmbeddingIndex:
                     )
                     self._entries[entry.id] = entry
                 self._rebuild_matrix()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self._entries = {}
 
     def _save(self) -> None:

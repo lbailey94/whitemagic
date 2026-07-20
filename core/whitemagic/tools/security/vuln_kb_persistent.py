@@ -83,7 +83,7 @@ class PersistentVulnKnowledgeBase(VulnKnowledgeBase):
                 conn.executescript(_SCHEMA)
                 conn.commit()
             self._db_available = True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("PersistentVulnKB: SQLite init failed (%s), using in-memory", e)
             self._db_available = False
 
@@ -118,7 +118,7 @@ class PersistentVulnKnowledgeBase(VulnKnowledgeBase):
                 )
                 self._patterns[pattern.pattern_id] = pattern
             logger.debug("PersistentVulnKB: loaded %d patterns from SQLite", len(rows))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("PersistentVulnKB: load failed: %s", e)
 
     def _save_pattern(self, pattern: VulnerabilityPattern) -> None:
@@ -154,7 +154,7 @@ class PersistentVulnKnowledgeBase(VulnKnowledgeBase):
                     ),
                 )
                 conn.commit()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("PersistentVulnKB: save failed: %s", e)
 
     def add_pattern(self, pattern: VulnerabilityPattern) -> None:
@@ -205,7 +205,7 @@ class PersistentVulnKnowledgeBase(VulnKnowledgeBase):
                 )
                 conn.commit()
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("PersistentVulnKB: add_attack_pattern failed: %s", e)
             return False
 
@@ -232,7 +232,7 @@ class PersistentVulnKnowledgeBase(VulnKnowledgeBase):
                         (limit,),
                     ).fetchall()
             return [{"pattern_text": r[0], "category": r[1], "severity": r[2], "source": r[3], "added_at": r[4]} for r in rows]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("PersistentVulnKB: get_attack_patterns failed: %s", e)
             return []
 

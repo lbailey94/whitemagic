@@ -226,6 +226,25 @@ class TestEmbeddingPipeline:
         """Store a memory and recall it via unified API."""
         from whitemagic.tools.unified_api import call_tool
 
+        # Pre-warm cold-start paths OUTSIDE the timed dispatch windows.
+        # Cold HF model load (~10-60s download) and the semantic-defense
+        # corpus embedding init run inside the 20s dispatch timeout
+        # otherwise, making this test flaky under xdist (fresh worker).
+        try:
+            from whitemagic.core.memory.embeddings import get_embedding_engine
+
+            engine = get_embedding_engine()
+            if engine.available():
+                engine.encode_batch(["warmup"])
+        except Exception:  # noqa: BLE001
+            pass  # engine unavailable → search falls back to FTS5
+        try:
+            from whitemagic.security.semantic_defense import combined_semantic_check
+
+            combined_semantic_check("warmup")  # force corpus embedding init
+        except Exception:  # noqa: BLE001
+            pass  # semantic defense unavailable → sanitizer degrades gracefully
+
         # Store
         out = call_tool(
             "create_memory",

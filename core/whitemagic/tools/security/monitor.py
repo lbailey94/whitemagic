@@ -46,7 +46,7 @@ class SecurityMonitor:
         for cb in self._callbacks:
             try:
                 cb(alert)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Alert callback failed: %s", e)
         logger.info("Security alert [%s]: %s — %s", severity, source, message)
         return alert
@@ -84,7 +84,7 @@ class SecurityMonitor:
         while not self._stop_event.is_set():
             try:
                 self._run_checks()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Monitor check failed: %s", e)
             self._stop_event.wait(interval)
 

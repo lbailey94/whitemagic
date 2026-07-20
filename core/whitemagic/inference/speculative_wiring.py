@@ -93,7 +93,7 @@ def _llamacpp_verify_handler(
             "tokens": [],  # Text-based comparison when token IDs unavailable
             "latency_ms": elapsed_ms,
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("llama.cpp verify handler error: %s", e)
         return {"text": "", "tokens": [], "latency_ms": 0.0}
 
@@ -136,7 +136,7 @@ def _bitnetcpp_verify_handler(
             "tokens": [],
             "latency_ms": elapsed_ms,
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("bitnet.cpp verify handler error: %s", e)
         return {"text": "", "tokens": [], "latency_ms": 0.0}
 
@@ -165,7 +165,7 @@ def wire_speculative_decoder(
             if autonomic.is_available:
                 decoder.register_draft(_bitmamba_draft_handler)
                 logger.info("Speculative decoder: draft=BitMamba-2 255M")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Draft handler registration failed: %s", e)
 
     # Register verify handler
@@ -177,7 +177,7 @@ def wire_speculative_decoder(
             if backend.is_available:
                 decoder.register_verify(_llamacpp_verify_handler)
                 logger.info("Speculative decoder: verify=llama.cpp")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Verify handler registration failed: %s", e)
     elif verify_model in ("bitnet", "falcon3"):
         env_key = "bitnet-2b4t" if verify_model == "bitnet" else "falcon3-1b"
@@ -244,7 +244,7 @@ def wire_pipelined_speculative(
                     "max_tokens": max_tokens,
                     "temperature": temperature,
                 })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Ring buffer send failed (pipelined draft): %s", e)
         return result
 
@@ -261,7 +261,7 @@ def wire_pipelined_speculative(
                 msg = rb.recv_json()
                 if msg and "tokens" in msg:
                     draft_tokens = msg["tokens"]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Ring buffer recv failed (pipelined verify): %s", e)
 
         # Use standard verify handler
@@ -278,7 +278,7 @@ def wire_pipelined_speculative(
             if autonomic.is_available:
                 decoder.register_draft(_pipelined_draft_handler)
                 logger.info("Pipelined speculative: draft=BitMamba-2 (core 0, ☰ Qián)")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Pipelined draft registration failed: %s", e)
 
     if verify_model == "llamacpp":
@@ -289,7 +289,7 @@ def wire_pipelined_speculative(
             if backend.is_available:
                 decoder.register_verify(_pipelined_verify_handler)
                 logger.info("Pipelined speculative: verify=llama.cpp (core 1, ☲ Lí)")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Pipelined verify registration failed: %s", e)
     elif verify_model in ("bitnet", "falcon3"):
         env_key = "bitnet-2b4t" if verify_model == "bitnet" else "falcon3-1b"

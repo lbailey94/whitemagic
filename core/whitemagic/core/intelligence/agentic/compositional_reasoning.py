@@ -142,7 +142,7 @@ class CompositionalReasoner:
                     relation=relation,
                     latency_ms=(time.time() - start) * 1000,
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Embedding engine unavailable: %s", e, exc_info=True)
             return CompositionalResult(
                 resolved=False,
@@ -227,7 +227,7 @@ class CompositionalReasoner:
                 "Vector search by embedding not available, using text fallback"
             )
             return []
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Projected search failed: %s", e, exc_info=True)
             return []
 

@@ -50,19 +50,19 @@ def get_galaxy_db_paths() -> dict[str, str]:
         from whitemagic.config.paths import DB_PATH
 
         paths["default"] = str(DB_PATH)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored error in galaxy_scan.py:53")
 
     try:
         from whitemagic.core.user_profile import get_user_dir
 
         galaxies_dir = get_user_dir("local") / "galaxies"
-    except Exception:
+    except Exception:  # noqa: BLE001
         try:
             from whitemagic.config.paths import DB_PATH
 
             galaxies_dir = Path(DB_PATH).parent / "galaxies"
-        except Exception:
+        except Exception:  # noqa: BLE001
             _db_paths_cache = paths
             _db_paths_cache_time = now
             return paths
@@ -117,7 +117,7 @@ def scan_query_all(
             with galaxy_connection(db_path) as conn:
                 rows = conn.execute(sql, params).fetchall()
                 all_rows.extend(rows)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(
                 "Galaxy scan query failed for '%s': %s",
                 galaxy_name,
@@ -138,7 +138,7 @@ def scan_query_one(
                 row = conn.execute(sql, params).fetchone()
                 if row:
                     return row
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(
                 "Galaxy scan query_one failed for '%s': %s",
                 galaxy_name,
@@ -163,7 +163,7 @@ def scan_count_all(
                 row = conn.execute(sql, params).fetchone()
                 if row:
                     total += row[0]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(
                 "Galaxy scan count failed for '%s': %s",
                 galaxy_name,
@@ -188,7 +188,7 @@ def execute_across_galaxies(
                 cur = conn.execute(sql, params)
                 conn.commit()
                 total_affected += cur.rowcount
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug(
                 "Galaxy execute failed for '%s': %s",
                 galaxy_name,

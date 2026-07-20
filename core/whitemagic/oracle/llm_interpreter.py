@@ -30,7 +30,7 @@ class OracleLLMInterpreter:
             backend = get_llama_cpp_backend()
             self._llm_available = backend is not None
             self._backend = backend
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._llm_available = False
             self._backend = None
 
@@ -58,7 +58,7 @@ class OracleLLMInterpreter:
         if self._llm_available:
             try:
                 return self._llm_interpret(synthesis_result, question, context or {})
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("LLM interpretation failed, falling back to template: %s", exc)
 
         return self._template_interpret(synthesis_result, question, context or {})

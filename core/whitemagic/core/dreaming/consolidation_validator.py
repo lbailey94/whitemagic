@@ -110,7 +110,7 @@ class ConsolidationValidator:
             try:
                 results = recall(query=q, limit=10, galaxy=self._galaxy)
                 count = len(results)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 count = 0
             lat = (time.perf_counter() - t0) * 1000
             latencies.append(lat)
@@ -140,7 +140,7 @@ class ConsolidationValidator:
 
             um = get_unified_memory()
             walker = GraphWalker(um)
-        except (ImportError, ModuleNotFoundError, Exception) as e:
+        except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
             logger.debug("Multi-hop check unavailable: %s", e)
             return {"avg_discovered": 0.0, "avg_paths": 0.0, "total_queries": 0}
 
@@ -164,7 +164,7 @@ class ConsolidationValidator:
                 total_paths += walk_result.paths_explored
                 if discovered > 0:
                     successful += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
         n = len(queries) if queries else 1
@@ -203,7 +203,7 @@ class ConsolidationValidator:
             report.consolidation_duration_s = time.perf_counter() - t0
             report.associations_created = result.get("cross_galaxy_mining", {}).get("associations_created", 0)
             report.memories_promoted = result.get("promotions", 0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             report.errors.append(f"consolidation_failed: {e}")
             report.consolidation_duration_s = time.perf_counter() - t0
 

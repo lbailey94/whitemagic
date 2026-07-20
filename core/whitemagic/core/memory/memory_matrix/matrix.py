@@ -88,7 +88,7 @@ class MemoryMatrix:
                     self._session = SessionContext(**filtered)
                 else:
                     self._new_session()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self._new_session()
         else:
             self._new_session()

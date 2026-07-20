@@ -96,7 +96,7 @@ class EmergenceEngine:
                         metadata={"edge_count": len(recent_edges)},
                     )
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
         self._insights = insights
         return insights

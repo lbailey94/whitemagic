@@ -215,7 +215,7 @@ class GHRRAttention:
             orig_tok = sum(len(t) // 4 for t in texts)
             comp_tok = len(summary) // 4
             return {"prompt": enhanced, "context_vector": compressed.tolist(), "relevance_scores": [(i, round(s, 4)) for i, s in scores], "method": "ghrr_attention", "compression_ratio": round(orig_tok / max(1, comp_tok), 2), "items_processed": len(bound_vecs)}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("GHRR preprocess failed: %s", e)
             return {"prompt": prompt, "context_vector": None, "relevance_scores": [], "method": "ghrr_error", "compression_ratio": 1.0}
 

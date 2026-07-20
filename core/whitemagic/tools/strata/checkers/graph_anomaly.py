@@ -27,7 +27,7 @@ def check_god_classes(
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     god_nodes = g.god_nodes(limit=20)
@@ -55,7 +55,7 @@ def check_circular_dependencies(
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     # Build import-only adjacency
@@ -131,7 +131,7 @@ def check_dead_code(
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     # Compute in-degree for each node
@@ -191,7 +191,7 @@ def check_bridge_modules(
         g = get_code_structure_graph()
         if g.stats()["node_count"] == 0:
             return
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     # Build networkx graph from code edges
@@ -208,7 +208,7 @@ def check_bridge_modules(
     # Compute betweenness centrality
     try:
         bc = nx.betweenness_centrality(G, normalized=True)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     # Find nodes with high betweenness (top 5% or > 0.1)

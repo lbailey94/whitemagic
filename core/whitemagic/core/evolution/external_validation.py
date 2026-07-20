@@ -189,7 +189,7 @@ class ExternalValidator:
                     if val_conf_rows
                     else 0.0
                 )
-        except (sqlite3.OperationalError, Exception) as e:
+        except (sqlite3.OperationalError, Exception) as e:  # noqa: BLE001
             logger.debug("Confidence calibration query failed: %s", e)
 
         calibration_gap = abs(train_conf - val_conf)

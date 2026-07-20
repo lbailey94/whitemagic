@@ -77,7 +77,7 @@ def _check_offensive_token(tool_name: str, kwargs: dict[str, Any]) -> dict[str, 
             }
     except ImportError:
         logger.debug("Optional dependency unavailable: ImportError")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Handler token check failed for %s: %s", tool_name, e)
     return None
 
@@ -129,7 +129,7 @@ def _execute_in_shelter(
         return result
     except ImportError:
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Shelter execution failed for %s: %s", tool_name, e)
         return None
 
@@ -279,7 +279,7 @@ def handle_poc_generate(**kwargs: Any) -> dict[str, Any]:
     try:
         code = generate_poc(kwargs.get("template_name", ""), kwargs.get("variables", {}), tier=kwargs.get("tier"))
         return {"success": True, "code": code}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"success": False, "error": str(e)}
 
 
@@ -588,7 +588,7 @@ def handle_slither_scan(**kwargs: Any) -> dict[str, Any]:
         result = _sp.run(cmd, capture_output=True, text=True, timeout=120, cwd=project_dir)
     except _sp.TimeoutExpired:
         return {"status": "error", "error": "Slither timed out", "findings": []}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e), "findings": []}
     if result.returncode not in (0, 1):
         return {"status": "error", "error": f"Slither exited with code {result.returncode}", "findings": []}
@@ -638,7 +638,7 @@ def handle_slither_status(**kwargs: Any) -> dict[str, Any]:
     try:
         result = _sp.run([slither_bin, "--version"], capture_output=True, text=True, timeout=10)
         version = result.stdout.strip() or result.stderr.strip()
-    except Exception:
+    except Exception:  # noqa: BLE001
         version = "unknown"
     return {"available": True, "path": slither_bin, "version": version}
 

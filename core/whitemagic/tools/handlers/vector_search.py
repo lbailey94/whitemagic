@@ -31,7 +31,7 @@ def handle_vector_search(**kwargs: Any) -> dict[str, Any]:
                     "accelerated": True,
                     "layer": accel["layer"],
                 }
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in vector_search.py:35")
 
     from whitemagic.core.memory.vector_search import get_vector_search

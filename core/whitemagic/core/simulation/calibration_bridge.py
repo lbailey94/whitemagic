@@ -71,7 +71,7 @@ class PredictionCalibrationBridge:
             try:
                 from whitemagic.forecasting.temporal_db import TemporalForecastDB
                 self._forecast_db = TemporalForecastDB()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("TemporalForecastDB unavailable", exc_info=True)
                 self._forecast_db = None
         return self._forecast_db
@@ -124,7 +124,7 @@ class PredictionCalibrationBridge:
                     notes=f"confidence={confidence}, adjustment={self._calibration_gap:.4f}",
                 )
                 pred.metadata["forecast_db_id"] = db_pred_id
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Failed to persist prediction to TemporalForecastDB", exc_info=True)
 
         logger.info("Recorded prediction %s: P=%.2f (adjusted from %.2f)",
@@ -163,7 +163,7 @@ class PredictionCalibrationBridge:
                         db.validate(db_id, pred.created_at[:10], validation_ref="simulation")
                     else:
                         db.falsify(db_id, notes=f"brier={brier:.4f}")
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Failed to persist resolution to TemporalForecastDB", exc_info=True)
 
         return {

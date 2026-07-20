@@ -176,7 +176,7 @@ def get_query_cache() -> QueryCache:
                         flush_func=_query_cache.clear,
                         stats_func=_query_cache.get_stats,
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("CacheRegistry registration skipped", exc_info=True)
     return _query_cache
 

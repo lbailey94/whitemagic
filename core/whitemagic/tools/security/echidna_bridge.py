@@ -69,7 +69,7 @@ class EchidnaBridge:
             )
         except subprocess.TimeoutExpired:
             return EchidnaResult(False, "", "Timeout", 0, 0, [], self._timeout)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return EchidnaResult(False, "", str(e), 0, 0, [], 0.0)
 
     def _parse_output(self, output: str) -> tuple[int, int, list[dict[str, Any]]]:

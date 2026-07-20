@@ -93,7 +93,7 @@ class AbstentionGate:
             # Use a simple heuristic if we can't get the memory's embedding
             # In practice, the search pipeline already has embeddings cached
             return 0.5  # Neutral score when embeddings unavailable
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0.5  # Neutral — don't penalize when embeddings unavailable
 
     def _compute_keyword_overlap(self, query: str, content: str) -> float:

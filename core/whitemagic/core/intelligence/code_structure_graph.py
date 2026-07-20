@@ -237,7 +237,7 @@ class CodeStructureGraph:
                     elapsed = (time.perf_counter() - start) * 1000
                     result["duration_ms"] = round(elapsed, 2)
                     return result
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Rust codegraph build failed, falling back: %s", e)
 
         # Python fallback
@@ -436,7 +436,7 @@ class CodeStructureGraph:
             UG = G.to_undirected()
             try:
                 comms = nx.community.louvain_communities(UG)
-            except (AttributeError, Exception):
+            except (AttributeError, Exception):  # noqa: BLE001
                 comms = [set(c) for c in nx.connected_components(UG) if len(c) >= 2]
 
             result = []
@@ -749,7 +749,7 @@ class CodeStructureGraph:
         # Compute centrality on the unified graph
         try:
             pagerank = nx.pagerank(G, max_iter=200)
-        except Exception:
+        except Exception:  # noqa: BLE001
             pagerank = {}
 
         # Compute code-only degree
@@ -965,7 +965,7 @@ class CodeStructureGraph:
                     "score": r.get("score", 0.0),
                     "source": "semantic_search",
                 })
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in code_structure_graph.py:966")
 
         return {
@@ -1011,7 +1011,7 @@ class CodeStructureGraph:
                             "type": row[3], "confidence": row[4], "weight": row[5],
                             "metadata": row[6],
                         }
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in code_structure_graph.py:1012")
         else:
             old_nodes = {n["id"]: n for n in old_graph.get("nodes", [])}

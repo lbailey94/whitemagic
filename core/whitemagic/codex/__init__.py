@@ -88,7 +88,7 @@ class CodexPipeline:
                     except OSError:
                         continue
             return docs
-        except (ImportError, AttributeError, Exception):
+        except (ImportError, AttributeError, Exception):  # noqa: BLE001
             logger.debug("Ignored ImportError, AttributeError, Exception in __init__.py:88")
 
         # Python fallback

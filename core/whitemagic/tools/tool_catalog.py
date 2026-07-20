@@ -5,7 +5,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from whitemagic.tools.tool_types import (
+from whitemagic.tools.tool_types import (  # noqa: E402  # conditional/late import
     ToolCategory,
     ToolDefinition,
     ToolSafety,

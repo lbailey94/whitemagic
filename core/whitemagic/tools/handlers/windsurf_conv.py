@@ -36,7 +36,7 @@ def handle_windsurf_list_conversations(**kwargs: Any) -> dict[str, Any]:
                     "method": "api",
                 })
             return {"status": "success", "conversations": conversations, "method": "api"}
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in windsurf_conv.py:40")
 
     from whitemagic.archaeology.windsurf_reader import WindsurfConversationReader
@@ -66,7 +66,7 @@ def handle_windsurf_read_conversation(**kwargs: Any) -> dict[str, Any]:
                     "turns": [t.to_dict() for t in turns],
                     "method": "api",
                 }
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in windsurf_conv.py:70")
 
     # Fallback: .pb file reading
@@ -116,7 +116,7 @@ def handle_windsurf_search_conversations(**kwargs: Any) -> dict[str, Any]:
         results = SessionRecorder.search(query, limit=kwargs.get("limit", 20))
         if results:
             return {"status": "success", "results": results, "method": "fts5"}
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in windsurf_conv.py:120")
 
     # Fallback to in-memory keyword search
@@ -217,7 +217,7 @@ def handle_windsurf_full_steps(**kwargs: Any) -> dict[str, Any]:
     try:
         steps = miner._api.get_all_steps(cascade_id)
         return {"status": "success", "cascade_id": cascade_id, "total_steps": len(steps), "steps": steps}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -250,7 +250,7 @@ def handle_windsurf_semantic_search(**kwargs: Any) -> dict[str, Any]:
         results = um.search(query, galaxy="sessions", limit=limit)
         if results:
             return {"status": "success", "results": results, "method": "galaxy_semantic"}
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in windsurf_conv.py:253")
 
     # Fallback to keyword search on .pb files

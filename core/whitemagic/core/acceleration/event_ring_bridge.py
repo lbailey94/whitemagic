@@ -194,7 +194,7 @@ class EventRingBridge:
                 )
                 if isinstance(sequence, (int, float)):
                     return int(sequence)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:
@@ -210,7 +210,7 @@ class EventRingBridge:
                 consumer_id = getattr(whitemagic_rs, "ring_register_consumer")()
                 if isinstance(consumer_id, (int, float)):
                     return int(consumer_id)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:
@@ -235,7 +235,7 @@ class EventRingBridge:
                     )
                     for seq, et, sid, ts, conf, d in raw
                 ]
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:
@@ -262,7 +262,7 @@ class EventRingBridge:
                 stats = getattr(whitemagic_rs, "ring_stats")()
                 if isinstance(stats, dict):
                     return stats
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         if self._fallback is None:

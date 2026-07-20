@@ -138,7 +138,7 @@ class CodeValidator:
                 line=e.lineno or 0,
                 auto_fixable=e.text and e.text.rstrip().endswith(":"),
             ))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result.issues.append(ValidationIssue(
                 severity="warning",
                 message=f"AST parse failed: {e}",
@@ -183,7 +183,7 @@ class CodeValidator:
             yaml.safe_load(code)
         except ImportError:
             logger.debug("Optional dependency unavailable: ImportError")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result.issues.append(ValidationIssue(
                 severity="error",
                 message=f"YAML parse error: {e}",

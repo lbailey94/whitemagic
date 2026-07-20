@@ -86,7 +86,7 @@ class CoherenceMetric:
                     self.weights[d] = loaded[d] / total
                 else:
                     self.weights[d] = equal_w / total
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in coherence.py:90")
 
     def _load_drift_history(self) -> None:
@@ -98,7 +98,7 @@ class CoherenceMetric:
                         if line.strip():
                             entry = __import__("json").loads(line)
                             self.history.append(entry)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in coherence.py:102")
 
     def _persist_measurement(self, overall: float) -> None:
@@ -115,7 +115,7 @@ class CoherenceMetric:
             }
             with open(self._drift_file, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in coherence.py:119")
 
     def measure(

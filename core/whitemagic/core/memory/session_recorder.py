@@ -128,7 +128,7 @@ class SessionRecorder:
             from whitemagic.core.consciousness.citta_cycle import get_citta_cycle
 
             return get_citta_cycle().get_cycle_summary().get("stream_length", 0)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0
 
     def recall_recent(self, n: int = 10) -> list[dict[str, Any]]:
@@ -382,7 +382,7 @@ class SessionRecorder:
             coloring = cycle.get_emotional_coloring()
             dominant = coloring.get("dominant", "neutral")
             return self._EMOTIONAL_TONE_VALENCE.get(dominant, 0.0)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0.0
 
     def record_user(

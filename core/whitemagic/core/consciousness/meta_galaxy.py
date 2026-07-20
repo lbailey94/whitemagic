@@ -112,7 +112,7 @@ class MetaGalaxy:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             return um._galaxy_backend
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("MetaGalaxy: could not get galaxy backend: %s", e)
             return None
 
@@ -121,7 +121,7 @@ class MetaGalaxy:
         try:
             from whitemagic.config.paths import WM_ROOT
             return str(WM_ROOT / "users" / "local" / "galaxies")
-        except Exception:
+        except Exception:  # noqa: BLE001
             return os.path.expanduser("~/.whitemagic/users/local/galaxies")
 
     def _scan_disk_galaxies(self) -> dict[str, str]:
@@ -144,7 +144,7 @@ class MetaGalaxy:
             stats = backend.get_stats()
             summary.memory_count = stats.get("total_memories", 0)
             summary.avg_importance = stats.get("avg_importance", 0.0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("MetaGalaxy: stats failed for %s: %s", name, e)
 
         try:
@@ -164,7 +164,7 @@ class MetaGalaxy:
                 if row:
                     summary.oldest_memory = row[0] or ""
                     summary.newest_memory = row[1] or ""
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("MetaGalaxy: tag scan failed for %s: %s", name, e)
 
         # Use canonical galaxy zones from taxonomy
@@ -207,7 +207,7 @@ class MetaGalaxy:
                 newest = datetime.fromisoformat(summary.newest_memory.replace("Z", ""))
                 if datetime.now() - newest > timedelta(days=7):
                     gaps.append(f"Galaxy '{galaxy_name}' is stale — no new memories in >7 days")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in meta_galaxy.py:210")
 
         return gaps
@@ -235,7 +235,7 @@ class MetaGalaxy:
                         key = f"{name}->{other_name}"
                         refs[key] = count
                 conn.close()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return refs
 
@@ -291,7 +291,7 @@ class MetaGalaxy:
                     )
                     for row in cur.fetchall():
                         summary.top_tags.append((row[0], row[1]))
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored error in meta_galaxy.py:294")
 
                 # Oldest and newest
@@ -301,11 +301,11 @@ class MetaGalaxy:
                     if row:
                         summary.oldest_memory = row[0] or ""
                         summary.newest_memory = row[1] or ""
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored error in meta_galaxy.py:304")
 
             conn.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("MetaGalaxy: disk scan failed for %s: %s", name, e)
 
         # Use canonical galaxy zones
@@ -369,7 +369,7 @@ class MetaGalaxy:
 
             conn.commit()
             conn.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("MetaGalaxy: persist to meta DB failed: %s", e)
 
     def refresh(self) -> MetaGalaxyIndex:
@@ -384,7 +384,7 @@ class MetaGalaxy:
                     continue  # Don't scan ourselves
                 try:
                     galaxies[name] = self._summarize_galaxy_from_disk(name, db_path)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.debug("MetaGalaxy: failed to summarize galaxy %s: %s", name, e)
                     galaxies[name] = GalaxySummary(name=name)
 
@@ -427,7 +427,7 @@ class MetaGalaxy:
             for cb in self._refresh_callbacks:
                 try:
                     cb(index)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored error in meta_galaxy.py:430")
 
             return index

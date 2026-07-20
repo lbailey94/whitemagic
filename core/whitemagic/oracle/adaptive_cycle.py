@@ -94,7 +94,7 @@ class AdaptiveOracleCycle:
             oracle = QuantumIChing()
             consultation = oracle.consult(question, context or {})
             result.hexagram = consultation.primary_hexagram
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("Oracle consultation failed: %s", exc)
 
         # Step 2: Synthesize reading
@@ -126,7 +126,7 @@ class AdaptiveOracleCycle:
             }
             if synthesis.claim_ids:
                 result.claim_id = synthesis.claim_ids[0]
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("Synthesis failed: %s", exc)
 
         # Step 3: Interpret reading
@@ -135,7 +135,7 @@ class AdaptiveOracleCycle:
             interpreter = get_oracle_interpreter()
             if synthesis:
                 result.interpretation = interpreter.interpret(synthesis, question, context)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("Interpretation failed: %s", exc)
 
         # Step 4: Translate to BO parameters
@@ -147,7 +147,7 @@ class AdaptiveOracleCycle:
                     "primary_hexagram": result.hexagram,
                     "hrr_resonances": result.synthesis.get("hrr_resonances", []),
                 })
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("BO translation failed: %s", exc)
 
         # Step 5: Run simulation (optional)
@@ -164,7 +164,7 @@ class AdaptiveOracleCycle:
                     xi=result.bo_params.get("xi", 0.01),
                 )
                 result.simulation_result = sim_result.to_dict()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("Simulation failed: %s", exc)
 
         # Step 6: Get calibration feedback
@@ -175,7 +175,7 @@ class AdaptiveOracleCycle:
             if score.get("brier_score") is not None:
                 result.calibration_score = score["brier_score"]
                 self._calibration_history.append(score["brier_score"])
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("Calibration lookup failed: %s", exc)
 
         self._results.append(result)

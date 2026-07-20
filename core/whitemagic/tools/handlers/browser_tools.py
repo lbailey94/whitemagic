@@ -37,7 +37,7 @@ def handle_browser_navigate(**kwargs: Any) -> dict[str, Any]:
     try:
         result = _run_async(_navigate())
         return {"status": "success", **result}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
@@ -65,7 +65,7 @@ def handle_browser_click(**kwargs: Any) -> dict[str, Any]:
     try:
         result = _run_async(_click())
         return {"status": "success", **result}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
@@ -94,7 +94,7 @@ def handle_browser_type(**kwargs: Any) -> dict[str, Any]:
     try:
         result = _run_async(_type())
         return {"status": "success", **result}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
@@ -131,7 +131,7 @@ def handle_browser_extract_dom(**kwargs: Any) -> dict[str, Any]:
                 "message": result["error"],
             }
         return {"status": "success", **result}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
@@ -160,7 +160,7 @@ def handle_browser_screenshot(**kwargs: Any) -> dict[str, Any]:
                 "message": result["error"],
             }
         return {"status": "success", **result}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}
 
 
@@ -204,5 +204,5 @@ def handle_browser_get_interactables(**kwargs: Any) -> dict[str, Any]:
                 "message": result["error"],
             }
         return {"status": "success", **result}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error_code": "browser_unavailable", "message": str(exc)[:200]}

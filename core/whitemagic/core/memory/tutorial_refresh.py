@@ -457,7 +457,7 @@ def is_tutorial_seeded() -> bool:
         count = conn.execute("SELECT COUNT(*) FROM memories WHERE galaxy = 'tutorial'").fetchone()[0]
         conn.close()
         return count > 0
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -475,7 +475,7 @@ def seed_tutorial(force: bool = False) -> dict[str, Any]:
     try:
         from whitemagic import __version__
         version_str = f"v{__version__}"
-    except Exception:
+    except Exception:  # noqa: BLE001
         version_str = "v25.0.0"
 
     conn = _ensure_galaxy_db(db_path)
@@ -593,5 +593,5 @@ def auto_seed_if_needed() -> None:
     try:
         if not is_tutorial_seeded():
             seed_tutorial()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Tutorial auto-seed failed: %s", e)

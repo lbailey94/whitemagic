@@ -263,7 +263,7 @@ class MachineTimeEstimator:
                     if tool and duration > 0:
                         self._tool_history.setdefault(tool, []).append(duration)
                         self._type_history.setdefault(op_type, []).append(duration)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to load machine_time history: %s", e)
 
     def predict(self, tool_name: str, complexity_hint: float = 1.0) -> EffortPrediction:
@@ -414,7 +414,7 @@ class MachineTimeEstimator:
         try:
             with open(self.log_path, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to persist machine_time record: %s", e)
 
         return result
@@ -445,7 +445,7 @@ class MachineTimeEstimator:
                     correction = max(0.5, min(2.0, raw_correction))
                     self._correction_factors[tool] = correction
                     self._tool_log_ratios[tool] = ratios
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to load correction factors: %s", e)
 
     def get_calibration_feedback(self) -> dict[str, Any]:
@@ -543,7 +543,7 @@ class MachineTimeEstimator:
                         log_ratios.append(entry.get("log_ratio_error", 0.0))
                         op_type = entry.get("operation_type", "unknown")
                         per_type.setdefault(op_type, []).append(entry["crps"])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to read CRPS history: %s", e)
             return {"count": 0, "mean_crps": None, "message": f"Error: {e}"}
 

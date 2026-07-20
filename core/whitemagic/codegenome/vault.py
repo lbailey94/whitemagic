@@ -106,7 +106,7 @@ class GeneseedVault:
             validation = val_result.to_dict()
             if not val_result.valid:
                 logger.warning("Validation failed for %s: %s", template_name, val_result.issues)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Validation skipped: %s", e)
 
         # Track usage
@@ -184,7 +184,7 @@ class GeneseedVault:
                         + "\n".join(pattern_lines)
                     )
                     patterns_count = len(patterns)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Geneseed pattern mining skipped: %s", e)
 
         llm_refined = False
@@ -213,7 +213,7 @@ class GeneseedVault:
                 if response and response.strip() and not response.startswith("Error:"):
                     final_code = response.strip()
                     llm_refined = True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("LLM refinement skipped: %s", e)
 
         write_result = None
@@ -226,7 +226,7 @@ class GeneseedVault:
                 base_path = os.path.dirname(write_output) or "."
                 rel_path = os.path.basename(write_output)
                 write_result = write_file(base_path, rel_path, final_code)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 write_result = {"success": False, "error": str(e)}
                 logger.warning("CodeWritingClone write failed: %s", e)
 
@@ -413,7 +413,7 @@ class GeneseedVault:
                         template.success_rate = stats["success_rate"]
                         if stats["success_rate"] < _DEPRECATION_THRESHOLD:
                             template.deprecated = True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Usage stats load skipped: %s", e)
 
     def _save_usage_stats(self) -> None:
@@ -424,7 +424,7 @@ class GeneseedVault:
             self._stats_file.parent.mkdir(parents=True, exist_ok=True)
             with open(self._stats_file, "w") as f:
                 json.dump(self._usage_stats, f, indent=2)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Usage stats save skipped: %s", e)
 
     def fork(

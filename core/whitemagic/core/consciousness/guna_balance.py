@@ -75,7 +75,7 @@ def _load_persisted_winners() -> None:
             TARGET_RATIOS["rajasic"],
             TARGET_RATIOS["tamasic"],
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("GunaBalance: could not load persisted winners, using defaults")
 
 
@@ -327,7 +327,7 @@ class GunaBalanceMetric:
                 from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
                 get_dream_cycle().trigger_cycle(reason="guna_balance_consolidation")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Guna correction '%s' failed: %s", action, e)
 
     def get_status(self) -> dict[str, Any]:

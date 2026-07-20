@@ -233,26 +233,26 @@ class WarpMarketplace:
         results = listings
 
         if capability:
-            results = [l for l in results if capability in l.capabilities]
+            results = [listing for listing in results if capability in listing.capabilities]
         if domain:
-            results = [l for l in results if domain in l.research_domains]
+            results = [listing for listing in results if domain in listing.research_domains]
         if inference_tier:
-            results = [l for l in results if l.inference_tier == inference_tier]
+            results = [listing for listing in results if listing.inference_tier == inference_tier]
         if max_price > 0:
-            results = [l for l in results if l.price_xrp <= max_price]
+            results = [listing for listing in results if listing.price_xrp <= max_price]
 
         # Score by relevance
         if query:
-            scored = [(l, l.matches_query(query)) for l in results]
-            scored = [(l, s) for l, s in scored if s > 0]
+            scored = [(listing, listing.matches_query(query)) for listing in results]
+            scored = [(listing, s) for listing, s in scored if s > 0]
             scored.sort(key=lambda x: x[1], reverse=True)
-            results = [l for l, _ in scored[:limit]]
+            results = [listing for listing, _ in scored[:limit]]
         else:
             results = sorted(results, key=lambda x: x.downloads, reverse=True)[:limit]
 
         return {
             "status": "success",
-            "results": [l.to_dict() for l in results],
+            "results": [listing.to_dict() for listing in results],
             "total": len(results),
         }
 
@@ -367,7 +367,7 @@ class WarpMarketplace:
                 "total_published": self._stats["total_published"],
                 "total_downloaded": self._stats["total_downloaded"],
                 "total_negotiated": self._stats["total_negotiated"],
-                "warp_names": [l.warp_name for l in self._listings.values()],
+                "warp_names": [listing.warp_name for listing in self._listings.values()],
             }
 
     def broadcast_listing(self, listing_id: str) -> dict[str, Any]:

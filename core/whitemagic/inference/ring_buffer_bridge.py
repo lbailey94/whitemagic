@@ -78,7 +78,7 @@ class RingBufferBridge:
                 else:
                     self._rb = wmi.ring_buffer_open(name)
                 logger.debug("RingBufferBridge '%s': using Rust backend", name)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Rust ring buffer unavailable, falling back to Python: %s", e)
                 self._use_rust = False
 
@@ -311,7 +311,7 @@ class RingBufferBridge:
         if self._use_rust and self._rb is not None:
             try:
                 self._rb.close()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
             self._rb = None
         else:

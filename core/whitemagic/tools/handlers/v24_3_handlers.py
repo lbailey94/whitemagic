@@ -116,7 +116,7 @@ def handle_bounty_scan_all(**kwargs: Any) -> dict[str, Any]:
                 if ecosystem_filter not in ecosystems:
                     continue
             if language_filter:
-                languages = [l.lower() for l in extra.get("languages", [])]
+                languages = [lang.lower() for lang in extra.get("languages", [])]
                 if language_filter not in languages:
                     continue
             all_bounties.append({

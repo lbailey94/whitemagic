@@ -45,7 +45,7 @@ class WhiteMagicToolset:
                 for td in all_tools
                 if td.name in self._tool_names
             ]
-        except Exception:
+        except Exception:  # noqa: BLE001
             return []
 
     def execute(self, tool_name: str, **kwargs: Any) -> dict[str, Any]:

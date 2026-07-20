@@ -153,7 +153,7 @@ class CittaBridge:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Cannot store citta summary: %s", e)
             return None
 
@@ -212,7 +212,7 @@ class CittaBridge:
             )
             logger.debug("Stored citta session summary: %s", mem_id)
             return mem_id
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Failed to store citta session summary: %s", e, exc_info=True
             )
@@ -264,7 +264,7 @@ class CittaBridge:
             from whitemagic.core.memory.unified import get_unified_memory
 
             um = get_unified_memory()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Cannot store citta moment: %s", e)
             return None
 
@@ -343,7 +343,7 @@ class CittaBridge:
             self._last_store_time = time.time()
             logger.debug("Stored citta moment: %s (reason: %s)", mem_id, reason)
             return mem_id
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to store citta moment: %s", e, exc_info=True)
             return None
 

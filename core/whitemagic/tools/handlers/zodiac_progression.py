@@ -54,7 +54,7 @@ def handle_zodiac_activate(**kwargs: Any) -> dict[str, Any]:
             "processing_result": response.processing_result,
             "timestamp": response.timestamp.isoformat(),
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -80,7 +80,7 @@ def handle_zodiac_council(**kwargs: Any) -> dict[str, Any]:
             "perspectives": result["perspectives"],
             "timestamp": result["timestamp"],
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -91,5 +91,5 @@ def handle_zodiac_stats(**kwargs: Any) -> dict[str, Any]:
 
         cores = get_zodiac_cores()
         return {"status": "success", "stats": cores.get_core_statistics()}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}

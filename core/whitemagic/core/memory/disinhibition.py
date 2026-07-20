@@ -106,7 +106,7 @@ class DisinhibitionModel:
             else:
                 self._proc.terminate()
                 self._proc = None
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._proc = None
             logger.debug("Koka disinhibition bridge unavailable, using Python fallback")
 
@@ -123,7 +123,7 @@ class DisinhibitionModel:
                 return None
             response = self._proc.stdout.readline()
             return json.loads(response)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     def get_state(self) -> dict[str, Any]:

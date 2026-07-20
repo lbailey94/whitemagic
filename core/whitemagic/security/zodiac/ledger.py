@@ -16,13 +16,17 @@ import logging
 import time
 
 logger = logging.getLogger(__name__)
-import uuid
-from dataclasses import dataclass, field
-from typing import Any
+import uuid  # noqa: E402  # conditional/late import
+from dataclasses import dataclass, field  # noqa: E402  # conditional/late import
+from typing import Any  # noqa: E402  # conditional/late import
 
-from whitemagic.config.paths import DB_PATH
-from whitemagic.core.memory.db_manager import get_db_pool
-from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.config.paths import DB_PATH  # noqa: E402  # conditional/late import
+from whitemagic.core.memory.db_manager import (  # noqa: E402  # conditional/late import
+    get_db_pool,
+)
+from whitemagic.utils.fast_json import (  # noqa: E402  # conditional/late import
+    dumps_str as _json_dumps,
+)
 
 
 @dataclass

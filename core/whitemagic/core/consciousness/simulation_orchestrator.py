@@ -127,7 +127,7 @@ class SimulationOrchestrator:
                 "wu_xing": "fire",  # Default; could be derived from hexagram
             }
             return bridge.translate(oracle_output)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug("Oracle BO consultation failed: %s", exc)
             return None
 
@@ -486,7 +486,7 @@ class SimulationOrchestrator:
                 metadata=metadata or {},
             )
             return result.get("id") if isinstance(result, dict) else None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Memory persist: %s", e, exc_info=True)
             return None
 
@@ -516,7 +516,7 @@ class SimulationOrchestrator:
                 outcome=outcome,
             )
             return exp.experiment_id
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("DAG recording: %s", e, exc_info=True)
             return None
 

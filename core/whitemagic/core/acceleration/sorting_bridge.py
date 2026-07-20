@@ -20,7 +20,7 @@ except (ImportError, ModuleNotFoundError):
     logger.debug("Optional dependency unavailable: ImportError")
 
 
-def fast_sort(data: list[T], key: Any = None, reverse: bool = False) -> list[T]:
+def fast_sort(data: list[T], key: Any = None, reverse: bool = False) -> list[T]:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Sort list with Rust acceleration for large collections.
 
     Uses Rust's parallel sort for >10K elements, Python's Timsort otherwise.
@@ -44,7 +44,7 @@ def fast_sort(data: list[T], key: Any = None, reverse: bool = False) -> list[T]:
     return sorted(data, key=key, reverse=reverse)
 
 
-def fast_sort_inplace(data: list[T], key: Any = None, reverse: bool = False) -> None:
+def fast_sort_inplace(data: list[T], key: Any = None, reverse: bool = False) -> None:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Sort list in-place with Rust acceleration."""
     if len(data) < 10000:
         data.sort(key=key, reverse=reverse)
@@ -75,7 +75,7 @@ def parallel_sort_by_key(
     return sorted(data, key=lambda x: x.get(key_field, 0), reverse=reverse)
 
 
-def top_k(data: list[T], k: int, key: Any = None) -> list[T]:
+def top_k(data: list[T], k: int, key: Any = None) -> list[T]:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Get top k elements without full sort (O(n log k) vs O(n log n))."""
     import heapq
 

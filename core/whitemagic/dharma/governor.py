@@ -124,7 +124,7 @@ class DharmaGovernor:
                     metric.measure(memories_accessible=count)
                 else:
                     metric.measure()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 metric.measure()
             level = metric.get_coherence_level()
             if level == "transcendent":
@@ -135,7 +135,7 @@ class DharmaGovernor:
                 return min(0.95, self.strictness + 0.2)
             else:  # fragmented or dissociated
                 return min(0.95, self.strictness + 0.3)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return self.strictness
 
 

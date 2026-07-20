@@ -114,7 +114,7 @@ class HealthSurface:
             health.details["middleware_count"] = len(middlewares)
             health.details["middlewares"] = middlewares
             health.status = "healthy"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             health.status = "degraded"
             health.error = str(e)
 
@@ -146,7 +146,7 @@ class HealthSurface:
                 health.error = "; ".join(errors[:3])
             else:
                 health.status = "healthy"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             health.status = "degraded"
             health.error = str(e)
 
@@ -162,7 +162,7 @@ class HealthSurface:
             _ensure_cached()
             health.details["cache_initialized"] = True
             health.status = "healthy"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             health.status = "degraded"
             health.error = str(e)
 
@@ -208,7 +208,7 @@ class HealthSurface:
                     available += 1
             except ImportError:
                 bridges[name] = "unavailable"
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 bridges[name] = f"degraded: {e!s}"
 
         health.details["bridges"] = bridges
@@ -244,7 +244,7 @@ class HealthSurface:
                 health.error = ", ".join(degraded_reasons)
             else:
                 health.status = "healthy"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             health.status = "degraded"
             health.error = str(e)
 
@@ -275,7 +275,7 @@ class HealthSurface:
                 health.status = "degraded"
             else:
                 health.status = "healthy"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             health.status = "unknown"
             health.error = str(e)
 
@@ -308,7 +308,7 @@ class HealthSurface:
                 health.error = f"Degraded: {', '.join(degraded_metrics[:3])}"
             else:
                 health.status = "healthy"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             health.status = "unknown"
             health.error = str(e)
 

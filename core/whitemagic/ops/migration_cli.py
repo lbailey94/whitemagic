@@ -423,7 +423,7 @@ class MigrationCLI:
                             user_id=user_id,
                         )
                         result.items_affected += 1
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
                         result.errors.append(f"Failed to import memory: {e}")
 
         except (json.JSONDecodeError, KeyError) as e:

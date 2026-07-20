@@ -161,7 +161,7 @@ class RetrievalIndexCache:
             self._telemetry["warmed"] += 1
             logger.debug("Cache warmed for %s/%s", user_id, galaxy)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self._telemetry["warm_failures"] += 1
             logger.debug("Cache warm failed for %s/%s: %s", user_id, galaxy, e)
             return False

@@ -264,7 +264,7 @@ class SingletonRegistry:
                 # Try importing — if it fails, skip silently
                 try:
                     mod = importlib.import_module(mod_name)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
             if mod and hasattr(mod, attr_name):
                 current = getattr(mod, attr_name)
@@ -279,7 +279,7 @@ class SingletonRegistry:
             if mod is None:
                 try:
                     mod = importlib.import_module(mod_name)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
             if mod and hasattr(mod, cls_name):
                 klass = getattr(mod, cls_name)

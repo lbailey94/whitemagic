@@ -26,7 +26,7 @@ def _try_import_dream_cycle():
     try:
         from whitemagic.core.dreaming.dream_cycle import DreamCycle, DreamPhase
         return DreamCycle, DreamPhase
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None, None
 
 
@@ -138,7 +138,7 @@ class DreamCycleIntegration:
                     if real_result.get("narrative"):
                         report.narrative = real_result["narrative"]
                     return report
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("DreamCycle delegation failed for %s: %s", phase, e)
 
         # Fallback: simulated phases
@@ -246,7 +246,7 @@ class DreamCycleIntegration:
                     "insights": [result.get("insight", "")] if isinstance(result, dict) and result.get("insight") else [],
                     "narrative": result.get("narrative", "") if isinstance(result, dict) else "",
                 }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("DreamCycle delegation error: %s", e)
 
         return None
@@ -370,9 +370,9 @@ class DreamCycleIntegration:
                         enable_holographic_index=False,
                     )
                     persisted += 1
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     errors.append(f"{report.phase}: {e}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             errors.append(f"unified_memory: {e}")
 
         logger.info("Persisted %d/%d consolidation reports for %s", persisted, len(reports), simulation_id)

@@ -80,7 +80,7 @@ def handle_simulation_create(**kwargs: Any) -> dict[str, Any]:
             "personas": created_personas,
             "rules": created_rules,
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -148,7 +148,7 @@ def handle_simulation_run(**kwargs: Any) -> dict[str, Any]:
                 "outcome": analysis.worst_trial.outcome,
             } if analysis.worst_trial else None,
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -199,7 +199,7 @@ def handle_simulation_search(**kwargs: Any) -> dict[str, Any]:
             "status": "success",
             **result,
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -253,7 +253,7 @@ def handle_simulation_inject(**kwargs: Any) -> dict[str, Any]:
             "injected": True,
             "message": f"Injected {len(injection)} variable(s) into {scenario_name} across {num_trials} trial(s)",
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -320,7 +320,7 @@ def handle_simulation_analyze(**kwargs: Any) -> dict[str, Any]:
             "analysis": analysis,
             "consolidation": consolidation_reports,
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -384,7 +384,7 @@ def handle_simulation_synthesize(**kwargs: Any) -> dict[str, Any]:
                 for i in top
             ],
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -439,7 +439,7 @@ def handle_simulation_calibrate(**kwargs: Any) -> dict[str, Any]:
             scorecard = bridge.get_scorecard()
             return {"status": "success", **scorecard}
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -548,7 +548,7 @@ def handle_simulation_pipeline(**kwargs: Any) -> dict[str, Any]:
             try:
                 persist_dream = dream.persist_consolidation(scenario_name)
                 result["stages"]["persist_dream"] = persist_dream
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 result["stages"]["persist_dream"] = {"persisted": 0, "errors": [str(e)]}
 
         # Stage 4: Synthesize insights
@@ -603,7 +603,7 @@ def handle_simulation_pipeline(**kwargs: Any) -> dict[str, Any]:
             result["stages"]["resolve"] = resolve_result
 
         return result
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -634,7 +634,7 @@ def handle_mc_surrogate(**kwargs: Any) -> dict[str, Any]:
                 p = orch.gp_predict(x_train, y_train, xp)
                 preds.append(p)
         return {"status": "success", "fit": result, "predictions": preds}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -658,7 +658,7 @@ def handle_mc_optimize(**kwargs: Any) -> dict[str, Any]:
         def fitness_fn(x):
             try:
                 return float(eval(fitness_expr, {"x": x, "np": np}))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return 0.0
 
         initial_y = [fitness_fn(x) for x in initial_x]
@@ -672,7 +672,7 @@ def handle_mc_optimize(**kwargs: Any) -> dict[str, Any]:
             seed=seed,
         )
         return {"status": "success", **result}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -707,7 +707,7 @@ def handle_mc_rare_event(**kwargs: Any) -> dict[str, Any]:
             return {"status": "error", "error": f"Unknown method: {method}"}
 
         return {"status": "success", "probability": result.get("probability", 0.0), **result}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -746,7 +746,7 @@ def handle_mc_sde(**kwargs: Any) -> dict[str, Any]:
             result["mlmc"] = mlmc_result
 
         return {"status": "success", **result}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -769,7 +769,7 @@ def handle_mc_superforecaster(**kwargs: Any) -> dict[str, Any]:
         def fitness_fn(x):
             try:
                 return float(eval(fitness_expr, {"x": x, "np": np}))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return 0.0
 
         result = orch.superforecaster_estimate(
@@ -780,7 +780,7 @@ def handle_mc_superforecaster(**kwargs: Any) -> dict[str, Any]:
             seed=seed,
         )
         return {"status": "success", **result}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -809,7 +809,7 @@ def handle_simulation_introspect(**kwargs: Any) -> dict[str, Any]:
             "memory_id": d["memory_id"],
             "dag_experiment_id": d["dag_experiment_id"],
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -839,7 +839,7 @@ def handle_simulation_forecast(**kwargs: Any) -> dict[str, Any]:
             "dag_experiment_id": d["dag_experiment_id"],
             "error": d["error"],
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -852,7 +852,7 @@ def handle_simulation_status(**kwargs: Any) -> dict[str, Any]:
         orch = get_simulation_orchestrator()
         status = orch.get_status()
         return {"status": "success", **status}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -882,5 +882,5 @@ def handle_simulation_recursive(**kwargs: Any) -> dict[str, Any]:
                 "external_count": ext_count,
             },
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}

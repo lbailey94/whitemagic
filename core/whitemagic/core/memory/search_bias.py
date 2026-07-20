@@ -42,7 +42,7 @@ def _get_working_memory_ids() -> set[str]:
         from whitemagic.core.intelligence.working_memory import get_working_memory
         wm = get_working_memory()
         return set(wm.get_active_ids())
-    except (ImportError, ModuleNotFoundError, Exception):
+    except (ImportError, ModuleNotFoundError, Exception):  # noqa: BLE001
         return set()
 
 
@@ -60,7 +60,7 @@ def _get_citta_valence() -> float | None:
             return state.get("emotional_valence")
         if hasattr(state, "emotional_valence"):
             return state.emotional_valence
-    except (ImportError, ModuleNotFoundError, Exception):
+    except (ImportError, ModuleNotFoundError, Exception):  # noqa: BLE001
         pass
     return None
 
@@ -78,7 +78,7 @@ def _get_citta_coherence() -> float | None:
             return state.get("coherence")
         if hasattr(state, "coherence"):
             return state.coherence
-    except (ImportError, ModuleNotFoundError, Exception):
+    except (ImportError, ModuleNotFoundError, Exception):  # noqa: BLE001
         pass
     return None
 
@@ -96,7 +96,7 @@ def _get_citta_depth() -> str | None:
             return state.get("depth")
         if hasattr(state, "depth"):
             return state.depth
-    except (ImportError, ModuleNotFoundError, Exception):
+    except (ImportError, ModuleNotFoundError, Exception):  # noqa: BLE001
         pass
     return None
 
@@ -218,7 +218,7 @@ def auto_attend_to_working_memory(
                 importance=getattr(mem, "importance", 0.5),
                 tags=getattr(mem, "tags", None),
             )
-    except (ImportError, ModuleNotFoundError, Exception) as e:
+    except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
         logger.debug("Auto-attend to WM failed: %s", e)
 
 

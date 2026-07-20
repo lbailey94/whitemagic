@@ -397,7 +397,7 @@ class ProcessSupervisor:
                 env=full_env,
                 cwd=self._cwd,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("%s: failed to start process: %s", self.name, e)
             self._health = CapabilityState.UNAVAILABLE
             self._breaker.record_failure()
@@ -453,7 +453,7 @@ class ProcessSupervisor:
                     # Trim to cap, keeping the most recent bytes
                     if len(buf) > self._stderr_cap:
                         del buf[: len(buf) - self._stderr_cap]
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in process_supervisor.py:456")
 
         t = threading.Thread(
@@ -549,7 +549,7 @@ class ProcessSupervisor:
                     result_queue.put(line)
                 else:
                     result_queue.put(None)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 result_queue.put(None)
 
         thread = threading.Thread(
@@ -694,7 +694,7 @@ class ProcessSupervisor:
                 fallback=True,
                 latency_ms=elapsed * 1000,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             elapsed = time.perf_counter() - start
             self._stats.record_call(elapsed, success=False)
             self._breaker.record_failure()
@@ -762,7 +762,7 @@ class ProcessSupervisor:
             return BridgeResult(
                 ok=True, data={"response": line.strip()}, latency_ms=elapsed_ms
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             elapsed = time.perf_counter() - start
             self._stats.record_call(elapsed, success=False)
             self._breaker.record_failure()
@@ -862,7 +862,7 @@ def shutdown_all() -> None:
     for sup in supervisors:
         try:
             sup.close()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Error shutting down %s", sup.name, exc_info=True)
 
 

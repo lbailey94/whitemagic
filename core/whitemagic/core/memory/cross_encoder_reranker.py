@@ -49,7 +49,7 @@ def _get_cross_encoder_model() -> Any | None:
         _instance = CrossEncoder(CROSS_ENCODER_MODEL)
         logger.info("Cross-encoder model loaded: %s", CROSS_ENCODER_MODEL)
         return _instance
-    except (ImportError, ModuleNotFoundError, Exception) as e:
+    except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
         logger.debug("Cross-encoder model unavailable: %s", e)
         _instance = False  # Mark as checked but unavailable
         return None
@@ -223,7 +223,7 @@ def rerank_cross_encoder(
             scored.sort(key=lambda x: (x[0], x[1]), reverse=True)
             reranked = [m for _, _, m in scored]
             return reranked[:top_k] if top_k else reranked
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Cross-encoder model scoring failed: %s", e)
 
     # Heuristic fallback — also blended

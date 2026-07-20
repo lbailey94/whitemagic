@@ -124,7 +124,7 @@ class JoyArchaeology:
                             "full_path": md_file,
                         }
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in joy_archaeology.py:127")
 
         return joy_moments
@@ -198,7 +198,7 @@ class JoyArchaeology:
 
             return full_content
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return f"Could not revive joy: {e}"
 
     def create_joy_timeline(self) -> list[dict]:

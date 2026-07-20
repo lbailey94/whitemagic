@@ -108,7 +108,7 @@ class WhiteMagicTool:
             for td in get_all_tools():
                 if td.name == self.tool_name:
                     return td.description
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
         return f"WhiteMagic tool: {self.tool_name}"
 

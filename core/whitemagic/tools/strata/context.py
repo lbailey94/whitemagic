@@ -47,7 +47,7 @@ class ContextEnricher:
                         }.get(node.node_type, node.node_type)
                         best_match = f"{prefix} {node.name}"
             return best_match
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     def _get_python_context(self, file_path: Path, line: int) -> str | None:

@@ -12,7 +12,7 @@ from typing import Any, TypeVar
 T = TypeVar("T")
 
 
-def run_async(coro: asyncio.Coroutine[Any, Any, T]) -> T:
+def run_async(coro: asyncio.Coroutine[Any, Any, T]) -> T:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Run a coroutine from synchronous context.
 
     If no event loop is running, uses asyncio.run directly.

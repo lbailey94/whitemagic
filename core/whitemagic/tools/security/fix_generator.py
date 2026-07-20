@@ -179,7 +179,7 @@ def create_pr(
         if pr_result.returncode == 0:
             return {"success": True, "pr_url": pr_result.stdout.strip()}
         return {"success": False, "error": f"PR creation failed: {pr_result.stderr}"}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"success": False, "error": str(e)}
 
 

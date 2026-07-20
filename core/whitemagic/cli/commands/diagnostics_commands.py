@@ -22,7 +22,9 @@ except ImportError:
     console = None
     Panel = None  # type: ignore[assignment,misc]
 
-from whitemagic.utils.fast_json import dumps_str as _json_dumps
+from whitemagic.utils.fast_json import (  # noqa: E402  # conditional/late import
+    dumps_str as _json_dumps,
+)
 
 
 @click.command(name="status")

@@ -322,7 +322,7 @@ def galaxy_stats() -> GalaxyStats:
                     if g_newest and (newest is None or g_newest[0] > newest[0]):
                         newest = g_newest
                     gconn.close()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
 
     return GalaxyStats(
@@ -382,7 +382,7 @@ def memory_recent(limit: int = 10, memory_type: str | None = None) -> list[Memor
                     grows = gconn.execute(gquery, gparams).fetchall()
                     mems.extend(Memory.from_row(r) for r in grows)
                     gconn.close()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
             mems.sort(key=lambda m: m.updated_at or m.created_at or "", reverse=True)
             mems = mems[:limit]
@@ -492,7 +492,7 @@ def memory_search(
                     grows = gconn.execute(gsql, gparams).fetchall()
                     mems.extend(Memory.from_row(r) for r in grows)
                     gconn.close()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
     return mems
 
@@ -627,7 +627,7 @@ def event_search(
                             "concerns": r["concerns"],
                         })
                     gconn.close()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
             events = events[:limit]
     return events
@@ -738,7 +738,7 @@ def substrate_health() -> dict[str, Any]:
                     except sqlite3.OperationalError:
                         logger.debug("Ignored Exception in __init__.py:739")
                     gconn.close()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
     except sqlite3.DatabaseError as e:
         out["status"] = "error"

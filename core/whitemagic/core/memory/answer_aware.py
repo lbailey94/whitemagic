@@ -214,7 +214,7 @@ def answer_aware_search(
                     limit=10,
                     galaxy=galaxy,
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Answer-aware secondary search failed: %s", e)
 
     # Merge: add secondary results not already in primary

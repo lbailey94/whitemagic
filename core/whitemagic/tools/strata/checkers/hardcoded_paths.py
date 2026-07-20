@@ -101,7 +101,7 @@ def check_hardcoded_paths(
                 )
             )
         return
-    except (ImportError, AttributeError, Exception):
+    except (ImportError, AttributeError, Exception):  # noqa: BLE001
         logger.debug("Ignored ImportError, AttributeError, Exception in hardcoded_paths.py:104")
 
     # Fallback: Python sequential scan

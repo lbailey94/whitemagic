@@ -52,7 +52,7 @@ def check_slither(
     except subprocess.TimeoutExpired:
         logger.warning("Slither timed out on %s", project_path)
         return
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Slither failed: %s", e)
         return
 

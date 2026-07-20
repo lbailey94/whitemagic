@@ -98,7 +98,7 @@ def verify_poc(
     # 2. Render template
     try:
         code = generate_poc(template_name, variables, tier=tier)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return PoCResult(
             success=False,
             template_name=template_name,

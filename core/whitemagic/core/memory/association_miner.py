@@ -136,7 +136,7 @@ class AssociationMiner:
                 result = rust_kw(text, max_keywords)
                 if result is not None:
                     return cast(set[str], result)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         # Python extraction (fastest path for keywords)
@@ -186,7 +186,7 @@ class AssociationMiner:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Association mining: could not get memory system: %s", e)
             return report
 
@@ -207,7 +207,7 @@ class AssociationMiner:
                     if m.id not in existing_ids:
                         all_mems.append(m)
                         existing_ids.add(m.id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Association mining: sampling failed: %s", e)
             all_mems = []
 
@@ -254,7 +254,7 @@ class AssociationMiner:
                         ))
                 used_rust = True
                 logger.debug("Association mining used Rust accelerator")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Rust association mining unavailable, using Python: %s", e)
 
         # Python fallback path (with batch Rust keyword extraction)
@@ -272,7 +272,7 @@ class AssociationMiner:
                     for (mid, _), kw_set in zip(texts_for_batch, result):
                         fingerprints[mid] = kw_set
                     batch_done = True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
             if not batch_done:
@@ -318,9 +318,9 @@ class AssociationMiner:
                         um.add_association(p.source_id, p.target_id, p.overlap_score)
                         um.add_association(p.target_id, p.source_id, p.overlap_score)
                         report.links_created += 1
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.debug("Swallowed exception", exc_info=True)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error("Association mining: persistence failed: %s", e)
 
         # Gap A3 synthesis: Feed strong associations into the Knowledge Graph
@@ -374,7 +374,7 @@ class AssociationMiner:
 
             if edges_created:
                 logger.info("KG enrichment: %s association edges created", edges_created)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("KG enrichment skipped: %s", e)
 
     def mine_semantic(
@@ -405,7 +405,7 @@ class AssociationMiner:
         try:
             from whitemagic.core.memory.embeddings import get_embedding_engine
             engine = get_embedding_engine()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Semantic mining: embedding engine unavailable: %s", e)
             return report
 
@@ -448,7 +448,7 @@ class AssociationMiner:
                 for row in rows:
                     existing_assoc.add((row[0], row[1]))
                     existing_assoc.add((row[1], row[0]))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Semantic mining: could not load existing associations: %s", e)
 
         # Build proposals
@@ -487,9 +487,9 @@ class AssociationMiner:
                         um.add_association(proposal.source_id, proposal.target_id, proposal.overlap_score)
                         um.add_association(proposal.target_id, proposal.source_id, proposal.overlap_score)
                         report.links_created += 1
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.debug("Swallowed exception", exc_info=True)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error("Semantic mining: persistence failed: %s", e)
 
         # Feed strong links to Knowledge Graph
@@ -539,7 +539,7 @@ class AssociationMiner:
                     get_graph_engine as get_neural,
                 )
                 self._neural_graph_engine_instance = get_neural()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 return None
         return self._neural_graph_engine_instance
 
@@ -617,7 +617,7 @@ class AssociationMiner:
             from whitemagic.core.memory.galaxy_manager import GalaxyManager
             gm = GalaxyManager()
             galaxies = [g["name"] for g in gm.list_galaxies() if g.get("name")]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Cross-galaxy mining: could not list galaxies: %s", e)
             return report
 
@@ -632,7 +632,7 @@ class AssociationMiner:
                 mems = um.search(galaxy=galaxy, limit=sample_per_galaxy)
                 if mems:
                     galaxy_samples[galaxy] = mems
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
         if len(galaxy_samples) < 2:
@@ -703,10 +703,10 @@ class AssociationMiner:
                             um.add_association(prop.source_id, prop.target_id, prop.overlap_score)
                             um.add_association(prop.target_id, prop.source_id, prop.overlap_score)
                             persisted += 1
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         continue
                 report.associations_created = persisted
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error("Cross-galaxy mining: persist failed: %s", e)
 
         report.duration_ms = (time.perf_counter() - start) * 1000

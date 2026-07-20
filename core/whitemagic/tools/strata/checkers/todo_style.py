@@ -37,7 +37,7 @@ def check_todo_vs_fixme(
                 )
             )
         return
-    except (ImportError, AttributeError, Exception):
+    except (ImportError, AttributeError, Exception):  # noqa: BLE001
         logger.debug("Ignored ImportError, AttributeError, Exception in todo_style.py:41")
 
     # Fallback: Python sequential scan

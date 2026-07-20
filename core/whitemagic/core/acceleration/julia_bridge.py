@@ -111,7 +111,7 @@ println(JSON3.write(result))
             logger.debug("Julia %s stderr: %s", module_file, proc.stderr[:300])
     except subprocess.TimeoutExpired:
         logger.warning("Julia %s timed out after 60s", module_file)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Julia %s call failed: %s", module_file, e)
 
     return None
@@ -293,7 +293,7 @@ def _call_julia_direct(
             logger.debug("Julia %s stderr: %s", module_file, proc.stderr[:300])
     except subprocess.TimeoutExpired:
         logger.warning("Julia %s timed out", module_file)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Julia %s call failed: %s", module_file, e)
     return None
 
@@ -463,7 +463,7 @@ def _init_pyjulia() -> Any:
     except ImportError:
         logger.debug("PyJulia not installed — spatial bridge unavailable")
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Failed to initialize PyJulia: %s", e)
         return None
 
@@ -478,7 +478,7 @@ def jl_batch_cosine(
     try:
         result = jl.WhiteMagicSpatial.batch_cosine(query, corpus)
         return list(result)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Julia batch_cosine failed: %s", e)
         return None
 

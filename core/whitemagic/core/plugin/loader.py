@@ -57,7 +57,7 @@ class PluginLoader:
                 if isinstance(plugin, Plugin):
                     self._register_plugin(plugin, module_path)
                     return plugin
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("create_plugin() failed for '%s': %s", module_path, e)
                 self._register_error(module_path, str(e))
                 return None
@@ -82,7 +82,7 @@ class PluginLoader:
         if callable(getter):
             try:
                 return getter()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("get_manifest() failed for '%s': %s", module_path, e)
 
         return None
@@ -96,7 +96,7 @@ class PluginLoader:
             registry.set_instance(plugin.manifest.name, plugin)
             logger.info("Activated plugin: %s", plugin.manifest.name)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to activate plugin '%s': %s", plugin.manifest.name, e)
             get_registry().set_state(plugin.manifest.name, PluginState.ERROR, str(e))
             return False
@@ -108,7 +108,7 @@ class PluginLoader:
             get_registry().set_state(plugin.manifest.name, PluginState.INACTIVE)
             logger.info("Deactivated plugin: %s", plugin.manifest.name)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to deactivate plugin '%s': %s", plugin.manifest.name, e)
             return False
 

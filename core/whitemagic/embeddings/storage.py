@@ -39,7 +39,7 @@ class EmbeddingCache:
                     memory_id,
                 )
                 return list(row["embedding"]) if row else None
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     async def set(
@@ -62,7 +62,7 @@ class EmbeddingCache:
                     len(embedding),
                 )
             return True
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
 
@@ -168,7 +168,7 @@ class FileBasedEmbeddingCache:
                             raise pickle.UnpicklingError(f"Forbidden: {module}.{name}")
 
                     return RestrictedUnpickler(io.BytesIO(data)).load()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to load cache for %s: %s", file_path, e)
             cache_path.unlink(missing_ok=True)
             return None
@@ -195,7 +195,7 @@ class FileBasedEmbeddingCache:
             with open(cache_path, "wb") as f:
                 pickle.dump(embedding, f)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to cache embedding for %s: %s", file_path, e)
             return False
 

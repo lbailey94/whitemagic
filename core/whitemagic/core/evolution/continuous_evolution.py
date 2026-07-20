@@ -149,7 +149,7 @@ class ContinuousEvolutionEngine:
                     if top_patterns
                     else 0,
                 }
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Autodidactic fallback failed: %s", e)
                 top_patterns = []
                 results["phases"]["patterns_loaded"] = {

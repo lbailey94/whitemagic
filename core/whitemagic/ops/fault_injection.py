@@ -162,7 +162,7 @@ class FaultInjector:
         for p in self._patches:
             try:
                 p.stop()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in fault_injection.py:165")
         self._patches.clear()
         self._active_faults.clear()
@@ -187,7 +187,7 @@ class FaultInjector:
         for p in self._patches:
             try:
                 p.stop()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in fault_injection.py:190")
         self._patches.clear()
         remaining = dict(self._active_faults)

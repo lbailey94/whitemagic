@@ -87,7 +87,7 @@ class WorkerRegistry:
                     if entry.thread is not None and entry.thread.is_alive():
                         entry.thread.join(timeout=timeout)
                     stopped.append(name)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Error stopping worker %s", name, exc_info=True)
             elif entry.thread is not None and entry.thread.is_alive():
                 entry.thread.join(timeout=timeout)

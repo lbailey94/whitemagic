@@ -83,7 +83,7 @@ class SeenRegistry:
                     k: SeenEntry.from_dict(v)
                     for k, v in data.get("entries", {}).items()
                 }
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self._entries = {}
 
     def _save(self) -> None:
@@ -102,7 +102,7 @@ class SeenRegistry:
         try:
             content = Path(path).read_bytes()
             return hashlib.sha256(content).hexdigest()[:16]
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     def _detect_type(self, path: str) -> str:

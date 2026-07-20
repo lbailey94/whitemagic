@@ -213,7 +213,7 @@ class CurrentStateTracker:
                 data = _json_loads(_STATE_FILE.read_text(encoding="utf-8"))
                 self._state = CurrentState.from_dict(data)
                 logger.debug("Current state loaded from %s", _STATE_FILE)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Failed to load current state: %s", e)
 
     def _save(self) -> None:
@@ -225,7 +225,7 @@ class CurrentStateTracker:
                 _json_dumps(self._state.to_dict(), indent=2),
                 encoding="utf-8",
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to save current state: %s", e)
 
     def _save_memory(self) -> None:
@@ -242,7 +242,7 @@ class CurrentStateTracker:
                 importance=0.9,
                 galaxy="sessions",
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("State memory save failed (best-effort)", exc_info=True)
 
     def _add_event(self, event_type: str, description: str, metadata: dict[str, Any] | None = None) -> None:

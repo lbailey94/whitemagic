@@ -41,7 +41,7 @@ class OSSBountyScanner:
             )
             if result.returncode == 0:
                 return result.stdout
-        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:  # noqa: BLE001
             logger.debug("gh CLI failed: %s", e)
         return None
 

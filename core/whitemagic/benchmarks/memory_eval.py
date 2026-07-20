@@ -420,7 +420,7 @@ def run_benchmarks() -> BenchmarkSuite:
             result = fn()
             suite.results.append(result)
             logger.info("Benchmark %s: %s", name, "PASS" if result.passed else "FAIL")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Benchmark %s failed with error: %s", name, e)
             suite.results.append(BenchmarkResult(
                 name=name,

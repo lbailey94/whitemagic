@@ -108,7 +108,7 @@ class ScenarioRunner:
                     dim=2,  # coherence + emotional_state
                 )
                 logger.info("Using Rust LHS for %d trials", config.num_trials)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 lhs_samples = None
                 use_rust = False
         else:

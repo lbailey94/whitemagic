@@ -43,7 +43,7 @@ def batch_cosine_similarity_numpy(query: Any, vectors: Any, pre_normalized: bool
                 v_contig = _np.ascontiguousarray(v)
                 if q_contig.dtype == _np.float32 and v_contig.dtype == _np.float32:
                     return _inf.py_batch_cosine_numpy(q_contig, v_contig)
-            except (ImportError, Exception):
+            except (ImportError, Exception):  # noqa: BLE001
                 pass
 
         if pre_normalized:

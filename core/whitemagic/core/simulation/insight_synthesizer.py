@@ -148,7 +148,7 @@ class InsightSynthesizer:
                             insight.statement = f"{insight.statement} (recurring)"
                     filtered.append(insight)
             return filtered if filtered else insights
-        except Exception:
+        except Exception:  # noqa: BLE001
             # If EmergenceEngine isn't available, return unfiltered
             return insights
 
@@ -376,9 +376,9 @@ class InsightSynthesizer:
                         enable_holographic_index=False,
                     )
                     persisted += 1
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     errors.append(f"{insight.id}: {e}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             errors.append(f"unified_memory: {e}")
 
         logger.info("Persisted %d/%d insights to codex galaxy", persisted, len(top))

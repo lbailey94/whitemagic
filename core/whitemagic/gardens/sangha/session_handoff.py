@@ -206,7 +206,7 @@ class SessionHandoff:
                 session_id=session_id,
                 files_modified=state.files_modified,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Failed to push handoff to CurrentStateTracker", exc_info=True)
 
         # Auto-consolidate important session turns to codex galaxy (sleep consolidation)
@@ -217,7 +217,7 @@ class SessionHandoff:
             result = recorder.consolidate_session(min_importance=0.7, dry_run=False)
             if result.get("promoted", 0) > 0:
                 logger.info("Sleep consolidation: %d turns promoted to codex", result["promoted"])
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Auto-consolidation failed (best-effort)", exc_info=True)
 
         # Persist working memory for next session
@@ -225,7 +225,7 @@ class SessionHandoff:
             from whitemagic.core.intelligence.working_memory import get_working_memory
 
             get_working_memory().save_to_disk()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Working memory save failed (best-effort)", exc_info=True)
 
         logger.info("🏁 Session ended: %s", session_id)

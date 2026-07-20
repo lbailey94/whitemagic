@@ -103,7 +103,7 @@ class ThalamicHardGate:
             else:
                 self._proc.terminate()
                 self._proc = None
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._proc = None
             logger.debug("Zig TRN gate unavailable, using Python fallback")
 
@@ -119,7 +119,7 @@ class ThalamicHardGate:
                 return None
             response = self._proc.stdout.readline()
             return json.loads(response)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     def check(self, galaxy: str, activation: float = 1.0, context: str | None = None) -> bool:

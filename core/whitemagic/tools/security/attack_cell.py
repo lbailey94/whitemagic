@@ -215,7 +215,7 @@ class AttackCell:
                 findings = self._run_agent(role)
                 agent_state.findings = findings
                 agent_state.status = "success" if findings else "completed"
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 agent_state.status = "failed"
                 agent_state.error = str(e)
                 logger.warning("Agent %s failed: %s", role.value, e)
@@ -280,7 +280,7 @@ class AttackCell:
             from whitemagic.tools.security.dynamic_testers import run_nikto
             nikto_result = run_nikto(self.target, timeout=60)
             findings.extend(nikto_result.get("findings", []))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Web agent error: %s", e)
         return findings
 
@@ -293,7 +293,7 @@ class AttackCell:
             from whitemagic.tools.security.dynamic_testers import run_sqlmap
             sqli_result = run_sqlmap(self.target, timeout=120)
             findings.extend(sqli_result.get("findings", []))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Exploit agent error: %s", e)
         return findings
 
@@ -328,7 +328,7 @@ class AttackCell:
                     "target": self.target,
                     "mitre_ttp_ids": ["T1552"],
                 })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Crypto agent error: %s", e)
         return findings
 
@@ -349,7 +349,7 @@ class AttackCell:
                     "mitre_ttp_ids": f.mitre_ttp_ids,
                     "owasp_llm_category": f.owasp_llm_category,
                 })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Social eng agent error: %s", e)
         return findings
 
@@ -360,7 +360,7 @@ class AttackCell:
             from whitemagic.tools.security.dynamic_testers import run_nmap
             nmap_result = run_nmap(self.target, scan_type="quick", timeout=60)
             findings.extend(nmap_result.get("findings", []))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Lateral agent error: %s", e)
         return findings
 
@@ -379,7 +379,7 @@ class AttackCell:
                 "target": self.target,
                 "mitre_ttp_ids": [],
             })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Report agent error: %s", e)
         return findings
 

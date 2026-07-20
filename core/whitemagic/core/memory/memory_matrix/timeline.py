@@ -76,7 +76,7 @@ class ChronologicalTimeline:
                     for e in data.get("events", [])
                 ]
                 self._event_counter = data.get("counter", len(self._events))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self._events = []
 
     def _save(self) -> None:
@@ -146,7 +146,7 @@ class ChronologicalTimeline:
                 event_time = parse_datetime(event.timestamp.replace("Z", "+00:00"))
                 if start <= event_time <= end:
                     results.append(event)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
         return sorted(results, key=lambda e: e.timestamp)

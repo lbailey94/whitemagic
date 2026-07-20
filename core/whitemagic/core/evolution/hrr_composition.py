@@ -55,7 +55,7 @@ class HRRCompositionEngine:
                 from whitemagic.core.memory.hrr import get_hrr_engine
 
                 self._hrr = get_hrr_engine(dim=self._dim)
-            except (ImportError, Exception) as e:
+            except (ImportError, Exception) as e:  # noqa: BLE001
                 logger.debug("HRR engine unavailable: %s", e)
                 self._hrr = False
         return self._hrr if self._hrr is not False else None

@@ -253,7 +253,7 @@ class CanaryTokenManager:
                     "context": context,
                 },
             ))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to emit canary security event: %s", e)
 
     def cleanup_expired(self) -> int:

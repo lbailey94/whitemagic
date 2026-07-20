@@ -100,12 +100,14 @@ def _ensure_semantic_cache_cached() -> None:
     _json_module = _j
     try:
         import whitemagic.core.cache as _cache_mod
-        _get_unified_cache = lambda: _cache_mod.get_unified_cache()
+        def _get_unified_cache():
+            return _cache_mod.get_unified_cache()
     except Exception:
         logger.debug("get_unified_cache unavailable")
     try:
         import whitemagic.tools.speculative_prefetch as _sp_mod
-        _get_prefetcher = lambda: _sp_mod.get_prefetcher()
+        def _get_prefetcher():
+            return _sp_mod.get_prefetcher()
     except Exception:
         logger.debug("get_prefetcher unavailable")
     try:

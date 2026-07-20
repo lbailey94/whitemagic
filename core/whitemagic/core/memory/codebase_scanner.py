@@ -658,7 +658,7 @@ class CodebaseScanner:
 
             return files
 
-        except (ImportError, AttributeError, Exception) as e:
+        except (ImportError, AttributeError, Exception) as e:  # noqa: BLE001
             logger.debug("Rust walk_directory unavailable, falling back to os.walk: %s", e)
 
         # Python fallback
@@ -1019,12 +1019,12 @@ class CodebaseScanner:
             for content, title, tags, importance, metadata in parent_memories + dir_memories:
                 try:
                     self._direct_store(content=content, title=title, tags=tags, importance=importance, metadata=metadata)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored error in codebase_scanner.py:1022")
             for chunk in chunks:
                 try:
                     self._direct_store(content=chunk.content, title=chunk.title, tags=chunk.to_tags(), importance=0.5, metadata=chunk.to_metadata(chunk.content_hash))
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored error in codebase_scanner.py:1027")
 
     def _store_manifest(self, result: ScanResult) -> None:

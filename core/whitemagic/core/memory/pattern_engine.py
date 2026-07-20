@@ -243,7 +243,7 @@ class PatternEngine:
 
     def persist_to_galaxy(self, report: PatternReport) -> dict[str, int]:
         """Store extracted patterns to the knowledge galaxy.
-        
+
         Returns counts of stored patterns by type.
         """
         try:

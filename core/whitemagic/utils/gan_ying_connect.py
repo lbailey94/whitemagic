@@ -36,6 +36,6 @@ def connect_to_bus(component_name: str = "component") -> Any:
     except ImportError:
         logger.debug("%s: Gan Ying not available — remaining localized", component_name)
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("%s: Gan Ying connection failed: %s", component_name, e)
         return None

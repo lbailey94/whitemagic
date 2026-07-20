@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-def _safe(fn: Callable[[], T], default: T | None = None) -> T | None:
+def _safe(fn: Callable[[], T], default: T | None = None) -> T | None:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Call fn, return default on any failure."""
     try:
         return fn()

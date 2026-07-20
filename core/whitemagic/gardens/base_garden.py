@@ -207,7 +207,7 @@ class BaseGarden(ABC):
                     confidence=self._activation_level,
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
 
     def _cascade_to_partners(
@@ -230,7 +230,7 @@ class BaseGarden(ABC):
                         partner.boost(amount)
                     else:
                         partner.dampen(amount)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
 
     def get_status(self) -> dict[str, Any]:

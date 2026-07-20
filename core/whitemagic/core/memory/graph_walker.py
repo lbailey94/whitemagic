@@ -202,7 +202,7 @@ class GraphWalker:
                     )
                     for row in rows
                 ]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("GraphWalker: failed to load neighbors for %s: %s", memory_id, e)
             return []
 
@@ -257,7 +257,7 @@ class GraphWalker:
                         ]
                 finally:
                     conn.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("GraphWalker: galaxy fallback failed for %s: %s", memory_id, e)
         return []
 
@@ -271,7 +271,7 @@ class GraphWalker:
                 ).fetchone()
                 if row:
                     return row[0] or 0.5
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
         return 0.5
 
@@ -290,7 +290,7 @@ class GraphWalker:
             if row and row[0]:
                 from whitemagic.core.memory.embedding_similarity import unpack_embedding
                 return cast(list[float] | None, unpack_embedding(row[0]))
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
         return None
 
@@ -320,7 +320,7 @@ class GraphWalker:
                 engine = get_graph_engine()
                 self._pagerank_cache = engine.pagerank()
                 self._pagerank_cache_time = now
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
         return self._pagerank_cache.get(memory_id, 0.01)
 
@@ -347,7 +347,7 @@ class GraphWalker:
                     (memory_id, self._min_strength),
                 ).fetchone()
                 return row[0] if row else 0
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0
 
     def _hub_penalty(self, neighbor: Neighbor, pool: Any) -> float:
@@ -363,7 +363,7 @@ class GraphWalker:
         """
         try:
             degree = self._get_neighbor_count(neighbor.memory_id, pool)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 1.0
         if degree <= 5:
             return 1.0
@@ -393,7 +393,7 @@ class GraphWalker:
                 curr_t = datetime.fromisoformat(neighbor.created_at)
                 if curr_t < prev_t:
                     return 0.0  # Violates temporal ordering
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         # Semantic similarity: steer walk toward query-relevant neighbors
@@ -410,7 +410,7 @@ class GraphWalker:
                     hrr = get_hrr_engine(dim=len(query_embedding))
                     projected = hrr.project(query_embedding, neighbor.relation_type)
                     effective_query = projected.tolist()
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored Exception in graph_walker.py:290")
             raw_sim = self._cosine_similarity(effective_query, neighbor_embedding)
             # Map from [-1, 1] to [0.1, 2.0] — never zero, reward alignment
@@ -431,7 +431,7 @@ class GraphWalker:
                 created = datetime.fromisoformat(neighbor.created_at)
                 days_old = max(0.0, (datetime.now() - created).total_seconds() / 86400.0)
                 recency = 1.0 / (1.0 + days_old * 0.01)  # gentle decay
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         # Staleness: penalize over-traversed paths (encourage exploration)
@@ -487,7 +487,7 @@ class GraphWalker:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
             pool = um.pool
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("GraphWalker: could not access memory system: %s", e)
             result.duration_ms = (time.perf_counter() - start) * 1000
             return result
@@ -644,7 +644,7 @@ class GraphWalker:
         try:
             from whitemagic.core.memory.unified import get_unified_memory
             um = get_unified_memory()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("hybrid_recall: could not access memory system: %s", e)
             return []
 
@@ -660,7 +660,7 @@ class GraphWalker:
             engine = get_embedding_engine()
             if engine.available():
                 query_embedding = engine.encode(query)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in graph_walker.py:533")
 
         anchor_ids = [m.id for m in anchors]
@@ -681,7 +681,7 @@ class GraphWalker:
                             for n in neighbors
                             if n.strength >= self._min_strength
                         ]
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         return []
 
                 quantum_nodes = adapter.quantum_enhanced_walk(
@@ -695,7 +695,7 @@ class GraphWalker:
                     "⚛️ Quantum walk: %d nodes in superposition from %d anchors",
                     len(quantum_nodes), len(anchor_ids),
                 )
-            except (ImportError, ModuleNotFoundError, Exception) as e:
+            except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
                 logger.debug("Quantum walk unavailable, falling back to classical: %s", e)
                 quantum_nodes = []
 
@@ -730,7 +730,7 @@ class GraphWalker:
                 mem = um.recall(mid)
                 if mem:
                     discovered_map[mid] = mem
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         results: list[dict[str, Any]] = []
@@ -825,7 +825,7 @@ class GraphWalker:
         try:
             from whitemagic.ai.vsa_context_compressor import get_vsa_context_compressor
             compressor = get_vsa_context_compressor()
-        except Exception:
+        except Exception:  # noqa: BLE001
             compressor = None
 
         # Build items for compression
@@ -918,7 +918,7 @@ class GraphWalker:
                 ).fetchone()
                 if row:
                     return str(row[0])
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
         return None
 
@@ -931,7 +931,7 @@ class GraphWalker:
                 ).fetchone()
                 if row and row[0]:
                     return int(row[0])
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
         return 10  # default
 
@@ -946,7 +946,7 @@ class GraphWalker:
                        WHERE source_id = ? AND target_id = ?""",
                     (datetime.now().isoformat(), source_id, target_id),
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in graph_walker.py:819")
 
     def get_stats(self) -> dict[str, Any]:

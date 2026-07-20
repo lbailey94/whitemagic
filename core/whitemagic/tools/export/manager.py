@@ -404,7 +404,7 @@ class ExportImportManager:
                         extra_fields=memory.metadata,
                     )
                     result.completed += 1
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     result.add_error(i, exc, item_id=memory.id)
             result.rollback_state = "committed"
         except ImportError:

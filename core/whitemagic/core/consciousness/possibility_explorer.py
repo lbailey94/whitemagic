@@ -261,7 +261,7 @@ class PossibilitySpaceExplorer:
                 n_bo_iterations=n_bo_iterations,
                 seed=seed,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Superforecaster failed, falling back to basic MC: %s", e)
             return self.explore(
                 space_name, n_trials=n_trials,
@@ -330,7 +330,7 @@ class PossibilitySpaceExplorer:
             if n_trials > 5000 and any(b.value == "rust" for b in backends):
                 return "rust"
             return "python"
-        except Exception:
+        except Exception:  # noqa: BLE001
             return "python"
 
     def _compute_sensitivity(
@@ -605,7 +605,7 @@ class PossibilitySpaceExplorer:
                         p - learning_rate * g
                         for p, g in zip(param_vec, gradients)
                     ]
-            except Exception:
+            except Exception:  # noqa: BLE001
                 # Fallback to flat gradient descent
                 new_param_vec = [
                     p - learning_rate * g

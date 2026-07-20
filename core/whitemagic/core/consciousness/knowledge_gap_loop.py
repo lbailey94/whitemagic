@@ -78,7 +78,7 @@ class KnowledgeGapActionLoop:
                 )
                 gap.proposed_action = self._propose_action(gap)
                 gaps.append(gap)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("KnowledgeGap: MetaGalaxy gap detection failed: %s", e)
 
         # 2. Gaps from RecursiveImprovementLoop
@@ -97,7 +97,7 @@ class KnowledgeGapActionLoop:
                         )
                         gap.proposed_action = self._propose_action(gap)
                         gaps.append(gap)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("KnowledgeGap: RIL gap detection failed: %s", e)
 
         # WI 13: Gaps from EmergenceEngine — novel patterns that reveal
@@ -124,7 +124,7 @@ class KnowledgeGapActionLoop:
                     )
                     gap.proposed_action = self._propose_action(gap)
                     gaps.append(gap)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("KnowledgeGap: EmergenceEngine gap detection failed: %s", e)
 
         # WI 13: Reverse direction — check if EmergenceEngine has insights
@@ -150,7 +150,7 @@ class KnowledgeGapActionLoop:
                             gap.metadata = gap.metadata or {}
                             gap.metadata["related_emergence"] = insight.get("id", "")
                             break
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("KnowledgeGap: EmergenceEngine reverse cross-ref failed: %s", e)
 
         with self._lock:
@@ -228,7 +228,7 @@ class KnowledgeGapActionLoop:
                 with self._lock:
                     self._failed_count += 1
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             gap.status = "failed"
             result["status"] = "error"
             result["error"] = str(e)
@@ -250,7 +250,7 @@ class KnowledgeGapActionLoop:
                 importance=gap.priority,
             )
             return {"status": "success", "memory_id": mem_id, "galaxy": gap.galaxy}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"status": "error", "error": str(e)}
 
     def _generate_code(self, gap: KnowledgeGap) -> dict[str, Any]:
@@ -272,7 +272,7 @@ class KnowledgeGapActionLoop:
                 )
                 return {"status": "success", "template": result.get("template_name", "")}
             return {"status": "error", "error": result.get("error_code", "generation_failed")}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"status": "error", "error": str(e)}
 
     def _synthesize_strategy(self, gap: KnowledgeGap) -> dict[str, Any]:
@@ -297,7 +297,7 @@ class KnowledgeGapActionLoop:
                 importance=0.8,
             )
             return {"status": "success", "priorities_count": len(priorities)}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"status": "error", "error": str(e)}
 
     def _search_and_ingest(self, gap: KnowledgeGap) -> dict[str, Any]:
@@ -318,7 +318,7 @@ class KnowledgeGapActionLoop:
                 importance=0.3,
             )
             return {"status": "success", "note": "created placeholder for unresolved gap"}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"status": "error", "error": str(e)}
 
     def run(self, max_gaps: int = 3) -> list[dict[str, Any]]:

@@ -257,7 +257,7 @@ async def _get_broker(host: str = "localhost", port: int = 6379) -> _AsyncBroker
 T = TypeVar("T")
 
 
-def _run(coro: Coroutine[Any, Any, T]) -> T:
+def _run(coro: Coroutine[Any, Any, T]) -> T:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Run an async coroutine from a sync handler context.
 
     Properly cleans up the event loop to prevent unraisable exceptions

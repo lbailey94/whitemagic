@@ -457,7 +457,7 @@ class ConsciousnessLoop:
                 from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
 
                 get_dream_cycle().stop()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in consciousness_loop.py:442")
 
         # Detach homeostatic loop if we attached it
@@ -466,7 +466,7 @@ class ConsciousnessLoop:
                 from whitemagic.harmony.homeostatic_loop import get_homeostatic_loop
 
                 get_homeostatic_loop().detach()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in consciousness_loop.py:451")
 
         if self._thread and self._thread.is_alive():
@@ -494,7 +494,7 @@ class ConsciousnessLoop:
         try:
             from whitemagic.core.consciousness.neuro_upgrades import get_neuro_upgrades
             get_neuro_upgrades().set_mode(mode.value)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in consciousness_loop.py:476")
 
         # Restart dream cycle if enable state changed
@@ -506,7 +506,7 @@ class ConsciousnessLoop:
                 from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
                 get_dream_cycle().stop()
                 self._dream_started = False
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in consciousness_loop.py:488")
 
         logger.info(
@@ -533,7 +533,7 @@ class ConsciousnessLoop:
             from whitemagic.core.dreaming.dream_cycle import get_dream_cycle
 
             get_dream_cycle().touch()
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in consciousness_loop.py:515")
 
     def status(self) -> dict[str, Any]:
@@ -667,7 +667,7 @@ class ConsciousnessLoop:
                     self._run_security_scan()
                     self._last_security_scan = now
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 self._stats.last_error = str(e)
                 logger.debug("Consciousness loop error: %s", e, exc_info=True)
 
@@ -700,7 +700,7 @@ class ConsciousnessLoop:
             reg.flush_stale()
             # Collect tuning recommendations (non-applying, just analysis)
             reg.auto_tune_ttls()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Cache warming skipped: %s", e)
 
         # Proactively warm retrieval index caches for active galaxies
@@ -720,7 +720,7 @@ class ConsciousnessLoop:
                     mem = um.recall(chunk_id)
                     if mem and hasattr(mem, "galaxy") and mem.galaxy:
                         active_galaxies.add(mem.galaxy)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
 
             # Always warm core galaxies
@@ -729,7 +729,7 @@ class ConsciousnessLoop:
             # Warm up to 5 galaxies to avoid excessive I/O
             for galaxy in list(active_galaxies)[:5]:
                 cache.warm_galaxy("default", galaxy)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Retrieval cache warming skipped: %s", e)
 
     def _run_security_scan(self) -> None:
@@ -794,7 +794,7 @@ class ConsciousnessLoop:
                     self._stats.last_security_ttps,
                 )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Security scan skipped: %s", e, exc_info=True)
 
     def _advance_citta(self) -> None:
@@ -830,7 +830,7 @@ class ConsciousnessLoop:
                     "prediction_surprise": neuro_result["prediction_errors"].get("surprise", 0.0),
                     "cortical_l4": neuro_result["cortical_layers"]["l4_output"],
                 }
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in consciousness_loop.py:706")
 
             advance_citta(
@@ -848,7 +848,7 @@ class ConsciousnessLoop:
             self._stats.last_citta_coherence = coherence
             self._stats.last_citta_depth = depth
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Citta advancement failed: %s", e, exc_info=True)
 
     def _compute_system_coherence(self) -> float:
@@ -859,7 +859,7 @@ class ConsciousnessLoop:
             cycle = get_citta_cycle()
             summary = cycle.get_cycle_summary()
             return summary.get("avg_coherence", 0.8)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0.8
 
     def _compute_depth_layer(self) -> str:
@@ -871,7 +871,7 @@ class ConsciousnessLoop:
             if dc._dreaming:
                 return "dream"
             return "surface"
-        except Exception:
+        except Exception:  # noqa: BLE001
             return "surface"
 
     def _start_dream_cycle(self) -> None:
@@ -889,7 +889,7 @@ class ConsciousnessLoop:
                 "Dream cycle started by consciousness loop (idle threshold: %.0fs)",
                 self._config.dream_idle_threshold_s,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Dream cycle start failed: %s", e, exc_info=True)
 
     def _start_homeostatic(self) -> None:
@@ -912,7 +912,7 @@ class ConsciousnessLoop:
                 "Homeostatic loop attached by consciousness loop (interval: %.0fs)",
                 self._config.homeostatic_interval_s,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Homeostatic loop attach failed: %s", e, exc_info=True)
 
     def _run_homeostatic(self) -> None:
@@ -936,7 +936,7 @@ class ConsciousnessLoop:
                 summary.get("stream_length", 0),
                 summary.get("avg_coherence", 1.0),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Citta persist failed: %s", e, exc_info=True)
 
     def _check_proactive_dream(self) -> None:
@@ -950,7 +950,7 @@ class ConsciousnessLoop:
                 logger.info(
                     "Proactive dream triggered: %s", result.get("reason", "unknown")
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in consciousness_loop.py:826")
 
     # ── T2: Fast meta loop ──────────────────────────────────────────
@@ -988,7 +988,7 @@ class ConsciousnessLoop:
                 from whitemagic.core.consciousness.meta_galaxy import get_meta_galaxy
 
                 _meta_priorities = get_meta_galaxy().get_strategic_priorities()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in consciousness_loop.py:864")
 
             turns = self._self_directed.observe_and_generate()
@@ -1016,7 +1016,7 @@ class ConsciousnessLoop:
                         content=priority,
                         salience=0.7,
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Self-directed attention failed: %s", e, exc_info=True)
 
     def _run_apotheosis_health(self) -> None:
@@ -1055,7 +1055,7 @@ class ConsciousnessLoop:
                         "predictive_alert",
                         f"{alert.get('component', '')}: {alert.get('issue', '')}",
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Apotheosis health check failed: %s", e, exc_info=True)
 
     def _run_emergence_scan(self) -> None:
@@ -1089,7 +1089,7 @@ class ConsciousnessLoop:
                         content=f"{insight.title}: {insight.description[:100]}",
                         salience=insight.confidence,
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Emergence scan failed: %s", e, exc_info=True)
 
     def _run_guna_balance_check(self) -> None:
@@ -1108,7 +1108,7 @@ class ConsciousnessLoop:
                     reading.correction_action,
                 )
                 gb.apply_correction(reading.correction_action)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Guna balance check failed: %s", e, exc_info=True)
 
     def _run_meta_galaxy_refresh(self) -> None:
@@ -1120,7 +1120,7 @@ class ConsciousnessLoop:
             overview = mg.get_overview()
             self._stats.meta_galaxy_refreshes += 1
             self._stats.last_meta_galaxy_galaxies = overview.get("total_galaxies", 0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Meta galaxy refresh failed: %s", e, exc_info=True)
 
     # ── T3: Slow meta loop ──────────────────────────────────────────
@@ -1184,7 +1184,7 @@ class ConsciousnessLoop:
                     content=f"{rec.get('title', '')}: {rec.get('source', '')}",
                     salience=min(rec.get("score", 0.5), 1.0),
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Recursive improvement failed: %s", e, exc_info=True)
 
     def _run_foresight(self) -> None:
@@ -1240,7 +1240,7 @@ class ConsciousnessLoop:
                     novelty=0.3,
                     metadata={"high_risk_count": len(high_risk)},
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Foresight analysis failed: %s", e, exc_info=True)
 
     def _run_knowledge_gap_loop(self) -> None:
@@ -1256,7 +1256,7 @@ class ConsciousnessLoop:
             self._stats.knowledge_gaps_filled += filled
             if results:
                 logger.info("Knowledge gap loop: %d attempts, %d filled", len(results), filled)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Knowledge gap loop failed: %s", e, exc_info=True)
 
     # ── T4: Deep meta loop ──────────────────────────────────────────
@@ -1318,7 +1318,7 @@ class ConsciousnessLoop:
                     "oracle_caution_aligns_with_degradation",
                     f"Oracle cautions: {', '.join(result.cautions[:2])}",
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Oracle consultation failed: %s", e, exc_info=True)
 
     def _run_meta_learning(self) -> None:
@@ -1345,7 +1345,7 @@ class ConsciousnessLoop:
                         novelty=0.6,
                         metadata={"meta_pattern_id": mp.meta_pattern_id},
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Meta-learning failed: %s", e, exc_info=True)
 
     def _run_association_mining(self) -> None:
@@ -1364,7 +1364,7 @@ class ConsciousnessLoop:
                     report.links_created,
                     report.pairs_evaluated,
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Association mining failed: %s", e, exc_info=True)
 
     def _run_possibility_exploration(self) -> None:
@@ -1414,7 +1414,7 @@ class ConsciousnessLoop:
                     try:
                         with open(winners_path) as f:
                             existing = json.load(f)
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.debug("Ignored error in consciousness_loop.py:1286")
                 existing_applied = existing.get("applied_params", {})
                 for space, params in best_params.items():
@@ -1430,7 +1430,7 @@ class ConsciousnessLoop:
                     winners_path,
                     len(best_params),
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Possibility exploration failed: %s", e, exc_info=True)
 
     # ── v24.3: Hyperspace integration ───────────────────────────────
@@ -1465,7 +1465,7 @@ class ConsciousnessLoop:
                         content=f"Breakthrough in {result.campaign_name}: fitness={result.best_fitness:.4f}",
                         salience=min(result.best_fitness, 1.0),
                     )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Autoswarm tick failed: %s", e, exc_info=True)
 
     def _run_mesh_sync(self) -> None:
@@ -1484,7 +1484,7 @@ class ConsciousnessLoop:
             if synced:
                 self._stats.mesh_sync_synced += synced
                 logger.info("Mesh sync: %d pending broadcasts synced", synced)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Mesh sync failed: %s", e, exc_info=True)
 
     # ── Insight persistence & workspace proposal ─────────────────────
@@ -1518,7 +1518,7 @@ class ConsciousnessLoop:
                 },
             )
             self._stats.insights_persisted += 1
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Insight persistence failed: %s", e, exc_info=True)
 
     def _propose_to_workspace(
@@ -1535,7 +1535,7 @@ class ConsciousnessLoop:
                 content={"message": content},
                 salience=min(salience, 1.0),
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in consciousness_loop.py:1407")
 
     # ── Human check-in threshold logic ───────────────────────────────

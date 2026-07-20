@@ -147,7 +147,7 @@ class FileIndex:
                 index[ext] = [Path(p) for p in paths]
             self._ext_index = index
             return index
-        except (ImportError, AttributeError, Exception):
+        except (ImportError, AttributeError, Exception):  # noqa: BLE001
             logger.debug("Ignored ImportError, AttributeError, Exception in file_index.py:150")
 
         # Fallback: Python rglob

@@ -298,7 +298,7 @@ def build_effect_registry() -> dict[str, list[EffectSignature]]:
                 safety=tool_def.safety.value if tool_def.safety else "",
             )
             registry[tool_def.name] = effects
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Failed to build full effect registry: %s", e, exc_info=True)
 
     # Also check WRITE_TOOLS for any tools not in the registry
@@ -308,7 +308,7 @@ def build_effect_registry() -> dict[str, list[EffectSignature]]:
         for tool_name in WRITE_TOOLS:
             if tool_name not in registry:
                 registry[tool_name] = infer_effects(tool_name, safety="WRITE")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Failed to merge WRITE_TOOLS: %s", e, exc_info=True)
 
     logger.info("Effect registry: %d tools mapped", len(registry))

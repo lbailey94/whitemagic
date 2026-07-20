@@ -45,7 +45,7 @@ try:
 except ImportError:
     HAS_TEXTUAL = False
 
-import importlib.util
+import importlib.util  # noqa: E402  # conditional/late import
 
 HAS_RICH = importlib.util.find_spec("rich") is not None
 

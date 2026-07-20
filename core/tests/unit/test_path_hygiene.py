@@ -142,6 +142,8 @@ class TestPathHygiene:
             "archive/",
             # Canonical path module (the single source of truth for path resolution)
             "config/paths.py",
+            # Canonical env-var registry — get_env_path() expands ~ for env-provided paths
+            "config/env_vars.py",
             # Path validation with security gating (legitimate)
             "security/tool_gating.py",
             # User-provided base_path validation in unified API

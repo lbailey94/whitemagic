@@ -71,7 +71,7 @@ class SQLiteBackend:
             if COLD_DB_PATH.exists():
                 self._cold_pool = get_db_pool(str(COLD_DB_PATH))
                 return self._cold_pool
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
         self._cold_pool = False  # Sentinel: checked but unavailable
         return None
@@ -611,7 +611,7 @@ class SQLiteBackend:
                     if isinstance(content, str) and (content.startswith("{") or content.startswith("[")):
                         try:
                             content = json.loads(content)
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             pass
 
                     result[mid] = Memory(
@@ -664,7 +664,7 @@ class SQLiteBackend:
             if isinstance(content, str) and (content.startswith("{") or content.startswith("[")):
                 try:
                     content = json.loads(content)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Ignored Exception in sqlite_backend.py:456")
 
             return Memory(
@@ -938,7 +938,7 @@ class SQLiteBackend:
             query_vec = engine.encode(query)
             if query_vec is None:
                 return memories
-        except Exception:
+        except Exception:  # noqa: BLE001
             return memories
 
         # Extract entities from query (capitalized words, multi-word proper nouns)
@@ -952,7 +952,7 @@ class SQLiteBackend:
                 if cached is not None:
                     from whitemagic.core.memory.embeddings import cosine_similarity
                     sem_score = cosine_similarity(query_vec, cached)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
             # Entity boost: +0.15 per shared entity, capped at +0.3
@@ -1384,7 +1384,7 @@ class SQLiteBackend:
             if isinstance(content, str) and (content.startswith("{") or content.startswith("[")):
                 try:
                     content = json.loads(content)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("Swallowed exception", exc_info=True)
 
             try:
@@ -1417,7 +1417,7 @@ class SQLiteBackend:
                     mem.metadata["fts_rank"] = float(row["rank"])
 
                 memories.append(mem)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error("Error hydrating memory %s: %s", mem_id, e)
 
         return memories
@@ -1576,7 +1576,7 @@ class SQLiteBackend:
                 try:
                     created = datetime.fromisoformat(created_at)
                     days_old = max(0.0, (datetime.now() - created).total_seconds() / 86400.0)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     continue
 
                 if days_old < 0.5:
@@ -1719,7 +1719,7 @@ class SQLiteBackend:
             # VACUUM to reclaim space
             try:
                 conn.execute("VACUUM")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
             size_after = 0
@@ -1800,7 +1800,7 @@ class SQLiteBackend:
                            WHERE source_id = ? AND target_id = ?""",
                         (datetime.now().isoformat(), source_id, target_id),
                     )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in sqlite_backend.py:1388")
 
     def log_dharma_audit(
@@ -1934,7 +1934,7 @@ class SQLiteBackend:
                 else:
                     row = conn.execute("SELECT COUNT(*) FROM memories").fetchone()
                 return row[0] if row else 0
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("count_with_rust failed: %s", e)
             return 0
 

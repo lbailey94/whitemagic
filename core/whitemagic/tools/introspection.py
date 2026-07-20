@@ -31,8 +31,8 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-from whitemagic import __version__
-from whitemagic.config.paths import (
+from whitemagic import __version__  # noqa: E402  # conditional/late import
+from whitemagic.config.paths import (  # noqa: E402  # conditional/late import
     ARTIFACTS_DIR,
     CACHE_DIR,
     DATA_DIR,
@@ -43,8 +43,12 @@ from whitemagic.config.paths import (
     SESSIONS_DIR,
     WM_ROOT,
 )
-from whitemagic.tools.contract import ENV_VARS, ENVELOPE_VERSION, TOOL_CONTRACT_VERSION
-from whitemagic.tools.tool_surface import (
+from whitemagic.tools.contract import (  # noqa: E402  # conditional/late import
+    ENV_VARS,
+    ENVELOPE_VERSION,
+    TOOL_CONTRACT_VERSION,
+)
+from whitemagic.tools.tool_surface import (  # noqa: E402  # conditional/late import
     get_callable_tool_definitions,
     get_surface_counts,
 )

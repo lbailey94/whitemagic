@@ -82,7 +82,7 @@ def galactic_batch_score(
                 result_json = _rs.galactic_batch_score(memories_json)
             parsed: list[dict[str, Any]] = json.loads(result_json)
             return parsed
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Rust galactic scoring failed, using Python: %s", e)
 
     # Python fallback
@@ -182,7 +182,7 @@ def association_mine(
             )
             parsed: dict[str, Any] = json.loads(result_json)
             return parsed
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Rust association mining failed, using Python: %s", e)
 
     # Python fallback
@@ -321,7 +321,7 @@ def get_spatial_index_5d() -> Any:
                 _index_5d = _rs.SpatialIndex5D()
                 logger.debug("Using Rust 5D spatial index")
                 return _index_5d
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
         # Python fallback — thin wrapper over the 4D index
         _index_5d = PythonSpatialIndex5D()
@@ -445,7 +445,7 @@ def holographic_encode_batch(
         result_json = _rs.holographic_encode_batch(memories_json)
         parsed: list[dict[str, float]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust holographic batch encoding failed: %s", e)
         return None
 
@@ -468,7 +468,7 @@ def holographic_encode_single(
         result_json = _rs.holographic_encode_single(memory_json)
         parsed: dict[str, float] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust holographic single encoding failed: %s", e)
         return None
 
@@ -502,7 +502,7 @@ def holographic_nearest_5d(
         )
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust holographic nearest 5D failed: %s", e)
         return None
 
@@ -530,7 +530,7 @@ def minhash_find_duplicates(
         result_json = _rs.minhash_find_duplicates(keywords_json, threshold, max_results)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust MinHash find_duplicates failed: %s", e)
         return None
 
@@ -554,7 +554,7 @@ def minhash_signatures(
         result_json = _rs.minhash_signatures(keywords_json)
         parsed: list[list[int]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust MinHash signatures failed: %s", e)
         return None
 
@@ -580,7 +580,7 @@ def sqlite_batch_update_galactic(
         result_json = _rs.sqlite_batch_update_galactic(db_path, updates_json)
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust SQLite batch update failed: %s", e)
         return None
 
@@ -602,7 +602,7 @@ def sqlite_decay_drift(
         result_json = _rs.sqlite_decay_drift(db_path, drift_amount, max_distance)
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust SQLite decay drift failed: %s", e)
         return None
 
@@ -625,7 +625,7 @@ def sqlite_fts_search(
         result_json = _rs.sqlite_fts_search(db_path, query, limit, min_importance)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust SQLite FTS search failed: %s", e)
         return None
 
@@ -645,7 +645,7 @@ def sqlite_zone_stats(
         result_json = _rs.sqlite_zone_stats(db_path)
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust SQLite zone stats failed: %s", e)
         return None
 
@@ -670,7 +670,7 @@ def sqlite_export_for_mining(
         )
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust SQLite export for mining failed: %s", e)
         return None
 
@@ -703,7 +703,7 @@ def sqlite_hybrid_search(
         )
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust SQLite hybrid search failed: %s", e)
         return None
 
@@ -713,7 +713,7 @@ try:
     if _rs is not None and hasattr(_rs, "search_build_index"):
         _RUST_SEARCH = True
         logger.debug("Rust BM25 search engine available")
-except Exception:
+except Exception:  # noqa: BLE001
     logger.debug("Swallowed exception", exc_info=True)
 
 
@@ -740,7 +740,7 @@ def search_build_index(
         docs_json = json.dumps(documents)
         result: tuple[int, int] = _rs.search_build_index(docs_json)
         return result
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust search_build_index failed: %s", e)
         return None
 
@@ -762,7 +762,7 @@ def search_query(
         result_json = _rs.search_query(query, limit)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust search_query failed: %s", e)
         return None
 
@@ -785,7 +785,7 @@ def search_fuzzy(
         result_json = _rs.search_fuzzy(query, limit, max_distance)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust search_fuzzy failed: %s", e)
         return None
 
@@ -807,7 +807,7 @@ def search_and_query(
         result_json = _rs.search_and_query(query, limit)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust search_and_query failed: %s", e)
         return None
 
@@ -826,7 +826,7 @@ def search_stats() -> dict[str, Any] | None:
         result_json = _rs.search_stats()
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust search_stats failed: %s", e)
         return None
 
@@ -836,7 +836,7 @@ try:
     if _rs is not None and hasattr(_rs, "rate_check"):
         _RUST_RATE_LIMITER = True
         logger.debug("Rust atomic rate limiter available")
-except Exception:
+except Exception:  # noqa: BLE001
     logger.debug("Swallowed exception", exc_info=True)
 
 
@@ -863,7 +863,7 @@ def rate_check(tool_name: str) -> dict[str, Any] | None:
         result_json = _rs.rate_check(tool_name)
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust rate_check failed: %s", e)
         return None
 
@@ -880,7 +880,7 @@ def rate_set_override(tool_name: str, rpm: int) -> bool:
     try:
         _rs.rate_set_override(tool_name, rpm)
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust rate_set_override failed: %s", e)
         return False
 
@@ -904,7 +904,7 @@ def rate_stats() -> dict[str, Any] | None:
         result_json = _rs.rate_stats()
         parsed: dict[str, Any] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust rate_stats failed: %s", e)
         return None
 
@@ -936,7 +936,7 @@ def rate_check_batch(tool_names: list[str]) -> list[dict[str, Any]] | None:
         result_json = _rs.rate_check_batch(tool_names)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust rate_check_batch failed: %s", e)
         return None
 
@@ -946,7 +946,7 @@ try:
     if _rs and hasattr(_rs, "retrieval_pipeline"):
         _RUST_PIPELINE = True
         logger.debug("Rust retrieval pipeline available")
-except Exception:
+except Exception:  # noqa: BLE001
     logger.debug("Swallowed exception", exc_info=True)
 
 
@@ -994,7 +994,7 @@ def retrieval_pipeline(
         result_json = _rs.retrieval_pipeline(input_data)
         parsed: list[dict[str, Any]] = json.loads(result_json)
         return parsed
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust retrieval_pipeline failed: %s", e)
         return None
 
@@ -1004,7 +1004,7 @@ try:
     if _rs and hasattr(_rs, "keyword_extract"):
         _RUST_KEYWORDS = True
         logger.debug("Rust keyword extraction available")
-except Exception:
+except Exception:  # noqa: BLE001
     logger.debug("Swallowed exception", exc_info=True)
 
 
@@ -1025,7 +1025,7 @@ def keyword_extract(text: str, max_keywords: int = 50) -> set[str] | None:
     try:
         result = _rs.keyword_extract(text, max_keywords)
         return cast(set[str], result)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust keyword_extract failed: %s", e)
         return None
 
@@ -1042,7 +1042,7 @@ def keyword_extract_batch(
     try:
         result = _rs.keyword_extract_batch(texts, max_keywords)
         return cast(list[set[str]], result)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust keyword_extract_batch failed: %s", e)
         return None
 
@@ -1052,7 +1052,7 @@ try:
     if _rs is not None and hasattr(_rs, "arrow_bridge"):
         _RUST_ARROW = True
         logger.debug("Rust Arrow IPC bridge available")
-except Exception:
+except Exception:  # noqa: BLE001
     logger.debug("Swallowed exception", exc_info=True)
 
 
@@ -1072,7 +1072,7 @@ def arrow_encode_memories(memories_json: str) -> bytes | None:
         return None
     try:
         return cast(bytes, _rs.arrow_bridge.arrow_encode_memories(memories_json))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust arrow_encode_memories failed: %s", e)
         return None
 
@@ -1086,7 +1086,7 @@ def arrow_decode_memories(ipc_bytes: bytes) -> str | None:
         return None
     try:
         return cast(str, _rs.arrow_bridge.arrow_decode_memories(ipc_bytes))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust arrow_decode_memories failed: %s", e)
         return None
 
@@ -1097,7 +1097,7 @@ def arrow_schema_info() -> dict[str, Any] | None:
         return None
     try:
         return cast(dict[str, Any], json.loads(_rs.arrow_bridge.arrow_schema_info()))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust arrow_schema_info failed: %s", e)
         return None
 
@@ -1111,7 +1111,7 @@ def arrow_roundtrip_bench(n: int = 1000) -> tuple[int, int, int] | None:
         return None
     try:
         return cast(tuple[int, int, int], _rs.arrow_bridge.arrow_roundtrip_bench(n))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust arrow_roundtrip_bench failed: %s", e)
         return None
 
@@ -1121,7 +1121,7 @@ try:
     if _rs is not None and hasattr(_rs, "tokio_deploy_clones"):
         _RUST_TOKIO_CLONES = True
         logger.debug("Rust Tokio Clone Army available")
-except Exception:
+except Exception:  # noqa: BLE001
     logger.debug("Swallowed exception", exc_info=True)
 
 
@@ -1152,7 +1152,7 @@ def tokio_deploy_clones(
     try:
         result_json = _rs.tokio_deploy_clones(prompt, num_clones, strategies or [])
         return cast(dict[str, Any], json.loads(result_json))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust tokio_deploy_clones failed: %s", e)
         return None
 
@@ -1163,7 +1163,7 @@ def tokio_clone_bench(num_clones: int = 1000) -> tuple[float, float] | None:
         return None
     try:
         return cast(tuple[float, float], _rs.tokio_clone_bench(num_clones))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust tokio_clone_bench failed: %s", e)
         return None
 
@@ -1174,7 +1174,7 @@ def tokio_clone_stats() -> dict[str, Any] | None:
         return None
     try:
         return cast(dict[str, Any], json.loads(_rs.tokio_clone_stats()))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust tokio_clone_stats failed: %s", e)
         return None
 
@@ -1184,7 +1184,7 @@ try:
     if _rs is not None and hasattr(_rs, "ipc_bridge"):
         _RUST_IPC = True
         logger.debug("Rust IPC bridge available")
-except Exception:
+except Exception:  # noqa: BLE001
     logger.debug("Swallowed exception", exc_info=True)
 
 
@@ -1199,6 +1199,6 @@ def ipc_status() -> dict[str, Any] | None:
         return None
     try:
         return cast(dict[str, Any], json.loads(_rs.ipc_bridge.ipc_status()))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Rust ipc_bridge_status failed: %s", e)
         return None

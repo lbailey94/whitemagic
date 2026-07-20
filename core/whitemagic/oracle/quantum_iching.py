@@ -287,7 +287,7 @@ class QuantumIChing:
                     # Add complex phase from question hash for quantum character
                     phase = (int(question_hash[(i * 2) % 64:(i * 2) % 64 + 8], 16) / 0xFFFFFFFF) * 2 * math.pi
                     amplitudes[i] = complex(score * math.cos(phase), score * math.sin(phase))
-        except Exception:
+        except Exception:  # noqa: BLE001
             hrr_available = False
 
         if not hrr_available:
@@ -360,7 +360,7 @@ class QuantumIChing:
                             # Modulate both probabilities by interference
                             probabilities[pair_a] *= max(0.01, abs(interference_val))
                             probabilities[pair_b] *= max(0.01, abs(interference_val))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in quantum_iching.py:363")
 
         # Renormalize
@@ -379,7 +379,7 @@ class QuantumIChing:
             if "index" in result and not result.get("fallback"):
                 selected = result["index"] + 1  # 0-indexed → 1-indexed
                 return selected if selected in self.db.hexagrams else 1
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in quantum_iching.py:382")
 
         # Fallback: existing numpy/weighted-random collapse

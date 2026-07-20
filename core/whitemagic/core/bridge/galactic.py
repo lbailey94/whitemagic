@@ -81,7 +81,7 @@ def galactic_galaxy_stats(**kwargs: Any) -> dict[str, Any]:
         }
     except FileNotFoundError as e:
         return {"status": "unavailable", "error": str(e)}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -109,7 +109,7 @@ def galactic_memory_recent(
                 "memories": [m.to_dict() for m in mems],
             },
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -142,7 +142,7 @@ def galactic_memory_search(
                 "memories": [m.to_dict() for m in results],
             },
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -164,7 +164,7 @@ def galactic_memory_by_id(memory_id: str, **kwargs: Any) -> dict[str, Any]:
             "function": "galactic_memory_by_id",
             "result": mem.to_dict(),
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -195,7 +195,7 @@ def galactic_associations(
                 "associations": assocs,
             },
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -242,7 +242,7 @@ def galactic_event_search(
                 "events": results,
             },
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -259,7 +259,7 @@ def galactic_substrate_health(**kwargs: Any) -> dict[str, Any]:
         return _unavailable("galactic_substrate_health")
     try:
         return api["substrate_health"]()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}
 
 
@@ -280,5 +280,5 @@ def galactic_constellation_count(**kwargs: Any) -> dict[str, Any]:
             "function": "galactic_constellation_count",
             "result": {"constellations": n},
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "error": str(e)}

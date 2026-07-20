@@ -131,7 +131,7 @@ class TemporalKnowledgeGraph:
             """)
             conn.commit()
             conn.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to init temporal KG DB: %s", e)
 
     def _now_iso(self) -> str:
@@ -347,7 +347,7 @@ class TemporalKnowledgeGraph:
                 AND source_memory_id != ''
             """).fetchall()
             return {row[0] for row in rows}
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
             return set()
         finally:

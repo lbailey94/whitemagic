@@ -162,14 +162,14 @@ class SecurityEventBus:
         for cb in subs + wildcards:
             try:
                 cb(event)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Security event subscriber error: %s", e)
 
         # Publish to Redis if available
         if self._redis_enabled and self._redis_pub is not None:
             try:
                 self._redis_pub.publish(_REDIS_CHANNEL, _json_dumps(event.to_dict()))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Redis publish failed: %s", e)
 
     def emit(
@@ -257,7 +257,7 @@ class SecurityEventBus:
         except ImportError:
             logger.debug("Redis not available — using in-memory event bus")
             return False
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Redis connection failed: %s", e)
             return False
 
@@ -284,11 +284,11 @@ class SecurityEventBus:
                         for cb in subs + wildcards:
                             try:
                                 cb(event)
-                            except Exception:
+                            except Exception:  # noqa: BLE001
                                 logger.debug("Ignored error in event_bus.py:283")
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.debug("Ignored error in event_bus.py:285")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Redis listener stopped: %s", e)
 
     def stop_redis(self) -> None:
@@ -304,7 +304,7 @@ class SecurityEventBus:
                 self._redis_sub.close()
             if self._redis_pub:
                 self._redis_pub.close()
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
 

@@ -716,7 +716,7 @@ def init_command(
                 f"    ✅ Ingested {ingested}/{found} files "
                 f"({skipped_files} skipped, {errors} errors)"
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             click.echo(f"    ❌ Ingest failed: {e}")
             if non_interactive:
                 click.echo("       Continuing with setup (use 'wm galaxy ingest' to retry)")
@@ -772,7 +772,7 @@ def init_command(
             else:
                 click.echo(f"\n  ⚠️  Quickstart: {steps_ok} passed, {steps_fail} failed.")
                 click.echo("     Run 'wm doctor' for diagnostics.")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             click.echo(f"    ⚠️  Quickstart skipped: {e}")
 
     # ── Print next steps ───────────────────────────────────────────────

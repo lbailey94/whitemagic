@@ -352,7 +352,7 @@ class WorkingMemory:
             }
             path.write_text(_json_dumps(data, indent=2), encoding="utf-8")
             logger.debug("WorkingMemory saved %d chunks to %s", len(self._chunks), path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to save working memory: %s", e)
 
     def load_from_disk(self, path: Path | None = None) -> int:
@@ -388,7 +388,7 @@ class WorkingMemory:
                 loaded += 1
             logger.info("WorkingMemory loaded %d chunks from %s", loaded, path)
             return loaded
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to load working memory: %s", e)
             return 0
 

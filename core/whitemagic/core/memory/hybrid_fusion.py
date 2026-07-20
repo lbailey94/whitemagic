@@ -282,7 +282,7 @@ class OptimalHybridSearcher:
                     'score': n.get('weight', 0.5),
                 })
             return results
-        except Exception:
+        except Exception:  # noqa: BLE001
             return []
 
 

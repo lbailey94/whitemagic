@@ -35,7 +35,7 @@ def connect_to_gan_ying(owner: str = "") -> Any:
         if owner:
             bus.owner = owner
         return bus
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("GanYingBus not available: %s", e)
         return None
 
@@ -64,7 +64,7 @@ def run_async(coro: Any) -> Any:
                     asyncio.set_event_loop(new_loop)
                     result.append(new_loop.run_until_complete(coro))
                     new_loop.close()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     error.append(e)
 
             t = threading.Thread(target=_run)

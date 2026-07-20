@@ -151,7 +151,7 @@ class SecuritySwarm:
                                 "severity": f.severity.value,
                                 "agent": agent_id,
                             })
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001
                         logger.debug("Checker %s failed: %s", checker.__name__, e)
 
         elif role == AgentRole.PYTHON_AUDITOR:
@@ -171,7 +171,7 @@ class SecuritySwarm:
                                 "severity": f.severity.value,
                                 "agent": agent_id,
                             })
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.debug("Ignored error in multi_agent.py:174")
 
         elif role == AgentRole.WEB_AUDITOR:
@@ -191,7 +191,7 @@ class SecuritySwarm:
                                 "severity": f.severity.value,
                                 "agent": agent_id,
                             })
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         logger.debug("Ignored error in multi_agent.py:194")
 
         return findings
@@ -251,7 +251,7 @@ class SecuritySwarm:
                     finding["verification_status"] = "unverified_consensus"
                     finding["verification_detail"] = result.get("error", "WASM replay mismatch")
                     unverified.append(finding)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 finding["verification_status"] = "verification_error"
                 finding["verification_detail"] = str(e)
                 unverified.append(finding)

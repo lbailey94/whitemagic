@@ -60,7 +60,7 @@ def register_whitemagic_tools(
                             input_schema=td.input_schema,
                         )
                         break
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
 

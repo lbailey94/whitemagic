@@ -268,7 +268,7 @@ class ReplayPlayer:
                 "message": f"Replay of {trace.tool_name} returned no result",
                 "replay_trace_id": trace.trace_id,
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Replay re-execute failed for %s: %s", trace.tool_name, e)
             return {
                 "status": "error",

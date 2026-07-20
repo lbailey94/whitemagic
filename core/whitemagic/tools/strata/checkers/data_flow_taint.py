@@ -148,7 +148,7 @@ def _check_graph_data_flow() -> list[Finding]:
                     if neighbor not in visited:
                         visited.add(neighbor)
                         queue.append((neighbor, path + [neighbor]))
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in data_flow_taint.py:149")
     return findings
 

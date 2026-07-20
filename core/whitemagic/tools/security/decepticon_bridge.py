@@ -125,7 +125,7 @@ def run_decepticon_directly(
         }
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "tool": "decepticon", "target": target, "timeout": timeout}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "tool": "decepticon", "error": str(e)}
 
 
@@ -260,7 +260,7 @@ def _run_recon_phase(
                     "target": target,
                     "mitre_ttp_ids": m["ttp_ids"],
                 })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("STRATA recon failed: %s", e)
 
     step.status = "success" if findings else "completed"
@@ -338,7 +338,7 @@ def _run_exploit_phase(
                     "target": target,
                     "mitre_ttp_ids": ["T1059.007"],
                 })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("XSS probe failed: %s", e)
 
     step.status = "success" if findings else "completed"
@@ -384,7 +384,7 @@ def _run_report_phase(
             "finding_count": len(findings),
         }
         step.status = "success"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         step.result = {"error": str(e)}
         step.status = "failed"
 

@@ -124,7 +124,7 @@ def test_prompt_injection(
                     mitre_ttp_ids=["T1059"],
                 ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             findings.append(AgentVulnFinding(
                 test_type="prompt_injection",
                 severity="medium",
@@ -211,7 +211,7 @@ def test_context_overflow(
             ))
             break
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             findings.append(AgentVulnFinding(
                 test_type="context_overflow",
                 severity="medium",
@@ -304,7 +304,7 @@ def test_tool_misuse(
                     mitre_ttp_ids=["T1059", "T1548"],
                 ))
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             findings.append(AgentVulnFinding(
                 test_type="tool_misuse",
                 severity="low",
@@ -430,7 +430,7 @@ def test_model_format_fuzzing(
             # Expected — loader correctly rejected the malformed input
             pass
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # Unexpected exception type might indicate a crash vulnerability
             exc_name = type(e).__name__
             if exc_name in ("MemoryError", "RecursionError", "SystemExit"):

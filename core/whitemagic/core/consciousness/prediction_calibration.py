@@ -97,7 +97,7 @@ class PredictionCalibration:
                         data = json.loads(line)
                         data["timestamp"] = datetime.fromisoformat(data["timestamp"])
                         self.estimates.append(TaskEstimate(**data))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to load calibration history: %s", e)
 
     def record_estimate(
@@ -165,7 +165,7 @@ class PredictionCalibration:
                     "timestamp": estimate.timestamp.isoformat(),
                 }
                 f.write(json.dumps(data) + "\n")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Failed to persist calibration: %s", e)
 
     def record_auto(

@@ -417,7 +417,7 @@ def handle_effect_trace(**kwargs: Any) -> dict[str, Any]:
                         "karmic_result": result,
                         "koka_enforced": True,
                     }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Koka karmic dispatch failed: %s", e, exc_info=True)
 
     # Python fallback: return trace from ledger

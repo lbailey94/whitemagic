@@ -97,7 +97,7 @@ class TelemetryPanel(Static):
                     )
                 rust = data.get("rust", {}).get("available", False)
                 lines.append(f"[bold]Rust:[/bold] {'yes' if rust else 'no'}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             lines.append(f"[red]Health error: {e}[/]")
 
         try:
@@ -125,7 +125,7 @@ class TelemetryPanel(Static):
                     lines.append(f"  ! {alert}")
                 if not alerts:
                     lines.append("  [green]No alerts - all systems nominal[/]")
-        except Exception:
+        except Exception:  # noqa: BLE001
             lines.append("\n[dim]Self-Model: not available[/]")
 
         try:
@@ -135,7 +135,7 @@ class TelemetryPanel(Static):
                 lines.append("\n[bold]Galactic Distribution:[/bold]")
                 for zone, count in data.get("zone_counts", {}).items():
                     lines.append(f"  {zone}: {count}")
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in tui.py:138")
 
         self.update("\n".join(lines))
@@ -170,7 +170,7 @@ class ToolsPanel(Static):
                 lines.append("")
 
             self.update("\n".join(lines))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.update(f"[red]Error loading tools: {e}[/]")
 
 
@@ -202,7 +202,7 @@ class DreamPanel(Static):
                             lines.append(
                                 f"  - {dream.get('phase', '?')}: {str(dream.get('summary', ''))[:60]}"
                             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             lines.append(f"[red]Dream status error: {e}[/]")
 
         try:
@@ -216,7 +216,7 @@ class DreamPanel(Static):
                         lines.append(
                             f"  - [{a.get('type', '?')}] {str(a.get('title', ''))[:50]}"
                         )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored Exception in tui.py:219")
 
         self.update("\n".join(lines) if lines else "[dim]Dream cycle not available[/]")
@@ -351,7 +351,7 @@ class CognitiveCockpit(App):
             try:
                 w = self.query_one(f"#{widget_id}")
                 w.remove()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in tui.py:354")
 
         if mode == "galaxy":
@@ -384,19 +384,19 @@ class CognitiveCockpit(App):
             try:
                 panel = self.query_one("#telemetry_view", TelemetryPanel)
                 panel.render_telemetry()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in tui.py:387")
         elif mode == "tools":
             try:
                 panel = self.query_one("#tools_view", ToolsPanel)
                 panel.render_tools()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in tui.py:393")
         elif mode == "dream":
             try:
                 panel = self.query_one("#dream_view", DreamPanel)
                 panel.render_dream()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in tui.py:399")
 
     def _refresh_galaxy(self) -> None:
@@ -419,7 +419,7 @@ class CognitiveCockpit(App):
 
             try:
                 self.query_one(GalaxyMap).update_map(raw_results)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in tui.py:422")
 
             try:
@@ -433,11 +433,11 @@ class CognitiveCockpit(App):
                     y = f"{m.get('y', 0):.2f}"
                     w = f"{m.get('w', 0):.2f}"
                     table.add_row(mid, title, x, y, w)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored Exception in tui.py:436")
 
             self.notify(f"Synchronized {len(raw_results)} stars")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             self.notify(f"Refresh error: {e}", severity="warning")
 
 

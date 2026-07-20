@@ -44,7 +44,7 @@ class AsyncCompat:
         unregister_worker("async_compat_executor")
 
 
-def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any, T]]:
+def async_compat(func: Callable[..., T]) -> Callable[..., T | Coroutine[Any, Any, T]]:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Decorator that makes a function work in both sync and async contexts.
 
     Usage:

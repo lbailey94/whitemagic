@@ -114,7 +114,7 @@ class HRREngine:
             r = np.ascontiguousarray(b_arr)
             out = _inf.py_batch_circular_convolution_numpy(q, r)
             return cast(np.ndarray, out[0])
-        except (ImportError, Exception):
+        except (ImportError, Exception):  # noqa: BLE001
             pass
 
         # Legacy SIMD path
@@ -124,7 +124,7 @@ class HRREngine:
             )
             result = circular_convolution(a_arr, b_arr)
             return cast(np.ndarray, result)
-        except (ImportError, Exception):
+        except (ImportError, Exception):  # noqa: BLE001
             result = np.real(np.fft.ifft(np.fft.fft(a_arr) * np.fft.fft(b_arr)))
             return cast(np.ndarray, result.astype(np.float32))
 
@@ -148,7 +148,7 @@ class HRREngine:
             r_rev = np.ascontiguousarray(np.roll(b_arr[::-1], 1).copy())
             out = _inf.py_batch_circular_convolution_numpy(q, r_rev)
             return cast(np.ndarray, out[0])
-        except (ImportError, Exception):
+        except (ImportError, Exception):  # noqa: BLE001
             pass
 
         # Legacy SIMD path
@@ -158,7 +158,7 @@ class HRREngine:
             )
             result = circular_correlation(bound_arr, b_arr)
             return cast(np.ndarray, result)
-        except (ImportError, Exception):
+        except (ImportError, Exception):  # noqa: BLE001
             result = np.real(np.fft.ifft(
                 np.conj(np.fft.fft(b_arr)) * np.fft.fft(bound_arr),
             ))

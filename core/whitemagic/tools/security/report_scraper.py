@@ -115,7 +115,7 @@ class ReportScraper:
                 if parsed.path.startswith(path):
                     return False
             return True
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._robots_cache[base] = None
             return True
 
@@ -188,7 +188,7 @@ class ReportScraper:
                 raw_text=text[:5000],
                 scraped_at=time.time(),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("Scrape failed for %s: %s", url, e)
             return None
 

@@ -255,7 +255,7 @@ class GalaxyRouter:
                 target_galaxy,
             )
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Galaxy migration failed for %s: %s", memory_id, e)
             return False
 

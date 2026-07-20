@@ -124,7 +124,7 @@ def run_nmap(
         rc, stdout, stderr = _run_tool("nmap", args + [target], timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "tool": "nmap", "target": target, "timeout": timeout}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "tool": "nmap", "error": str(e)}
 
     # Parse nmap output
@@ -218,7 +218,7 @@ def run_sqlmap(
         rc, stdout, stderr = _run_tool("sqlmap", args, timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "tool": "sqlmap", "url": url, "timeout": timeout}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "tool": "sqlmap", "error": str(e)}
 
     findings = _parse_sqlmap_output(stdout, url)
@@ -323,7 +323,7 @@ def run_hydra(
         rc, stdout, stderr = _run_tool("hydra", args, timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "tool": "hydra", "target": target, "timeout": timeout}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "tool": "hydra", "error": str(e)}
 
     findings = _parse_hydra_output(stdout, target, service)
@@ -384,7 +384,7 @@ def run_nikto(
         rc, stdout, stderr = _run_tool("nikto", args, timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "tool": "nikto", "target": target, "timeout": timeout}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "tool": "nikto", "error": str(e)}
 
     findings = _parse_nikto_output(stdout, target)
@@ -478,7 +478,7 @@ def run_ffuf(
         rc, stdout, stderr = _run_tool("ffuf", args, timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "tool": "ffuf", "url": url, "timeout": timeout}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "tool": "ffuf", "error": str(e)}
 
     findings = _parse_ffuf_output(stdout, url)
@@ -558,7 +558,7 @@ def run_nuclei(
         rc, stdout, stderr = _run_tool("nuclei", args, timeout=timeout)
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "tool": "nuclei", "target": target, "timeout": timeout}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "tool": "nuclei", "error": str(e)}
 
     findings = _parse_nuclei_output(stdout, target)

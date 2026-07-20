@@ -132,7 +132,7 @@ class HybridRecallCache:
         try:
             from whitemagic.core.memory.cache_registry import get_cache_registry
             return get_cache_registry().get_version("hybrid_recall")
-        except Exception:
+        except Exception:  # noqa: BLE001
             return 0
 
     def get_query_result(self, query: str, **kwargs: Any) -> list[Any] | None:
@@ -218,6 +218,6 @@ def get_hybrid_cache() -> HybridRecallCache:
                     stats_func=_cache_instance.stats,
                     invalidate_func=_cache_instance.invalidate_ns,
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("CacheRegistry registration skipped", exc_info=True)
         return _cache_instance

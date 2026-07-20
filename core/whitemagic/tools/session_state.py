@@ -50,7 +50,7 @@ def _activate_consciousness() -> None:
         )
 
         wire_cross_subsystem_patterns()
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in session_state.py:53")
 
     try:
@@ -61,7 +61,7 @@ def _activate_consciousness() -> None:
         engine = get_apotheosis_engine()
         if not engine._running:
             engine.start()
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in session_state.py:64")
 
 

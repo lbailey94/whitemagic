@@ -141,7 +141,7 @@ class StateBoardBridge:
                     path = Path(board_get_path())
                 else:
                     path = self._default_path()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 path = self._default_path()
         else:
             path = self._default_path()
@@ -153,7 +153,7 @@ class StateBoardBridge:
             self._mmap_file = open(path, "r+b")
             self._mmap = mmap.mmap(self._mmap_file.fileno(), _BOARD_SIZE)
             return self._mmap
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning("StateBoard mmap fallback failed: %s", e)
             return None
 
@@ -181,7 +181,7 @@ class StateBoardBridge:
                         karma_debt=hv.get("karma_debt", 0.0),
                         energy=hv.get("energy", 0.0),
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         # Python mmap fallback
@@ -209,7 +209,7 @@ class StateBoardBridge:
                         wu_xing=WuXingPhase(state.get("wu_xing_phase", 0)),
                         guna=Guna(state.get("guna", 0)),
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
@@ -239,7 +239,7 @@ class StateBoardBridge:
                         tick = state.get("tick", 0)
                         if isinstance(tick, (int, float)):
                             return int(tick)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
@@ -257,7 +257,7 @@ class StateBoardBridge:
                 if board_read_breaker:
                     state, failures = board_read_breaker(tool_slot)
                     return BreakerState(state), failures
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
@@ -305,7 +305,7 @@ class StateBoardBridge:
                     )
                     if isinstance(tick, (int, float)):
                         return int(tick)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
@@ -356,7 +356,7 @@ class StateBoardBridge:
                     )
                     if isinstance(tick, (int, float)):
                         return int(tick)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
@@ -391,7 +391,7 @@ class StateBoardBridge:
                 if board_write_breaker:
                     board_write_breaker(tool_slot, int(state), failures)
                     return
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         mm = self._ensure_mmap()
@@ -412,7 +412,7 @@ class StateBoardBridge:
                     "StateBoard: reset all breakers via Rust PyO3 (board_reset)"
                 )
                 return 64  # All slots reset
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         # Fallback: per-slot reset via mmap
@@ -423,7 +423,7 @@ class StateBoardBridge:
                 if state != BreakerState.CLOSED:
                     self.write_breaker(slot, BreakerState.CLOSED, 0)
                     count += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
         if count:
             logger.info("StateBoard: reset %d breaker slot(s) to CLOSED", count)

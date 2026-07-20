@@ -49,7 +49,7 @@ class FoundryBridge:
             )
         except subprocess.TimeoutExpired:
             return FoundryResult(False, "", "Timeout", -1)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return FoundryResult(False, "", str(e), -1)
 
     def build(self, silent: bool = True) -> FoundryResult:

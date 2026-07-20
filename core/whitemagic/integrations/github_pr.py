@@ -229,7 +229,7 @@ class GitHubPRReviewer:
         try:
             self._api(f"/repos/{repo}/pulls/{pr_number}/reviews", method="POST", body=body)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Failed to post review: %s", e)
             return False
 

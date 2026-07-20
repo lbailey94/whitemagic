@@ -294,7 +294,7 @@ class RustInspiredPipeline:
 
 
 # Quick interfaces inspired by Rust convenience
-async def par_map(data: list[T], func: Callable[[T], Any]) -> list[Any]:
+async def par_map(data: list[T], func: Callable[[T], Any]) -> list[Any]:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Quick parallel map (like Rust rayon).
 
     Example:
@@ -308,7 +308,7 @@ async def par_map(data: list[T], func: Callable[[T], Any]) -> list[Any]:
     return await executor.execute_parallel(tasks)
 
 
-async def par_filter_map(
+async def par_filter_map(  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     data: list[T],
     predicate: Callable[[T], bool],
     mapper: Callable[[T], Any],

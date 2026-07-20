@@ -650,7 +650,7 @@ class AdaptiveDefenseLoop:
             from whitemagic.tools.input_sanitizer import sanitize_tool_args
             result = sanitize_tool_args("create_memory", {"content": variant.content})
             variant.blocked = result is not None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Sanitizer error testing variant: %s", e)
             variant.blocked = True  # Fail safe
 
@@ -1046,7 +1046,7 @@ def run_multi_round_evolution(
                         "Round %d LLM second-pass: %d/%d leaked variants caught by ensemble",
                         round_num + 1, llm_caught, llm_total,
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("LLM second-pass failed: %s", e, exc_info=True)
 
         # Mutation-aware corpus expansion: add normalized leaked variants to

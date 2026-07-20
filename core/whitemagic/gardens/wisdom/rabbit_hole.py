@@ -1213,7 +1213,7 @@ class RabbitHoleExplorer:
                     },
                     tags=["rabbit_hole", "web_research", topic, "spiral"],
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
         # Emit to Gan Ying

@@ -167,7 +167,7 @@ def dream_run() -> None:
                 )
         else:
             click.echo("Dream cycle ran but produced no report")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         if HAS_RICH and console:
             console.print(f"[red]Dream cycle error: {e}[/red]")
         else:
@@ -189,7 +189,7 @@ def dream_report(limit: int) -> None:
         dreams = list_dreams()
         if limit > 0:
             dreams = dreams[:limit]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         if HAS_RICH and console:
             console.print(f"[yellow]Could not load dream artifacts: {e}[/yellow]")
         else:
@@ -248,7 +248,7 @@ def dream_read(dream_id: str) -> None:
         from whitemagic.core.dreaming.dream_artifacts import read_dream
 
         dream = read_dream(dream_id)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         click.echo(f"Error: {e}")
         return
 
@@ -342,5 +342,5 @@ def dream_promote(dream_id: str) -> None:
                 click.echo(f"Promoted: {result.get('promoted_to_memory_id', '?')}")
         else:
             click.echo(f"Dream not found: {dream_id}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         click.echo(f"Error: {e}")

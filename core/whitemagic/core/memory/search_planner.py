@@ -92,7 +92,7 @@ class SearchQueryPlanner:
             )
             for m in lexical_results:
                 all_memories[m.id] = m
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Planned lexical search failed: %s", e, exc_info=True)
         st_lexical = StageTiming(
             stage=RetrievalStage.LEXICAL_RANKING,
@@ -123,7 +123,7 @@ class SearchQueryPlanner:
                             if hit.get("source") == "cold":
                                 mem.metadata["storage_tier"] = "cold"
                             all_memories[mid] = mem
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Planned semantic search failed: %s", e, exc_info=True)
             result.degraded_stages.append(RetrievalStage.SEMANTIC_RANKING.value)
         st_semantic = StageTiming(
@@ -149,7 +149,7 @@ class SearchQueryPlanner:
                     for mid, mem in batch.items():
                         if mid not in all_memories:
                             all_memories[mid] = mem
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Planned spatial search failed: %s", e, exc_info=True)
                 result.degraded_stages.append(RetrievalStage.SPATIAL_RANKING.value)
         st_spatial = StageTiming(
@@ -197,7 +197,7 @@ class SearchQueryPlanner:
                     if hnsw_score > cs.semantic_score:
                         cs.semantic_score = hnsw_score
                     cs.channels.add("hnsw")
-        except (ImportError, ModuleNotFoundError, Exception) as e:
+        except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
             logger.debug("Per-galaxy HNSW search skipped: %s", e)
 
         for rank, hit in enumerate(spatial_hits):
@@ -254,7 +254,7 @@ class SearchQueryPlanner:
                         cs.entity_score = boost_val - base
                         if cs.entity_score > 0 or mid not in rrf_dict:
                             cs.channels.add("entity")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Planned entity boost failed: %s", e, exc_info=True)
                 result.degraded_stages.append(RetrievalStage.ENTITY_BOOST.value)
         st_entity = StageTiming(
@@ -277,7 +277,7 @@ class SearchQueryPlanner:
                     closest = engine.closest_constellation(query, max_results=1)
                     if closest and closest[0]["similarity"] >= profile.constellation_threshold:
                         query_constellation = closest[0]["name"]
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Constellation lookup failed: %s", e, exc_info=True)
 
             if query_constellation:
@@ -377,7 +377,7 @@ class SearchQueryPlanner:
                                                 if galaxy and _gname != galaxy:
                                                     continue
                                                 galaxy_db_paths[_gname] = str(_dbp)
-                            except Exception:
+                            except Exception:  # noqa: BLE001
                                 pass
                             sa_result = sa_engine.spread(
                                 seed_ids=seed_ids,
@@ -396,9 +396,9 @@ class SearchQueryPlanner:
                                 sa_score = primed.activation * profile.graph_walk_weight * 0.5
                                 cs.graph_score = max(cs.graph_score, sa_score / (profile.rrf_k + rank + 1))
                                 cs.channels.add("spreading_activation")
-                        except (ImportError, ModuleNotFoundError, Exception) as e:
+                        except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
                             logger.debug("Spreading activation channel skipped: %s", e)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Planned graph walk failed: %s", e, exc_info=True)
                 result.degraded_stages.append(RetrievalStage.GRAPH_WALK.value)
         st_graph = StageTiming(
@@ -452,7 +452,7 @@ class SearchQueryPlanner:
             try:
                 from whitemagic.core.memory.entity_reranker import rerank_results
                 results = rerank_results(results, query, query_entities)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Planned reranking failed: %s", e, exc_info=True)
                 result.degraded_stages.append(RetrievalStage.RERANKING.value)
 
@@ -463,7 +463,7 @@ class SearchQueryPlanner:
                         rerank_cross_encoder,
                     )
                     results = rerank_cross_encoder(query, results)
-                except (ImportError, ModuleNotFoundError, Exception) as e:
+                except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
                     logger.debug("Cross-encoder reranking skipped: %s", e)
         st_rerank = StageTiming(
             stage=RetrievalStage.RERANKING,
@@ -478,7 +478,7 @@ class SearchQueryPlanner:
         try:
             from whitemagic.core.memory.search_bias import apply_search_bias
             results = apply_search_bias(query, results)
-        except (ImportError, ModuleNotFoundError, Exception) as e:
+        except (ImportError, ModuleNotFoundError, Exception) as e:  # noqa: BLE001
             logger.debug("Search bias skipped: %s", e)
 
         # Trim to final limit
@@ -509,7 +509,7 @@ class SearchQueryPlanner:
                             skill_mem.metadata["procedural_skill"] = skill_info
                             skill_mem.metadata["retrieval_channels"] = "procedural"
                             results.append(skill_mem)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("Planned skill matching failed: %s", e, exc_info=True)
 
         # ── Finalise telemetry ───────────────────────────────────────
@@ -522,7 +522,7 @@ class SearchQueryPlanner:
             try:
                 from whitemagic.core.memory.unified import _emit_search_hooks
                 _emit_search_hooks(results)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in search_planner.py:369")
 
         return results, result
@@ -591,7 +591,7 @@ def federated_galaxy_search(
                 limit=per_galaxy_limit, min_importance=min_importance,
             )
             return name, results, None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return name, [], str(e)
 
     with ThreadPoolExecutor(max_workers=min(len(search_targets), max_concurrency)) as executor:

@@ -261,7 +261,7 @@ class WuXingPhaseController:
         for callback in self._on_phase_change:
             try:
                 callback(old_phase, new_phase)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Phase callback error: %s", e, exc_info=True)
 
         logger.info(
@@ -297,7 +297,7 @@ class WuXingPhaseController:
                     confidence=0.9,
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
 

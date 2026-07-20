@@ -140,7 +140,7 @@ class InvariantTracker:
                 shannon_entropy = -sum(p * math.log2(p) for p in probs if p > 0)
 
             conn.close()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Invariant snapshot failed: %s", e)
 
         snap = InvariantSnapshot(

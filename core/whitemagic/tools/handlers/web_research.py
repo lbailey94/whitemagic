@@ -547,7 +547,7 @@ def handle_alchemical_cycle(**kwargs: Any) -> dict[str, Any]:
 
     try:
         result = run_alchemical_cycle(task=task, cycles=cycles)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error_code": "alchemical_failed", "message": str(exc)[:200]}
 
     _emit(
@@ -661,7 +661,7 @@ def handle_web_fetch_enhanced(**kwargs: Any) -> dict[str, Any]:
                 return ""
 
         raw_html = _run_async(_fetch_raw()) or fetch_result.content
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in web_research.py:664")
 
     enhanced = process_content(

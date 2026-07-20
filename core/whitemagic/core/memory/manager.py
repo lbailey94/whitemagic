@@ -314,7 +314,7 @@ class MemoryManager:
             from whitemagic.core.memory.cache_registry import get_cache_registry
             galaxy = memory.galaxy if hasattr(memory, "galaxy") else "universal"
             get_cache_registry().invalidate_namespace(galaxy)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in manager.py:317")
         # Emit CACHE_INVALIDATE event for multi-agent coherence
         try:
@@ -329,7 +329,7 @@ class MemoryManager:
                     "operation": "delete",
                 },
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in manager.py:332")
         return {"success": True, "status": "success", "id": memory_id, "action": "permanently_deleted"}
 

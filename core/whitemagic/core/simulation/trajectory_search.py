@@ -185,7 +185,7 @@ class TrajectoryTreeSearch:
         if self._rollout_fn is not None:
             try:
                 return max(0.0, min(1.0, float(self._rollout_fn(node.state))))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.warning("rollout_fn failed, falling back to heuristic", exc_info=True)
 
         depth_factor = node.depth / self.max_depth

@@ -56,7 +56,7 @@ class GrimoireAuditor:
                         category=category,
                     )
                 )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Could not load dispatch table: %s", e)
 
         # 2. Scan scripts/ for executable Python files

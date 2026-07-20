@@ -78,7 +78,7 @@ class SerendipityEngine:
                         "description": f"Cross-cluster link: {edge.get('source_cluster', '?')} → {edge.get('target_cluster', '?')}",
                     }
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
         return results
 

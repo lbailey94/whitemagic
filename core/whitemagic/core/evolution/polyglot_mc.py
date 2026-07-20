@@ -561,7 +561,7 @@ class PolyglotMCOrchestrator:
                 sigma_n=sigma_n,
             )
             return result
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Python fallback: return basic stats
             n = len(y_train)
             y_mean = sum(y_train) / n if n else 0.0
@@ -598,7 +598,7 @@ class PolyglotMCOrchestrator:
                 sigma_n=sigma_n,
             )
             return result
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Python fallback: nearest neighbor interpolation
             if not x_train:
                 return {"mean": 0.0, "variance": 1.0, "fallback": True}
@@ -638,7 +638,7 @@ class PolyglotMCOrchestrator:
                 seed=seed,
             )
             return result
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Python fallback: random search
             import random
 
@@ -703,7 +703,7 @@ class PolyglotMCOrchestrator:
                 g_expr=g_expr,
                 seed=seed,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Python fallback: crude Monte Carlo
             import random
 
@@ -745,7 +745,7 @@ class PolyglotMCOrchestrator:
                 g_expr=g_expr,
                 seed=seed,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Fallback to subset simulation
             return self.subset_simulation(dim, n_samples, 1e-4, threshold, g_expr, seed)
 
@@ -769,7 +769,7 @@ class PolyglotMCOrchestrator:
                 g_expr=g_expr,
                 seed=seed,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             return self.subset_simulation(dim, n_samples, 1e-4, threshold, g_expr, seed)
 
     # ── Tier 4: SDE Solvers ──
@@ -792,7 +792,7 @@ class PolyglotMCOrchestrator:
                 x0=x0, t0=t0, t_end=t_end, n_steps=n_steps,
                 drift_type=drift_type, mu=mu, sigma=sigma, seed=seed,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Python fallback: simple Euler-Maruyama
             import random
 
@@ -829,7 +829,7 @@ class PolyglotMCOrchestrator:
                 x0=x0, t0=t0, t_end=t_end, n_steps=n_steps, n_paths=n_paths,
                 drift_type=drift_type, mu=mu, sigma=sigma, seed=seed,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Python fallback
             import random
 
@@ -873,7 +873,7 @@ class PolyglotMCOrchestrator:
                 x0=x0, t0=t0, t_end=t_end, n_levels=n_levels, n_paths_fine=n_paths_fine,
                 drift_type=drift_type, mu=mu, sigma=sigma, payoff=payoff, seed=seed,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Fallback to parallel Euler
             result = self.sde_parallel_euler(x0, t0, t_end, 100, n_paths_fine, drift_type, mu, sigma, seed)
             estimate = result.get("mean", x0)
@@ -1178,7 +1178,7 @@ class PolyglotMCOrchestrator:
                 target_mean=target_mean or [0.0],
                 target_cov=target_cov or [1.0],
             ) or {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
 
     def hamiltonian_monte_carlo(
@@ -1211,7 +1211,7 @@ class PolyglotMCOrchestrator:
                 target_mean=target_mean or [0.0],
                 target_cov=target_cov or [1.0],
             ) or {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"samples": [], "n_samples": 0, "acceptance_rate": 0.0, "fallback": True}
 
     # ── Expanded SDE Models ──
@@ -1242,7 +1242,7 @@ class PolyglotMCOrchestrator:
                 jump_mean=jump_mean, jump_std=jump_std,
                 seed=seed,
             ) or {"final_value": x0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"final_value": x0, "fallback": True}
 
     def sde_heston(
@@ -1270,7 +1270,7 @@ class PolyglotMCOrchestrator:
                 s0=s0, v0=v0, t0=t0, t_end=t_end, n_steps=n_steps,
                 mu=mu, kappa=kappa, theta=theta, xi=xi, rho=rho, seed=seed,
             ) or {"final_price": s0, "final_variance": v0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"final_price": s0, "final_variance": v0, "fallback": True}
 
     def sde_cir(
@@ -1294,7 +1294,7 @@ class PolyglotMCOrchestrator:
                 x0=x0, t0=t0, t_end=t_end, n_steps=n_steps,
                 kappa=kappa, theta=theta, sigma=sigma, seed=seed,
             ) or {"final_value": x0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"final_value": x0, "fallback": True}
 
     # ── Advanced GP Methods ──
@@ -1315,7 +1315,7 @@ class PolyglotMCOrchestrator:
                 sigma_n=sigma_n,
                 n_grid=n_grid,
             ) or {"length_scale": 1.0, "sigma_f": 1.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"length_scale": 1.0, "sigma_f": 1.0, "fallback": True}
 
     def expected_improvement(
@@ -1340,7 +1340,7 @@ class PolyglotMCOrchestrator:
                 sigma_n=sigma_n,
                 xi=xi,
             ) or {"ei_values": [], "f_best": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"ei_values": [], "f_best": 0.0, "fallback": True}
 
     def multid_gaussian(
@@ -1359,7 +1359,7 @@ class PolyglotMCOrchestrator:
                 cov=cov or [1.0],
                 seed=seed,
             ) or {"samples": [], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"samples": [], "fallback": True}
 
     # ── Quantum-Inspired Methods ──
@@ -1381,7 +1381,7 @@ class PolyglotMCOrchestrator:
             self._julia_quantum_backend = backend
             logger.info("Julia quantum backend connected")
             return backend
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Julia quantum backend unavailable: %s", e)
             self._julia_quantum_backend = False  # Mark as unavailable
             return None
@@ -1393,7 +1393,7 @@ class PolyglotMCOrchestrator:
             return None
         try:
             return backend.call(method, timeout=15.0, **kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Julia quantum call %s failed: %s", method, e)
             return None
 
@@ -1414,7 +1414,7 @@ class PolyglotMCOrchestrator:
             self._haskell_topological_backend = backend
             logger.info("Haskell topological backend connected")
             return backend
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Haskell topological backend unavailable: %s", e)
             self._haskell_topological_backend = False
             return None
@@ -1426,7 +1426,7 @@ class PolyglotMCOrchestrator:
             return None
         try:
             return backend.call(method, timeout=15.0, **kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Haskell topological call %s failed: %s", method, e)
             return None
 
@@ -1458,7 +1458,7 @@ class PolyglotMCOrchestrator:
                 jacobian=jacobian,
                 n_params=n_p,
             ) or {"metric": [], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"metric": [], "fallback": True}
 
     def natural_gradient(
@@ -1491,7 +1491,7 @@ class PolyglotMCOrchestrator:
                 metric=metric,
                 learning_rate=learning_rate,
             ) or {"new_params": params, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"new_params": [p - learning_rate * g for p, g in zip(params, gradients)], "fallback": True}
 
     def multiscale_bind(
@@ -1508,7 +1508,7 @@ class PolyglotMCOrchestrator:
                 bond_dim=bond_dim,
                 seed=seed,
             ) or {"result": [], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"result": [], "fallback": True}
 
     def manifold_distance(
@@ -1534,7 +1534,7 @@ class PolyglotMCOrchestrator:
                 "q_manifold_distance",
                 a=a, b=b, manifold=manifold,
             ) or {"distance": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             import math
             if manifold == "spherical":
                 dot = sum(x * y for x, y in zip(a, b))
@@ -1555,7 +1555,7 @@ class PolyglotMCOrchestrator:
                 point=point,
                 manifold=manifold,
             ) or {"embedded": point, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"embedded": point, "fallback": True}
 
     def riemannian_gradient(
@@ -1572,7 +1572,7 @@ class PolyglotMCOrchestrator:
                 gradient=gradient,
                 manifold=manifold,
             ) or {"riemannian_gradient": gradient, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"riemannian_gradient": gradient, "fallback": True}
 
     def exponential_map(
@@ -1589,7 +1589,7 @@ class PolyglotMCOrchestrator:
                 tangent=tangent,
                 manifold=manifold,
             ) or {"result": [p + t for p, t in zip(point, tangent)], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"result": [p + t for p, t in zip(point, tangent)], "fallback": True}
 
     def auto_select_manifold(
@@ -1613,7 +1613,7 @@ class PolyglotMCOrchestrator:
                 "q_auto_manifold",
                 points=points,
             ) or {"manifold": "euclidean", "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"manifold": "euclidean", "fallback": True}
 
     def born_sample(
@@ -1628,7 +1628,7 @@ class PolyglotMCOrchestrator:
                 amplitudes=amplitudes,
                 seed=seed,
             ) or {"index": 0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             import random
             total = sum(a * a for a in amplitudes) or 1e-15
             r = random.Random(seed).random() * total
@@ -1653,7 +1653,7 @@ class PolyglotMCOrchestrator:
                 n=n,
                 seed=seed,
             ) or {"samples": [], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"samples": [self.born_sample(amplitudes, seed + i)["index"] for i in range(n)], "fallback": True}
 
     def born_distribution(
@@ -1666,7 +1666,7 @@ class PolyglotMCOrchestrator:
                 "q_born_distribution",
                 amplitudes=amplitudes,
             ) or {"distribution": [], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             total = sum(a * a for a in amplitudes) or 1e-15
             return {"distribution": [{"index": i, "probability": a * a / total} for i, a in enumerate(amplitudes)], "fallback": True}
 
@@ -1681,7 +1681,7 @@ class PolyglotMCOrchestrator:
                 "q_interference",
                 a=a, b=b,
             ) or {"interference": [], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"interference": [ai * ai + bi * bi + 2 * ai * bi for ai, bi in zip(a, b)], "fallback": True}
 
     def berry_phase(
@@ -1707,7 +1707,7 @@ class PolyglotMCOrchestrator:
                 states=states,
                 params=params,
             ) or {"phase": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"phase": 0.0, "fallback": True}
 
     def chern_number(
@@ -1735,7 +1735,7 @@ class PolyglotMCOrchestrator:
                 dtheta=dtheta,
                 dphi=dphi,
             ) or {"chern_number": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"chern_number": 0.0, "fallback": True}
 
     def topological_encode(
@@ -1763,7 +1763,7 @@ class PolyglotMCOrchestrator:
                 n_redundant=n_redundant,
                 seed=seed,
             ) or {"encoded": data, "protection": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"encoded": data, "protection": 0.0, "fallback": True}
 
     def topological_decode(
@@ -1784,7 +1784,7 @@ class PolyglotMCOrchestrator:
                 data_len=data_len,
                 n_redundant=n_redundant,
             ) or {"decoded": [], "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {"decoded": encoded[:data_len], "fallback": True}
 
     def quantum_walk_optimize(
@@ -1805,7 +1805,7 @@ class PolyglotMCOrchestrator:
                 beta=beta,
                 seed=seed,
             ) or {"amplitudes": [], "best_index": 0, "cost": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             n = len(cost_matrix)
             return {"amplitudes": [1.0 / n ** 0.5] * n, "best_index": 0, "cost": cost_matrix[0][0] if n else 0.0, "fallback": True}
 
@@ -1823,6 +1823,6 @@ class PolyglotMCOrchestrator:
                 n_steps=n_steps,
                 seed=seed,
             ) or {"partition": [], "cut_value": 0.0, "fallback": True}
-        except Exception:
+        except Exception:  # noqa: BLE001
             n = len(adjacency)
             return {"partition": [0] * n, "cut_value": 0.0, "fallback": True}

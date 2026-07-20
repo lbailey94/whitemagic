@@ -69,7 +69,7 @@ class EmbeddingConfig(BaseModel):
             provider = config.embeddings.provider
             model = config.embeddings.model
             _ = config.embeddings.cache_enabled  # cache setting read but not yet used
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Fallback to defaults if config not available
             provider = "local"
             model = "all-MiniLM-L6-v2"

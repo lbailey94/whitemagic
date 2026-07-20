@@ -57,7 +57,7 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
                     }
                 )
                 break
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in anomaly.py:61")
 
     # Enrich with thermal anomalies from laptop-optimizer
@@ -78,7 +78,7 @@ def handle_anomaly_check(**kwargs: Any) -> dict[str, Any]:
                     "message": anomaly.message,
                 }
             )
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in anomaly.py:82")
 
     all_alerts = alerts + strata_anomalies + thermal_anomalies

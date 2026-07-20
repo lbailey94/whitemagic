@@ -59,7 +59,7 @@ def _ensemble_dir() -> Path:
     return d
 
 
-def _run(coro: Coroutine[Any, Any, T]) -> T:
+def _run(coro: Coroutine[Any, Any, T]) -> T:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Run an async coroutine from a sync handler context."""
     try:
         asyncio.get_running_loop()

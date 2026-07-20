@@ -61,7 +61,7 @@ class FormalVerifier:
             return self._parse_halmos_output(result.stdout, elapsed)
         except subprocess.TimeoutExpired:
             return [VerificationResult("*", False, None, self._timeout, "halmos", "Timeout")]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return [VerificationResult("*", False, None, 0, "halmos", str(e))]
 
     def _parse_halmos_output(self, output: str, elapsed: float) -> list[VerificationResult]:

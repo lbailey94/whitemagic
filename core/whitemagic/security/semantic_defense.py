@@ -324,7 +324,7 @@ def _get_embedder():
             if not _embedder_instance.is_available:
                 return None
             return _embedder_instance
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Embedder init failed: %s", e, exc_info=True)
             return None
 
@@ -367,7 +367,7 @@ def _get_embeddings(text: str) -> list[float] | None:
             _embedding_cache[cache_key] = vec
 
         return vec.tolist()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Semantic defense embedding failed: %s", e, exc_info=True)
         return None
 
@@ -403,7 +403,7 @@ def _get_embeddings_np(text: str) -> np.ndarray | None:
                     _embedding_cache.pop(k, None)
             _embedding_cache[cache_key] = vec
         return vec
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Semantic defense embedding failed: %s", e, exc_info=True)
         return None
 
@@ -460,7 +460,7 @@ def _init_corpus_embeddings() -> bool:
             if attack_vecs_raw is None or len(attack_vecs_raw) == 0:
                 return False
             attack_matrix = np.asarray(attack_vecs_raw, dtype=np.float32)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Batch attack embedding failed: %s", e, exc_info=True)
             return False
 
@@ -470,7 +470,7 @@ def _init_corpus_embeddings() -> bool:
             benign_vecs_raw = embedder.embed(_BENIGN_CORPUS)
             if benign_vecs_raw is not None and len(benign_vecs_raw) > 0:
                 benign_matrix = np.asarray(benign_vecs_raw, dtype=np.float32)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Batch benign embedding failed: %s", e, exc_info=True)
 
         # Pre-compute L2 norms for cosine similarity
@@ -592,7 +592,7 @@ def _llama_available() -> bool:
         from whitemagic.inference.llama_cpp import get_llama_cpp_backend
         backend = get_llama_cpp_backend()
         return backend.is_available
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -642,7 +642,7 @@ def _query_model_for_classification(model: str, text: str, timeout: float = 30.0
             latency_ms=elapsed_ms,
         )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         elapsed_ms = (time.time() - start) * 1000
         return EnsembleVote(
             model=model,

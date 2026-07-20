@@ -249,7 +249,7 @@ class CrossDomainCollisionDetector:
                     elapsed,
                 )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Cross-domain collision detection failed: %s", e, exc_info=True
             )
@@ -278,7 +278,7 @@ class CrossDomainCollisionDetector:
                         embeddings[r["memory_id"]] = (
                             vec[:384] if len(vec) > 384 else vec
                         )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Embedding load failed: %s", e)
 
         return embeddings
@@ -306,7 +306,7 @@ class CrossDomainCollisionDetector:
             if na < 1e-8 or nb < 1e-8:
                 return None
             return float(np.dot(va, vb) / (na * nb))
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     @staticmethod
@@ -405,9 +405,9 @@ class CrossDomainCollisionDetector:
                         },
                         galaxy="creative_solutions",
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.debug("Schema persist failed: %s", e)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Schema persistence skipped: %s", e)
 
     def get_stats(self) -> dict[str, Any]:

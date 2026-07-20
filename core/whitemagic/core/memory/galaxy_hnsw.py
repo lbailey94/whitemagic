@@ -81,7 +81,7 @@ class GalaxyHNSWManager:
                 )
                 self._indices[galaxy] = index
                 return index
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning("Failed to create HNSW index for galaxy %s: %s", galaxy, e)
                 return None
 
@@ -109,7 +109,7 @@ class GalaxyHNSWManager:
             vec = np.array(vector, dtype=np.float32)
             index.add_item(memory_id, vec)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to add item to galaxy %s HNSW: %s", galaxy, e)
             return False
 
@@ -138,7 +138,7 @@ class GalaxyHNSWManager:
         try:
             vec = np.array(query_vector, dtype=np.float32)
             return index.search(vec, k=k, ef=ef)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Galaxy HNSW search failed for %s: %s", galaxy, e)
             return []
 
@@ -179,7 +179,7 @@ class GalaxyHNSWManager:
                 galaxy = futures[future]
                 try:
                     results[galaxy] = future.result()
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     logger.debug("Galaxy search failed for %s: %s", galaxy, e)
                     results[galaxy] = []
 
@@ -236,7 +236,7 @@ class GalaxyHNSWManager:
         try:
             index.save()
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to save galaxy %s HNSW: %s", galaxy, e)
             return False
 
@@ -256,7 +256,7 @@ class GalaxyHNSWManager:
                     "size": len(index),
                     "dim": index.dim if hasattr(index, "dim") else self._dim,
                 }
-            except Exception:
+            except Exception:  # noqa: BLE001
                 stats[galaxy] = {"size": 0, "error": "unknown"}
         return stats
 

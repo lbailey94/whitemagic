@@ -5,6 +5,61 @@
 
 ---
 
+## [25.1.0] - 2026-07-20 — Violet Security Release
+
+Full-spectrum cybersecurity pipeline: red team (offensive), blue team (defensive),
+and governance systems. 74 security dispatch entries, 677 security tests, 47 STRATA→MITRE
+ATT&CK mappings, 6 Dharma violet governance rules.
+
+### Red Team (Offensive) — 12 systems
+- **Attack Cell**: 8-agent purple-team cell (recon, web, exploit, C2, crypto, social eng, lateral, report) with shelter compartment isolation and MITRE ATT&CK auto-mapping
+- **Agent Red Team**: 4 test types — prompt injection (14 payloads), context overflow, tool misuse (9 payloads), model fuzzing (7 payloads)
+- **Dynamic Testers**: nmap, sqlmap, hydra, nikto, ffuf, nuclei — subprocess wrappers with structured finding parsing and MITRE mapping
+- **Decepticon Bridge**: Autonomous red-teaming with Decepticon SDK + fallback pipeline (recon→plan→exploit→report)
+- **HTTP Probes**: GET, POST, XSS, SQLi, IDOR, SSRF, API state machine — all engagement-gated
+- **Foundry Bridge**: Build, test, test_json for smart contract security analysis
+- **Echidna Fuzzer**: Property-based fuzzing for smart contracts
+- **Formal Verifier**: Halmos-based formal verification
+- **PoC Pipeline**: Generate + verify exploit PoCs with governance approval and tiered execution
+- **Contest Pipeline**: Finding aggregation, dedup, MITRE Navigator output, 8 platform formats (Code4rena, Sherlock, CodeHawks, Cantina, HackerOne, Bugcrowd, MITRE, Huntr)
+- **Bounty Platform**: 6 real platform adapters (Immunefi, CodeHawks, Sherlock, Code4rena, HackenProof, Cantina) with auto-connector and capability-based agent matching
+- **STRATA→MITRE Mapping**: 47 security checker categories mapped to MITRE ATT&CK Enterprise TTPs
+
+### Blue Team (Defensive) — 17 modules
+- **Engagement Tokens**: 238 tokens issued, defense-in-depth at middleware + handler level
+- **Dharma Governance**: 26 rules including 6 violet-specific (token requirement, blue-ops logging, model load warnings, exfiltration blocking, recon throttling, jailbreak blocking)
+- **Transaction Firewall**: Per-agent spend limits, rate limiting, recipient allowlist/blocklist, Dharma ethical sign-off
+- **WASM Verifier**: Checksum + replay verification for pure/read tools with karmic debt on mismatch
+- **Semantic Defense**: Ensemble voting on content safety with embedder-based analysis
+- **Tool Gating**: Path validation and risk classification for all tool calls
+- **Input Sanitizer**: Shell injection scanning with content-scan exempt list
+- **Security Event Bus**: Pub/sub for security events across modules
+- **Canary Tokens**: Active canaries for exfiltration detection
+- **Hermit Crab**: Withdrawal-based access control with cryptographic ledger
+- **MCP Integrity**: Baseline snapshot (860 tools) + drift detection
+- **Model Signing**: 4 registered models with trust distribution (verified/unverified/blocked)
+- **Audit Signing**: Cryptographic audit trail for all security operations
+- **Sandbox**: Process-level isolation for offensive tool execution
+- **Vault**: Encrypted secret storage with access logging
+- **Adaptive Defense**: Attack variant generation + defense loop
+- **Security Monitor**: Rapid-fire detection, lateral movement tracking, escalation patterns
+
+### Infrastructure
+- Fixed FTS5 trigger bug across 20 galaxy databases (broken `'delete'` command syntax → standard SQL DELETE)
+- Galaxy DB maintenance: 1.86 GB → 1.08 GB (42% reduction) — removed 1.98M mirror-duplicate associations, 146K orphaned associations, 137K weak edges, vacuumed all galaxies
+- Ruff lint: 670 errors → 0 (627 BLE001, 15 E402, 12 UP047, 10 E741, 4 W293, 2 E731)
+- Session sync: 51 sessions exported, 16 new/changed ingested (6,243 turns recorded)
+
+### Metrics
+- **832 dispatch entries** (74 security-related)
+- **8,244 test functions** across 467 test files
+- **677 security tests** passing (604 unit + 73 violet integration)
+- **47 STRATA→MITRE ATT&CK** category mappings
+- **6 Dharma violet governance rules**
+- **0 ruff lint errors**
+
+---
+
 ## [23.1.0] - 2026-06-26 — Test Suite Stabilization
 
 Test suite stabilization and infrastructure cleanup. Full suite (2,526 tests)

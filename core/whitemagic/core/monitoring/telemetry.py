@@ -243,7 +243,7 @@ def get_telemetry() -> Telemetry:
 
 def rollup_to_galaxy() -> dict[str, Any]:
     """Write a periodic summary of telemetry stats to the telemetry galaxy.
-    
+
     Called periodically (e.g. hourly) to maintain a curated record of system
     performance in the telemetry galaxy, replacing the old raw-event model.
     """
@@ -286,6 +286,6 @@ def rollup_to_galaxy() -> dict[str, Any]:
             memory_type="LONG_TERM",
         )
         return {"status": "success", "summary": summary}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug("Telemetry rollup failed: %s", e, exc_info=True)
         return {"status": "error", "reason": str(e)}

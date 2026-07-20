@@ -277,7 +277,7 @@ class SecurityImmuneSystem:
                     timestamp=event.timestamp,
                 )
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to emit security event: %s", e)
 
     def _analyze_event(self, event: SecurityEvent) -> None:
@@ -422,7 +422,7 @@ class SecurityImmuneSystem:
                     timestamp=datetime.now(),
                 )
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Failed to emit emergence event: %s", e)
 
     def on_security_event(self, event: Any) -> None:
@@ -479,7 +479,7 @@ class SecurityImmuneSystem:
                         confidence=best_match.effectiveness,
                     )
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Swallowed exception", exc_info=True)
 
             return response
@@ -598,7 +598,7 @@ class SecurityAutoimmune:
                     confidence=0.8,
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Swallowed exception", exc_info=True)
 
 

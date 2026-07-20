@@ -55,7 +55,7 @@ class HTTPProbe:
                 "elapsed_ms": elapsed, "timestamp": time.time(),
             })
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             elapsed = (time.time() - start) * 1000
             return HTTPResponse(0, {}, str(e), elapsed, url)
 

@@ -21,7 +21,7 @@ from typing import Any, TypeVar
 T = TypeVar("T")
 
 
-def threadsafe_singleton(cls: type[T]) -> type[T]:
+def threadsafe_singleton(cls: type[T]) -> type[T]:  # noqa: UP047  # TypeVar-based generics (not yet PEP 695)
     """Decorator that makes a class a thread-safe singleton.
 
     Replaces the boilerplate:

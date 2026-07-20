@@ -140,7 +140,7 @@ def handle_embedding_daemon_process(**kwargs: Any) -> dict[str, Any]:
         daemon = get_embedding_daemon()
         result = daemon.process_now(limit=limit)
         return {"status": "success", **result}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return {
             "status": "error",
             "error_code": "embedding_table_missing",

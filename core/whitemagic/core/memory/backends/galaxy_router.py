@@ -89,7 +89,7 @@ class GalaxyAwareBackend:
                 galaxies_dir = user_dir / "galaxies"
             galaxies_dir.mkdir(parents=True, exist_ok=True)
             return galaxies_dir
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Fallback: use memory/galaxies
             return self._default_path.parent / "galaxies"
 
@@ -147,7 +147,7 @@ class GalaxyAwareBackend:
                 if db_path.exists():
                     self._galaxy_backends[cache_key] = SQLiteBackend(db_path)
                     logger.debug("Discovered galaxy backend: %s (user='%s')", name, self._user_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("Galaxy discovery failed: %s", e)
 
     def _get_backend_for_memory(self, memory: Memory) -> SQLiteBackend:
@@ -182,7 +182,7 @@ class GalaxyAwareBackend:
             from whitemagic.core.memory.retrieval_cache import get_retrieval_cache
             galaxy = getattr(memory, "galaxy", "universal") or "universal"
             get_retrieval_cache().invalidate(self._user_id, galaxy)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in galaxy_router.py:162")
         return result
 
@@ -227,7 +227,7 @@ class GalaxyAwareBackend:
                     result = backend.recall(memory_id)
                     if result:
                         return result
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Ignored error in galaxy_router.py:198")
 
         return None
@@ -276,7 +276,7 @@ class GalaxyAwareBackend:
                             remaining -= set(result.keys())
                             if not remaining:
                                 break
-            except Exception:
+            except Exception:  # noqa: BLE001
                 logger.debug("Ignored error in galaxy_router batch_recall")
 
         return found
@@ -391,7 +391,7 @@ class GalaxyAwareBackend:
                 if gbackend.recall(memory_id):
                     gbackend.store_coords(memory_id, x, y, z, w, v, u)
                     return
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
         # Fallback: try default backend (may fail with FK if memory is in a galaxy DB)
@@ -497,7 +497,7 @@ class GalaxyAwareBackend:
             try:
                 if gbackend.recall(source_id):
                     return gbackend.add_association(source_id, target_id, strength)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return self._get_default_backend().add_association(source_id, target_id, strength)
 
@@ -508,7 +508,7 @@ class GalaxyAwareBackend:
                 coords = gbackend.get_coords(memory_id)
                 if coords:
                     return coords
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return None
 
@@ -518,13 +518,13 @@ class GalaxyAwareBackend:
         # Default backend first
         try:
             all_coords.update(self._get_default_backend().get_all_coords())
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.debug("get_all_coords failed for default backend: %s", e)
         # Galaxy backends
         for gbackend in self._galaxy_backends.values():
             try:
                 all_coords.update(gbackend.get_all_coords())
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("get_all_coords failed for galaxy backend: %s", e)
         return all_coords
 
@@ -536,7 +536,7 @@ class GalaxyAwareBackend:
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
             try:
                 all_mems.extend(gbackend.list_recent(limit=limit, memory_type=memory_type))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         def _sort_key(m):
             ts = getattr(m, "created_at", None)
@@ -555,7 +555,7 @@ class GalaxyAwareBackend:
             try:
                 if gbackend.recall(memory_id):
                     return gbackend.update_galactic_distance(memory_id, distance)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return self._get_default_backend().update_galactic_distance(memory_id, distance)
 
@@ -565,7 +565,7 @@ class GalaxyAwareBackend:
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
             try:
                 total += gbackend.rebuild_fts(batch_size=batch_size)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.debug("FTS rebuild failed for backend: %s", e)
         return total
 
@@ -580,7 +580,7 @@ class GalaxyAwareBackend:
                 total_decayed += result.get("associations_decayed", 0)
                 total_pruned += result.get("associations_pruned", 0)
                 total_evaluated += result.get("associations_evaluated", 0)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return {
             "status": "success",
@@ -598,7 +598,7 @@ class GalaxyAwareBackend:
                 result = gbackend.prune_associations(min_strength=min_strength)
                 total_pruned += result.get("pruned", 0)
                 total_remaining += result.get("remaining", 0)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return {
             "status": "success",
@@ -612,7 +612,7 @@ class GalaxyAwareBackend:
             try:
                 if gbackend.recall(memory_id):
                     return gbackend.archive_to_edge(memory_id, galactic_distance)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return self._get_default_backend().archive_to_edge(memory_id, galactic_distance)
 
@@ -622,7 +622,7 @@ class GalaxyAwareBackend:
             try:
                 if gbackend.recall(memory_id):
                     return gbackend.update_retention_score(memory_id, score)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return self._get_default_backend().update_retention_score(memory_id, score)
 
@@ -635,7 +635,7 @@ class GalaxyAwareBackend:
                     if score is not None:
                         self.update_retention_score(memory_id, score)
                     updated += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return updated
 
@@ -647,7 +647,7 @@ class GalaxyAwareBackend:
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
             try:
                 all_contents.extend(gbackend.fetch_memory_contents(memory_type=memory_type, limit=limit))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return all_contents[:limit]
 
@@ -657,7 +657,7 @@ class GalaxyAwareBackend:
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
             try:
                 all_mems.extend(gbackend.get_weakest_memories(limit=limit))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         all_mems.sort(key=lambda m: getattr(m, "neuro_score", 1.0))
         return all_mems[:limit]
@@ -669,7 +669,7 @@ class GalaxyAwareBackend:
                 memberships = gbackend.get_constellation_memberships(memory_id)
                 if memberships:
                     return memberships
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return []
 
@@ -679,7 +679,7 @@ class GalaxyAwareBackend:
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
             try:
                 total += gbackend.consolidate()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return total
 
@@ -689,7 +689,7 @@ class GalaxyAwareBackend:
         for gbackend in list(self._galaxy_backends.values()) + [self._get_default_backend()]:
             try:
                 all_mems.extend(gbackend.list_accessed(limit=limit))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         all_mems.sort(key=lambda m: getattr(m, "accessed_at", ""), reverse=True)
         return all_mems[:limit]
@@ -701,6 +701,6 @@ class GalaxyAwareBackend:
             try:
                 for tag, count in gbackend.get_tag_counts(limit=limit * 3):
                     tag_map[tag] = tag_map.get(tag, 0) + count
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
         return sorted(tag_map.items(), key=lambda x: x[1], reverse=True)[:limit]

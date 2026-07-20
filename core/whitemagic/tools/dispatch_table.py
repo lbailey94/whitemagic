@@ -433,7 +433,7 @@ def _mw_core_router(
             garden = get_garden(garden_name)
             if garden is not None:
                 garden.boost(0.1)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Swallowed exception", exc_info=True)
 
     if ctx.tool_name.startswith("gana_") and _gana_invoke is not None:
@@ -595,7 +595,7 @@ def _ensure_fast_path_registry() -> None:
                     "safety=%s, fast_path_safety=%s. Skipping.",
                     td.name, td.safety, td.fast_path_safety,
                 )
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Ignored Exception in dispatch_table.py:584")
 
 
@@ -610,7 +610,7 @@ def _verify_explicit_fast_path() -> None:
     try:
         from whitemagic.tools.registry import get_all_tools
         registry_map = {td.name: td for td in get_all_tools()}
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
     for name in _FAST_PATH_TOOLS:
         td = registry_map.get(name)
@@ -688,7 +688,7 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
             garden = get_garden(garden_name)
             if garden is not None:
                 garden.boost(0.1)
-    except Exception:
+    except Exception:  # noqa: BLE001
         logger.debug("Swallowed exception", exc_info=True)
 
     # Gana-prefixed tools → gana_invoke
@@ -706,7 +706,7 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
         if handler is not None:
             try:
                 result = handler(**kwargs)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 from whitemagic.tools.errors import (
                     ToolExecutionError,
                     classify_exception,
@@ -731,7 +731,7 @@ def _fast_path_dispatch(tool_name: str, **kwargs: Any) -> dict[str, Any] | None:
     if result is None and _bridge_execute is not None:
         try:
             result = _bridge_execute(tool_name, **kwargs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
 
             logger.debug(
                 "Bridge fallback failed for %s: %s: %s",

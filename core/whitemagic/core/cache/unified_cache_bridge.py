@@ -433,7 +433,7 @@ def get_unified_cache() -> UnifiedCacheBridge:
                         cleanup_func=_unified_cache.cleanup_expired,
                         invalidate_func=_unified_cache.invalidate_namespace,
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     logger.debug("CacheRegistry registration skipped", exc_info=True)
     return _unified_cache
 
