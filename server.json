@@ -6,12 +6,12 @@
     "url": "https://github.com/lbailey94/whitemagic",
     "source": "github"
   },
-  "version": "25.0.1",
+  "version": "25.1.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "whitemagic-mcp",
-      "version": "25.0.1",
+      "version": "25.1.0",
       "transport": {
         "type": "stdio"
       },
