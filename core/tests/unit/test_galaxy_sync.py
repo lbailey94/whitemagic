@@ -78,8 +78,10 @@ class TestGalaxySyncPublish:
             coro.close()
             return "msg_123"
 
-        with patch("whitemagic.tools.handlers.broker._run", side_effect=_fake_run):
-            with patch("whitemagic.tools.handlers.broker._get_broker") as mock_get:
+        # P4.1: production resolves run/get_broker via whitemagic.core.ports
+        # (cached port) — patching broker._run directly no longer intercepts.
+        with patch("whitemagic.core.ports.run", side_effect=_fake_run):
+            with patch("whitemagic.core.ports.get_broker") as mock_get:
                 mock_get.return_value = None
                 result = publish_galaxy_event("galaxy.created", "alice", "test-galaxy")
                 assert result is True
@@ -92,7 +94,7 @@ class TestGalaxySyncPublish:
         from whitemagic.core.memory.galaxy_sync import publish_galaxy_event
 
         with patch(
-            "whitemagic.tools.handlers.broker._run",
+            "whitemagic.core.ports.run",
             side_effect=Exception("Connection refused"),
         ):
             result = publish_galaxy_event("galaxy.created", "alice", "test")

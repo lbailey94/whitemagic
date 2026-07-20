@@ -1,13 +1,10 @@
 """Tests for continuous security scanning in ConsciousnessLoop (Gap 5)."""
-import pytest
-import time
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import MagicMock, patch
 
 from whitemagic.core.consciousness.consciousness_loop import (
     ConsciousnessLoop,
     LoopConfig,
     LoopStats,
-    CittaMode,
 )
 
 
@@ -97,7 +94,7 @@ class TestSecurityScanMethod:
         mock_strata = MagicMock()
         mock_strata.analyze.return_value = [mock_finding]
 
-        with patch("whitemagic.tools.strata.Strata", return_value=mock_strata):
+        with patch("whitemagic.core.ports.get_strata", return_value=lambda *a, **k: mock_strata):
             loop._run_security_scan()
 
         assert loop._stats.security_scans == 1
@@ -115,7 +112,7 @@ class TestSecurityScanMethod:
         mock_strata = MagicMock()
         mock_strata.analyze.return_value = []
 
-        with patch("whitemagic.tools.strata.Strata", return_value=mock_strata):
+        with patch("whitemagic.core.ports.get_strata", return_value=lambda *a, **k: mock_strata):
             loop._run_security_scan()
 
         assert loop._stats.security_scans == 1
@@ -134,7 +131,7 @@ class TestSecurityScanMethod:
         mock_strata = MagicMock()
         mock_strata.analyze.return_value = []
 
-        with patch("whitemagic.tools.strata.Strata", return_value=mock_strata), \
+        with patch("whitemagic.core.ports.get_strata", return_value=lambda *a, **k: mock_strata), \
              patch("pathlib.Path.exists", return_value=True):
             loop._run_security_scan()
 
@@ -148,7 +145,7 @@ class TestSecurityScanMethod:
         )
         loop = ConsciousnessLoop(config)
 
-        with patch("whitemagic.tools.strata.Strata", side_effect=Exception("Test error")):
+        with patch("whitemagic.core.ports.get_strata", side_effect=Exception("Test error")):
             # Should not raise
             loop._run_security_scan()
 
@@ -174,7 +171,7 @@ class TestSecurityScanMethod:
         mock_strata = MagicMock()
         mock_strata.analyze.return_value = [mock_finding]
 
-        with patch("whitemagic.tools.strata.Strata", return_value=mock_strata):
+        with patch("whitemagic.core.ports.get_strata", return_value=lambda *a, **k: mock_strata):
             loop._run_security_scan()
 
         # py_sql_injection maps to T1190 and T1213
@@ -199,8 +196,8 @@ class TestSecurityScanMethod:
         mock_strata = MagicMock()
         mock_strata.analyze.return_value = [mock_finding]
 
-        with patch("whitemagic.tools.strata.Strata", return_value=mock_strata), \
-             patch("whitemagic.tools.security.contest_pipeline.get_contest_pipeline") as mock_get_pipeline:
+        with patch("whitemagic.core.ports.get_strata", return_value=lambda *a, **k: mock_strata), \
+             patch("whitemagic.core.ports.get_contest_pipeline") as mock_get_pipeline:
             mock_pipeline = MagicMock()
             mock_get_pipeline.return_value = mock_pipeline
 
