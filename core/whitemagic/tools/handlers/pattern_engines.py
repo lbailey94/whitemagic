@@ -203,9 +203,9 @@ def handle_association_mine_semantic(**kwargs: Any) -> dict[str, Any]:
     try:
         from whitemagic.core.memory.association_miner import AssociationMiner
 
-        min_similarity = kwargs.get("min_similarity", 0.5)
-        strong_threshold = kwargs.get("strong_threshold", 0.7)
-        max_proposals = kwargs.get("max_proposals", 100)
+        min_similarity = float(kwargs.get("min_similarity", 0.5) or 0.5)
+        strong_threshold = float(kwargs.get("strong_threshold", 0.7) or 0.7)
+        max_proposals = int(kwargs.get("max_proposals", 100) or 100)
         persist = kwargs.get("persist", True)
 
         miner = AssociationMiner()

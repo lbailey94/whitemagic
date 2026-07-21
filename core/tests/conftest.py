@@ -46,6 +46,9 @@ os.environ["WM_STATE_ROOT"] = _TEST_STATE_ROOT
 os.environ["WM_SILENT_INIT"] = "1"
 # Skip heavy holographic index loading during tests
 os.environ["WM_SKIP_HOLO_INDEX"] = "1"
+# Prevent torch/ONNX fork+OpenMP deadlocks in xdist workers (§2.3)
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 # PostgreSQL integration tests (skipped gracefully if unavailable)
 os.environ.setdefault("WM_PG_PASSWORD", "whitemagic")
 # Polyglot subprocess checks are gated per-test via skipif decorators.

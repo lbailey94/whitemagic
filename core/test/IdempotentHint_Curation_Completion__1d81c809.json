@@ -1,0 +1,11 @@
+{
+  "cascadeId": "1d81c809-c7e4-4f85-8504-a1fb988bede6",
+  "title": "IdempotentHint Curation Completion",
+  "stepCount": 297,
+  "numTotalSteps": 297,
+  "transcriptLength": 22329,
+  "createdTime": "2026-07-20T18:14:15.735652428Z",
+  "lastModifiedTime": "2026-07-20T19:15:42.772646986Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 2
+}

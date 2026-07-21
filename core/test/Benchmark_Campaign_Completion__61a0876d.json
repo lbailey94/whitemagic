@@ -1,0 +1,11 @@
+{
+  "cascadeId": "61a0876d-b808-4cd7-9eba-bafb6116f7d5",
+  "title": "Benchmark Campaign Completion",
+  "stepCount": 406,
+  "numTotalSteps": 406,
+  "transcriptLength": 54455,
+  "createdTime": "2026-07-21T20:31:26.938233629Z",
+  "lastModifiedTime": "2026-07-21T22:49:47.622441061Z",
+  "status": "CASCADE_RUN_STATUS_RUNNING",
+  "userInputCount": 12
+}

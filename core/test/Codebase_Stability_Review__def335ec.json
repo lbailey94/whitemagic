@@ -1,0 +1,11 @@
+{
+  "cascadeId": "def335ec-e01a-4f31-b609-e5c50befd594",
+  "title": "Codebase Stability Review",
+  "stepCount": 65,
+  "numTotalSteps": 65,
+  "transcriptLength": 13684,
+  "createdTime": "2026-07-19T00:54:12.284790888Z",
+  "lastModifiedTime": "2026-07-19T01:02:09.092125438Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 1
+}

@@ -1,0 +1,11 @@
+{
+  "cascadeId": "144d9c49-1b6d-4598-b846-44fad9c9d10f",
+  "title": "Optimize Scale Benchmark",
+  "stepCount": 1954,
+  "numTotalSteps": 1954,
+  "transcriptLength": 186264,
+  "createdTime": "2026-07-16T12:43:09.440414251Z",
+  "lastModifiedTime": "2026-07-17T21:21:42.033870472Z",
+  "status": "CASCADE_RUN_STATUS_IDLE",
+  "userInputCount": 21
+}
