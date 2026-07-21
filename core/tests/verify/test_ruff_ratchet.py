@@ -60,7 +60,10 @@ class TestRuffRatchet:
                     f"Fix new findings or add per-line noqa with justification."
                 )
                 return
-        pytest.fail("Could not parse ruff findings count")
+        # No "Found" line means zero findings — that's better than baseline
+        if result.returncode == 0:
+            return
+        pytest.fail(f"Could not parse ruff findings count. Output:\n{result.stdout}\n{result.stderr}")
 
     def test_ble001_count_ratcheted(self):
         """BLE001 (blind-except) count must not grow from baseline."""
