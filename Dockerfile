@@ -18,7 +18,7 @@
 #   docker run --rm -i -v ~/.whitemagic:/data/whitemagic whitemagic:core
 
 # ── Stage 1: Rust Builder ────────────────────────────────────────────
-FROM rust:1.82-slim AS rust-builder
+FROM rust:1.85-slim AS rust-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev pkg-config \
@@ -31,13 +31,9 @@ COPY core/whitemagic-math/ /build/whitemagic-math/
 
 WORKDIR /build/whitemagic-rust
 
-# Build wm-seed binary (statically linked, no Python needed)
-RUN cargo build --release --bin wm-seed \
-    && cp target/release/wm-seed /build/wm-seed
-
 # Build Python extension wheel (optional, for core/heavy targets)
-RUN cargo install maturin --version 1.7.0 2>/dev/null || pip install maturin
-RUN maturin build --release --out /build/dist --manylinux off || true
+RUN cargo install maturin --version 1.7.0 2>/dev/null; \
+    maturin build --release --out /build/dist --manylinux off 2>/dev/null || true
 
 # Ensure dist exists
 RUN mkdir -p /build/dist && touch /build/dist/.empty
