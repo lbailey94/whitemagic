@@ -2,7 +2,7 @@
   "name": "whitemagic",
   "display_name": "WhiteMagic Core",
   "description": "AI memory, cognitive upgrades, and more — 860 callable tools via single wm meta-tool (28 Gana in PRAT mode, 832 in classic), 14-galaxy holographic memory, Dharma ethical governance, MandalaOS compartments, citta stream, session recording. MIT-licensed, local-first, free forever.",
-  "version": "25.1.0",
+  "version": "25.2.0",
   "protocol_version": "2025-11-25",
   "homepage": "https://github.com/lbailey94/whitemagic",
   "license": "MIT",

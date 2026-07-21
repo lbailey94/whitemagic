@@ -149,7 +149,7 @@ def main() -> None:
     if args.dry_run:
         logger.debug("(DRY RUN — no files will be modified)\n")
     else:
-        logger.debug()
+        pass
 
     updated = 0
     skipped = 0

@@ -5,6 +5,43 @@
 
 ---
 
+## [25.2.0] - 2026-07-20 — Determinism & Cold-Start Release
+
+Test-suite determinism fully hardened (Phase 3 gate re-verified: **3 consecutive
+randomized full-suite passes, 7,739 passed / 0 failed each**), hardware-adaptive
+inference tuning, and the MCP cold-start fix.
+
+### Features
+- **Serving-stack prewarm (P6.4)**: MCP server now warms the embedding engine,
+  semantic-defense corpus, cross-encoder reranker, and full middleware chain in a
+  daemon thread at startup (`WM_PREWARM=0` disables). First `search_memories`
+  on a cold production root: 5.0s success (previously >20s timeout error).
+- **Hardware-adaptive inference auto-tuning**: InferenceTuner applies
+  hardware-aware llama.cpp config on startup; MARS verification; AVX-512 VNNI
+  ternary kernel.
+
+### Fixes — test determinism (root-caused, boundary-fixed)
+- Stale mock patch targets after the P4.1 ports refactor (security scan, galaxy
+  sync): tests patched pre-ports paths, mocks never intercepted.
+- ML models loading inside unit tests: embedding engine + cross-encoder mocked at
+  class boundary (codebase scanner, alchemical loop).
+- Module-level `WM_STATE_ROOT` hard override polluting xdist workers.
+- leap3 E2E cold-init flake: untimed warm of the identical dispatch path.
+- Fixed-sleep timing assertions replaced with poll-until-fired waits
+  (consciousness loop).
+- Absolute-ms pipeline profiling moved to `tests/benchmarks/` (P6.2 layer
+  separation).
+
+### Fixes — release truth
+- v25.1.0 version alignment completed across 12 straggler references; v25.2.0
+  bump verified by `check_versions.py` + 13 version-consistency tests.
+- `generate_facts.py` and P9/P10 verify tests read version dynamically from
+  `VERSION` (no more hardcoded bumps).
+- `version_bump.py` crash fixed (no-arg `logger.debug()`); ruff F401 + ratchet
+  baselines updated.
+
+---
+
 ## [25.1.0] - 2026-07-20 — Violet Security Release
 
 Full-spectrum cybersecurity pipeline: red team (offensive), blue team (defensive),
