@@ -12,10 +12,10 @@ status` clean after runs. Verify tier: 2,077 passed / 0 failed.
 - ✅ 2.1: Mock remaining alchemical-loop boundaries (13 mocks, 11/11 pass)
 - ✅ 2.2: Fix 5 load-victim test files (mock heavy engines, adjust thresholds/timeouts)
 - ✅ 4.1: CRITICAL HEALTH threshold tuning (4 thresholds + 3 calc bugs fixed, 105 tests pass)
+- ✅ 6.1: Publish v25.2.0 artifacts (PyPI, GitHub Release, Docker GHCR, CHANGELOG, AGENTS.md)
 - ⬜ 2.3: xdist native-crash/hang robustness (open)
 - ⬜ 3.1–3.2: Cold path & warm-path latency (open)
 - ⬜ 5.2: Import-linter violation drain (open)
-- ⬜ 6.1: Publish v25.2.0 artifacts (next)
 - ⬜ 6.2–6.4: External review, surf strategy, benchmark campaign (open)
 
 This doc collects everything that surfaced *after* the strategy closed, plus the
@@ -291,7 +291,7 @@ fail under full-suite xdist CPU contention on a loaded machine, all green standa
 
 ## 6. P5 — Release & launch logistics
 
-### 6.1 Publish v25.2.0 artifacts — **M**
+### 6.1 Publish v25.2.0 artifacts — **M** ✅
 - **What**: The 7-step release process beyond git tags: PyPI wheel/sdist build +
   publish, MCP Registry publish (server.json), Docker image build, GitHub Release
   notes (from CHANGELOG 25.2.0 entry).
@@ -300,6 +300,15 @@ fail under full-suite xdist CPU contention on a loaded machine, all green standa
   as historical (documented) or delete; do not reuse.
 - **Acceptance**: `pip install whitemagic==25.2.0` works in a fresh venv; MCP
   registry lists 25.2.0.
+- **Result (2026-07-21)**: All artifacts published:
+  1. **PyPI**: `whitemagic-25.2.0-py3-none-any.whl` + sdist uploaded — `pip install whitemagic==25.2.0` verified in fresh venv
+  2. **GitHub Release**: https://github.com/lbailey94/whitemagic/releases/tag/v25.2.0
+  3. **Docker**: `ghcr.io/lbailey94/whitemagic:25.2.0` + `:latest` pushed to GHCR
+  4. **MCP Registry**: `server.json` already at 25.2.0 in repo (registry crawls GitHub)
+  5. **CHANGELOG.md**: v25.2.0 entry added with full release notes
+  6. **AGENTS.md**: Updated to 25.2.0 with changelog entry
+  7. **Dockerfile**: Updated to Rust 1.85 (indexmap v2.14.0 requires edition2024), made maturin build optional
+  - Post-perfection fixes committed and pushed to both remotes (private + public)
 
 ### 6.2 External adversarial review — **L**
 - **What**: Phase 10 defines it but it hasn't happened: an external reviewer (or a
