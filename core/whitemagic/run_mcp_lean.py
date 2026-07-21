@@ -1620,6 +1620,15 @@ async def main_stdio() -> None:
     stdout_task = asyncio.create_task(stdout_writer())
     shutdown_task = asyncio.create_task(shutdown_watcher())
 
+    # ── Serving-stack prewarm (P6.4): absorb cold model-init cost at startup
+    # so the first real dispatch never pays it inside the 20s timeout.
+    try:
+        from whitemagic.mcp.prewarm import start_prewarm_thread
+
+        start_prewarm_thread()
+    except Exception as e:
+        logger.debug("Prewarm thread failed to start: %s", e, exc_info=True)
+
     # ── Start dual-model background (if configured) ──
     _dual_manager = None
     try:
@@ -1795,6 +1804,15 @@ async def main_http(host: str = "127.0.0.1", port: int = 8770) -> None:
         reasons = ", ".join(runtime_status["degraded_reasons"])
         print(f"  Degraded reasons: {reasons}", file=sys.stderr)
     print("", file=sys.stderr)
+
+    # ── Serving-stack prewarm (P6.4): absorb cold model-init cost at startup
+    # so the first real dispatch never pays it inside the 20s timeout.
+    try:
+        from whitemagic.mcp.prewarm import start_prewarm_thread
+
+        start_prewarm_thread()
+    except Exception as e:
+        logger.debug("Prewarm thread failed to start: %s", e, exc_info=True)
 
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     uv_server = uvicorn.Server(config)
