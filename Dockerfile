@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════
-# WhiteMagic v25.0.0 — Multi-stage Dockerfile (3 targets: seed/core/heavy)
+# WhiteMagic v25.2.0 — Multi-stage Dockerfile (3 targets: seed/core/heavy)
 # ═══════════════════════════════════════════════════════════════════════
 #
 # Targets:
@@ -47,7 +47,7 @@ FROM debian:bookworm-slim AS seed
 
 LABEL org.opencontainers.image.title="WhiteMagic Seed" \
       org.opencontainers.image.description="Zero-dependency MCP memory server — 30 tools, Rust binary" \
-      org.opencontainers.image.version="25.0.0" \
+      org.opencontainers.image.version="25.2.0" \
       org.opencontainers.image.source="https://github.com/lbailey94/whitemagic" \
       org.opencontainers.image.licenses="MIT"
 
@@ -68,7 +68,7 @@ FROM python:3.12-slim AS core
 
 LABEL org.opencontainers.image.title="WhiteMagic" \
       org.opencontainers.image.description="The Cognitive OS for Agentic AI — 829 MCP tools" \
-      org.opencontainers.image.version="25.0.0" \
+      org.opencontainers.image.version="25.2.0" \
       org.opencontainers.image.source="https://github.com/lbailey94/whitemagic" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.vendor="whitemagic-ai"
