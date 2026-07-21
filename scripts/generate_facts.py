@@ -54,8 +54,10 @@ def generate_facts() -> dict:
         z = GALAXY_ZONES[g]
         zone_counts[z] = zone_counts.get(z, 0) + 1
 
+    version = (Path(__file__).parent.parent / "VERSION").read_text().strip()
+
     return {
-        "version": "25.0.1",
+        "version": version,
         "callable_tools": len(TOOL_REGISTRY),
         "dispatch_entries": len(dispatch_names),
         "authored_definitions": len(authored_names),

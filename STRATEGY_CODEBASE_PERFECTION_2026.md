@@ -686,6 +686,32 @@ Run 3 count increased by 38 due to `__init__.py` fix enabling `test_tool_consoli
 - ✅ Skips/xfails are intentional and bounded (21 skipped, all pre-existing).
 - ✅ Serial and parallel outcomes agree (randomized order produces same failures).
 
+### Re-verified (2026-07-20): fully green under xdist, 3 consecutive runs
+
+A determinism-hardening session eliminated the residual flake classes that
+surfaced under full-suite xdist on a loaded machine (each reproduced,
+root-caused, and fixed at the boundary):
+
+- Stale mock patch targets after the P4.1 ports refactor (tests patched
+  pre-ports paths; mocks never intercepted — real Strata/Redis ran)
+- ML models loading inside unit tests (embedding engine, cross-encoder
+  reranker) — mocked at class boundary per test-purity rules
+- Module-level `WM_STATE_ROOT` hard override polluting xdist workers
+- Cold torch/MiniLM init inside the 20s production dispatch timeout
+  (leap3 E2E now warms untimed via the identical dispatch path)
+- Fixed-sleep timing assertions (replaced with poll-until-fired waits)
+- Absolute-ms latency profiling moved to `tests/benchmarks/` (P6.2 layer
+  separation — benchmarks, not unit tests)
+
+| Run | Passed | Failed | Skipped | Duration |
+|-----|--------|--------|---------|----------|
+| 1   | 7739   | 0      | 4       | 404s     |
+| 2   | 7739   | 0      | 4       | 397s     |
+| 3   | 7739   | 0      | 4       | 357s     |
+
+`git status` clean after each run (0 repository artifacts). Commits:
+`f50f83e7`, `a0514bbf`, `cf30233b`, `b2e9842c`, `6a6df09e`, `089671eb`.
+
 ---
 
 # Phase 4 — Restore Architectural Boundaries

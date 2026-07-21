@@ -11,6 +11,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DOCS_ROOT = REPO_ROOT / "docs"
 CHECKLIST = DOCS_ROOT / "RELEASE_READINESS_CHECKLIST.md"
+VERSION = (REPO_ROOT / "VERSION").read_text().strip()
 
 
 class TestReleaseReadinessChecklist:
@@ -21,7 +22,7 @@ class TestReleaseReadinessChecklist:
 
     def test_checklist_has_version(self):
         content = CHECKLIST.read_text()
-        assert "25.0.1" in content
+        assert VERSION in content
 
     def test_checklist_has_contract_integrity(self):
         content = CHECKLIST.read_text()

@@ -14,6 +14,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DOCS_ROOT = REPO_ROOT / "docs"
+VERSION = (REPO_ROOT / "VERSION").read_text().strip()
 
 
 class TestDocumentationHierarchy:
@@ -36,7 +37,7 @@ class TestDocumentationHierarchy:
 
     def test_readme_has_correct_version(self):
         content = (REPO_ROOT / "README.md").read_text()
-        assert "25.0.1" in content
+        assert VERSION in content
 
     def test_readme_has_correct_tool_count(self):
         content = (REPO_ROOT / "README.md").read_text()
