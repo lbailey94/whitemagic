@@ -41,7 +41,6 @@ def get_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
 
     Raises:
         ValueError: If provider is unknown or configuration is invalid
-        NotImplementedError: If local provider is requested (not yet implemented)
 
     Example:
         >>> config = EmbeddingConfig.from_env()
@@ -58,12 +57,11 @@ def get_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
             timeout=config.timeout,
         )
     elif config.provider == "local":
-        # Will raise NotImplementedError
         return LocalEmbeddings(model=config.model)
     else:
         raise ValueError(
             f"Unknown provider: {config.provider}. "
-            f"Supported providers: openai, local (not yet available)"
+            f"Supported providers: openai, local"
         )
 
 

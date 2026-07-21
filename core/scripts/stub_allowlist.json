@@ -1,8 +1,5 @@
 [
   "core/whitemagic/adapters/langchain.py:80:clear",
-  "core/whitemagic/core/acceleration/mojo_bridge.py:19:mojo_batch_encode",
-  "core/whitemagic/core/acceleration/mojo_bridge.py:26:mojo_neuro_score",
-  "core/whitemagic/core/acceleration/mojo_bridge.py:33:mojo_quantize",
   "core/whitemagic/core/intelligence/synthesis/title_generator.py:65:_generate_evocative_name",
   "core/whitemagic/core/memory/akashic.py:112:_save_field",
   "core/whitemagic/core/memory/backends/base.py:84:find_by_content_hash",
@@ -10,8 +7,6 @@
   "core/whitemagic/core/memory/galaxy_scan.py:101:scan_query_all",
   "core/whitemagic/core/plugin/base.py:31:deactivate",
   "core/whitemagic/core/plugin/base.py:34:configure",
-  "core/whitemagic/embeddings/__init__.py:32:get_embedding_provider",
-  "core/whitemagic/inference/unified_embedder.py:154:_encode_mojo_gpu",
   "core/whitemagic/interfaces/chat.py:1076:stop_server",
   "core/whitemagic/interfaces/terminal/__init__.py:23:__getattr__",
   "core/whitemagic/interfaces/unified_tui.py:153:stop_server",
@@ -36,6 +31,5 @@
   "core/whitemagic/run_mcp.py:32:startup",
   "core/whitemagic/run_mcp.py:37:shutdown",
   "core/whitemagic/tools/handlers/misc.py:10:_stub",
-  "core/whitemagic/tools/security/abi_decoder.py:125:_selector_matches",
   "core/whitemagic/tools/security/monitor.py:91:_run_checks"
 ]

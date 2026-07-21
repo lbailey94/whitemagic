@@ -125,11 +125,13 @@ def _decode_chunk(chunk: str) -> str:
 def _selector_matches(selector: str, signature: str) -> bool:
     """Check if a 4-byte selector matches a function signature.
 
-    Without keccak256, we can't compute the exact selector.
-    This is a placeholder that always returns False — real matching
-    requires web3.eth.keccak or eth_utils.
+    Computes keccak256(signature) and compares the first 4 bytes against
+    ``selector`` (hex, with or without 0x prefix, case-insensitive).
     """
-    return False
+    from eth_utils import keccak
+
+    digest = keccak(text=signature).hex()
+    return selector.lower().removeprefix("0x") == digest[:8]
 
 
 def extract_events(abi_json: str | list) -> list[dict[str, Any]]:
