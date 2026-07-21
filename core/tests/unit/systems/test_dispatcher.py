@@ -12,7 +12,10 @@ _TESTS_DIR = Path(__file__).resolve().parent.parent.parent
 if str(_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_TESTS_DIR))
 
-from _envelope import assert_envelope_shape
+from _envelope import assert_envelope_shape  # noqa: E402
+
+if str(_TESTS_DIR) in sys.path:
+    sys.path.remove(str(_TESTS_DIR))
 
 
 class TestDispatchRouting:

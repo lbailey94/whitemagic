@@ -75,9 +75,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
       - working-directory: core
         run: uv sync --all-extras --dev
-      - name: Run duplicate audit
+      - name: Run duplicate ratchet test
         working-directory: core
-        run: uv run python scripts/check_duplicates.py
+        run: uv run pytest tests/verify/test_duplicate_ratchet.py -q -o addopts="--timeout=120"
 
   # ─── type check (mypy) ──────────────────────────────────────────────
   typecheck:

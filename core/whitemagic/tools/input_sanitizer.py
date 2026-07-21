@@ -457,6 +457,12 @@ _ENCODING_SCAN_EXEMPT: set = {
     "oms.inspect",
     "oms.verify",
     "oms.price",
+    # Memory tools (users may store hex hashes, base64, dense technical content)
+    "create_memory",
+    "update_memory",
+    "memory_update",
+    "import_memories",
+    "galaxy.ingest",
 }
 
 
@@ -789,6 +795,23 @@ _FUZZY_ALLOWLIST: frozenset[str] = frozenset({
     "silver", "deliver", "delivered", "liver", "river",
     # Common words near "activate" (distance ≤3, >6 chars threshold=3)
     "climate", "climates", "climatic", "climax", "climaxed",
+    # Common words near "override" that were missing (caused create_memory false positives)
+    "overwrite", "overwrites", "overwritten", "overwriting",
+    # Common words near "activate" that were missing
+    "private", "privately", "privacy", "privilege", "privileges",
+    "reactivate", "reactivated", "reactivates", "reactivating",
+    "deactivate", "deactivated", "deactivates", "deactivating",
+    "motivate", "motivated", "motivates", "motivating",
+    "cultivate", "cultivated", "cultivates", "cultivating",
+    "validate", "validated", "validates", "validating",
+    "invalidate", "invalidated", "invalidates",
+    "incentivize", "incentivized", "incentivizes",
+    "primitive", "primitives", "primarily",
+    "describe", "describes", "described", "describing",
+    "prescribe", "prescribes", "prescribed", "prescribing",
+    "subscribe", "subscribes", "subscribed", "subscribing",
+    "inscribe", "inscribes", "inscribed", "inscribing",
+    "underwrite", "underwrites", "underwritten", "underwriting",
 })
 
 
@@ -1000,6 +1023,9 @@ def _scan_encoding(obj: Any, path: str = "root") -> str | None:
     if isinstance(obj, str):
         # Skip very short strings (false positive risk)
         if len(obj) < 3:
+            return None
+        # Skip UUIDs — hex segments like "a1b2c3" trigger the l33tspeak pattern
+        if _UUID_RE.search(obj):
             return None
         for pattern in _ENCODING_PATTERNS:
             if pattern.search(obj):

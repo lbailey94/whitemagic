@@ -152,6 +152,8 @@ REGISTRY: dict[str, EnvVarSpec] = {
     "WM_SEQUENTIAL_OBSERVE": EnvVarSpec("WM_SEQUENTIAL_OBSERVE", False, "bool", "Sequential observation mode"),
     "WM_SECURITY_SCAN_PATH": EnvVarSpec("WM_SECURITY_SCAN_PATH", "", "path", "Security scan path"),
     "WM_CITTA_MODE": EnvVarSpec("WM_CITTA_MODE", "normal", "str", "Citta cycle mode"),
+    "WM_CONSCIOUSNESS_LOOP": EnvVarSpec("WM_CONSCIOUSNESS_LOOP", True, "bool", "Enable persistent background consciousness loop"),
+    "WM_PREWARM": EnvVarSpec("WM_PREWARM", True, "bool", "Enable serving-stack prewarm at MCP startup"),
 
     # ── Consciousness / lifecycle ─────────────────────────────────────
     "WM_SLEEP_ENABLED": EnvVarSpec("WM_SLEEP_ENABLED", True, "bool", "Enable sleep cycle"),

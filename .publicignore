@@ -25,7 +25,7 @@ core/docs/internal_audit.py
 .desloppify/
 
 # === Internal strategy docs ===
-STRATEGY_CODEBASE_PERFECTION_2026.md
+docs/completed/STRATEGY_CODEBASE_PERFECTION_2026.md
 content/research/
 
 # === Internal build artifacts ===

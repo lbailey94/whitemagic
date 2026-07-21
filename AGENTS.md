@@ -1,7 +1,7 @@
 # AGENTS.md — WhiteMagic Agent Guide
 
-**Version**: 25.1.0 (AGENTS.md revision 25.1.0)
-**Last Updated**: 2026-07-20
+**Version**: 25.2.0 (AGENTS.md revision 25.2.0)
+**Last Updated**: 2026-07-21
 **Purpose**: Operational guide for AI agents contributing to the WhiteMagic codebase.
 
 ---
@@ -15,6 +15,7 @@ WhiteMagic is a **cognitive operating system** for agentic AI — not merely a m
 - 8-stage dispatch pipeline with Dharma ethical governance
 - Full-spectrum cybersecurity pipeline: 12 red team systems, 17 blue team modules, 6 Dharma violet rules, 47 STRATA→MITRE ATT&CK mappings
 - Polyglot accelerators (Rust, Haskell, Elixir, Go, Zig, Koka, Julia)
+- v25.2.0: Determinism & Cold-Start Release — serving-stack prewarm (40s cold cost moved to startup), alchemical loop test fixtures expanded to 13 mocked boundaries, 5 load-victim test files fixed (mock heavy engines, adjust thresholds/timeouts), health threshold tuning (4 thresholds + 3 calc bugs in apotheosis_engine/guna_balance), semantic defense over-sensitivity fixed (25+ allowlist words, UUID exemption, encoding scan exempt), teardown logging noise eliminated, pytest-hygiene syspath leaks fixed, MCP conformance 12/12 re-verified, CI workflows migrated to uv, stub registry review pass, strategy doc archived
 - v25.1.0: Violet Security Release — 832 dispatch entries (74 security-related), 8,244 test functions, 170K+ memories across 14 galaxies, 0 ruff lint errors; FTS5 trigger bug fixed across 20 galaxy DBs, DB maintenance 42% size reduction, session sync 6,243 turns recorded
 - v23.0.0: test suite optimized from 823s → 119s (6.9x); integration suite from 642s → 23s (27.7x); 3 flaky tests fixed by mocking heavy engines; AGENTS.md process refinements (test purity, hot path review, ruff linting, flaky test ban)
 - v23.1.0: integration test hangs fixed (stale GanYingBus singleton root cause); full suite 2,526 passed, 0 failed, ~105s; 4 compiled binaries removed from git; gitignore cleanup

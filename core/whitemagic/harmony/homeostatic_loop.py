@@ -170,7 +170,8 @@ class HomeostaticLoop:
             try:
                 self.check()
             except Exception as e:
-                logger.debug("Homeostatic check error: %s", e, exc_info=True)
+                if self._running:
+                    logger.debug("Homeostatic check error: %s", e, exc_info=True)
 
     def check(self) -> list[HomeostaticAction]:
         """Sample the Harmony Vector and apply corrective actions.

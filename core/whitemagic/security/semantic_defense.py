@@ -285,6 +285,17 @@ _BENIGN_CORPUS = [
     "how do I optimize my database queries",
     "can you recommend a good book on system design",
     "what are the principles of clean code",
+    # Technical session summaries (added to reduce false positives on legitimate technical content)
+    "completed the release process refinement and updated version references",
+    "fixed the duplicate code ratchet baseline and CI workflow",
+    "registered environment variables in the centralized config registry",
+    "the semantic defense layer uses embedding similarity to detect attacks",
+    "override the default configuration with custom thresholds for production",
+    "activate the prewarm stage to reduce cold start latency on startup",
+    "the homeostatic loop checks harmony dimensions periodically",
+    "import-linter violations show core to tools dependency drift",
+    "benchmark campaign adjusted rate with timeout and unexpected failures",
+    "the dispatch table has 832 entries with 860 callable tools",
 ]
 
 # Pre-computed embeddings (lazy init)

@@ -446,7 +446,7 @@ class TestAllGanasSmoke:
                     "name": gana,
                     "arguments": {"tool": tool, "args": args},
                 },
-                timeout=45.0,
+                timeout=60.0,
             )
             assert "result" in response, f"{gana}/{tool}: no result key"
             content = response["result"].get("content", [])

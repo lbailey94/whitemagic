@@ -487,3 +487,13 @@ def _repo_state_guard():
             + ", ".join(sorted(real_changes)[:5]),
             stacklevel=2,
         )
+
+
+# ---------------------------------------------------------------------------
+# Suppress "ValueError: I/O operation on closed file" from daemon threads
+# (homeostatic_loop, embedding_daemon, etc.) that may still be mid-iteration
+# when the interpreter closes logging handlers during pytest teardown.
+# ---------------------------------------------------------------------------
+import logging as _teardown_logging  # noqa: E402
+
+_teardown_logging.raiseExceptions = False

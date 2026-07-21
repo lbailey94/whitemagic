@@ -17,7 +17,9 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+_added_path = str(Path(__file__).parent.parent)
+if _added_path not in sys.path:
+    sys.path.insert(0, _added_path)
 
 try:
     from whitemagic.core.resonance.gan_ying import EventType, ResonanceEvent, get_bus
@@ -26,6 +28,9 @@ try:
 except ImportError:
     logger.info("⚠️ Gan Ying Bus not yet in path - will wire when ready!")
     GANYING_AVAILABLE = False
+finally:
+    if _added_path in sys.path:
+        sys.path.remove(_added_path)
 
 
 class PatternConsciousnessHub:

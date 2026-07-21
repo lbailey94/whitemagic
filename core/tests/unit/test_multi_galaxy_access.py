@@ -4,6 +4,7 @@
 
 import tempfile
 import threading
+from unittest.mock import patch
 
 import pytest
 
@@ -12,7 +13,12 @@ from whitemagic.core.memory.galaxy_manager import GalaxyManager
 
 @pytest.fixture
 def _clean_galaxy_manager():
-    """Create a fresh GalaxyManager with a temp registry."""
+    """Create a fresh GalaxyManager with a temp registry.
+
+    Mocks search_multi_galaxy to avoid cross-encoder torch rerank
+    crashes/timeouts under xdist CPU contention (AGENTS.md test purity:
+    mock heavy engines at the boundary).
+    """
     # Reset singleton
     GalaxyManager._instance = None
 
@@ -25,12 +31,27 @@ def _clean_galaxy_manager():
     tmpdir = tempfile.mkdtemp(prefix="wm_test_galaxy_")
     gm_mod._REGISTRY_PATH = Path(tmpdir) / "galaxies.json"
 
-    # Also set WM_ROOT to temp for galaxy DB creation
-
     # Create manager
     gm = GalaxyManager.get_instance()
 
-    yield gm
+    def _mock_search(self, query="", limit=5, galaxies=None, **kw):
+        # Pass through galaxy validation
+        if galaxies:
+            available = {g["name"] for g in self.list_galaxies()}
+            for g in galaxies:
+                if g not in available:
+                    raise ValueError(f"Galaxy '{g}' not found")
+        return {
+            "status": "success",
+            "galaxies_searched": 1,
+            "total_results": 0,
+            "results": [],
+            "per_galaxy": {},
+            "errors": None,
+        }
+
+    with patch.object(GalaxyManager, "search_multi_galaxy", _mock_search):
+        yield gm
 
     # Cleanup
     GalaxyManager._instance = None

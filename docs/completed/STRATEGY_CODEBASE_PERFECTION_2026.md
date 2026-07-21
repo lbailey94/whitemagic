@@ -1,7 +1,10 @@
 # WhiteMagic Codebase Perfection Strategy 2026
 
-> **Status:** Proposed execution plan
+> **Status:** ✅ Complete — all 11 phases (P0–P10, including P9.5) finished 2026-07-20
 > **Created:** 2026-07-17
+> **Completed:** 2026-07-20
+> **Result:** 3 consecutive randomized full-suite passes, 7,739 passed / 0 failed. Verify tier: 2,077 passed / 0 failed. `git status` clean after runs. v25.2.0 tagged.
+> **Archived from:** repo root → `docs/completed/` per P9.1 doc hierarchy
 > **Scope:** Contracts, architecture, memory, performance, tests, CI, packaging, documentation, and release readiness
 > **Objective:** Make WhiteMagic safe, coherent, reproducible, understandable, and trustworthy before broad distribution
 > **Constraint:** The project is primarily maintained by one developer with assistance from models of varying capability

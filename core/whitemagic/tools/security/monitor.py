@@ -89,7 +89,15 @@ class SecurityMonitor:
             self._stop_event.wait(interval)
 
     def _run_checks(self) -> None:
-        """Run periodic security checks."""
+        """Run periodic security checks.
+
+        Deferred (STUB_REGISTRY 2026-07-20): ``start_monitoring`` is never
+        called in production, so this loop body is a dormant path. The
+        planned checks need external integrations — bounty targets (now
+        covered by ``agents/bounty_connector.py``), vulnerability
+        disclosures, and contract state watching (chain RPC). Implement
+        them here when the loop is wired to a live scheduler.
+        """
         # Check for new bounty targets
         # Check for new vulnerability disclosures
         # Check for monitored contract state changes

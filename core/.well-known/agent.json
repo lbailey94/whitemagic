@@ -1,6 +1,6 @@
 {
   "name": "WhiteMagic",
-  "description": "AI memory, cognitive upgrades, and more — 829 MCP tools (28 Gana meta-tools in seed mode, 801 nested tools), tiered memory with 5D holographic coordinates, HNSW semantic search, ethical governance with 8-stage security pipeline, MandalaOS compartments, and polyglot accelerators in 7 languages (Rust, Zig, Julia, Elixir, Haskell, Koka, Go). Free and open (MIT). Local-first, no telemetry. See mcp-registry.json for current tool count.",
+  "description": "AI memory, cognitive upgrades, and more — 860 callable tools (28 Gana meta-tools in PRAT mode, 832 tools in classic mode), tiered memory with 6D holographic coordinates, HNSW semantic search, ethical governance with an 8-stage security pipeline, MandalaOS compartments, and polyglot accelerators in 7 languages (Rust, Zig, Julia, Elixir, Haskell, Koka, Go). Free and open (MIT). Local-first, no telemetry.",
   "url": "https://github.com/lbailey94/whitemagic",
   "version": "25.2.0",
   "provider": {
@@ -21,7 +21,7 @@
     {
       "id": "memory-management",
       "name": "Memory Management",
-      "description": "Store, recall, search, and manage tiered memories with 5D holographic coordinates and Galactic Map lifecycle. Supports SHORT_TERM, LONG_TERM, PATTERN, and CORE memory tiers.",
+      "description": "Store, recall, search, and manage tiered memories with 6D holographic coordinates and Galactic Map lifecycle. Supports SHORT_TERM, LONG_TERM, PATTERN, and CORE memory tiers.",
       "tags": ["memory", "storage", "search", "semantic"],
       "examples": [
         "Store an architectural decision as a long-term memory",
@@ -32,10 +32,10 @@
     {
       "id": "tool-dispatch",
       "name": "Tool Dispatch & Orchestration",
-      "description": "Unified dispatch pipeline for 829 MCP tools with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. Supports PRAT mode (28 Gana meta-tools). 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
+      "description": "Unified dispatch pipeline for 860 callable tools with input sanitization, rate limiting, RBAC, circuit breakers, and maturity gates. Supports PRAT mode (28 Gana meta-tools) and classic mode (832 tools). 8-stage security pipeline — defense in depth against prompt injection, path traversal, and supply chain attacks.",
       "tags": ["tools", "mcp", "dispatch", "orchestration"],
       "examples": [
-        "Call any of the 829 registered tools via unified API",
+        "Call any of the 860 callable tools via unified API",
         "Route tools through PRAT Gana meta-tool interface",
         "Create multi-step tool pipelines"
       ]

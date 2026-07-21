@@ -96,7 +96,7 @@ class SelfMonitoringHealthLoop:
         self._recovery_count: int = 0   # How many consecutive healthy checks
 
         self.thresholds = {
-            "coherence": 0.6,
+            "coherence": 0.4,
             "memory_usage_percent": 85.0,
             "response_time_ms": 1000.0,
             "error_rate": 0.05,
@@ -107,9 +107,9 @@ class SelfMonitoringHealthLoop:
             # Biological / immune-inspired metrics
             "inflammation_index": 0.3,
             "antibody_diversity": 0.5,
-            "signal_to_noise": 0.3,
-            "setpoint_deviation": 0.15,
-            "guna_balance": 0.7,
+            "signal_to_noise": 0.15,
+            "setpoint_deviation": 0.3,
+            "guna_balance": 0.3,
         }
 
     def register_callback(self, callback: Callable[[HealthStatus, str], None]) -> None:
@@ -344,13 +344,17 @@ class SelfMonitoringHealthLoop:
             summary = cycle.get_cycle_summary()
             coloring = summary.get("emotional_coloring", {})
             distribution = coloring.get("distribution", {})
-            total = sum(distribution.values()) if distribution else 1
-            signal = distribution.get("rajasic", 0) + distribution.get("frustrated", 0)
-            noise = distribution.get("sattvic", 0) + distribution.get("neutral", 0) + distribution.get("tamasic", 0)
-            if total > 0 and signal + noise > 0:
-                snr = signal / (signal + noise)
-            else:
+            total = sum(distribution.values()) if distribution else 0
+            if total < 5:
+                # Insufficient data for meaningful SNR — neutral, not critical
                 snr = 0.5
+            else:
+                signal = distribution.get("rajasic", 0) + distribution.get("frustrated", 0)
+                noise = distribution.get("sattvic", 0) + distribution.get("neutral", 0) + distribution.get("tamasic", 0)
+                if signal + noise > 0:
+                    snr = signal / (signal + noise)
+                else:
+                    snr = 0.5
         except Exception:
             snr = 0.5
         readings["signal_to_noise"] = HealthReading(
@@ -364,10 +368,14 @@ class SelfMonitoringHealthLoop:
         )
 
         # 11. Setpoint deviation — average distance from target values
+        # Only counts deviation for metrics outside healthy range; metrics
+        # that are EXCELLENT or HEALTHY are at their target, so no deviation.
         try:
             deviations: list[float] = []
             for r in readings.values():
                 if r.metric_name in ("inflammation_index", "antibody_diversity", "signal_to_noise", "setpoint_deviation", "guna_balance"):
+                    continue
+                if r.status in (HealthStatus.EXCELLENT, HealthStatus.HEALTHY):
                     continue
                 threshold = r.threshold
                 if threshold > 0:

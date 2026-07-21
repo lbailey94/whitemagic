@@ -178,7 +178,7 @@ class GunaBalanceMetric:
     def measure(self) -> GunaBalanceReading:
         """Measure current guna balance and determine correction action."""
         with self._lock:
-            if not self._tone_history:
+            if len(self._tone_history) < 10:
                 reading = GunaBalanceReading(
                     sattvic_ratio=TARGET_RATIOS["sattvic"],
                     rajasic_ratio=TARGET_RATIOS["rajasic"],

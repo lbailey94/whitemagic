@@ -5,11 +5,11 @@ Ensures all version references across the codebase agree on the canonical versio
 from core/VERSION. Run this before release to catch version drift.
 """
 
+import logging
 import re
 import sys
 from pathlib import Path
 
-import logging
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO)
@@ -26,8 +26,14 @@ logger.debug("Canonical version: %s", CANONICAL)
 
 # Files to check for version references
 REFERENCES = [
+    "VERSION",
     "README.md",
     "CHANGELOG.md",
+    "package.json",
+    "package-lock.json",
+    "server.json",
+    "mcp-registry.json",
+    "mcp-package/pyproject.toml",
     "core/README.md",
     "core/pyproject.toml",
     "SECURITY.md",
@@ -55,15 +61,22 @@ for ref in REFERENCES:
     content = ref_path.read_text()
 
     # File-specific checks
-    if ref == "core/pyproject.toml":
-        # Only check the version = line, not dependencies
-        for line in content.split("\n"):
-            if line.strip().startswith("version =") and "dependencies" not in line:
-                version_match = re.search(r'"(\d+\.\d+\.\d+)"', line)
-                if version_match:
-                    version = version_match.group(1)
-                    if version != CANONICAL:
-                        mismatches.append((ref, version, line.strip()))
+    if ref == "VERSION":
+        version = content.strip()
+        if version != CANONICAL:
+            mismatches.append((ref, version, version))
+    elif ref == "core/pyproject.toml":
+        if 'dynamic = ["version"]' not in content:
+            mismatches.append((ref, "missing", 'dynamic = ["version"]'))
+    elif ref == "mcp-package/pyproject.toml":
+        version_match = re.search(r'^version\s*=\s*"(\d+\.\d+\.\d+)"', content, re.MULTILINE)
+        dependency_match = re.search(r'"whitemagic>=(\d+\.\d+\.\d+)"', content)
+        if not version_match or version_match.group(1) != CANONICAL:
+            version = version_match.group(1) if version_match else "missing"
+            mismatches.append((ref, version, "project version"))
+        if not dependency_match or dependency_match.group(1) != CANONICAL:
+            version = dependency_match.group(1) if dependency_match else "missing"
+            mismatches.append((ref, version, "whitemagic dependency floor"))
     elif ref in {"core/whitemagic-rust/Cargo.toml", "core/whitemagic-math/Cargo.toml"}:
         # Only check the package version line, not dependencies
         in_package = False
@@ -88,7 +101,7 @@ for ref in REFERENCES:
                 mismatches.append((ref, version, f"{match.group(1)} version field"))
     elif ref.endswith("package.json") or ref.endswith("package-lock.json"):
         matches = list(re.finditer(r'"version"\s*:\s*"(\d+\.\d+\.\d+)"', content))
-        max_checks = 2 if ref.endswith("package-lock.json") else 1
+        max_checks = 2 if ref.endswith("package-lock.json") or ref == "server.json" else 1
         for match in matches[:max_checks]:
             version = match.group(1)
             if version != CANONICAL:

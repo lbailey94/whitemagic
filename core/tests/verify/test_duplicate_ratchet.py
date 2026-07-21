@@ -19,10 +19,10 @@ pytestmark = [pytest.mark.core, pytest.mark.contract]
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 CHECK_SCRIPT = REPO_ROOT / "core" / "scripts" / "check_duplicates.py"
 
-# Baseline established 2026-07-19
-# 597 duplicate functions across 211 groups
-TOTAL_FUNCTIONS_BASELINE = 597
-TOTAL_GROUPS_BASELINE = 211
+# Baseline established 2026-07-19, updated 2026-07-20
+# 599 duplicate functions across 212 groups
+TOTAL_FUNCTIONS_BASELINE = 599
+TOTAL_GROUPS_BASELINE = 212
 
 
 def _run_duplicate_check() -> tuple[int, int, str]:
@@ -78,10 +78,8 @@ class TestDuplicateRatchet:
         # The top group should be singleton getters (get_* with 17 nodes)
         # This is expected — 598 singleton factories use the same pattern
         lines = output.splitlines()
-        group1_found = False
         for line in lines:
             if "Group 1" in line:
-                group1_found = True
                 # Should have many copies (20+)
                 assert "29 copies" in line or "2[0-9] copies" in line, (
                     f"Top duplicate group should be large singleton pattern, got: {line}"

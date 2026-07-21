@@ -183,6 +183,7 @@ All 5 meta-strategy themes are complete. Resolution doc archived to `docs/archiv
 | STRATA→MITRE mappings | 47 |
 | Dharma violet rules | 6 |
 | Ruff lint errors | 0 |
+| MCP conformance (mcp-conform) | 12/12 stdio + HTTP @ v25.2.0 (2026-07-20) |
 
 ---
 

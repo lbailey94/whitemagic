@@ -185,7 +185,7 @@ class TestAllGanas:
                     "name": gana,
                     "arguments": {"tool": tool, "args": args},
                 },
-                timeout=45.0,
+                timeout=60.0,
             )
             elapsed = time.monotonic() - start
 

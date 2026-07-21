@@ -342,12 +342,24 @@ class TestAlchemicalLoop:
 
     @pytest.fixture(autouse=True)
     def _mock_heavy_ops(self):
-        """Mock rabbit_hole and filter_research to avoid 8s+ tool dispatch.
+        """Mock all heavy engine boundaries to avoid xdist CPU contention
+        crashes/timeouts (AGENTS.md test purity: mock heavy engines at the
+        class boundary).
 
-        _mine_associations is mocked too: it runs a real memory search whose
-        cross-encoder torch rerank crashes/times out under xdist CPU
-        contention (AGENTS.md test purity: mock heavy engines at the class
-        boundary).
+        Mocked boundaries:
+        - _call_rabbit_hole: web exploration (network I/O)
+        - _filter_research: memory search (cross-encoder torch rerank)
+        - _mine_associations: memory search (cross-encoder torch rerank)
+        - _run_strata: STRATA static analysis (repo scan)
+        - _run_strata_survey: STRATA survey (repo scan)
+        - _check_quality: ensemble query (model dispatch)
+        - _extract_lessons: AutonomousLearner persistence
+        - _run_monte_carlo_scoring: MCForecastEnhancer 1000-trial simulation
+        - _run_self_improvement: SelfImprovementPipeline (generate→analyze→score)
+        - _consolidate_memory: unified memory store (DB write)
+        - _check_antipatterns: AutoimmuneSystem pattern loading
+        - _run_parallel_reasoning: ParallelReasoningTree branch exploration
+        - _generate_code: CodeGenome vault render
         """
         with patch(
             "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._call_rabbit_hole",
@@ -361,6 +373,46 @@ class TestAlchemicalLoop:
             "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._mine_associations",
             new_callable=AsyncMock,
             return_value={"associations": [], "count": 0},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._run_strata",
+            new_callable=AsyncMock,
+            return_value={"issues": 0, "score": 0.7},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._run_strata_survey",
+            new_callable=AsyncMock,
+            return_value={"passed": True, "structural_score": 0.8},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._check_quality",
+            new_callable=AsyncMock,
+            return_value={"acceptable": True, "quality_score": 0.7},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._extract_lessons",
+            new_callable=AsyncMock,
+            return_value=["Cycle 1: High confidence (0.85) approach effective"],
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._run_monte_carlo_scoring",
+            new_callable=AsyncMock,
+            return_value={"brier_skill_score": 0.5, "confidence": 0.75, "trials": 1000},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._run_self_improvement",
+            new_callable=AsyncMock,
+            return_value={"iterations": 1, "final_score": 0.8, "success": True, "lessons": 1},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._consolidate_memory",
+            new_callable=AsyncMock,
+            return_value={"consolidated": 1, "memory_id": "test"},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._check_antipatterns",
+            new_callable=AsyncMock,
+            return_value={"patterns_loaded": 0, "violations": 0},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._run_parallel_reasoning",
+            new_callable=AsyncMock,
+            return_value={"branches": 2, "best_branch": "b1", "best_score": 0.8, "synthesis": "test", "memory_contexts": 0, "anti_patterns": 0, "lessons_loaded": 0},
+        ), patch(
+            "whitemagic.core.intelligence.alchemical_loop.AlchemicalLoop._generate_code",
+            new_callable=AsyncMock,
+            return_value={"status": "success", "code_length": 100},
         ):
             yield
 

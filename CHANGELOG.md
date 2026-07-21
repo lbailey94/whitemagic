@@ -7,12 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — Violet Strategy: Full-Spectrum Security Pipeline
+### Added — Post-Perfection Hardening (2026-07-20/21)
 
-#### Gap 4: MITRE ATT&CK Mapping
-- `strata_mitre_map.py` — 34 STRATA categories mapped to MITRE ATT&CK TTPs with tactic, technique, and notes
-- `generate_navigator_layer()` — MITRE ATT&CK Navigator v4.5 JSON export with severity scoring
-- `ContestFinding.mitre_ttp_ids` field added; `_format_navigator()` includes explicit TTP IDs from findings
+#### Test Determinism
+- Alchemical loop test fixtures expanded from 3 to 13 mocked heavy boundaries (`_run_strata`, `_run_strata_survey`, `_check_quality`, `_extract_lessons`, `_run_monte_carlo_scoring`, `_run_self_improvement`, `_consolidate_memory`, `_check_antipatterns`, `_run_parallel_reasoning`, `_generate_code`)
+- 5 load-victim test files fixed: `test_multi_galaxy_access.py` (mock cross-encoder rerank), `test_security_assessment_phase1.py` (mock WASM verify), `test_clone_army_integration.py` (throughput threshold + slow mark), `test_all_ganas_mcp.py` / `test_opencode_hermes_bridge.py` (timeout 45s→60s)
+- Teardown logging noise eliminated (`homeostatic_loop.py` shutdown guard + `conftest.py` `logging.raiseExceptions = False`)
+- Pytest-hygiene syspath leak fixed in `gan_ying_integration.py` and `test_dispatcher.py`
+
+#### Health Threshold Tuning
+- `apotheosis_engine.py`: coherence threshold 0.6→0.4, guna_balance 0.7→0.3, signal_to_noise 0.3→0.15, setpoint_deviation 0.15→0.3
+- `apotheosis_engine.py`: setpoint_deviation calculation now skips EXCELLENT/HEALTHY metrics (being too healthy was counted as deviation)
+- `apotheosis_engine.py`: SNR returns 0.5 (neutral) for <5 citta samples instead of 0.0
+- `guna_balance.py`: minimum 10 samples before declaring imbalance (prevents false CRITICAL on idle servers)
+
+#### Semantic Defense
+- 25+ words added to `_FUZZY_ALLOWLIST` (overwrite, private, reactivate, etc.)
+- UUID exemption in `_scan_encoding` to prevent l33tspeak false positives on hex segments
+- `create_memory` and related memory tools added to `_ENCODING_SCAN_EXEMPT`
+- `_BENIGN_CORPUS` expanded with 10 technical session-summary entries
+
+#### Other
+- MCP conformance re-verified: 12/12 on both stdio and HTTP transports
+- `STRATEGY_CODEBASE_PERFECTION_2026.md` archived to `docs/completed/`
+- Stub registry review pass: monitor `_run_checks` documented as deferred, 2 `run_mcp.py` entries reclassified
+- CI workflows: all bare `pip install` replaced with `uv pip install` / `uv sync`
+- Tool-count consistency verified: dispatch=832, registry=860, nested=830, prat=830
+
+## [25.2.0] - 2026-07-20
+
+### Added — Determinism & Cold-Start Release
+
+#### Serving-Stack Prewarm
+- MCP server prewarms cross-encoder, middleware, embedding engine, and semantic defense at startup (P6.4)
+- Eliminates 40s cold-first-dispatch latency — all cost moved to startup, warm path unaffected
+
+#### Test Determinism
+- `_mine_associations` mocked in alchemical loop tests (worst flake class)
+- Pipeline profiling moved to benchmarks tier (P6.2)
+- Poll-until-fired pattern in consciousness loop timing tests
+- Leap3 store/recall determinism — warm cold model init untimed
+
+#### Inference
+- Hardware-adaptive inference auto-tuning + MARS verification + AVX-512 VNNI kernel
+- Dynamic version reads from VERSION file (Phase 3 re-verification addendum)
+
+#### CI
+- Ruff F401 fixes + ratchet baseline updates for v25.1.0
+- Removed generated security-testing artifacts
 - `contest.add_finding` handler accepts `mitre_ttp_ids` parameter
 
 #### Gap 2: Dynamic Testing Wrappers

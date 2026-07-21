@@ -26,17 +26,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install Slither
-        run: pip install slither-analyzer solc-select
-      - name: Install solc
-        run: |
-          solc-select install 0.8.20
-          solc-select use 0.8.20
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
           cache-dependency-glob: "core/uv.lock"
+      - name: Install Slither
+        run: uv pip install slither-analyzer solc-select
+      - name: Install solc
+        run: |
+          solc-select install 0.8.20
+          solc-select use 0.8.20
       - name: Run Slither on Solidity files
         # P8.3: Advisory — Slither findings are informational. Solidity is
         # not a primary language for WhiteMagic; findings are reviewed manually.
