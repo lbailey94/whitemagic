@@ -43,17 +43,33 @@ class TestPrewarmServingStack:
             lambda q, docs, top_k=None: calls.append("rerank") or docs,
         )
         monkeypatch.setattr(
+            "whitemagic.tools.middleware._ensure_citta_cached",
+            lambda: calls.append("citta"),
+        )
+        monkeypatch.setattr(
+            "whitemagic.core.consciousness.neuro_sensorium.get_neuro_sensorium",
+            lambda: type("_NS", (), {"get_citta_enrichment": lambda self: calls.append("neuro") or {}})(),
+        )
+        monkeypatch.setattr(
+            "whitemagic.tools.prat_resonance._build_sensorium",
+            lambda: calls.append("sensorium") or {},
+        )
+        monkeypatch.setattr(
             "whitemagic.tools.unified_api._dispatch_tool",
             lambda name, **kw: calls.append("dispatch") or {"status": "success"},
         )
 
+        # Enable cross-encoder prewarm for this test
+        monkeypatch.setenv("WM_PREWARM_CROSS_ENCODER", "1")
         timings = prewarm.prewarm_serving_stack()
 
-        assert calls == ["encode", "semantic_defense", "rerank", "dispatch"]
+        assert calls == ["encode", "semantic_defense", "rerank", "citta", "neuro", "sensorium", "dispatch"]
         assert set(timings) == {
             "embedding_engine_s",
             "semantic_defense_s",
             "cross_encoder_s",
+            "citta_consciousness_s",
+            "sensorium_build_s",
             "dispatch_chain_s",
         }
 
@@ -72,15 +88,75 @@ class TestPrewarmServingStack:
             lambda q, docs, top_k=None: calls.append("rerank") or docs,
         )
         monkeypatch.setattr(
+            "whitemagic.tools.middleware._ensure_citta_cached",
+            lambda: calls.append("citta"),
+        )
+        monkeypatch.setattr(
+            "whitemagic.core.consciousness.neuro_sensorium.get_neuro_sensorium",
+            lambda: type("_NS", (), {"get_citta_enrichment": lambda self: calls.append("neuro") or {}})(),
+        )
+        monkeypatch.setattr(
+            "whitemagic.tools.prat_resonance._build_sensorium",
+            lambda: calls.append("sensorium") or {},
+        )
+        monkeypatch.setattr(
             "whitemagic.tools.unified_api._dispatch_tool",
             lambda name, **kw: calls.append("dispatch") or {"status": "success"},
         )
+        monkeypatch.setenv("WM_PREWARM_CROSS_ENCODER", "1")
 
         timings = prewarm.prewarm_serving_stack()
 
         # Later stages still ran despite the first stage raising
-        assert calls == ["semantic_defense", "rerank", "dispatch"]
+        assert calls == ["semantic_defense", "rerank", "citta", "neuro", "sensorium", "dispatch"]
         assert "embedding_engine_s" in timings
+
+    def test_cross_encoder_skipped_by_default(self, monkeypatch):
+        """Cross-encoder prewarm is opt-in (WM_PREWARM_CROSS_ENCODER=1)."""
+        calls = []
+
+        class _FakeEngine:
+            def available(self):
+                return True
+
+            def encode_batch(self, texts):
+                calls.append("encode")
+
+        monkeypatch.setattr(
+            "whitemagic.core.memory.embeddings.get_embedding_engine",
+            lambda: _FakeEngine(),
+        )
+        monkeypatch.setattr(
+            "whitemagic.security.semantic_defense.combined_semantic_check",
+            lambda text: calls.append("semantic_defense") or {},
+        )
+        monkeypatch.setattr(
+            "whitemagic.core.memory.cross_encoder_reranker.rerank_cross_encoder",
+            lambda q, docs, top_k=None: calls.append("rerank") or docs,
+        )
+        monkeypatch.setattr(
+            "whitemagic.tools.middleware._ensure_citta_cached",
+            lambda: calls.append("citta"),
+        )
+        monkeypatch.setattr(
+            "whitemagic.core.consciousness.neuro_sensorium.get_neuro_sensorium",
+            lambda: type("_NS", (), {"get_citta_enrichment": lambda self: calls.append("neuro") or {}})(),
+        )
+        monkeypatch.setattr(
+            "whitemagic.tools.prat_resonance._build_sensorium",
+            lambda: calls.append("sensorium") or {},
+        )
+        monkeypatch.setattr(
+            "whitemagic.tools.unified_api._dispatch_tool",
+            lambda name, **kw: calls.append("dispatch") or {"status": "success"},
+        )
+        monkeypatch.delenv("WM_PREWARM_CROSS_ENCODER", raising=False)
+
+        timings = prewarm.prewarm_serving_stack()
+
+        # rerank should NOT be called when WM_PREWARM_CROSS_ENCODER is not set
+        assert calls == ["encode", "semantic_defense", "citta", "neuro", "sensorium", "dispatch"]
+        assert "cross_encoder_s" in timings
 
 
 class TestStartPrewarmThread:

@@ -2092,8 +2092,8 @@ def mw_citta_consciousness(
         except Exception:
             logger.debug("Ignored error in citta depth_gauge begin")
 
-    # WI 4: NeuroSensorium composites
-    if _neuro_sensorium_get is not None:
+    # WI 4: NeuroSensorium composites (skippable via WM_FAST_CITTA=1)
+    if _neuro_sensorium_get is not None and os.environ.get("WM_FAST_CITTA", "0") not in ("1", "true", "yes", "on"):
         try:
             _neuro = _neuro_sensorium_get()
             _enrichment = _neuro.get_citta_enrichment()
@@ -2124,9 +2124,9 @@ def mw_citta_consciousness(
     if result is not None and isinstance(result, dict):
         _is_success = result.get("status") in ("success", "ok")
 
-        # Build sensorium
+        # Build sensorium (skippable via WM_FAST_CITTA=1)
         _sensorium: dict[str, Any] = {}
-        if _build_sensorium_fn is not None:
+        if _build_sensorium_fn is not None and os.environ.get("WM_FAST_CITTA", "0") not in ("1", "true", "yes", "on"):
             try:
                 _sensorium = _build_sensorium_fn()
             except Exception:

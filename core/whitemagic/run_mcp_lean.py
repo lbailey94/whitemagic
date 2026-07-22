@@ -48,6 +48,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("wm_mcp")
 
+# ── Cold-path: default HF_HUB_OFFLINE=1 for installed deployments ────
+# Avoids network round-trips during model loading (saves ~2-5s on cold start).
+# Override with HF_HUB_OFFLINE=0 to allow downloads.
+if "HF_HUB_OFFLINE" not in os.environ:
+    os.environ["HF_HUB_OFFLINE"] = "1"
+
 
 # ── Lazy MCP SDK wrappers (deferred until first use) ─────────────────
 class _LazyMCPTypes:

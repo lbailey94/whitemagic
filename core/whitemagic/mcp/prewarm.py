@@ -54,25 +54,59 @@ def prewarm_serving_stack() -> dict[str, float]:
         logger.debug("Prewarm: semantic defense skipped: %s", e)
     timings["semantic_defense_s"] = round(time.monotonic() - t, 3)
 
-    # 3. Cross-encoder reranker explicitly: a bare recall can return zero
-    #    candidates and skip the torch/ST load entirely (observed live),
-    #    so force the model up with a synthetic document.
+    # 3. Cross-encoder reranker: opt-in via WM_PREWARM_CROSS_ENCODER=1.
+    #    Default: skip (saves ~33s cold path). The model loads lazily on the
+    #    first actual rerank call unless WM_CROSS_ENCODER=0 disables it.
     t = time.monotonic()
-    try:
-        from whitemagic.core.memory.cross_encoder_reranker import (
-            rerank_cross_encoder,
-        )
+    if os.environ.get("WM_PREWARM_CROSS_ENCODER", "0").strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            from whitemagic.core.memory.cross_encoder_reranker import (
+                rerank_cross_encoder,
+            )
 
-        class _Doc:
-            content = "prewarm document"
-            metadata: dict = {}
+            class _Doc:
+                content = "prewarm document"
+                metadata: dict = {}
 
-        rerank_cross_encoder("prewarm", [_Doc()], top_k=1)
-    except Exception as e:  # noqa: BLE001
-        logger.debug("Prewarm: cross-encoder skipped: %s", e)
+            rerank_cross_encoder("prewarm", [_Doc()], top_k=1)
+        except Exception as e:  # noqa: BLE001
+            logger.debug("Prewarm: cross-encoder skipped: %s", e)
+    else:
+        logger.debug("Prewarm: cross-encoder prewarm skipped (set WM_PREWARM_CROSS_ENCODER=1 to enable)")
     timings["cross_encoder_s"] = round(time.monotonic() - t, 3)
 
-    # 4. Full read-only dispatch: warms every middleware's lazy init
+    # 4. Citta consciousness modules — pre-import the 10 lazy-loaded
+    #    consciousness dependencies (~13s on first dispatch) so the
+    #    first real dispatch doesn't pay this cost inside mw_citta_consciousness.
+    t = time.monotonic()
+    try:
+        from whitemagic.tools.middleware import _ensure_citta_cached
+
+        _ensure_citta_cached()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Prewarm: citta consciousness skipped: %s", e)
+    timings["citta_consciousness_s"] = round(time.monotonic() - t, 3)
+
+    # 4b. Neuro sensorium + sensorium build — these two calls take ~15s
+    #     on first invocation (lazy imports of 8 neuro modules + coherence
+    #     metric + flow state + depth gauge). Prewarm them so the first
+    #     dispatch's mw_citta_consciousness doesn't pay this cost.
+    t = time.monotonic()
+    try:
+        from whitemagic.core.consciousness.neuro_sensorium import get_neuro_sensorium
+
+        get_neuro_sensorium().get_citta_enrichment()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Prewarm: neuro sensorium skipped: %s", e)
+    try:
+        from whitemagic.tools.prat_resonance import _build_sensorium
+
+        _build_sensorium()
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Prewarm: sensorium build skipped: %s", e)
+    timings["sensorium_build_s"] = round(time.monotonic() - t, 3)
+
+    # 5. Full read-only dispatch: warms every middleware's lazy init
     #    (permissions, maturity gate, pattern guard, engagement tokens —
     #    ~17-26s cold on a production state root) plus DB/HNSW open.
     t = time.monotonic()

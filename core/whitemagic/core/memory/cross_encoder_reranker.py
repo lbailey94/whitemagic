@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -38,11 +39,19 @@ CROSS_ENCODER_MODEL = "BAAI/bge-reranker-base"
 _instance: Any = None
 
 
+def _cross_encoder_disabled() -> bool:
+    """Check if cross-encoder model loading is disabled via env var."""
+    return os.environ.get("WM_CROSS_ENCODER", "auto").strip().lower() in ("0", "off", "false", "no")
+
+
 def _get_cross_encoder_model() -> Any | None:
-    """Try to load a local cross-encoder model. Returns None if unavailable."""
+    """Try to load a local cross-encoder model. Returns None if unavailable or disabled."""
     global _instance
     if _instance is not None:
         return _instance
+    if _cross_encoder_disabled():
+        _instance = False
+        return None
     try:
         from sentence_transformers import CrossEncoder  # type: ignore[import-untyped]
 
