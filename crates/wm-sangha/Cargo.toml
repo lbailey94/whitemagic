@@ -1,0 +1,25 @@
+[package]
+name = "wm-sangha"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+wm-core = { path = "../wm-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+
+# Optional network transport (TCP + UDP)
+tokio = { workspace = true, optional = true, features = ["net", "sync"] }
+socket2 = { workspace = true, optional = true }
+
+[features]
+transport = ["dep:tokio", "dep:socket2"]
+
+[lints]
+workspace = true

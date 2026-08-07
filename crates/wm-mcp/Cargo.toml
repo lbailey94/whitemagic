@@ -1,0 +1,62 @@
+[package]
+name = "wm-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wm-core = { workspace = true }
+wm-memory = { workspace = true }
+wm-dispatch = { workspace = true }
+wm-consciousness = { workspace = true }
+wm-governance = { workspace = true }
+wm-substrate = { workspace = true }
+wm-tools = { workspace = true }
+wm-polyglot = { workspace = true }
+wm-reflex = { workspace = true }
+wm-timescale = { workspace = true }
+wm-workspace = { workspace = true }
+wm-selfmodel = { workspace = true }
+wm-bicameral = { workspace = true }
+wm-drive = { workspace = true }
+wm-autonomic = { workspace = true }
+wm-resonance = { workspace = true }
+wm-sangha = { workspace = true }
+wm-simulation = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+rusqlite = { version = "0.32", features = ["bundled"] }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+default = []
+python = ["dep:pyo3"]
+pyo3 = ["dep:pyo3"]
+
+[dependencies.pyo3]
+version = "0.22"
+optional = true
+features = ["abi3-py38"]
+
+[lib]
+name = "wm_mcp"
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "wm"
+path = "src/bin/wm.rs"

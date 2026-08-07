@@ -1,0 +1,32 @@
+[package]
+name = "wm-dispatch"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wm-core = { workspace = true }
+wm-memory = { workspace = true }
+wm-governance = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+ahash = { workspace = true }
+tracing = { workspace = true }
+regex = { workspace = true }
+tokio = { workspace = true }
+smallvec = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = "3"
+criterion = { workspace = true }
+
+[[bench]]
+name = "pipeline_bench"
+harness = false

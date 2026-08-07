@@ -1,0 +1,140 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/wm-core",
+    "crates/wm-memory",
+    "crates/wm-dispatch",
+    "crates/wm-consciousness",
+    "crates/wm-governance",
+    "crates/wm-polyglot",
+    "crates/wm-substrate",
+    "crates/wm-tools",
+    "crates/wm-mcp",
+    "crates/wm-reflex",
+    "crates/wm-timescale",
+    "crates/wm-workspace",
+    "crates/wm-selfmodel",
+    "crates/wm-bicameral",
+    "crates/wm-drive",
+    "crates/wm-autonomic",
+    "crates/wm-resonance",
+    "crates/wm-sangha",
+    "crates/wm-simulation",
+]
+
+[workspace.package]
+version = "4.0.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+authors = ["WhiteMagic Project"]
+repository = "https://github.com/lbailey94/whitemagic-site-private"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"
+nursery = "warn"
+# Individual allows must have higher priority than group
+unnecessary_literal_bound = { level = "allow", priority = 1 }
+missing_errors_doc = { level = "allow", priority = 1 }
+missing_panics_doc = { level = "allow", priority = 1 }
+missing_docs_in_private_items = { level = "allow", priority = 1 }
+cast_precision_loss = { level = "allow", priority = 1 }
+cast_possible_truncation = { level = "allow", priority = 1 }
+cast_sign_loss = { level = "allow", priority = 1 }
+doc_markdown = { level = "allow", priority = 1 }
+float_cmp = { level = "allow", priority = 1 }
+too_many_lines = { level = "allow", priority = 1 }
+struct_excessive_bools = { level = "allow", priority = 1 }
+unreadable_literal = { level = "allow", priority = 1 }
+option_if_let_else = { level = "allow", priority = 1 }
+unnecessary_wraps = { level = "allow", priority = 1 }
+match_same_arms = { level = "allow", priority = 1 }
+unused_self = { level = "allow", priority = 1 }
+manual_let_else = { level = "allow", priority = 1 }
+similar_names = { level = "allow", priority = 1 }
+many_single_char_names = { level = "allow", priority = 1 }
+items_after_statements = { level = "allow", priority = 1 }
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "time", "io-util", "io-std", "signal"] }
+# Data parallelism
+rayon = "1"
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rmp-serde = "1"
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+# Error handling
+thiserror = "2"
+anyhow = "1"
+# Collections
+ahash = "0.8"
+smallvec = "1"
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+# IDs
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+# CLI
+clap = { version = "4", features = ["derive"] }
+# Testing
+proptest = "1"
+criterion = "0.5"
+tempfile = "3"
+# HTTP client (sync, for LLM right hemisphere)
+ureq = { version = "3", features = ["json"] }
+# Regex for pattern matching (inference router)
+regex = "1"
+# TOML parsing (redteam manifest)
+toml = "0.8"
+# Socket options (multicast join for Sangha transport)
+socket2 = "0.6"
+
+# Internal crates
+wm-core = { path = "crates/wm-core" }
+wm-memory = { path = "crates/wm-memory" }
+wm-dispatch = { path = "crates/wm-dispatch" }
+wm-consciousness = { path = "crates/wm-consciousness" }
+wm-governance = { path = "crates/wm-governance" }
+wm-polyglot = { path = "crates/wm-polyglot" }
+wm-substrate = { path = "crates/wm-substrate" }
+wm-tools = { path = "crates/wm-tools" }
+wm-mcp = { path = "crates/wm-mcp" }
+wm-reflex = { path = "crates/wm-reflex" }
+wm-timescale = { path = "crates/wm-timescale" }
+wm-workspace = { path = "crates/wm-workspace" }
+wm-selfmodel = { path = "crates/wm-selfmodel" }
+wm-bicameral = { path = "crates/wm-bicameral" }
+wm-drive = { path = "crates/wm-drive" }
+wm-autonomic = { path = "crates/wm-autonomic" }
+wm-resonance = { path = "crates/wm-resonance" }
+wm-sangha = { path = "crates/wm-sangha" }
+wm-simulation = { path = "crates/wm-simulation" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = 1
+codegen-units = 16
+incremental = true
+
+[profile.test]
+inherits = "dev"
+opt-level = 0
+debug = 1
+codegen-units = 16
+
+[profile.bench]
+inherits = "release"
+debug = true
