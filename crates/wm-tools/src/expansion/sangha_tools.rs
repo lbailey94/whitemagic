@@ -1,0 +1,564 @@
+//! Sangha Mesh tools — sangha.peers, sangha.signal, sangha.chat, sangha.locks.
+//!
+//! Gana::Room — multi-agent coordination and mesh management.
+
+#![forbid(unsafe_code)]
+
+use std::sync::Arc;
+use std::sync::Mutex;
+
+use serde_json::{Value, json};
+use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
+use wm_sangha::{
+    PeerCapability, PeerDiscovery, PeerInfo, ResourceLockManager, SanghaChat, Signal,
+    SignalBroadcast, SignalType,
+};
+
+// ── sangha.peers ──────────────────────────────────────────────────────
+
+/// `sangha.peers` — List discovered peers and their capabilities.
+pub struct SanghaPeersTool {
+    discovery: Arc<Mutex<PeerDiscovery>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SanghaPeersTool {
+    pub fn new(discovery: Arc<Mutex<PeerDiscovery>>) -> Self {
+        Self {
+            discovery,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sangha".into())]),
+        }
+    }
+}
+
+impl Tool for SanghaPeersTool {
+    fn name(&self) -> &str {
+        "sangha.peers"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Room
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "List discovered peers in the Sangha mesh, optionally filter by capability"
+    }
+    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let discovery = self.discovery.lock().unwrap();
+        let peers: Vec<&PeerInfo> =
+            if let Some(cap_str) = args.get("capability").and_then(Value::as_str) {
+                let cap = parse_capability(cap_str);
+                discovery.peers_with_capability(&cap)
+            } else {
+                discovery.alive_peers()
+            };
+
+        let peer_list: Vec<Value> = peers
+            .iter()
+            .map(|p| {
+                json!({
+                    "id": p.id,
+                    "address": p.address,
+                    "alive": p.alive,
+                    "capabilities": p.capabilities.iter().map(wm_sangha::PeerCapability::as_str).collect::<Vec<_>>(),
+                    "heartbeat_count": p.heartbeat_count,
+                    "last_seen": p.last_seen,
+                })
+            })
+            .collect();
+
+        Ok(json!({
+            "status": "success",
+            "peer_count": peer_list.len(),
+            "peers": peer_list,
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+// ── sangha.discover ───────────────────────────────────────────────────
+
+/// `sangha.discover` — Register or update a peer in the discovery registry.
+pub struct SanghaDiscoverTool {
+    discovery: Arc<Mutex<PeerDiscovery>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SanghaDiscoverTool {
+    pub fn new(discovery: Arc<Mutex<PeerDiscovery>>) -> Self {
+        Self {
+            discovery,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sangha".into())]),
+        }
+    }
+}
+
+impl Tool for SanghaDiscoverTool {
+    fn name(&self) -> &str {
+        "sangha.discover"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Room
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Register or update a peer in the Sangha mesh (args: peer_id, address, capabilities)"
+    }
+    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let peer_id = args
+            .get("peer_id")
+            .and_then(Value::as_str)
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("peer_id required".into()))?;
+
+        let address = args
+            .get("address")
+            .and_then(Value::as_str)
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("address required".into()))?;
+
+        let mut peer = PeerInfo::new(peer_id, address);
+
+        if let Some(caps) = args.get("capabilities").and_then(Value::as_array) {
+            for cap in caps {
+                if let Some(s) = cap.as_str() {
+                    peer.add_capability(parse_capability(s));
+                }
+            }
+        }
+
+        let mut discovery = self.discovery.lock().unwrap();
+        discovery.discover(peer);
+
+        Ok(json!({
+            "status": "success",
+            "peer_id": peer_id,
+            "address": address,
+            "peer_count": discovery.peer_count(),
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+// ── sangha.signal ─────────────────────────────────────────────────────
+
+/// `sangha.signal` — Broadcast a signal to the mesh.
+pub struct SanghaSignalTool {
+    broadcast: Arc<Mutex<SignalBroadcast>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SanghaSignalTool {
+    pub fn new(broadcast: Arc<Mutex<SignalBroadcast>>) -> Self {
+        Self {
+            broadcast,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sangha".into())]),
+        }
+    }
+}
+
+impl Tool for SanghaSignalTool {
+    fn name(&self) -> &str {
+        "sangha.signal"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Room
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Broadcast a signal to the Sangha mesh (args: signal_type, source, data)"
+    }
+    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let signal_type_str = args
+            .get("signal_type")
+            .and_then(Value::as_str)
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("signal_type required".into()))?;
+
+        let source = args.get("source").and_then(Value::as_str).unwrap_or("user");
+
+        let data = args.get("data").cloned().unwrap_or_else(|| json!({}));
+
+        let signal_type = parse_signal_type(signal_type_str).ok_or_else(|| {
+            wm_core::CoreError::InvalidArgs(format!("unknown signal type: {signal_type_str}"))
+        })?;
+
+        let signal = Signal::new(signal_type, source, data);
+        let mut broadcast = self.broadcast.lock().unwrap();
+        let delivered = broadcast.broadcast(signal);
+
+        Ok(json!({
+            "status": "success",
+            "delivered": delivered,
+            "signal_type": signal_type_str,
+            "subscription_count": broadcast.subscription_count(),
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+// ── sangha.chat ───────────────────────────────────────────────────────
+
+/// `sangha.chat` — Send a message to a Sangha chat channel.
+pub struct SanghaChatTool {
+    chat: Arc<Mutex<SanghaChat>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SanghaChatTool {
+    pub fn new(chat: Arc<Mutex<SanghaChat>>) -> Self {
+        Self {
+            chat,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sangha".into())]),
+        }
+    }
+}
+
+impl Tool for SanghaChatTool {
+    fn name(&self) -> &str {
+        "sangha.chat"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Room
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Send or read messages in a Sangha chat channel (args: action=send|read, channel, sender, content)"
+    }
+    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let action = args.get("action").and_then(Value::as_str).unwrap_or("read");
+
+        let channel = args
+            .get("channel")
+            .and_then(Value::as_str)
+            .unwrap_or("general");
+
+        let mut chat = self.chat.lock().unwrap();
+
+        match action {
+            "send" => {
+                let sender = args.get("sender").and_then(Value::as_str).ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs("sender required for send".into())
+                })?;
+
+                let content = args.get("content").and_then(Value::as_str).ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs("content required for send".into())
+                })?;
+
+                let msg = chat.send(channel, sender, content);
+                Ok(json!({
+                    "status": "success",
+                    "message_id": msg.id,
+                    "channel": msg.channel,
+                    "sender": msg.sender,
+                    "timestamp": msg.timestamp,
+                }))
+            }
+            "read" => {
+                let after_id = args.get("after_id").and_then(Value::as_u64);
+                let messages = chat.read(channel, after_id);
+                let msgs: Vec<Value> = messages
+                    .iter()
+                    .map(|m| {
+                        json!({
+                            "id": m.id,
+                            "sender": m.sender,
+                            "content": m.content,
+                            "timestamp": m.timestamp,
+                        })
+                    })
+                    .collect();
+
+                Ok(json!({
+                    "status": "success",
+                    "channel": channel,
+                    "message_count": msgs.len(),
+                    "messages": msgs,
+                }))
+            }
+            _ => Err(wm_core::CoreError::InvalidArgs(
+                "action must be 'send' or 'read'".into(),
+            )),
+        }
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+// ── sangha.locks ──────────────────────────────────────────────────────
+
+/// `sangha.locks` — Manage distributed resource locks.
+pub struct SanghaLocksTool {
+    lock_manager: Arc<Mutex<ResourceLockManager>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SanghaLocksTool {
+    pub fn new(lock_manager: Arc<Mutex<ResourceLockManager>>) -> Self {
+        Self {
+            lock_manager,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sangha".into())]),
+        }
+    }
+}
+
+impl Tool for SanghaLocksTool {
+    fn name(&self) -> &str {
+        "sangha.locks"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Room
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Manage distributed resource locks (args: action=acquire|release|list, resource, peer)"
+    }
+    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let action = args
+            .get("action")
+            .and_then(Value::as_str)
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("action required".into()))?;
+
+        let mut lm = self.lock_manager.lock().unwrap();
+
+        match action {
+            "acquire" => {
+                let resource = args
+                    .get("resource")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| wm_core::CoreError::InvalidArgs("resource required".into()))?;
+
+                let peer = args
+                    .get("peer")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| wm_core::CoreError::InvalidArgs("peer required".into()))?;
+
+                let success = lm.acquire(resource, peer);
+                Ok(json!({
+                    "status": if success { "success" } else { "denied" },
+                    "resource": resource,
+                    "peer": peer,
+                    "lock_count": lm.lock_count(),
+                }))
+            }
+            "release" => {
+                let resource = args
+                    .get("resource")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| wm_core::CoreError::InvalidArgs("resource required".into()))?;
+
+                let peer = args
+                    .get("peer")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| wm_core::CoreError::InvalidArgs("peer required".into()))?;
+
+                let success = lm.release(resource, peer);
+                Ok(json!({
+                    "status": if success { "success" } else { "not_found" },
+                    "resource": resource,
+                    "peer": peer,
+                }))
+            }
+            "list" => {
+                let summary = lm.summary();
+                Ok(json!({
+                    "status": "success",
+                    "summary": summary,
+                }))
+            }
+            _ => Err(wm_core::CoreError::InvalidArgs(
+                "action must be 'acquire', 'release', or 'list'".into(),
+            )),
+        }
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+
+fn parse_capability(s: &str) -> PeerCapability {
+    match s {
+        "inference" => PeerCapability::Inference,
+        "memory" => PeerCapability::Memory,
+        "dream" => PeerCapability::Dream,
+        "full" => PeerCapability::Full,
+        _ => PeerCapability::Tool(s.to_string()),
+    }
+}
+
+fn parse_signal_type(s: &str) -> Option<SignalType> {
+    match s {
+        "memory_created" => Some(SignalType::MemoryCreated),
+        "anomaly_detected" => Some(SignalType::AnomalyDetected),
+        "dream_artifact" => Some(SignalType::DreamArtifact),
+        "tool_result" => Some(SignalType::ToolResult),
+        "hologram_update" => Some(SignalType::HologramUpdate),
+        "peer_status" => Some(SignalType::PeerStatus),
+        "custom" => Some(SignalType::Custom),
+        _ => None,
+    }
+}
+
+// ── Registration ──────────────────────────────────────────────────────
+
+/// Register all Sangha tools into a registry.
+#[allow(clippy::needless_pass_by_value)]
+pub fn register_sangha(
+    registry: &wm_dispatch::ToolRegistry,
+    discovery: Arc<Mutex<PeerDiscovery>>,
+    broadcast: Arc<Mutex<SignalBroadcast>>,
+    chat: Arc<Mutex<SanghaChat>>,
+    lock_manager: Arc<Mutex<ResourceLockManager>>,
+) -> wm_dispatch::ToolRegistry {
+    registry
+        .register(Arc::new(SanghaPeersTool::new(discovery.clone())))
+        .register(Arc::new(SanghaDiscoverTool::new(discovery)))
+        .register(Arc::new(SanghaSignalTool::new(broadcast)))
+        .register(Arc::new(SanghaChatTool::new(chat)))
+        .register(Arc::new(SanghaLocksTool::new(lock_manager)))
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_discovery() -> Arc<Mutex<PeerDiscovery>> {
+        Arc::new(Mutex::new(PeerDiscovery::default()))
+    }
+    fn test_broadcast() -> Arc<Mutex<SignalBroadcast>> {
+        Arc::new(Mutex::new(SignalBroadcast::new(100)))
+    }
+    fn test_chat() -> Arc<Mutex<SanghaChat>> {
+        Arc::new(Mutex::new(SanghaChat::new(100)))
+    }
+    fn test_locks() -> Arc<Mutex<ResourceLockManager>> {
+        Arc::new(Mutex::new(ResourceLockManager::default()))
+    }
+    #[test]
+    fn sangha_peers_returns_list() {
+        let discovery = test_discovery();
+        let tool = SanghaPeersTool::new(discovery);
+        let mut ctx = Context::default();
+        let v = tool.call(&mut ctx, json!({})).unwrap();
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["peer_count"], 0);
+    }
+
+    #[test]
+    fn sangha_discover_registers_peer() {
+        let discovery = test_discovery();
+        let tool = SanghaDiscoverTool::new(discovery);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"peer_id": "node-1", "address": "127.0.0.1:8080", "capabilities": ["inference", "memory"]}))
+            .unwrap();
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["peer_count"], 1);
+    }
+
+    #[test]
+    fn sangha_signal_broadcasts() {
+        let broadcast = test_broadcast();
+        let tool = SanghaSignalTool::new(broadcast);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"signal_type": "peer_status", "source": "test", "data": {"status": "ok"}}),
+            )
+            .unwrap();
+        assert_eq!(v["status"], "success");
+        assert!(v["delivered"].is_number());
+    }
+
+    #[test]
+    fn sangha_chat_send_and_read() {
+        let chat = test_chat();
+        let tool = SanghaChatTool::new(chat);
+        let mut ctx = Context::default();
+
+        let send_v = tool
+            .call(&mut ctx, json!({"action": "send", "channel": "general", "sender": "node-1", "content": "hello"}))
+            .unwrap();
+        assert_eq!(send_v["status"], "success");
+
+        let read_v = tool
+            .call(&mut ctx, json!({"action": "read", "channel": "general"}))
+            .unwrap();
+        assert_eq!(read_v["message_count"], 1);
+    }
+
+    #[test]
+    fn sangha_locks_acquire_and_list() {
+        let lm = test_locks();
+        let tool = SanghaLocksTool::new(lm);
+        let mut ctx = Context::default();
+
+        let acq_v = tool
+            .call(
+                &mut ctx,
+                json!({"action": "acquire", "resource": "res:1", "peer": "node-1"}),
+            )
+            .unwrap();
+        assert_eq!(acq_v["status"], "success");
+
+        let list_v = tool.call(&mut ctx, json!({"action": "list"})).unwrap();
+        assert!(list_v["summary"]["active_locks"].is_number());
+    }
+
+    #[test]
+    fn sangha_locks_release() {
+        let lm = test_locks();
+        let tool = SanghaLocksTool::new(lm);
+        let mut ctx = Context::default();
+
+        tool.call(
+            &mut ctx,
+            json!({"action": "acquire", "resource": "res:1", "peer": "node-1"}),
+        )
+        .unwrap();
+
+        let rel_v = tool
+            .call(
+                &mut ctx,
+                json!({"action": "release", "resource": "res:1", "peer": "node-1"}),
+            )
+            .unwrap();
+        assert_eq!(rel_v["status"], "success");
+    }
+
+    #[test]
+    fn sangha_tools_are_room_gana() {
+        assert_eq!(SanghaPeersTool::new(test_discovery()).gana(), Gana::Room);
+        assert_eq!(SanghaSignalTool::new(test_broadcast()).gana(), Gana::Room);
+        assert_eq!(SanghaChatTool::new(test_chat()).gana(), Gana::Room);
+        assert_eq!(SanghaLocksTool::new(test_locks()).gana(), Gana::Room);
+    }
+}

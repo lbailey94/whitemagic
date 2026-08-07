@@ -1,0 +1,25 @@
+/target
+**/*.rs.bk
+*.swp
+*.swo
+*~
+.DS_Store
+.env
+.env.local
+__pycache__/
+*.pyc
+.koka/
+.julia/
+.ghc/
+
+# v2 reference code (not compiled)
+/v2-reference/
+
+# Local data store (LMDB, Tantivy index)
+/.whitemagic/
+
+# Vercel placeholder (deployed separately)
+/vercel-placeholder/
+
+# IDE config
+.windsurf/

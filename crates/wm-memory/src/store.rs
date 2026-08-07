@@ -1,0 +1,1430 @@
+//! LMDB-backed memory store.
+//!
+//! Each galaxy is an LMDB named database (sub-DB within the same file).
+//! Reads are zero-copy (mmap'd). Writes are batched.
+
+use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction, WriteFlags};
+use std::path::Path;
+use wm_core::{CoreError, Galaxy, Result};
+
+use crate::indexes::IndexDbs;
+use crate::memory::{Memory, decode_embedding, encode_embedding};
+use crate::semantic::SemanticEncoder;
+
+/// Query filter for memories.
+#[derive(Debug, Clone, Default)]
+pub struct MemoryQuery {
+    /// Filter by tags (memory must contain ALL specified tags).
+    pub tags: Vec<String>,
+    /// Minimum importance (inclusive).
+    pub min_importance: Option<f32>,
+    /// Maximum importance (inclusive).
+    pub max_importance: Option<f32>,
+    /// Only memories created after this timestamp.
+    pub created_after: Option<chrono::DateTime<chrono::Utc>>,
+    /// Only memories created before this timestamp.
+    pub created_before: Option<chrono::DateTime<chrono::Utc>>,
+    /// Maximum number of results.
+    pub limit: usize,
+}
+
+impl MemoryQuery {
+    /// Create an empty query (matches all, limit 100).
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            limit: 100,
+            ..Default::default()
+        }
+    }
+
+    /// Set tag filter.
+    #[must_use]
+    pub fn with_tags(mut self, tags: Vec<String>) -> Self {
+        self.tags = tags;
+        self
+    }
+
+    /// Set importance range.
+    #[must_use]
+    pub const fn with_importance_range(mut self, min: f32, max: f32) -> Self {
+        self.min_importance = Some(min);
+        self.max_importance = Some(max);
+        self
+    }
+
+    /// Set temporal range.
+    #[must_use]
+    pub const fn with_time_range(
+        mut self,
+        after: chrono::DateTime<chrono::Utc>,
+        before: chrono::DateTime<chrono::Utc>,
+    ) -> Self {
+        self.created_after = Some(after);
+        self.created_before = Some(before);
+        self
+    }
+
+    /// Set limit.
+    #[must_use]
+    pub const fn with_limit(mut self, limit: usize) -> Self {
+        self.limit = limit;
+        self
+    }
+
+    /// Check if a memory matches this query.
+    #[must_use]
+    pub fn matches(&self, mem: &Memory) -> bool {
+        // Tag filter: memory must contain all specified tags
+        if !self.tags.is_empty() {
+            for tag in &self.tags {
+                if !mem.metadata.tags.iter().any(|t| t == tag) {
+                    return false;
+                }
+            }
+        }
+
+        // Importance filter
+        if let Some(min) = self.min_importance {
+            if mem.metadata.importance < min {
+                return false;
+            }
+        }
+        if let Some(max) = self.max_importance {
+            if mem.metadata.importance > max {
+                return false;
+            }
+        }
+
+        // Temporal filter
+        if let Some(after) = self.created_after {
+            if mem.metadata.created_at < after {
+                return false;
+            }
+        }
+        if let Some(before) = self.created_before {
+            if mem.metadata.created_at > before {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+/// The LMDB environment containing all 14 galaxy sub-databases plus 4 index DBs.
+pub struct MemoryStore {
+    /// Path to the LMDB file
+    path: std::path::PathBuf,
+    /// LMDB environment (opened once, shared across threads)
+    env: Environment,
+    /// Cached handles to the 4 secondary index sub-databases
+    index_dbs: IndexDbs,
+    /// Semantic encoder for content-derived coordinates
+    semantic_encoder: SemanticEncoder,
+    /// Optional per-galaxy entry limit (DoS prevention)
+    max_entries_per_galaxy: Option<usize>,
+}
+
+impl MemoryStore {
+    /// Open or create an LMDB store at the given path.
+    pub fn open(path: impl AsRef<Path>, map_size: usize) -> Result<Self> {
+        let path = path.as_ref().to_path_buf();
+        let env = Environment::new()
+            .set_map_size(map_size)
+            .set_max_dbs(32)
+            .open(&path)
+            .map_err(|e| CoreError::Memory(format!("LMDB open failed: {e}")))?;
+
+        // Create all 14 galaxy sub-databases
+        for galaxy in Galaxy::all() {
+            let db = env
+                .create_db(Some(galaxy.db_name()), DatabaseFlags::default())
+                .map_err(|e| {
+                    CoreError::Memory(format!(
+                        "LMDB create_db failed for {}: {e}",
+                        galaxy.db_name()
+                    ))
+                })?;
+            let _ = db;
+        }
+
+        // Create 4 secondary index sub-databases
+        for (name, flags) in crate::indexes::INDEX_DBS {
+            let db = env
+                .create_db(Some(name), *flags)
+                .map_err(|e| CoreError::Memory(format!("LMDB create_db failed for {name}: {e}")))?;
+            let _ = db;
+        }
+
+        let index_dbs = IndexDbs::open(&env)?;
+        Ok(Self {
+            path,
+            env,
+            index_dbs,
+            semantic_encoder: SemanticEncoder::new(),
+            max_entries_per_galaxy: None,
+        })
+    }
+
+    /// Open with default 4GB map size.
+    pub fn open_default(path: impl AsRef<Path>) -> Result<Self> {
+        Self::open(path, 4 * 1024 * 1024 * 1024) // 4 GB
+    }
+
+    /// Set a per-galaxy entry limit for DoS prevention.
+    ///
+    /// When set, `put` will reject writes that would exceed the limit.
+    /// This prevents a single galaxy from exhausting the LMDB map.
+    #[must_use]
+    pub const fn with_entry_limit(mut self, limit: usize) -> Self {
+        self.max_entries_per_galaxy = Some(limit);
+        self
+    }
+
+    /// Path to the LMDB file.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Get the LMDB environment handle.
+    pub const fn env(&self) -> &Environment {
+        &self.env
+    }
+
+    /// Get the cached index database handles.
+    pub const fn index_dbs(&self) -> &IndexDbs {
+        &self.index_dbs
+    }
+
+    /// Get the semantic encoder.
+    pub const fn semantic_encoder(&self) -> &SemanticEncoder {
+        &self.semantic_encoder
+    }
+
+    /// Get a named database handle for a galaxy.
+    pub fn galaxy_db(&self, galaxy: Galaxy) -> Result<Database> {
+        self.env.open_db(Some(galaxy.db_name())).map_err(|e| {
+            CoreError::Memory(format!("LMDB open_db failed for {}: {e}", galaxy.db_name()))
+        })
+    }
+
+    // ── Memory CRUD ───────────────────────────────────────────────────
+
+    /// Store a memory in the given galaxy. Keyed by memory.metadata.id.
+    /// Also updates all secondary indexes.
+    ///
+    /// Returns a clear error if the per-galaxy entry limit is exceeded
+    /// or if the LMDB map is full.
+    pub fn put(&self, galaxy: Galaxy, memory: &Memory) -> Result<()> {
+        // Check per-galaxy entry limit (DoS prevention)
+        if let Some(limit) = self.max_entries_per_galaxy {
+            let current = self.count(galaxy)?;
+            if current >= limit {
+                return Err(CoreError::Memory(format!(
+                    "galaxy {} entry limit reached ({current}/{limit}), write rejected",
+                    galaxy.db_name()
+                )));
+            }
+        }
+
+        let db = self.galaxy_db(galaxy)?;
+        let key = memory.metadata.id.as_bytes();
+        let val = rmp_serde::to_vec(memory)
+            .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
+
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        match tx.put(db, key, &val, lmdb::WriteFlags::default()) {
+            Ok(()) => {}
+            Err(lmdb::Error::MapFull) => {
+                tx.abort();
+                return Err(CoreError::Memory(format!(
+                    "LMDB map full: galaxy {}, consider growing map size or pruning old memories",
+                    galaxy.db_name()
+                )));
+            }
+            Err(e) => {
+                tx.abort();
+                return Err(CoreError::Memory(format!("LMDB put failed: {e}")));
+            }
+        }
+        self.index_dbs.add(&mut tx, galaxy, memory)?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Retrieve a memory by ID from the given galaxy.
+    pub fn get(&self, galaxy: Galaxy, id: uuid::Uuid) -> Result<Option<Memory>> {
+        let db = self.galaxy_db(galaxy)?;
+        let key = id.as_bytes();
+
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let result = tx.get(db, key);
+        match result {
+            Ok(bytes) => {
+                let memory: Memory = rmp_serde::from_slice(bytes)
+                    .map_err(|e| CoreError::Memory(format!("deserialize failed: {e}")))?;
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(Some(memory))
+            }
+            Err(lmdb::Error::NotFound) => {
+                // ReadOnly transactions don't strictly need commit, but it's good practice
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(None)
+            }
+            Err(e) => Err(CoreError::Memory(format!("LMDB get failed: {e}"))),
+        }
+    }
+
+    /// Delete a memory by ID from the given galaxy. Returns true if a key was removed.
+    /// Also removes all secondary index entries for the memory.
+    pub fn delete(&self, galaxy: Galaxy, id: uuid::Uuid) -> Result<bool> {
+        let db = self.galaxy_db(galaxy)?;
+        let key = id.as_bytes();
+
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+
+        // Check if key exists and deserialize for index cleanup
+        let exists = tx.get(db, key).is_ok();
+        if exists {
+            // Read memory to get index values for cleanup
+            if let Ok(bytes) = tx.get(db, key) {
+                if let Ok(memory) = rmp_serde::from_slice::<Memory>(bytes) {
+                    let _ = self.index_dbs.remove(&mut tx, galaxy, &memory);
+                }
+            }
+            tx.del(db, key, None)
+                .map_err(|e| CoreError::Memory(format!("LMDB del failed: {e}")))?;
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(exists)
+    }
+
+    /// Scan up to `limit` memories from the given galaxy (unordered by LMDB page layout).
+    pub fn scan(&self, galaxy: Galaxy, limit: usize) -> Result<Vec<Memory>> {
+        let db = self.galaxy_db(galaxy)?;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+
+        let mut cursor = tx
+            .open_ro_cursor(db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
+
+        let mut memories = Vec::with_capacity(limit.min(256));
+        for (i, (_key, val)) in cursor.iter().enumerate() {
+            if memories.len() >= limit {
+                break;
+            }
+            match rmp_serde::from_slice::<Memory>(val) {
+                Ok(memory) => memories.push(memory),
+                Err(e) => {
+                    tracing::warn!(
+                        "Skipping corrupted entry at index {i} in galaxy {:?}: {e}",
+                        galaxy
+                    );
+                }
+            }
+        }
+
+        drop(cursor);
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(memories)
+    }
+
+    /// Count entries in a galaxy.
+    pub fn count(&self, galaxy: Galaxy) -> Result<usize> {
+        let db = self.galaxy_db(galaxy)?;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let mut cursor = tx
+            .open_ro_cursor(db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
+        let count = cursor.iter().count();
+        drop(cursor);
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(count)
+    }
+
+    /// Clear all memories from a galaxy in a single transaction.
+    /// Returns the number of entries cleared.
+    /// Also removes all secondary index entries.
+    pub fn clear_galaxy(&self, galaxy: Galaxy) -> Result<usize> {
+        let db = self.galaxy_db(galaxy)?;
+
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+
+        let mut cursor = tx
+            .open_ro_cursor(db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
+
+        let mut count = 0usize;
+        let keys_to_delete: Vec<(Vec<u8>, Memory)> = cursor
+            .iter()
+            .filter_map(|(key, val)| {
+                if let Ok(memory) = rmp_serde::from_slice::<Memory>(val) {
+                    Some((key.to_vec(), memory))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        drop(cursor);
+
+        for (key, memory) in &keys_to_delete {
+            let _ = self.index_dbs.remove(&mut tx, galaxy, memory);
+            tx.del(db, &key, None)
+                .map_err(|e| CoreError::Memory(format!("LMDB del failed: {e}")))?;
+            count += 1;
+        }
+
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(count)
+    }
+
+    /// Put multiple memories into a galaxy in a single transaction.
+    /// Returns the number of memories written.
+    pub fn batch_put(&self, galaxy: Galaxy, memories: &[Memory]) -> Result<usize> {
+        if memories.is_empty() {
+            return Ok(0);
+        }
+
+        let db = self.galaxy_db(galaxy)?;
+
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+
+        let mut count = 0usize;
+        for memory in memories {
+            let key = memory.metadata.id.as_bytes();
+            let val = rmp_serde::to_vec(memory)
+                .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
+            match tx.put(db, key, &val, WriteFlags::default()) {
+                Ok(()) => {}
+                Err(lmdb::Error::MapFull) => {
+                    tx.abort();
+                    return Err(CoreError::Memory(format!(
+                        "LMDB map full: galaxy {}, consider growing map size",
+                        galaxy.db_name()
+                    )));
+                }
+                Err(e) => {
+                    tx.abort();
+                    return Err(CoreError::Memory(format!("LMDB put failed: {e}")));
+                }
+            }
+            self.index_dbs.add(&mut tx, galaxy, memory)?;
+            count += 1;
+        }
+
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(count)
+    }
+
+    /// Get raw key-value bytes (for advanced use cases).
+    pub fn get_raw(&self, galaxy: Galaxy, key: &[u8]) -> Result<Option<Vec<u8>>> {
+        let db = self.galaxy_db(galaxy)?;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        match tx.get(db, &key) {
+            Ok(bytes) => {
+                let data = bytes.to_vec();
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(Some(data))
+            }
+            Err(lmdb::Error::NotFound) => {
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(None)
+            }
+            Err(e) => Err(CoreError::Memory(format!("LMDB get_raw failed: {e}"))),
+        }
+    }
+
+    /// Put raw key-value bytes (for advanced use cases).
+    pub fn put_raw(&self, galaxy: Galaxy, key: &[u8], val: &[u8]) -> Result<()> {
+        let db = self.galaxy_db(galaxy)?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        tx.put(db, &key, &val, lmdb::WriteFlags::default())
+            .map_err(|e| CoreError::Memory(format!("LMDB put_raw failed: {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Delete raw key-value bytes (for advanced use cases).
+    /// Returns true if a key was removed.
+    pub fn delete_raw(&self, galaxy: Galaxy, key: &[u8]) -> Result<bool> {
+        let db = self.galaxy_db(galaxy)?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        let deleted = tx.del(db, &key, None).is_ok();
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(deleted)
+    }
+
+    /// Batch multiple raw key-value writes in a single LMDB transaction.
+    /// All writes succeed or fail atomically.
+    pub fn put_raw_batch(&self, galaxy: Galaxy, entries: &[(&[u8], &[u8])]) -> Result<()> {
+        let db = self.galaxy_db(galaxy)?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        for (key, val) in entries {
+            tx.put(db, key, val, WriteFlags::default())
+                .map_err(|e| CoreError::Memory(format!("LMDB put_raw_batch failed: {e}")))?;
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(())
+    }
+
+    // ── Content-hash Deduplication ────────────────────────────────────
+
+    /// Check if a memory with the same content hash already exists in the galaxy.
+    /// Uses the content_hash index for O(1) lookup.
+    /// Returns the existing memory's ID if found.
+    pub fn find_by_content_hash(&self, galaxy: Galaxy, hash: &str) -> Result<Option<uuid::Uuid>> {
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let result = self.index_dbs.find_by_content_hash(&tx, galaxy, hash)?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(result)
+    }
+
+    /// Scan-based content hash lookup (O(n) fallback, used for testing index correctness).
+    pub fn find_by_content_hash_scan(
+        &self,
+        galaxy: Galaxy,
+        hash: &str,
+    ) -> Result<Option<uuid::Uuid>> {
+        let memories = self.scan(galaxy, 10_000)?;
+        for mem in memories {
+            if mem.metadata.content_hash == hash {
+                return Ok(Some(mem.metadata.id));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Store a memory with content-hash deduplication.
+    /// If a memory with the same content already exists in the galaxy,
+    /// returns the existing memory's ID without creating a duplicate.
+    pub fn put_dedup(&self, galaxy: Galaxy, memory: &Memory) -> Result<uuid::Uuid> {
+        if let Some(existing_id) =
+            self.find_by_content_hash(galaxy, &memory.metadata.content_hash)?
+        {
+            return Ok(existing_id);
+        }
+        let id = memory.metadata.id;
+        self.put(galaxy, memory)?;
+        Ok(id)
+    }
+
+    // ── Write Batching ─────────────────────────────────────────────────
+
+    /// Store multiple memories in a single LMDB transaction (batch write).
+    /// All writes and index updates succeed or fail atomically.
+    pub fn put_batch(&self, galaxy: Galaxy, memories: &[Memory]) -> Result<()> {
+        let db = self.galaxy_db(galaxy)?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+
+        for memory in memories {
+            let key = memory.metadata.id.as_bytes();
+            let val = rmp_serde::to_vec(memory)
+                .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
+            tx.put(db, key, &val, WriteFlags::default())
+                .map_err(|e| CoreError::Memory(format!("LMDB put_batch failed: {e}")))?;
+            self.index_dbs.add(&mut tx, galaxy, memory)?;
+        }
+
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(())
+    }
+
+    // ── Query API ──────────────────────────────────────────────────────
+
+    /// Query memories in a galaxy with filtering.
+    /// Uses secondary indexes when the query is a pure single-dimension filter
+    /// (single tag, importance range, or time range with no other filters).
+    /// Falls back to scan for complex multi-dimensional queries.
+    pub fn query(&self, galaxy: Galaxy, query: &MemoryQuery) -> Result<Vec<Memory>> {
+        // Try indexed fast paths for single-dimension queries
+        if query.tags.len() == 1
+            && query.min_importance.is_none()
+            && query.max_importance.is_none()
+            && query.created_after.is_none()
+            && query.created_before.is_none()
+        {
+            return self.query_by_tag_indexed(galaxy, &query.tags[0], query.limit);
+        }
+
+        if query.tags.is_empty()
+            && let Some(min) = query.min_importance
+            && let Some(max) = query.max_importance
+            && query.created_after.is_none()
+            && query.created_before.is_none()
+        {
+            return self.query_by_importance_indexed(galaxy, min, max, query.limit);
+        }
+
+        if query.tags.is_empty()
+            && query.min_importance.is_none()
+            && query.max_importance.is_none()
+            && let Some(after) = query.created_after
+            && let Some(before) = query.created_before
+        {
+            return self.query_by_time_indexed(galaxy, after, before, query.limit);
+        }
+
+        // Fallback: full scan with in-memory filter
+        let memories = self.scan(galaxy, 10_000)?;
+        let mut results = Vec::new();
+        for mem in memories {
+            if query.matches(&mem) {
+                results.push(mem);
+                if results.len() >= query.limit {
+                    break;
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    /// Tag-based indexed query → memories with the given tag.
+    fn query_by_tag_indexed(&self, galaxy: Galaxy, tag: &str, limit: usize) -> Result<Vec<Memory>> {
+        let db = self.galaxy_db(galaxy)?;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let ids = self.index_dbs.find_by_tag(&tx, galaxy, tag)?;
+        let mut results = Vec::new();
+        for id in &ids {
+            if results.len() >= limit {
+                break;
+            }
+            if let Ok(bytes) = tx.get(db, id.as_bytes()) {
+                if let Ok(mem) = rmp_serde::from_slice::<Memory>(bytes) {
+                    results.push(mem);
+                }
+            }
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(results)
+    }
+
+    /// Importance-range indexed query → memories with importance in [min, max].
+    fn query_by_importance_indexed(
+        &self,
+        galaxy: Galaxy,
+        min: f32,
+        max: f32,
+        limit: usize,
+    ) -> Result<Vec<Memory>> {
+        let db = self.galaxy_db(galaxy)?;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let ids = self
+            .index_dbs
+            .find_by_importance_range(&tx, galaxy, min, max)?;
+        let mut results = Vec::new();
+        for id in &ids {
+            if results.len() >= limit {
+                break;
+            }
+            if let Ok(bytes) = tx.get(db, id.as_bytes()) {
+                if let Ok(mem) = rmp_serde::from_slice::<Memory>(bytes) {
+                    results.push(mem);
+                }
+            }
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(results)
+    }
+
+    /// Time-range indexed query → memories created in [after, before].
+    fn query_by_time_indexed(
+        &self,
+        galaxy: Galaxy,
+        after: chrono::DateTime<chrono::Utc>,
+        before: chrono::DateTime<chrono::Utc>,
+        limit: usize,
+    ) -> Result<Vec<Memory>> {
+        let db = self.galaxy_db(galaxy)?;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let ids = self
+            .index_dbs
+            .find_by_time_range(&tx, galaxy, after, before)?;
+        let mut results = Vec::new();
+        for id in &ids {
+            if results.len() >= limit {
+                break;
+            }
+            if let Ok(bytes) = tx.get(db, id.as_bytes()) {
+                if let Ok(mem) = rmp_serde::from_slice::<Memory>(bytes) {
+                    results.push(mem);
+                }
+            }
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(results)
+    }
+
+    // ── Semantic Coordinate Encoding ─────────────────────────────────────
+
+    /// Store a memory with semantically-derived 5D coordinates.
+    ///
+    /// Replaces the SHA-256 hash-based `Coordinate5D::encode()` with
+    /// anchor-based TF projection. The memory's `coord5d` field is updated
+    /// with semantically meaningful x/y/z values before storage.
+    pub fn put_semantic(&self, galaxy: Galaxy, memory: &mut Memory) -> Result<()> {
+        let temporal_weight = memory.metadata.coord5d.w;
+        let importance = memory.metadata.importance;
+        memory.metadata.coord5d =
+            self.semantic_encoder
+                .encode_coordinate(&memory.content, temporal_weight, importance);
+        self.put(galaxy, memory)
+    }
+
+    /// Find memories in a galaxy with content semantically similar to the query text.
+    ///
+    /// Encodes the query text into a 5D coordinate and scans the galaxy,
+    /// returning memories sorted by semantic distance (nearest first).
+    pub fn find_similar(
+        &self,
+        galaxy: Galaxy,
+        query_text: &str,
+        limit: usize,
+    ) -> Result<Vec<(Memory, f32)>> {
+        let query_coord = self
+            .semantic_encoder
+            .encode_coordinate(query_text, 0.5, 0.5);
+        let memories = self.scan(galaxy, 10_000)?;
+        let mut results: Vec<(Memory, f32)> = memories
+            .into_iter()
+            .map(|m| {
+                let dist = query_coord.semantic_distance_to(&m.metadata.coord5d);
+                (m, dist)
+            })
+            .collect();
+        results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        results.truncate(limit);
+        Ok(results)
+    }
+
+    // ── Embedding Storage ──────────────────────────────────────────────
+
+    /// Store an embedding vector for a memory in the Embeddings galaxy.
+    /// Keyed by the memory's UUID.
+    pub fn put_embedding(&self, memory_id: uuid::Uuid, embedding: &[f32]) -> Result<()> {
+        let db = self.galaxy_db(Galaxy::Embeddings)?;
+        let key = memory_id.as_bytes();
+        let val = encode_embedding(embedding);
+
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        tx.put(db, key, &val, WriteFlags::default())
+            .map_err(|e| CoreError::Memory(format!("LMDB put_embedding failed: {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Retrieve an embedding vector for a memory from the Embeddings galaxy.
+    pub fn get_embedding(&self, memory_id: uuid::Uuid) -> Result<Option<Vec<f32>>> {
+        let db = self.galaxy_db(Galaxy::Embeddings)?;
+        let key = memory_id.as_bytes();
+
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        match tx.get(db, key) {
+            Ok(bytes) => {
+                let embedding = decode_embedding(bytes);
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(Some(embedding))
+            }
+            Err(lmdb::Error::NotFound) => {
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(None)
+            }
+            Err(e) => Err(CoreError::Memory(format!("LMDB get_embedding failed: {e}"))),
+        }
+    }
+
+    /// Delete an embedding vector from the Embeddings galaxy.
+    pub fn delete_embedding(&self, memory_id: uuid::Uuid) -> Result<bool> {
+        let db = self.galaxy_db(Galaxy::Embeddings)?;
+        let key = memory_id.as_bytes();
+
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        let exists = tx.get(db, key).is_ok();
+        if exists {
+            tx.del(db, key, None)
+                .map_err(|e| CoreError::Memory(format!("LMDB del_embedding failed: {e}")))?;
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(exists)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::content_hash;
+
+    #[test]
+    fn open_and_create_galaxies() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        for galaxy in Galaxy::all() {
+            let _db = store.galaxy_db(galaxy).unwrap();
+        }
+    }
+
+    #[test]
+    fn put_get_delete_memory() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem = Memory::new(Galaxy::Codex, "Hello world".to_string());
+        let id = mem.metadata.id;
+
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let retrieved = store.get(Galaxy::Codex, id).unwrap();
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().content, "Hello world");
+
+        let deleted = store.delete(Galaxy::Codex, id).unwrap();
+        assert!(deleted);
+
+        let gone = store.get(Galaxy::Codex, id).unwrap();
+        assert!(gone.is_none());
+    }
+
+    #[test]
+    fn scan_memories() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        for i in 0..5 {
+            let mem = Memory::new(Galaxy::Codex, format!("memory-{i}"));
+            store.put(Galaxy::Codex, &mem).unwrap();
+        }
+
+        let all = store.scan(Galaxy::Codex, 100).unwrap();
+        assert_eq!(all.len(), 5);
+
+        let limited = store.scan(Galaxy::Codex, 3).unwrap();
+        assert_eq!(limited.len(), 3);
+    }
+
+    #[test]
+    fn count_memories() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 0);
+
+        for i in 0..3 {
+            let mem = Memory::new(Galaxy::Codex, format!("count-{i}"));
+            store.put(Galaxy::Codex, &mem).unwrap();
+        }
+
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 3);
+    }
+
+    #[test]
+    fn get_nonexistent_returns_none() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let result = store.get(Galaxy::Codex, uuid::Uuid::new_v4()).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn raw_put_get() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        store
+            .put_raw(Galaxy::Substrate, b"config:key", b"value123")
+            .unwrap();
+        let val = store.get_raw(Galaxy::Substrate, b"config:key").unwrap();
+        assert_eq!(val, Some(b"value123".to_vec()));
+    }
+
+    #[test]
+    fn put_dedup_prevents_duplicates() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem1 = Memory::new(Galaxy::Codex, "duplicate content".into());
+        let id1 = store.put_dedup(Galaxy::Codex, &mem1).unwrap();
+
+        let mem2 = Memory::new(Galaxy::Codex, "duplicate content".into());
+        let id2 = store.put_dedup(Galaxy::Codex, &mem2).unwrap();
+
+        assert_eq!(id1, id2, "dedup should return same ID for same content");
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 1);
+    }
+
+    #[test]
+    fn put_dedup_allows_different_content() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem1 = Memory::new(Galaxy::Codex, "content A".into());
+        store.put_dedup(Galaxy::Codex, &mem1).unwrap();
+
+        let mem2 = Memory::new(Galaxy::Codex, "content B".into());
+        store.put_dedup(Galaxy::Codex, &mem2).unwrap();
+
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 2);
+    }
+
+    #[test]
+    fn put_batch_atomic_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let memories: Vec<Memory> = (0..10)
+            .map(|i| Memory::new(Galaxy::Codex, format!("batch-{i}")))
+            .collect();
+
+        store.put_batch(Galaxy::Codex, &memories).unwrap();
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 10);
+    }
+
+    #[test]
+    fn query_by_tags() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem1 = Memory::new(Galaxy::Codex, "tagged memory".into())
+            .with_tags(vec!["rust".into(), "memory".into()]);
+        let mem2 =
+            Memory::new(Galaxy::Codex, "other memory".into()).with_tags(vec!["python".into()]);
+        store.put(Galaxy::Codex, &mem1).unwrap();
+        store.put(Galaxy::Codex, &mem2).unwrap();
+
+        let query = MemoryQuery::new().with_tags(vec!["rust".into()]);
+        let results = store.query(Galaxy::Codex, &query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "tagged memory");
+    }
+
+    #[test]
+    fn query_by_importance_range() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        store
+            .put(
+                Galaxy::Codex,
+                &Memory::new(Galaxy::Codex, "low".into()).with_importance(0.1),
+            )
+            .unwrap();
+        store
+            .put(
+                Galaxy::Codex,
+                &Memory::new(Galaxy::Codex, "mid".into()).with_importance(0.5),
+            )
+            .unwrap();
+        store
+            .put(
+                Galaxy::Codex,
+                &Memory::new(Galaxy::Codex, "high".into()).with_importance(0.9),
+            )
+            .unwrap();
+
+        let query = MemoryQuery::new().with_importance_range(0.4, 0.6);
+        let results = store.query(Galaxy::Codex, &query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "mid");
+    }
+
+    #[test]
+    fn embedding_put_get_delete() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let id = uuid::Uuid::new_v4();
+        let embedding = vec![0.1, 0.2, 0.3, 0.4, 0.5];
+
+        store.put_embedding(id, &embedding).unwrap();
+        let retrieved = store.get_embedding(id).unwrap();
+        assert!(retrieved.is_some());
+        let retrieved = retrieved.unwrap();
+        assert_eq!(retrieved.len(), 5);
+        assert!((retrieved[0] - 0.1).abs() < f32::EPSILON);
+
+        assert!(store.delete_embedding(id).unwrap());
+        assert!(store.get_embedding(id).unwrap().is_none());
+    }
+
+    #[test]
+    fn content_hash_is_sha256() {
+        let hash1 = content_hash("test content");
+        let hash2 = content_hash("test content");
+        let hash3 = content_hash("different content");
+
+        assert_eq!(hash1, hash2, "same content should produce same hash");
+        assert_ne!(
+            hash1, hash3,
+            "different content should produce different hash"
+        );
+        assert_eq!(hash1.len(), 64, "SHA-256 hex should be 64 chars");
+    }
+
+    #[test]
+    fn query_by_tag_uses_index() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem1 = Memory::new(Galaxy::Codex, "tagged".into())
+            .with_tags(vec!["rust".into(), "memory".into()]);
+        let mem2 = Memory::new(Galaxy::Codex, "other".into()).with_tags(vec!["python".into()]);
+        store.put(Galaxy::Codex, &mem1).unwrap();
+        store.put(Galaxy::Codex, &mem2).unwrap();
+
+        let query = MemoryQuery::new().with_tags(vec!["rust".into()]);
+        let results = store.query(Galaxy::Codex, &query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "tagged");
+    }
+
+    #[test]
+    fn query_by_importance_uses_index() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        store
+            .put(
+                Galaxy::Codex,
+                &Memory::new(Galaxy::Codex, "low".into()).with_importance(0.1),
+            )
+            .unwrap();
+        store
+            .put(
+                Galaxy::Codex,
+                &Memory::new(Galaxy::Codex, "mid".into()).with_importance(0.5),
+            )
+            .unwrap();
+        store
+            .put(
+                Galaxy::Codex,
+                &Memory::new(Galaxy::Codex, "high".into()).with_importance(0.9),
+            )
+            .unwrap();
+
+        let query = MemoryQuery::new().with_importance_range(0.4, 0.6);
+        let results = store.query(Galaxy::Codex, &query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "mid");
+    }
+
+    #[test]
+    fn query_by_time_uses_index() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let t0 = chrono::Utc::now();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let mem = Memory::new(Galaxy::Codex, "timed".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        let t2 = chrono::Utc::now();
+
+        let query = MemoryQuery::new().with_time_range(t0, t2);
+        let results = store.query(Galaxy::Codex, &query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "timed");
+    }
+
+    #[test]
+    fn delete_removes_index_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem = Memory::new(Galaxy::Codex, "test".into())
+            .with_tags(vec!["tag1".into()])
+            .with_importance(0.7);
+        let id = mem.metadata.id;
+        let hash = mem.metadata.content_hash.clone();
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        // Verify index entries exist
+        assert!(
+            store
+                .find_by_content_hash(Galaxy::Codex, &hash)
+                .unwrap()
+                .is_some()
+        );
+
+        // Delete
+        store.delete(Galaxy::Codex, id).unwrap();
+
+        // Verify index entries are gone
+        assert!(
+            store
+                .find_by_content_hash(Galaxy::Codex, &hash)
+                .unwrap()
+                .is_none()
+        );
+
+        // Tag query should return 0
+        let query = MemoryQuery::new().with_tags(vec!["tag1".into()]);
+        let results = store.query(Galaxy::Codex, &query).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn put_batch_updates_indexes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let memories: Vec<Memory> = (0..5)
+            .map(|i| {
+                Memory::new(Galaxy::Codex, format!("batch-{i}"))
+                    .with_tags(vec![format!("tag{i}")])
+                    .with_importance(i as f32 * 0.2)
+            })
+            .collect();
+        store.put_batch(Galaxy::Codex, &memories).unwrap();
+
+        for i in 0..5 {
+            let query = MemoryQuery::new().with_tags(vec![format!("tag{i}")]);
+            let results = store.query(Galaxy::Codex, &query).unwrap();
+            assert_eq!(results.len(), 1, "tag{i} should have 1 result");
+        }
+    }
+
+    #[test]
+    fn find_by_content_hash_indexed_matches_scan() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem = Memory::new(Galaxy::Codex, "dedup test".into());
+        let id = mem.metadata.id;
+        let hash = mem.metadata.content_hash.clone();
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let indexed = store.find_by_content_hash(Galaxy::Codex, &hash).unwrap();
+        let scanned = store
+            .find_by_content_hash_scan(Galaxy::Codex, &hash)
+            .unwrap();
+
+        assert_eq!(indexed, scanned);
+        assert_eq!(indexed, Some(id));
+    }
+
+    #[test]
+    fn put_dedup_uses_index() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mem1 = Memory::new(Galaxy::Codex, "duplicate content".into());
+        let id1 = store.put_dedup(Galaxy::Codex, &mem1).unwrap();
+
+        let mem2 = Memory::new(Galaxy::Codex, "duplicate content".into());
+        let id2 = store.put_dedup(Galaxy::Codex, &mem2).unwrap();
+
+        assert_eq!(id1, id2, "dedup should return same ID for same content");
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 1);
+    }
+
+    #[test]
+    fn put_semantic_updates_coord5d() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mut mem = Memory::new(
+            Galaxy::Codex,
+            "The algorithm computes data using a systematic method".to_string(),
+        );
+        let original_coord = mem.metadata.coord5d.clone();
+        store.put_semantic(Galaxy::Codex, &mut mem).unwrap();
+
+        // coord5d should have changed from the SHA-256 hash-based encoding
+        assert_ne!(
+            mem.metadata.coord5d.x, original_coord.x,
+            "semantic encoding should change x"
+        );
+        assert_ne!(
+            mem.metadata.coord5d.y, original_coord.y,
+            "semantic encoding should change y"
+        );
+
+        // Verify it was stored with the semantic coordinate
+        let retrieved = store.get(Galaxy::Codex, mem.metadata.id).unwrap().unwrap();
+        assert_eq!(retrieved.metadata.coord5d.x, mem.metadata.coord5d.x);
+    }
+
+    #[test]
+    fn put_semantic_preserves_temporal_and_importance() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mut mem = Memory::new(Galaxy::Codex, "test content".into()).with_importance(0.8);
+        mem.metadata.coord5d.w = 0.6;
+        store.put_semantic(Galaxy::Codex, &mut mem).unwrap();
+
+        assert!((mem.metadata.coord5d.w - 0.6).abs() < f32::EPSILON);
+        assert!((mem.metadata.coord5d.v - 0.8).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn find_similar_returns_nearest_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let mut logic_mem = Memory::new(
+            Galaxy::Codex,
+            "The algorithm computes data using systematic logic and analysis".to_string(),
+        );
+        store.put_semantic(Galaxy::Codex, &mut logic_mem).unwrap();
+
+        let mut emotion_mem = Memory::new(
+            Galaxy::Codex,
+            "I feel love and joy with deep passion and empathy in my heart".to_string(),
+        );
+        store.put_semantic(Galaxy::Codex, &mut emotion_mem).unwrap();
+
+        // Query with logic-like text should find the logic memory first
+        let results = store
+            .find_similar(Galaxy::Codex, "algorithm data systematic method", 10)
+            .unwrap();
+        assert!(!results.is_empty());
+        assert_eq!(results[0].0.metadata.id, logic_mem.metadata.id);
+
+        // Query with emotion-like text should find the emotion memory first
+        let results = store
+            .find_similar(Galaxy::Codex, "love joy passion heart feeling", 10)
+            .unwrap();
+        assert!(!results.is_empty());
+        assert_eq!(results[0].0.metadata.id, emotion_mem.metadata.id);
+    }
+
+    #[test]
+    fn find_similar_empty_galaxy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let results = store.find_similar(Galaxy::Codex, "anything", 10).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn find_similar_respects_limit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        for i in 0..5 {
+            let mut mem = Memory::new(Galaxy::Codex, format!("algorithm data method {i}"));
+            store.put_semantic(Galaxy::Codex, &mut mem).unwrap();
+        }
+
+        let results = store
+            .find_similar(Galaxy::Codex, "algorithm data", 3)
+            .unwrap();
+        assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn semantic_encoder_accessible() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let scores = store.semantic_encoder().encode("algorithm data logic");
+        // Logic-heavy text → x < 0.5
+        assert!(scores.x < 0.5);
+    }
+
+    #[test]
+    fn put_raw_batch_writes_atomically() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let entries: &[(&[u8], &[u8])] =
+            &[(b"key1", b"val1"), (b"key2", b"val2"), (b"key3", b"val3")];
+        store.put_raw_batch(Galaxy::Karma, entries).unwrap();
+
+        assert_eq!(
+            store.get_raw(Galaxy::Karma, b"key1").unwrap().unwrap(),
+            b"val1"
+        );
+        assert_eq!(
+            store.get_raw(Galaxy::Karma, b"key2").unwrap().unwrap(),
+            b"val2"
+        );
+        assert_eq!(
+            store.get_raw(Galaxy::Karma, b"key3").unwrap().unwrap(),
+            b"val3"
+        );
+    }
+
+    #[test]
+    fn put_raw_batch_empty_is_noop() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        store.put_raw_batch(Galaxy::Karma, &[]).unwrap();
+        assert_eq!(store.count(Galaxy::Karma).unwrap(), 0);
+    }
+
+    #[test]
+    fn entry_limit_rejects_excess_writes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path())
+            .unwrap()
+            .with_entry_limit(3);
+
+        for i in 0..3 {
+            let mem = Memory::new(Galaxy::Codex, format!("memory {i}"));
+            store.put(Galaxy::Codex, &mem).unwrap();
+        }
+
+        // 4th write should be rejected
+        let mem = Memory::new(Galaxy::Codex, "overflow memory".to_string());
+        let result = store.put(Galaxy::Codex, &mem);
+        assert!(result.is_err(), "write beyond limit should be rejected");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("entry limit reached"),
+            "error should mention entry limit: {err_msg}"
+        );
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 3);
+    }
+
+    #[test]
+    fn entry_limit_per_galaxy_independent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path())
+            .unwrap()
+            .with_entry_limit(2);
+
+        // Fill Codex to limit
+        for i in 0..2 {
+            let mem = Memory::new(Galaxy::Codex, format!("codex {i}"));
+            store.put(Galaxy::Codex, &mem).unwrap();
+        }
+
+        // Writing to a different galaxy should still work
+        let mem = Memory::new(Galaxy::Research, "science memory".to_string());
+        let result = store.put(Galaxy::Research, &mem);
+        assert!(
+            result.is_ok(),
+            "different galaxy should not be affected by limit"
+        );
+    }
+
+    #[test]
+    fn entry_limit_none_allows_unlimited() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        // No limit set — should allow many writes
+        for i in 0..50 {
+            let mem = Memory::new(Galaxy::Codex, format!("memory {i}"));
+            store.put(Galaxy::Codex, &mem).unwrap();
+        }
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 50);
+    }
+
+    #[test]
+    fn map_full_error_is_graceful() {
+        // Use a very small map size to trigger MapFull
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open(tmp.path(), 64 * 1024).unwrap(); // 64KB
+
+        // Write memories until map is full
+        let mut written = 0;
+        let mut got_map_full = false;
+        for i in 0..1000 {
+            let mem = Memory::new(
+                Galaxy::Codex,
+                format!("memory content {i} {}", "with padding ".repeat(50)),
+            );
+            match store.put(Galaxy::Codex, &mem) {
+                Ok(()) => written += 1,
+                Err(e) => {
+                    let msg = e.to_string();
+                    if msg.contains("map full") {
+                        got_map_full = true;
+                        break;
+                    }
+                    // Other errors are fine too (e.g., serialize failed)
+                    break;
+                }
+            }
+        }
+
+        assert!(
+            got_map_full || written < 1000,
+            "should eventually hit map full or error"
+        );
+        assert!(written > 0, "should have written at least some memories");
+    }
+}

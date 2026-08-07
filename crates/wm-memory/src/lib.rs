@@ -1,0 +1,57 @@
+//! `WhiteMagic` v4 Memory — LMDB + Tantivy + `LanceDB`
+//!
+//! Replaces the v2 `SQLite` + FTS5 + Python HNSW stack with:
+//! - LMDB for key-value storage (mmap'd, zero-copy reads)
+//! - Tantivy for full-text search (Rust, Lucene-class performance)
+//! - `LanceDB` for vector similarity search (disk-based HNSW)
+
+#![forbid(unsafe_code)]
+
+pub mod associations;
+pub mod conversational;
+pub mod embedder;
+pub mod galaxy_registry;
+pub mod indexes;
+pub mod lifecycle;
+pub mod mandala;
+pub mod memory;
+pub mod predictive_cache;
+pub mod recall;
+pub mod recovery;
+pub mod search;
+pub mod semantic;
+pub mod store;
+pub mod validator;
+pub mod vector;
+
+pub use associations::{Association, AssociationStore, LinkType};
+pub use conversational::{
+    ConversationalConfig, ConversationalResult, ConversationalSearch, QueryClassification,
+    SearchMetrics,
+};
+#[cfg(feature = "onnx")]
+pub use embedder::OrtEmbedder;
+pub use embedder::{Embedder, EmbedderConfig, HttpEmbedder, StubEmbedder, create_embedder};
+pub use galaxy_registry::{GalaxyMetadata, GalaxyRegistry};
+pub use lifecycle::{ConsolidationResult, ForgettingResult, Lifecycle, LifecycleConfig};
+pub use mandala::{Compartment, CompartmentConfig, MandalaLevel, MandalaManager};
+pub use memory::{
+    Memory, MemoryId, MemoryMetadata, MemoryType, content_hash, decode_embedding, encode_embedding,
+};
+pub use predictive_cache::{CacheStats, PredictiveCache};
+pub use recall::{RecallConfig, RecallEngine, RecallResult};
+pub use recovery::{
+    GalaxyIntegrity, IntegrityReport, QuarantineEntry, RecoveryStrategy, RepairReport,
+    check_integrity, grow_map_size, open_with_recovery, repair,
+};
+pub use search::{SearchEngine, SearchResult};
+pub use semantic::{SemanticEncoder, SemanticScores};
+pub use store::MemoryQuery;
+pub use store::MemoryStore;
+pub use validator::{MemoryValidator, ValidationVerdict, ValidatorConfig, detect_injection};
+pub use vector::{VectorSearchEngine, VectorSearchResult, VectorStore};
+
+#[cfg(feature = "lancedb")]
+pub mod lance_vector;
+#[cfg(feature = "lancedb")]
+pub use lance_vector::LanceVectorStore;

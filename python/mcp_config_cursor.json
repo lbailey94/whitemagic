@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "whitemagic-v4": {
+      "command": "python",
+      "args": [
+        "/path/to/whitemagic-v4/python/whitemagic_v4_server.py",
+        "--store",
+        "/path/to/whitemagic-v4/.whitemagic/lmdb"
+      ],
+      "env": {
+        "WM_LOG_LEVEL": "info"
+      }
+    }
+  }
+}

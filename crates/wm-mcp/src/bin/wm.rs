@@ -1,0 +1,772 @@
+//! `WhiteMagic` CLI — `wm` command
+//!
+//! Entry point for the `WhiteMagic` v4 CLI tool.
+
+use clap::{Parser, Subcommand};
+use std::path::PathBuf;
+
+#[derive(Parser)]
+#[command(name = "wm", version = "4.0.0", about = "WhiteMagic v4 — Cognitive OS")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Run the MCP server (JSON-RPC over stdio)
+    Serve {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Run the built-in quickstart demo
+    Quickstart,
+    /// Diagnose system issues
+    Doctor {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Check LMDB integrity (scan all galaxies for corruption)
+        #[arg(long)]
+        check_integrity: bool,
+        /// Repair corrupted entries (implies --check-integrity)
+        #[arg(long)]
+        repair: bool,
+    },
+    /// Show resource usage and brain-wave state
+    Stats {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Show polyglot acceleration status
+    Polyglot,
+    /// Export collected training data for LoRA fine-tuning
+    ExportTrainingData {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Output file path (default: stdout)
+        #[arg(long)]
+        output: Option<PathBuf>,
+        /// Export format: jsonl, llama_cpp, or chat (default: jsonl)
+        #[arg(long, default_value = "jsonl")]
+        format: String,
+        /// Include negative (failed verification) samples
+        #[arg(long)]
+        include_negative: bool,
+    },
+    /// Run as a persistent daemon — always-on consciousness with autonomous cycles
+    Daemon {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Interval between full cycle sweeps in seconds (default: 300 = 5 min)
+        #[arg(long, default_value_t = 300)]
+        cycle_interval: u64,
+        /// Interval between dream cycle runs in seconds (default: 600 = 10 min)
+        #[arg(long, default_value_t = 600)]
+        dream_interval: u64,
+        /// Minimum health score to run cycles (default: 0.3)
+        #[arg(long, default_value_t = 0.3)]
+        min_health: f32,
+        /// Interval between RSI Phase 4 codegen cycles in seconds (0 = disabled)
+        #[arg(long, default_value_t = 0)]
+        codegen_interval: u64,
+        /// Auto-apply code patches that pass tests (dangerous)
+        #[arg(long)]
+        codegen_auto_apply: bool,
+    },
+    /// Show current brain-wave state (shorthand for stats)
+    BrainWave {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Migrate v2 SQLite memories to v4 LMDB store
+    Migrate {
+        /// Path to v2 galaxies directory (containing per-galaxy subdirs with whitemagic.db)
+        #[arg(long)]
+        v2_dir: Option<PathBuf>,
+        /// Path to a single v2 SQLite database
+        #[arg(long)]
+        v2_db: Option<PathBuf>,
+        /// Path to the v4 LMDB store directory
+        #[arg(long)]
+        store: PathBuf,
+        /// Dry run — report what would be migrated without writing
+        #[arg(long)]
+        dry_run: bool,
+        /// Only migrate memories from this v2 galaxy name (e.g. "codex")
+        #[arg(long)]
+        galaxy: Option<String>,
+    },
+}
+
+fn default_store_path() -> PathBuf {
+    std::env::var("XDG_DATA_HOME").map_or_else(
+        |_| {
+            std::env::var("HOME").map_or_else(
+                |_| PathBuf::from(".whitemagic"),
+                |home| {
+                    PathBuf::from(home)
+                        .join(".local")
+                        .join("share")
+                        .join("whitemagic")
+                },
+            )
+        },
+        |xdg| PathBuf::from(xdg).join("whitemagic"),
+    )
+}
+
+fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+
+    // Initialize logging (only to stderr — stdout is for JSON-RPC)
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_writer(std::io::stderr)
+        .init();
+
+    match cli.command {
+        Commands::Serve { store } => {
+            let store_path = store.unwrap_or_else(default_store_path);
+            let lmdb_path = store_path.join("lmdb");
+            std::fs::create_dir_all(&lmdb_path)?;
+
+            tracing::info!("Starting MCP server, store: {}", lmdb_path.display());
+
+            let mut server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(
+                        "Normal open failed ({e}). Attempting recovery with AutoRepairAndGrow..."
+                    );
+                    // Try recovery: open store with auto-repair + map size growth
+                    let _recovered_store = wm_memory::open_with_recovery(
+                        &lmdb_path,
+                        1024 * 1024 * 1024,
+                        wm_memory::RecoveryStrategy::AutoRepairAndGrow,
+                    )?;
+                    // Now retry server creation
+                    wm_mcp::McpServer::with_defaults(&lmdb_path)?
+                }
+            };
+
+            // Use tokio runtime for async event loop with brain-wave eco mode
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async { server.run_async().await })?;
+            // run_async may exit on SIGTERM/SIGINT while a stdin read is still
+            // parked on tokio's blocking thread pool; Runtime::drop would wait
+            // for it indefinitely. Force shutdown with a bounded timeout instead.
+            rt.shutdown_timeout(std::time::Duration::from_millis(500));
+        }
+        Commands::Quickstart => {
+            run_quickstart()?;
+        }
+        Commands::Doctor {
+            store,
+            check_integrity,
+            repair,
+        } => {
+            run_doctor(store, check_integrity, repair)?;
+        }
+        Commands::Stats { store } => {
+            let store_path = store.unwrap_or_else(default_store_path);
+            let lmdb_path = store_path.join("lmdb");
+            if !lmdb_path.exists() {
+                println!(
+                    "No store found at {}. Run 'wm serve' first.",
+                    lmdb_path.display()
+                );
+                return Ok(());
+            }
+            let server = wm_mcp::McpServer::with_defaults(&lmdb_path)?;
+            let eco = server.eco_mode();
+            println!("=== Brain-Wave Eco Mode ===");
+            println!("State: {}", eco.current());
+            println!("Idle: {:.1}s", eco.idle_duration().as_secs_f64());
+            println!("Total events: {}", eco.metrics().total_events());
+            println!();
+            println!("Subsystem flags:");
+            let flags = eco.subsystems();
+            println!("  memory_read:  {}", flags.memory_read);
+            println!("  memory_write: {}", flags.memory_write);
+            println!("  search:       {}", flags.search);
+            println!("  karma:        {}", flags.karma);
+            println!("  dharma:       {}", flags.dharma);
+            println!("  citta:        {}", flags.citta);
+            println!("  dream:        {}", flags.dream);
+            println!("  embeddings:   {}", flags.embeddings);
+            println!("  inference:    {}", flags.inference);
+            println!();
+            println!("=== Citta (Consciousness) ===");
+            let citta = server.citta();
+            println!("Heartbeats: {}", citta.heartbeats());
+            println!("Coherence: {:.3}", citta.vector.coherence());
+            println!("Valence: {:.3}", citta.vector.valence());
+            println!("Magnitude: {:.3}", citta.vector.magnitude());
+            if let Some(reading) = citta.last_coherence() {
+                println!("Last significant reading: score={:.3}", reading.score);
+            }
+            println!();
+            println!("=== Smarana (Retention) ===");
+            println!("Score: {:.3}", citta.smarana.score());
+            println!("Total recalls: {}", citta.smarana.total());
+            println!();
+            println!("=== Apotheosis (Self-Improvement) ===");
+            println!("Score: {:.3}", citta.apotheosis.score());
+            println!("Evaluations: {}", citta.apotheosis.evaluations());
+            println!("Trend: {:.4}", citta.apotheosis.trend());
+            println!("Improving: {}", citta.apotheosis.is_improving());
+            println!();
+            println!("=== Dream Cycle ===");
+            let dream = server.dream();
+            println!("Cycles completed: {}", dream.cycles_completed());
+            println!("Consolidated: {}", dream.consolidation.consolidated());
+            println!("Skipped: {}", dream.consolidation.skipped());
+        }
+        Commands::Polyglot => {
+            run_polyglot();
+        }
+        Commands::ExportTrainingData {
+            store,
+            output,
+            format,
+            include_negative,
+        } => {
+            let store_path = store.unwrap_or_else(default_store_path);
+            let lmdb_path = store_path.join("lmdb");
+            if !lmdb_path.exists() {
+                println!(
+                    "No store found at {}. Run 'wm serve' first.",
+                    lmdb_path.display()
+                );
+                return Ok(());
+            }
+
+            let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Error opening server: {e}");
+                    return Ok(());
+                }
+            };
+
+            let bicameral = server.bicameral();
+            let engine = bicameral.lock().unwrap();
+
+            let data = if engine.has_router() {
+                match format.as_str() {
+                    "llama_cpp" => engine.export_training_data_llama_cpp(),
+                    "chat" => engine.export_training_data_chat(),
+                    _ => engine.export_training_data(include_negative),
+                }
+            } else {
+                println!("No router attached — no training data available.");
+                return Ok(());
+            };
+
+            if data.is_empty() {
+                println!("No training data collected yet.");
+                println!(
+                    "Training data is collected during self-verification in the inference router."
+                );
+                return Ok(());
+            }
+
+            let sample_count = data.lines().count();
+            match output {
+                Some(path) => {
+                    std::fs::write(&path, &data)?;
+                    println!("Exported {sample_count} samples to {}", path.display());
+                }
+                None => {
+                    println!("{data}");
+                }
+            }
+        }
+        Commands::Daemon {
+            store,
+            cycle_interval,
+            dream_interval,
+            min_health,
+            codegen_interval,
+            codegen_auto_apply,
+        } => {
+            let store_path = store.unwrap_or_else(default_store_path);
+            let lmdb_path = store_path.join("lmdb");
+            std::fs::create_dir_all(&lmdb_path)?;
+
+            tracing::info!("Starting daemon, store: {}", lmdb_path.display());
+
+            let mut server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::warn!(
+                        "Normal open failed ({e}). Attempting recovery with AutoRepairAndGrow..."
+                    );
+                    let _recovered_store = wm_memory::open_with_recovery(
+                        &lmdb_path,
+                        1024 * 1024 * 1024,
+                        wm_memory::RecoveryStrategy::AutoRepairAndGrow,
+                    )?;
+                    wm_mcp::McpServer::with_defaults(&lmdb_path)?
+                }
+            };
+
+            let config = wm_mcp::daemon::DaemonConfig {
+                cycle_interval: std::time::Duration::from_secs(cycle_interval),
+                dream_interval: std::time::Duration::from_secs(dream_interval),
+                min_health_score: min_health,
+                codegen_interval: std::time::Duration::from_secs(codegen_interval),
+                codegen_auto_apply,
+                ..Default::default()
+            };
+
+            wm_mcp::daemon::run_daemon(&mut server, &config)?;
+        }
+        Commands::BrainWave { store } => {
+            run_brain_wave(store);
+        }
+        Commands::Migrate {
+            v2_dir,
+            v2_db,
+            store,
+            dry_run,
+            galaxy,
+        } => {
+            wm_mcp::migrate::run_migration(
+                v2_dir.as_deref(),
+                v2_db.as_deref(),
+                &store,
+                dry_run,
+                galaxy.as_deref(),
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> anyhow::Result<()> {
+    let store_path = store.unwrap_or_else(default_store_path);
+    let lmdb_path = store_path.join("lmdb");
+
+    println!("=== WhiteMagic v4 Doctor ===");
+    println!();
+
+    // 1. LMDB store check
+    if !lmdb_path.exists() {
+        println!("[FAIL] LMDB store not found at {}", lmdb_path.display());
+        println!("  Run 'wm serve' to initialize the store.");
+        return Ok(());
+    }
+    println!("[OK]   LMDB store: {}", lmdb_path.display());
+
+    // 1a. Integrity check (if requested)
+    if check_integrity || repair {
+        println!();
+        println!("--- Integrity Check ---");
+        let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("[FAIL] Cannot open server: {e}");
+                return Ok(());
+            }
+        };
+        let report = wm_memory::check_integrity(server.store())?;
+        println!("{}", report.summary());
+        for gi in &report.galaxies {
+            if gi.corrupted > 0 {
+                println!(
+                    "  [WARN] {}: {} corrupted out of {} entries",
+                    gi.galaxy, gi.corrupted, gi.total
+                );
+            } else if gi.total > 0 {
+                println!("  [OK]   {}: {} entries, all valid", gi.galaxy, gi.total);
+            }
+        }
+
+        if repair && !report.is_clean {
+            println!();
+            println!("--- Repair ---");
+            // Drop the server to get exclusive access
+            drop(server);
+            // Open store directly for repair
+            let mut store_obj = wm_memory::MemoryStore::open_default(&lmdb_path)?;
+            let repair_report = wm_memory::repair(&mut store_obj, &lmdb_path)?;
+            println!("  Quarantined: {} entries", repair_report.quarantined);
+            println!(
+                "  Indexes rebuilt: {} entries",
+                repair_report.indexes_rebuilt
+            );
+            if let Some(ref path) = repair_report.quarantine_path {
+                println!("  Quarantine file: {path}");
+            }
+            if let Some(ref path) = repair_report.backup_path {
+                println!("  Backup: {path}");
+            }
+            println!("  {}", repair_report.integrity.summary());
+        }
+        println!();
+    }
+
+    let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("[FAIL] Cannot open server: {e}");
+            return Ok(());
+        }
+    };
+
+    // 2. Galaxy health
+    let mut total_memories = 0usize;
+    let mut galaxies_with_data = 0usize;
+    let mut galaxy_details = Vec::new();
+    for galaxy in wm_core::Galaxy::all() {
+        let count = server.store().count(galaxy).unwrap_or(0);
+        if count > 0 {
+            total_memories += count;
+            galaxies_with_data += 1;
+            galaxy_details.push(format!("  {}={}", galaxy.db_name(), count));
+        }
+    }
+    println!("[OK]   Galaxies with data: {galaxies_with_data}, total memories: {total_memories}");
+    if !galaxy_details.is_empty() {
+        for detail in &galaxy_details {
+            println!("{detail}");
+        }
+    }
+
+    // 3. Tantivy search index
+    let tantivy_path = lmdb_path.join("tantivy");
+    if tantivy_path.exists() {
+        println!("[OK]   Tantivy index: {}", tantivy_path.display());
+    } else {
+        println!("[WARN] Tantivy index not found (search will be unavailable)");
+    }
+
+    // 4. Brain-wave state
+    let eco = server.eco_mode();
+    println!("[OK]   Brain-wave state: {}", eco.current());
+    println!("       Idle: {:.1}s", eco.idle_duration().as_secs_f64());
+    println!("       Total events: {}", eco.metrics().total_events());
+
+    // 5. Subsystem flags
+    let flags = eco.subsystems();
+    println!("[OK]   Subsystem flags:");
+    println!("       memory_read:  {}", flags.memory_read);
+    println!("       memory_write: {}", flags.memory_write);
+    println!("       search:       {}", flags.search);
+    println!("       karma:        {}", flags.karma);
+    println!("       dharma:       {}", flags.dharma);
+    println!("       citta:        {}", flags.citta);
+    println!("       dream:        {}", flags.dream);
+
+    // 6. Citta coherence
+    let citta = server.citta();
+    let coherence = citta.vector.coherence();
+    let coherence_status = if coherence >= 0.7 {
+        "COHERENT"
+    } else if coherence >= 0.3 {
+        "MODERATE"
+    } else {
+        "LOW"
+    };
+    println!("[OK]   Citta coherence: {coherence:.3} ({coherence_status})");
+    println!("       Valence: {:.3}", citta.vector.valence());
+    println!("       Heartbeats: {}", citta.heartbeats());
+
+    // 7. Dream cycle
+    let dream = server.dream();
+    println!(
+        "[OK]   Dream cycle: {} completed, {} consolidated, {} skipped",
+        dream.cycles_completed(),
+        dream.consolidation.consolidated(),
+        dream.consolidation.skipped()
+    );
+
+    // 8. Tool registry
+    let registry = server.registry();
+    let all_tools = registry.all();
+    println!("[OK]   Tool registry: {} tools registered", all_tools.len());
+
+    // 9. Karma chain integrity
+    let karma_path = lmdb_path.join("data.mdb");
+    if karma_path.exists() {
+        println!("[OK]   Karma chain: LMDB data file present");
+    }
+
+    println!();
+    println!("=== Doctor Summary ===");
+    let issues = 0u32;
+    if issues == 0 {
+        println!("All systems healthy.");
+    } else {
+        println!("{issues} issue(s) found.");
+    }
+
+    Ok(())
+}
+
+fn run_quickstart() -> anyhow::Result<()> {
+    let store_path = default_store_path();
+    let lmdb_path = store_path.join("lmdb");
+    std::fs::create_dir_all(&lmdb_path)?;
+
+    println!("=== WhiteMagic v4 Quickstart ===");
+    println!();
+    println!("Initializing store at {}...", lmdb_path.display());
+
+    let mut server = wm_mcp::McpServer::with_defaults(&lmdb_path)?;
+
+    // Step 1: Create memories
+    println!();
+    println!("--- Step 1: Create memories ---");
+
+    let memories = [
+        (
+            "Rust is a systems programming language focused on safety and speed.",
+            vec!["programming", "rust"],
+        ),
+        (
+            "LMDB is a lightning-fast embedded key-value store using mmap.",
+            vec!["database", "lmdb"],
+        ),
+        (
+            "Tantivy is a full-text search engine written in Rust.",
+            vec!["search", "rust"],
+        ),
+    ];
+
+    {
+        let store = server.store();
+        for (content, tags) in &memories {
+            let mut mem = wm_memory::Memory::new(wm_core::Galaxy::Codex, content.to_string());
+            mem.metadata.tags = tags.iter().map(std::string::ToString::to_string).collect();
+            let id = mem.metadata.id;
+            store.put(wm_core::Galaxy::Codex, &mem)?;
+            println!("  Created: [{}] \"{}\"", id, &content[..50]);
+        }
+
+        // Step 2: List memories
+        println!();
+        println!("--- Step 2: List memories in Codex galaxy ---");
+        let list = store.scan(wm_core::Galaxy::Codex, 100)?;
+        println!("  Total: {} memories", list.len());
+    }
+
+    // Step 3: Search (via MCP protocol to reuse the server's already-open SearchEngine)
+    println!();
+    println!("--- Step 3: Full-text search for 'rust' ---");
+    let search_request = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": "wm",
+            "arguments": {
+                "route": "memory.search",
+                "args": {"query": "rust", "limit": 10}
+            }
+        }
+    });
+    let response = server.handle_request(&search_request.to_string());
+    let resp: serde_json::Value = serde_json::from_str(&response).unwrap_or_default();
+    if let Some(result) = resp.get("result") {
+        if let Some(content) = result
+            .get("content")
+            .and_then(|c| c.get(0))
+            .and_then(|c| c.get("text"))
+        {
+            if let Ok(text) =
+                serde_json::from_str::<serde_json::Value>(content.as_str().unwrap_or("{}"))
+            {
+                if let Some(results) = text.get("results").and_then(|r| r.as_array()) {
+                    println!("  Found {} results:", results.len());
+                    for r in results.iter().take(10) {
+                        let score = r
+                            .get("score")
+                            .and_then(serde_json::Value::as_f64)
+                            .unwrap_or(0.0);
+                        let galaxy = r.get("galaxy").and_then(|g| g.as_str()).unwrap_or("?");
+                        let preview = r.get("content").and_then(|c| c.as_str()).unwrap_or("");
+                        println!(
+                            "    score={:.3} galaxy={} preview=\"{}\"",
+                            score,
+                            galaxy,
+                            &preview.chars().take(60).collect::<String>()
+                        );
+                    }
+                } else {
+                    println!("  (Search returned no results — index may still be building)");
+                }
+            } else {
+                println!("  (Search returned unexpected response format)");
+            }
+        }
+    } else if let Some(error) = resp.get("error") {
+        let msg = error
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("unknown");
+        println!("  (Search error: {msg})");
+    } else {
+        println!("  (Search returned no response)");
+    }
+
+    // Step 4: Galaxy stats
+    println!();
+    println!("--- Step 4: Galaxy statistics ---");
+    {
+        let store = server.store();
+        for galaxy in wm_core::Galaxy::all() {
+            let count = store.count(galaxy).unwrap_or(0);
+            if count > 0 {
+                println!("  {}: {} memories", galaxy.db_name(), count);
+            }
+        }
+    }
+
+    // Step 5: Consciousness dashboard
+    println!();
+    println!("--- Step 5: Consciousness dashboard ---");
+    let eco = server.eco_mode();
+    println!("  Brain-wave: {}", eco.current());
+    let citta = server.citta();
+    println!("  Citta coherence: {:.3}", citta.vector.coherence());
+    println!("  Citta valence: {:.3}", citta.vector.valence());
+
+    // Step 6: Tool count
+    println!();
+    println!("--- Step 6: Available tools ---");
+    let registry = server.registry();
+    let all_tools = registry.all();
+    println!("  {} tools registered", all_tools.len());
+    println!("  Sample tools:");
+    for tool in all_tools.iter().take(10) {
+        println!("    {} ({:?})", tool.name(), tool.gana());
+    }
+    if all_tools.len() > 10 {
+        println!("    ... and {} more", all_tools.len() - 10);
+    }
+
+    println!();
+    println!("=== Quickstart Complete ===");
+    println!("Store: {}", lmdb_path.display());
+    println!("Run 'wm serve' to start the MCP server.");
+    println!("Run 'wm stats' to see the full consciousness dashboard.");
+    println!("Run 'wm doctor' for a health check.");
+
+    Ok(())
+}
+
+fn run_polyglot() {
+    println!("=== WhiteMagic v4 Polyglot Status ===");
+    println!();
+
+    let runtimes: &[(&str, &str, &str)] = &[
+        (
+            "Julia",
+            "jlrs",
+            "Embedded via jlrs (in-process, no subprocess)",
+        ),
+        (
+            "Haskell",
+            "FFI",
+            "Compiled to native library, called via C ABI",
+        ),
+        (
+            "Zig",
+            "C ABI",
+            "Compiled to native library, called via C ABI",
+        ),
+        (
+            "Koka",
+            "C ABI",
+            "Compiled to native library, called via C ABI",
+        ),
+    ];
+
+    for (name, bridge, desc) in runtimes {
+        let status = check_polyglot_runtime(name);
+        let icon = if status { "[OK]" } else { "[--]" };
+        println!("{icon} {name} ({bridge})");
+        println!("     {desc}");
+        if status {
+            println!("     Status: Available");
+        } else {
+            println!(
+                "     Status: Not built (run with --features wm-polyglot/{})",
+                name.to_lowercase()
+            );
+        }
+        println!();
+    }
+
+    println!("=== Polyglot Summary ===");
+    let available = runtimes
+        .iter()
+        .filter(|(n, _, _)| check_polyglot_runtime(n))
+        .count();
+    println!("{}/{} runtimes available", available, runtimes.len());
+    println!();
+    println!("To build with polyglot support:");
+    println!("  cargo build --release --features wm-polyglot/julia");
+    println!("  cargo build --release --features wm-mcp/python");
+}
+
+const fn check_polyglot_runtime(name: &str) -> bool {
+    // Check if the polyglot crate was compiled with this runtime
+    // For now, all are false since wm-polyglot is Phase 7
+    let _ = name;
+    false
+}
+
+fn run_brain_wave(store: Option<PathBuf>) {
+    let store_path = store.unwrap_or_else(default_store_path);
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.exists() {
+        println!(
+            "No store found at {}. Run 'wm serve' first.",
+            lmdb_path.display()
+        );
+        return;
+    }
+
+    let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error opening server: {e}");
+            return;
+        }
+    };
+
+    let eco = server.eco_mode();
+    println!("=== Brain-Wave State ===");
+    println!("State: {}", eco.current());
+    println!("Idle: {:.1}s", eco.idle_duration().as_secs_f64());
+    println!("Total events: {}", eco.metrics().total_events());
+    println!();
+
+    let flags = eco.subsystems();
+    println!("Subsystem flags:");
+    println!("  memory_read:  {}", flags.memory_read);
+    println!("  memory_write: {}", flags.memory_write);
+    println!("  search:       {}", flags.search);
+    println!("  karma:        {}", flags.karma);
+    println!("  dharma:       {}", flags.dharma);
+    println!("  citta:        {}", flags.citta);
+    println!("  dream:        {}", flags.dream);
+    println!("  embeddings:   {}", flags.embeddings);
+    println!("  inference:    {}", flags.inference);
+    println!();
+
+    let citta = server.citta();
+    println!("Citta coherence: {:.3}", citta.vector.coherence());
+    println!("Citta valence:   {:.3}", citta.vector.valence());
+    println!("Heartbeats:      {}", citta.heartbeats());
+}

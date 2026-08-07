@@ -1,0 +1,22 @@
+msrv = "1.85"
+
+# ── Complexity thresholds ──────────────────────────────────────────────
+# Functions exceeding these limits should be refactored.
+cognitive-complexity-threshold = 50
+too-many-arguments-threshold = 8
+type-complexity-threshold = 250
+single-char-binding-names-threshold = 10
+
+# ── Documentation ──────────────────────────────────────────────────────
+# Require docs for public items (enforced via lint, not here — kept as
+# allow in Cargo.toml since the project has many public items).
+doc-valid-idents = ["LMDB", "Tantivy", "LanceDB", "MCP", "JSON", "RPC", "SHA", "UUID", "NLU"]
+
+# ── Miscellaneous ──────────────────────────────────────────────────────
+# Warn on large enum variants (stack size matters in dispatch hot path).
+enum-variant-size-threshold = 200
+# Warn on functions with too many lines.
+too-many-lines-threshold = 150
+# Allow up to 5 branches in match arms before suggesting refactoring.
+struct-field-name-threshold = 8
+

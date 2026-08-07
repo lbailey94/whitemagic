@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 0a1ba382338932345051bad7bdd030c3b671697e3f8e572b652c1b3d1389a107 # shrinks to effects = EffectRow { reads: [], writes: [], invokes: [], spawns: true, cost: CostEstimate { cpu_ns: 0, memory_bytes: 0, disk_bytes: 0, network_bytes: 0, expensive: false } }

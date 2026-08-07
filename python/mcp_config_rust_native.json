@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "whitemagic-v4": {
+      "command": "/home/lucas/Desktop/whitemagic-v4/target/release/wm",
+      "args": [
+        "serve",
+        "--store",
+        "/home/lucas/Desktop/whitemagic-v4/.whitemagic"
+      ],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

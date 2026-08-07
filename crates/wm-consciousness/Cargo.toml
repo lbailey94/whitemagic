@@ -1,0 +1,36 @@
+[package]
+name = "wm-consciousness"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wm-core = { workspace = true }
+wm-memory = { workspace = true }
+wm-substrate = { workspace = true }
+wm-bicameral = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+ndarray = "0.16"
+wide = "0.7"
+chrono = { workspace = true }
+uuid = { workspace = true }
+lmdb = "0.8"
+toml = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = "3"
+criterion = { workspace = true }
+
+[[bench]]
+name = "dream_bench"
+harness = false
