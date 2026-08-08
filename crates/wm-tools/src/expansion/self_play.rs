@@ -144,7 +144,10 @@ impl Tool for SelfPlayRunTool {
         };
 
         // Get or create the self-play loop
-        let mut loop_guard = self.loop_state.lock().unwrap();
+        let mut loop_guard = self
+            .loop_state
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("self-play loop lock: {e}")))?;
         if loop_guard.is_none() {
             // Build a new loop using the store path
             let store_path = self
@@ -253,7 +256,10 @@ impl Tool for SelfPlayStatusTool {
         &self.stats
     }
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
-        let loop_guard = self.loop_state.lock().unwrap();
+        let loop_guard = self
+            .loop_state
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("self-play loop lock: {e}")))?;
 
         if let Some(loop_) = loop_guard.as_ref() {
             let stats = loop_.stats();
@@ -328,7 +334,10 @@ impl Tool for SelfPlayExportTool {
             .and_then(Value::as_bool)
             .unwrap_or(false);
 
-        let loop_guard = self.loop_state.lock().unwrap();
+        let loop_guard = self
+            .loop_state
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("self-play loop lock: {e}")))?;
 
         if let Some(loop_) = loop_guard.as_ref() {
             let data = match format {

@@ -211,6 +211,31 @@ impl LearnedRouter {
 
     /// Classify a prompt to determine the appropriate inference tier.
     ///
+    /// Fall back to the deterministic regex classifier (cold start or
+    /// learned-router failure — lock poisoning, embedding errors, no
+    /// neighbors). Never panics.
+    fn regex_fallback(
+        &self,
+        prompt: &str,
+        max_output_tokens: Option<usize>,
+        latency_budget_ms: Option<f64>,
+        is_background: bool,
+    ) -> LearnedAssessment {
+        let regex_result = self.regex_classifier.classify(
+            prompt,
+            max_output_tokens,
+            latency_budget_ms,
+            is_background,
+        );
+        LearnedAssessment {
+            tier: regex_result.tier,
+            task_type: regex_result.task_type,
+            confidence: regex_result.confidence,
+            source: ClassificationSource::RegexFallback,
+            neighbors_found: 0,
+        }
+    }
+
     /// When history is sufficient (≥ `MIN_HISTORY`), uses embedding k-NN with
     /// conformal calibration. Otherwise, falls back to the regex classifier.
     #[must_use]
@@ -221,23 +246,23 @@ impl LearnedRouter {
         latency_budget_ms: Option<f64>,
         is_background: bool,
     ) -> LearnedAssessment {
-        let history = self.history.read().unwrap();
-
-        if !history.is_ready() {
-            // Cold-start: use regex classifier
-            let regex_result = self.regex_classifier.classify(
+        let Ok(history) = self.history.read() else {
+            return self.regex_fallback(
                 prompt,
                 max_output_tokens,
                 latency_budget_ms,
                 is_background,
             );
-            return LearnedAssessment {
-                tier: regex_result.tier,
-                task_type: regex_result.task_type,
-                confidence: regex_result.confidence,
-                source: ClassificationSource::RegexFallback,
-                neighbors_found: 0,
-            };
+        };
+
+        if !history.is_ready() {
+            // Cold-start: use regex classifier
+            return self.regex_fallback(
+                prompt,
+                max_output_tokens,
+                latency_budget_ms,
+                is_background,
+            );
         }
 
         // Embed the query
@@ -266,19 +291,12 @@ impl LearnedRouter {
         drop(history);
 
         if neighbors.is_empty() {
-            let regex_result = self.regex_classifier.classify(
+            return self.regex_fallback(
                 prompt,
                 max_output_tokens,
                 latency_budget_ms,
                 is_background,
             );
-            return LearnedAssessment {
-                tier: regex_result.tier,
-                task_type: regex_result.task_type,
-                confidence: regex_result.confidence,
-                source: ClassificationSource::RegexFallback,
-                neighbors_found: 0,
-            };
         }
 
         // Weighted vote: neighbors weighted by similarity (closer = more weight)
@@ -286,7 +304,14 @@ impl LearnedRouter {
         let mut tier_votes: AHashMap<InferenceTier, f32> = AHashMap::new();
         let mut task_type_votes: AHashMap<String, f32> = AHashMap::new();
 
-        let history_read = self.history.read().unwrap();
+        let Ok(history_read) = self.history.read() else {
+            return self.regex_fallback(
+                prompt,
+                max_output_tokens,
+                latency_budget_ms,
+                is_background,
+            );
+        };
 
         for neighbor in &neighbors {
             let record = &history_read.records[neighbor.index];
@@ -318,9 +343,9 @@ impl LearnedRouter {
         };
 
         // Calibrate confidence using conformal calibrator
-        let calibrated_confidence = {
-            let cal = self.calibrator.read().unwrap();
-            cal.calibrate(raw_confidence)
+        let calibrated_confidence = match self.calibrator.read() {
+            Ok(cal) => cal.calibrate(raw_confidence),
+            Err(_) => raw_confidence,
         };
 
         // Find the best task type
@@ -372,14 +397,18 @@ impl LearnedRouter {
             timestamp,
         };
 
-        let mut history = self.history.write().unwrap();
+        let Ok(mut history) = self.history.write() else {
+            return;
+        };
         history.add(record);
 
         // Also add a calibration sample
         let raw_confidence = if correct { 0.85 } else { 0.3 };
         drop(history);
 
-        let mut cal = self.calibrator.write().unwrap();
+        let Ok(mut cal) = self.calibrator.write() else {
+            return;
+        };
         cal.add_sample(raw_confidence, correct);
 
         // Re-fit periodically
@@ -396,14 +425,18 @@ impl LearnedRouter {
     /// History size (number of routing records).
     #[must_use]
     pub fn history_len(&self) -> usize {
-        let guard = self.history.read().unwrap();
+        let Ok(guard) = self.history.read() else {
+            return 0;
+        };
         guard.len()
     }
 
     /// Whether the learned router has enough history to be used.
     #[must_use]
     pub fn is_ready(&self) -> bool {
-        let guard = self.history.read().unwrap();
+        let Ok(guard) = self.history.read() else {
+            return false;
+        };
         guard.is_ready()
     }
 
@@ -416,26 +449,34 @@ impl LearnedRouter {
     /// Get a snapshot of routing records for inspection.
     #[must_use]
     pub fn history_records(&self) -> Vec<RoutingRecord> {
-        let guard = self.history.read().unwrap();
+        let Ok(guard) = self.history.read() else {
+            return Vec::new();
+        };
         guard.records().to_vec()
     }
 
     /// Add a calibration sample to the conformal calibrator.
     pub fn add_calibration_sample(&self, raw_confidence: f32, correct: bool) {
-        let mut cal = self.calibrator.write().unwrap();
+        let Ok(mut cal) = self.calibrator.write() else {
+            return;
+        };
         cal.add_sample(raw_confidence, correct);
     }
 
     /// Fit the conformal calibrator.
     pub fn fit_calibrator(&self) {
-        let mut cal = self.calibrator.write().unwrap();
+        let Ok(mut cal) = self.calibrator.write() else {
+            return;
+        };
         cal.fit();
     }
 
     /// Whether the conformal calibrator has been fitted.
     #[must_use]
     pub fn is_calibrated(&self) -> bool {
-        let guard = self.calibrator.read().unwrap();
+        let Ok(guard) = self.calibrator.read() else {
+            return false;
+        };
         guard.is_fitted()
     }
 }

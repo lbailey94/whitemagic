@@ -48,7 +48,10 @@ impl Tool for BusStatsTool {
         "Gan Ying Bus statistics (events emitted, cascades, subscriber triggers)"
     }
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
-        let bus = self.bus.lock().unwrap();
+        let bus = self
+            .bus
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("resonance bus lock: {e}")))?;
         let stats = bus.stats();
         Ok(json!({
             "status": "success",
@@ -112,7 +115,10 @@ impl Tool for BusEmitTool {
             wm_core::CoreError::InvalidArgs(format!("unknown event type: {event_type_str}"))
         })?;
 
-        let mut bus = self.bus.lock().unwrap();
+        let mut bus = self
+            .bus
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("resonance bus lock: {e}")))?;
         bus.emit(event_type, source, data);
 
         Ok(json!({
@@ -165,7 +171,10 @@ impl Tool for BusRecentTool {
 
         let category_filter = args.get("category").and_then(Value::as_str);
 
-        let bus = self.bus.lock().unwrap();
+        let bus = self
+            .bus
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("resonance bus lock: {e}")))?;
         let recent = bus.recent_events(limit);
 
         let events: Vec<Value> = recent

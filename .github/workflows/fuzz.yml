@@ -28,6 +28,6 @@ jobs:
         run: |
           for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation; do
             echo "--- $target ---"
-            cargo fuzz run "$target" -- -max_total_time=30
+            cargo fuzz run --fuzz-dir . "$target" -- -max_total_time=30
           done
         working-directory: fuzz

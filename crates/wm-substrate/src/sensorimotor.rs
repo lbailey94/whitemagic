@@ -306,7 +306,7 @@ impl StubActuator {
     /// Get the last command sent to this actuator (for testing).
     #[must_use]
     pub fn last_command(&self) -> Option<ActuatorCommand> {
-        self.last_command.lock().unwrap().clone()
+        self.last_command.lock().map(|c| c.clone()).unwrap_or(None)
     }
 }
 
@@ -320,7 +320,10 @@ impl ActuatorDevice for StubActuator {
     }
 
     fn command(&self, cmd: &ActuatorCommand) -> Result<(), String> {
-        *self.last_command.lock().unwrap() = Some(cmd.clone());
+        let Ok(mut last) = self.last_command.lock() else {
+            return Err("sensorimotor last-command lock poisoned".to_string());
+        };
+        *last = Some(cmd.clone());
         Ok(())
     }
 }

@@ -51,7 +51,10 @@ impl Tool for SanghaPeersTool {
         "List discovered peers in the Sangha mesh, optionally filter by capability"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        let discovery = self.discovery.lock().unwrap();
+        let discovery = self
+            .discovery
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("sangha discovery lock: {e}")))?;
         let peers: Vec<&PeerInfo> =
             if let Some(cap_str) = args.get("capability").and_then(Value::as_str) {
                 let cap = parse_capability(cap_str);
@@ -140,7 +143,10 @@ impl Tool for SanghaDiscoverTool {
             }
         }
 
-        let mut discovery = self.discovery.lock().unwrap();
+        let mut discovery = self
+            .discovery
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("sangha discovery lock: {e}")))?;
         discovery.discover(peer);
 
         Ok(json!({
@@ -204,7 +210,10 @@ impl Tool for SanghaSignalTool {
         })?;
 
         let signal = Signal::new(signal_type, source, data);
-        let mut broadcast = self.broadcast.lock().unwrap();
+        let mut broadcast = self
+            .broadcast
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("sangha broadcast lock: {e}")))?;
         let delivered = broadcast.broadcast(signal);
 
         Ok(json!({
@@ -261,7 +270,10 @@ impl Tool for SanghaChatTool {
             .and_then(Value::as_str)
             .unwrap_or("general");
 
-        let mut chat = self.chat.lock().unwrap();
+        let mut chat = self
+            .chat
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("sangha chat lock: {e}")))?;
 
         match action {
             "send" => {
@@ -354,7 +366,10 @@ impl Tool for SanghaLocksTool {
             .and_then(Value::as_str)
             .ok_or_else(|| wm_core::CoreError::InvalidArgs("action required".into()))?;
 
-        let mut lm = self.lock_manager.lock().unwrap();
+        let mut lm = self
+            .lock_manager
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("sangha lock-manager lock: {e}")))?;
 
         match action {
             "acquire" => {

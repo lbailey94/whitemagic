@@ -683,7 +683,10 @@ impl Tool for MemoryChatTool {
         };
 
         let (results, metrics) = {
-            let search = self.search.lock().unwrap();
+            let search = self
+                .search
+                .lock()
+                .map_err(|e| wm_core::CoreError::Tool(format!("search lock: {e}")))?;
             let results = search.search_in_galaxy(query, limit, galaxy);
             let metrics = search.metrics();
             (results, metrics)
@@ -753,7 +756,10 @@ impl MemoryVectorSearchTool {
 
     /// Ensure the vector store is loaded from LMDB.
     fn ensure_loaded(&self) -> wm_core::Result<()> {
-        let mut vs = self.vector_store.lock().unwrap();
+        let mut vs = self
+            .vector_store
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("vector store lock: {e}")))?;
         if !vs.is_loaded() {
             vs.load(&self.store)?;
         }
@@ -794,7 +800,10 @@ impl Tool for MemoryVectorSearchTool {
                 wm_core::CoreError::InvalidArgs(format!("Invalid memory_id UUID: {e}"))
             })?;
 
-            let vs = self.vector_store.lock().unwrap();
+            let vs = self
+                .vector_store
+                .lock()
+                .map_err(|e| wm_core::CoreError::Tool(format!("vector store lock: {e}")))?;
             vs.search_similar_to(memory_id, limit)
         } else if let Some(embedding_arr) = args.get("embedding").and_then(|v| v.as_array()) {
             // Search by raw embedding vector
@@ -809,7 +818,10 @@ impl Tool for MemoryVectorSearchTool {
                 ));
             }
 
-            let vs = self.vector_store.lock().unwrap();
+            let vs = self
+                .vector_store
+                .lock()
+                .map_err(|e| wm_core::CoreError::Tool(format!("vector store lock: {e}")))?;
             vs.search(&embedding, limit, galaxy_filter)
         } else {
             return Err(wm_core::CoreError::InvalidArgs(
