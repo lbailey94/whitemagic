@@ -4,6 +4,7 @@
 //! - `selfmodel.forecast` — forecast a metric or all metrics
 //! - `selfmodel.alerts` — check active alerts
 //! - `selfmodel.snapshot` — full self-model state snapshot
+//! - `selfmodel.gnosis` — compact holistic system introspection
 
 #![forbid(unsafe_code)]
 #![allow(clippy::significant_drop_tightening)]
@@ -319,6 +320,119 @@ impl Tool for SelfModelSnapshotTool {
     }
 }
 
+// ── selfmodel.gnosis ──────────────────────────────────────────────────
+
+/// `selfmodel.gnosis` — compact holistic system introspection.
+///
+/// Mirrors the legacy v26 `gnosis` tool: one call returns the system's
+/// self-knowledge — confidence, tracked metrics, active alerts, and a
+/// per-metric health summary — without flooding the context window.
+pub struct SelfModelGnosisTool {
+    model: Arc<Mutex<SelfModel>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SelfModelGnosisTool {
+    #[must_use]
+    pub fn new(model: Arc<Mutex<SelfModel>>) -> Self {
+        Self {
+            model,
+            stats: ToolStats::default(),
+            effects: EffectRow::pure(),
+        }
+    }
+}
+
+impl Default for SelfModelGnosisTool {
+    fn default() -> Self {
+        Self::new(Arc::new(Mutex::new(SelfModel::new())))
+    }
+}
+
+#[async_trait]
+#[async_trait]
+impl Tool for SelfModelGnosisTool {
+    fn name(&self) -> &str {
+        "selfmodel.gnosis"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Ghost
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+        let model = self
+            .model
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("self-model lock: {e}")))?;
+
+        let snap = model.snapshot();
+        let confidence = model.confidence();
+
+        let metrics_json: Vec<Value> = snap
+            .metrics
+            .iter()
+            .map(|m| {
+                json!({
+                    "metric": m.kind.as_str(),
+                    "samples": m.sample_count,
+                    "current": m.current,
+                    "min": m.min,
+                    "max": m.max,
+                    "avg": m.avg,
+                })
+            })
+            .collect();
+
+        let alerts_json: Vec<Value> = snap
+            .alerts
+            .iter()
+            .map(|a| {
+                json!({
+                    "metric": a.metric.as_str(),
+                    "level": alert_level_as_str(a.level),
+                    "message": a.message,
+                })
+            })
+            .collect();
+
+        // Health verdict per metric: healthy if no alert and enough samples.
+        let mut healthy = 0usize;
+        let mut degraded = 0usize;
+        for m in &snap.metrics {
+            let has_alert = snap.alerts.iter().any(|a| a.metric == m.kind);
+            if has_alert {
+                degraded += 1;
+            } else {
+                healthy += 1;
+            }
+        }
+
+        let overall = if snap.alerts.is_empty() {
+            "healthy"
+        } else {
+            "degraded"
+        };
+
+        Ok(json!({
+            "timestamp": snap.timestamp.to_rfc3339(),
+            "overall_health": overall,
+            "confidence": confidence,
+            "tracked_metrics": healthy + degraded,
+            "healthy_metrics": healthy,
+            "degraded_metrics": degraded,
+            "alert_count": snap.alerts.len(),
+            "metrics": metrics_json,
+            "alerts": alerts_json,
+        }))
+    }
+}
+
 // ── Registration ──────────────────────────────────────────────────────
 
 /// Register all self-model tools into a registry.
@@ -329,7 +443,8 @@ pub fn register_selfmodel(
     registry
         .register(Arc::new(SelfModelForecastTool::new(Arc::clone(&model))))
         .register(Arc::new(SelfModelAlertsTool::new(Arc::clone(&model))))
-        .register(Arc::new(SelfModelSnapshotTool::new(model)))
+        .register(Arc::new(SelfModelSnapshotTool::new(Arc::clone(&model))))
+        .register(Arc::new(SelfModelGnosisTool::new(model)))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -528,5 +643,23 @@ mod tests {
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["conservative_mode"], false);
+    }
+
+    #[tokio::test]
+    async fn gnosis_reports_health_and_metrics() {
+        let model = test_model();
+        let tool = SelfModelGnosisTool::new(Arc::clone(&model));
+        let mut ctx = Context::new(wm_core::BrainWave::Gamma);
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
+
+        // Rising CPU load (0.1 → 0.5) crosses default warning AND critical
+        // thresholds → degraded (2 alerts, one per rule level).
+        assert_eq!(result["overall_health"], "degraded");
+        assert_eq!(result["tracked_metrics"], 2);
+        assert_eq!(result["healthy_metrics"], 1);
+        assert_eq!(result["degraded_metrics"], 1);
+        assert_eq!(result["alert_count"], 2);
+        assert_eq!(result["metrics"].as_array().unwrap().len(), 2);
+        assert!(result["confidence"].as_f64().unwrap() > 0.0);
     }
 }
