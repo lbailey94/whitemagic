@@ -23,3 +23,7 @@ __pycache__/
 
 # IDE config
 .windsurf/
+
+# Criterion benchmark artifacts
+/criterion
+/crates/**/benches/**/target

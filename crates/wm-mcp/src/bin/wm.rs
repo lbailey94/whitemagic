@@ -106,21 +106,21 @@ enum Commands {
         #[arg(long)]
         store: Option<PathBuf>,
     },
-    /// Migrate v2 SQLite memories to v4 LMDB store
+    /// Migrate legacy v26 SQLite memories into the v5 LMDB store
     Migrate {
-        /// Path to v2 galaxies directory (containing per-galaxy subdirs with whitemagic.db)
+        /// Path to v26 galaxies directory (containing per-galaxy subdirs with whitemagic.db)
         #[arg(long)]
         v2_dir: Option<PathBuf>,
-        /// Path to a single v2 SQLite database
+        /// Path to a single v26 SQLite database
         #[arg(long)]
         v2_db: Option<PathBuf>,
-        /// Path to the v4 LMDB store directory
+        /// Path to the v5 LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
-        store: PathBuf,
+        store: Option<PathBuf>,
         /// Dry run — report what would be migrated without writing
         #[arg(long)]
         dry_run: bool,
-        /// Only migrate memories from this v2 galaxy name (e.g. "codex")
+        /// Only migrate memories from this galaxy name (e.g. "codex")
         #[arg(long)]
         galaxy: Option<String>,
     },
@@ -413,10 +413,11 @@ fn main() -> anyhow::Result<()> {
             dry_run,
             galaxy,
         } => {
+            let store_path = store.unwrap_or_else(default_store_path);
             wm_mcp::migrate::run_migration(
                 v2_dir.as_deref(),
                 v2_db.as_deref(),
-                &store,
+                &store_path,
                 dry_run,
                 galaxy.as_deref(),
             )?;

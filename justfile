@@ -1,4 +1,4 @@
-# WhiteMagic v4 build targets
+# WhiteMagic v5 build targets
 
 default: build
 
@@ -45,7 +45,7 @@ serve:
 
 # Run MCP server via Python shell
 serve-python:
-    python python/whitemagic_v4_server.py --store .whitemagic/lmdb
+    python python/whitemagic_v5_server.py --store .whitemagic/lmdb
 
 # Quickstart demo
 quickstart:
@@ -58,3 +58,16 @@ doctor:
 # Brain-wave state
 brain-wave:
     cargo run --release --bin wm -- brain-wave
+
+# Full workspace verification: fmt + clippy + tests
+verify:
+    cargo fmt --all -- --check
+    cargo clippy --all-targets --all-features
+    cargo test --all
+
+# Remove all build artifacts (reclaims ~8GB)
+prune: clean
+    rm -rf .criterion
+    rm -rf crates/*/benches/target
+    find . -name "*.profraw" -delete 2>/dev/null
+    @echo "Build artifacts removed"

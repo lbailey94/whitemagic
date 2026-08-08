@@ -1,4 +1,4 @@
-//! v2 → v4 Migration tool — transfers SQLite memories to LMDB.
+//! v26 → v5 Migration tool — transfers legacy SQLite memories into the v5 LMDB store.
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
@@ -9,7 +9,7 @@ use uuid::Uuid;
 use wm_core::Galaxy;
 use wm_memory::{Memory, MemoryType, SearchEngine};
 
-/// v2 galaxy name → v4 Galaxy enum mapping.
+/// v26 galaxy name → v5 Galaxy enum mapping.
 fn map_galaxy(name: &str) -> Option<Galaxy> {
     match name.to_lowercase().as_str() {
         "codex" | "knowledge" | "openai_archives" => Some(Galaxy::Codex),
@@ -37,7 +37,7 @@ fn map_galaxy(name: &str) -> Option<Galaxy> {
     }
 }
 
-/// v2 memory_type string → v4 MemoryType enum.
+/// v26 memory_type string → v5 MemoryType enum.
 fn map_memory_type(v2_type: &str) -> MemoryType {
     match v2_type.to_uppercase().as_str() {
         "SHORT_TERM" => MemoryType::ShortTerm,
@@ -67,7 +67,7 @@ fn parse_timestamp(ts: &str) -> DateTime<Utc> {
     DateTime::parse_from_rfc3339(ts).map_or_else(|_| Utc::now(), |dt| dt.with_timezone(&Utc))
 }
 
-/// Map v2 source_trust string to v4 f32 trust score.
+/// Map v26 source_trust string to v5 f32 trust score.
 fn map_source_trust(v2_trust: &str) -> f32 {
     match v2_trust.to_lowercase().as_str() {
         "user" => 1.0,
@@ -145,8 +145,8 @@ fn row_to_v2_memory(row: &Row) -> rusqlite::Result<V2Memory> {
     })
 }
 
-/// Convert a v2 memory row into a v4 Memory.
-fn v2_to_v4_memory(v2: &V2Memory, tags: &[String], galaxy: Galaxy) -> Memory {
+/// Convert a v26 memory row into a v5 Memory.
+fn v2_to_v5_memory(v2: &V2Memory, tags: &[String], galaxy: Galaxy) -> Memory {
     let id = parse_v2_id(&v2.id);
     let created_at = parse_timestamp(&v2.created_at);
     let accessed_at = parse_timestamp(&v2.accessed_at);
@@ -201,7 +201,7 @@ fn load_tags(conn: &Connection) -> Result<HashMap<String, Vec<String>>> {
     Ok(tag_map)
 }
 
-/// Migrate a single v2 SQLite database to v4 LMDB.
+/// Migrate a single v26 SQLite database into the v5 LMDB store.
 fn migrate_database(
     db_path: &Path,
     store: &wm_memory::MemoryStore,
@@ -235,7 +235,7 @@ fn migrate_database(
 
     let rows = stmt.query_map([], row_to_v2_memory)?;
 
-    // Group memories by v4 galaxy for batch writing
+    // Group memories by v5 galaxy for batch writing
     let mut by_galaxy: HashMap<Galaxy, Vec<Memory>> = HashMap::new();
     let mut total_read = 0usize;
     let mut total_skipped = 0usize;
@@ -255,7 +255,7 @@ fn migrate_database(
         };
 
         let tags = tag_map.get(&v2.id).cloned().unwrap_or_default();
-        let mem = v2_to_v4_memory(&v2, &tags, galaxy);
+        let mem = v2_to_v5_memory(&v2, &tags, galaxy);
         by_galaxy.entry(galaxy).or_default().push(mem);
     }
 
@@ -329,24 +329,24 @@ fn discover_v2_databases(galaxies_dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(dbs)
 }
 
-/// Run the migration from v2 SQLite to v4 LMDB.
+/// Run the migration from v26 SQLite into the v5 LMDB store.
 ///
 /// # Arguments
 /// * `v2_galaxies_dir` - Path to v2's `galaxies/` directory (containing per-galaxy subdirs with whitemagic.db)
 /// * `v2_single_db` - Optional path to a single v2 SQLite database
-/// * `v4_store_path` - Path to v4's LMDB store directory
+/// * `store_path` - Path to the v5 LMDB store directory
 /// * `dry_run` - If true, only report what would be migrated without writing
 /// * `galaxy_filter` - Optional galaxy name filter (only migrate memories from this v2 galaxy)
 pub fn run_migration(
     v2_galaxies_dir: Option<&Path>,
     v2_single_db: Option<&Path>,
-    v4_store_path: &Path,
+    store_path: &Path,
     dry_run: bool,
     galaxy_filter: Option<&str>,
 ) -> Result<()> {
     println!("=== WhiteMagic v5 Migration Tool ===");
     println!();
-    println!("Target v4 store: {}", v4_store_path.display());
+    println!("Target v5 store: {}", store_path.display());
     if dry_run {
         println!("Mode: DRY RUN (no writes)");
     }
@@ -377,9 +377,9 @@ pub fn run_migration(
     }
     println!();
 
-    // Open v4 store — use 4GB map size for migration (v2 data can be large)
+    // Open v5 store — use 4GB map size for migration (v26 data can be large)
     // Write to lmdb/ subdirectory for consistency with wm serve/doctor
-    let lmdb_path = v4_store_path.join("lmdb");
+    let lmdb_path = store_path.join("lmdb");
     std::fs::create_dir_all(&lmdb_path)?;
     let store = wm_memory::MemoryStore::open(&lmdb_path, 4 * 1024 * 1024 * 1024)?;
 
@@ -410,9 +410,9 @@ pub fn run_migration(
     println!("Total memories skipped: {grand_total_skipped}");
     println!();
 
-    // Verify by counting memories in v4 store
+    // Verify by counting memories in v5 store
     if !dry_run {
-        println!("=== v4 Store Verification ===");
+        println!("=== v5 Store Verification ===");
         let mut total = 0usize;
         for galaxy in Galaxy::all() {
             let count = store.count(galaxy).unwrap_or(0);
@@ -421,7 +421,7 @@ pub fn run_migration(
                 total += count;
             }
         }
-        println!("  Total in v4: {total} memories");
+        println!("  Total in v5: {total} memories");
     }
 
     Ok(())
@@ -626,7 +626,7 @@ mod tests {
     }
 
     #[test]
-    fn v2_to_v4_memory_preserves_fields() {
+    fn v2_to_v5_memory_preserves_fields() {
         let v2 = V2Memory {
             id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
             galaxy: "codex".to_string(),
@@ -650,7 +650,7 @@ mod tests {
             agent_id: "test-agent".to_string(),
         };
         let tags = vec!["rust".to_string(), "memory".to_string()];
-        let mem = v2_to_v4_memory(&v2, &tags, Galaxy::Codex);
+        let mem = v2_to_v5_memory(&v2, &tags, Galaxy::Codex);
 
         assert_eq!(mem.metadata.galaxy, Galaxy::Codex);
         assert_eq!(mem.content, "test content");
@@ -670,7 +670,7 @@ mod tests {
     }
 
     #[test]
-    fn v2_to_v4_memory_empty_agent_id_defaults_to_system() {
+    fn v2_to_v5_memory_empty_agent_id_defaults_to_system() {
         let v2 = V2Memory {
             id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
             galaxy: "universal".to_string(),
@@ -693,7 +693,7 @@ mod tests {
             version: 1,
             agent_id: String::new(),
         };
-        let mem = v2_to_v4_memory(&v2, &[], Galaxy::Universal);
+        let mem = v2_to_v5_memory(&v2, &[], Galaxy::Universal);
         assert_eq!(mem.metadata.agent_id, "system");
         assert_ne!(
             mem.metadata.content_hash, "",
@@ -702,7 +702,7 @@ mod tests {
     }
 
     #[test]
-    fn v2_to_v4_memory_negative_access_count_clamped() {
+    fn v2_to_v5_memory_negative_access_count_clamped() {
         let v2 = V2Memory {
             id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
             galaxy: "universal".to_string(),
@@ -725,7 +725,7 @@ mod tests {
             version: 0,
             agent_id: String::new(),
         };
-        let mem = v2_to_v4_memory(&v2, &[], Galaxy::Universal);
+        let mem = v2_to_v5_memory(&v2, &[], Galaxy::Universal);
         assert_eq!(
             mem.metadata.access_count, 0,
             "Negative access_count should be clamped to 0"

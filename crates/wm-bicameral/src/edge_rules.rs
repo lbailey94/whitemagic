@@ -170,13 +170,13 @@ impl EdgeRuleEngine {
             (
                 "version",
                 "version|what version",
-                "WhiteMagic v5 — local AI substrate with 184 tools.",
+                "WhiteMagic v5 — local AI substrate with 185 tools.",
                 1.0,
             ),
             (
                 "help",
                 "help|what can you do|capabilities",
-                "I can answer questions locally without cloud AI. 184 MCP tools across 28 Ganas. Ask about version, architecture, or WhiteMagic concepts.",
+                "I can answer questions locally without cloud AI. 185 MCP tools across 28 Ganas. Ask about version, architecture, or WhiteMagic concepts.",
                 0.9,
             ),
             (
