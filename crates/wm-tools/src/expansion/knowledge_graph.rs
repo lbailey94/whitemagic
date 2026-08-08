@@ -7,6 +7,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -195,6 +197,8 @@ impl KgExtractTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for KgExtractTool {
     fn name(&self) -> &str {
         "kg.extract"
@@ -208,7 +212,7 @@ impl Tool for KgExtractTool {
     fn description(&self) -> &str {
         "Extract entities from memory content and create typed associations (knowledge graph)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -309,6 +313,8 @@ impl KgQueryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for KgQueryTool {
     fn name(&self) -> &str {
         "kg.query"
@@ -322,7 +328,7 @@ impl Tool for KgQueryTool {
     fn description(&self) -> &str {
         "Query the knowledge graph for an entity (find memories and associations)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let entity = args
             .get("entity")
             .and_then(|v| v.as_str())
@@ -431,6 +437,8 @@ impl KgTopTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for KgTopTool {
     fn name(&self) -> &str {
         "kg.top"
@@ -444,7 +452,7 @@ impl Tool for KgTopTool {
     fn description(&self) -> &str {
         "Find top entities by connection count (hub/god nodes in the knowledge graph)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -513,29 +521,29 @@ mod tests {
         (tmp, store)
     }
 
-    #[test]
-    fn extract_entities_finds_capitalized_words() {
+    #[tokio::test]
+    async fn extract_entities_finds_capitalized_words() {
         let entities = extract_entities("Rust is a language. Python is also great.");
         assert!(entities.contains(&"Rust".to_string()));
         assert!(entities.contains(&"Python".to_string()));
     }
 
-    #[test]
-    fn extract_entities_finds_multi_word_phrases() {
+    #[tokio::test]
+    async fn extract_entities_finds_multi_word_phrases() {
         let entities = extract_entities("The White Magic project uses LMDB storage.");
         assert!(entities.contains(&"White Magic".to_string()));
         assert!(entities.contains(&"LMDB".to_string()));
     }
 
-    #[test]
-    fn extract_entities_ignores_common_words() {
+    #[tokio::test]
+    async fn extract_entities_ignores_common_words() {
         let entities = extract_entities("The quick brown fox jumps over the lazy dog.");
         // "The" at sentence start should be filtered
         assert!(!entities.iter().any(|e| e == "The"));
     }
 
-    #[test]
-    fn detect_link_type_causal() {
+    #[tokio::test]
+    async fn detect_link_type_causal() {
         let lt = detect_link_type(
             "Rust causes fast performance because of zero-cost abstractions",
             "Rust",
@@ -544,8 +552,8 @@ mod tests {
         assert_eq!(lt, LinkType::Causal);
     }
 
-    #[test]
-    fn detect_link_type_temporal() {
+    #[tokio::test]
+    async fn detect_link_type_temporal() {
         let lt = detect_link_type(
             "First we tried Python, then we switched to Rust",
             "Python",
@@ -554,14 +562,14 @@ mod tests {
         assert_eq!(lt, LinkType::Temporal);
     }
 
-    #[test]
-    fn detect_link_type_related_default() {
+    #[tokio::test]
+    async fn detect_link_type_related_default() {
         let lt = detect_link_type("Rust and Python are languages", "Rust", "Python");
         assert_eq!(lt, LinkType::Related);
     }
 
-    #[test]
-    fn kg_extract_creates_associations() {
+    #[tokio::test]
+    async fn kg_extract_creates_associations() {
         let (_tmp, store) = open_store();
         let store = Arc::new(store);
 
@@ -576,6 +584,7 @@ mod tests {
         let tool = KgExtractTool::new(store.clone());
         let result = tool
             .call(&mut Context::default(), json!({"galaxy": "codex"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -590,8 +599,8 @@ mod tests {
         assert!(count > 0, "should have created at least one association");
     }
 
-    #[test]
-    fn kg_query_finds_entity() {
+    #[tokio::test]
+    async fn kg_query_finds_entity() {
         let (_tmp, store) = open_store();
 
         let mem = wm_memory::Memory::new(
@@ -606,6 +615,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"entity": "Rust", "galaxy": "codex"}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -613,16 +623,16 @@ mod tests {
         assert_eq!(obj["entity"], "Rust");
     }
 
-    #[test]
-    fn kg_query_missing_entity_param_errors() {
+    #[tokio::test]
+    async fn kg_query_missing_entity_param_errors() {
         let (_tmp, store) = open_store();
         let tool = KgQueryTool::new(Arc::new(store));
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn kg_top_ranks_entities() {
+    #[tokio::test]
+    async fn kg_top_ranks_entities() {
         let (_tmp, store) = open_store();
 
         // Create memories with a shared entity
@@ -641,6 +651,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"galaxy": "codex", "top_n": 5}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -653,16 +664,16 @@ mod tests {
         assert_eq!(top[0]["memory_count"], 5);
     }
 
-    #[test]
-    fn kg_tool_names_are_correct() {
+    #[tokio::test]
+    async fn kg_tool_names_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(KgExtractTool::new(store.clone()).name(), "kg.extract");
         assert_eq!(KgQueryTool::new(store.clone()).name(), "kg.query");
         assert_eq!(KgTopTool::new(store).name(), "kg.top");
     }
 
-    #[test]
-    fn kg_tool_ganas_are_correct() {
+    #[tokio::test]
+    async fn kg_tool_ganas_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(KgExtractTool::new(store.clone()).gana(), Gana::Net);
         assert_eq!(KgQueryTool::new(store.clone()).gana(), Gana::Net);

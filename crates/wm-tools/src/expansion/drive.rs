@@ -9,10 +9,12 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::significant_drop_tightening)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
+use wm_cognitive::{DriveCore, DriveEvent, DriveEventKind};
 use wm_core::{Context, EffectRow, Gana, Tool, ToolStats};
-use wm_drive::{DriveCore, DriveEvent, DriveEventKind};
 
 // ── drive.snapshot ────────────────────────────────────────────────────
 
@@ -34,6 +36,8 @@ impl DriveSnapshotTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DriveSnapshotTool {
     fn name(&self) -> &str {
         "drive.snapshot"
@@ -47,7 +51,7 @@ impl Tool for DriveSnapshotTool {
     fn description(&self) -> &str {
         "Show current drive state (curiosity, satisfaction, caution, energy, social) and tool selection bias"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let (snapshot, bias) = {
             let core = self
                 .core
@@ -94,6 +98,8 @@ impl DriveEventTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DriveEventTool {
     fn name(&self) -> &str {
         "drive.event"
@@ -107,7 +113,7 @@ impl Tool for DriveEventTool {
     fn description(&self) -> &str {
         "Inject a drive event (tool_success, tool_error, novel_input, etc.) to update drive state"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let kind_str = args
             .get("kind")
             .and_then(Value::as_str)
@@ -176,38 +182,43 @@ mod tests {
         Arc::new(Mutex::new(DriveCore::new()))
     }
 
-    #[test]
-    fn drive_snapshot_returns_state() {
+    #[tokio::test]
+    async fn drive_snapshot_returns_state() {
         let core = make_core();
         let tool = DriveSnapshotTool::new(core);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert!(obj["drives"]["curiosity"].as_f64().is_some());
         assert!(obj["bias"]["exploration_weight"].as_f64().is_some());
     }
 
-    #[test]
-    fn drive_event_tool_success() {
+    #[tokio::test]
+    async fn drive_event_tool_success() {
         let core = make_core();
         let tool = DriveEventTool::new(core);
         let result = tool
             .call(&mut Context::default(), json!({"kind": "tool_success"}))
+            .await
             .unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["event_kind"], "tool_success");
         assert_eq!(result["event_count"], 1);
     }
 
-    #[test]
-    fn drive_event_tool_error() {
+    #[tokio::test]
+    async fn drive_event_tool_error() {
         let core = make_core();
         let tool = DriveEventTool::new(core.clone());
         tool.call(&mut Context::default(), json!({"kind": "tool_error"}))
+            .await
             .unwrap();
         // Check caution increased
         let snap_tool = DriveSnapshotTool::new(core);
-        let snap = snap_tool.call(&mut Context::default(), json!({})).unwrap();
+        let snap = snap_tool
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
         let caution = snap["drives"]["caution"].as_f64().unwrap();
         assert!(
             caution > 0.3,
@@ -215,8 +226,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn drive_event_novel_input() {
+    #[tokio::test]
+    async fn drive_event_novel_input() {
         let core = make_core();
         let tool = DriveEventTool::new(core);
         let result = tool
@@ -224,35 +235,40 @@ mod tests {
                 &mut Context::default(),
                 json!({"kind": "novel_input", "detail": "new user query"}),
             )
+            .await
             .unwrap();
         assert_eq!(result["event_kind"], "novel_input");
     }
 
-    #[test]
-    fn drive_event_missing_kind() {
+    #[tokio::test]
+    async fn drive_event_missing_kind() {
         let core = make_core();
         let tool = DriveEventTool::new(core);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn drive_event_unknown_kind() {
+    #[tokio::test]
+    async fn drive_event_unknown_kind() {
         let core = make_core();
         let tool = DriveEventTool::new(core);
-        let result = tool.call(&mut Context::default(), json!({"kind": "unknown_kind"}));
+        let result = tool
+            .call(&mut Context::default(), json!({"kind": "unknown_kind"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn drive_event_decay() {
+    #[tokio::test]
+    async fn drive_event_decay() {
         let core = make_core();
         let tool = DriveEventTool::new(core.clone());
         // Boost curiosity first
         tool.call(&mut Context::default(), json!({"kind": "novel_input"}))
+            .await
             .unwrap();
         // Then decay
         tool.call(&mut Context::default(), json!({"kind": "decay"}))
+            .await
             .unwrap();
         assert_eq!(core.lock().unwrap().event_count(), 2);
     }

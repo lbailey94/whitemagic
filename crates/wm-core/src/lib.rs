@@ -14,6 +14,7 @@ pub mod effects;
 pub mod error;
 pub mod galaxy;
 pub mod gana;
+pub mod mutable;
 pub mod security;
 pub mod tool;
 
@@ -24,4 +25,8 @@ pub use effects::{Capability, CostEstimate, EffectRow, Resource};
 pub use error::{CoreError, Result};
 pub use galaxy::Galaxy;
 pub use gana::Gana;
+pub use mutable::{
+    CycleEffectiveness, CycleStrategy, DynamicGalaxy, DynamicGalaxyRegistry, GanaMerge,
+    GanaRegistry, LearnedCycleStrategy, LearnedDreamCycle, PhaseEffectiveness,
+};
 pub use tool::{Args, Output, Tool, ToolStats, ToolStatsSnapshot};

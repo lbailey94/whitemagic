@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -26,6 +28,8 @@ impl TaskDistributeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for TaskDistributeTool {
     fn name(&self) -> &str {
         "task.distribute"
@@ -39,7 +43,7 @@ impl Tool for TaskDistributeTool {
     fn description(&self) -> &str {
         "Distribute a task to registered agents"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
         let agent_id = args
             .get("agent_id")
@@ -87,6 +91,8 @@ impl TaskStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for TaskStatusTool {
     fn name(&self) -> &str {
         "task.status"
@@ -100,7 +106,7 @@ impl Tool for TaskStatusTool {
     fn description(&self) -> &str {
         "Check status of distributed tasks"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let task_id = args.get("task_id").and_then(|v| v.as_str()).unwrap_or("");
         let memories = self.store.scan(Galaxy::Substrate, 500)?;
         let tasks: Vec<Value> = memories

@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -26,6 +28,8 @@ impl AgentRegisterTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentRegisterTool {
     fn name(&self) -> &str {
         "agent.register"
@@ -39,7 +43,7 @@ impl Tool for AgentRegisterTool {
     fn description(&self) -> &str {
         "Register a new agent in the Substrate galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let name = args
             .get("name")
             .and_then(|v| v.as_str())
@@ -85,6 +89,8 @@ impl AgentListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentListTool {
     fn name(&self) -> &str {
         "agent.list"
@@ -98,7 +104,7 @@ impl Tool for AgentListTool {
     fn description(&self) -> &str {
         "List all registered agents"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let memories = self.store.scan(Galaxy::Substrate, 500)?;
         let agents: Vec<Value> = memories
             .iter()
@@ -142,6 +148,8 @@ impl AgentHeartbeatTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentHeartbeatTool {
     fn name(&self) -> &str {
         "agent.heartbeat"
@@ -155,7 +163,7 @@ impl Tool for AgentHeartbeatTool {
     fn description(&self) -> &str {
         "Record an agent heartbeat"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let agent_id = args.get("agent_id").and_then(|v| v.as_str()).unwrap_or("");
         let status = args
             .get("status")
@@ -206,6 +214,8 @@ impl AgentTrustTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentTrustTool {
     fn name(&self) -> &str {
         "agent.trust"
@@ -219,7 +229,7 @@ impl Tool for AgentTrustTool {
     fn description(&self) -> &str {
         "Get or set trust level for an agent (0.0–1.0)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let agent_id = args
             .get("agent_id")
             .and_then(|v| v.as_str())
@@ -300,6 +310,8 @@ impl AgentDescriptionsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentDescriptionsTool {
     fn name(&self) -> &str {
         "agent.descriptions"
@@ -313,7 +325,7 @@ impl Tool for AgentDescriptionsTool {
     fn description(&self) -> &str {
         "Get or set description for an agent"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let agent_id = args
             .get("agent_id")
             .and_then(|v| v.as_str())
@@ -393,6 +405,8 @@ impl AgentCapabilitiesTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentCapabilitiesTool {
     fn name(&self) -> &str {
         "agent.capabilities"
@@ -406,7 +420,7 @@ impl Tool for AgentCapabilitiesTool {
     fn description(&self) -> &str {
         "Get or set capabilities for an agent"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let agent_id = args
             .get("agent_id")
             .and_then(|v| v.as_str())
@@ -479,6 +493,8 @@ impl AgentHeartbeatHistoryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentHeartbeatHistoryTool {
     fn name(&self) -> &str {
         "agent.heartbeat.history"
@@ -492,7 +508,7 @@ impl Tool for AgentHeartbeatHistoryTool {
     fn description(&self) -> &str {
         "Retrieve heartbeat history for an agent"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let agent_id = args
             .get("agent_id")
             .and_then(|v| v.as_str())
@@ -558,6 +574,8 @@ impl AgentDeregisterTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AgentDeregisterTool {
     fn name(&self) -> &str {
         "agent.deregister"
@@ -571,7 +589,7 @@ impl Tool for AgentDeregisterTool {
     fn description(&self) -> &str {
         "Deregister an agent (removes registration record)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let agent_id = args
             .get("agent_id")
             .and_then(|v| v.as_str())
@@ -617,127 +635,141 @@ mod tests {
         Arc::new(MemoryStore::open_default(dir.path()).unwrap())
     }
 
-    #[test]
-    fn agent_trust_get_default() {
+    #[tokio::test]
+    async fn agent_trust_get_default() {
         let store = test_store();
         let reg = AgentRegisterTool::new(store.clone());
         let mut ctx = Context::default();
-        let _ = reg.call(&mut ctx, json!({"name": "worker-1"}));
+        let _ = reg.call(&mut ctx, json!({"name": "worker-1"})).await;
 
         let tool = AgentTrustTool::new(store);
-        let result = tool.call(&mut ctx, json!({"agent_id": "worker-1"}));
+        let result = tool.call(&mut ctx, json!({"agent_id": "worker-1"})).await;
         assert!(result.is_ok());
         let v = result.unwrap();
         assert_eq!(v["action"], "get");
         assert_eq!(v["trust_level"], 0.5);
     }
 
-    #[test]
-    fn agent_trust_set_and_get() {
+    #[tokio::test]
+    async fn agent_trust_set_and_get() {
         let store = test_store();
         let reg = AgentRegisterTool::new(store.clone());
         let mut ctx = Context::default();
-        let _ = reg.call(&mut ctx, json!({"name": "worker-2"}));
+        let _ = reg.call(&mut ctx, json!({"name": "worker-2"})).await;
 
         let tool = AgentTrustTool::new(store);
-        let _ = tool.call(
-            &mut ctx,
-            json!({"agent_id": "worker-2", "trust_level": 0.9}),
-        );
+        let _ = tool
+            .call(
+                &mut ctx,
+                json!({"agent_id": "worker-2", "trust_level": 0.9}),
+            )
+            .await;
 
-        let result = tool.call(&mut ctx, json!({"agent_id": "worker-2"}));
+        let result = tool.call(&mut ctx, json!({"agent_id": "worker-2"})).await;
         assert!(result.is_ok());
         let v = result.unwrap();
         assert_eq!(v["action"], "get");
         assert_eq!(v["trust_level"], 0.9);
     }
 
-    #[test]
-    fn agent_descriptions_set_and_get() {
+    #[tokio::test]
+    async fn agent_descriptions_set_and_get() {
         let store = test_store();
         let reg = AgentRegisterTool::new(store.clone());
         let mut ctx = Context::default();
-        let _ = reg.call(&mut ctx, json!({"name": "worker-3"}));
+        let _ = reg.call(&mut ctx, json!({"name": "worker-3"})).await;
 
         let tool = AgentDescriptionsTool::new(store);
-        let _ = tool.call(
-            &mut ctx,
-            json!({"agent_id": "worker-3", "description": "A test agent"}),
-        );
+        let _ = tool
+            .call(
+                &mut ctx,
+                json!({"agent_id": "worker-3", "description": "A test agent"}),
+            )
+            .await;
 
-        let result = tool.call(&mut ctx, json!({"agent_id": "worker-3"}));
+        let result = tool.call(&mut ctx, json!({"agent_id": "worker-3"})).await;
         assert!(result.is_ok());
         let v = result.unwrap();
         assert_eq!(v["description"], "A test agent");
     }
 
-    #[test]
-    fn agent_capabilities_set_and_get() {
+    #[tokio::test]
+    async fn agent_capabilities_set_and_get() {
         let store = test_store();
         let reg = AgentRegisterTool::new(store.clone());
         let mut ctx = Context::default();
-        let _ = reg.call(
-            &mut ctx,
-            json!({"name": "worker-4", "capabilities": ["read"]}),
-        );
+        let _ = reg
+            .call(
+                &mut ctx,
+                json!({"name": "worker-4", "capabilities": ["read"]}),
+            )
+            .await;
 
         let tool = AgentCapabilitiesTool::new(store);
-        let result = tool.call(&mut ctx, json!({"agent_id": "worker-4"}));
+        let result = tool.call(&mut ctx, json!({"agent_id": "worker-4"})).await;
         assert!(result.is_ok());
         let v = result.unwrap();
         assert_eq!(v["capabilities"], json!(["read"]));
 
-        let _ = tool.call(
-            &mut ctx,
-            json!({"agent_id": "worker-4", "capabilities": ["read", "write"]}),
-        );
-        let result = tool.call(&mut ctx, json!({"agent_id": "worker-4"}));
+        let _ = tool
+            .call(
+                &mut ctx,
+                json!({"agent_id": "worker-4", "capabilities": ["read", "write"]}),
+            )
+            .await;
+        let result = tool.call(&mut ctx, json!({"agent_id": "worker-4"})).await;
         let v = result.unwrap();
         assert_eq!(v["capabilities"], json!(["read", "write"]));
     }
 
-    #[test]
-    fn agent_heartbeat_history() {
+    #[tokio::test]
+    async fn agent_heartbeat_history() {
         let store = test_store();
         let reg = AgentRegisterTool::new(store.clone());
         let mut ctx = Context::default();
-        let _ = reg.call(&mut ctx, json!({"name": "worker-5"}));
+        let _ = reg.call(&mut ctx, json!({"name": "worker-5"})).await;
 
         let hb = AgentHeartbeatTool::new(store.clone());
-        let _ = hb.call(&mut ctx, json!({"agent_id": "worker-5", "status": "alive"}));
-        let _ = hb.call(&mut ctx, json!({"agent_id": "worker-5", "status": "busy"}));
+        let _ = hb
+            .call(&mut ctx, json!({"agent_id": "worker-5", "status": "alive"}))
+            .await;
+        let _ = hb
+            .call(&mut ctx, json!({"agent_id": "worker-5", "status": "busy"}))
+            .await;
 
         let tool = AgentHeartbeatHistoryTool::new(store);
-        let result = tool.call(&mut ctx, json!({"agent_id": "worker-5"}));
+        let result = tool.call(&mut ctx, json!({"agent_id": "worker-5"})).await;
         assert!(result.is_ok());
         let v = result.unwrap();
         assert_eq!(v["count"], 2);
     }
 
-    #[test]
-    fn agent_deregister() {
+    #[tokio::test]
+    async fn agent_deregister() {
         let store = test_store();
         let reg = AgentRegisterTool::new(store.clone());
         let mut ctx = Context::default();
-        let _ = reg.call(&mut ctx, json!({"name": "worker-6"}));
+        let _ = reg.call(&mut ctx, json!({"name": "worker-6"})).await;
 
         let tool = AgentDeregisterTool::new(store.clone());
-        let result = tool.call(&mut ctx, json!({"agent_id": "worker-6"}));
+        let result = tool.call(&mut ctx, json!({"agent_id": "worker-6"})).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap()["deregistered"], true);
 
         let list = AgentListTool::new(store);
-        let result = list.call(&mut ctx, json!({}));
+        let result = list.call(&mut ctx, json!({})).await;
         let v = result.unwrap();
         assert_eq!(v["count"], 0);
     }
 
-    #[test]
-    fn agent_trust_not_found() {
+    #[tokio::test]
+    async fn agent_trust_not_found() {
         let store = test_store();
         let tool = AgentTrustTool::new(store);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"agent_id": "nonexistent"}));
+        let result = tool
+            .call(&mut ctx, json!({"agent_id": "nonexistent"}))
+            .await;
         assert!(result.is_err());
     }
 }

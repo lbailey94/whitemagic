@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -25,6 +27,8 @@ impl MemoryCountTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryCountTool {
     fn name(&self) -> &str {
         "memory.count"
@@ -38,7 +42,7 @@ impl Tool for MemoryCountTool {
     fn description(&self) -> &str {
         "Count memories in a galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let count = self.store.count(galaxy)?;
         Ok(json!({ "status": "success", "galaxy": galaxy_name(galaxy), "count": count }))
@@ -65,6 +69,8 @@ impl MemoryTagsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryTagsTool {
     fn name(&self) -> &str {
         "memory.tags"
@@ -78,7 +84,7 @@ impl Tool for MemoryTagsTool {
     fn description(&self) -> &str {
         "List all unique tags in a galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let memories = self.store.scan(galaxy, 10_000)?;
         let tags: std::collections::HashSet<String> = memories
@@ -112,6 +118,8 @@ impl SessionListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SessionListTool {
     fn name(&self) -> &str {
         "session.list"
@@ -125,7 +133,7 @@ impl Tool for SessionListTool {
     fn description(&self) -> &str {
         "List all sessions in the Sessions galaxy"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let memories = self.store.scan(Galaxy::Sessions, 500)?;
         let sessions: Vec<Value> = memories
             .iter()
@@ -167,6 +175,8 @@ impl Default for CittaCoherenceTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for CittaCoherenceTool {
     fn name(&self) -> &str {
         "citta.coherence"
@@ -180,7 +190,7 @@ impl Tool for CittaCoherenceTool {
     fn description(&self) -> &str {
         "Check citta coherence level and whether writes are permitted"
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let threshold = 0.3f32;
         let can_write = ctx.citta_coherence >= threshold;
         Ok(json!({
@@ -218,6 +228,8 @@ impl Default for DharmaProfilesTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DharmaProfilesTool {
     fn name(&self) -> &str {
         "dharma.profiles"
@@ -231,7 +243,7 @@ impl Tool for DharmaProfilesTool {
     fn description(&self) -> &str {
         "List available dharma governance profiles"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         Ok(json!({
             "status": "success",
             "profiles": [
@@ -264,6 +276,8 @@ impl MemoryNearbyTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryNearbyTool {
     fn name(&self) -> &str {
         "memory.nearby"
@@ -277,7 +291,7 @@ impl Tool for MemoryNearbyTool {
     fn description(&self) -> &str {
         "Find memories spatially near a query text using 5D holographic coordinates"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
         if query.is_empty() {
             return Err(wm_core::CoreError::InvalidArgs(

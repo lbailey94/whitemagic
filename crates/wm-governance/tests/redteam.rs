@@ -23,6 +23,9 @@ fn karma_chain_tamper_breaks_linkage() {
     let e0 = ledger.record("tool_a", false, 0, true).unwrap();
     let e1 = ledger.record("tool_b", false, 0, true).unwrap();
 
+    // Flush to persist entries before tampering directly via LMDB
+    ledger.flush().unwrap();
+
     // Chain linkage: e1.parent_hash == e0.payload_hash
     assert_eq!(
         e1.parent_hash, e0.payload_hash,

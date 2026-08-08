@@ -4,6 +4,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -33,6 +35,8 @@ impl SanghaPeersTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SanghaPeersTool {
     fn name(&self) -> &str {
         "sangha.peers"
@@ -46,7 +50,7 @@ impl Tool for SanghaPeersTool {
     fn description(&self) -> &str {
         "List discovered peers in the Sangha mesh, optionally filter by capability"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let discovery = self.discovery.lock().unwrap();
         let peers: Vec<&PeerInfo> =
             if let Some(cap_str) = args.get("capability").and_then(Value::as_str) {
@@ -100,6 +104,8 @@ impl SanghaDiscoverTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SanghaDiscoverTool {
     fn name(&self) -> &str {
         "sangha.discover"
@@ -113,7 +119,7 @@ impl Tool for SanghaDiscoverTool {
     fn description(&self) -> &str {
         "Register or update a peer in the Sangha mesh (args: peer_id, address, capabilities)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let peer_id = args
             .get("peer_id")
             .and_then(Value::as_str)
@@ -168,6 +174,8 @@ impl SanghaSignalTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SanghaSignalTool {
     fn name(&self) -> &str {
         "sangha.signal"
@@ -181,7 +189,7 @@ impl Tool for SanghaSignalTool {
     fn description(&self) -> &str {
         "Broadcast a signal to the Sangha mesh (args: signal_type, source, data)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let signal_type_str = args
             .get("signal_type")
             .and_then(Value::as_str)
@@ -230,6 +238,8 @@ impl SanghaChatTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SanghaChatTool {
     fn name(&self) -> &str {
         "sangha.chat"
@@ -243,7 +253,7 @@ impl Tool for SanghaChatTool {
     fn description(&self) -> &str {
         "Send or read messages in a Sangha chat channel (args: action=send|read, channel, sender, content)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let action = args.get("action").and_then(Value::as_str).unwrap_or("read");
 
         let channel = args
@@ -323,6 +333,8 @@ impl SanghaLocksTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SanghaLocksTool {
     fn name(&self) -> &str {
         "sangha.locks"
@@ -336,7 +348,7 @@ impl Tool for SanghaLocksTool {
     fn description(&self) -> &str {
         "Manage distributed resource locks (args: action=acquire|release|list, resource, peer)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let action = args
             .get("action")
             .and_then(Value::as_str)
@@ -461,30 +473,30 @@ mod tests {
     fn test_locks() -> Arc<Mutex<ResourceLockManager>> {
         Arc::new(Mutex::new(ResourceLockManager::default()))
     }
-    #[test]
-    fn sangha_peers_returns_list() {
+    #[tokio::test]
+    async fn sangha_peers_returns_list() {
         let discovery = test_discovery();
         let tool = SanghaPeersTool::new(discovery);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({})).unwrap();
+        let v = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(v["status"], "success");
         assert_eq!(v["peer_count"], 0);
     }
 
-    #[test]
-    fn sangha_discover_registers_peer() {
+    #[tokio::test]
+    async fn sangha_discover_registers_peer() {
         let discovery = test_discovery();
         let tool = SanghaDiscoverTool::new(discovery);
         let mut ctx = Context::default();
         let v = tool
-            .call(&mut ctx, json!({"peer_id": "node-1", "address": "127.0.0.1:8080", "capabilities": ["inference", "memory"]}))
+            .call(&mut ctx, json!({"peer_id": "node-1", "address": "127.0.0.1:8080", "capabilities": ["inference", "memory"]})).await
             .unwrap();
         assert_eq!(v["status"], "success");
         assert_eq!(v["peer_count"], 1);
     }
 
-    #[test]
-    fn sangha_signal_broadcasts() {
+    #[tokio::test]
+    async fn sangha_signal_broadcasts() {
         let broadcast = test_broadcast();
         let tool = SanghaSignalTool::new(broadcast);
         let mut ctx = Context::default();
@@ -493,30 +505,32 @@ mod tests {
                 &mut ctx,
                 json!({"signal_type": "peer_status", "source": "test", "data": {"status": "ok"}}),
             )
+            .await
             .unwrap();
         assert_eq!(v["status"], "success");
         assert!(v["delivered"].is_number());
     }
 
-    #[test]
-    fn sangha_chat_send_and_read() {
+    #[tokio::test]
+    async fn sangha_chat_send_and_read() {
         let chat = test_chat();
         let tool = SanghaChatTool::new(chat);
         let mut ctx = Context::default();
 
         let send_v = tool
-            .call(&mut ctx, json!({"action": "send", "channel": "general", "sender": "node-1", "content": "hello"}))
+            .call(&mut ctx, json!({"action": "send", "channel": "general", "sender": "node-1", "content": "hello"})).await
             .unwrap();
         assert_eq!(send_v["status"], "success");
 
         let read_v = tool
             .call(&mut ctx, json!({"action": "read", "channel": "general"}))
+            .await
             .unwrap();
         assert_eq!(read_v["message_count"], 1);
     }
 
-    #[test]
-    fn sangha_locks_acquire_and_list() {
+    #[tokio::test]
+    async fn sangha_locks_acquire_and_list() {
         let lm = test_locks();
         let tool = SanghaLocksTool::new(lm);
         let mut ctx = Context::default();
@@ -526,15 +540,19 @@ mod tests {
                 &mut ctx,
                 json!({"action": "acquire", "resource": "res:1", "peer": "node-1"}),
             )
+            .await
             .unwrap();
         assert_eq!(acq_v["status"], "success");
 
-        let list_v = tool.call(&mut ctx, json!({"action": "list"})).unwrap();
+        let list_v = tool
+            .call(&mut ctx, json!({"action": "list"}))
+            .await
+            .unwrap();
         assert!(list_v["summary"]["active_locks"].is_number());
     }
 
-    #[test]
-    fn sangha_locks_release() {
+    #[tokio::test]
+    async fn sangha_locks_release() {
         let lm = test_locks();
         let tool = SanghaLocksTool::new(lm);
         let mut ctx = Context::default();
@@ -543,6 +561,7 @@ mod tests {
             &mut ctx,
             json!({"action": "acquire", "resource": "res:1", "peer": "node-1"}),
         )
+        .await
         .unwrap();
 
         let rel_v = tool
@@ -550,12 +569,13 @@ mod tests {
                 &mut ctx,
                 json!({"action": "release", "resource": "res:1", "peer": "node-1"}),
             )
+            .await
             .unwrap();
         assert_eq!(rel_v["status"], "success");
     }
 
-    #[test]
-    fn sangha_tools_are_room_gana() {
+    #[tokio::test]
+    async fn sangha_tools_are_room_gana() {
         assert_eq!(SanghaPeersTool::new(test_discovery()).gana(), Gana::Room);
         assert_eq!(SanghaSignalTool::new(test_broadcast()).gana(), Gana::Room);
         assert_eq!(SanghaChatTool::new(test_chat()).gana(), Gana::Room);

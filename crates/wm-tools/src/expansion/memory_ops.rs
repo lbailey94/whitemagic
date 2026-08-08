@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -32,6 +34,8 @@ impl MemoryConsolidateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryConsolidateTool {
     fn name(&self) -> &str {
         "memory.consolidate"
@@ -45,7 +49,7 @@ impl Tool for MemoryConsolidateTool {
     fn description(&self) -> &str {
         "Deduplicate memories by content_hash within a galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -97,6 +101,8 @@ impl MemoryDecayTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryDecayTool {
     fn name(&self) -> &str {
         "memory.decay"
@@ -110,7 +116,7 @@ impl Tool for MemoryDecayTool {
     fn description(&self) -> &str {
         "Lower importance of old, low-access memories (never deletes)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -166,6 +172,8 @@ impl MemoryBatchReadTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryBatchReadTool {
     fn name(&self) -> &str {
         "memory.batch_read"
@@ -179,7 +187,7 @@ impl Tool for MemoryBatchReadTool {
     fn description(&self) -> &str {
         "Read multiple memories by ID from a galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -246,6 +254,8 @@ impl MemoryUpdateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryUpdateTool {
     fn name(&self) -> &str {
         "memory.update"
@@ -259,7 +269,7 @@ impl Tool for MemoryUpdateTool {
     fn description(&self) -> &str {
         "Update tags or importance of an existing memory"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let id_str = args
             .get("id")
@@ -340,6 +350,8 @@ impl MemoryTagTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryTagTool {
     fn name(&self) -> &str {
         "memory.tag"
@@ -353,7 +365,7 @@ impl Tool for MemoryTagTool {
     fn description(&self) -> &str {
         "Add or remove tags from a memory"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let id_str = args
             .get("id")
@@ -416,6 +428,8 @@ impl MemoryStatsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryStatsTool {
     fn name(&self) -> &str {
         "memory.stats"
@@ -429,7 +443,7 @@ impl Tool for MemoryStatsTool {
     fn description(&self) -> &str {
         "Statistics for a galaxy (count, avg importance, tag frequency)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let memories = self.store.scan(galaxy, 10_000)?;
         let total = memories.len();
@@ -478,6 +492,8 @@ impl MemoryHybridRecallTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryHybridRecallTool {
     fn name(&self) -> &str {
         "memory.hybrid_recall"
@@ -491,7 +507,7 @@ impl Tool for MemoryHybridRecallTool {
     fn description(&self) -> &str {
         "Hybrid recall: combine full-text search with metadata filtering"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
         let limit = args
@@ -598,6 +614,8 @@ impl MemorySortTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemorySortTool {
     fn name(&self) -> &str {
         "memory.sort"
@@ -611,7 +629,7 @@ impl Tool for MemorySortTool {
     fn description(&self) -> &str {
         "Sort memories by importance, recency, or access count"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let sort_by = args
             .get("sort_by")
@@ -700,6 +718,8 @@ impl MemoryFilterTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryFilterTool {
     fn name(&self) -> &str {
         "memory.filter"
@@ -713,7 +733,7 @@ impl Tool for MemoryFilterTool {
     fn description(&self) -> &str {
         "Filter memories by tags, date range, and importance thresholds"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let tags: Vec<String> = args
             .get("tags")
@@ -807,6 +827,8 @@ impl MemoryDeduplicateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryDeduplicateTool {
     fn name(&self) -> &str {
         "memory.deduplicate"
@@ -820,7 +842,7 @@ impl Tool for MemoryDeduplicateTool {
     fn description(&self) -> &str {
         "Find and merge duplicate memories by content hash or similarity"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("hash");
         let dry_run = args
@@ -930,6 +952,8 @@ impl MemoryExportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryExportTool {
     fn name(&self) -> &str {
         "memory.export"
@@ -943,7 +967,7 @@ impl Tool for MemoryExportTool {
     fn description(&self) -> &str {
         "Export memories in JSON, CSV, or Markdown format"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let format = args
             .get("format")
@@ -1056,14 +1080,15 @@ mod tests {
         let _ = store.put(galaxy, &m3);
     }
 
-    #[test]
-    fn memory_sort_by_importance_desc() {
+    #[tokio::test]
+    async fn memory_sort_by_importance_desc() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemorySortTool::new(store);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"sort_by": "importance", "order": "desc"}))
+            .await
             .unwrap();
         assert_eq!(v["status"], "success");
         assert_eq!(v["returned"], 3);
@@ -1071,61 +1096,68 @@ mod tests {
         assert!(mems[0]["importance"].as_f64().unwrap() >= mems[1]["importance"].as_f64().unwrap());
     }
 
-    #[test]
-    fn memory_sort_by_importance_asc() {
+    #[tokio::test]
+    async fn memory_sort_by_importance_asc() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemorySortTool::new(store);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"sort_by": "importance", "order": "asc"}))
+            .await
             .unwrap();
         let mems = v["memories"].as_array().unwrap();
         assert!(mems[0]["importance"].as_f64().unwrap() <= mems[1]["importance"].as_f64().unwrap());
     }
 
-    #[test]
-    fn memory_sort_by_recency() {
+    #[tokio::test]
+    async fn memory_sort_by_recency() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemorySortTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"sort_by": "recency"})).unwrap();
+        let v = tool
+            .call(&mut ctx, json!({"sort_by": "recency"}))
+            .await
+            .unwrap();
         assert_eq!(v["returned"], 3);
     }
 
-    #[test]
-    fn memory_sort_invalid_field() {
+    #[tokio::test]
+    async fn memory_sort_invalid_field() {
         let store = test_store();
         let tool = MemorySortTool::new(store);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"sort_by": "invalid"}));
+        let result = tool.call(&mut ctx, json!({"sort_by": "invalid"})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn memory_sort_with_limit() {
+    #[tokio::test]
+    async fn memory_sort_with_limit() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemorySortTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"limit": 2})).unwrap();
+        let v = tool.call(&mut ctx, json!({"limit": 2})).await.unwrap();
         assert_eq!(v["returned"], 2);
         assert_eq!(v["total"], 3);
     }
 
-    #[test]
-    fn memory_filter_by_tag() {
+    #[tokio::test]
+    async fn memory_filter_by_tag() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemoryFilterTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"tags": ["rust"]})).unwrap();
+        let v = tool
+            .call(&mut ctx, json!({"tags": ["rust"]}))
+            .await
+            .unwrap();
         assert_eq!(v["matched"], 2);
     }
 
-    #[test]
-    fn memory_filter_by_importance_range() {
+    #[tokio::test]
+    async fn memory_filter_by_importance_range() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemoryFilterTool::new(store);
@@ -1135,36 +1167,39 @@ mod tests {
                 &mut ctx,
                 json!({"min_importance": 0.4, "max_importance": 0.6}),
             )
+            .await
             .unwrap();
         assert_eq!(v["matched"], 1);
     }
 
-    #[test]
-    fn memory_filter_no_matches() {
+    #[tokio::test]
+    async fn memory_filter_no_matches() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemoryFilterTool::new(store);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"tags": ["nonexistent"]}))
+            .await
             .unwrap();
         assert_eq!(v["matched"], 0);
     }
 
-    #[test]
-    fn memory_filter_combined_tags_and_importance() {
+    #[tokio::test]
+    async fn memory_filter_combined_tags_and_importance() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemoryFilterTool::new(store);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"tags": ["rust"], "min_importance": 0.5}))
+            .await
             .unwrap();
         assert_eq!(v["matched"], 1);
     }
 
-    #[test]
-    fn memory_deduplicate_hash_dry_run() {
+    #[tokio::test]
+    async fn memory_deduplicate_hash_dry_run() {
         let store = test_store();
         let m1 = Memory::new(Galaxy::Codex, "duplicate content".into());
         let m2 = Memory::new(Galaxy::Codex, "duplicate content".into());
@@ -1179,6 +1214,7 @@ mod tests {
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"mode": "hash", "dry_run": true}))
+            .await
             .unwrap();
         assert_eq!(v["duplicates_found"], 1);
         assert_eq!(v["removed"], 0);
@@ -1187,8 +1223,8 @@ mod tests {
         assert_eq!(memories.len(), 3);
     }
 
-    #[test]
-    fn memory_deduplicate_hash_execute() {
+    #[tokio::test]
+    async fn memory_deduplicate_hash_execute() {
         let store = test_store();
         let m1 = Memory::new(Galaxy::Codex, "duplicate content".into());
         let m2 = Memory::new(Galaxy::Codex, "duplicate content".into());
@@ -1203,6 +1239,7 @@ mod tests {
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"mode": "hash", "dry_run": false}))
+            .await
             .unwrap();
         assert_eq!(v["duplicates_found"], 1);
         assert_eq!(v["removed"], 1);
@@ -1211,8 +1248,8 @@ mod tests {
         assert_eq!(memories.len(), 2);
     }
 
-    #[test]
-    fn memory_deduplicate_content_mode() {
+    #[tokio::test]
+    async fn memory_deduplicate_content_mode() {
         let store = test_store();
         let m1 = Memory::new(Galaxy::Codex, "same text".into());
         let m2 = Memory::new(Galaxy::Codex, "same text".into());
@@ -1223,12 +1260,13 @@ mod tests {
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"mode": "content", "dry_run": true}))
+            .await
             .unwrap();
         assert_eq!(v["duplicates_found"], 1);
     }
 
-    #[test]
-    fn memory_deduplicate_no_duplicates() {
+    #[tokio::test]
+    async fn memory_deduplicate_no_duplicates() {
         let store = test_store();
         let _ = store.put(
             Galaxy::Codex,
@@ -1241,75 +1279,84 @@ mod tests {
 
         let tool = MemoryDeduplicateTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({})).unwrap();
+        let v = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(v["duplicates_found"], 0);
     }
 
-    #[test]
-    fn memory_deduplicate_invalid_mode() {
+    #[tokio::test]
+    async fn memory_deduplicate_invalid_mode() {
         let store = test_store();
         let tool = MemoryDeduplicateTool::new(store);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"mode": "invalid"}));
+        let result = tool.call(&mut ctx, json!({"mode": "invalid"})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn memory_export_json() {
+    #[tokio::test]
+    async fn memory_export_json() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemoryExportTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"format": "json"})).unwrap();
+        let v = tool
+            .call(&mut ctx, json!({"format": "json"}))
+            .await
+            .unwrap();
         assert_eq!(v["format"], "json");
         assert_eq!(v["count"], 3);
         assert!(v["export"].as_str().unwrap().contains("First memory"));
     }
 
-    #[test]
-    fn memory_export_csv() {
+    #[tokio::test]
+    async fn memory_export_csv() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemoryExportTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"format": "csv"})).unwrap();
+        let v = tool.call(&mut ctx, json!({"format": "csv"})).await.unwrap();
         let csv = v["export"].as_str().unwrap();
         assert!(csv.contains("id,content,tags"));
         assert!(csv.contains("First memory"));
     }
 
-    #[test]
-    fn memory_export_markdown() {
+    #[tokio::test]
+    async fn memory_export_markdown() {
         let store = test_store();
         populate_memories(&store, Galaxy::Codex);
         let tool = MemoryExportTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"format": "markdown"})).unwrap();
+        let v = tool
+            .call(&mut ctx, json!({"format": "markdown"}))
+            .await
+            .unwrap();
         let md = v["export"].as_str().unwrap();
         assert!(md.contains("# Memory Export"));
         assert!(md.contains("First memory"));
     }
 
-    #[test]
-    fn memory_export_invalid_format() {
+    #[tokio::test]
+    async fn memory_export_invalid_format() {
         let store = test_store();
         let tool = MemoryExportTool::new(store);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"format": "xml"}));
+        let result = tool.call(&mut ctx, json!({"format": "xml"})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn memory_export_empty_galaxy() {
+    #[tokio::test]
+    async fn memory_export_empty_galaxy() {
         let store = test_store();
         let tool = MemoryExportTool::new(store);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"format": "json"})).unwrap();
+        let v = tool
+            .call(&mut ctx, json!({"format": "json"}))
+            .await
+            .unwrap();
         assert_eq!(v["count"], 0);
     }
 
-    #[test]
-    fn memory_sort_and_filter_are_winnowing_basket_gana() {
+    #[tokio::test]
+    async fn memory_sort_and_filter_are_winnowing_basket_gana() {
         let store = test_store();
         assert_eq!(
             MemorySortTool::new(store.clone()).gana(),

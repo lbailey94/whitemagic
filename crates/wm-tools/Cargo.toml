@@ -13,16 +13,12 @@ workspace = true
 wm-core = { workspace = true }
 wm-memory = { workspace = true }
 wm-dispatch = { workspace = true }
-wm-consciousness = { workspace = true }
+wm-cognitive = { workspace = true }
 wm-governance = { workspace = true }
 wm-substrate = { workspace = true }
-wm-reflex = { workspace = true }
-wm-timescale = { workspace = true }
 wm-workspace = { workspace = true }
 wm-selfmodel = { workspace = true }
 wm-bicameral = { workspace = true }
-wm-drive = { workspace = true }
-wm-resonance = { workspace = true }
 wm-sangha = { workspace = true }
 wm-simulation = { workspace = true }
 serde = { workspace = true }
@@ -31,6 +27,7 @@ thiserror = { workspace = true }
 ahash = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
+async-trait = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 

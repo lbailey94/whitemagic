@@ -1,5 +1,6 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::sync::Arc;
+use tokio::runtime::Runtime;
 use wm_core::{BrainWave, Context, Tool, ToolStatsSnapshot};
 use wm_memory::MemoryStore;
 use wm_tools::expansion::{DispatchTelemetry, FrictionAutoLogTool, FrictionLogTool, friction_hash};
@@ -93,7 +94,8 @@ fn bench_friction_log_tool_call(c: &mut Criterion) {
             },
             |tool| {
                 let mut ctx = Context::new(BrainWave::Gamma);
-                tool.call(
+                let rt = Runtime::new().unwrap();
+                rt.block_on(tool.call(
                     &mut ctx,
                     serde_json::json!({
                         "what_happened": "Tool returned unexpected empty result",
@@ -103,7 +105,7 @@ fn bench_friction_log_tool_call(c: &mut Criterion) {
                         "category": "ux",
                         "tool_name": "memory.search",
                     }),
-                )
+                ))
                 .unwrap();
             },
             criterion::BatchSize::SmallInput,

@@ -9,6 +9,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -42,6 +44,8 @@ impl AntiLoopCheckTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AntiLoopCheckTool {
     fn name(&self) -> &str {
         "anti_loop.check"
@@ -55,7 +59,7 @@ impl Tool for AntiLoopCheckTool {
     fn description(&self) -> &str {
         "Detect repetitive patterns indicating loops or stuck states"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args.get("galaxy").and_then(|v| v.as_str());
         let scan_limit = args
             .get("scan_limit")
@@ -226,6 +230,8 @@ impl BoundaryEnforceTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for BoundaryEnforceTool {
     fn name(&self) -> &str {
         "boundary.enforce"
@@ -239,7 +245,7 @@ impl Tool for BoundaryEnforceTool {
     fn description(&self) -> &str {
         "Enforce resource boundaries and report violations"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let max_memories_per_galaxy = args
             .get("max_memories_per_galaxy")
             .and_then(serde_json::Value::as_u64)
@@ -392,13 +398,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn anti_loop_detects_exact_duplicates() {
+    #[tokio::test]
+    async fn anti_loop_detects_exact_duplicates() {
         let (_tmp, store) = open_store();
         seed_duplicates(&store);
 
         let tool = AntiLoopCheckTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         let warnings = obj["warnings"].as_array().unwrap();
@@ -406,30 +412,30 @@ mod tests {
         assert!(has_dup, "Should detect exact duplicates");
     }
 
-    #[test]
-    fn anti_loop_no_issues() {
+    #[tokio::test]
+    async fn anti_loop_no_issues() {
         let (_tmp, store) = open_store();
         seed_normal(&store);
 
         let tool = AntiLoopCheckTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["loop_detected"], false);
     }
 
-    #[test]
-    fn anti_loop_empty_store() {
+    #[tokio::test]
+    async fn anti_loop_empty_store() {
         let (_tmp, store) = open_store();
         let tool = AntiLoopCheckTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["total_memories"], 0);
         assert_eq!(obj["loop_detected"], false);
     }
 
-    #[test]
-    fn anti_loop_detects_near_duplicates() {
+    #[tokio::test]
+    async fn anti_loop_detects_near_duplicates() {
         let (_tmp, store) = open_store();
         let mut mem1 =
             wm_memory::Memory::new(Galaxy::Codex, "Rust programming language features".into());
@@ -446,6 +452,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"similarity_threshold": 0.5}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         let warnings = obj["warnings"].as_array().unwrap();
@@ -453,21 +460,21 @@ mod tests {
         assert!(has_near, "Should detect near-duplicates");
     }
 
-    #[test]
-    fn boundary_enforce_all_clear() {
+    #[tokio::test]
+    async fn boundary_enforce_all_clear() {
         let (_tmp, store) = open_store();
         seed_normal(&store);
 
         let tool = BoundaryEnforceTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["all_clear"], true);
         assert_eq!(obj["violation_count"], 0);
     }
 
-    #[test]
-    fn boundary_enforce_detects_oversized() {
+    #[tokio::test]
+    async fn boundary_enforce_detects_oversized() {
         let (_tmp, store) = open_store();
         let mut mem = wm_memory::Memory::new(Galaxy::Codex, "A".repeat(100));
         mem.metadata.importance = 0.5;
@@ -476,6 +483,7 @@ mod tests {
         let tool = BoundaryEnforceTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"max_content_length": 50}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["all_clear"], false);
@@ -484,8 +492,8 @@ mod tests {
         assert!(has_oversized, "Should detect oversized memories");
     }
 
-    #[test]
-    fn boundary_enforce_detects_overtagged() {
+    #[tokio::test]
+    async fn boundary_enforce_detects_overtagged() {
         let (_tmp, store) = open_store();
         let mut mem = wm_memory::Memory::new(Galaxy::Codex, "Test memory".into());
         mem.metadata.tags = (0..25).map(|i| format!("tag{i}")).collect();
@@ -494,6 +502,7 @@ mod tests {
         let tool = BoundaryEnforceTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"max_tags_per_memory": 20}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         let violations = obj["violations"].as_array().unwrap();
@@ -503,23 +512,23 @@ mod tests {
         assert!(has_overtagged, "Should detect over-tagged memories");
     }
 
-    #[test]
-    fn boundary_enforce_empty_store() {
+    #[tokio::test]
+    async fn boundary_enforce_empty_store() {
         let (_tmp, store) = open_store();
         let tool = BoundaryEnforceTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["all_clear"], true);
         assert_eq!(obj["total_memories"], 0);
     }
 
-    #[test]
-    fn boundary_enforce_galaxy_reports() {
+    #[tokio::test]
+    async fn boundary_enforce_galaxy_reports() {
         let (_tmp, store) = open_store();
         seed_normal(&store);
 
         let tool = BoundaryEnforceTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         let reports = obj["galaxy_reports"].as_array().unwrap();
         let codex = reports.iter().find(|r| r["galaxy"] == "codex");

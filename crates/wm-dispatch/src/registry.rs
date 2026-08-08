@@ -1,5 +1,7 @@
 //! Tool registry — maps Gana → tools and provides lookup.
 
+#[cfg(test)]
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
 use wm_core::{Gana, Tool};
@@ -224,6 +226,7 @@ mod tests {
         stats: ToolStats,
     }
 
+    #[async_trait]
     impl Tool for MockTool {
         fn name(&self) -> &str {
             &self.name
@@ -237,7 +240,7 @@ mod tests {
         fn stats(&self) -> &ToolStats {
             &self.stats
         }
-        fn call(
+        async fn call(
             &self,
             _ctx: &mut wm_core::Context,
             _args: wm_core::Args,

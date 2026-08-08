@@ -11,7 +11,10 @@
 #![allow(clippy::cast_precision_loss)]
 
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use crate::router::TierHandler;
 
@@ -102,6 +105,131 @@ impl DualPrediction {
     }
 }
 
+// ── L1 Prediction Cache ──────────────────────────────────────────────
+
+/// Cache statistics for the L1 prediction cache.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CacheStats {
+    /// Total cache lookups.
+    pub hits: u64,
+    /// Total cache misses (triggered L2 call).
+    pub misses: u64,
+    /// Total entries currently in the cache.
+    pub entries: usize,
+}
+
+impl CacheStats {
+    /// Hit rate as a fraction (0.0–1.0).
+    #[must_use]
+    pub fn hit_rate(&self) -> f64 {
+        let total = self.hits + self.misses;
+        if total == 0 {
+            0.0
+        } else {
+            self.hits as f64 / total as f64
+        }
+    }
+}
+
+/// L1 in-memory cache for world model predictions.
+///
+/// Avoids redundant LLM (L2) calls when the same (state, action, goal)
+/// combination is predicted multiple times — common during rollouts,
+/// scenario evaluation, and Monte Carlo simulation.
+///
+/// Entries expire after `ttl_secs` to prevent stale predictions when
+/// the underlying state may have changed (e.g. after memory updates).
+pub struct PredictionCache {
+    entries: HashMap<u64, (DualPrediction, Instant)>,
+    ttl_secs: u64,
+    max_entries: usize,
+    stats: CacheStats,
+}
+
+impl PredictionCache {
+    /// Create a new prediction cache.
+    ///
+    /// - `ttl_secs`: Time-to-live for cache entries (0 = never expire).
+    /// - `max_entries`: Maximum number of cached predictions (LRU eviction when full).
+    #[must_use]
+    pub fn new(ttl_secs: u64, max_entries: usize) -> Self {
+        Self {
+            entries: HashMap::new(),
+            ttl_secs,
+            max_entries,
+            stats: CacheStats::default(),
+        }
+    }
+
+    /// Compute a cache key from (state, action, goal).
+    fn cache_key(state: &str, action: &str, goal: &str) -> u64 {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        state.hash(&mut hasher);
+        action.hash(&mut hasher);
+        goal.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// Look up a cached prediction.
+    fn get(&mut self, state: &str, action: &str, goal: &str) -> Option<DualPrediction> {
+        let key = Self::cache_key(state, action, goal);
+        let hit = self.entries.get(&key).and_then(|(pred, ts)| {
+            if self.ttl_secs == 0 || ts.elapsed().as_secs() < self.ttl_secs {
+                Some(pred.clone())
+            } else {
+                None
+            }
+        });
+        if hit.is_some() {
+            self.stats.hits += 1;
+        } else {
+            // Remove expired entry if present
+            if self.entries.contains_key(&key) {
+                self.entries.remove(&key);
+            }
+            self.stats.misses += 1;
+        }
+        hit
+    }
+
+    /// Store a prediction in the cache.
+    fn put(&mut self, state: &str, action: &str, goal: &str, prediction: &DualPrediction) {
+        // Evict oldest entries if at capacity (simple FIFO, not true LRU)
+        if self.entries.len() >= self.max_entries {
+            if let Some(&oldest_key) = self
+                .entries
+                .iter()
+                .min_by_key(|(_, (_, ts))| *ts)
+                .map(|(k, _)| k)
+            {
+                self.entries.remove(&oldest_key);
+            }
+        }
+        let key = Self::cache_key(state, action, goal);
+        self.entries
+            .insert(key, (prediction.clone(), Instant::now()));
+        self.stats.entries = self.entries.len();
+    }
+
+    /// Get cache statistics.
+    #[must_use]
+    pub fn stats(&self) -> CacheStats {
+        self.stats.clone()
+    }
+
+    /// Clear all cached predictions.
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.stats.entries = 0;
+    }
+}
+
+impl Default for PredictionCache {
+    fn default() -> Self {
+        Self::new(300, 512) // 5-minute TTL, 512 entries
+    }
+}
+
 /// The LLM-based world model.
 ///
 /// Uses the existing bicameral hemispheres to predict outcomes:
@@ -118,6 +246,8 @@ pub struct WorldModel {
     /// Consensus threshold — if left/right confidence difference exceeds this,
     /// we consider them in disagreement.
     consensus_threshold: f32,
+    /// L1 prediction cache (avoids redundant LLM calls).
+    cache: Mutex<PredictionCache>,
 }
 
 impl WorldModel {
@@ -128,6 +258,7 @@ impl WorldModel {
             left,
             right,
             consensus_threshold: 0.3,
+            cache: Mutex::new(PredictionCache::default()),
         }
     }
 
@@ -138,6 +269,13 @@ impl WorldModel {
         self
     }
 
+    /// Configure the L1 cache (TTL in seconds, max entries).
+    #[must_use]
+    pub fn with_cache_config(mut self, ttl_secs: u64, max_entries: usize) -> Self {
+        self.cache = Mutex::new(PredictionCache::new(ttl_secs, max_entries));
+        self
+    }
+
     /// Predict the outcome of taking `action` in `state`.
     ///
     /// Uses the left hemisphere for deterministic prediction.
@@ -145,6 +283,15 @@ impl WorldModel {
     /// and checks for consensus (DMWM dual-mind consistency).
     #[must_use]
     pub fn predict(&self, state: &str, action: &str, goal: &str) -> DualPrediction {
+        // L1 cache check — avoid redundant LLM calls
+        if let Ok(mut cache) = self.cache.lock() {
+            if let Some(cached) = cache.get(state, action, goal) {
+                tracing::debug!("world model: L1 cache hit");
+                return cached;
+            }
+        }
+
+        // L2 — LLM prediction
         let prompt = build_predict_prompt(state, action, goal);
 
         let left_result = self.left.handle(&prompt, 256).unwrap_or_else(|e| {
@@ -178,13 +325,20 @@ impl WorldModel {
             (true, None, PredictionSource::Left)
         };
 
-        DualPrediction {
+        let prediction = DualPrediction {
             left,
             right,
             consensus,
             agrees,
             source,
+        };
+
+        // Store in L1 cache
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.put(state, action, goal, &prediction);
         }
+
+        prediction
     }
 
     /// Roll out K steps of imagination.
@@ -248,6 +402,19 @@ impl WorldModel {
     #[must_use]
     pub fn right_name(&self) -> Option<&'static str> {
         self.right.as_ref().map(|h| h.name())
+    }
+
+    /// Get L1 cache statistics.
+    #[must_use]
+    pub fn cache_stats(&self) -> CacheStats {
+        self.cache.lock().map(|c| c.stats()).unwrap_or_default()
+    }
+
+    /// Clear the L1 prediction cache.
+    pub fn clear_cache(&self) {
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.clear();
+        }
     }
 }
 
@@ -770,5 +937,100 @@ mod tests {
         let wm = make_left_only();
         assert_eq!(wm.left_name(), "stub-left");
         assert_eq!(wm.right_name(), None);
+    }
+
+    // ── L1 Cache tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn cache_hit_on_repeat_prediction() {
+        let wm = make_left_only();
+        // First call: L2 miss
+        let p1 = wm.predict("state-a", "action-b", "goal-c");
+        let stats_after_first = wm.cache_stats();
+        assert_eq!(stats_after_first.misses, 1);
+        assert_eq!(stats_after_first.hits, 0);
+
+        // Second call: L1 hit — same prediction
+        let p2 = wm.predict("state-a", "action-b", "goal-c");
+        let stats_after_second = wm.cache_stats();
+        assert_eq!(stats_after_second.misses, 1);
+        assert_eq!(stats_after_second.hits, 1);
+
+        // Cached prediction should be identical
+        assert_eq!(p1.left.description, p2.left.description);
+    }
+
+    #[test]
+    fn cache_miss_on_different_inputs() {
+        let wm = make_left_only();
+        let _ = wm.predict("state-a", "action-b", "goal-c");
+        let _ = wm.predict("state-x", "action-b", "goal-c");
+        let stats = wm.cache_stats();
+        assert_eq!(stats.misses, 2);
+        assert_eq!(stats.hits, 0);
+    }
+
+    #[test]
+    fn cache_hit_rate_calculation() {
+        let wm = make_left_only();
+        let _ = wm.predict("s", "a", "g"); // miss
+        let _ = wm.predict("s", "a", "g"); // hit
+        let _ = wm.predict("s", "a", "g"); // hit
+        let stats = wm.cache_stats();
+        assert_eq!(stats.hits, 2);
+        assert_eq!(stats.misses, 1);
+        assert!((stats.hit_rate() - 2.0 / 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn cache_clear_resets_entries() {
+        let wm = make_left_only();
+        let _ = wm.predict("s", "a", "g");
+        assert_eq!(wm.cache_stats().entries, 1);
+        wm.clear_cache();
+        let stats = wm.cache_stats();
+        assert_eq!(stats.entries, 0);
+        // Stats (hits/misses) are not reset by clear
+        assert_eq!(stats.misses, 1);
+    }
+
+    #[test]
+    fn cache_eviction_when_full() {
+        let wm = make_left_only().with_cache_config(0, 2); // no TTL, max 2 entries
+        let _ = wm.predict("s1", "a", "g");
+        let _ = wm.predict("s2", "a", "g");
+        let _ = wm.predict("s3", "a", "g"); // should evict oldest
+        let stats = wm.cache_stats();
+        assert_eq!(stats.entries, 2);
+    }
+
+    #[test]
+    fn cache_stats_empty_initially() {
+        let wm = make_left_only();
+        let stats = wm.cache_stats();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 0);
+        assert_eq!(stats.entries, 0);
+        assert_eq!(stats.hit_rate(), 0.0);
+    }
+
+    #[test]
+    fn cache_with_custom_config() {
+        let wm = make_left_only().with_cache_config(600, 128);
+        let _ = wm.predict("s", "a", "g");
+        let stats = wm.cache_stats();
+        assert_eq!(stats.entries, 1);
+        assert_eq!(stats.misses, 1);
+    }
+
+    #[test]
+    fn cache_rollout_uses_cache() {
+        // Rollout with repeated states should benefit from cache
+        let wm = make_left_only();
+        let actions = vec!["act".into(), "act".into(), "act".into()];
+        let _ = wm.rollout("initial", &actions, "goal");
+        // After rollout, we should have some cache entries
+        let stats = wm.cache_stats();
+        assert!(stats.entries > 0);
     }
 }

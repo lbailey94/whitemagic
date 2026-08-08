@@ -10,6 +10,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -42,6 +44,8 @@ impl AssociationMineTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AssociationMineTool {
     fn name(&self) -> &str {
         "association.mine"
@@ -55,7 +59,7 @@ impl Tool for AssociationMineTool {
     fn description(&self) -> &str {
         "Mine cross-galaxy associations using keyword overlap analysis"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let min_strength = args
             .get("min_strength")
             .and_then(Value::as_f64)
@@ -166,6 +170,8 @@ impl PatternDetectTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for PatternDetectTool {
     fn name(&self) -> &str {
         "pattern.detect"
@@ -179,7 +185,7 @@ impl Tool for PatternDetectTool {
     fn description(&self) -> &str {
         "Detect structural patterns (hubs, bridges, chains) in the association graph"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let top_k = args
             .get("top_k")
             .and_then(serde_json::Value::as_u64)
@@ -325,6 +331,8 @@ impl EmergenceReportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for EmergenceReportTool {
     fn name(&self) -> &str {
         "emergence.report"
@@ -338,7 +346,7 @@ impl Tool for EmergenceReportTool {
     fn description(&self) -> &str {
         "Detailed emergence analysis with tag frequency distribution and trend detection"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut tag_counts: HashMap<String, usize> = HashMap::new();
         let mut total_memories = 0usize;
 
@@ -427,6 +435,8 @@ impl NetworkStatsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for NetworkStatsTool {
     fn name(&self) -> &str {
         "network.stats"
@@ -440,7 +450,7 @@ impl Tool for NetworkStatsTool {
     fn description(&self) -> &str {
         "Global association network statistics (nodes, edges, density, degree distribution)"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let env = self.store.env();
         let assoc_store = AssociationStore::open(env)?;
 
@@ -549,6 +559,8 @@ impl NetworkCentralityTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for NetworkCentralityTool {
     fn name(&self) -> &str {
         "network.centrality"
@@ -562,7 +574,7 @@ impl Tool for NetworkCentralityTool {
     fn description(&self) -> &str {
         "Compute degree centrality metrics for memories in the association graph"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let top_k = args
             .get("top_k")
             .and_then(serde_json::Value::as_u64)
@@ -651,6 +663,8 @@ impl NetworkClustersTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for NetworkClustersTool {
     fn name(&self) -> &str {
         "network.clusters"
@@ -664,7 +678,7 @@ impl Tool for NetworkClustersTool {
     fn description(&self) -> &str {
         "Identify connected components and clusters in the association graph"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let env = self.store.env();
         let assoc_store = AssociationStore::open(env)?;
 
@@ -770,8 +784,8 @@ mod tests {
         mem
     }
 
-    #[test]
-    fn association_mine_basic() {
+    #[tokio::test]
+    async fn association_mine_basic() {
         let (_tmp, store) = open_store();
         let tool = AssociationMineTool::new(store.clone());
 
@@ -789,13 +803,13 @@ mod tests {
         store.put(Galaxy::Codex, &m2).unwrap();
 
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["proposed_associations"].as_u64().unwrap() >= 1);
     }
 
-    #[test]
-    fn association_mine_with_min_strength() {
+    #[tokio::test]
+    async fn association_mine_with_min_strength() {
         let (_tmp, store) = open_store();
         let tool = AssociationMineTool::new(store.clone());
 
@@ -805,22 +819,25 @@ mod tests {
         store.put(Galaxy::Codex, &m2).unwrap();
 
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({"min_strength": 0.9})).unwrap();
+        let result = tool
+            .call(&mut ctx, json!({"min_strength": 0.9}))
+            .await
+            .unwrap();
         assert_eq!(result["proposed_associations"], 0);
     }
 
-    #[test]
-    fn pattern_detect_empty_graph() {
+    #[tokio::test]
+    async fn pattern_detect_empty_graph() {
         let (_tmp, store) = open_store();
         let tool = PatternDetectTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_nodes"], 0);
     }
 
-    #[test]
-    fn pattern_detect_finds_hubs() {
+    #[tokio::test]
+    async fn pattern_detect_finds_hubs() {
         let (_tmp, store) = open_store();
         let env = store.env();
         let assoc_store = AssociationStore::open(env).unwrap();
@@ -857,7 +874,7 @@ mod tests {
 
         let tool = PatternDetectTool::new(store.clone());
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["total_nodes"].as_u64().unwrap() >= 3);
         let hubs = result["hubs"].as_array().unwrap();
@@ -866,8 +883,8 @@ mod tests {
         assert!(first_hub_degree >= 2);
     }
 
-    #[test]
-    fn emergence_report_basic() {
+    #[tokio::test]
+    async fn emergence_report_basic() {
         let (_tmp, store) = open_store();
         let tool = EmergenceReportTool::new(store.clone());
 
@@ -891,35 +908,35 @@ mod tests {
             .unwrap();
 
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_memories"], 3);
         assert!(result["unique_tags"].as_u64().unwrap() >= 2);
     }
 
-    #[test]
-    fn emergence_report_empty() {
+    #[tokio::test]
+    async fn emergence_report_empty() {
         let (_tmp, store) = open_store();
         let tool = EmergenceReportTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_memories"], 0);
     }
 
-    #[test]
-    fn network_stats_empty() {
+    #[tokio::test]
+    async fn network_stats_empty() {
         let (_tmp, store) = open_store();
         let tool = NetworkStatsTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["nodes"], 0);
         assert_eq!(result["edges"], 0);
     }
 
-    #[test]
-    fn network_stats_with_edges() {
+    #[tokio::test]
+    async fn network_stats_with_edges() {
         let (_tmp, store) = open_store();
         let env = store.env();
         let assoc_store = AssociationStore::open(env).unwrap();
@@ -943,14 +960,14 @@ mod tests {
 
         let tool = NetworkStatsTool::new(store.clone());
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["edges"], 1);
         assert!(result["nodes"].as_u64().unwrap() >= 2);
     }
 
-    #[test]
-    fn network_centrality_basic() {
+    #[tokio::test]
+    async fn network_centrality_basic() {
         let (_tmp, store) = open_store();
         let env = store.env();
         let assoc_store = AssociationStore::open(env).unwrap();
@@ -987,7 +1004,7 @@ mod tests {
 
         let tool = NetworkCentralityTool::new(store.clone());
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({"top_k": 5})).unwrap();
+        let result = tool.call(&mut ctx, json!({"top_k": 5})).await.unwrap();
         assert_eq!(result["status"], "success");
         let nodes = result["top_nodes"].as_array().unwrap();
         assert!(!nodes.is_empty());
@@ -995,29 +1012,29 @@ mod tests {
         assert!(first_degree >= 2);
     }
 
-    #[test]
-    fn network_centrality_empty() {
+    #[tokio::test]
+    async fn network_centrality_empty() {
         let (_tmp, store) = open_store();
         let tool = NetworkCentralityTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_nodes_with_edges"], 0);
     }
 
-    #[test]
-    fn network_clusters_empty() {
+    #[tokio::test]
+    async fn network_clusters_empty() {
         let (_tmp, store) = open_store();
         let tool = NetworkClustersTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_nodes"], 0);
         assert_eq!(result["num_clusters"], 0);
     }
 
-    #[test]
-    fn network_clusters_connected() {
+    #[tokio::test]
+    async fn network_clusters_connected() {
         let (_tmp, store) = open_store();
         let env = store.env();
         let assoc_store = AssociationStore::open(env).unwrap();
@@ -1055,15 +1072,15 @@ mod tests {
 
         let tool = NetworkClustersTool::new(store.clone());
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["num_clusters"], 1);
         assert_eq!(result["largest_cluster_size"], 3);
         assert_eq!(result["isolated_nodes"], 0);
     }
 
-    #[test]
-    fn network_clusters_isolated() {
+    #[tokio::test]
+    async fn network_clusters_isolated() {
         let (_tmp, store) = open_store();
         let env = store.env();
         let assoc_store = AssociationStore::open(env).unwrap();
@@ -1088,7 +1105,7 @@ mod tests {
 
         let tool = NetworkClustersTool::new(store.clone());
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["num_clusters"], 1);
         assert_eq!(result["isolated_nodes"], 0);
     }

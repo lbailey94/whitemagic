@@ -4,6 +4,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -37,6 +39,8 @@ impl Default for SimMcTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SimMcTool {
     fn name(&self) -> &str {
         "sim.mc"
@@ -50,7 +54,7 @@ impl Tool for SimMcTool {
     fn description(&self) -> &str {
         "Run a Monte Carlo simulation (args: n_samples, seed, quasi_mc, distributions, model)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let n_samples = args
             .get("n_samples")
             .and_then(Value::as_u64)
@@ -129,6 +133,8 @@ impl Default for SimForecastTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SimForecastTool {
     fn name(&self) -> &str {
         "sim.forecast"
@@ -142,7 +148,7 @@ impl Tool for SimForecastTool {
     fn description(&self) -> &str {
         "Forecast a time series (args: data, horizon, method=moving_average|exponential_smoothing|linear_trend)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let data: Vec<f64> = args
             .get("data")
             .and_then(Value::as_array)
@@ -212,6 +218,8 @@ impl Default for SimCounterfactualTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SimCounterfactualTool {
     fn name(&self) -> &str {
         "sim.counterfactual"
@@ -225,7 +233,7 @@ impl Tool for SimCounterfactualTool {
     fn description(&self) -> &str {
         "Estimate causal impact of an intervention (args: pre, post)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let pre: Vec<f64> = args
             .get("pre")
             .and_then(Value::as_array)
@@ -317,8 +325,8 @@ pub fn register_simulation(registry: &wm_dispatch::ToolRegistry) -> wm_dispatch:
 mod tests {
     use super::*;
 
-    #[test]
-    fn sim_mc_runs_simulation() {
+    #[tokio::test]
+    async fn sim_mc_runs_simulation() {
         let tool = SimMcTool::new();
         let mut ctx = Context::default();
         let v = tool
@@ -330,21 +338,22 @@ mod tests {
                     "model": "sum"
                 }),
             )
+            .await
             .unwrap();
         assert_eq!(v["status"], "success");
         assert!(v["result"]["mean"].is_number());
     }
 
-    #[test]
-    fn sim_mc_missing_distributions_errors() {
+    #[tokio::test]
+    async fn sim_mc_missing_distributions_errors() {
         let tool = SimMcTool::new();
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({}));
+        let result = tool.call(&mut ctx, json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn sim_forecast_runs() {
+    #[tokio::test]
+    async fn sim_forecast_runs() {
         let tool = SimForecastTool::new();
         let mut ctx = Context::default();
         let v = tool
@@ -356,21 +365,22 @@ mod tests {
                     "method": "linear_trend"
                 }),
             )
+            .await
             .unwrap();
         assert_eq!(v["status"], "success");
         assert!(v["result"]["forecast"].is_array());
     }
 
-    #[test]
-    fn sim_forecast_empty_data_errors() {
+    #[tokio::test]
+    async fn sim_forecast_empty_data_errors() {
         let tool = SimForecastTool::new();
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"data": []}));
+        let result = tool.call(&mut ctx, json!({"data": []})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn sim_counterfactual_runs() {
+    #[tokio::test]
+    async fn sim_counterfactual_runs() {
         let tool = SimCounterfactualTool::new();
         let mut ctx = Context::default();
         let v = tool
@@ -381,28 +391,29 @@ mod tests {
                     "post": [15.0, 15.0, 15.0, 15.0, 15.0]
                 }),
             )
+            .await
             .unwrap();
         assert_eq!(v["status"], "success");
         assert!(v["result"]["impact"].is_number());
     }
 
-    #[test]
-    fn sim_counterfactual_missing_pre_errors() {
+    #[tokio::test]
+    async fn sim_counterfactual_missing_pre_errors() {
         let tool = SimCounterfactualTool::new();
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"post": [1.0]}));
+        let result = tool.call(&mut ctx, json!({"post": [1.0]})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn sim_tools_are_mound_gana() {
+    #[tokio::test]
+    async fn sim_tools_are_mound_gana() {
         assert_eq!(SimMcTool::new().gana(), Gana::Mound);
         assert_eq!(SimForecastTool::new().gana(), Gana::Mound);
         assert_eq!(SimCounterfactualTool::new().gana(), Gana::Mound);
     }
 
-    #[test]
-    fn parse_distribution_uniform() {
+    #[tokio::test]
+    async fn parse_distribution_uniform() {
         let d = parse_distribution(&json!({"kind": "uniform", "min": 0.0, "max": 10.0})).unwrap();
         assert!(matches!(
             d,
@@ -413,8 +424,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn parse_distribution_normal() {
+    #[tokio::test]
+    async fn parse_distribution_normal() {
         let d =
             parse_distribution(&json!({"kind": "normal", "mean": 5.0, "std_dev": 2.0})).unwrap();
         assert!(matches!(
@@ -426,8 +437,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn parse_distribution_unknown_errors() {
+    #[tokio::test]
+    async fn parse_distribution_unknown_errors() {
         let result = parse_distribution(&json!({"kind": "unknown"}));
         assert!(result.is_err());
     }

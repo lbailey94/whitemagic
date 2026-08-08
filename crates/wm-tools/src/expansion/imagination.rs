@@ -10,11 +10,14 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::significant_drop_tightening)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_bicameral::{
-    ScenarioEngine, ScenarioEvaluator, WorldModel, world_model_from_env,
+    ScenarioEngine, ScenarioEvaluator, WorldModel,
     simulation_bridge::{SimulationBridge, SimulationBridgeConfig},
+    world_model_from_env,
 };
 use wm_core::{Context, EffectRow, Gana, Tool, ToolStats};
 use wm_memory::MemoryStore;
@@ -74,6 +77,8 @@ impl ImagineScenarioTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ImagineScenarioTool {
     fn name(&self) -> &str {
         "imagine.scenario"
@@ -87,7 +92,7 @@ impl Tool for ImagineScenarioTool {
     fn description(&self) -> &str {
         "Generate and evaluate scenarios for a given state and goal using the bicameral imagination engine"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let state = args
             .get("state")
             .and_then(Value::as_str)
@@ -108,10 +113,7 @@ impl Tool for ImagineScenarioTool {
             .and_then(Value::as_bool)
             .unwrap_or(false);
 
-        let mc_samples = args
-            .get("mc_samples")
-            .and_then(Value::as_u64)
-            .unwrap_or(10) as usize;
+        let mc_samples = args.get("mc_samples").and_then(Value::as_u64).unwrap_or(10) as usize;
 
         // Gather memory context
         let memory_context = self.gather_context(goal, scan_limit);
@@ -211,6 +213,8 @@ impl Default for ImaginePredictTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ImaginePredictTool {
     fn name(&self) -> &str {
         "imagine.predict"
@@ -224,7 +228,7 @@ impl Tool for ImaginePredictTool {
     fn description(&self) -> &str {
         "Predict the outcome of a specific action from a given state using the bicameral world model"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let state = args
             .get("state")
             .and_then(Value::as_str)
@@ -312,6 +316,8 @@ impl Default for ImagineReflectTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ImagineReflectTool {
     fn name(&self) -> &str {
         "imagine.reflect"
@@ -325,7 +331,7 @@ impl Tool for ImagineReflectTool {
     fn description(&self) -> &str {
         "Counterfactual reflection: compare actual action outcome vs alternative action using the bicameral world model"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let past_state = args
             .get("past_state")
             .and_then(Value::as_str)
@@ -406,103 +412,111 @@ mod tests {
         Arc::new(MemoryStore::open(dir.path(), 1024 * 1024).unwrap())
     }
 
-    #[test]
-    fn imagine_scenario_tool_name() {
+    #[tokio::test]
+    async fn imagine_scenario_tool_name() {
         let store = make_store();
         let tool = ImagineScenarioTool::new(store);
         assert_eq!(tool.name(), "imagine.scenario");
         assert_eq!(tool.gana(), Gana::ThreeStars);
     }
 
-    #[test]
-    fn imagine_predict_tool_name() {
+    #[tokio::test]
+    async fn imagine_predict_tool_name() {
         let tool = ImaginePredictTool::new();
         assert_eq!(tool.name(), "imagine.predict");
         assert_eq!(tool.gana(), Gana::ThreeStars);
     }
 
-    #[test]
-    fn imagine_reflect_tool_name() {
+    #[tokio::test]
+    async fn imagine_reflect_tool_name() {
         let tool = ImagineReflectTool::new();
         assert_eq!(tool.name(), "imagine.reflect");
         assert_eq!(tool.gana(), Gana::ThreeStars);
     }
 
-    #[test]
-    fn imagine_scenario_generates_scenarios() {
+    #[tokio::test]
+    async fn imagine_scenario_generates_scenarios() {
         let store = make_store();
         let tool = ImagineScenarioTool::new(store);
         let mut ctx = Context::default();
-        let result = tool.call(
-            &mut ctx,
-            json!({
-                "state": "system is slow",
-                "goal": "improve performance",
-            }),
-        );
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "state": "system is slow",
+                    "goal": "improve performance",
+                }),
+            )
+            .await;
         assert!(result.is_ok());
         let val = result.unwrap();
         assert_eq!(val["status"], "ok");
         assert!(val["scenario_count"].as_u64().is_some());
     }
 
-    #[test]
-    fn imagine_scenario_missing_state() {
+    #[tokio::test]
+    async fn imagine_scenario_missing_state() {
         let store = make_store();
         let tool = ImagineScenarioTool::new(store);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"goal": "test"}));
+        let result = tool.call(&mut ctx, json!({"goal": "test"})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn imagine_scenario_missing_goal() {
+    #[tokio::test]
+    async fn imagine_scenario_missing_goal() {
         let store = make_store();
         let tool = ImagineScenarioTool::new(store);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"state": "test"}));
+        let result = tool.call(&mut ctx, json!({"state": "test"})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn imagine_predict_returns_prediction() {
+    #[tokio::test]
+    async fn imagine_predict_returns_prediction() {
         let tool = ImaginePredictTool::new();
         let mut ctx = Context::default();
-        let result = tool.call(
-            &mut ctx,
-            json!({
-                "state": "idle system",
-                "action": "run optimization",
-                "goal": "improve speed",
-            }),
-        );
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "state": "idle system",
+                    "action": "run optimization",
+                    "goal": "improve speed",
+                }),
+            )
+            .await;
         assert!(result.is_ok());
         let val = result.unwrap();
         assert_eq!(val["status"], "ok");
         assert!(val["best_prediction"]["description"].as_str().is_some());
     }
 
-    #[test]
-    fn imagine_predict_missing_action() {
+    #[tokio::test]
+    async fn imagine_predict_missing_action() {
         let tool = ImaginePredictTool::new();
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"state": "test", "goal": "test"}));
+        let result = tool
+            .call(&mut ctx, json!({"state": "test", "goal": "test"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn imagine_reflect_returns_reflection() {
+    #[tokio::test]
+    async fn imagine_reflect_returns_reflection() {
         let tool = ImagineReflectTool::new();
         let mut ctx = Context::default();
-        let result = tool.call(
-            &mut ctx,
-            json!({
-                "past_state": "system running",
-                "actual_action": "did nothing",
-                "alternative_action": "optimized cache",
-                "goal": "improve speed",
-            }),
-        );
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "past_state": "system running",
+                    "actual_action": "did nothing",
+                    "alternative_action": "optimized cache",
+                    "goal": "improve speed",
+                }),
+            )
+            .await;
         assert!(result.is_ok());
         let val = result.unwrap();
         assert_eq!(val["status"], "ok");
@@ -514,22 +528,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn imagine_reflect_missing_alternative() {
+    #[tokio::test]
+    async fn imagine_reflect_missing_alternative() {
         let tool = ImagineReflectTool::new();
         let mut ctx = Context::default();
-        let result = tool.call(
-            &mut ctx,
-            json!({
-                "past_state": "test",
-                "actual_action": "test",
-            }),
-        );
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "past_state": "test",
+                    "actual_action": "test",
+                }),
+            )
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn register_imagination_registers_three_tools() {
+    #[tokio::test]
+    async fn register_imagination_registers_three_tools() {
         let store = make_store();
         let registry = wm_dispatch::ToolRegistry::new();
         let registry = register_imagination(&registry, &store);

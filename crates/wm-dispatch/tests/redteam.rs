@@ -6,6 +6,7 @@
 //! - Circuit breaker bypass via name aliasing
 //! - Brain-wave state manipulation
 
+use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 use wm_core::{
@@ -23,6 +24,7 @@ struct LyingTool {
     stats: ToolStats,
 }
 
+#[async_trait]
 impl Tool for LyingTool {
     fn name(&self) -> &str {
         "lying_tool"
@@ -35,7 +37,7 @@ impl Tool for LyingTool {
         static EFFECTS: OnceLock<EffectRow> = OnceLock::new();
         EFFECTS.get_or_init(EffectRow::pure)
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
         // Tool claims to be pure but returns "writes" in output
         // The karma ledger will detect this mismatch
         Ok(serde_json::json!({
@@ -53,6 +55,7 @@ struct DestructiveTool {
     stats: ToolStats,
 }
 
+#[async_trait]
 impl Tool for DestructiveTool {
     fn name(&self) -> &str {
         "destructive_tool"
@@ -68,7 +71,7 @@ impl Tool for DestructiveTool {
             ..Default::default()
         })
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
         Ok(serde_json::json!({"result": "done"}))
     }
     fn stats(&self) -> &ToolStats {
@@ -82,6 +85,7 @@ struct LongNameTool {
     stats: ToolStats,
 }
 
+#[async_trait]
 impl Tool for LongNameTool {
     fn name(&self) -> &str {
         &self.name
@@ -94,7 +98,7 @@ impl Tool for LongNameTool {
         static EFFECTS: OnceLock<EffectRow> = OnceLock::new();
         EFFECTS.get_or_init(EffectRow::pure)
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
         Ok(serde_json::json!("ok"))
     }
     fn stats(&self) -> &ToolStats {
@@ -106,8 +110,8 @@ impl Tool for LongNameTool {
 
 /// A tool that declares pure effects but actually writes should be
 /// caught by the karma ledger — it accumulates Tamasic debt.
-#[test]
-fn lying_tool_accumulates_karma_debt() {
+#[tokio::test]
+async fn lying_tool_accumulates_karma_debt() {
     let tmp = tempfile::tempdir().unwrap();
     let store = Arc::new(wm_memory::MemoryStore::open_default(tmp.path()).unwrap());
     let ledger = Arc::new(KarmaLedger::new(store).unwrap());
@@ -124,7 +128,7 @@ fn lying_tool_accumulates_karma_debt() {
         stats: ToolStats::default(),
     };
 
-    let result = pipeline.dispatch(&tool, &mut ctx, Args::default());
+    let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
     assert!(
         result.is_ok(),
         "Pipeline should succeed (Dharma gate sees pure effects)"
@@ -146,8 +150,8 @@ fn lying_tool_accumulates_karma_debt() {
 
 /// Verify that a destructive tool is blocked in Delta (dormant) state
 /// even if the context has perfect karma and maximum intent.
-#[test]
-fn delta_blocks_all_tools_even_with_perfect_context() {
+#[tokio::test]
+async fn delta_blocks_all_tools_even_with_perfect_context() {
     let pipeline = DispatchPipeline::with_defaults();
     let mut ctx = Context::new(BrainWave::Delta);
     ctx.karma_debt = 0.0;
@@ -158,7 +162,7 @@ fn delta_blocks_all_tools_even_with_perfect_context() {
     let tool = DestructiveTool {
         stats: ToolStats::default(),
     };
-    let result = pipeline.dispatch(&tool, &mut ctx, Args::default());
+    let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
     assert!(
         result.is_err(),
         "Delta must block all tools regardless of context"
@@ -167,8 +171,8 @@ fn delta_blocks_all_tools_even_with_perfect_context() {
 
 /// Verify that the pipeline rejects tools with extremely long names
 /// (potential DoS vector for logging or memory).
-#[test]
-fn pipeline_handles_extremely_long_tool_name() {
+#[tokio::test]
+async fn pipeline_handles_extremely_long_tool_name() {
     let pipeline = DispatchPipeline::with_defaults();
     let mut ctx = Context::new(BrainWave::Gamma);
     let tool = LongNameTool {
@@ -177,7 +181,7 @@ fn pipeline_handles_extremely_long_tool_name() {
     };
 
     // Should not crash — may succeed or fail, but must not panic
-    let result = pipeline.dispatch(&tool, &mut ctx, Args::default());
+    let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
     assert!(result.is_ok(), "Long name should not cause failure");
 }
 
@@ -185,8 +189,8 @@ fn pipeline_handles_extremely_long_tool_name() {
 
 /// Verify that rate limiting is per-tool, not global — different tools
 /// should each get their own rate limit bucket.
-#[test]
-fn rate_limit_is_per_tool_not_global() {
+#[tokio::test]
+async fn rate_limit_is_per_tool_not_global() {
     let rate_limiter = Arc::new(RateLimiter::new(10000, 2, 0));
     let pipeline = DispatchPipeline::new(
         rate_limiter,
@@ -205,16 +209,19 @@ fn rate_limit_is_per_tool_not_global() {
     assert!(
         pipeline
             .dispatch(&tool_a, &mut ctx, Args::default())
+            .await
             .is_ok()
     );
     assert!(
         pipeline
             .dispatch(&tool_a, &mut ctx, Args::default())
+            .await
             .is_ok()
     );
     assert!(
         pipeline
             .dispatch(&tool_a, &mut ctx, Args::default())
+            .await
             .is_err()
     );
 
@@ -226,6 +233,7 @@ fn rate_limit_is_per_tool_not_global() {
     assert!(
         pipeline
             .dispatch(&tool_b, &mut ctx, Args::default())
+            .await
             .is_ok(),
         "Different tool should have its own rate limit bucket"
     );
@@ -233,8 +241,8 @@ fn rate_limit_is_per_tool_not_global() {
 
 /// Verify that rate-limited tools don't consume karma or stats
 /// (the rejection happens before tool execution).
-#[test]
-fn rate_limited_call_does_not_execute_tool() {
+#[tokio::test]
+async fn rate_limited_call_does_not_execute_tool() {
     let tmp = tempfile::tempdir().unwrap();
     let store = Arc::new(wm_memory::MemoryStore::open_default(tmp.path()).unwrap());
     let ledger = Arc::new(KarmaLedger::new(store).unwrap());
@@ -254,9 +262,14 @@ fn rate_limited_call_does_not_execute_tool() {
     };
 
     // First call succeeds
-    assert!(pipeline.dispatch(&tool, &mut ctx, Args::default()).is_ok());
+    assert!(
+        pipeline
+            .dispatch(&tool, &mut ctx, Args::default())
+            .await
+            .is_ok()
+    );
     // Second call is rate-limited
-    let result = pipeline.dispatch(&tool, &mut ctx, Args::default());
+    let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
     assert!(matches!(result, Err(CoreError::RateLimited(_))));
 
     // Only 1 karma entry should exist (the successful call)
@@ -280,8 +293,8 @@ fn rate_limited_call_does_not_execute_tool() {
 
 /// Verify that a tool cannot bypass the circuit breaker by registering
 /// under a different name — the breaker tracks by tool.name().
-#[test]
-fn circuit_breaker_tracks_by_name_not_identity() {
+#[tokio::test]
+async fn circuit_breaker_tracks_by_name_not_identity() {
     let breakers = Arc::new(CircuitBreakerRegistry::new(
         wm_dispatch::circuit_breaker::BreakerConfig {
             failure_threshold: 3,
@@ -301,7 +314,7 @@ fn circuit_breaker_tracks_by_name_not_identity() {
     let flaky = FailTool::new("flaky");
     let mut ctx = Context::new(BrainWave::Gamma);
     for _ in 0..3 {
-        let _ = pipeline.dispatch(&flaky, &mut ctx, Args::default());
+        let _ = pipeline.dispatch(&flaky, &mut ctx, Args::default()).await;
     }
     assert_eq!(
         breakers.state("flaky"),
@@ -310,7 +323,7 @@ fn circuit_breaker_tracks_by_name_not_identity() {
 
     // A different tool with the same name should also be blocked
     let flaky2 = FailTool::new("flaky");
-    let result = pipeline.dispatch(&flaky2, &mut ctx, Args::default());
+    let result = pipeline.dispatch(&flaky2, &mut ctx, Args::default()).await;
     assert!(
         matches!(result, Err(CoreError::CircuitBreaker(_))),
         "Circuit breaker must block by name, not tool identity"
@@ -318,7 +331,7 @@ fn circuit_breaker_tracks_by_name_not_identity() {
 
     // A tool with a different name should NOT be blocked
     let other = FailTool::new("other_tool");
-    let result = pipeline.dispatch(&other, &mut ctx, Args::default());
+    let result = pipeline.dispatch(&other, &mut ctx, Args::default()).await;
     assert!(
         !matches!(result, Err(CoreError::CircuitBreaker(_))),
         "Different tool name should not be affected by another tool's breaker"
@@ -330,8 +343,8 @@ fn circuit_breaker_tracks_by_name_not_identity() {
 /// Verify that the brain-wave state cannot be manipulated mid-dispatch
 /// to bypass governance. The context is checked at the start of dispatch
 /// and the tool runs with that state.
-#[test]
-fn brain_wave_cannot_be_manipulated_mid_dispatch() {
+#[tokio::test]
+async fn brain_wave_cannot_be_manipulated_mid_dispatch() {
     let pipeline = DispatchPipeline::with_defaults();
 
     // Start in Delta — all tools blocked
@@ -341,7 +354,7 @@ fn brain_wave_cannot_be_manipulated_mid_dispatch() {
         stats: ToolStats::default(),
     };
 
-    let result = pipeline.dispatch(&tool, &mut ctx, Args::default());
+    let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
     assert!(result.is_err(), "Delta must block before tool execution");
 
     // Even if we change brain-wave after the failed dispatch,
@@ -349,7 +362,7 @@ fn brain_wave_cannot_be_manipulated_mid_dispatch() {
     ctx.brain_wave = BrainWave::Gamma;
     // The failed dispatch cannot be "retried" with the old context —
     // a new dispatch call is required
-    let result2 = pipeline.dispatch(&tool, &mut ctx, Args::default());
+    let result2 = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
     assert!(result2.is_ok(), "New dispatch with Gamma should succeed");
 }
 
@@ -368,6 +381,7 @@ impl FailTool {
     }
 }
 
+#[async_trait]
 impl Tool for FailTool {
     fn name(&self) -> &str {
         &self.name
@@ -380,7 +394,7 @@ impl Tool for FailTool {
         static EFFECTS: OnceLock<EffectRow> = OnceLock::new();
         EFFECTS.get_or_init(EffectRow::pure)
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
         Err(CoreError::Internal("intentional failure".into()))
     }
     fn stats(&self) -> &ToolStats {
@@ -392,14 +406,15 @@ impl Tool for FailTool {
 
 /// Verify that dispatch_by_name returns NotFound for unknown tools
 /// (no fallback or wildcard execution).
-#[test]
-fn dispatch_by_name_rejects_unknown_tools() {
+#[tokio::test]
+async fn dispatch_by_name_rejects_unknown_tools() {
     let pipeline = DispatchPipeline::with_defaults();
     let registry = ToolRegistry::new();
     let mut ctx = Context::new(BrainWave::Gamma);
 
-    let result =
-        pipeline.dispatch_by_name(&registry, "nonexistent_tool", &mut ctx, Args::default());
+    let result = pipeline
+        .dispatch_by_name(&registry, "nonexistent_tool", &mut ctx, Args::default())
+        .await;
     assert!(
         matches!(result, Err(CoreError::NotFound(_))),
         "Unknown tool must return NotFound, got {result:?}"
@@ -407,13 +422,15 @@ fn dispatch_by_name_rejects_unknown_tools() {
 }
 
 /// Verify that dispatch_by_name rejects empty string.
-#[test]
-fn dispatch_by_name_rejects_empty_string() {
+#[tokio::test]
+async fn dispatch_by_name_rejects_empty_string() {
     let pipeline = DispatchPipeline::with_defaults();
     let registry = ToolRegistry::new();
     let mut ctx = Context::new(BrainWave::Gamma);
 
-    let result = pipeline.dispatch_by_name(&registry, "", &mut ctx, Args::default());
+    let result = pipeline
+        .dispatch_by_name(&registry, "", &mut ctx, Args::default())
+        .await;
     assert!(
         matches!(result, Err(CoreError::NotFound(_))),
         "Empty tool name must return NotFound"

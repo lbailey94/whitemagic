@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -23,6 +25,8 @@ impl SystemHealthTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SystemHealthTool {
     fn name(&self) -> &str {
         "system.health"
@@ -36,7 +40,7 @@ impl Tool for SystemHealthTool {
     fn description(&self) -> &str {
         "Overall system health check — galaxy counts, store path"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut total = 0usize;
         let mut galaxies_with_data = 0usize;
         for galaxy in Galaxy::all() {
@@ -82,6 +86,8 @@ impl Default for SystemConfigTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SystemConfigTool {
     fn name(&self) -> &str {
         "system.config"
@@ -95,7 +101,7 @@ impl Tool for SystemConfigTool {
     fn description(&self) -> &str {
         "System configuration info — brain-wave states, galaxies, ganas"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         Ok(json!({
             "status": "success",
             "version": env!("CARGO_PKG_VERSION"),
@@ -135,6 +141,8 @@ impl SystemFlushTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SystemFlushTool {
     fn name(&self) -> &str {
         "system.flush"
@@ -148,7 +156,7 @@ impl Tool for SystemFlushTool {
     fn description(&self) -> &str {
         "Flush low-importance memories across all galaxies (gentle GC)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let threshold = args
             .get("threshold")
             .and_then(serde_json::Value::as_f64)

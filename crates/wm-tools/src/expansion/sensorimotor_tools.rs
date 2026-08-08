@@ -14,10 +14,12 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
+use wm_cognitive::{EventType, GanYingBus};
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
-use wm_resonance::{EventType, GanYingBus};
 use wm_substrate::sensorimotor::{
     ActuatorCommand, ActuatorKind, ReflexLoop, ReflexRule, SensorimotorBus,
 };
@@ -41,6 +43,8 @@ impl SensorListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SensorListTool {
     fn name(&self) -> &str {
         "sensor.list"
@@ -54,7 +58,7 @@ impl Tool for SensorListTool {
     fn description(&self) -> &str {
         "List all registered hardware sensors"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let Ok(bus) = self.bus.lock() else {
             return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
         };
@@ -86,6 +90,8 @@ impl SensorReadTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SensorReadTool {
     fn name(&self) -> &str {
         "sensor.read"
@@ -99,7 +105,7 @@ impl Tool for SensorReadTool {
     fn description(&self) -> &str {
         "Read current value from a specific sensor by ID (args: sensor_id)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let sensor_id = args.get("sensor_id").and_then(Value::as_str).unwrap_or("");
         if sensor_id.is_empty() {
             return Ok(json!({
@@ -162,6 +168,8 @@ impl SensorPollTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SensorPollTool {
     fn name(&self) -> &str {
         "sensor.poll"
@@ -175,7 +183,7 @@ impl Tool for SensorPollTool {
     fn description(&self) -> &str {
         "Poll all registered sensors and return current readings"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let Ok(mut bus) = self.bus.lock() else {
             return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
         };
@@ -241,6 +249,8 @@ impl SensorHistoryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SensorHistoryTool {
     fn name(&self) -> &str {
         "sensor.history"
@@ -254,7 +264,7 @@ impl Tool for SensorHistoryTool {
     fn description(&self) -> &str {
         "Get recent sensor reading history (optional args: limit)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(50) as usize;
 
         let Ok(bus) = self.bus.lock() else {
@@ -304,6 +314,8 @@ impl ActuatorListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ActuatorListTool {
     fn name(&self) -> &str {
         "actuator.list"
@@ -317,7 +329,7 @@ impl Tool for ActuatorListTool {
     fn description(&self) -> &str {
         "List all registered actuators"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let Ok(bus) = self.bus.lock() else {
             return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
         };
@@ -369,6 +381,8 @@ impl ActuatorCommandTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ActuatorCommandTool {
     fn name(&self) -> &str {
         "actuator.command"
@@ -382,7 +396,7 @@ impl Tool for ActuatorCommandTool {
     fn description(&self) -> &str {
         "Send a command to an actuator (args: actuator_id, value, optional: kind, params)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let actuator_id = args
             .get("actuator_id")
             .and_then(Value::as_str)
@@ -481,6 +495,8 @@ impl ActuatorEStopTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ActuatorEStopTool {
     fn name(&self) -> &str {
         "actuator.estop"
@@ -494,7 +510,7 @@ impl Tool for ActuatorEStopTool {
     fn description(&self) -> &str {
         "Emergency stop all actuators"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let Ok(bus) = self.bus.lock() else {
             return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
         };
@@ -546,6 +562,8 @@ impl ReflexListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ReflexListTool {
     fn name(&self) -> &str {
         "reflex.list"
@@ -559,7 +577,7 @@ impl Tool for ReflexListTool {
     fn description(&self) -> &str {
         "List all registered reflex rules"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let Ok(reflex) = self.reflex.lock() else {
             return Ok(json!({"status": "error", "message": "reflex mutex poisoned"}));
         };
@@ -592,6 +610,8 @@ impl ReflexAddTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ReflexAddTool {
     fn name(&self) -> &str {
         "reflex.add"
@@ -605,7 +625,7 @@ impl Tool for ReflexAddTool {
     fn description(&self) -> &str {
         "Add a reflex rule (args: sensor_id, actuator_id, actuator_kind, threshold, command_value, trigger_above, cooldown_secs)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let sensor_id = args.get("sensor_id").and_then(Value::as_str).unwrap_or("");
         let actuator_id = args
             .get("actuator_id")
@@ -712,6 +732,8 @@ impl ReflexEvaluateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ReflexEvaluateTool {
     fn name(&self) -> &str {
         "reflex.evaluate"
@@ -725,7 +747,7 @@ impl Tool for ReflexEvaluateTool {
     fn description(&self) -> &str {
         "Poll sensors, evaluate reflex rules, and send any triggered actuator commands"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let readings = {
             let Ok(mut bus) = self.bus.lock() else {
                 return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
@@ -859,11 +881,11 @@ mod tests {
         Arc::new(Mutex::new(ReflexLoop::new()))
     }
 
-    #[test]
-    fn sensor_list_tool() {
+    #[tokio::test]
+    async fn sensor_list_tool() {
         let tool = SensorListTool::new(make_bus());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["sensor_count"], 2);
         assert!(
             result["sensors"]
@@ -873,44 +895,48 @@ mod tests {
         );
     }
 
-    #[test]
-    fn sensor_read_tool() {
+    #[tokio::test]
+    async fn sensor_read_tool() {
         let tool = SensorReadTool::new(make_bus());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"sensor_id": "temp0"})).unwrap();
+        let result = tool
+            .call(&mut ctx, json!({"sensor_id": "temp0"}))
+            .await
+            .unwrap();
         assert_eq!(result["sensor_id"], "temp0");
         assert!((result["value"].as_f64().unwrap() - 55.0).abs() < 0.01);
     }
 
-    #[test]
-    fn sensor_read_missing_id() {
+    #[tokio::test]
+    async fn sensor_read_missing_id() {
         let tool = SensorReadTool::new(make_bus());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "error");
     }
 
-    #[test]
-    fn sensor_read_nonexistent() {
+    #[tokio::test]
+    async fn sensor_read_nonexistent() {
         let tool = SensorReadTool::new(make_bus());
         let mut ctx = Context::default();
         let result = tool
             .call(&mut ctx, json!({"sensor_id": "nonexistent"}))
+            .await
             .unwrap();
         assert_eq!(result["status"], "error");
     }
 
-    #[test]
-    fn sensor_poll_tool() {
+    #[tokio::test]
+    async fn sensor_poll_tool() {
         let tool = SensorPollTool::new(make_bus());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["count"], 2);
         assert!(result["readings"].is_array());
     }
 
-    #[test]
-    fn sensor_history_tool() {
+    #[tokio::test]
+    async fn sensor_history_tool() {
         let bus = make_bus();
         {
             let mut b = bus.lock().unwrap();
@@ -919,28 +945,28 @@ mod tests {
         }
         let tool = SensorHistoryTool::new(bus);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({"limit": 5})).unwrap();
+        let result = tool.call(&mut ctx, json!({"limit": 5})).await.unwrap();
         assert!(result["count"].as_u64().unwrap() > 0);
     }
 
-    #[test]
-    fn actuator_list_tool() {
+    #[tokio::test]
+    async fn actuator_list_tool() {
         let tool = ActuatorListTool::new(make_bus());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["actuator_count"], 0);
     }
 
-    #[test]
-    fn actuator_command_missing_id() {
+    #[tokio::test]
+    async fn actuator_command_missing_id() {
         let tool = ActuatorCommandTool::new(make_bus());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "error");
     }
 
-    #[test]
-    fn actuator_command_nonexistent() {
+    #[tokio::test]
+    async fn actuator_command_nonexistent() {
         let tool = ActuatorCommandTool::new(make_bus());
         let mut ctx = Context::default();
         let result = tool
@@ -948,28 +974,29 @@ mod tests {
                 &mut ctx,
                 json!({"actuator_id": "nonexistent", "value": 0.5}),
             )
+            .await
             .unwrap();
         assert_eq!(result["status"], "error");
     }
 
-    #[test]
-    fn actuator_estop_tool() {
+    #[tokio::test]
+    async fn actuator_estop_tool() {
         let tool = ActuatorEStopTool::new(make_bus());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "ok");
     }
 
-    #[test]
-    fn reflex_list_tool() {
+    #[tokio::test]
+    async fn reflex_list_tool() {
         let tool = ReflexListTool::new(make_reflex());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["rule_count"], 0);
     }
 
-    #[test]
-    fn reflex_add_tool() {
+    #[tokio::test]
+    async fn reflex_add_tool() {
         let reflex = make_reflex();
         let tool = ReflexAddTool::new(reflex);
         let mut ctx = Context::default();
@@ -986,21 +1013,22 @@ mod tests {
                     "cooldown_secs": 5.0,
                 }),
             )
+            .await
             .unwrap();
         assert_eq!(result["status"], "ok");
         assert_eq!(result["rule_count"], 1);
     }
 
-    #[test]
-    fn reflex_add_missing_params() {
+    #[tokio::test]
+    async fn reflex_add_missing_params() {
         let tool = ReflexAddTool::new(make_reflex());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "error");
     }
 
-    #[test]
-    fn reflex_evaluate_tool() {
+    #[tokio::test]
+    async fn reflex_evaluate_tool() {
         let bus = make_bus();
         let reflex = make_reflex();
 
@@ -1020,14 +1048,14 @@ mod tests {
         // No actuator registered, so command will fail
         let tool = ReflexEvaluateTool::new(bus, reflex);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["sensors_polled"], 2);
         // Command triggered but not executed (no actuator)
         assert!(result["commands_triggered"].as_u64().unwrap() > 0);
     }
 
-    #[test]
-    fn parse_actuator_kind_all_variants() {
+    #[tokio::test]
+    async fn parse_actuator_kind_all_variants() {
         assert_eq!(parse_actuator_kind("motor"), ActuatorKind::Motor);
         assert_eq!(parse_actuator_kind("relay"), ActuatorKind::Relay);
         assert_eq!(parse_actuator_kind("display"), ActuatorKind::Display);
@@ -1037,8 +1065,8 @@ mod tests {
         assert_eq!(parse_actuator_kind("unknown"), ActuatorKind::Custom);
     }
 
-    #[test]
-    fn register_sensorimotor_returns_registry() {
+    #[tokio::test]
+    async fn register_sensorimotor_returns_registry() {
         let registry = wm_dispatch::ToolRegistry::new();
         let bus = make_bus();
         let reflex = make_reflex();

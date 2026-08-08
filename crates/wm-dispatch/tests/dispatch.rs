@@ -6,6 +6,7 @@
 //! - The dispatch pipeline records stats after tool calls
 //! - The tool registry routes by Gana and name
 
+use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 use wm_core::{Args, Context, CoreError, EffectRow, Gana, Output, Tool, ToolStats};
@@ -26,6 +27,7 @@ impl EchoTool {
     }
 }
 
+#[async_trait]
 impl Tool for EchoTool {
     fn name(&self) -> &str {
         "test.echo"
@@ -39,7 +41,7 @@ impl Tool for EchoTool {
         static EFFECTS: OnceLock<EffectRow> = OnceLock::new();
         EFFECTS.get_or_init(EffectRow::pure)
     }
-    fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
         Ok(args)
     }
     fn stats(&self) -> &ToolStats {
@@ -60,6 +62,7 @@ impl FailTool {
     }
 }
 
+#[async_trait]
 impl Tool for FailTool {
     fn name(&self) -> &str {
         "test.fail"
@@ -72,7 +75,7 @@ impl Tool for FailTool {
         static EFFECTS: OnceLock<EffectRow> = OnceLock::new();
         EFFECTS.get_or_init(EffectRow::pure)
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
         Err(CoreError::Internal("intentional failure".into()))
     }
     fn stats(&self) -> &ToolStats {
@@ -82,8 +85,8 @@ impl Tool for FailTool {
 
 // ── ToolStats Tests ───────────────────────────────────────────────────
 
-#[test]
-fn stats_record_success_increments_counters() {
+#[tokio::test]
+async fn stats_record_success_increments_counters() {
     let stats = ToolStats::default();
     stats.record_success(Duration::from_millis(5), Duration::from_millis(3));
     assert_eq!(
@@ -99,8 +102,8 @@ fn stats_record_success_increments_counters() {
     assert_eq!(stats.success_rate(), 1.0);
 }
 
-#[test]
-fn stats_record_failure_increments_call_but_not_success() {
+#[tokio::test]
+async fn stats_record_failure_increments_call_but_not_success() {
     let stats = ToolStats::default();
     stats.record_success(Duration::from_millis(5), Duration::from_millis(3));
     stats.record_failure(Duration::from_millis(2));
@@ -117,8 +120,8 @@ fn stats_record_failure_increments_call_but_not_success() {
     assert_eq!(stats.success_rate(), 0.5);
 }
 
-#[test]
-fn stats_success_rate_is_one_when_no_calls() {
+#[tokio::test]
+async fn stats_success_rate_is_one_when_no_calls() {
     let stats = ToolStats::default();
     assert_eq!(
         stats.success_rate(),
@@ -127,8 +130,8 @@ fn stats_success_rate_is_one_when_no_calls() {
     );
 }
 
-#[test]
-fn stats_should_retire_after_threshold_with_low_effectiveness() {
+#[tokio::test]
+async fn stats_should_retire_after_threshold_with_low_effectiveness() {
     let stats = ToolStats::default();
     // 1 success + 14 failures = ~0.067 effectiveness (< 0.2 threshold)
     stats.record_success(Duration::from_millis(1), Duration::from_millis(1));
@@ -141,8 +144,8 @@ fn stats_should_retire_after_threshold_with_low_effectiveness() {
     );
 }
 
-#[test]
-fn stats_should_not_retire_below_min_calls() {
+#[tokio::test]
+async fn stats_should_not_retire_below_min_calls() {
     let stats = ToolStats::default();
     stats.record_failure(Duration::from_millis(1));
     assert!(
@@ -151,8 +154,8 @@ fn stats_should_not_retire_below_min_calls() {
     );
 }
 
-#[test]
-fn stats_should_not_retire_with_high_effectiveness() {
+#[tokio::test]
+async fn stats_should_not_retire_with_high_effectiveness() {
     let stats = ToolStats::default();
     for _ in 0..20 {
         stats.record_success(Duration::from_millis(1), Duration::from_millis(1));
@@ -163,8 +166,8 @@ fn stats_should_not_retire_with_high_effectiveness() {
     );
 }
 
-#[test]
-fn stats_is_hot_after_call_threshold() {
+#[tokio::test]
+async fn stats_is_hot_after_call_threshold() {
     let stats = ToolStats::default();
     for _ in 0..1001 {
         stats.record_success(Duration::from_micros(100), Duration::from_micros(50));
@@ -176,8 +179,8 @@ fn stats_is_hot_after_call_threshold() {
     );
 }
 
-#[test]
-fn stats_snapshot_captures_all_fields() {
+#[tokio::test]
+async fn stats_snapshot_captures_all_fields() {
     let stats = ToolStats::default();
     stats.record_success(Duration::from_millis(10), Duration::from_millis(5));
     let snap = stats.snapshot();
@@ -189,14 +192,17 @@ fn stats_snapshot_captures_all_fields() {
 
 // ── DispatchPipeline Tests ────────────────────────────────────────────
 
-#[test]
-fn pipeline_dispatch_success_records_stats() {
+#[tokio::test]
+async fn pipeline_dispatch_success_records_stats() {
     let pipeline = DispatchPipeline::with_defaults();
     let tool = EchoTool::new();
     let mut ctx = Context::default();
     let args = serde_json::json!({"message": "hello"});
 
-    let result = pipeline.dispatch(&tool, &mut ctx, args.clone()).unwrap();
+    let result = pipeline
+        .dispatch(&tool, &mut ctx, args.clone())
+        .await
+        .unwrap();
     assert_eq!(result, args);
     assert_eq!(
         tool.stats
@@ -212,13 +218,15 @@ fn pipeline_dispatch_success_records_stats() {
     );
 }
 
-#[test]
-fn pipeline_dispatch_failure_records_stats() {
+#[tokio::test]
+async fn pipeline_dispatch_failure_records_stats() {
     let pipeline = DispatchPipeline::with_defaults();
     let tool = FailTool::new();
     let mut ctx = Context::default();
 
-    let result = pipeline.dispatch(&tool, &mut ctx, serde_json::json!({}));
+    let result = pipeline
+        .dispatch(&tool, &mut ctx, serde_json::json!({}))
+        .await;
     assert!(result.is_err());
     assert_eq!(
         tool.stats
@@ -236,8 +244,8 @@ fn pipeline_dispatch_failure_records_stats() {
 
 // ── ToolRegistry Tests ────────────────────────────────────────────────
 
-#[test]
-fn registry_register_and_lookup_by_name() {
+#[tokio::test]
+async fn registry_register_and_lookup_by_name() {
     let mut registry = ToolRegistry::new();
     let tool = Arc::new(EchoTool::new());
     registry = registry.register(tool);
@@ -247,8 +255,8 @@ fn registry_register_and_lookup_by_name() {
     assert!(registry.get("nonexistent").is_none());
 }
 
-#[test]
-fn registry_lookup_by_gana() {
+#[tokio::test]
+async fn registry_lookup_by_gana() {
     let mut registry = ToolRegistry::new();
     let echo = Arc::new(EchoTool::new());
     let fail = Arc::new(FailTool::new());
@@ -263,30 +271,30 @@ fn registry_lookup_by_gana() {
     assert_eq!(heart_tools[0].name(), "test.fail");
 }
 
-#[test]
-fn registry_empty_gana_returns_empty_vec() {
+#[tokio::test]
+async fn registry_empty_gana_returns_empty_vec() {
     let registry = ToolRegistry::new();
     assert!(registry.by_gana(Gana::Wall).is_empty());
 }
 
-#[test]
-fn registry_all_returns_all_tools() {
+#[tokio::test]
+async fn registry_all_returns_all_tools() {
     let mut registry = ToolRegistry::new();
     registry = registry.register(Arc::new(EchoTool::new()));
     registry = registry.register(Arc::new(FailTool::new()));
     assert_eq!(registry.all().len(), 2);
 }
 
-#[test]
-fn registry_is_empty_check() {
+#[tokio::test]
+async fn registry_is_empty_check() {
     let registry = ToolRegistry::new();
     assert!(registry.is_empty());
 }
 
 // ── Context Tests ─────────────────────────────────────────────────────
 
-#[test]
-fn context_scratchpad_set_and_get() {
+#[tokio::test]
+async fn context_scratchpad_set_and_get() {
     let mut ctx = Context::default();
     ctx.set("key1", serde_json::json!(42));
     ctx.set("key2", serde_json::json!("hello"));
@@ -295,8 +303,8 @@ fn context_scratchpad_set_and_get() {
     assert_eq!(ctx.get("missing"), None);
 }
 
-#[test]
-fn context_brain_wave_reflects_construction() {
+#[tokio::test]
+async fn context_brain_wave_reflects_construction() {
     let ctx = Context::new(wm_core::BrainWave::Gamma);
     assert_eq!(ctx.brain_wave(), wm_core::BrainWave::Gamma);
 
@@ -319,6 +327,7 @@ impl WriteTool {
     }
 }
 
+#[async_trait]
 impl Tool for WriteTool {
     fn name(&self) -> &str {
         "test.write"
@@ -334,7 +343,7 @@ impl Tool for WriteTool {
             ..Default::default()
         })
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
         Ok(serde_json::json!({"status": "ok"}))
     }
     fn stats(&self) -> &ToolStats {
@@ -342,8 +351,8 @@ impl Tool for WriteTool {
     }
 }
 
-#[test]
-fn registry_available_in_gamma_returns_all() {
+#[tokio::test]
+async fn registry_available_in_gamma_returns_all() {
     let mut registry = ToolRegistry::new();
     registry = registry.register(Arc::new(EchoTool::new()));
     registry = registry.register(Arc::new(WriteTool::new()));
@@ -352,8 +361,8 @@ fn registry_available_in_gamma_returns_all() {
     assert_eq!(available.len(), 2);
 }
 
-#[test]
-fn registry_available_in_alpha_excludes_writes() {
+#[tokio::test]
+async fn registry_available_in_alpha_excludes_writes() {
     let mut registry = ToolRegistry::new();
     registry = registry.register(Arc::new(EchoTool::new()));
     registry = registry.register(Arc::new(WriteTool::new()));
@@ -363,8 +372,8 @@ fn registry_available_in_alpha_excludes_writes() {
     assert_eq!(available[0].name(), "test.echo");
 }
 
-#[test]
-fn registry_available_in_delta_returns_none() {
+#[tokio::test]
+async fn registry_available_in_delta_returns_none() {
     let mut registry = ToolRegistry::new();
     registry = registry.register(Arc::new(EchoTool::new()));
     registry = registry.register(Arc::new(WriteTool::new()));
@@ -373,8 +382,8 @@ fn registry_available_in_delta_returns_none() {
     assert_eq!(available.len(), 0);
 }
 
-#[test]
-fn registry_available_count_matches() {
+#[tokio::test]
+async fn registry_available_count_matches() {
     let mut registry = ToolRegistry::new();
     registry = registry.register(Arc::new(EchoTool::new()));
     registry = registry.register(Arc::new(WriteTool::new()));

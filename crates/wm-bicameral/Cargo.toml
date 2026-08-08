@@ -11,7 +11,9 @@ workspace = true
 
 [dependencies]
 wm-core = { workspace = true }
+wm-memory = { workspace = true }
 wm-simulation = { workspace = true }
+ahash = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -22,7 +24,12 @@ regex = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+tempfile = { workspace = true }
 
 [[bench]]
 name = "router_bench"
+harness = false
+
+[[bench]]
+name = "self_play_bench"
 harness = false

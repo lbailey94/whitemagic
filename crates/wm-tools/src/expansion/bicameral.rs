@@ -9,6 +9,8 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::significant_drop_tightening)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
 use wm_bicameral::{
@@ -44,6 +46,8 @@ impl BicameralReasonTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for BicameralReasonTool {
     fn name(&self) -> &str {
         "bicameral.reason"
@@ -57,7 +61,7 @@ impl Tool for BicameralReasonTool {
     fn description(&self) -> &str {
         "Dual-hemisphere bicameral reasoning: left (deterministic) + right (heuristic) debate with consensus gate"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let topic = args
             .get("topic")
             .and_then(Value::as_str)
@@ -162,6 +166,8 @@ impl BicameralStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for BicameralStatusTool {
     fn name(&self) -> &str {
         "bicameral.status"
@@ -175,7 +181,7 @@ impl Tool for BicameralStatusTool {
     fn description(&self) -> &str {
         "Show bicameral engine configuration and hemisphere availability"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let (config, has_right, left_name) = {
             let engine = self.engine.lock().map_err(|e| {
                 wm_core::CoreError::Tool(format!("bicameral engine lock error: {e}"))
@@ -272,6 +278,8 @@ impl SpeculativeDecodeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SpeculativeDecodeTool {
     fn name(&self) -> &str {
         "speculative.decode"
@@ -285,7 +293,7 @@ impl Tool for SpeculativeDecodeTool {
     fn description(&self) -> &str {
         "Speculative decoding: draft model generates, verify model checks. 1.5-2.1x speedup for local LLM inference"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let prompt = args
             .get("prompt")
             .and_then(Value::as_str)
@@ -337,6 +345,8 @@ impl SpeculativeStatsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SpeculativeStatsTool {
     fn name(&self) -> &str {
         "speculative.stats"
@@ -350,7 +360,7 @@ impl Tool for SpeculativeStatsTool {
     fn description(&self) -> &str {
         "Show speculative decoder statistics: acceptance rate, latency, estimated speedup"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let stats = self.decoder.stats();
         let config = self.decoder.config();
 
@@ -400,6 +410,8 @@ impl MetaEnhanceTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MetaEnhanceTool {
     fn name(&self) -> &str {
         "meta.enhance"
@@ -413,7 +425,7 @@ impl Tool for MetaEnhanceTool {
     fn description(&self) -> &str {
         "Enhance a prompt with cognitive strategies (memory grounding, self-correction, ensemble voting)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let prompt = args
             .get("prompt")
             .and_then(Value::as_str)
@@ -480,6 +492,8 @@ impl MetaStatsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MetaStatsTool {
     fn name(&self) -> &str {
         "meta.stats"
@@ -493,7 +507,7 @@ impl Tool for MetaStatsTool {
     fn description(&self) -> &str {
         "Show meta-harness enhancement statistics (calls, latency, improvement by mode)"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let stats = self.harness.stats();
 
         let modes = [
@@ -557,6 +571,8 @@ impl DenseEncodeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DenseEncodeTool {
     fn name(&self) -> &str {
         "dense.encode"
@@ -570,7 +586,7 @@ impl Tool for DenseEncodeTool {
     fn description(&self) -> &str {
         "Compress text using CJK character mapping for token-efficient internal context"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let text = args
             .get("text")
             .and_then(Value::as_str)
@@ -614,6 +630,8 @@ impl DenseDecodeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DenseDecodeTool {
     fn name(&self) -> &str {
         "dense.decode"
@@ -627,7 +645,7 @@ impl Tool for DenseDecodeTool {
     fn description(&self) -> &str {
         "Decode CJK-compressed text back to approximate English original"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let text = args
             .get("text")
             .and_then(Value::as_str)
@@ -690,8 +708,8 @@ mod tests {
         )))
     }
 
-    #[test]
-    fn bicameral_reason_with_evidence() {
+    #[tokio::test]
+    async fn bicameral_reason_with_evidence() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
         let engine = make_engine();
@@ -699,6 +717,7 @@ mod tests {
 
         let result = tool
             .call(&mut Context::default(), json!({"topic": "rust"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -708,36 +727,37 @@ mod tests {
         assert!(obj["right_hemisphere"].is_object());
     }
 
-    #[test]
-    fn bicameral_reason_no_evidence() {
+    #[tokio::test]
+    async fn bicameral_reason_no_evidence() {
         let (_tmp, store) = open_store();
         let engine = make_engine();
         let tool = BicameralReasonTool::new(store, engine);
 
         let result = tool
             .call(&mut Context::default(), json!({"topic": "nonexistent"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["evidence_count"], 0);
         assert!(!obj["conclusion"].as_str().unwrap().is_empty());
     }
 
-    #[test]
-    fn bicameral_reason_missing_topic() {
+    #[tokio::test]
+    async fn bicameral_reason_missing_topic() {
         let (_tmp, store) = open_store();
         let engine = make_engine();
         let tool = BicameralReasonTool::new(store, engine);
 
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn bicameral_status_shows_config() {
+    #[tokio::test]
+    async fn bicameral_status_shows_config() {
         let engine = make_engine();
         let tool = BicameralStatusTool::new(engine);
 
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["left_hemisphere"], "left");
@@ -745,14 +765,14 @@ mod tests {
         assert!(obj["config"]["max_rounds"].as_u64().unwrap() > 0);
     }
 
-    #[test]
-    fn bicameral_status_left_only() {
+    #[tokio::test]
+    async fn bicameral_status_left_only() {
         let engine = Arc::new(Mutex::new(BicameralEngine::left_only(
             BicameralConfig::default(),
         )));
         let tool = BicameralStatusTool::new(engine);
 
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["right_hemisphere"], "unavailable");
     }

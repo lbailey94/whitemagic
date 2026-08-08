@@ -16,6 +16,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+async-trait = { workspace = true }
 libloading = "0.8"
 
 [features]
@@ -30,3 +31,4 @@ features = ["async-rt", "multi-rt"]
 
 [dev-dependencies]
 proptest = { workspace = true }
+tokio = { workspace = true }

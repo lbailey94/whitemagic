@@ -45,6 +45,8 @@ pub struct Context {
     pub drive_exploration_weight: f32,
     /// Drive conservative weight (0.0–1.0). Derived from caution.
     pub drive_conservative_weight: f32,
+    /// Last Gana dispatched in this context (for co-usage tracking, Phase 6)
+    pub last_gana: Option<crate::Gana>,
 }
 
 impl Context {
@@ -69,6 +71,7 @@ impl Context {
             drive_energy: 0.8,
             drive_exploration_weight: 0.5,
             drive_conservative_weight: 0.3,
+            last_gana: None,
         }
     }
 

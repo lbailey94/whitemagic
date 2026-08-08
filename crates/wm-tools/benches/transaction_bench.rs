@@ -1,5 +1,6 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 use wm_core::{BrainWave, Context, Galaxy, Tool};
 use wm_memory::{Memory, MemoryStore};
 use wm_tools::expansion::transaction::{
@@ -16,8 +17,9 @@ fn bench_transaction_begin_empty(c: &mut Criterion) {
                 (store, state, tmp)
             },
             |(store, state, _tmp)| {
+                let rt = Runtime::new().unwrap();
                 let tool = TransactionBeginTool::new(store, state);
-                tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({}))
+                rt.block_on(tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})))
                     .unwrap();
             },
             criterion::BatchSize::SmallInput,
@@ -41,9 +43,12 @@ fn bench_transaction_begin_with_memories(c: &mut Criterion) {
                     (store, state, tmp)
                 },
                 |(store, state, _tmp)| {
+                    let rt = Runtime::new().unwrap();
                     let tool = TransactionBeginTool::new(store, state);
-                    tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({}))
-                        .unwrap();
+                    rt.block_on(
+                        tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})),
+                    )
+                    .unwrap();
                 },
                 criterion::BatchSize::SmallInput,
             );
@@ -60,14 +65,15 @@ fn bench_transaction_rollback_empty(c: &mut Criterion) {
                 let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
                 let state: TransactionState = Arc::new(Mutex::new(None));
                 let begin = TransactionBeginTool::new(store.clone(), state.clone());
-                begin
-                    .call(&mut Context::new(BrainWave::Gamma), serde_json::json!({}))
+                let rt = Runtime::new().unwrap();
+                rt.block_on(begin.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})))
                     .unwrap();
                 (store, state, tmp)
             },
             |(store, state, _tmp)| {
+                let rt = Runtime::new().unwrap();
                 let tool = TransactionRollbackTool::new(store, state);
-                tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({}))
+                rt.block_on(tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})))
                     .unwrap();
             },
             criterion::BatchSize::SmallInput,
@@ -89,15 +95,20 @@ fn bench_transaction_rollback_with_memories(c: &mut Criterion) {
                     }
                     let state: TransactionState = Arc::new(Mutex::new(None));
                     let begin = TransactionBeginTool::new(store.clone(), state.clone());
-                    begin
-                        .call(&mut Context::new(BrainWave::Gamma), serde_json::json!({}))
-                        .unwrap();
+                    let rt = Runtime::new().unwrap();
+                    rt.block_on(
+                        begin.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})),
+                    )
+                    .unwrap();
                     (store, state, tmp)
                 },
                 |(store, state, _tmp)| {
+                    let rt = Runtime::new().unwrap();
                     let tool = TransactionRollbackTool::new(store, state);
-                    tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({}))
-                        .unwrap();
+                    rt.block_on(
+                        tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})),
+                    )
+                    .unwrap();
                 },
                 criterion::BatchSize::SmallInput,
             );

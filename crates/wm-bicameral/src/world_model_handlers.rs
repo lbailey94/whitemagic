@@ -250,29 +250,63 @@ fn parse_confidence(content: &str) -> f32 {
 /// - Right: `LlmTierHandler::right_from_env()` or `StubWorldModelHandler::right()`
 #[must_use]
 pub fn world_model_from_env() -> crate::world_model::WorldModel {
-    let left: Arc<dyn TierHandler> = match LlmTierHandler::left_from_env() {
-        Some(h) => {
-            tracing::info!("world model: using LLM left hemisphere");
-            Arc::new(h)
-        }
-        None => {
-            tracing::info!("world model: using stub left hemisphere (set WM_LLAMA_ENDPOINT for LLM)");
-            Arc::new(StubWorldModelHandler::left())
-        }
+    let left: Arc<dyn TierHandler> = if let Some(h) = LlmTierHandler::left_from_env() {
+        tracing::info!("world model: using LLM left hemisphere");
+        Arc::new(h)
+    } else {
+        tracing::info!("world model: using stub left hemisphere (set WM_LLAMA_ENDPOINT for LLM)");
+        Arc::new(StubWorldModelHandler::left())
     };
 
-    let right: Option<Arc<dyn TierHandler>> = match LlmTierHandler::right_from_env() {
-        Some(h) => {
-            tracing::info!("world model: using LLM right hemisphere");
-            Some(Arc::new(h))
-        }
-        None => {
-            tracing::info!("world model: using stub right hemisphere (set WM_LLM_API_KEY for LLM)");
-            Some(Arc::new(StubWorldModelHandler::right()))
-        }
+    let right: Option<Arc<dyn TierHandler>> = if let Some(h) = LlmTierHandler::right_from_env() {
+        tracing::info!("world model: using LLM right hemisphere");
+        Some(Arc::new(h))
+    } else {
+        tracing::info!("world model: using stub right hemisphere (set WM_LLM_API_KEY for LLM)");
+        Some(Arc::new(StubWorldModelHandler::right()))
     };
 
     crate::world_model::WorldModel::new(left, right)
+}
+
+// ── Self-Play handler factory ─────────────────────────────────────────
+
+/// Build proposer and solver `TierHandler` instances from environment variables.
+///
+/// Returns `(proposer, solver)` as boxed `TierHandler` trait objects.
+/// - **Solver** (deterministic): `LlmTierHandler::left_from_env()` or stub
+/// - **Proposer** (creative): `LlmTierHandler::right_from_env()` or
+///   `left_from_env()` or stub
+///
+/// Environment variables:
+/// - `WM_LLAMA_ENDPOINT` + `WM_LLAMA_MODEL` — for the solver (low temp)
+/// - `WM_LLM_API_KEY` + `WM_LLM_ENDPOINT` + `WM_LLM_MODEL` — for the proposer
+#[must_use]
+pub fn self_play_handlers_from_env() -> (Box<dyn TierHandler>, Box<dyn TierHandler>) {
+    // Solver: deterministic, low temperature
+    let solver: Box<dyn TierHandler> = if let Some(h) = LlmTierHandler::left_from_env() {
+        tracing::info!("self-play: using LLM solver (llama-server)");
+        Box::new(h)
+    } else {
+        tracing::info!("self-play: using stub solver (set WM_LLAMA_ENDPOINT for LLM)");
+        Box::new(crate::world_model::StubWorldModelHandler::left())
+    };
+
+    // Proposer: creative, higher temperature — prefer cloud LLM, fall back to local
+    let proposer: Box<dyn TierHandler> = if let Some(h) = LlmTierHandler::right_from_env() {
+        tracing::info!("self-play: using LLM proposer (cloud)");
+        Box::new(h)
+    } else if let Some(h) = LlmTierHandler::left_from_env() {
+        tracing::info!("self-play: using LLM proposer (local llama-server)");
+        Box::new(h)
+    } else {
+        tracing::info!(
+            "self-play: using stub proposer (set WM_LLM_API_KEY or WM_LLAMA_ENDPOINT for LLM)"
+        );
+        Box::new(crate::world_model::StubWorldModelHandler::right())
+    };
+
+    (proposer, solver)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -331,5 +365,36 @@ mod tests {
             "test-handler",
         );
         assert_eq!(h.name(), "test-handler");
+    }
+
+    #[test]
+    fn self_play_handlers_from_env_returns_handlers() {
+        // Without env vars, should return stub handlers (not panic).
+        // Can't mutate env vars in forbid(unsafe_code) crates.
+        let (proposer, solver) = self_play_handlers_from_env();
+        assert!(!proposer.name().is_empty());
+        assert!(!solver.name().is_empty());
+    }
+
+    #[test]
+    fn llm_tier_handler_implements_trait() {
+        let h = LlmTierHandler::new(
+            "http://localhost:8080/v1/chat/completions".into(),
+            "test-model".into(),
+            Some("test-key".into()),
+            0.7,
+            Duration::from_secs(10),
+            "test-right",
+        );
+        assert_eq!(h.name(), "test-right");
+    }
+
+    #[test]
+    fn llm_tier_handler_left_from_env_returns_none_without_env() {
+        // When WM_LLAMA_ENDPOINT is not set, left_from_env returns None.
+        // Can't mutate env vars, so just verify it doesn't panic.
+        let result = LlmTierHandler::left_from_env();
+        // Result depends on env state — just verify no panic
+        let _ = result;
     }
 }

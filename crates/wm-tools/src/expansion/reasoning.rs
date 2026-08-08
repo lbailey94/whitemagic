@@ -8,6 +8,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -38,6 +40,8 @@ impl ReasoningBicameralTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ReasoningBicameralTool {
     fn name(&self) -> &str {
         "reasoning.bicameral"
@@ -51,7 +55,7 @@ impl Tool for ReasoningBicameralTool {
     fn description(&self) -> &str {
         "Analyze a topic from multiple perspectives using bicameral reasoning"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let topic = args
             .get("topic")
             .and_then(|v| v.as_str())
@@ -212,6 +216,8 @@ impl ThinkTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ThinkTool {
     fn name(&self) -> &str {
         "think"
@@ -225,7 +231,7 @@ impl Tool for ThinkTool {
     fn description(&self) -> &str {
         "Gather memory context and produce structured analysis with insights"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args
             .get("query")
             .and_then(|v| v.as_str())
@@ -397,6 +403,8 @@ impl ExplainTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ExplainTool {
     fn name(&self) -> &str {
         "explain"
@@ -410,7 +418,7 @@ impl Tool for ExplainTool {
     fn description(&self) -> &str {
         "Explain a memory or topic by gathering context from related memories"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         // Accept either a memory_id or a topic string
         let memory_id = args.get("memory_id").and_then(|v| v.as_str());
         let topic = args.get("topic").and_then(|v| v.as_str());
@@ -603,14 +611,15 @@ mod tests {
         ids
     }
 
-    #[test]
-    fn bicameral_finds_supporting_and_opposing() {
+    #[tokio::test]
+    async fn bicameral_finds_supporting_and_opposing() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = ReasoningBicameralTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"topic": "rust"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -621,28 +630,29 @@ mod tests {
         assert!(obj["synthesis"].as_str().unwrap().contains("rust"));
     }
 
-    #[test]
-    fn bicameral_no_matches() {
+    #[tokio::test]
+    async fn bicameral_no_matches() {
         let (_tmp, store) = open_store();
         let tool = ReasoningBicameralTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"topic": "nonexistent"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["total_evidence"], 0);
         assert!(obj["synthesis"].as_str().unwrap().contains("No memories"));
     }
 
-    #[test]
-    fn bicameral_missing_topic() {
+    #[tokio::test]
+    async fn bicameral_missing_topic() {
         let (_tmp, store) = open_store();
         let tool = ReasoningBicameralTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn think_gathers_context() {
+    #[tokio::test]
+    async fn think_gathers_context() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -652,6 +662,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"query": "rust programming", "depth": "standard"}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -664,8 +675,8 @@ mod tests {
         assert!(!questions.is_empty());
     }
 
-    #[test]
-    fn think_shallow_depth() {
+    #[tokio::test]
+    async fn think_shallow_depth() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -675,21 +686,22 @@ mod tests {
                 &mut Context::default(),
                 json!({"query": "rust", "depth": "shallow"}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["depth"], "shallow");
     }
 
-    #[test]
-    fn think_missing_query() {
+    #[tokio::test]
+    async fn think_missing_query() {
         let (_tmp, store) = open_store();
         let tool = ThinkTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn explain_by_memory_id() {
+    #[tokio::test]
+    async fn explain_by_memory_id() {
         let (_tmp, store) = open_store();
         let ids = seed_memories(&store);
 
@@ -699,6 +711,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"memory_id": ids[0].to_string()}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -712,8 +725,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn explain_by_topic() {
+    #[tokio::test]
+    async fn explain_by_topic() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -723,36 +736,41 @@ mod tests {
                 &mut Context::default(),
                 json!({"topic": "rust memory safety"}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert!(obj["total_related"].as_u64().unwrap() >= 2);
     }
 
-    #[test]
-    fn explain_missing_args() {
+    #[tokio::test]
+    async fn explain_missing_args() {
         let (_tmp, store) = open_store();
         let tool = ExplainTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn explain_invalid_uuid() {
+    #[tokio::test]
+    async fn explain_invalid_uuid() {
         let (_tmp, store) = open_store();
         let tool = ExplainTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({"memory_id": "not-a-uuid"}));
+        let result = tool
+            .call(&mut Context::default(), json!({"memory_id": "not-a-uuid"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn explain_not_found() {
+    #[tokio::test]
+    async fn explain_not_found() {
         let (_tmp, store) = open_store();
         let tool = ExplainTool::new(store);
-        let result = tool.call(
-            &mut Context::default(),
-            json!({"memory_id": "00000000-0000-0000-0000-000000000000"}),
-        );
+        let result = tool
+            .call(
+                &mut Context::default(),
+                json!({"memory_id": "00000000-0000-0000-0000-000000000000"}),
+            )
+            .await;
         assert!(result.is_err());
     }
 }

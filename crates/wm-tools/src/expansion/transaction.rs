@@ -7,6 +7,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
@@ -41,6 +43,8 @@ impl TransactionBeginTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for TransactionBeginTool {
     fn name(&self) -> &str {
         "transaction.begin"
@@ -54,7 +58,7 @@ impl Tool for TransactionBeginTool {
     fn description(&self) -> &str {
         "Begin a transaction — snapshots all galaxies for potential rollback"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut guard = self.state.lock().map_err(|e| {
             wm_core::CoreError::Governance(format!("transaction state lock error: {e}"))
         })?;
@@ -136,6 +140,8 @@ impl TransactionCommitTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for TransactionCommitTool {
     fn name(&self) -> &str {
         "transaction.commit"
@@ -149,7 +155,7 @@ impl Tool for TransactionCommitTool {
     fn description(&self) -> &str {
         "Commit a transaction — keeps all changes, clears rollback snapshot"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut guard = self.state.lock().map_err(|e| {
             wm_core::CoreError::Governance(format!("transaction state lock error: {e}"))
         })?;
@@ -193,6 +199,8 @@ impl TransactionRollbackTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for TransactionRollbackTool {
     fn name(&self) -> &str {
         "transaction.rollback"
@@ -206,7 +214,7 @@ impl Tool for TransactionRollbackTool {
     fn description(&self) -> &str {
         "Rollback a transaction — restores all galaxies from snapshot"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut guard = self.state.lock().map_err(|e| {
             wm_core::CoreError::Governance(format!("transaction state lock error: {e}"))
         })?;
@@ -311,8 +319,8 @@ mod tests {
         (tmp, store)
     }
 
-    #[test]
-    fn transaction_begin_commit_workflow() {
+    #[tokio::test]
+    async fn transaction_begin_commit_workflow() {
         let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(None));
 
@@ -322,19 +330,23 @@ mod tests {
 
         // Begin transaction
         let begin = TransactionBeginTool::new(Arc::clone(&store), Arc::clone(&state));
-        let result = begin.call(&mut Context::new(BrainWave::Gamma), json!({}));
+        let result = begin
+            .call(&mut Context::new(BrainWave::Gamma), json!({}))
+            .await;
         assert!(result.is_ok());
         assert!(state.lock().unwrap().is_some());
 
         // Commit
         let commit = TransactionCommitTool::new(Arc::clone(&state));
-        let result = commit.call(&mut Context::new(BrainWave::Gamma), json!({}));
+        let result = commit
+            .call(&mut Context::new(BrainWave::Gamma), json!({}))
+            .await;
         assert!(result.is_ok());
         assert!(state.lock().unwrap().is_none());
     }
 
-    #[test]
-    fn transaction_begin_rollback_restores_data() {
+    #[tokio::test]
+    async fn transaction_begin_rollback_restores_data() {
         let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(None));
 
@@ -344,7 +356,9 @@ mod tests {
 
         // Begin transaction
         let begin = TransactionBeginTool::new(store.clone(), state.clone());
-        let result = begin.call(&mut Context::new(BrainWave::Gamma), json!({}));
+        let result = begin
+            .call(&mut Context::new(BrainWave::Gamma), json!({}))
+            .await;
         assert!(result.is_ok());
 
         // Modify: delete the memory
@@ -353,7 +367,9 @@ mod tests {
 
         // Rollback
         let rollback = TransactionRollbackTool::new(store.clone(), state);
-        let result = rollback.call(&mut Context::new(BrainWave::Gamma), json!({}));
+        let result = rollback
+            .call(&mut Context::new(BrainWave::Gamma), json!({}))
+            .await;
         assert!(result.is_ok());
 
         // Verify memory was restored
@@ -362,35 +378,41 @@ mod tests {
         assert_eq!(memories[0].content, "original content");
     }
 
-    #[test]
-    fn transaction_begin_twice_errors() {
+    #[tokio::test]
+    async fn transaction_begin_twice_errors() {
         let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(Some("existing-id".into())));
 
         let begin = TransactionBeginTool::new(store, state);
-        let result = begin.call(&mut Context::new(BrainWave::Gamma), json!({}));
+        let result = begin
+            .call(&mut Context::new(BrainWave::Gamma), json!({}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn transaction_commit_without_begin_errors() {
+    #[tokio::test]
+    async fn transaction_commit_without_begin_errors() {
         let state: TransactionState = Arc::new(Mutex::new(None));
         let commit = TransactionCommitTool::new(state);
-        let result = commit.call(&mut Context::new(BrainWave::Gamma), json!({}));
+        let result = commit
+            .call(&mut Context::new(BrainWave::Gamma), json!({}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn transaction_rollback_without_begin_errors() {
+    #[tokio::test]
+    async fn transaction_rollback_without_begin_errors() {
         let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(None));
         let rollback = TransactionRollbackTool::new(store, state);
-        let result = rollback.call(&mut Context::new(BrainWave::Gamma), json!({}));
+        let result = rollback
+            .call(&mut Context::new(BrainWave::Gamma), json!({}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn transaction_rollback_is_destructive() {
+    #[tokio::test]
+    async fn transaction_rollback_is_destructive() {
         let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(None));
         let rollback = TransactionRollbackTool::new(store, state);

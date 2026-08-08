@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -25,6 +27,8 @@ impl PatternSearchTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for PatternSearchTool {
     fn name(&self) -> &str {
         "pattern.search"
@@ -38,7 +42,7 @@ impl Tool for PatternSearchTool {
     fn description(&self) -> &str {
         "Search for patterns in memory content across galaxies"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let pattern = args.get("pattern").and_then(|v| v.as_str()).unwrap_or("");
         let galaxies = args.get("galaxies").and_then(|v| v.as_array());
         let limit = args
@@ -105,6 +109,8 @@ impl SalienceSpotlightTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SalienceSpotlightTool {
     fn name(&self) -> &str {
         "salience.spotlight"
@@ -118,7 +124,7 @@ impl Tool for SalienceSpotlightTool {
     fn description(&self) -> &str {
         "Find high-importance memories across all galaxies"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let min_importance = args
             .get("min_importance")
             .and_then(serde_json::Value::as_f64)
@@ -178,6 +184,8 @@ impl SerendipitySurfaceTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SerendipitySurfaceTool {
     fn name(&self) -> &str {
         "serendipity.surface"
@@ -191,7 +199,7 @@ impl Tool for SerendipitySurfaceTool {
     fn description(&self) -> &str {
         "Surface unexpected cross-galaxy connections from associations"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let env = self.store.env();
         let assoc_store = AssociationStore::open(env)?;
         let total = assoc_store.count(env)?;

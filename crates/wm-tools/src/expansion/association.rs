@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
@@ -28,6 +30,8 @@ impl MemoryAssociateMineTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryAssociateMineTool {
     fn name(&self) -> &str {
         "memory.associate_mine"
@@ -41,7 +45,7 @@ impl Tool for MemoryAssociateMineTool {
     fn description(&self) -> &str {
         "Mine associations across galaxies using keyword overlap"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_name_str = args
             .get("galaxy")
             .and_then(|v| v.as_str())

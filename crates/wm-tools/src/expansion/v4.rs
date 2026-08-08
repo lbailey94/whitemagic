@@ -12,12 +12,14 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
+use wm_cognitive::{ReflexArgs, ReflexDispatchTable, ReflexId};
+use wm_cognitive::{Tier, TimescaleBus};
 use wm_core::{Context, EffectRow, Gana, Tool, ToolStats};
-use wm_reflex::{ReflexArgs, ReflexDispatchTable, ReflexId};
-use wm_timescale::{Tier, TimescaleBus};
 use wm_workspace::{CoreId, EventType, GlobalWorkspace, Salience};
 
 // ── Helper: parse CoreId from string ─────────────────────────────────
@@ -76,15 +78,15 @@ fn parse_tier(s: &str) -> Result<Tier, wm_core::CoreError> {
     }
 }
 
-const fn command_name(cmd: wm_reflex::ReflexCommand) -> &'static str {
+const fn command_name(cmd: wm_cognitive::ReflexCommand) -> &'static str {
     match cmd {
-        wm_reflex::ReflexCommand::EmergencyStop => "emergency_stop",
-        wm_reflex::ReflexCommand::ReducePower => "reduce_power",
-        wm_reflex::ReflexCommand::ApplyCorrection => "apply_correction",
-        wm_reflex::ReflexCommand::IssueAlert => "issue_alert",
-        wm_reflex::ReflexCommand::Drop => "drop",
-        wm_reflex::ReflexCommand::NoOp => "noop",
-        wm_reflex::ReflexCommand::Custom => "custom",
+        wm_cognitive::ReflexCommand::EmergencyStop => "emergency_stop",
+        wm_cognitive::ReflexCommand::ReducePower => "reduce_power",
+        wm_cognitive::ReflexCommand::ApplyCorrection => "apply_correction",
+        wm_cognitive::ReflexCommand::IssueAlert => "issue_alert",
+        wm_cognitive::ReflexCommand::Drop => "drop",
+        wm_cognitive::ReflexCommand::NoOp => "noop",
+        wm_cognitive::ReflexCommand::Custom => "custom",
     }
 }
 
@@ -106,6 +108,8 @@ impl ReflexDispatchTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ReflexDispatchTool {
     fn name(&self) -> &str {
         "reflex.dispatch"
@@ -116,7 +120,7 @@ impl Tool for ReflexDispatchTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let reflex_id: ReflexId = args
             .get("reflex_id")
             .and_then(serde_json::Value::as_u64)
@@ -187,6 +191,8 @@ impl ReflexStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ReflexStatusTool {
     fn name(&self) -> &str {
         "reflex.status"
@@ -197,7 +203,7 @@ impl Tool for ReflexStatusTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let table = self
             .table
             .lock()
@@ -205,7 +211,7 @@ impl Tool for ReflexStatusTool {
         let registered_handlers = table.registered_count();
         let safety_mask = format!("{:#010x}", table.safety_mask());
         let dispatch_count = table.dispatch_count();
-        let builtins: Vec<Value> = wm_reflex::builtins::BUILTINS
+        let builtins: Vec<Value> = wm_cognitive::reflex::builtins::BUILTINS
             .iter()
             .map(|b| {
                 json!({
@@ -246,6 +252,8 @@ impl WorkspaceSpotlightTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for WorkspaceSpotlightTool {
     fn name(&self) -> &str {
         "workspace.spotlight"
@@ -256,7 +264,7 @@ impl Tool for WorkspaceSpotlightTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let ws = self
             .workspace
             .lock()
@@ -307,6 +315,8 @@ impl WorkspaceEventsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for WorkspaceEventsTool {
     fn name(&self) -> &str {
         "workspace.events"
@@ -317,7 +327,7 @@ impl Tool for WorkspaceEventsTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let count = args
             .get("count")
             .and_then(serde_json::Value::as_u64)
@@ -376,6 +386,8 @@ impl WorkspacePublishTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for WorkspacePublishTool {
     fn name(&self) -> &str {
         "workspace.publish"
@@ -386,7 +398,7 @@ impl Tool for WorkspacePublishTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let core_str = args
             .get("core")
             .and_then(serde_json::Value::as_str)
@@ -458,6 +470,8 @@ impl WorkspaceStatsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for WorkspaceStatsTool {
     fn name(&self) -> &str {
         "workspace.stats"
@@ -468,7 +482,7 @@ impl Tool for WorkspaceStatsTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let ws = self
             .workspace
             .lock()
@@ -519,6 +533,8 @@ impl TimescaleStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for TimescaleStatusTool {
     fn name(&self) -> &str {
         "timescale.status"
@@ -529,7 +545,7 @@ impl Tool for TimescaleStatusTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let bus = self.bus.lock().map_err(|e| {
             wm_core::CoreError::Governance(format!("timescale bus lock error: {e}"))
         })?;
@@ -587,6 +603,8 @@ impl TimescaleHooksTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for TimescaleHooksTool {
     fn name(&self) -> &str {
         "timescale.hooks"
@@ -597,7 +615,7 @@ impl Tool for TimescaleHooksTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let tier_str = args
             .get("tier")
             .and_then(serde_json::Value::as_str)
@@ -693,7 +711,7 @@ pub fn register_v4(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wm_reflex::{ReflexDispatchTable, builtins};
+    use wm_cognitive::reflex::{ReflexDispatchTable, builtins};
     use wm_workspace::GlobalWorkspace;
 
     fn test_reflex_table() -> Arc<Mutex<ReflexDispatchTable>> {
@@ -710,66 +728,70 @@ mod tests {
         Arc::new(Mutex::new(TimescaleBus::default()))
     }
 
-    #[test]
-    fn reflex_dispatch_e_stop() {
+    #[tokio::test]
+    async fn reflex_dispatch_e_stop() {
         let table = test_reflex_table();
         let tool = ReflexDispatchTool::new(Arc::clone(&table));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({"reflex_id": 0})).unwrap();
+        let result = tool.call(&mut ctx, json!({"reflex_id": 0})).await.unwrap();
         assert_eq!(result["command"], "emergency_stop");
         assert_eq!(result["priority"], 255);
     }
 
-    #[test]
-    fn reflex_dispatch_with_payload() {
+    #[tokio::test]
+    async fn reflex_dispatch_with_payload() {
         let table = test_reflex_table();
         let tool = ReflexDispatchTool::new(Arc::clone(&table));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         let result = tool
             .call(&mut ctx, json!({"reflex_id": 0, "payload": "deadbeef"}))
+            .await
             .unwrap();
         assert_eq!(result["command"], "emergency_stop");
     }
 
-    #[test]
-    fn reflex_dispatch_not_registered() {
+    #[tokio::test]
+    async fn reflex_dispatch_not_registered() {
         let table = test_reflex_table();
         let tool = ReflexDispatchTool::new(Arc::clone(&table));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let err = tool.call(&mut ctx, json!({"reflex_id": 200})).unwrap_err();
+        let err = tool
+            .call(&mut ctx, json!({"reflex_id": 200}))
+            .await
+            .unwrap_err();
         assert!(err.to_string().contains("no handler registered"));
     }
 
-    #[test]
-    fn reflex_dispatch_missing_id() {
+    #[tokio::test]
+    async fn reflex_dispatch_missing_id() {
         let table = test_reflex_table();
         let tool = ReflexDispatchTool::new(Arc::clone(&table));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let err = tool.call(&mut ctx, json!({})).unwrap_err();
+        let err = tool.call(&mut ctx, json!({})).await.unwrap_err();
         assert!(err.to_string().contains("reflex_id"));
     }
 
-    #[test]
-    fn reflex_status_shows_builtins() {
+    #[tokio::test]
+    async fn reflex_status_shows_builtins() {
         let table = test_reflex_table();
         let tool = ReflexStatusTool::new(Arc::clone(&table));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["registered_handlers"], 8);
         assert!(result["dispatch_count"].as_u64().unwrap() == 0);
     }
 
-    #[test]
-    fn workspace_spotlight_empty() {
+    #[tokio::test]
+    async fn workspace_spotlight_empty() {
         let ws = test_workspace();
         let tool = WorkspaceSpotlightTool::new(Arc::clone(&ws));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert!(result["spotlight"].is_null());
     }
 
-    #[test]
-    fn workspace_spotlight_after_publish() {
+    #[tokio::test]
+    async fn workspace_spotlight_after_publish() {
         let ws = test_workspace();
         let pub_tool = WorkspacePublishTool::new(Arc::clone(&ws));
         let spot_tool = WorkspaceSpotlightTool::new(Arc::clone(&ws));
@@ -786,15 +808,16 @@ mod tests {
                     "confidence": 0.95,
                 }),
             )
+            .await
             .unwrap();
 
-        let result = spot_tool.call(&mut ctx, json!({})).unwrap();
+        let result = spot_tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["core"], "reflex");
         assert_eq!(result["event_type"], "safety_alert");
     }
 
-    #[test]
-    fn workspace_publish_wins_spotlight() {
+    #[tokio::test]
+    async fn workspace_publish_wins_spotlight() {
         let ws = test_workspace();
         let tool = WorkspacePublishTool::new(Arc::clone(&ws));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
@@ -809,24 +832,26 @@ mod tests {
                     "confidence": 0.8,
                 }),
             )
+            .await
             .unwrap();
         assert_eq!(result["won_spotlight"], true);
         assert_eq!(result["spotlight_core"], "citta");
     }
 
-    #[test]
-    fn workspace_publish_missing_core() {
+    #[tokio::test]
+    async fn workspace_publish_missing_core() {
         let ws = test_workspace();
         let tool = WorkspacePublishTool::new(Arc::clone(&ws));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         let err = tool
             .call(&mut ctx, json!({"event_type": "error"}))
+            .await
             .unwrap_err();
         assert!(err.to_string().contains("core"));
     }
 
-    #[test]
-    fn workspace_publish_invalid_core() {
+    #[tokio::test]
+    async fn workspace_publish_invalid_core() {
         let ws = test_workspace();
         let tool = WorkspacePublishTool::new(Arc::clone(&ws));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
@@ -835,12 +860,13 @@ mod tests {
                 &mut ctx,
                 json!({"core": "nonexistent", "event_type": "error"}),
             )
+            .await
             .unwrap_err();
         assert!(err.to_string().contains("unknown core"));
     }
 
-    #[test]
-    fn workspace_events_after_publish() {
+    #[tokio::test]
+    async fn workspace_events_after_publish() {
         let ws = test_workspace();
         let pub_tool = WorkspacePublishTool::new(Arc::clone(&ws));
         let events_tool = WorkspaceEventsTool::new(Arc::clone(&ws));
@@ -858,16 +884,20 @@ mod tests {
                         "confidence": 0.5,
                     }),
                 )
+                .await
                 .unwrap();
         }
 
-        let result = events_tool.call(&mut ctx, json!({"count": 10})).unwrap();
+        let result = events_tool
+            .call(&mut ctx, json!({"count": 10}))
+            .await
+            .unwrap();
         assert_eq!(result["total_published"], 3);
         assert_eq!(result["events"].as_array().unwrap().len(), 3);
     }
 
-    #[test]
-    fn workspace_stats_shows_counts() {
+    #[tokio::test]
+    async fn workspace_stats_shows_counts() {
         let ws = test_workspace();
         let pub_tool = WorkspacePublishTool::new(Arc::clone(&ws));
         let stats_tool = WorkspaceStatsTool::new(Arc::clone(&ws));
@@ -884,48 +914,53 @@ mod tests {
                     "confidence": 0.8,
                 }),
             )
+            .await
             .unwrap();
 
-        let result = stats_tool.call(&mut ctx, json!({})).unwrap();
+        let result = stats_tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["events_published"], 1);
         assert_eq!(result["spotlight_transfers"], 1);
     }
 
-    #[test]
-    fn timescale_status_default() {
+    #[tokio::test]
+    async fn timescale_status_default() {
         let bus = test_timescale_bus();
         let tool = TimescaleStatusTool::new(Arc::clone(&bus));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["brain_wave"], "Gamma");
         assert_eq!(result["total_hooks"], 0);
         let tiers = result["tiers"].as_array().unwrap();
         assert_eq!(tiers.len(), 5);
     }
 
-    #[test]
-    fn timescale_hooks_empty_tier() {
+    #[tokio::test]
+    async fn timescale_hooks_empty_tier() {
         let bus = test_timescale_bus();
         let tool = TimescaleHooksTool::new(Arc::clone(&bus));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({"tier": "reflex"})).unwrap();
+        let result = tool
+            .call(&mut ctx, json!({"tier": "reflex"}))
+            .await
+            .unwrap();
         assert_eq!(result["tier"], "Reflex");
         assert_eq!(result["hook_count"], 0);
     }
 
-    #[test]
-    fn timescale_hooks_invalid_tier() {
+    #[tokio::test]
+    async fn timescale_hooks_invalid_tier() {
         let bus = test_timescale_bus();
         let tool = TimescaleHooksTool::new(Arc::clone(&bus));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         let err = tool
             .call(&mut ctx, json!({"tier": "nonexistent"}))
+            .await
             .unwrap_err();
         assert!(err.to_string().contains("unknown tier"));
     }
 
-    #[test]
-    fn parse_core_id_all_builtins() {
+    #[tokio::test]
+    async fn parse_core_id_all_builtins() {
         assert_eq!(parse_core_id("citta").unwrap(), CoreId::Citta);
         assert_eq!(parse_core_id("CITTA").unwrap(), CoreId::Citta);
         assert_eq!(parse_core_id("dream").unwrap(), CoreId::Dream);
@@ -936,8 +971,8 @@ mod tests {
         assert_eq!(parse_core_id("custom_42").unwrap(), CoreId::Custom(42));
     }
 
-    #[test]
-    fn parse_event_type_all_types() {
+    #[tokio::test]
+    async fn parse_event_type_all_types() {
         assert_eq!(parse_event_type("error").unwrap(), EventType::Error);
         assert_eq!(parse_event_type("reward").unwrap(), EventType::Reward);
         assert_eq!(
@@ -958,8 +993,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn parse_tier_all_tiers() {
+    #[tokio::test]
+    async fn parse_tier_all_tiers() {
         assert_eq!(parse_tier("reflex").unwrap(), Tier::Reflex);
         assert_eq!(parse_tier("reactive").unwrap(), Tier::Reactive);
         assert_eq!(parse_tier("planning").unwrap(), Tier::Planning);
@@ -969,8 +1004,8 @@ mod tests {
         assert_eq!(parse_tier("4").unwrap(), Tier::Evolutionary);
     }
 
-    #[test]
-    fn hex_roundtrip() {
+    #[tokio::test]
+    async fn hex_roundtrip() {
         let data = vec![0xde, 0xad, 0xbe, 0xef];
         let encoded = hex_encode(&data);
         assert_eq!(encoded, "deadbeef");
@@ -978,13 +1013,13 @@ mod tests {
         assert_eq!(decoded, data);
     }
 
-    #[test]
-    fn hex_decode_odd_length_fails() {
+    #[tokio::test]
+    async fn hex_decode_odd_length_fails() {
         assert!(hex_decode("abc").is_err());
     }
 
-    #[test]
-    fn register_v4_creates_8_tools() {
+    #[tokio::test]
+    async fn register_v4_creates_8_tools() {
         let table = test_reflex_table();
         let bus = test_timescale_bus();
         let ws = test_workspace();

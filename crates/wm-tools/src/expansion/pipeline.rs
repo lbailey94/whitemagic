@@ -9,6 +9,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -39,6 +41,8 @@ impl PipelineCreateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for PipelineCreateTool {
     fn name(&self) -> &str {
         "pipeline.create"
@@ -52,7 +56,7 @@ impl Tool for PipelineCreateTool {
     fn description(&self) -> &str {
         "Create a named pipeline with steps stored in memory"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let name = args
             .get("name")
             .and_then(|v| v.as_str())
@@ -105,6 +109,8 @@ impl PipelineListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for PipelineListTool {
     fn name(&self) -> &str {
         "pipeline.list"
@@ -118,7 +124,7 @@ impl Tool for PipelineListTool {
     fn description(&self) -> &str {
         "List all stored pipelines"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mems = self.store.scan(Galaxy::Sessions, 500)?;
         let pipelines: Vec<Value> = mems
             .iter()
@@ -167,6 +173,8 @@ impl PipelineStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for PipelineStatusTool {
     fn name(&self) -> &str {
         "pipeline.status"
@@ -180,7 +188,7 @@ impl Tool for PipelineStatusTool {
     fn description(&self) -> &str {
         "Get detailed status of a specific pipeline"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let name = args.get("name").and_then(|v| v.as_str());
         let id_str = args.get("id").and_then(|v| v.as_str());
 
@@ -241,6 +249,8 @@ impl SkillInvokeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SkillInvokeTool {
     fn name(&self) -> &str {
         "skill.invoke"
@@ -254,7 +264,7 @@ impl Tool for SkillInvokeTool {
     fn description(&self) -> &str {
         "Invoke a named skill from the Codex galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let skill_name = args
             .get("skill")
             .and_then(|v| v.as_str())
@@ -308,6 +318,8 @@ impl SkillListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SkillListTool {
     fn name(&self) -> &str {
         "skill.list"
@@ -321,7 +333,7 @@ impl Tool for SkillListTool {
     fn description(&self) -> &str {
         "List all available skills in the Codex galaxy"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mems = self.store.scan(Galaxy::Codex, 500)?;
         let skills: Vec<Value> = mems
             .iter()
@@ -390,8 +402,8 @@ mod tests {
         id
     }
 
-    #[test]
-    fn pipeline_create_stores_definition() {
+    #[tokio::test]
+    async fn pipeline_create_stores_definition() {
         let (_tmp, store) = open_store();
         let tool = PipelineCreateTool::new(store);
         let result = tool
@@ -399,6 +411,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"name": "my-pipeline", "steps": [{"tool": "memory.create"}]}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -406,29 +419,33 @@ mod tests {
         assert_eq!(obj["steps_count"], 1);
     }
 
-    #[test]
-    fn pipeline_create_missing_name() {
+    #[tokio::test]
+    async fn pipeline_create_missing_name() {
         let (_tmp, store) = open_store();
         let tool = PipelineCreateTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({"steps": []}));
+        let result = tool
+            .call(&mut Context::default(), json!({"steps": []}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn pipeline_create_missing_steps() {
+    #[tokio::test]
+    async fn pipeline_create_missing_steps() {
         let (_tmp, store) = open_store();
         let tool = PipelineCreateTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({"name": "test"}));
+        let result = tool
+            .call(&mut Context::default(), json!({"name": "test"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn pipeline_list_shows_pipelines() {
+    #[tokio::test]
+    async fn pipeline_list_shows_pipelines() {
         let (_tmp, store) = open_store();
         seed_pipeline(&store);
 
         let tool = PipelineListTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["count"], 1);
@@ -436,23 +453,24 @@ mod tests {
         assert_eq!(pipelines[0]["name"], "test-pipeline");
     }
 
-    #[test]
-    fn pipeline_list_empty() {
+    #[tokio::test]
+    async fn pipeline_list_empty() {
         let (_tmp, store) = open_store();
         let tool = PipelineListTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["count"], 0);
     }
 
-    #[test]
-    fn pipeline_status_by_name() {
+    #[tokio::test]
+    async fn pipeline_status_by_name() {
         let (_tmp, store) = open_store();
         seed_pipeline(&store);
 
         let tool = PipelineStatusTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"name": "test-pipeline"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -460,24 +478,26 @@ mod tests {
         assert!(obj["definition"].is_object());
     }
 
-    #[test]
-    fn pipeline_status_not_found() {
+    #[tokio::test]
+    async fn pipeline_status_not_found() {
         let (_tmp, store) = open_store();
         let tool = PipelineStatusTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({"name": "nonexistent"}));
+        let result = tool
+            .call(&mut Context::default(), json!({"name": "nonexistent"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn pipeline_status_missing_args() {
+    #[tokio::test]
+    async fn pipeline_status_missing_args() {
         let (_tmp, store) = open_store();
         let tool = PipelineStatusTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn skill_invoke_finds_skill() {
+    #[tokio::test]
+    async fn skill_invoke_finds_skill() {
         let (_tmp, store) = open_store();
         seed_skill(&store);
 
@@ -487,6 +507,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"skill": "summarize", "params": {"galaxy": "codex"}}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -494,29 +515,31 @@ mod tests {
         assert!(obj["definition"].is_object());
     }
 
-    #[test]
-    fn skill_invoke_not_found() {
+    #[tokio::test]
+    async fn skill_invoke_not_found() {
         let (_tmp, store) = open_store();
         let tool = SkillInvokeTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({"skill": "nonexistent"}));
+        let result = tool
+            .call(&mut Context::default(), json!({"skill": "nonexistent"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn skill_invoke_missing_skill_arg() {
+    #[tokio::test]
+    async fn skill_invoke_missing_skill_arg() {
         let (_tmp, store) = open_store();
         let tool = SkillInvokeTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn skill_list_shows_skills() {
+    #[tokio::test]
+    async fn skill_list_shows_skills() {
         let (_tmp, store) = open_store();
         seed_skill(&store);
 
         let tool = SkillListTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["count"], 1);
@@ -524,11 +547,11 @@ mod tests {
         assert_eq!(skills[0]["name"], "summarize");
     }
 
-    #[test]
-    fn skill_list_empty() {
+    #[tokio::test]
+    async fn skill_list_empty() {
         let (_tmp, store) = open_store();
         let tool = SkillListTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["count"], 0);
     }
