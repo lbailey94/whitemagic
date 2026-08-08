@@ -7850,39 +7850,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
-name = "wm-autonomic"
-version = "4.0.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "tempfile",
- "tracing",
- "wm-core",
- "wm-drive",
- "wm-workspace",
-]
-
-[[package]]
 name = "wm-bicameral"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
+ "ahash",
  "chrono",
  "criterion",
  "regex",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.19",
  "tracing",
  "ureq",
  "wm-core",
+ "wm-memory",
  "wm-simulation",
 ]
 
 [[package]]
-name = "wm-consciousness"
-version = "4.0.0"
+name = "wm-cognitive"
+version = "5.2.1"
 dependencies = [
+ "ahash",
  "chrono",
  "criterion",
  "lmdb",
@@ -7901,14 +7891,17 @@ dependencies = [
  "wm-core",
  "wm-memory",
  "wm-substrate",
+ "wm-workspace",
 ]
 
 [[package]]
 name = "wm-core"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "ahash",
+ "async-trait",
  "chrono",
+ "criterion",
  "hmac",
  "proptest",
  "serde",
@@ -7922,9 +7915,10 @@ dependencies = [
 
 [[package]]
 name = "wm-dispatch"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "ahash",
+ "async-trait",
  "criterion",
  "proptest",
  "regex",
@@ -7941,18 +7935,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "wm-drive"
-version = "4.0.0"
-dependencies = [
- "serde",
- "serde_json",
- "tracing",
- "wm-core",
-]
-
-[[package]]
 name = "wm-governance"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "ahash",
  "chrono",
@@ -7972,9 +7956,10 @@ dependencies = [
 
 [[package]]
 name = "wm-mcp"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
  "clap",
  "pyo3",
@@ -7984,32 +7969,28 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.19",
  "tokio",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "uuid",
- "wm-autonomic",
  "wm-bicameral",
- "wm-consciousness",
+ "wm-cognitive",
  "wm-core",
  "wm-dispatch",
- "wm-drive",
  "wm-governance",
  "wm-memory",
  "wm-polyglot",
- "wm-reflex",
- "wm-resonance",
  "wm-sangha",
  "wm-selfmodel",
  "wm-simulation",
  "wm-substrate",
- "wm-timescale",
  "wm-tools",
  "wm-workspace",
 ]
 
 [[package]]
 name = "wm-memory"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "ahash",
  "arrow",
@@ -8041,42 +8022,23 @@ dependencies = [
 
 [[package]]
 name = "wm-polyglot"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
+ "async-trait",
  "jlrs",
  "libloading",
  "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.19",
+ "tokio",
  "tracing",
  "wm-core",
-]
-
-[[package]]
-name = "wm-reflex"
-version = "4.0.0"
-dependencies = [
- "criterion",
- "thiserror 2.0.19",
- "tracing",
- "wm-core",
-]
-
-[[package]]
-name = "wm-resonance"
-version = "4.0.0"
-dependencies = [
- "ahash",
- "chrono",
- "serde",
- "serde_json",
- "tracing",
 ]
 
 [[package]]
 name = "wm-sangha"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "chrono",
  "serde",
@@ -8089,7 +8051,7 @@ dependencies = [
 
 [[package]]
 name = "wm-selfmodel"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "chrono",
  "serde",
@@ -8099,7 +8061,7 @@ dependencies = [
 
 [[package]]
 name = "wm-simulation"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "chrono",
  "serde",
@@ -8110,7 +8072,7 @@ dependencies = [
 
 [[package]]
 name = "wm-substrate"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "chrono",
  "serde",
@@ -8120,22 +8082,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "wm-timescale"
-version = "4.0.0"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 2.0.19",
- "tokio",
- "tracing",
- "wm-core",
-]
-
-[[package]]
 name = "wm-tools"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "ahash",
+ "async-trait",
  "chrono",
  "criterion",
  "proptest",
@@ -8147,25 +8098,21 @@ dependencies = [
  "tracing",
  "uuid",
  "wm-bicameral",
- "wm-consciousness",
+ "wm-cognitive",
  "wm-core",
  "wm-dispatch",
- "wm-drive",
  "wm-governance",
  "wm-memory",
- "wm-reflex",
- "wm-resonance",
  "wm-sangha",
  "wm-selfmodel",
  "wm-simulation",
  "wm-substrate",
- "wm-timescale",
  "wm-workspace",
 ]
 
 [[package]]
 name = "wm-workspace"
-version = "4.0.0"
+version = "5.2.1"
 dependencies = [
  "serde",
  "serde_json",

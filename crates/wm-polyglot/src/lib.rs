@@ -1,4 +1,4 @@
-//! WhiteMagic v4 wm-polyglot — Polyglot language bridges.
+//! WhiteMagic v5 wm-polyglot — Polyglot language bridges.
 //!
 //! Provides a unified interface for calling functions in Julia, Haskell,
 //! Zig, and Koka from the WhiteMagic runtime. All language backends

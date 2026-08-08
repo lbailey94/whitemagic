@@ -1,15 +1,16 @@
-//! WhiteMagic v4 MCP — Model Context Protocol server
+//! WhiteMagic v5 MCP — Model Context Protocol server
 //!
 //! Pure Rust JSON-RPC over stdio. Exposes a single `wm` fractal tool
 //! that auto-routes to all internal tools.
 //!
 //! With the `python` feature, also provides PyO3 bindings for use as a
-//! Python extension module (`whitemagic_v4`).
+//! Python extension module (`whitemagic_v5`).
 
 // wm-mcp has an FFI boundary (PyO3 bridge), so we use `deny` instead of
 // `forbid` — the pyo3_bridge module can locally allow unsafe for PyO3 macros.
 #![deny(unsafe_code)]
 
+pub mod config;
 pub mod cyberbrain;
 pub mod daemon;
 pub mod input_validation;

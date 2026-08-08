@@ -4,26 +4,21 @@ members = [
     "crates/wm-core",
     "crates/wm-memory",
     "crates/wm-dispatch",
-    "crates/wm-consciousness",
+    "crates/wm-cognitive",
     "crates/wm-governance",
     "crates/wm-polyglot",
     "crates/wm-substrate",
     "crates/wm-tools",
     "crates/wm-mcp",
-    "crates/wm-reflex",
-    "crates/wm-timescale",
     "crates/wm-workspace",
     "crates/wm-selfmodel",
     "crates/wm-bicameral",
-    "crates/wm-drive",
-    "crates/wm-autonomic",
-    "crates/wm-resonance",
     "crates/wm-sangha",
     "crates/wm-simulation",
 ]
 
 [workspace.package]
-version = "4.0.0"
+version = "5.2.1"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
@@ -95,25 +90,22 @@ regex = "1"
 toml = "0.8"
 # Socket options (multicast join for Sangha transport)
 socket2 = "0.6"
+# Async trait
+async-trait = "0.1"
 
 # Internal crates
 wm-core = { path = "crates/wm-core" }
 wm-memory = { path = "crates/wm-memory" }
 wm-dispatch = { path = "crates/wm-dispatch" }
-wm-consciousness = { path = "crates/wm-consciousness" }
+wm-cognitive = { path = "crates/wm-cognitive" }
 wm-governance = { path = "crates/wm-governance" }
 wm-polyglot = { path = "crates/wm-polyglot" }
 wm-substrate = { path = "crates/wm-substrate" }
 wm-tools = { path = "crates/wm-tools" }
 wm-mcp = { path = "crates/wm-mcp" }
-wm-reflex = { path = "crates/wm-reflex" }
-wm-timescale = { path = "crates/wm-timescale" }
 wm-workspace = { path = "crates/wm-workspace" }
 wm-selfmodel = { path = "crates/wm-selfmodel" }
 wm-bicameral = { path = "crates/wm-bicameral" }
-wm-drive = { path = "crates/wm-drive" }
-wm-autonomic = { path = "crates/wm-autonomic" }
-wm-resonance = { path = "crates/wm-resonance" }
 wm-sangha = { path = "crates/wm-sangha" }
 wm-simulation = { path = "crates/wm-simulation" }
 

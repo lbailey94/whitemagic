@@ -1,4 +1,4 @@
-//! WhiteMagic v4 Global Workspace Bus — salience-based multi-objective arbitration.
+//! WhiteMagic v5 Global Workspace Bus — salience-based multi-objective arbitration.
 //!
 //! All cognitive cores publish state events to the workspace. The workspace
 //! arbitrates attention: whichever core has the highest salience score wins
