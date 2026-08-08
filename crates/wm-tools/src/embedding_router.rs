@@ -202,7 +202,9 @@ impl EmbeddingRouter {
             .map(|(_, tool, bonus)| (*tool, *bonus));
 
         // Score each tool by cosine similarity to (optionally refined) embedding
-        let stats_lock = self.outcome_stats.read().unwrap();
+        let Ok(stats_lock) = self.outcome_stats.read() else {
+            return (String::new(), 0.0);
+        };
 
         let mut best_tool = "gnosis".to_string();
         let mut best_score = 0.0_f64;
@@ -269,7 +271,9 @@ impl EmbeddingRouter {
             Err(_) => return,
         };
 
-        let mut stats = self.outcome_stats.write().unwrap();
+        let Ok(mut stats) = self.outcome_stats.write() else {
+            return;
+        };
         let stat = stats
             .entry(tool_name.to_string())
             .or_insert_with(|| OutcomeStats::new(self.dim));
@@ -297,7 +301,9 @@ impl EmbeddingRouter {
     /// Get a snapshot of outcome stats counts for observability.
     #[must_use]
     pub fn outcome_counts(&self) -> Vec<(String, usize, usize)> {
-        let stats = self.outcome_stats.read().unwrap();
+        let Ok(stats) = self.outcome_stats.read() else {
+            return Vec::new();
+        };
         stats
             .iter()
             .map(|(name, s)| (name.clone(), s.success_count, s.failure_count))
@@ -308,7 +314,9 @@ impl EmbeddingRouter {
     #[must_use]
     #[allow(clippy::type_complexity)]
     pub fn save_oats(&self) -> Option<String> {
-        let stats = self.outcome_stats.read().unwrap();
+        let Ok(stats) = self.outcome_stats.read() else {
+            return None;
+        };
         let serializable: Vec<(String, usize, usize, Vec<f32>, Vec<f32>)> = stats
             .iter()
             .map(|(name, s)| {
@@ -329,7 +337,9 @@ impl EmbeddingRouter {
         if let Ok(data) =
             serde_json::from_str::<Vec<(String, usize, usize, Vec<f32>, Vec<f32>)>>(json)
         {
-            let mut stats = self.outcome_stats.write().unwrap();
+            let Ok(mut stats) = self.outcome_stats.write() else {
+                return;
+            };
             for (name, success_count, failure_count, success_centroid, failure_centroid) in data {
                 let dim = success_centroid.len().max(self.dim);
                 let mut s = OutcomeStats::new(dim);

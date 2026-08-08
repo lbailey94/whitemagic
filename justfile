@@ -71,3 +71,12 @@ prune: clean
     rm -rf crates/*/benches/target
     find . -name "*.profraw" -delete 2>/dev/null
     @echo "Build artifacts removed"
+
+# Dependency security audit (RustSec advisories + licenses + duplicate bans)
+audit:
+    cargo deny check
+
+# Everything: fmt + clippy + tests + dependency audit
+verify: fmt-check lint
+    cargo test --all
+    cargo deny check

@@ -27,3 +27,8 @@ __pycache__/
 # Criterion benchmark artifacts
 /criterion
 /crates/**/benches/**/target
+
+# Fuzz build artifacts
+/fuzz/target/
+/fuzz/artifacts/
+/fuzz/corpus/

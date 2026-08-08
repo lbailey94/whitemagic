@@ -551,7 +551,7 @@ impl MetaHarness {
     /// Get current statistics.
     #[must_use]
     pub fn stats(&self) -> HarnessStats {
-        self.stats.lock().unwrap().clone()
+        self.stats.lock().map(|s| s.clone()).unwrap_or_default()
     }
 
     /// Get the configuration.
@@ -632,7 +632,9 @@ impl MetaHarness {
     }
 
     fn record_stats(&self, mode: EnhancementMode, response: &EnhancedResponse) {
-        let mut stats = self.stats.lock().unwrap();
+        let Ok(mut stats) = self.stats.lock() else {
+            return;
+        };
         stats.total_calls += 1;
         stats.total_latency_us += response.latency_us;
 

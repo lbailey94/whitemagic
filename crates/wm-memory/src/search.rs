@@ -179,7 +179,7 @@ impl SearchEngine {
             .parse_query(&sanitized)
             .map_err(|e| CoreError::Memory(format!("Tantivy parse_query: {e}")))?;
 
-        let collector = TopDocs::with_limit(limit);
+        let collector = TopDocs::with_limit(limit).order_by_score();
 
         let top_docs = searcher
             .search(&parsed, &collector)

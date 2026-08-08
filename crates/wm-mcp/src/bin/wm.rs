@@ -284,7 +284,9 @@ fn main() -> anyhow::Result<()> {
             };
 
             let bicameral = server.bicameral();
-            let engine = bicameral.lock().unwrap();
+            let engine = bicameral
+                .lock()
+                .map_err(|e| anyhow::anyhow!("bicameral lock: {e}"))?;
 
             let data = if engine.has_router() {
                 match format.as_str() {

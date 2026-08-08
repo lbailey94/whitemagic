@@ -83,3 +83,13 @@ jobs:
       - run: cargo test -p wm-governance --lib dharma_gate
       - run: cargo test -p wm-dispatch --lib rate_limiter
       - run: cargo test -p wm-core --lib effects
+
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check

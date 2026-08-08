@@ -33,7 +33,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use uuid::Uuid;
-use wm_core::{Galaxy, Result};
+use wm_core::{CoreError, Galaxy, Result};
 
 use crate::embedder::Embedder;
 use crate::memory::content_hash;
@@ -199,7 +199,10 @@ impl RecallEngine {
 
         // Check cache
         if self.config.cache_embeddings {
-            let cache = self.embedding_cache.lock().unwrap();
+            let cache = self
+                .embedding_cache
+                .lock()
+                .map_err(|e| CoreError::Memory(format!("embedding cache lock: {e}")))?;
             if let Some(vec) = cache.get(&hash) {
                 return Ok(vec.clone());
             }
@@ -210,7 +213,10 @@ impl RecallEngine {
 
         // Cache
         if self.config.cache_embeddings {
-            let mut cache = self.embedding_cache.lock().unwrap();
+            let mut cache = self
+                .embedding_cache
+                .lock()
+                .map_err(|e| CoreError::Memory(format!("embedding cache lock: {e}")))?;
             if cache.len() >= self.config.max_cache_entries {
                 // Evict ~10% of entries (simple strategy)
                 let to_remove: Vec<String> = cache.keys().take(cache.len() / 10).cloned().collect();
@@ -243,7 +249,10 @@ impl RecallEngine {
 
         // 4. Add to vector store
         {
-            let mut vs = self.vector_store.lock().unwrap();
+            let mut vs = self
+                .vector_store
+                .lock()
+                .map_err(|e| CoreError::Memory(format!("vector store lock: {e}")))?;
             vs.add(memory.metadata.id, galaxy, embedding);
         }
 
@@ -293,7 +302,9 @@ impl RecallEngine {
 
         // 3. Vector search
         let vector_results = {
-            let vs = self.vector_store.lock().unwrap();
+            let Ok(vs) = self.vector_store.lock() else {
+                return Vec::new();
+            };
             vs.search(&query_vec, bm25_limit, galaxy_filter)
         };
 
@@ -315,7 +326,9 @@ impl RecallEngine {
         };
 
         let vector_results = {
-            let vs = self.vector_store.lock().unwrap();
+            let Ok(vs) = self.vector_store.lock() else {
+                return Vec::new();
+            };
             vs.search(&query_vec, limit, galaxy_filter)
         };
 
@@ -404,18 +417,20 @@ impl RecallEngine {
     /// Get the number of cached embeddings.
     #[must_use]
     pub fn cache_size(&self) -> usize {
-        self.embedding_cache.lock().unwrap().len()
+        self.embedding_cache.lock().map(|c| c.len()).unwrap_or(0)
     }
 
     /// Clear the embedding cache.
     pub fn clear_cache(&self) {
-        self.embedding_cache.lock().unwrap().clear();
+        if let Ok(mut c) = self.embedding_cache.lock() {
+            c.clear();
+        }
     }
 
     /// Get the number of vectors in the vector store.
     #[must_use]
     pub fn vector_count(&self) -> usize {
-        self.vector_store.lock().unwrap().len()
+        self.vector_store.lock().map(|c| c.len()).unwrap_or(0)
     }
 }
 

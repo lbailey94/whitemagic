@@ -180,6 +180,16 @@ pub struct MerkleCheckpoint {
     pub chain_head: String,
 }
 
+/// Acquire a lock with graceful error handling — a poisoned mutex
+/// degrades the ledger call instead of panicking the whole server.
+fn lock_or_err<'a, T>(
+    m: &'a std::sync::Mutex<T>,
+    what: &str,
+) -> Result<std::sync::MutexGuard<'a, T>> {
+    m.lock()
+        .map_err(|e| CoreError::Tool(format!("karma {what} lock poisoned: {e}")))
+}
+
 impl KarmaLedger {
     /// Open or create a karma ledger backed by the given LMDB store.
     pub fn new(store: Arc<MemoryStore>) -> Result<Self> {
@@ -209,7 +219,7 @@ impl KarmaLedger {
     /// Load chain head and next ID from LMDB (if previously persisted).
     #[allow(clippy::significant_drop_tightening)]
     fn load_state(&self) -> Result<()> {
-        let mut state = self.chain_state.lock().unwrap();
+        let mut state = lock_or_err(&self.chain_state, "chain-state")?;
 
         // Load chain head
         if let Ok(Some(data)) = self.store.get_raw(Galaxy::Karma, CHAIN_HEAD_KEY) {
@@ -262,7 +272,7 @@ impl KarmaLedger {
 
         // Lock chain state only for computation + in-memory update.
         // The mutex is NOT held across LMDB I/O — that's the optimization.
-        let mut state = self.chain_state.lock().unwrap();
+        let mut state = lock_or_err(&self.chain_state, "chain-state")?;
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let parent_hash = state.chain_head.clone();
 
@@ -306,7 +316,7 @@ impl KarmaLedger {
 
         // Buffer the write — no LMDB I/O here
         {
-            let mut pending = self.pending.lock().unwrap();
+            let mut pending = lock_or_err(&self.pending, "pending")?;
             pending.entries.push((key, val));
             pending.chain_head = entry_hash;
             pending.next_id = next_id_val;
@@ -331,7 +341,7 @@ impl KarmaLedger {
     pub fn flush(&self) -> Result<()> {
         // Drain the pending buffer
         let (entries, chain_head, next_id) = {
-            let mut pending = self.pending.lock().unwrap();
+            let mut pending = lock_or_err(&self.pending, "pending")?;
             if pending.is_empty() {
                 drop(pending);
                 return Ok(());
@@ -357,17 +367,17 @@ impl KarmaLedger {
     /// Number of pending writes not yet flushed to LMDB.
     #[must_use]
     pub fn pending_count(&self) -> usize {
-        self.pending.lock().unwrap().len()
+        self.pending.lock().map(|p| p.len()).unwrap_or(0)
     }
 
     /// Check if there are pending writes not yet flushed.
     #[must_use]
     pub fn has_pending(&self) -> bool {
-        !self.pending.lock().unwrap().is_empty()
+        self.pending.lock().map(|p| !p.is_empty()).unwrap_or(false)
     }
 
     fn pending_len(&self) -> usize {
-        self.pending.lock().unwrap().len()
+        self.pending.lock().map(|p| p.len()).unwrap_or(0)
     }
 
     /// Get the current total karma debt with time-based decay.
@@ -377,7 +387,9 @@ impl KarmaLedger {
     /// and the system can recover from accumulated debt over time.
     /// The decay is computed lazily on each read.
     pub fn total_debt(&self) -> f32 {
-        let mut state = self.chain_state.lock().unwrap();
+        let Ok(mut state) = lock_or_err(&self.chain_state, "chain-state") else {
+            return 0.0;
+        };
         let raw_debt = state.total_debt;
         if raw_debt <= 0.0 {
             return 0.0;
@@ -415,7 +427,7 @@ impl KarmaLedger {
             .unwrap_or_default()
             .as_secs();
 
-        let mut state = self.chain_state.lock().unwrap();
+        let mut state = lock_or_err(&self.chain_state, "chain-state")?;
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let parent_hash = state.chain_head.clone();
         let debt_delta = 0.01_f32;
@@ -451,7 +463,7 @@ impl KarmaLedger {
         drop(state);
 
         {
-            let mut pending = self.pending.lock().unwrap();
+            let mut pending = lock_or_err(&self.pending, "pending")?;
             pending.entries.push((key, val));
             pending.chain_head = entry_hash;
             pending.next_id = next_id_val;
@@ -473,7 +485,7 @@ impl KarmaLedger {
             .unwrap_or_default()
             .as_secs();
 
-        let mut state = self.chain_state.lock().unwrap();
+        let mut state = lock_or_err(&self.chain_state, "chain-state")?;
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let parent_hash = state.chain_head.clone();
         let debt_delta = -0.05_f32;
@@ -509,7 +521,7 @@ impl KarmaLedger {
         drop(state);
 
         {
-            let mut pending = self.pending.lock().unwrap();
+            let mut pending = lock_or_err(&self.pending, "pending")?;
             pending.entries.push((key, val));
             pending.chain_head = entry_hash;
             pending.next_id = next_id_val;

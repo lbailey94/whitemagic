@@ -109,7 +109,9 @@ impl CompositionTracker {
     /// Call this after each tool is dispatched. The tool name is appended
     /// to the sliding window of recent calls.
     pub fn record(&self, tool_name: &str) {
-        let mut recent = self.recent.lock().unwrap();
+        let Ok(mut recent) = self.recent.lock() else {
+            return;
+        };
         recent.push(tool_name.to_string());
         if recent.len() > self.config.window_size {
             recent.remove(0);
@@ -125,7 +127,9 @@ impl CompositionTracker {
     /// Also updates the internal pattern store.
     #[must_use]
     pub fn discover(&self) -> Vec<CompositionPattern> {
-        let recent = self.recent.lock().unwrap();
+        let Ok(recent) = self.recent.lock() else {
+            return Vec::new();
+        };
         let mut counts: HashMap<Vec<String>, usize> = HashMap::new();
 
         let max_len = self.config.max_pattern_len.min(recent.len());
@@ -183,7 +187,9 @@ impl CompositionTracker {
     #[must_use]
     pub fn suggest_next(&self, last_n: usize) -> Vec<String> {
         let context: Vec<String> = {
-            let recent = self.recent.lock().unwrap();
+            let Ok(recent) = self.recent.lock() else {
+                return Vec::new();
+            };
             if recent.is_empty() {
                 return Vec::new();
             }

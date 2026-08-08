@@ -25,6 +25,12 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
+/// Acquire the components lock with graceful degradation — a poisoned
+/// mutex returns the supplied default instead of panicking the server.
+fn lock_components<T>(m: &std::sync::Mutex<T>) -> Result<std::sync::MutexGuard<'_, T>, String> {
+    m.lock()
+        .map_err(|_| "tri-model components lock poisoned".to_string())
+}
 use crate::router::{InferenceTier, TierHandler};
 
 // ── HTTP chat request/response (OpenAI-compatible) ────────────────────
@@ -603,7 +609,9 @@ impl TriModelManager {
     /// Get the state of a model component.
     #[must_use]
     pub fn state(&self, kind: ModelKind) -> ModelState {
-        let components = self.components.lock().unwrap();
+        let Ok(components) = self.components.lock() else {
+            return ModelState::Stopped;
+        };
         components[kind as usize].state()
     }
 
@@ -616,21 +624,27 @@ impl TriModelManager {
     /// Get request count for a model.
     #[must_use]
     pub fn request_count(&self, kind: ModelKind) -> u64 {
-        let components = self.components.lock().unwrap();
+        let Ok(components) = self.components.lock() else {
+            return 0;
+        };
         components[kind as usize].request_count()
     }
 
     /// Get error count for a model.
     #[must_use]
     pub fn error_count(&self, kind: ModelKind) -> u64 {
-        let components = self.components.lock().unwrap();
+        let Ok(components) = self.components.lock() else {
+            return 0;
+        };
         components[kind as usize].error_count()
     }
 
     /// Get idle duration for a model.
     #[must_use]
     pub fn idle_duration(&self, kind: ModelKind) -> Duration {
-        let components = self.components.lock().unwrap();
+        let Ok(components) = self.components.lock() else {
+            return Duration::ZERO;
+        };
         components[kind as usize].idle_duration()
     }
 
@@ -647,7 +661,7 @@ impl TriModelManager {
     /// In a real deployment, this spawns the BitMamba daemon.
     /// In test/stub mode, this just marks the component as running.
     pub fn start_autonomic(&self) -> Result<(), String> {
-        let mut components = self.components.lock().unwrap();
+        let mut components = lock_components(&self.components)?;
         let comp = &mut components[ModelKind::Autonomic as usize];
 
         if comp.state.is_available() {
@@ -674,7 +688,7 @@ impl TriModelManager {
             return self.start_autonomic();
         }
 
-        let mut components = self.components.lock().unwrap();
+        let mut components = lock_components(&self.components)?;
         let comp = &mut components[kind as usize];
 
         if comp.state.is_available() {
@@ -702,7 +716,9 @@ impl TriModelManager {
 
     /// Stop a specific model component (graceful shutdown).
     pub fn stop(&self, kind: ModelKind) {
-        let mut components = self.components.lock().unwrap();
+        let Ok(mut components) = self.components.lock() else {
+            return;
+        };
         let comp = &mut components[kind as usize];
 
         if comp.state == ModelState::Stopped {
@@ -722,7 +738,7 @@ impl TriModelManager {
 
         if state.is_available() {
             // Touch to update last-active and wake from idle/dreaming
-            let mut components = self.components.lock().unwrap();
+            let mut components = lock_components(&self.components)?;
             let comp = &mut components[kind as usize];
             let was_idle = comp.state == ModelState::Idle;
             let was_dreaming = comp.state == ModelState::Dreaming;
@@ -767,8 +783,9 @@ impl TriModelManager {
         // Stop then start
         self.stop(kind);
         self.start(kind).inspect_err(|e| {
-            let mut components = self.components.lock().unwrap();
-            components[kind as usize].mark_failed(e);
+            if let Ok(mut components) = self.components.lock() {
+                components[kind as usize].mark_failed(e);
+            }
             self.emit_event(kind, LifecycleEventType::Failed, Some(e.clone()));
         })?;
 
@@ -792,7 +809,9 @@ impl TriModelManager {
     pub fn check_idle(&self) -> Vec<ModelKind> {
         // First pass: find models that need transitioning
         let to_transition: Vec<(ModelKind, ModelState)> = {
-            let components = self.components.lock().unwrap();
+            let Ok(components) = self.components.lock() else {
+                return Vec::new();
+            };
             components
                 .iter()
                 .enumerate()
@@ -834,14 +853,18 @@ impl TriModelManager {
             match target_state {
                 ModelState::Dreaming => {
                     {
-                        let mut components = self.components.lock().unwrap();
+                        let Ok(mut components) = self.components.lock() else {
+                            continue;
+                        };
                         components[*kind as usize].mark_dreaming();
                     }
                     self.emit_event(*kind, LifecycleEventType::DreamStarted, None);
                 }
                 ModelState::Stopped => {
                     {
-                        let mut components = self.components.lock().unwrap();
+                        let Ok(mut components) = self.components.lock() else {
+                            continue;
+                        };
                         let was_dreaming = components[*kind as usize].state == ModelState::Dreaming;
                         components[*kind as usize].mark_stopped();
                         if was_dreaming {
@@ -870,7 +893,9 @@ impl TriModelManager {
 
         // Collect running models first, then emit events without holding the lock
         let running: Vec<ModelKind> = {
-            let components = self.components.lock().unwrap();
+            let Ok(components) = self.components.lock() else {
+                return Vec::new();
+            };
             components
                 .iter()
                 .enumerate()
@@ -890,21 +915,27 @@ impl TriModelManager {
 
     /// Mark a model as failed.
     pub fn mark_failed(&self, kind: ModelKind, error: &str) {
-        let mut components = self.components.lock().unwrap();
+        let Ok(mut components) = self.components.lock() else {
+            return;
+        };
         components[kind as usize].mark_failed(error);
         self.emit_event(kind, LifecycleEventType::Failed, Some(error.to_string()));
     }
 
     /// Record a successful request on a model.
     pub fn record_success(&self, kind: ModelKind) {
-        let mut components = self.components.lock().unwrap();
+        let Ok(mut components) = self.components.lock() else {
+            return;
+        };
         components[kind as usize].touch();
         components[kind as usize].record_success();
     }
 
     /// Record a failed request on a model.
     pub fn record_error(&self, kind: ModelKind, error: &str) {
-        let components = self.components.lock().unwrap();
+        let Ok(components) = self.components.lock() else {
+            return;
+        };
         components[kind as usize].record_error(error);
         // Don't immediately mark as failed — allow retries
     }
@@ -1043,7 +1074,9 @@ impl TriModelManager {
     /// Get a comprehensive status snapshot as JSON.
     #[must_use]
     pub fn status(&self) -> serde_json::Value {
-        let components = self.components.lock().unwrap();
+        let Ok(components) = self.components.lock() else {
+            return serde_json::Value::Null;
+        };
 
         let component_status = |kind: ModelKind| {
             let comp = &components[kind as usize];
@@ -1073,7 +1106,9 @@ impl TriModelManager {
     /// Get a summary string suitable for CLI display.
     #[must_use]
     pub fn summary(&self) -> String {
-        let components = self.components.lock().unwrap();
+        let Ok(components) = self.components.lock() else {
+            return String::new();
+        };
         let mut out = String::new();
 
         for kind in ModelKind::all() {

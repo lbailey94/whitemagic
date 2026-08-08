@@ -356,7 +356,9 @@ impl ConversationalSearch {
 
         // Check cache
         let from_cache = self.config.enable_cache && {
-            let mut cache = self.cache.lock().unwrap();
+            let Ok(mut cache) = self.cache.lock() else {
+                return Vec::new();
+            };
             if let Some(entry) = cache.get_mut(&cache_key) {
                 entry.hit_count += 1;
                 entry.timestamp = Instant::now();
@@ -367,7 +369,9 @@ impl ConversationalSearch {
         };
 
         let results = if from_cache {
-            let cache = self.cache.lock().unwrap();
+            let Ok(cache) = self.cache.lock() else {
+                return Vec::new();
+            };
             cache
                 .get(&cache_key)
                 .map(|e| e.results.clone())
@@ -384,8 +388,12 @@ impl ConversationalSearch {
                     hit_count: 1,
                 };
                 {
-                    let mut cache = self.cache.lock().unwrap();
-                    let mut order = self.cache_order.lock().unwrap();
+                    let Ok(mut cache) = self.cache.lock() else {
+                        return Vec::new();
+                    };
+                    let Ok(mut order) = self.cache_order.lock() else {
+                        return Vec::new();
+                    };
 
                     // Evict LRU if at capacity
                     while order.len() >= self.config.cache_size {
@@ -404,8 +412,9 @@ impl ConversationalSearch {
 
             // Record cache miss
             if self.config.enable_cache {
-                let mut metrics = self.metrics.lock().unwrap();
-                metrics.cache_misses += 1;
+                if let Ok(mut metrics) = self.metrics.lock() {
+                    metrics.cache_misses += 1;
+                }
             }
 
             recall_results
@@ -413,15 +422,18 @@ impl ConversationalSearch {
 
         // Record cache hit
         if from_cache {
-            let mut metrics = self.metrics.lock().unwrap();
-            metrics.cache_hits += 1;
+            if let Ok(mut metrics) = self.metrics.lock() {
+                metrics.cache_hits += 1;
+            }
         }
 
         let latency_us = start.elapsed().as_micros() as u64;
 
         // Update metrics
         {
-            let mut metrics = self.metrics.lock().unwrap();
+            let Ok(mut metrics) = self.metrics.lock() else {
+                return Vec::new();
+            };
             metrics.total_queries += 1;
             metrics.total_latency_us += latency_us;
             if metrics.min_latency_us == 0 || latency_us < metrics.min_latency_us {
@@ -464,19 +476,23 @@ impl ConversationalSearch {
     /// Get current performance metrics.
     #[must_use]
     pub fn metrics(&self) -> SearchMetrics {
-        self.metrics.lock().unwrap().clone()
+        self.metrics.lock().map(|m| m.clone()).unwrap_or_default()
     }
 
     /// Clear the query cache.
     pub fn clear_cache(&self) {
-        self.cache.lock().unwrap().clear();
-        self.cache_order.lock().unwrap().clear();
+        if let Ok(mut c) = self.cache.lock() {
+            c.clear();
+        }
+        if let Ok(mut c) = self.cache_order.lock() {
+            c.clear();
+        }
     }
 
     /// Get the number of cached queries.
     #[must_use]
     pub fn cache_len(&self) -> usize {
-        self.cache.lock().unwrap().len()
+        self.cache.lock().map(|c| c.len()).unwrap_or(0)
     }
 
     /// Get the underlying recall engine.
