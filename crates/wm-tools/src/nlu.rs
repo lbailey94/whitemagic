@@ -2105,6 +2105,22 @@ pub static TOOL_PROFILES: &[ToolProfile] = &[
             ("factual", 2.5),
         ],
     },
+    // ── NLU observability ───────────────────────────────────────────
+    ToolProfile {
+        tool_name: "nlu.shadow_report",
+        keywords: &[
+            ("shadow", 4.0),
+            ("disagreement", 4.0),
+            ("nlu", 3.0),
+            ("router", 3.0),
+            ("embedding", 2.5),
+            ("tfidf", 2.5),
+            ("tf-idf", 2.5),
+            ("oats", 3.0),
+            ("promotion", 2.5),
+            ("routing", 2.0),
+        ],
+    },
 ];
 
 /// Common English stopwords that don't contribute to tool routing.
@@ -2305,7 +2321,7 @@ fn cosine_similarity(input_tf: &AHashMap<String, f64>, profile: &ToolProfile) ->
 /// Command verbs that strongly indicate a specific tool when they appear
 /// as the first word of the input. This helps counteract cosine similarity's
 /// bias toward profiles with fewer keywords (smaller norm).
-const PREFIX_ROUTES: &[(&str, &str, f64)] = &[
+pub const PREFIX_ROUTES: &[(&str, &str, f64)] = &[
     ("remember", "memory.create", 1.5),
     ("store", "memory.create", 1.5),
     ("save", "memory.create", 1.5),

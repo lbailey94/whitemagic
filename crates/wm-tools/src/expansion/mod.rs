@@ -52,12 +52,14 @@ pub mod karma;
 pub mod knowledge_graph;
 pub mod memory_ops;
 pub mod network;
+pub mod nlu_tools;
 pub mod patterns;
 pub mod pipeline;
 pub mod reasoning;
 pub mod resonance;
 pub mod rsi;
 pub mod sangha_tools;
+pub mod self_play;
 pub mod selfmodel;
 pub mod sensorimotor_tools;
 pub mod session;
@@ -118,6 +120,7 @@ pub use network::{
     AssociationMineTool, EmergenceReportTool, NetworkCentralityTool, NetworkClustersTool,
     NetworkStatsTool, PatternDetectTool,
 };
+pub use nlu_tools::NluShadowReportTool;
 pub use patterns::{PatternSearchTool, SalienceSpotlightTool, SerendipitySurfaceTool};
 pub use pipeline::{
     PipelineCreateTool, PipelineListTool, PipelineStatusTool, SkillInvokeTool, SkillListTool,
@@ -131,6 +134,10 @@ pub use rsi::{
 };
 pub use sangha_tools::{
     SanghaChatTool, SanghaDiscoverTool, SanghaLocksTool, SanghaPeersTool, SanghaSignalTool,
+};
+pub use self_play::{
+    SelfPlayExportTool, SelfPlayRunTool, SelfPlayStatusTool, SharedSelfPlayLoop,
+    build_self_play_loop, new_shared_loop, register_self_play,
 };
 pub use sensorimotor_tools::{
     ActuatorCommandTool, ActuatorEStopTool, ActuatorListTool, ReflexAddTool, ReflexEvaluateTool,
@@ -150,9 +157,9 @@ pub use v4::{
 };
 
 use std::sync::Arc;
+use wm_cognitive::GanYingBus;
 use wm_governance::KarmaLedger;
 use wm_memory::{AssociationStore, MemoryStore, SearchEngine};
-use wm_resonance::GanYingBus;
 use wm_substrate::SubstrateMonitor;
 use wm_substrate::anomaly::AnomalyDetector;
 use wm_substrate::homeostatic::HomeostaticLoop;
@@ -165,7 +172,7 @@ pub fn register_expansion(
     store: &Arc<MemoryStore>,
     search: Option<Arc<SearchEngine>>,
     associations: Arc<AssociationStore>,
-    spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     karma: Option<Arc<KarmaLedger>>,
     substrate: Option<Arc<SubstrateMonitor>>,
     homeostatic_loop: Option<Arc<std::sync::Mutex<HomeostaticLoop>>>,
@@ -386,6 +393,9 @@ pub fn register_expansion(
 
     // Imagination tools (3) — scenario generation, prediction, reflection
     reg = register_imagination(&reg, store);
+
+    // Self-play tools (3) — training loop, status, export
+    reg = register_self_play(&reg, store, new_shared_loop());
 
     reg
 }

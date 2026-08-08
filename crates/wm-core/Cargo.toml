@@ -20,7 +20,13 @@ tracing = { workspace = true }
 smallvec = { workspace = true }
 sha2 = "0.10"
 hmac = "0.12"
+async-trait = "0.1"
 
 [dev-dependencies]
 proptest = { workspace = true }
 serde_json = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "mutable_bench"
+harness = false

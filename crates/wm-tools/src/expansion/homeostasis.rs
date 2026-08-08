@@ -5,6 +5,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
@@ -41,6 +43,8 @@ impl HomeostasisCheckTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for HomeostasisCheckTool {
     fn name(&self) -> &str {
         "homeostasis.check"
@@ -54,7 +58,7 @@ impl Tool for HomeostasisCheckTool {
     fn description(&self) -> &str {
         "Check all homeostasis metrics (CPU, memory, thermal, battery, health score)"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let hv = self.monitor.sample();
         let health = hv.health_score();
         let stressed = hv.is_stressed();
@@ -147,6 +151,8 @@ impl HomeostasisAdjustTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for HomeostasisAdjustTool {
     fn name(&self) -> &str {
         "homeostasis.adjust"
@@ -160,7 +166,7 @@ impl Tool for HomeostasisAdjustTool {
     fn description(&self) -> &str {
         "Simulate adjusted health score with custom metric weights"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let hv = self.monitor.sample();
 
         let cpu_weight = args
@@ -248,6 +254,8 @@ impl HomeostasisHistoryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for HomeostasisHistoryTool {
     fn name(&self) -> &str {
         "homeostasis.history"
@@ -261,7 +269,7 @@ impl Tool for HomeostasisHistoryTool {
     fn description(&self) -> &str {
         "Historical homeostasis readings (recent samples)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args
             .get("limit")
             .and_then(serde_json::Value::as_u64)
@@ -334,6 +342,8 @@ impl HomeostasisAlertsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for HomeostasisAlertsTool {
     fn name(&self) -> &str {
         "homeostasis.alerts"
@@ -347,7 +357,7 @@ impl Tool for HomeostasisAlertsTool {
     fn description(&self) -> &str {
         "Current alerts and warnings based on homeostasis thresholds"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let hv = self.monitor.sample();
         let mut alerts: Vec<Value> = Vec::new();
 
@@ -523,12 +533,12 @@ mod tests {
         Arc::new(std::sync::Mutex::new(AnomalyDetector::default()))
     }
 
-    #[test]
-    fn homeostasis_check_returns_metrics() {
+    #[tokio::test]
+    async fn homeostasis_check_returns_metrics() {
         let monitor = test_monitor();
         let tool = HomeostasisCheckTool::new(monitor, test_loop(), test_detector());
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({}));
+        let result = tool.call(&mut ctx, json!({})).await;
         assert!(result.is_ok());
         let v = result.unwrap();
         assert_eq!(v["status"], "success");
@@ -539,22 +549,22 @@ mod tests {
         assert!(v["anomaly_alerts"].is_array());
     }
 
-    #[test]
-    fn homeostasis_check_has_recommendations() {
+    #[tokio::test]
+    async fn homeostasis_check_has_recommendations() {
         let monitor = test_monitor();
         let tool = HomeostasisCheckTool::new(monitor, test_loop(), test_detector());
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({})).unwrap();
+        let v = tool.call(&mut ctx, json!({})).await.unwrap();
         let recs = v["recommendations"].as_array().unwrap();
         assert!(!recs.is_empty());
     }
 
-    #[test]
-    fn homeostasis_adjust_with_default_weights() {
+    #[tokio::test]
+    async fn homeostasis_adjust_with_default_weights() {
         let monitor = test_monitor();
         let tool = HomeostasisAdjustTool::new(monitor);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, json!({}));
+        let result = tool.call(&mut ctx, json!({})).await;
         assert!(result.is_ok());
         let v = result.unwrap();
         assert_eq!(v["status"], "success");
@@ -562,8 +572,8 @@ mod tests {
         assert!(v["default_health_score"].is_number());
     }
 
-    #[test]
-    fn homeostasis_adjust_with_custom_weights() {
+    #[tokio::test]
+    async fn homeostasis_adjust_with_custom_weights() {
         let monitor = test_monitor();
         let tool = HomeostasisAdjustTool::new(monitor);
         let mut ctx = Context::default();
@@ -571,27 +581,27 @@ mod tests {
             .call(
                 &mut ctx,
                 json!({"cpu_weight": 0.5, "memory_weight": 0.3, "swap_weight": 0.1, "thermal_weight": 0.1}),
-            )
+            ).await
             .unwrap();
         let weights = &v["weights"];
         assert!((weights["cpu"].as_f64().unwrap() - 0.5).abs() < 0.01);
         assert!((weights["memory"].as_f64().unwrap() - 0.3).abs() < 0.01);
     }
 
-    #[test]
-    fn homeostasis_adjust_zero_weights_errors() {
+    #[tokio::test]
+    async fn homeostasis_adjust_zero_weights_errors() {
         let monitor = test_monitor();
         let tool = HomeostasisAdjustTool::new(monitor);
         let mut ctx = Context::default();
         let result = tool.call(
             &mut ctx,
             json!({"cpu_weight": 0.0, "memory_weight": 0.0, "swap_weight": 0.0, "thermal_weight": 0.0}),
-        );
+        ).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn homeostasis_history_returns_samples() {
+    #[tokio::test]
+    async fn homeostasis_history_returns_samples() {
         let monitor = test_monitor();
         // Take a few samples
         let _ = monitor.sample();
@@ -600,29 +610,29 @@ mod tests {
 
         let tool = HomeostasisHistoryTool::new(monitor);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({"limit": 5})).unwrap();
+        let v = tool.call(&mut ctx, json!({"limit": 5})).await.unwrap();
         assert_eq!(v["status"], "success");
         assert_eq!(v["count"], 3);
         assert!(v["samples"].is_array());
         assert!(v["avg_health_score"].is_number());
     }
 
-    #[test]
-    fn homeostasis_history_empty_when_no_samples() {
+    #[tokio::test]
+    async fn homeostasis_history_empty_when_no_samples() {
         let monitor = test_monitor();
         let tool = HomeostasisHistoryTool::new(monitor);
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({})).unwrap();
+        let v = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(v["count"], 0);
     }
 
-    #[test]
-    fn homeostasis_alerts_returns_array() {
+    #[tokio::test]
+    async fn homeostasis_alerts_returns_array() {
         let monitor = test_monitor();
         let _ = monitor.sample();
         let tool = HomeostasisAlertsTool::new(monitor, test_detector());
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({})).unwrap();
+        let v = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(v["status"], "success");
         assert!(v["alerts"].is_array());
         assert!(v["healthy"].is_boolean());
@@ -630,19 +640,19 @@ mod tests {
         assert!(v["anomaly_alerts"].is_array());
     }
 
-    #[test]
-    fn homeostasis_alerts_has_severity_counts() {
+    #[tokio::test]
+    async fn homeostasis_alerts_has_severity_counts() {
         let monitor = test_monitor();
         let _ = monitor.sample();
         let tool = HomeostasisAlertsTool::new(monitor, test_detector());
         let mut ctx = Context::default();
-        let v = tool.call(&mut ctx, json!({})).unwrap();
+        let v = tool.call(&mut ctx, json!({})).await.unwrap();
         assert!(v["critical"].is_number());
         assert!(v["warnings"].is_number());
     }
 
-    #[test]
-    fn homeostasis_tools_are_dipper_gana() {
+    #[tokio::test]
+    async fn homeostasis_tools_are_dipper_gana() {
         let monitor = test_monitor();
         assert_eq!(
             HomeostasisCheckTool::new(monitor.clone(), test_loop(), test_detector()).gana(),

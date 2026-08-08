@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -28,6 +30,8 @@ impl Default for DharmaRulesTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DharmaRulesTool {
     fn name(&self) -> &str {
         "dharma.rules"
@@ -41,7 +45,7 @@ impl Tool for DharmaRulesTool {
     fn description(&self) -> &str {
         "List active dharma rules and governance policies"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         Ok(json!({
             "status": "success",
             "rules": [
@@ -75,6 +79,8 @@ impl DharmaAuditTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DharmaAuditTool {
     fn name(&self) -> &str {
         "dharma.audit"
@@ -88,7 +94,7 @@ impl Tool for DharmaAuditTool {
     fn description(&self) -> &str {
         "Audit recent dispatches for governance violations"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args
             .get("limit")
             .and_then(serde_json::Value::as_u64)

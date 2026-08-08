@@ -2,19 +2,21 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Gana, Tool, ToolStats};
 use wm_memory::{AssociationStore, MemoryStore};
 
 pub struct SpiralReportTool {
-    tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl SpiralReportTool {
-    pub fn new(tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>) -> Self {
+    pub fn new(tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>) -> Self {
         Self {
             tracker,
             stats: ToolStats::default(),
@@ -23,6 +25,8 @@ impl SpiralReportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SpiralReportTool {
     fn name(&self) -> &str {
         "spiral.report"
@@ -36,7 +40,7 @@ impl Tool for SpiralReportTool {
     fn description(&self) -> &str {
         "Report on autonomy expansion or circling (spiral direction, novelty, suspensions)"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let report = {
             let tracker = self
                 .tracker
@@ -59,7 +63,7 @@ impl Tool for SpiralReportTool {
 pub struct ConsolidationConnectTool {
     store: Arc<MemoryStore>,
     associations: Arc<AssociationStore>,
-    spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -68,7 +72,7 @@ impl ConsolidationConnectTool {
     pub fn new(
         store: Arc<MemoryStore>,
         associations: Arc<AssociationStore>,
-        spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+        spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     ) -> Self {
         Self {
             store,
@@ -80,6 +84,8 @@ impl ConsolidationConnectTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ConsolidationConnectTool {
     fn name(&self) -> &str {
         "consolidation.connect"
@@ -93,16 +99,16 @@ impl Tool for ConsolidationConnectTool {
     fn description(&self) -> &str {
         "Propose typed associations for disconnected memories (gated, human review)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let health_score = args
             .get("health_score")
             .and_then(Value::as_f64)
             .unwrap_or(0.8) as f32;
 
-        let mut runner = wm_consciousness::AutonomousCycleRunner::default();
+        let mut runner = wm_cognitive::AutonomousCycleRunner::default();
         let cycle_ctx =
-            wm_consciousness::CycleContext::new(&self.store, &self.associations, health_score);
-        let result = runner.run_cycle(wm_consciousness::CycleType::Connect, &cycle_ctx);
+            wm_cognitive::CycleContext::new(&self.store, &self.associations, health_score);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Connect, &cycle_ctx);
 
         // Record in spiral tracker
         if let Ok(mut tracker) = self.spiral_tracker.lock() {
@@ -135,7 +141,7 @@ impl Tool for ConsolidationConnectTool {
 pub struct ConsolidationCompressTool {
     store: Arc<MemoryStore>,
     associations: Arc<AssociationStore>,
-    spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -144,7 +150,7 @@ impl ConsolidationCompressTool {
     pub fn new(
         store: Arc<MemoryStore>,
         associations: Arc<AssociationStore>,
-        spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+        spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     ) -> Self {
         Self {
             store,
@@ -156,6 +162,8 @@ impl ConsolidationCompressTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ConsolidationCompressTool {
     fn name(&self) -> &str {
         "consolidation.compress"
@@ -169,16 +177,16 @@ impl Tool for ConsolidationCompressTool {
     fn description(&self) -> &str {
         "Propose merging semantically overlapping memories (gated, human review)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let health_score = args
             .get("health_score")
             .and_then(Value::as_f64)
             .unwrap_or(0.8) as f32;
 
-        let mut runner = wm_consciousness::AutonomousCycleRunner::default();
+        let mut runner = wm_cognitive::AutonomousCycleRunner::default();
         let cycle_ctx =
-            wm_consciousness::CycleContext::new(&self.store, &self.associations, health_score);
-        let result = runner.run_cycle(wm_consciousness::CycleType::Compress, &cycle_ctx);
+            wm_cognitive::CycleContext::new(&self.store, &self.associations, health_score);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Compress, &cycle_ctx);
 
         // Record in spiral tracker
         if let Ok(mut tracker) = self.spiral_tracker.lock() {
@@ -211,7 +219,7 @@ impl Tool for ConsolidationCompressTool {
 pub struct EmergenceScanTool {
     store: Arc<MemoryStore>,
     associations: Arc<AssociationStore>,
-    spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -220,7 +228,7 @@ impl EmergenceScanTool {
     pub fn new(
         store: Arc<MemoryStore>,
         associations: Arc<AssociationStore>,
-        spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+        spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     ) -> Self {
         Self {
             store,
@@ -232,6 +240,8 @@ impl EmergenceScanTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for EmergenceScanTool {
     fn name(&self) -> &str {
         "emergence.scan"
@@ -245,16 +255,16 @@ impl Tool for EmergenceScanTool {
     fn description(&self) -> &str {
         "Detect tag/topic emergence patterns across memories (gated, logged)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let health_score = args
             .get("health_score")
             .and_then(Value::as_f64)
             .unwrap_or(0.8) as f32;
 
-        let mut runner = wm_consciousness::AutonomousCycleRunner::default();
+        let mut runner = wm_cognitive::AutonomousCycleRunner::default();
         let cycle_ctx =
-            wm_consciousness::CycleContext::new(&self.store, &self.associations, health_score);
-        let result = runner.run_cycle(wm_consciousness::CycleType::Emergence, &cycle_ctx);
+            wm_cognitive::CycleContext::new(&self.store, &self.associations, health_score);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Emergence, &cycle_ctx);
 
         // Record in spiral tracker
         if let Ok(mut tracker) = self.spiral_tracker.lock() {
@@ -287,7 +297,7 @@ impl Tool for EmergenceScanTool {
 pub struct RetentionPruneTool {
     store: Arc<MemoryStore>,
     associations: Arc<AssociationStore>,
-    spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -296,7 +306,7 @@ impl RetentionPruneTool {
     pub fn new(
         store: Arc<MemoryStore>,
         associations: Arc<AssociationStore>,
-        spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+        spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     ) -> Self {
         Self {
             store,
@@ -308,6 +318,8 @@ impl RetentionPruneTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for RetentionPruneTool {
     fn name(&self) -> &str {
         "retention.prune"
@@ -321,16 +333,16 @@ impl Tool for RetentionPruneTool {
     fn description(&self) -> &str {
         "Identify memories ready for forgetting based on decay + neuro_score (gated, human review)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let health_score = args
             .get("health_score")
             .and_then(Value::as_f64)
             .unwrap_or(0.8) as f32;
 
-        let mut runner = wm_consciousness::AutonomousCycleRunner::default();
+        let mut runner = wm_cognitive::AutonomousCycleRunner::default();
         let cycle_ctx =
-            wm_consciousness::CycleContext::new(&self.store, &self.associations, health_score);
-        let result = runner.run_cycle(wm_consciousness::CycleType::Prune, &cycle_ctx);
+            wm_cognitive::CycleContext::new(&self.store, &self.associations, health_score);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Prune, &cycle_ctx);
 
         // Record in spiral tracker
         if let Ok(mut tracker) = self.spiral_tracker.lock() {
@@ -364,7 +376,7 @@ impl Tool for RetentionPruneTool {
 pub struct SensorimotorScanTool {
     store: Arc<MemoryStore>,
     associations: Arc<AssociationStore>,
-    spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     sensorimotor_bus: Arc<std::sync::Mutex<wm_substrate::sensorimotor::SensorimotorBus>>,
     reflex_loop: Arc<std::sync::Mutex<wm_substrate::sensorimotor::ReflexLoop>>,
     stats: ToolStats,
@@ -375,7 +387,7 @@ impl SensorimotorScanTool {
     pub fn new(
         store: Arc<MemoryStore>,
         associations: Arc<AssociationStore>,
-        spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+        spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
         sensorimotor_bus: Arc<std::sync::Mutex<wm_substrate::sensorimotor::SensorimotorBus>>,
         reflex_loop: Arc<std::sync::Mutex<wm_substrate::sensorimotor::ReflexLoop>>,
     ) -> Self {
@@ -391,6 +403,8 @@ impl SensorimotorScanTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SensorimotorScanTool {
     fn name(&self) -> &str {
         "sensorimotor.scan"
@@ -404,18 +418,18 @@ impl Tool for SensorimotorScanTool {
     fn description(&self) -> &str {
         "Poll sensors, evaluate reflex rules, and execute triggered actuator commands (gated, logged)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let health_score = args
             .get("health_score")
             .and_then(Value::as_f64)
             .unwrap_or(0.8) as f32;
 
-        let mut runner = wm_consciousness::AutonomousCycleRunner::default();
+        let mut runner = wm_cognitive::AutonomousCycleRunner::default();
         let cycle_ctx =
-            wm_consciousness::CycleContext::new(&self.store, &self.associations, health_score)
+            wm_cognitive::CycleContext::new(&self.store, &self.associations, health_score)
                 .with_sensorimotor(&self.sensorimotor_bus, &self.reflex_loop);
 
-        let result = runner.run_cycle(wm_consciousness::CycleType::Sensorimotor, &cycle_ctx);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Sensorimotor, &cycle_ctx);
 
         if let Ok(mut tracker) = self.spiral_tracker.lock() {
             tracker.record(&result);

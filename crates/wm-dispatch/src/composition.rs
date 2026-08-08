@@ -201,8 +201,7 @@ impl CompositionTracker {
             // Check if the pattern starts with the context
             if &pattern.sequence[..context.len()] == context.as_slice() {
                 let next_tool = &pattern.sequence[context.len()];
-                *suggestions.entry(next_tool.clone()).or_insert(0) +=
-                    pattern.frequency;
+                *suggestions.entry(next_tool.clone()).or_insert(0) += pattern.frequency;
             }
         }
 
@@ -262,8 +261,16 @@ mod tests {
         }
 
         let patterns = tracker.discover();
-        assert!(patterns.iter().any(|p| p.sequence == ["A".to_string(), "B".to_string()] && p.frequency == 3));
-        assert!(patterns.iter().any(|p| p.sequence == ["B".to_string(), "A".to_string()] && p.frequency == 2));
+        assert!(
+            patterns
+                .iter()
+                .any(|p| p.sequence == ["A".to_string(), "B".to_string()] && p.frequency == 3)
+        );
+        assert!(
+            patterns
+                .iter()
+                .any(|p| p.sequence == ["B".to_string(), "A".to_string()] && p.frequency == 2)
+        );
     }
 
     #[test]
@@ -281,7 +288,9 @@ mod tests {
         }
 
         let patterns = tracker.discover();
-        assert!(patterns.iter().any(|p| p.sequence == ["A".to_string(), "B".to_string(), "C".to_string()] && p.frequency == 2));
+        assert!(patterns.iter().any(|p| p.sequence
+            == ["A".to_string(), "B".to_string(), "C".to_string()]
+            && p.frequency == 2));
     }
 
     #[test]
@@ -381,8 +390,16 @@ mod tests {
 
         let patterns = tracker.discover();
         // Should find "B C", "C D" but not "A B"
-        assert!(patterns.iter().any(|p| p.sequence == ["C".to_string(), "D".to_string()]));
-        assert!(!patterns.iter().any(|p| p.sequence == ["A".to_string(), "B".to_string()]));
+        assert!(
+            patterns
+                .iter()
+                .any(|p| p.sequence == ["C".to_string(), "D".to_string()])
+        );
+        assert!(
+            !patterns
+                .iter()
+                .any(|p| p.sequence == ["A".to_string(), "B".to_string()])
+        );
     }
 
     #[test]
@@ -460,7 +477,14 @@ mod tests {
 
         // The full triple should be the most frequent
         let top = &patterns[0];
-        assert_eq!(top.sequence, vec!["memory.search".to_string(), "memory.create".to_string(), "memory.associate".to_string()]);
+        assert_eq!(
+            top.sequence,
+            vec![
+                "memory.search".to_string(),
+                "memory.create".to_string(),
+                "memory.associate".to_string()
+            ]
+        );
         assert_eq!(top.frequency, 5);
     }
 

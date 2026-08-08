@@ -5,6 +5,7 @@
 //! counters. The dispatch pipeline uses these stats to retire ineffective
 //! tools and promote hot ones.
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
@@ -166,6 +167,7 @@ pub struct ToolStatsSnapshot {
 /// Tools declare their Gana affiliation and effect row, then implement
 /// the `call` method. The dispatch pipeline handles routing, governance,
 /// and statistics tracking.
+#[async_trait]
 pub trait Tool: Send + Sync {
     /// Unique tool name (e.g., "memory.create", "search.hybrid")
     fn name(&self) -> &str;
@@ -177,7 +179,7 @@ pub trait Tool: Send + Sync {
     fn effects(&self) -> &crate::EffectRow;
 
     /// Execute the tool.
-    fn call(&self, ctx: &mut crate::Context, args: Args) -> crate::Result<Output>;
+    async fn call(&self, ctx: &mut crate::Context, args: Args) -> crate::Result<Output>;
 
     /// Access this tool's statistics.
     fn stats(&self) -> &ToolStats;

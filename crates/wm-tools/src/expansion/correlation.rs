@@ -9,6 +9,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -39,6 +41,8 @@ impl CorrelationAnalyzeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for CorrelationAnalyzeTool {
     fn name(&self) -> &str {
         "correlation.analyze"
@@ -52,7 +56,7 @@ impl Tool for CorrelationAnalyzeTool {
     fn description(&self) -> &str {
         "Analyze statistical correlations between tags, keywords, and galaxies"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args.get("galaxy").and_then(|v| v.as_str());
         let top_n = args
             .get("top_n")
@@ -228,6 +232,8 @@ impl GodNodesTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GodNodesTool {
     fn name(&self) -> &str {
         "god.nodes"
@@ -241,7 +247,7 @@ impl Tool for GodNodesTool {
     fn description(&self) -> &str {
         "Identify hub entities (god nodes) that connect many memories across galaxies"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let top_n = args
             .get("top_n")
             .and_then(serde_json::Value::as_u64)
@@ -373,14 +379,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn correlation_analyze_finds_tag_correlations() {
+    #[tokio::test]
+    async fn correlation_analyze_finds_tag_correlations() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = CorrelationAnalyzeTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"top_n": 10}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -392,36 +399,37 @@ mod tests {
         assert!(!correlations.is_empty());
     }
 
-    #[test]
-    fn correlation_analyze_empty_store() {
+    #[tokio::test]
+    async fn correlation_analyze_empty_store() {
         let (_tmp, store) = open_store();
         let tool = CorrelationAnalyzeTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["total_memories"], 0);
         assert_eq!(obj["correlations"].as_array().unwrap().len(), 0);
     }
 
-    #[test]
-    fn correlation_analyze_galaxy_distribution() {
+    #[tokio::test]
+    async fn correlation_analyze_galaxy_distribution() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = CorrelationAnalyzeTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         let dist = obj["galaxy_distribution"].as_array().unwrap();
         assert!(!dist.is_empty());
     }
 
-    #[test]
-    fn god_nodes_finds_entities() {
+    #[tokio::test]
+    async fn god_nodes_finds_entities() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = GodNodesTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"top_n": 5}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -434,8 +442,8 @@ mod tests {
         assert!(rust_node.unwrap()["memory_count"].as_u64().unwrap() >= 2);
     }
 
-    #[test]
-    fn god_nodes_min_galaxies_filter() {
+    #[tokio::test]
+    async fn god_nodes_min_galaxies_filter() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -445,6 +453,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"top_n": 20, "min_galaxies": 2}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         let nodes = obj["nodes"].as_array().unwrap();
@@ -457,11 +466,11 @@ mod tests {
         }
     }
 
-    #[test]
-    fn god_nodes_empty_store() {
+    #[tokio::test]
+    async fn god_nodes_empty_store() {
         let (_tmp, store) = open_store();
         let tool = GodNodesTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["total_entities"], 0);
         assert_eq!(obj["nodes"].as_array().unwrap().len(), 0);

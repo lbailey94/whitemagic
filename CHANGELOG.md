@@ -1,9 +1,157 @@
 # Changelog
 
-All notable changes to WhiteMagic v4 are documented in this file.
+All notable changes to WhiteMagic are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [5.2.1] — 2026-08-10
+
+### Karma Ledger Optimization & Phase 7 Benchmarks
+
+#### Karma Write-Behind Batching
+- **Batched LMDB writes**: `KarmaLedger` buffers `record()` calls in memory and flushes via single LMDB transaction (`flush_threshold=16` default)
+- **Benchmark results** (criterion, release profile):
+  - `karma_record_batched`: 97.7 µs/call (batched, threshold=16)
+  - `karma_record_synchronous`: 1.07 ms/call (threshold=0, flush every record)
+  - **10.9x throughput improvement** (batched vs synchronous)
+  - `karma_flush_16_entries`: 314.7 µs per batch flush (16 entries in one LMDB transaction)
+  - `dispatch_noop_with_karma`: 168.2 µs (full pipeline + karma record)
+  - `dispatch_noop_no_karma`: 1.25 µs (pipeline overhead without karma)
+
+#### Mutable Structure Benchmarks (13 criterion benchmarks)
+- **GanaRegistry**: record_usage 228 ns, record_co_usage 1.02 µs, co_usage_count 171 ns, analyze_drift 80 ns, serialize 1.13 µs, deserialize 1.61 µs
+- **LearnedDreamCycle**: record_phase 488 ns, phases_to_run 457 ns, update_phase_order 568 ns, serialize 3.71 µs, deserialize 5.45 µs
+- **LearnedCycleStrategy**: record_cycle 362 ns, cycles_to_run 29 ns, update_priority_order 390 ns, serialize 3.97 µs, deserialize 3.81 µs
+
+#### Daemon Karma Flush on Shutdown
+- **Explicit `flush()` call**: Daemon's graceful shutdown now explicitly flushes the karma ledger before saving mutable state, ensuring no pending batched entries are lost when the process exits
+- **Root cause**: `KarmaLedger::Drop` flushes, but the daemon holds `Arc<KarmaLedger>` inside `McpServer` — `Drop` doesn't fire until the server itself is dropped, which is outside `run_daemon`'s scope
+
+#### E2E Integration Test
+- **`pipeline_karma_batched_e2e`**: Full dispatch cycle with 20 tool calls (10 honest + 10 wasteful), verifies pending buffer count, total_debt accuracy (2.0), chain integrity after flush, and persistence across ledger instances
+
+### Metrics
+- **184 tools** (unchanged)
+- **3,168 tests** (up from 3,167: +1 E2E karma batching test)
+- **0 clippy warnings**, fmt clean
+
+## [5.2.0] — 2026-08-10
+
+### v5 Strategy Implementation (Phases 5–6)
+
+#### Phase 5: Self-Play Training Loop ✅
+- **`SelfPlayLoop`** (`wm-bicameral/src/self_play.rs`, ~1,650 lines): proposer → solver → verifier → training data collection loop
+- **`TaskProposer`**: grounded/ungrounded task generation with memory context, 5 task types (CodeGeneration, ToolDispatch, Reasoning, Memory, Creative)
+- **`TaskSolver`**: attempts to solve proposed tasks using bicameral handlers
+- **3 Verifier implementations**: `SelfVerifier` (LLM self-critique with calibration), `ExactMatchVerifier`, `ToolResultVerifier`
+- **`LoRAAdapterManager`**: hot-swap adapter management with versioning and min-sample thresholds
+- **`SelfPlayConfig`**: configurable cycle count, task types, consecutive failure limits, adapter update thresholds
+- **`SelfPlayStats`**: accuracy tracking, per-task-type success rates, difficulty trends, adapter update history
+- **3 MCP tools**: `selfplay.run`, `selfplay.status`, `selfplay.export` (`wm-tools/src/expansion/self_play.rs`)
+- **Daemon integration**: `--selfplay-interval` CLI flag, self-play cycle in daemon main loop with memory grounding
+- **27 new tests**: task proposer, solver, verifiers, LoRA adapter, full cycle, multi-cycle, training data export, stats
+- **1 benchmark**: `self_play_bench` (single cycle ~100µs, 20 cycles ~134µs)
+
+#### Phase 6: Mutable Structures ✅
+- **`GanaRegistry`** (`wm-core/src/mutable.rs`): Gana taxonomy drift based on co-usage patterns
+  - Co-usage matrix with string keys for JSON serialization
+  - Drift threshold triggers suggested merges with confidence scores
+  - Per-Gana usage counts and rolling success rates
+  - `analyze_drift()` returns top-N reorganization suggestions
+- **`DynamicGalaxyRegistry`**: dynamic galaxy creation from memory clustering
+  - Configurable min cluster size, max galaxies, prune threshold
+  - Auto-pruning of ineffective galaxies
+  - Effectiveness tracking per dynamic galaxy
+- **`LearnedDreamCycle`**: learned dream cycle phase selection
+  - 12-phase effectiveness tracking (runs, useful results, avg improvement, avg duration)
+  - Phase reordering by effectiveness score
+  - Ineffective phase filtering (configurable threshold + min runs)
+- **`LearnedCycleStrategy`**: learned autonomous cycle strategies
+  - 4 strategies: FixedOrder, PriorityBased, BestOnly, Adaptive
+  - Auto-transitions from FixedOrder to PriorityBased after min_runs
+  - Per-cycle-type effectiveness tracking with proposal counts
+  - Priority order updates based on effectiveness scores
+- **31 new tests**: GanaRegistry (7), DynamicGalaxyRegistry (5), LearnedDreamCycle (6), PhaseEffectiveness (1), LearnedCycleStrategy (7), serialization (4), CycleEffectiveness (1)
+
+### Metrics (v5 Phases 1–6)
+- **14 crates** (unchanged)
+- **179 tools** (176 + 3 self-play)
+- **3,142 tests** (up from 3,080; 31 Phase 6 + 4 E2E wiring)
+- **0 clippy warnings**, fmt clean
+- **~3,400 lines new code** (Phase 5: ~1,950, Phase 6: ~1,200, Wiring: ~250)
+
+### Phase 7: Polish & Verification (In Progress)
+- **Mutable structures wiring**: All 4 mutable structures integrated into the live pipeline
+  - `GanaRegistry` → `DispatchPipeline` via `with_gana_registry()`, records usage + co-usage on every tool dispatch
+  - `LearnedDreamCycle` → `DreamCycle` via `with_learned()`, reorders phases by effectiveness, records phase results
+  - `LearnedCycleStrategy` → `AutonomousCycleRunner` via `with_learned()`, selects cycles adaptively, records cycle effectiveness
+  - `GanaRegistry` + `DynamicGalaxyRegistry` → `McpServer` via `Arc<Mutex<>>`, shared instances initialized in `with_defaults()`
+  - `LearnedCycleStrategy` + `LearnedDreamCycle` → Daemon main loop
+- **4 E2E integration tests**: GanaRegistry recording, DynamicGalaxyRegistry access, LearnedDreamCycle attachment, full pipeline integration
+- **All benchmarks passing**: dream, reflex, RSI, self-play, router, pipeline
+- **0 clippy warnings**, fmt clean
+
+## [5.1.0] — 2026-08-09
+
+### v5 Strategy Implementation (Phase 4)
+
+#### Phase 4: Imagination Engine ✅
+- **`WorldModel`** (`wm-bicameral/src/world_model.rs`, 775 lines): bicameral LLM state prediction with `predict()`, `rollout()`, `generate_actions()`
+- **`ScenarioEngine`** (`wm-bicameral/src/scenario.rs`, 602 lines): core imagine→simulate→evaluate loop with `imagine()`, `select_best()`, `reflect()`
+- **`ScenarioEvaluator`** (`wm-bicameral/src/evaluator.rs`, 438 lines): multi-criteria scoring (goal progress, risk, novelty, confidence)
+- **`SimulationBridge`** (`wm-bicameral/src/simulation_bridge.rs`): connects `wm-simulation` (Monte Carlo, forecasting, counterfactual) to imagination engine
+- **`ImaginationConfigurator`** (`wm-bicameral/src/configurator.rs`, 440 lines): `DeliberationMode` (Direct, Shallow, Deep, Research) for depth selection
+- **3 MCP tools**: `imagine.scenario`, `imagine.predict`, `imagine.reflect` (`wm-tools/src/expansion/imagination.rs`, 557 lines)
+- **Dream cycle integration**: Oracle phase enhanced with `ScenarioEngine::reflect()` for counterfactual replay on hub memories
+- **`CycleType::Research`**: 8th autonomous cycle — scans for open problems, generates hypotheses, stores as `MemoryType::Hypothesis`
+- **Daemon `--research-interval`**: dedicated Research cycle on separate schedule (0 = run with regular cycle sweep)
+- **`McpServer::init_imagination()`**: builds `ScenarioEngine` at startup, wired into dream + cycle contexts
+- **2 new tests**: `dream_context_with_imagination`, `dream_cycle_oracle_with_imagination`
+
+### Metrics (v5 Phases 1–4)
+- **14 crates** (unchanged)
+- **176 tools** (unchanged)
+- **3,080 tests** (up from 3,078)
+- **0 clippy warnings**, fmt clean
+
+## [5.0.0] — 2026-08-08
+
+### v5 Strategy Implementation (Phases 1–3)
+
+#### Phase 1: Foundation (Async + Crate Merge) ✅
+- **Crate merge**: 19 → 14 crates (wm-cognitive absorbs wm-consciousness, wm-reflex, wm-timescale, wm-drive, wm-resonance, wm-autonomic)
+- **Async dispatch**: `async fn dispatch`, `#[async_trait]` Tool, `.await` at all call sites
+- **Async MCP server**: `handle_request`, `handle`, `handle_tools_call` all async
+- **Test conversion**: All tests converted to `#[tokio::test]` + `async fn`
+- **3,009 tests pass**, 0 clippy warnings, fmt clean
+- ~5,000 lines changed across 60+ files
+
+#### Phase 2: Embedding NLU Router ✅ (shadow mode)
+- **`EmbeddingRouter`** (`wm-tools/src/embedding_router.rs`, ~530 lines): cosine similarity against pre-computed tool embeddings
+- **OATS** (Outcome-Aware Tool Selection): offline embedding refinement from success/failure centroids (α=0.15, min 10 observations)
+- **Shadow mode**: embedding router primary, TF-IDF fallback runs alongside logging disagreements
+- **Graceful fallback**: stub embedder detected at init → TF-IDF used directly
+- **Integration**: `WmMetaTool::with_embedder()`, `register_meta_tools()` calls `create_embedder()`
+- **31 new tests**: cosine sim, OATS refinement, A/B comparison with TF-IDF
+- Step 2.8 (remove TF-IDF) deferred until production accuracy validation
+
+#### Phase 3: Learned Inference Router ✅ (shadow mode)
+- **`LearnedRouter`** (`wm-bicameral/src/learned_router.rs`, ~1,100 lines): embedding k-NN (k=5) + conformal calibration
+- **`RoutingHistory`**: k-NN store with prompt frequency tracking and outcome-based weighting
+- **`EdgeRuleGenerator`**: auto-promotes high-frequency simple responses to compiled edge rules (frequency ≥ 5, confidence > 0.9, response < 200 chars)
+- **Shadow mode**: learned router primary, regex classifier runs alongside logging disagreements
+- **Cold-start fallback**: `ComplexityClassifier` (regex) when history < 10 records
+- **Integration**: `InferenceRouter::with_embedder()`, `with_learned_router()`, `record_learned_outcome()`, `observe_for_edge_rules()`, `promote_edge_rules()`
+- **29 new tests**: cosine sim, k-NN routing, A/B comparison with regex, edge rule promotion
+- Step 3.5 (remove regex) deferred until production accuracy validation
+
+### Metrics (v5 Phases 1–3)
+- **14 crates** (down from 19)
+- **176 tools** (unchanged)
+- **~115,000 LOC** (up from ~112,300)
+- **3,078 tests** (up from 2,818: +152 crate merge, +31 embedding router, +29 learned router, +48 other)
+- **0 clippy warnings**, fmt clean
 
 ## [4.0.0] — 2026-08-07
 

@@ -2773,3 +2773,109 @@ New autonomous cycle type that polls sensors, evaluates reflex rules, executes a
 | wm-sangha | 100 | 100 | — |
 | wm-simulation | 47 | 47 | — |
 | **Total** | **2,785** | **2,818** | +33 |
+
+---
+
+## v5 Strategy Implementation — COMPLETE
+
+Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
+
+### Phase 1: Foundation (Async + Crate Merge) ✅
+- **Crate merge**: 19 → 14 (wm-cognitive absorbs wm-consciousness, wm-reflex, wm-timescale, wm-drive, wm-resonance, wm-autonomic)
+- **Async dispatch**: `async fn dispatch`, `#[async_trait]` Tool, `.await` at all call sites
+- **Async MCP server**: `handle_request`, `handle`, `handle_tools_call` all async
+- **3,009 tests**, 0 clippy warnings, fmt clean
+
+### Phase 2: Embedding NLU Router ✅ (shadow mode)
+- **`EmbeddingRouter`** (`wm-tools/src/embedding_router.rs`): cosine similarity against pre-computed tool embeddings
+- **OATS** (Outcome-Aware Tool Selection): offline embedding refinement from success/failure centroids
+- **Shadow mode**: embedding router primary, TF-IDF fallback runs alongside
+- **31 new tests**
+- Step 2.8 (remove TF-IDF) deferred until production accuracy validation
+
+### Phase 3: Learned Inference Router ✅ (shadow mode)
+- **`LearnedRouter`** (`wm-bicameral/src/learned_router.rs`): embedding k-NN (k=5) + conformal calibration
+- **`EdgeRuleGenerator`**: auto-promotes high-frequency simple responses to compiled edge rules
+- **29 new tests**
+- Step 3.5 (remove regex) deferred until production accuracy validation
+
+### Phase 4: Imagination Engine ✅
+- **`WorldModel`**, **`ScenarioEngine`**, **`ScenarioEvaluator`**, **`SimulationBridge`**, **`ImaginationConfigurator`**
+- 3 MCP tools: `imagine.scenario`, `imagine.predict`, `imagine.reflect`
+- Dream cycle Oracle phase enhanced with counterfactual replay
+- `CycleType::Research` (8th autonomous cycle), daemon `--research-interval`
+
+### Phase 5: Self-Play Training Loop ✅
+- **`SelfPlayLoop`** (`wm-bicameral/src/self_play.rs`, ~1,650 lines): proposer → solver → verifier → training data collection
+- 3 MCP tools: `selfplay.run`, `selfplay.status`, `selfplay.export`
+- Daemon `--selfplay-interval` flag
+- 27 new tests, 1 benchmark (`self_play_bench`)
+
+### Phase 6: Mutable Structures ✅
+- **`GanaRegistry`**: Gana taxonomy drift based on co-usage patterns
+- **`DynamicGalaxyRegistry`**: dynamic galaxy creation from memory clustering
+- **`LearnedDreamCycle`**: learned dream cycle phase selection (12-phase effectiveness tracking)
+- **`LearnedCycleStrategy`**: learned autonomous cycle strategies (4 strategies)
+- 31 new tests
+
+### Phase 7: Polish & Verification ✅
+- **Mutable structures wiring**: All 4 mutable structures integrated into live pipeline
+  - `GanaRegistry` → `DispatchPipeline` via `with_gana_registry()`
+  - `LearnedDreamCycle` → `DreamCycle` via `with_learned()`
+  - `LearnedCycleStrategy` → `AutonomousCycleRunner` via `with_learned()`
+  - `GanaRegistry` + `DynamicGalaxyRegistry` → `McpServer` via `Arc<Mutex<>>`
+- **Persistence**: All mutable structures save/load JSON state on daemon startup/shutdown
+- **E2E integration tests**: GanaRegistry recording, DynamicGalaxyRegistry access, LearnedDreamCycle attachment, full pipeline integration, persistence roundtrip
+- **All benchmarks passing**: dream, reflex, RSI, self-play, router, pipeline, mutable structures
+
+### v5.2.1: Karma Ledger Optimization & Benchmarks
+
+#### Karma Write-Behind Batching
+- `KarmaLedger` buffers `record()` calls in memory, flushes via single LMDB transaction (`flush_threshold=16`)
+- **Benchmark results** (criterion, release profile):
+
+| Benchmark | Time | Notes |
+|---|---|---|
+| `karma_record_batched` | 97.7 µs | Batched (threshold=16) |
+| `karma_record_synchronous` | 1.07 ms | Synchronous (threshold=0) |
+| `karma_flush_16_entries` | 314.7 µs | Single batch flush of 16 entries |
+| `dispatch_noop_with_karma` | 168.2 µs | Full pipeline + karma record |
+| `dispatch_noop_no_karma` | 1.25 µs | Pipeline overhead without karma |
+
+- **10.9x throughput improvement** (batched vs synchronous)
+
+#### Mutable Structure Benchmarks (13 criterion benchmarks)
+
+| Benchmark | Time |
+|---|---|
+| `gana_registry_record_usage` | 228 ns |
+| `gana_registry_record_co_usage` | 1.02 µs |
+| `gana_registry_co_usage_count` | 171 ns |
+| `gana_registry_analyze_drift` | 80 ns |
+| `gana_registry_serialize` | 1.13 µs |
+| `gana_registry_deserialize` | 1.61 µs |
+| `dream_cycle_record_phase` | 488 ns |
+| `dream_cycle_phases_to_run` | 457 ns |
+| `dream_cycle_update_phase_order` | 568 ns |
+| `dream_cycle_serialize` | 3.71 µs |
+| `dream_cycle_deserialize` | 5.45 µs |
+| `cycle_strategy_record_cycle` | 362 ns |
+| `cycle_strategy_cycles_to_run` | 29 ns |
+| `cycle_strategy_update_priority_order` | 390 ns |
+| `cycle_strategy_serialize` | 3.97 µs |
+| `cycle_strategy_deserialize` | 3.81 µs |
+
+#### Daemon Karma Flush on Shutdown
+- Added explicit `karma_ledger.flush()` call in `run_daemon` graceful shutdown
+- Root cause: `KarmaLedger::Drop` flushes, but daemon holds `Arc<KarmaLedger>` — `Drop` doesn't fire until server is dropped, which is outside `run_daemon`'s scope
+
+#### E2E Integration Test
+- `pipeline_karma_batched_e2e`: 20 tool dispatches (10 honest + 10 wasteful), verifies pending buffer, total_debt accuracy (2.0), chain integrity after flush, persistence across ledger instances
+
+#### Debug Test Fix
+- `benchmark_pipeline_overhead` assertion gated to `#[cfg(not(debug_assertions))]` — debug builds have unoptimized async/await overhead (~16µs) that exceeds the 5µs budget
+
+### Final v5 Metrics
+- **14 crates**, **184 tools**, **~128,500 LOC**
+- **3,168 tests**, 0 clippy warnings, fmt clean
+- All 7 phases complete

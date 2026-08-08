@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use wm_core::{Context, EffectRow, Gana, Tool, ToolStats};
 
@@ -26,6 +28,8 @@ impl Default for ToolsEffectivenessReportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ToolsEffectivenessReportTool {
     fn name(&self) -> &str {
         "tools.effectiveness_report"
@@ -39,7 +43,7 @@ impl Tool for ToolsEffectivenessReportTool {
     fn description(&self) -> &str {
         "Report on tool effectiveness from dispatch stats"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let total = self
             .stats
             .call_count
@@ -89,6 +93,8 @@ impl Default for ToolsRetireTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ToolsRetireTool {
     fn name(&self) -> &str {
         "tools.retire"
@@ -102,7 +108,7 @@ impl Tool for ToolsRetireTool {
     fn description(&self) -> &str {
         "Check if a tool should be retired based on effectiveness threshold"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let tool_name = args
             .get("tool")
             .and_then(|v| v.as_str())

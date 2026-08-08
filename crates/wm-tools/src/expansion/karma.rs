@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
@@ -23,6 +25,8 @@ impl KarmaHistoryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for KarmaHistoryTool {
     fn name(&self) -> &str {
         "karma.history"
@@ -36,7 +40,7 @@ impl Tool for KarmaHistoryTool {
     fn description(&self) -> &str {
         "Recent karma entries from the Karma galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args
             .get("limit")
             .and_then(serde_json::Value::as_u64)
@@ -89,6 +93,8 @@ impl KarmaClearTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for KarmaClearTool {
     fn name(&self) -> &str {
         "karma.clear"
@@ -102,7 +108,7 @@ impl Tool for KarmaClearTool {
     fn description(&self) -> &str {
         "Clear old karma entries, keeping only the most recent N"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let keep = args
             .get("keep")
             .and_then(serde_json::Value::as_u64)

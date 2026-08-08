@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -27,6 +29,8 @@ impl SessionStartTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SessionStartTool {
     fn name(&self) -> &str {
         "session.start"
@@ -40,7 +44,7 @@ impl Tool for SessionStartTool {
     fn description(&self) -> &str {
         "Start a new session — creates a session memory in Sessions galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let title = args
             .get("title")
             .and_then(|v| v.as_str())
@@ -93,6 +97,8 @@ impl SessionCheckpointTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SessionCheckpointTool {
     fn name(&self) -> &str {
         "session.checkpoint"
@@ -106,7 +112,7 @@ impl Tool for SessionCheckpointTool {
     fn description(&self) -> &str {
         "Save a checkpoint in a session"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let session_id = args
             .get("session_id")
             .and_then(|v| v.as_str())
@@ -158,6 +164,8 @@ impl SessionRecallTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SessionRecallTool {
     fn name(&self) -> &str {
         "session.recall"
@@ -171,7 +179,7 @@ impl Tool for SessionRecallTool {
     fn description(&self) -> &str {
         "Recall session memories by session_id"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let session_id = args
             .get("session_id")
             .and_then(|v| v.as_str())
@@ -226,6 +234,8 @@ impl SessionEndTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SessionEndTool {
     fn name(&self) -> &str {
         "session.end"
@@ -239,7 +249,7 @@ impl Tool for SessionEndTool {
     fn description(&self) -> &str {
         "End a session — writes a session_end marker"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let session_id = args
             .get("session_id")
             .and_then(|v| v.as_str())

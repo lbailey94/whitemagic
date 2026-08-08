@@ -4,6 +4,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -30,6 +32,8 @@ impl Default for CittaStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for CittaStatusTool {
     fn name(&self) -> &str {
         "citta.status"
@@ -43,7 +47,7 @@ impl Tool for CittaStatusTool {
     fn description(&self) -> &str {
         "Current citta (consciousness) vector status"
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         Ok(json!({
             "status": "success",
             "brain_wave": format!("{:?}", ctx.brain_wave),
@@ -75,6 +79,8 @@ impl CittaReflectTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for CittaReflectTool {
     fn name(&self) -> &str {
         "citta.reflect"
@@ -88,7 +94,7 @@ impl Tool for CittaReflectTool {
     fn description(&self) -> &str {
         "Reflect on recent citta events and coherence trends"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let citta_mems = self.store.scan(Galaxy::Citta, 50)?;
         let count = citta_mems.len();
         let avg_importance = if count > 0 {
@@ -129,6 +135,8 @@ impl DreamStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DreamStatusTool {
     fn name(&self) -> &str {
         "dream.status"
@@ -142,7 +150,7 @@ impl Tool for DreamStatusTool {
     fn description(&self) -> &str {
         "Dream cycle status — memories in Dreams galaxy"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let count = self.store.count(Galaxy::Dreams)?;
         Ok(json!({
             "status": "success",
@@ -179,6 +187,8 @@ impl DreamTriggerTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DreamTriggerTool {
     fn name(&self) -> &str {
         "dream.trigger"
@@ -192,7 +202,7 @@ impl Tool for DreamTriggerTool {
     fn description(&self) -> &str {
         "Trigger a dream cycle marker — writes to Dreams galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let reason = args
             .get("reason")
             .and_then(|v| v.as_str())
@@ -241,6 +251,8 @@ impl SmaranaStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SmaranaStatusTool {
     fn name(&self) -> &str {
         "smarana.status"
@@ -254,7 +266,7 @@ impl Tool for SmaranaStatusTool {
     fn description(&self) -> &str {
         "Retention score and recall statistics from smarana (memory retention)"
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let citta_mems = self.store.scan(Galaxy::Citta, 100)?;
         let recall_events = citta_mems
             .iter()
@@ -304,6 +316,8 @@ impl SmaranaTraceTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SmaranaTraceTool {
     fn name(&self) -> &str {
         "smarana.trace"
@@ -317,7 +331,7 @@ impl Tool for SmaranaTraceTool {
     fn description(&self) -> &str {
         "Trace retention decay over time from citta memory history"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args
             .get("limit")
             .and_then(serde_json::Value::as_u64)
@@ -395,6 +409,8 @@ impl ApotheosisCheckTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ApotheosisCheckTool {
     fn name(&self) -> &str {
         "apotheosis.check"
@@ -408,7 +424,7 @@ impl Tool for ApotheosisCheckTool {
     fn description(&self) -> &str {
         "Self-improvement trend check with apotheosis score and direction"
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let citta_mems = self.store.scan(Galaxy::Citta, 200)?;
 
         // Compute a proxy apotheosis score from citta memory quality
@@ -504,6 +520,8 @@ impl CittaHistoryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for CittaHistoryTool {
     fn name(&self) -> &str {
         "citta.history"
@@ -517,7 +535,7 @@ impl Tool for CittaHistoryTool {
     fn description(&self) -> &str {
         "Recent citta heartbeats and valence history from consciousness records"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args
             .get("limit")
             .and_then(serde_json::Value::as_u64)
@@ -581,6 +599,8 @@ impl DreamAnalyzeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DreamAnalyzeTool {
     fn name(&self) -> &str {
         "dream.analyze"
@@ -594,7 +614,7 @@ impl Tool for DreamAnalyzeTool {
     fn description(&self) -> &str {
         "Analyze dream cycle outputs and consolidation quality from Dreams galaxy"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let dream_mems = self.store.scan(Galaxy::Dreams, 200)?;
         let count = dream_mems.len();
 
@@ -691,6 +711,8 @@ impl ConsciousnessDepthTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ConsciousnessDepthTool {
     fn name(&self) -> &str {
         "consciousness.depth"
@@ -704,7 +726,7 @@ impl Tool for ConsciousnessDepthTool {
     fn description(&self) -> &str {
         "Measure depth of consciousness state from coherence, valence, and citta richness"
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let citta_mems = self.store.scan(Galaxy::Citta, 200)?;
         let citta_count = citta_mems.len();
 
@@ -765,19 +787,19 @@ mod tests {
         (tmp, Arc::new(store))
     }
 
-    #[test]
-    fn smarana_status_empty() {
+    #[tokio::test]
+    async fn smarana_status_empty() {
         let (_tmp, store) = open_store();
         let tool = SmaranaStatusTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["recall_events"], 0);
         assert_eq!(result["retention_score"], 1.0);
     }
 
-    #[test]
-    fn smarana_status_with_recall_events() {
+    #[tokio::test]
+    async fn smarana_status_with_recall_events() {
         let (_tmp, store) = open_store();
         let mut mem = Memory::new(Galaxy::Citta, "recall event".into());
         mem.metadata.tags = vec!["recall".into()];
@@ -789,14 +811,14 @@ mod tests {
 
         let tool = SmaranaStatusTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["recall_events"], 2);
         assert_eq!(result["successful_recalls"], 1);
     }
 
-    #[test]
-    fn smarana_trace_basic() {
+    #[tokio::test]
+    async fn smarana_trace_basic() {
         let (_tmp, store) = open_store();
         let mut mem = Memory::new(Galaxy::Citta, "recall 1".into());
         mem.metadata.tags = vec!["recall".into()];
@@ -804,33 +826,33 @@ mod tests {
 
         let tool = SmaranaTraceTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["trace_points"].as_u64().unwrap() >= 1);
     }
 
-    #[test]
-    fn smarana_trace_empty() {
+    #[tokio::test]
+    async fn smarana_trace_empty() {
         let (_tmp, store) = open_store();
         let tool = SmaranaTraceTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["trace_points"], 0);
     }
 
-    #[test]
-    fn apotheosis_check_empty() {
+    #[tokio::test]
+    async fn apotheosis_check_empty() {
         let (_tmp, store) = open_store();
         let tool = ApotheosisCheckTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_citta_memories"], 0);
     }
 
-    #[test]
-    fn apotheosis_check_with_memories() {
+    #[tokio::test]
+    async fn apotheosis_check_with_memories() {
         let (_tmp, store) = open_store();
         for i in 0..10 {
             let mut mem = Memory::new(Galaxy::Citta, format!("citta event {i}"));
@@ -843,24 +865,24 @@ mod tests {
 
         let tool = ApotheosisCheckTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_citta_memories"], 10);
         assert!(result["apotheosis_score"].as_f64().unwrap() > 0.0);
     }
 
-    #[test]
-    fn citta_history_empty() {
+    #[tokio::test]
+    async fn citta_history_empty() {
         let (_tmp, store) = open_store();
         let tool = CittaHistoryTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["count"], 0);
     }
 
-    #[test]
-    fn citta_history_with_memories() {
+    #[tokio::test]
+    async fn citta_history_with_memories() {
         let (_tmp, store) = open_store();
         let mut mem = Memory::new(Galaxy::Citta, "consciousness event".into());
         mem.metadata.importance = 0.8;
@@ -869,26 +891,26 @@ mod tests {
 
         let tool = CittaHistoryTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["count"], 1);
         let history = result["history"].as_array().unwrap();
         assert_eq!(history.len(), 1);
     }
 
-    #[test]
-    fn dream_analyze_empty() {
+    #[tokio::test]
+    async fn dream_analyze_empty() {
         let (_tmp, store) = open_store();
         let tool = DreamAnalyzeTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_dreams"], 0);
         assert_eq!(result["quality"], "no dreams yet");
     }
 
-    #[test]
-    fn dream_analyze_with_dreams() {
+    #[tokio::test]
+    async fn dream_analyze_with_dreams() {
         let (_tmp, store) = open_store();
         let mut mem = Memory::new(
             Galaxy::Dreams,
@@ -908,39 +930,39 @@ mod tests {
 
         let tool = DreamAnalyzeTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Beta);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_dreams"], 2);
         assert_eq!(result["triggers"], 1);
         assert_eq!(result["consolidations"], 1);
     }
 
-    #[test]
-    fn consciousness_depth_basic() {
+    #[tokio::test]
+    async fn consciousness_depth_basic() {
         let (_tmp, store) = open_store();
         let tool = ConsciousnessDepthTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         ctx.citta_coherence = 0.9;
         ctx.citta_valence = 0.5;
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["depth_score"].as_f64().unwrap() > 0.5);
     }
 
-    #[test]
-    fn consciousness_depth_delta_low() {
+    #[tokio::test]
+    async fn consciousness_depth_delta_low() {
         let (_tmp, store) = open_store();
         let tool = ConsciousnessDepthTool::new(store);
         let mut ctx = Context::new(wm_core::BrainWave::Delta);
         ctx.citta_coherence = 0.3;
         ctx.citta_valence = 0.0;
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["depth_score"].as_f64().unwrap() < 0.5);
     }
 
-    #[test]
-    fn consciousness_depth_gamma_high() {
+    #[tokio::test]
+    async fn consciousness_depth_gamma_high() {
         let (_tmp, store) = open_store();
         // Add citta memories for richness (need enough for high richness score)
         for _ in 0..50 {
@@ -951,7 +973,7 @@ mod tests {
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         ctx.citta_coherence = 1.0;
         ctx.citta_valence = 0.8;
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["depth_score"].as_f64().unwrap() > 0.7);
         assert_eq!(result["interpretation"], "deep consciousness");

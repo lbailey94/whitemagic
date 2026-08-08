@@ -7,6 +7,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -38,6 +40,8 @@ impl ArchaeologySearchTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ArchaeologySearchTool {
     fn name(&self) -> &str {
         "archaeology.search"
@@ -51,7 +55,7 @@ impl Tool for ArchaeologySearchTool {
     fn description(&self) -> &str {
         "Excavate memory layers by time depth and importance stratification"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args.get("galaxy").and_then(|v| v.as_str());
         let keyword = args.get("keyword").and_then(|v| v.as_str()).unwrap_or("");
         let max_layers = args
@@ -168,6 +172,8 @@ impl LearningPatternTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for LearningPatternTool {
     fn name(&self) -> &str {
         "learning.pattern"
@@ -181,7 +187,7 @@ impl Tool for LearningPatternTool {
     fn description(&self) -> &str {
         "Detect recurring patterns and themes across memory galaxies"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args.get("galaxy").and_then(|v| v.as_str());
         let min_frequency = args
             .get("min_frequency")
@@ -307,6 +313,8 @@ impl LearningSuggestTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for LearningSuggestTool {
     fn name(&self) -> &str {
         "learning.suggest"
@@ -320,7 +328,7 @@ impl Tool for LearningSuggestTool {
     fn description(&self) -> &str {
         "Suggest learning paths based on memory gaps and importance clusters"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args.get("galaxy").and_then(|v| v.as_str());
         let top_n = args
             .get("top_n")
@@ -473,14 +481,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn archaeology_search_returns_layers() {
+    #[tokio::test]
+    async fn archaeology_search_returns_layers() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = ArchaeologySearchTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"max_layers": 3}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -490,8 +499,8 @@ mod tests {
         assert!(layers.len() <= 3);
     }
 
-    #[test]
-    fn archaeology_search_with_keyword() {
+    #[tokio::test]
+    async fn archaeology_search_with_keyword() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -501,24 +510,25 @@ mod tests {
                 &mut Context::default(),
                 json!({"keyword": "rust", "max_layers": 2}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert!(obj["total_memories"].as_u64().unwrap() >= 3);
     }
 
-    #[test]
-    fn archaeology_search_empty_galaxy() {
+    #[tokio::test]
+    async fn archaeology_search_empty_galaxy() {
         let (_tmp, store) = open_store();
         let tool = ArchaeologySearchTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["total_memories"], 0);
     }
 
-    #[test]
-    fn learning_pattern_detects_tag_co_occurrence() {
+    #[tokio::test]
+    async fn learning_pattern_detects_tag_co_occurrence() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -528,6 +538,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"min_frequency": 2, "top_n": 10}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -537,8 +548,8 @@ mod tests {
         assert!(!tag_patterns.is_empty());
     }
 
-    #[test]
-    fn learning_pattern_detects_keywords() {
+    #[tokio::test]
+    async fn learning_pattern_detects_keywords() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -548,6 +559,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"min_frequency": 2, "top_n": 5}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         let keywords = obj["keyword_patterns"].as_array().unwrap();
@@ -559,14 +571,15 @@ mod tests {
         assert!(has_rust, "Expected 'rust' in keyword patterns");
     }
 
-    #[test]
-    fn learning_suggest_finds_gaps_and_hot_topics() {
+    #[tokio::test]
+    async fn learning_suggest_finds_gaps_and_hot_topics() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = LearningSuggestTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"top_n": 5}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -577,11 +590,11 @@ mod tests {
         assert!(!gaps.is_empty() || !hot.is_empty());
     }
 
-    #[test]
-    fn learning_suggest_empty_store() {
+    #[tokio::test]
+    async fn learning_suggest_empty_store() {
         let (_tmp, store) = open_store();
         let tool = LearningSuggestTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["gaps"].as_array().unwrap().len(), 0);

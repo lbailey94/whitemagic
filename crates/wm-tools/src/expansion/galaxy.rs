@@ -2,6 +2,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -25,6 +27,8 @@ impl GalaxyStatsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyStatsTool {
     fn name(&self) -> &str {
         "galaxy.stats"
@@ -38,7 +42,7 @@ impl Tool for GalaxyStatsTool {
     fn description(&self) -> &str {
         "Statistics for all galaxies (count per galaxy)"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut galaxy_counts = serde_json::Map::new();
         let mut total = 0usize;
         for galaxy in Galaxy::all() {
@@ -77,6 +81,8 @@ impl GalaxyExportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyExportTool {
     fn name(&self) -> &str {
         "galaxy.export"
@@ -90,7 +96,7 @@ impl Tool for GalaxyExportTool {
     fn description(&self) -> &str {
         "Export all memories from a galaxy as JSON"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let limit = args
             .get("limit")
@@ -141,6 +147,8 @@ impl GalaxyImportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyImportTool {
     fn name(&self) -> &str {
         "galaxy.import"
@@ -154,7 +162,7 @@ impl Tool for GalaxyImportTool {
     fn description(&self) -> &str {
         "Import memories into a galaxy from JSON array"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let memories = args
             .get("memories")
@@ -221,6 +229,8 @@ impl GalaxyTransferTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyTransferTool {
     fn name(&self) -> &str {
         "galaxy.transfer"
@@ -234,7 +244,7 @@ impl Tool for GalaxyTransferTool {
     fn description(&self) -> &str {
         "Transfer memories from one galaxy to another (move, not copy)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let from_galaxy = parse_galaxy(
             args.get("from_galaxy")
                 .and_then(|v| v.as_str())
@@ -320,6 +330,8 @@ impl GalaxyMergeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyMergeTool {
     fn name(&self) -> &str {
         "galaxy.merge"
@@ -333,7 +345,7 @@ impl Tool for GalaxyMergeTool {
     fn description(&self) -> &str {
         "Merge memories from a source galaxy into a destination (copy + dedup)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let from_galaxy = parse_galaxy(
             args.get("from_galaxy")
                 .and_then(|v| v.as_str())
@@ -415,6 +427,8 @@ impl GalaxySnapshotTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxySnapshotTool {
     fn name(&self) -> &str {
         "galaxy.snapshot"
@@ -428,7 +442,7 @@ impl Tool for GalaxySnapshotTool {
     fn description(&self) -> &str {
         "Capture a snapshot of a galaxy's state (stored in Journals galaxy)"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let limit = args
             .get("limit")
@@ -504,6 +518,8 @@ impl GalaxyRestoreTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyRestoreTool {
     fn name(&self) -> &str {
         "galaxy.restore"
@@ -517,7 +533,7 @@ impl Tool for GalaxyRestoreTool {
     fn description(&self) -> &str {
         "Restore a galaxy from a stored snapshot in the Journals galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let snapshot_id = args
             .get("snapshot_id")
             .and_then(|v| v.as_str())
@@ -611,6 +627,8 @@ impl GalaxyDashboardTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyDashboardTool {
     fn name(&self) -> &str {
         "galaxy.dashboard"
@@ -624,7 +642,7 @@ impl Tool for GalaxyDashboardTool {
     fn description(&self) -> &str {
         "Comprehensive dashboard overview of all galaxies"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut galaxy_details = serde_json::Map::new();
         let mut total_memories = 0usize;
         let mut total_tags: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -706,6 +724,8 @@ impl GalaxyBackupTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyBackupTool {
     fn name(&self) -> &str {
         "galaxy.backup"
@@ -719,7 +739,7 @@ impl Tool for GalaxyBackupTool {
     fn description(&self) -> &str {
         "Back up all memory galaxies into a single snapshot in Journals"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let backup_id = uuid::Uuid::new_v4();
         let mut galaxy_data = serde_json::Map::new();
         let mut total_backed_up = 0usize;
@@ -790,6 +810,8 @@ impl GalaxyTaxonomyTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyTaxonomyTool {
     fn name(&self) -> &str {
         "galaxy.taxonomy"
@@ -803,7 +825,7 @@ impl Tool for GalaxyTaxonomyTool {
     fn description(&self) -> &str {
         "List all galaxies with descriptions and memory counts"
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let galaxies: Vec<Value> = Galaxy::all()
             .iter()
             .map(|g| {
@@ -850,6 +872,8 @@ impl GalaxyPurgeTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyPurgeTool {
     fn name(&self) -> &str {
         "galaxy.purge"
@@ -863,7 +887,7 @@ impl Tool for GalaxyPurgeTool {
     fn description(&self) -> &str {
         "Delete all memories from a specific galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy =
             parse_galaxy(args.get("galaxy").and_then(|v| v.as_str()).ok_or_else(|| {
                 wm_core::CoreError::InvalidArgs("Missing 'galaxy' parameter".into())
@@ -903,6 +927,8 @@ impl GalaxyHealthTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GalaxyHealthTool {
     fn name(&self) -> &str {
         "galaxy.health"
@@ -916,7 +942,7 @@ impl Tool for GalaxyHealthTool {
     fn description(&self) -> &str {
         "Check health of a specific galaxy or all galaxies"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let target_galaxy = args.get("galaxy").and_then(|v| v.as_str());
 
         let galaxies_to_check: Vec<Galaxy> = if let Some(name) = target_galaxy {
@@ -991,8 +1017,8 @@ mod tests {
         (tmp, store)
     }
 
-    #[test]
-    fn galaxy_transfer_moves_memories() {
+    #[tokio::test]
+    async fn galaxy_transfer_moves_memories() {
         let (_tmp, store) = open_store();
         let mem = Memory::new(Galaxy::Codex, "test content".into());
         store.put(Galaxy::Codex, &mem).unwrap();
@@ -1005,39 +1031,44 @@ mod tests {
                 &mut Context::default(),
                 json!({"from_galaxy": "codex", "to_galaxy": "research"}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
         assert_eq!(obj["transferred"], 1);
     }
 
-    #[test]
-    fn galaxy_transfer_same_galaxy_errors() {
+    #[tokio::test]
+    async fn galaxy_transfer_same_galaxy_errors() {
         let (_tmp, store) = open_store();
         let tool = GalaxyTransferTool::new(Arc::new(store));
-        let result = tool.call(
-            &mut Context::default(),
-            json!({"from_galaxy": "codex", "to_galaxy": "codex"}),
-        );
+        let result = tool
+            .call(
+                &mut Context::default(),
+                json!({"from_galaxy": "codex", "to_galaxy": "codex"}),
+            )
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn galaxy_transfer_missing_params_errors() {
+    #[tokio::test]
+    async fn galaxy_transfer_missing_params_errors() {
         let (_tmp, store) = open_store();
         let tool = GalaxyTransferTool::new(Arc::new(store));
         assert!(
             tool.call(&mut Context::default(), json!({"from_galaxy": "codex"}))
+                .await
                 .is_err()
         );
         assert!(
             tool.call(&mut Context::default(), json!({"to_galaxy": "codex"}))
+                .await
                 .is_err()
         );
     }
 
-    #[test]
-    fn galaxy_transfer_with_tag_filter() {
+    #[tokio::test]
+    async fn galaxy_transfer_with_tag_filter() {
         let (_tmp, store) = open_store();
         let mut mem1 = Memory::new(Galaxy::Codex, "tagged content".into());
         mem1.metadata.tags = vec!["important".to_string()];
@@ -1055,14 +1086,15 @@ mod tests {
                     "tags": ["important"],
                 }),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["transferred"], 1);
         assert_eq!(obj["skipped"], 1);
     }
 
-    #[test]
-    fn galaxy_merge_copies_and_dedups() {
+    #[tokio::test]
+    async fn galaxy_merge_copies_and_dedups() {
         let (_tmp, store) = open_store();
         let mem1 = Memory::new(Galaxy::Codex, "shared content".into());
         let mem2 = Memory::new(Galaxy::Codex, "unique to codex".into());
@@ -1078,6 +1110,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"from_galaxy": "codex", "to_galaxy": "research"}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -1085,19 +1118,21 @@ mod tests {
         assert_eq!(obj["duplicates_skipped"], 1);
     }
 
-    #[test]
-    fn galaxy_merge_same_galaxy_errors() {
+    #[tokio::test]
+    async fn galaxy_merge_same_galaxy_errors() {
         let (_tmp, store) = open_store();
         let tool = GalaxyMergeTool::new(Arc::new(store));
-        let result = tool.call(
-            &mut Context::default(),
-            json!({"from_galaxy": "codex", "to_galaxy": "codex"}),
-        );
+        let result = tool
+            .call(
+                &mut Context::default(),
+                json!({"from_galaxy": "codex", "to_galaxy": "codex"}),
+            )
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn galaxy_snapshot_and_restore_roundtrip() {
+    #[tokio::test]
+    async fn galaxy_snapshot_and_restore_roundtrip() {
         let (_tmp, store) = open_store();
         let store = Arc::new(store);
 
@@ -1109,6 +1144,7 @@ mod tests {
         let snap_tool = GalaxySnapshotTool::new(store.clone());
         let snap_result = snap_tool
             .call(&mut Context::default(), json!({"galaxy": "codex"}))
+            .await
             .unwrap();
         let snap_obj = snap_result.as_object().unwrap();
         assert_eq!(snap_obj["status"], "success");
@@ -1129,6 +1165,7 @@ mod tests {
                     "clear_first": false,
                 }),
             )
+            .await
             .unwrap();
         let restore_obj = restore_result.as_object().unwrap();
         assert_eq!(restore_obj["status"], "success");
@@ -1137,27 +1174,29 @@ mod tests {
         assert_eq!(store.count(Galaxy::Codex).unwrap(), 2);
     }
 
-    #[test]
-    fn galaxy_restore_not_found_errors() {
+    #[tokio::test]
+    async fn galaxy_restore_not_found_errors() {
         let (_tmp, store) = open_store();
         let tool = GalaxyRestoreTool::new(Arc::new(store));
-        let result = tool.call(
-            &mut Context::default(),
-            json!({"snapshot_id": "nonexistent-id"}),
-        );
+        let result = tool
+            .call(
+                &mut Context::default(),
+                json!({"snapshot_id": "nonexistent-id"}),
+            )
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn galaxy_restore_missing_snapshot_id_errors() {
+    #[tokio::test]
+    async fn galaxy_restore_missing_snapshot_id_errors() {
         let (_tmp, store) = open_store();
         let tool = GalaxyRestoreTool::new(Arc::new(store));
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn galaxy_tool_names_are_correct() {
+    #[tokio::test]
+    async fn galaxy_tool_names_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(
             GalaxyTransferTool::new(store.clone()).name(),
@@ -1171,8 +1210,8 @@ mod tests {
         assert_eq!(GalaxyRestoreTool::new(store).name(), "galaxy.restore");
     }
 
-    #[test]
-    fn galaxy_tool_ganas_are_correct() {
+    #[tokio::test]
+    async fn galaxy_tool_ganas_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(GalaxyTransferTool::new(store.clone()).gana(), Gana::Neck);
         assert_eq!(GalaxyMergeTool::new(store.clone()).gana(), Gana::Neck);
@@ -1180,27 +1219,27 @@ mod tests {
         assert_eq!(GalaxyRestoreTool::new(store).gana(), Gana::Void);
     }
 
-    #[test]
-    fn galaxy_dashboard_shows_counts() {
+    #[tokio::test]
+    async fn galaxy_dashboard_shows_counts() {
         let store = Arc::new(open_store().1);
         let mem = Memory::new(Galaxy::Codex, "test".into());
         store.put(Galaxy::Codex, &mem).unwrap();
 
         let tool = GalaxyDashboardTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_memories"], 1);
         assert!(result["galaxies"]["codex"]["count"].as_u64() >= Some(1));
     }
 
-    #[test]
-    fn galaxy_backup_creates_snapshot() {
+    #[tokio::test]
+    async fn galaxy_backup_creates_snapshot() {
         let store = Arc::new(open_store().1);
         let mem = Memory::new(Galaxy::Codex, "backup test".into());
         store.put(Galaxy::Codex, &mem).unwrap();
 
         let tool = GalaxyBackupTool::new(store.clone());
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_memories"], 1);
         assert!(result["backup_id"].as_str().is_some());
@@ -1213,11 +1252,11 @@ mod tests {
         );
     }
 
-    #[test]
-    fn galaxy_taxonomy_lists_all() {
+    #[tokio::test]
+    async fn galaxy_taxonomy_lists_all() {
         let store = Arc::new(open_store().1);
         let tool = GalaxyTaxonomyTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total_galaxies"], 14);
         assert_eq!(result["memory_galaxies"], 10);
@@ -1225,8 +1264,8 @@ mod tests {
         assert_eq!(galaxies.len(), 14);
     }
 
-    #[test]
-    fn galaxy_purge_clears_galaxy() {
+    #[tokio::test]
+    async fn galaxy_purge_clears_galaxy() {
         let store = Arc::new(open_store().1);
         let mem1 = Memory::new(Galaxy::Codex, "first".into());
         let mem2 = Memory::new(Galaxy::Codex, "second".into());
@@ -1237,46 +1276,48 @@ mod tests {
         let tool = GalaxyPurgeTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"galaxy": "codex"}))
+            .await
             .unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["purged"], 2);
     }
 
-    #[test]
-    fn galaxy_purge_missing_param_errors() {
+    #[tokio::test]
+    async fn galaxy_purge_missing_param_errors() {
         let store = Arc::new(open_store().1);
         let tool = GalaxyPurgeTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn galaxy_health_all_galaxies() {
+    #[tokio::test]
+    async fn galaxy_health_all_galaxies() {
         let store = Arc::new(open_store().1);
         let mem = Memory::new(Galaxy::Codex, "healthy".into());
         store.put(Galaxy::Codex, &mem).unwrap();
 
         let tool = GalaxyHealthTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["all_healthy"], true);
         assert_eq!(result["galaxies_checked"], 10);
     }
 
-    #[test]
-    fn galaxy_health_single_galaxy() {
+    #[tokio::test]
+    async fn galaxy_health_single_galaxy() {
         let store = Arc::new(open_store().1);
         let tool = GalaxyHealthTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"galaxy": "codex"}))
+            .await
             .unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["galaxies_checked"], 1);
         assert_eq!(result["results"]["codex"]["health"], "empty");
     }
 
-    #[test]
-    fn galaxy_new_tool_names_are_correct() {
+    #[tokio::test]
+    async fn galaxy_new_tool_names_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(
             GalaxyDashboardTool::new(store.clone()).name(),
@@ -1291,8 +1332,8 @@ mod tests {
         assert_eq!(GalaxyHealthTool::new(store).name(), "galaxy.health");
     }
 
-    #[test]
-    fn galaxy_new_tool_ganas_are_void() {
+    #[tokio::test]
+    async fn galaxy_new_tool_ganas_are_void() {
         let store = Arc::new(open_store().1);
         assert_eq!(GalaxyDashboardTool::new(store.clone()).gana(), Gana::Void);
         assert_eq!(GalaxyBackupTool::new(store.clone()).gana(), Gana::Void);

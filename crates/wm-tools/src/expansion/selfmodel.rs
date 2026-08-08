@@ -8,6 +8,8 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::significant_drop_tightening)]
 
+use async_trait::async_trait;
+
 use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
@@ -86,6 +88,8 @@ impl Default for SelfModelForecastTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SelfModelForecastTool {
     fn name(&self) -> &str {
         "selfmodel.forecast"
@@ -99,7 +103,7 @@ impl Tool for SelfModelForecastTool {
     fn stats(&self) -> &ToolStats {
         &self.stats
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let model = self
             .model
             .lock()
@@ -171,6 +175,8 @@ impl Default for SelfModelAlertsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SelfModelAlertsTool {
     fn name(&self) -> &str {
         "selfmodel.alerts"
@@ -184,7 +190,7 @@ impl Tool for SelfModelAlertsTool {
     fn stats(&self) -> &ToolStats {
         &self.stats
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let model = self
             .model
             .lock()
@@ -249,6 +255,8 @@ impl Default for SelfModelSnapshotTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for SelfModelSnapshotTool {
     fn name(&self) -> &str {
         "selfmodel.snapshot"
@@ -262,7 +270,7 @@ impl Tool for SelfModelSnapshotTool {
     fn stats(&self) -> &ToolStats {
         &self.stats
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let model = self
             .model
             .lock()
@@ -340,8 +348,8 @@ mod tests {
         Arc::new(Mutex::new(model))
     }
 
-    #[test]
-    fn parse_metric_kind_all_variants() {
+    #[tokio::test]
+    async fn parse_metric_kind_all_variants() {
         assert_eq!(parse_metric_kind("cpu_load").unwrap(), MetricKind::CpuLoad);
         assert_eq!(parse_metric_kind("CPU").unwrap(), MetricKind::CpuLoad);
         assert_eq!(
@@ -365,46 +373,47 @@ mod tests {
         assert_eq!(parse_metric_kind("swap").unwrap(), MetricKind::SwapUsage);
     }
 
-    #[test]
-    fn parse_metric_kind_invalid() {
+    #[tokio::test]
+    async fn parse_metric_kind_invalid() {
         assert!(parse_metric_kind("nonexistent").is_err());
     }
 
-    #[test]
-    fn forecast_single_metric() {
+    #[tokio::test]
+    async fn forecast_single_metric() {
         let model = test_model();
         let tool = SelfModelForecastTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         let result = tool
             .call(&mut ctx, json!({"metric": "cpu_load", "horizon": 5}))
+            .await
             .unwrap();
         assert_eq!(result["metric"], "cpu_load");
         assert!(result["forecast"]["predicted_value"].is_number());
         assert!(result["forecast"]["confidence"].is_number());
     }
 
-    #[test]
-    fn forecast_all_metrics() {
+    #[tokio::test]
+    async fn forecast_all_metrics() {
         let model = test_model();
         let tool = SelfModelForecastTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({"horizon": 3})).unwrap();
+        let result = tool.call(&mut ctx, json!({"horizon": 3})).await.unwrap();
         let forecasts = result["forecasts"].as_array().unwrap();
         assert_eq!(forecasts.len(), 2);
         assert!(result["count"] == 2);
     }
 
-    #[test]
-    fn forecast_empty_model() {
+    #[tokio::test]
+    async fn forecast_empty_model() {
         let model = Arc::new(Mutex::new(SelfModel::new()));
         let tool = SelfModelForecastTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["forecasts"].as_array().unwrap().len(), 0);
     }
 
-    #[test]
-    fn forecast_insufficient_data() {
+    #[tokio::test]
+    async fn forecast_insufficient_data() {
         let model = Arc::new(Mutex::new(SelfModel::new()));
         {
             let m = model.lock().unwrap();
@@ -412,24 +421,28 @@ mod tests {
         }
         let tool = SelfModelForecastTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({"metric": "cpu_load"})).unwrap();
+        let result = tool
+            .call(&mut ctx, json!({"metric": "cpu_load"}))
+            .await
+            .unwrap();
         assert!(result["forecast"].is_null());
         assert!(result["message"].as_str().unwrap().contains("insufficient"));
     }
 
-    #[test]
-    fn forecast_invalid_metric() {
+    #[tokio::test]
+    async fn forecast_invalid_metric() {
         let model = test_model();
         let tool = SelfModelForecastTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
         let err = tool
             .call(&mut ctx, json!({"metric": "nonexistent"}))
+            .await
             .unwrap_err();
         assert!(err.to_string().contains("unknown metric"));
     }
 
-    #[test]
-    fn alerts_clear() {
+    #[tokio::test]
+    async fn alerts_clear() {
         let model = Arc::new(Mutex::new(SelfModel::new()));
         {
             let m = model.lock().unwrap();
@@ -439,13 +452,13 @@ mod tests {
         }
         let tool = SelfModelAlertsTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["total"], 0);
         assert_eq!(result["critical_count"], 0);
     }
 
-    #[test]
-    fn alerts_triggered() {
+    #[tokio::test]
+    async fn alerts_triggered() {
         let model = Arc::new(Mutex::new(SelfModel::new()));
         {
             let m = model.lock().unwrap();
@@ -455,18 +468,18 @@ mod tests {
         }
         let tool = SelfModelAlertsTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert!(result["total"].as_u64().unwrap() > 0);
         let alerts = result["alerts"].as_array().unwrap();
         assert!(alerts.iter().any(|a| a["metric"] == "cpu_load"));
     }
 
-    #[test]
-    fn snapshot_with_data() {
+    #[tokio::test]
+    async fn snapshot_with_data() {
         let model = test_model();
         let tool = SelfModelSnapshotTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert!(result["confidence"].is_number());
         assert!(result["metric_count"].as_u64().unwrap() > 0);
         assert!(result["forecast_count"].as_u64().unwrap() > 0);
@@ -474,19 +487,19 @@ mod tests {
         assert!(result["conservative_mode"].is_boolean());
     }
 
-    #[test]
-    fn snapshot_empty_model() {
+    #[tokio::test]
+    async fn snapshot_empty_model() {
         let model = Arc::new(Mutex::new(SelfModel::new()));
         let tool = SelfModelSnapshotTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["metric_count"], 0);
         assert_eq!(result["alert_count"], 0);
         assert_eq!(result["forecast_count"], 0);
     }
 
-    #[test]
-    fn register_selfmodel_registers_three_tools() {
+    #[tokio::test]
+    async fn register_selfmodel_registers_three_tools() {
         let model = test_model();
         let registry = wm_dispatch::ToolRegistry::new();
         let registry = register_selfmodel(&registry, model);
@@ -495,22 +508,25 @@ mod tests {
         assert!(registry.get("selfmodel.snapshot").is_some());
     }
 
-    #[test]
-    fn forecast_default_horizon() {
+    #[tokio::test]
+    async fn forecast_default_horizon() {
         let model = test_model();
         let tool = SelfModelForecastTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({"metric": "cpu_load"})).unwrap();
+        let result = tool
+            .call(&mut ctx, json!({"metric": "cpu_load"}))
+            .await
+            .unwrap();
         assert_eq!(result["forecast"]["horizon"], 5);
     }
 
-    #[test]
-    fn snapshot_conservative_mode_flag() {
+    #[tokio::test]
+    async fn snapshot_conservative_mode_flag() {
         let model = Arc::new(Mutex::new(SelfModel::new()));
         // Empty model → confidence 0.5 → not conservative
         let tool = SelfModelSnapshotTool::new(Arc::clone(&model));
         let mut ctx = Context::new(wm_core::BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["conservative_mode"], false);
     }
 }

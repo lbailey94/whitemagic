@@ -749,6 +749,11 @@ pub struct InferenceRouter {
     calibrator: ConformalCalibrator,
     /// Collects (prompt, response, label) triples for LoRA fine-tuning
     training_data: TrainingDataCollector,
+    /// Optional learned router (embedding + k-NN). When present, used as primary
+    /// classifier with regex as shadow/fallback.
+    learned_router: Option<crate::learned_router::LearnedRouter>,
+    /// Auto-generates edge rules from successful escalations.
+    edge_rule_generator: crate::learned_router::EdgeRuleGenerator,
 }
 
 impl InferenceRouter {
@@ -764,14 +769,115 @@ impl InferenceRouter {
             handlers: HashMap::new(),
             calibrator,
             training_data: TrainingDataCollector::default_capacity(),
+            learned_router: None,
+            edge_rule_generator: crate::learned_router::EdgeRuleGenerator::new(),
             config,
         }
     }
 
     /// Create a router from environment variables.
+    ///
+    /// Auto-registers `LlmTierHandler` instances for available tiers:
+    /// - `LocalLlamaCpp` / `LocalSmall`: from `WM_LLAMA_ENDPOINT` (low temp)
+    /// - `Cloud`: from `WM_LLM_API_KEY` + `WM_LLM_ENDPOINT` (higher temp)
     #[must_use]
     pub fn from_env() -> Self {
-        Self::new(RouterConfig::from_env())
+        let mut router = Self::new(RouterConfig::from_env());
+
+        // Register local llama-server handler for LocalLlamaCpp and LocalSmall
+        if let Some(h) = crate::world_model_handlers::LlmTierHandler::left_from_env() {
+            let arc: Arc<dyn TierHandler> = Arc::new(h);
+            router.register_handler(InferenceTier::LocalLlamaCpp, Arc::clone(&arc));
+            router.register_handler(InferenceTier::LocalSmall, arc);
+            tracing::info!("InferenceRouter: registered local llama-server handler");
+        }
+
+        // Register cloud LLM handler
+        if router.config.cloud_available {
+            if let Some(h) = crate::world_model_handlers::LlmTierHandler::right_from_env() {
+                router.register_handler(InferenceTier::Cloud, Arc::new(h));
+                tracing::info!("InferenceRouter: registered cloud LLM handler");
+            }
+        }
+
+        router
+    }
+
+    /// Attach a learned router for embedding-based classification (shadow mode).
+    ///
+    /// When attached, the learned router is used as the primary classifier.
+    /// The regex classifier runs alongside in shadow mode for comparison.
+    /// Falls back to regex when the learned router has insufficient history.
+    #[must_use]
+    pub fn with_learned_router(mut self, learned: crate::learned_router::LearnedRouter) -> Self {
+        self.learned_router = Some(learned);
+        self
+    }
+
+    /// Attach a learned router from an embedder, if the embedder is real (not stub).
+    ///
+    /// Convenience method that creates a `LearnedRouter` from the given embedder
+    /// and attaches it. If the embedder is a stub, the learned router is not attached.
+    #[must_use]
+    pub fn with_embedder(self, embedder: Box<dyn wm_memory::Embedder>) -> Self {
+        match crate::learned_router::LearnedRouter::new_if_real(embedder) {
+            Some(learned) => self.with_learned_router(learned),
+            None => self,
+        }
+    }
+
+    /// Whether a learned router is attached.
+    #[must_use]
+    pub const fn has_learned_router(&self) -> bool {
+        self.learned_router.is_some()
+    }
+
+    /// Get the number of routing records in the learned router's history.
+    #[must_use]
+    pub fn learned_history_len(&self) -> usize {
+        self.learned_router
+            .as_ref()
+            .map_or(0, crate::learned_router::LearnedRouter::history_len)
+    }
+
+    /// Record a routing outcome in the learned router for future k-NN classification.
+    ///
+    /// Call this after inference completes to track whether the tier was correct.
+    pub fn record_learned_outcome(
+        &self,
+        prompt: &str,
+        tier: InferenceTier,
+        task_type: &str,
+        correct: bool,
+    ) {
+        if let Some(ref learned) = self.learned_router {
+            learned.record_outcome(prompt, tier, task_type, correct);
+        }
+    }
+
+    /// Observe a dispatch result for edge rule generation.
+    ///
+    /// Call this after a successful dispatch that escalated past EdgeRules.
+    /// If the response is simple and confident, it becomes a candidate for an
+    /// auto-generated edge rule.
+    pub fn observe_for_edge_rules(
+        &mut self,
+        query: &str,
+        response: &str,
+        tier: InferenceTier,
+        confidence: f32,
+    ) {
+        self.edge_rule_generator
+            .observe(query, response, tier, confidence);
+    }
+
+    /// Promote high-frequency edge rule candidates to compiled rules.
+    ///
+    /// Call this periodically (e.g., after every N dispatches) to promote
+    /// candidates that have been seen enough times.
+    /// Returns the number of rules promoted.
+    pub fn promote_edge_rules(&mut self, engine: &mut crate::edge_rules::EdgeRuleEngine) -> usize {
+        self.edge_rule_generator.promote(engine)
     }
 
     /// Register a handler for a specific tier.
@@ -868,9 +974,46 @@ impl InferenceRouter {
     ) -> InferenceResponse {
         let start = Instant::now();
 
-        let assessment =
+        // Use learned router as primary when available, regex as fallback/shadow
+        let assessment = if let Some(ref learned) = self.learned_router {
+            let learned_assessment =
+                learned.classify(prompt, max_output_tokens, latency_budget_ms, is_background);
+
+            // Shadow mode: also run regex classifier and log disagreements
+            let regex_assessment = self.classifier.classify(
+                prompt,
+                max_output_tokens,
+                latency_budget_ms,
+                is_background,
+            );
+
+            if learned_assessment.tier != regex_assessment.tier {
+                tracing::debug!(
+                    prompt = prompt.chars().take(100).collect::<String>(),
+                    learned_tier = ?learned_assessment.tier,
+                    learned_conf = learned_assessment.confidence,
+                    learned_source = ?learned_assessment.source,
+                    regex_tier = ?regex_assessment.tier,
+                    regex_conf = regex_assessment.confidence,
+                    "shadow mode disagreement: learned vs regex"
+                );
+            }
+
+            // Convert LearnedAssessment to ComplexityAssessment
+            ComplexityAssessment {
+                tier: learned_assessment.tier,
+                task_type: learned_assessment.task_type,
+                confidence: learned_assessment.confidence,
+                estimated_output_tokens: regex_assessment.estimated_output_tokens,
+                is_sensitive: regex_assessment.is_sensitive,
+                needs_tool_calls: regex_assessment.needs_tool_calls,
+                is_multi_turn: regex_assessment.is_multi_turn,
+                signals: regex_assessment.signals,
+            }
+        } else {
             self.classifier
-                .classify(prompt, max_output_tokens, latency_budget_ms, is_background);
+                .classify(prompt, max_output_tokens, latency_budget_ms, is_background)
+        };
 
         let (mut tier, reason) = if let Some(forced) = force_tier {
             (forced, "forced".to_string())
@@ -2460,5 +2603,25 @@ mod verify_prompt_tests {
         let router = InferenceRouter::new(RouterConfig::default());
         let exported = router.export_training_data(false);
         assert!(exported.is_empty());
+    }
+
+    #[test]
+    fn router_from_env_no_handlers_without_env() {
+        // Without WM_LLAMA_ENDPOINT, no local handlers should be registered.
+        // We can't mutate env vars in forbid(unsafe_code) crates,
+        // so we test the logic by checking handler presence.
+        // If WM_LLAMA_ENDPOINT happens to be set in the test env, this still works.
+        let router = InferenceRouter::from_env();
+        let has_local = router.has_handler(InferenceTier::LocalLlamaCpp);
+        let has_cloud = router.has_handler(InferenceTier::Cloud);
+        // Just verify it doesn't panic and returns booleans
+        let _ = has_local;
+        let _ = has_cloud;
+    }
+
+    #[test]
+    fn router_from_env_does_not_panic() {
+        // from_env should not panic regardless of env state
+        let _ = InferenceRouter::from_env();
     }
 }

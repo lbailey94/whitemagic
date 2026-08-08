@@ -8,6 +8,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -41,6 +43,8 @@ impl AnomalyDetectTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for AnomalyDetectTool {
     fn name(&self) -> &str {
         "anomaly.detect"
@@ -54,7 +58,7 @@ impl Tool for AnomalyDetectTool {
     fn description(&self) -> &str {
         "Detect anomalies in memory importance, access patterns, and content"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args.get("galaxy").and_then(|v| v.as_str());
         let sensitivity = args
             .get("sensitivity")
@@ -250,6 +254,8 @@ impl StateSnapshotTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for StateSnapshotTool {
     fn name(&self) -> &str {
         "state.snapshot"
@@ -263,7 +269,7 @@ impl Tool for StateSnapshotTool {
     fn description(&self) -> &str {
         "Capture a snapshot of current system state into Journals galaxy"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let label = args
             .get("label")
             .and_then(|v| v.as_str())
@@ -347,6 +353,8 @@ impl StateRevertTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for StateRevertTool {
     fn name(&self) -> &str {
         "state.revert"
@@ -360,7 +368,7 @@ impl Tool for StateRevertTool {
     fn description(&self) -> &str {
         "Read a previous state snapshot for system comparison"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let label = args.get("label").and_then(|v| v.as_str());
         let snapshot_id = args.get("snapshot_id").and_then(|v| v.as_str());
 
@@ -457,14 +465,15 @@ mod tests {
         store.put(Galaxy::Codex, &long_mem).unwrap();
     }
 
-    #[test]
-    fn anomaly_detect_finds_outliers() {
+    #[tokio::test]
+    async fn anomaly_detect_finds_outliers() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = AnomalyDetectTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"sensitivity": "high"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -473,37 +482,39 @@ mod tests {
         assert!(!anomalies.is_empty(), "Should detect anomalies");
     }
 
-    #[test]
-    fn anomaly_detect_empty_store() {
+    #[tokio::test]
+    async fn anomaly_detect_empty_store() {
         let (_tmp, store) = open_store();
         let tool = AnomalyDetectTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["total_memories"], 0);
         assert_eq!(obj["anomalies"].as_array().unwrap().len(), 0);
     }
 
-    #[test]
-    fn anomaly_detect_low_sensitivity() {
+    #[tokio::test]
+    async fn anomaly_detect_low_sensitivity() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = AnomalyDetectTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"sensitivity": "low"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["sensitivity"], "low");
     }
 
-    #[test]
-    fn state_snapshot_captures_state() {
+    #[tokio::test]
+    async fn state_snapshot_captures_state() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
         let tool = StateSnapshotTool::new(store);
         let result = tool
             .call(&mut Context::default(), json!({"label": "test-snapshot"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -512,17 +523,17 @@ mod tests {
         assert!(obj["galaxies_with_data"].as_u64().unwrap() >= 1);
     }
 
-    #[test]
-    fn state_snapshot_default_label() {
+    #[tokio::test]
+    async fn state_snapshot_default_label() {
         let (_tmp, store) = open_store();
         let tool = StateSnapshotTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["label"], "system-state");
     }
 
-    #[test]
-    fn state_revert_finds_snapshot() {
+    #[tokio::test]
+    async fn state_revert_finds_snapshot() {
         let (_tmp, store) = open_store();
         seed_memories(&store);
 
@@ -530,6 +541,7 @@ mod tests {
         let snap_tool = StateSnapshotTool::new(store.clone());
         snap_tool
             .call(&mut Context::default(), json!({"label": "revert-test"}))
+            .await
             .unwrap();
 
         // Add more memories after snapshot
@@ -540,6 +552,7 @@ mod tests {
         let revert_tool = StateRevertTool::new(store);
         let result = revert_tool
             .call(&mut Context::default(), json!({"label": "revert-test"}))
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -548,19 +561,21 @@ mod tests {
         assert!(delta > 0, "Current should have more memories than snapshot");
     }
 
-    #[test]
-    fn state_revert_not_found() {
+    #[tokio::test]
+    async fn state_revert_not_found() {
         let (_tmp, store) = open_store();
         let tool = StateRevertTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({"label": "nonexistent"}));
+        let result = tool
+            .call(&mut Context::default(), json!({"label": "nonexistent"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn state_revert_missing_args() {
+    #[tokio::test]
+    async fn state_revert_missing_args() {
         let (_tmp, store) = open_store();
         let tool = StateRevertTool::new(store);
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 }

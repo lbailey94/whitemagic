@@ -1,10 +1,20 @@
-# WhiteMagic v4
+# WhiteMagic v5
 
 A cognitive operating system for agentic AI — rebuilt from the ground up in Rust.
 
 ## Current Status
 
-**v4.0.0 — All phases complete (0–8, A–F, R1–R7, L1–L5, N1–N21) + RSI (Phases 1–3) + Embodiment I/O + Safety features. 19 crates, 176 tools, 2,818 tests, ~112,300 LOC, 0 clippy warnings. MCP server exposes single `wm` meta-tool — all 176 tools accessible via NLU routing or explicit dispatch.**
+**v5.2.1 — All 7 phases complete. 14 crates, 184 tools, 3,168 tests, ~128,500 LOC, 0 clippy warnings. MCP server exposes single `wm` meta-tool — all 184 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
+
+### v5 Subsystems
+
+- **Embedding NLU Router** (Phase 2): Cosine similarity against pre-computed tool embeddings with OATS offline refinement. Shadow mode with TF-IDF fallback. `nlu.shadow_report` tool for disagreement analytics and promotion readiness. OATS persistence across restarts.
+- **Learned Inference Router** (Phase 3): k-NN (k=5) + conformal calibration for complexity-aware inference tier selection. Edge rule generator auto-promotes high-frequency simple responses.
+- **Imagination Engine** (Phase 4): World model predictions, scenario planning (imagine → simulate → evaluate → decide), dream cycle counterfactual replay, Research autonomous cycle.
+- **Self-Play Training Loop** (Phase 5): Propose → solve → verify → collect cycle with LoRA hot-swap. 3 MCP tools, daemon `--selfplay-interval`.
+- **Mutable Structures** (Phase 6): GanaRegistry (taxonomy drift), DynamicGalaxyRegistry (auto-created from emergence clusters), LearnedDreamCycle (adaptive phase selection), LearnedCycleStrategy (adaptive cycle ordering). All persist to disk across restarts.
+- **Persistence** (Phase 7): All mutable structures save/load JSON state on daemon startup/shutdown. Learned state accumulates across sessions.
+- **Karma Ledger Optimization** (v5.2.1): Write-behind batching (flush_threshold=16) delivers **10.9x throughput improvement** over synchronous LMDB writes (97.7 µs vs 1.07 ms per record). Explicit flush on daemon graceful shutdown ensures no pending entries are lost. E2E integration test verifies batching, chain integrity, and persistence across ledger instances.
 
 | Category | Tools |
 |---|---|
@@ -29,7 +39,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 | Anomaly | anomaly.detect, state.snapshot, state.revert |
 | Correlation | correlation.analyze, god.nodes |
 | Boundary | anti_loop.check, boundary.enforce |
-| Meta | wm (NLU router with 166 TF-IDF profiles + 12 prefix routes), gnosis, tools.list |
+| Meta | wm (NLU router with embedding + TF-IDF fallback, 12 prefix routes), gnosis, tools.list |
 | v4: Reflex | reflex.dispatch, reflex.status |
 | v4: Workspace | workspace.spotlight, workspace.events, workspace.publish, workspace.stats |
 | v4: Timescale | timescale.status, timescale.hooks |
@@ -43,11 +53,15 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 | v4: Homeostasis | homeostasis.check, homeostasis.adjust, homeostasis.history, homeostasis.alerts |
 | RSI | friction.log, friction.review, friction.auto_log, improve.proposals, improve.active_proposals, friction.resolve, redteam.proposals, redteam.from_friction, redteam.coverage_report |
 | Transaction | transaction.begin, transaction.commit, transaction.rollback |
+| v5: Imagination | imagine.scenario, imagine.predict, imagine.reflect |
+| v5: Self-Play | selfplay.run, selfplay.status, selfplay.export |
+| v5: NLU Observability | nlu.shadow_report |
 
 ### CLI Commands
 
 ```bash
 wm serve       # Start MCP server (async, tokio, brain-wave eco mode)
+wm daemon      # Persistent daemon — autonomous cycles, dream, self-play (--cycle-interval, --dream-interval, --research-interval, --selfplay-interval)
 wm doctor      # Health check — LMDB, Tantivy, citta, dream, tools (--store flag)
 wm quickstart  # 6-step guided setup
 wm stats       # Consciousness dashboard (--store flag)
@@ -59,7 +73,7 @@ wm polyglot    # Polyglot runtime status
 
 ```bash
 cargo build --release --features python -p wm-mcp  # Build PyO3 extension
-python python/whitemagic_v4_server.py --store ~/.local/share/whitemagic/lmdb
+python python/whitemagic_v5_server.py --store ~/.local/share/whitemagic/lmdb
 ```
 
 See `python/README.md` for MCP client configuration (Claude Desktop, Cursor, Windsurf).
@@ -74,13 +88,14 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for detailed phase status and v2/v4 com
 - **Brain-wave eco mode**: Five states (Gamma→Delta). Zero CPU when idle. No polling threads.
 - **Hardware-aware governance (v4)**: `wm-substrate` reads real `/proc` + `/sys` metrics. Brain-wave transitions gated by hardware health (Tiferet). Resource budgets, novelty detection, purpose requirements, human review (Yama). Full transparency via Gnosis Portals.
 - **5D holographic coordinates**: SHA-256 content encoding → spatial memory queries with `find_nearby()`.
-- **CyberBrain architecture (v4)**: 7 new crates — wm-reflex (two-tier safety dispatch), wm-timescale (multi-timescale event bus), wm-workspace (global workspace with salience-based spotlight), wm-selfmodel (predictive introspection with forecasting), wm-bicameral (dual-hemisphere debate with LLM right hemisphere), wm-substrate (hardware metrics), wm-drive (intrinsic motivation with 5 drives). Deep integration: drive bias gates, bicameral consensus on writes, timescale hooks for citta/dream decay, workspace events for drive updates.
-- **LLM right hemisphere**: OpenAI-compatible API integration via `ureq`. Configured by `WM_LLM_API_KEY` env var. Falls back to heuristic stub when unset. Graceful degradation on API errors.
-- **NLU router**: 166 TF-IDF profiles with cosine similarity, stopword filtering, English stemmer, 12 prefix routes, and payload extraction.
+- **CyberBrain architecture (v4→v5)**: Consolidated to 14 crates. wm-cognitive merges 6 former crates (citta, dream, autonomous cycles, reflex, timescale, drive). wm-bicameral adds imagination engine, self-play, learned inference router.
+- **Bicameral reasoning**: Dual-hemisphere (left: heuristic, right: LLM/stub) with 5-tier complexity-aware routing. Imagination engine for scenario planning. Self-play training loop with LoRA hot-swap.
+- **NLU router**: Two-layer system — embedding router (cosine similarity, OATS refinement) primary, TF-IDF fallback. 12 prefix routes, payload extraction. Shadow mode logs disagreements for promotion analysis.
+- **Mutable structures**: Gana taxonomy drift tracking, dynamic galaxy creation from memory clustering, learned dream cycle phase selection, learned autonomous cycle strategy. All persist to disk.
 - **Polyglot without subprocesses**: Julia embedded via jlrs, Haskell/Koka/Zig compiled to native libraries.
-- **Fractal meta-tool**: 176 tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm` — single entry point for all clients.
+- **Fractal meta-tool**: 184 tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm` — single entry point for all clients.
 - **Mandala compartments**: 4 security tiers (Research/Sandbox/Production/Secure) with isolated LMDB+Tantivy+associations per compartment.
-- **RSI pipeline**: 3-phase recursive self-improvement — friction logging, deduplication, karma-friction bridge, proactive improvement, resolution verification with regression detection, adversarial test synthesis from friction history, coverage reporting. 9 RSI tools, 7 autonomous cycle types.
+- **RSI pipeline**: 3-phase recursive self-improvement — friction logging, deduplication, karma-friction bridge, proactive improvement, resolution verification with regression detection, adversarial test synthesis from friction history, coverage reporting. 12 RSI tools, 8 autonomous cycle types.
 - **Fuzz testing**: 5 cargo-fuzz targets + 22 proptest tests across 4 crates.
 - **Cross-platform CI**: Linux, macOS, Windows test jobs + benchmark-on-release-tag.
 
@@ -99,9 +114,9 @@ See [docs/STRATEGY.md](docs/STRATEGY.md) for the full architecture document.
 
 ```bash
 cargo build                    # Debug build
-cargo build --release          # Release build (14 MB binary)
-cargo test                     # Run all 2,818 tests
-cargo clippy --all-targets     # Lint
+cargo build --release          # Release build
+cargo test                     # Run all 3,168 tests
+cargo clippy --all-targets     # Lint (0 warnings)
 cargo build --release --features python -p wm-mcp  # Build with PyO3 bindings
 cargo build --features wm-memory/lancedb  # Build with LanceDB vector search
 cargo bench -p wm-tools --bench rsi_bench           # RSI pipeline benchmarks

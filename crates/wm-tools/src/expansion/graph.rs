@@ -5,6 +5,8 @@
 
 #![forbid(unsafe_code)]
 
+use async_trait::async_trait;
+
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
@@ -34,6 +36,8 @@ impl GraphWalkTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GraphWalkTool {
     fn name(&self) -> &str {
         "graph.walk"
@@ -47,7 +51,7 @@ impl Tool for GraphWalkTool {
     fn description(&self) -> &str {
         "BFS traversal through the association graph from a starting memory"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let start_id = args
             .get("start_id")
             .and_then(|v| v.as_str())
@@ -168,6 +172,8 @@ impl GraphCommunityTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GraphCommunityTool {
     fn name(&self) -> &str {
         "graph.community"
@@ -181,7 +187,7 @@ impl Tool for GraphCommunityTool {
     fn description(&self) -> &str {
         "Detect communities in the association graph using label propagation"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let max_rounds = args
             .get("max_rounds")
             .and_then(serde_json::Value::as_u64)
@@ -328,6 +334,8 @@ impl GraphPropagateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GraphPropagateTool {
     fn name(&self) -> &str {
         "graph.propagate"
@@ -341,7 +349,7 @@ impl Tool for GraphPropagateTool {
     fn description(&self) -> &str {
         "Spread activation through the association graph from seed memories"
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let seed_ids = args
             .get("seed_ids")
             .and_then(|v| v.as_array())
@@ -530,8 +538,8 @@ mod tests {
         ids
     }
 
-    #[test]
-    fn graph_walk_traverses_bfs() {
+    #[tokio::test]
+    async fn graph_walk_traverses_bfs() {
         let (_tmp, store) = open_store();
         let ids = setup_graph(&store);
 
@@ -541,6 +549,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"start_id": ids[0].to_string(), "max_depth": 3}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -548,24 +557,26 @@ mod tests {
         assert!(obj["edges_traversed"].as_u64().unwrap() >= 4);
     }
 
-    #[test]
-    fn graph_walk_invalid_uuid_errors() {
+    #[tokio::test]
+    async fn graph_walk_invalid_uuid_errors() {
         let (_tmp, store) = open_store();
         let tool = GraphWalkTool::new(Arc::new(store));
-        let result = tool.call(&mut Context::default(), json!({"start_id": "not-a-uuid"}));
+        let result = tool
+            .call(&mut Context::default(), json!({"start_id": "not-a-uuid"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn graph_walk_missing_start_id_errors() {
+    #[tokio::test]
+    async fn graph_walk_missing_start_id_errors() {
         let (_tmp, store) = open_store();
         let tool = GraphWalkTool::new(Arc::new(store));
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn graph_walk_depth_limit_works() {
+    #[tokio::test]
+    async fn graph_walk_depth_limit_works() {
         let (_tmp, store) = open_store();
         let ids = setup_graph(&store);
 
@@ -575,6 +586,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"start_id": ids[0].to_string(), "max_depth": 1}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         // With depth 1, should visit A, B, E (direct neighbors)
@@ -582,8 +594,8 @@ mod tests {
         assert!(obj["nodes_visited"].as_u64().unwrap() <= 3);
     }
 
-    #[test]
-    fn graph_community_detects_clusters() {
+    #[tokio::test]
+    async fn graph_community_detects_clusters() {
         let (_tmp, store) = open_store();
         let _ids = setup_graph(&store);
 
@@ -593,6 +605,7 @@ mod tests {
                 &mut Context::default(),
                 json!({"max_rounds": 20, "min_size": 2}),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -602,18 +615,18 @@ mod tests {
         assert!(!communities.is_empty());
     }
 
-    #[test]
-    fn graph_community_empty_graph() {
+    #[tokio::test]
+    async fn graph_community_empty_graph() {
         let (_tmp, store) = open_store();
         let tool = GraphCommunityTool::new(Arc::new(store));
-        let result = tool.call(&mut Context::default(), json!({})).unwrap();
+        let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["total_nodes"], 0);
         assert_eq!(obj["communities"].as_array().unwrap().len(), 0);
     }
 
-    #[test]
-    fn graph_propagate_spreads_activation() {
+    #[tokio::test]
+    async fn graph_propagate_spreads_activation() {
         let (_tmp, store) = open_store();
         let ids = setup_graph(&store);
 
@@ -627,6 +640,7 @@ mod tests {
                     "decay": 0.5,
                 }),
             )
+            .await
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
@@ -636,24 +650,26 @@ mod tests {
         assert_eq!(results[0]["id"], ids[0].to_string());
     }
 
-    #[test]
-    fn graph_propagate_missing_seeds_errors() {
+    #[tokio::test]
+    async fn graph_propagate_missing_seeds_errors() {
         let (_tmp, store) = open_store();
         let tool = GraphPropagateTool::new(Arc::new(store));
-        let result = tool.call(&mut Context::default(), json!({}));
+        let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn graph_propagate_invalid_seed_errors() {
+    #[tokio::test]
+    async fn graph_propagate_invalid_seed_errors() {
         let (_tmp, store) = open_store();
         let tool = GraphPropagateTool::new(Arc::new(store));
-        let result = tool.call(&mut Context::default(), json!({"seed_ids": ["not-a-uuid"]}));
+        let result = tool
+            .call(&mut Context::default(), json!({"seed_ids": ["not-a-uuid"]}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn graph_tool_names_are_correct() {
+    #[tokio::test]
+    async fn graph_tool_names_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(GraphWalkTool::new(store.clone()).name(), "graph.walk");
         assert_eq!(
@@ -663,8 +679,8 @@ mod tests {
         assert_eq!(GraphPropagateTool::new(store).name(), "graph.propagate");
     }
 
-    #[test]
-    fn graph_tool_ganas_are_correct() {
+    #[tokio::test]
+    async fn graph_tool_ganas_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(
             GraphWalkTool::new(store.clone()).gana(),

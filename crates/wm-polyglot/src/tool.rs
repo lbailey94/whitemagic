@@ -3,6 +3,8 @@
 //! This allows the dispatch pipeline to route calls to any registered
 //! language backend. The tool name is `polyglot.call`.
 
+use async_trait::async_trait;
+
 use crate::backend::PolyglotRegistry;
 use crate::value::PolyglotValue;
 use std::sync::{Arc, Mutex};
@@ -40,6 +42,8 @@ impl PolyglotTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for PolyglotTool {
     fn name(&self) -> &str {
         "polyglot.call"
@@ -53,7 +57,7 @@ impl Tool for PolyglotTool {
         &self.effects
     }
 
-    fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
         let backend = args
             .get("backend")
             .and_then(|v| v.as_str())
@@ -142,69 +146,75 @@ fn polyglot_to_json(v: &PolyglotValue) -> serde_json::Value {
 mod tests {
     use super::*;
 
-    #[test]
-    fn polyglot_tool_name() {
+    #[tokio::test]
+    async fn polyglot_tool_name() {
         let reg = Arc::new(Mutex::new(PolyglotRegistry::new()));
         let tool = PolyglotTool::new(reg);
         assert_eq!(tool.name(), "polyglot.call");
     }
 
-    #[test]
-    fn polyglot_tool_gana() {
+    #[tokio::test]
+    async fn polyglot_tool_gana() {
         let reg = Arc::new(Mutex::new(PolyglotRegistry::new()));
         let tool = PolyglotTool::new(reg);
         assert_eq!(tool.gana(), Gana::Horn);
     }
 
-    #[test]
-    fn polyglot_tool_call_missing_backend() {
+    #[tokio::test]
+    async fn polyglot_tool_call_missing_backend() {
         let reg = Arc::new(Mutex::new(PolyglotRegistry::new()));
         let tool = PolyglotTool::new(reg);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, serde_json::json!({}));
+        let result = tool.call(&mut ctx, serde_json::json!({})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn polyglot_tool_call_missing_module() {
+    #[tokio::test]
+    async fn polyglot_tool_call_missing_module() {
         let reg = Arc::new(Mutex::new(PolyglotRegistry::new()));
         let tool = PolyglotTool::new(reg);
         let mut ctx = Context::default();
-        let result = tool.call(&mut ctx, serde_json::json!({"backend": "zig"}));
+        let result = tool
+            .call(&mut ctx, serde_json::json!({"backend": "zig"}))
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn polyglot_tool_call_missing_function() {
+    #[tokio::test]
+    async fn polyglot_tool_call_missing_function() {
         let reg = Arc::new(Mutex::new(PolyglotRegistry::new()));
         let tool = PolyglotTool::new(reg);
         let mut ctx = Context::default();
-        let result = tool.call(
-            &mut ctx,
-            serde_json::json!({"backend": "zig", "module": "mymod"}),
-        );
+        let result = tool
+            .call(
+                &mut ctx,
+                serde_json::json!({"backend": "zig", "module": "mymod"}),
+            )
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn polyglot_tool_call_no_backend_registered() {
+    #[tokio::test]
+    async fn polyglot_tool_call_no_backend_registered() {
         let reg = Arc::new(Mutex::new(PolyglotRegistry::new()));
         let tool = PolyglotTool::new(reg);
         let mut ctx = Context::default();
-        let result = tool.call(
-            &mut ctx,
-            serde_json::json!({
-                "backend": "zig",
-                "module": "mymod",
-                "function": "add",
-                "args": [1, 2]
-            }),
-        );
+        let result = tool
+            .call(
+                &mut ctx,
+                serde_json::json!({
+                    "backend": "zig",
+                    "module": "mymod",
+                    "function": "add",
+                    "args": [1, 2]
+                }),
+            )
+            .await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn json_to_polyglot_roundtrip() {
+    #[tokio::test]
+    async fn json_to_polyglot_roundtrip() {
         let json = serde_json::json!({
             "name": "test",
             "value": 42,
@@ -215,44 +225,44 @@ mod tests {
         assert_eq!(json, back);
     }
 
-    #[test]
-    fn json_to_polyglot_null() {
+    #[tokio::test]
+    async fn json_to_polyglot_null() {
         let json = serde_json::Value::Null;
         let poly = json_to_polyglot(&json);
         assert_eq!(poly, PolyglotValue::Null);
     }
 
-    #[test]
-    fn json_to_polyglot_bool() {
+    #[tokio::test]
+    async fn json_to_polyglot_bool() {
         let json = serde_json::Value::Bool(true);
         let poly = json_to_polyglot(&json);
         assert_eq!(poly, PolyglotValue::Bool(true));
     }
 
-    #[test]
-    fn json_to_polyglot_int() {
+    #[tokio::test]
+    async fn json_to_polyglot_int() {
         let json = serde_json::json!(42);
         let poly = json_to_polyglot(&json);
         assert_eq!(poly, PolyglotValue::Int(42));
     }
 
-    #[test]
-    fn json_to_polyglot_float() {
+    #[tokio::test]
+    async fn json_to_polyglot_float() {
         let json = serde_json::json!(3.15);
         let poly = json_to_polyglot(&json);
         assert_eq!(poly, PolyglotValue::Float(3.15));
     }
 
-    #[test]
-    fn json_to_polyglot_array() {
+    #[tokio::test]
+    async fn json_to_polyglot_array() {
         let json = serde_json::json!([1, 2, 3]);
         let poly = json_to_polyglot(&json);
         assert!(poly.as_array().is_some());
         assert_eq!(poly.as_array().unwrap().len(), 3);
     }
 
-    #[test]
-    fn polyglot_to_json_map() {
+    #[tokio::test]
+    async fn polyglot_to_json_map() {
         let poly = PolyglotValue::map([("key".into(), PolyglotValue::int(1))]);
         let json = polyglot_to_json(&poly);
         assert!(json.is_object());
