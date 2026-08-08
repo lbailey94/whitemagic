@@ -146,7 +146,7 @@ impl EdgeRuleEngine {
             (
                 "hello",
                 "hello|hi|hey|greetings",
-                "Hello! I'm WhiteMagic v4 running locally. How can I help?",
+                "Hello! I'm WhiteMagic v5 running locally. How can I help?",
                 1.0,
             ),
             (
@@ -164,19 +164,19 @@ impl EdgeRuleEngine {
             (
                 "who_are_you",
                 "who are you|what are you|your name",
-                "I'm WhiteMagic v4, a local AI system. I run on your device without cloud APIs.",
+                "I'm WhiteMagic v5, a local AI system. I run on your device without cloud APIs.",
                 1.0,
             ),
             (
                 "version",
                 "version|what version",
-                "WhiteMagic v4 — local AI substrate with 141+ tools.",
+                "WhiteMagic v5 — local AI substrate with 184 tools.",
                 1.0,
             ),
             (
                 "help",
                 "help|what can you do|capabilities",
-                "I can answer questions locally without cloud AI. 141+ MCP tools across 28 Ganas. Ask about version, architecture, or WhiteMagic concepts.",
+                "I can answer questions locally without cloud AI. 184 MCP tools across 28 Ganas. Ask about version, architecture, or WhiteMagic concepts.",
                 0.9,
             ),
             (
@@ -206,7 +206,7 @@ impl EdgeRuleEngine {
             (
                 "rust",
                 "rust|speed|performance|fast",
-                "WhiteMagic v4 is written in Rust for 10-100x speedup on all operations.",
+                "WhiteMagic v5 is written in Rust for 10-100x speedup on all operations.",
                 0.9,
             ),
             (

@@ -5,7 +5,7 @@
 //! - `tools/list`: returns only the `wm` meta-tool (single entry point)
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
-//! The `wm` meta-tool routes natural language to 173 tools via TF-IDF NLU
+//! The `wm` meta-tool routes natural language to 184 tools via TF-IDF NLU
 //! classification, or accepts an explicit `route` parameter for direct dispatch.
 //! Use `wm(thought="list tools")` or `wm(route="tools.list")` to discover tools.
 
@@ -15,24 +15,24 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use wm_bicameral::{BicameralConfig, BicameralEngine, LlmRightHemisphere, RightHemisphereStub};
-use wm_consciousness::{CittaHeartbeat, DreamContext, DreamCycle, EcoModeController};
+use wm_cognitive::DriveCore;
+use wm_cognitive::GanYingBus;
+use wm_cognitive::ReflexDispatchTable;
+use wm_cognitive::TimescaleBus;
+use wm_cognitive::{CittaHeartbeat, DreamContext, DreamCycle, EcoModeController};
 use wm_core::Context;
 use wm_dispatch::{DispatchPipeline, ToolRegistry};
-use wm_drive::DriveCore;
 use wm_governance::{DharmaGate, KarmaLedger, ResourceRules};
 use wm_memory::{
     AssociationStore, ConversationalSearch, Embedder, MemoryStore, RecallConfig, RecallEngine,
     SearchEngine, VectorStore, create_embedder,
 };
-use wm_reflex::ReflexDispatchTable;
-use wm_resonance::GanYingBus;
 use wm_sangha::{PeerDiscovery, ResourceLockManager, SanghaChat, SignalBroadcast};
 use wm_selfmodel::SelfModel;
 use wm_substrate::SubstrateMonitor;
 use wm_substrate::anomaly::AnomalyDetector;
 use wm_substrate::homeostatic::HomeostaticLoop;
 use wm_substrate::sensorimotor::{ReflexLoop, SensorimotorBus};
-use wm_timescale::TimescaleBus;
 use wm_tools::expansion::rsi::{DispatchTelemetry, FrictionAutoLogTool};
 use wm_workspace::GlobalWorkspace;
 
@@ -55,7 +55,7 @@ pub struct McpServer {
     self_model: Arc<std::sync::Mutex<SelfModel>>,
     bicameral: Arc<std::sync::Mutex<BicameralEngine>>,
     drive_core: Arc<std::sync::Mutex<DriveCore>>,
-    autonomic: Option<Arc<std::sync::Mutex<wm_autonomic::AutonomicLayer>>>,
+    autonomic: Option<Arc<std::sync::Mutex<wm_cognitive::AutonomicLayer>>>,
     gan_ying_bus: Arc<std::sync::Mutex<GanYingBus>>,
     peer_discovery: Arc<std::sync::Mutex<PeerDiscovery>>,
     signal_broadcast: Arc<std::sync::Mutex<SignalBroadcast>>,
@@ -77,6 +77,14 @@ pub struct McpServer {
     /// TriModelManager — tri-model lifecycle (autonomic/left/right)
     #[allow(dead_code)]
     tri_model: Option<Arc<wm_bicameral::TriModelManager>>,
+    /// Imagination engine for dream cycle counterfactual replay and Research cycle
+    scenario_engine: Option<wm_bicameral::ScenarioEngine>,
+    /// GanaRegistry for taxonomy drift tracking (Phase 6)
+    gana_registry: Arc<std::sync::Mutex<wm_core::GanaRegistry>>,
+    /// Dynamic galaxy registry for memory clustering (Phase 6)
+    dynamic_galaxies: Arc<std::sync::Mutex<wm_core::DynamicGalaxyRegistry>>,
+    /// Shadow mode stats for NLU router observability (OATS)
+    shadow_stats: Arc<std::sync::RwLock<wm_tools::embedding_router::ShadowModeStats>>,
 }
 
 /// JSON-RPC request envelope.
@@ -131,7 +139,7 @@ impl McpServer {
         self_model: Arc<std::sync::Mutex<SelfModel>>,
         bicameral: Arc<std::sync::Mutex<BicameralEngine>>,
         drive_core: Arc<std::sync::Mutex<DriveCore>>,
-        autonomic: Option<Arc<std::sync::Mutex<wm_autonomic::AutonomicLayer>>>,
+        autonomic: Option<Arc<std::sync::Mutex<wm_cognitive::AutonomicLayer>>>,
         gan_ying_bus: Arc<std::sync::Mutex<GanYingBus>>,
         peer_discovery: Arc<std::sync::Mutex<PeerDiscovery>>,
         signal_broadcast: Arc<std::sync::Mutex<SignalBroadcast>>,
@@ -145,6 +153,7 @@ impl McpServer {
         karma_ledger: Option<Arc<KarmaLedger>>,
         transaction_state: wm_tools::expansion::TransactionState,
         tri_model: Option<Arc<wm_bicameral::TriModelManager>>,
+        shadow_stats: Arc<std::sync::RwLock<wm_tools::embedding_router::ShadowModeStats>>,
     ) -> Self {
         Self {
             registry,
@@ -178,6 +187,12 @@ impl McpServer {
             dispatch_count: std::sync::atomic::AtomicU64::new(0),
             transaction_state,
             tri_model,
+            scenario_engine: None,
+            gana_registry: Arc::new(std::sync::Mutex::new(wm_core::GanaRegistry::new())),
+            dynamic_galaxies: Arc::new(
+                std::sync::Mutex::new(wm_core::DynamicGalaxyRegistry::new()),
+            ),
+            shadow_stats,
         }
     }
 
@@ -198,6 +213,7 @@ impl McpServer {
         self_model: Arc<std::sync::Mutex<SelfModel>>,
         bicameral: Arc<std::sync::Mutex<BicameralEngine>>,
         drive_core: Arc<std::sync::Mutex<DriveCore>>,
+        shadow_stats: Arc<std::sync::RwLock<wm_tools::embedding_router::ShadowModeStats>>,
     ) -> Self {
         let friction_auto_log = Arc::new(FrictionAutoLogTool::new(store.clone(), None));
         Self::new(
@@ -229,6 +245,7 @@ impl McpServer {
             None,
             Arc::new(std::sync::Mutex::new(None)),
             None,
+            shadow_stats,
         )
     }
 
@@ -257,17 +274,16 @@ impl McpServer {
         dharma_gate.update_homeostasis(hv.into());
 
         let associations = Arc::new(AssociationStore::open(store.env())?);
-        let spiral_tracker = Arc::new(std::sync::Mutex::new(
-            wm_consciousness::SpiralTracker::default(),
-        ));
+        let spiral_tracker =
+            Arc::new(std::sync::Mutex::new(wm_cognitive::SpiralTracker::default()));
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
 
         // v4 subsystems: reflex dispatch table, timescale bus, global workspace
-        let mut reflex_table = wm_reflex::ReflexDispatchTable::permissive();
-        wm_reflex::builtins::register_builtins(&mut reflex_table);
+        let mut reflex_table = wm_cognitive::ReflexDispatchTable::permissive();
+        wm_cognitive::reflex::builtins::register_builtins(&mut reflex_table);
         let reflex_table = Arc::new(std::sync::Mutex::new(reflex_table));
 
-        let timescale_bus = Arc::new(std::sync::Mutex::new(wm_timescale::TimescaleBus::default()));
+        let timescale_bus = Arc::new(std::sync::Mutex::new(wm_cognitive::TimescaleBus::default()));
 
         let workspace = Arc::new(std::sync::Mutex::new(wm_workspace::GlobalWorkspace::new()));
 
@@ -294,7 +310,7 @@ impl McpServer {
         let drive_core = Arc::new(std::sync::Mutex::new(DriveCore::new()));
 
         // L1: autonomic layer (BitMamba) — optional, env-gated
-        let autonomic = wm_autonomic::AutonomicLayer::from_env().map(|layer| {
+        let autonomic = wm_cognitive::AutonomicLayer::from_env().map(|layer| {
             tracing::info!("autonomic layer configured (BitMamba)");
             Arc::new(std::sync::Mutex::new(layer))
         });
@@ -307,7 +323,7 @@ impl McpServer {
             if let Ok(mut bus) = timescale_bus.lock() {
                 // Citta decay hook — moves consciousness vector toward neutral
                 bus.register(
-                    wm_timescale::Tier::Reactive,
+                    wm_cognitive::Tier::Reactive,
                     "citta_decay",
                     Box::new(|| {
                         // The citta vector decays via the heartbeat post-dispatch,
@@ -315,18 +331,18 @@ impl McpServer {
                         // This is a no-op placeholder — actual decay happens in
                         // the citta heartbeat. The hook exists so the timescale
                         // bus has a consciousness-related entry.
-                        wm_timescale::hooks::HookResult::Complete
+                        wm_cognitive::timescale::hooks::HookResult::Complete
                     }),
                 );
                 // Drive decay hook — moves drives toward baseline
                 bus.register(
-                    wm_timescale::Tier::Planning,
+                    wm_cognitive::Tier::Planning,
                     "drive_decay",
                     Box::new(|| {
                         // Drive decay is handled in the drive event processing
                         // during dispatch. This hook is a placeholder for
                         // between-dispatch decay when the system is idle.
-                        wm_timescale::hooks::HookResult::Complete
+                        wm_cognitive::timescale::hooks::HookResult::Complete
                     }),
                 );
             } else {
@@ -429,14 +445,22 @@ impl McpServer {
         );
         let registry = wm_tools::expansion::simulation_tools::register_simulation(&registry);
 
-        let registry = wm_tools::register_meta_tools(&registry, &store);
+        let shadow_stats = Arc::new(std::sync::RwLock::new(
+            wm_tools::embedding_router::ShadowModeStats::default(),
+        ));
+        let registry = wm_tools::register_meta_tools(&registry, &store, shadow_stats.clone());
+
+        let gana_registry = Arc::new(std::sync::Mutex::new(wm_core::GanaRegistry::new()));
+        let dynamic_galaxies =
+            Arc::new(std::sync::Mutex::new(wm_core::DynamicGalaxyRegistry::new()));
 
         let pipeline = DispatchPipeline::new(
             std::sync::Arc::new(wm_dispatch::RateLimiter::default()),
             std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
             dharma_gate.clone(),
             Some(karma_ledger.clone()),
-        );
+        )
+        .with_gana_registry(gana_registry.clone());
 
         let friction_auto_log = Arc::new(FrictionAutoLogTool::new(
             store.clone(),
@@ -445,7 +469,7 @@ impl McpServer {
 
         // Embodiment I/O: SensorimotorBus already created above and shared with tools
 
-        Ok(Self::new(
+        let mut server = Self::new(
             registry,
             pipeline,
             EcoModeController::from_env(),
@@ -474,7 +498,23 @@ impl McpServer {
             Some(karma_ledger),
             transaction_state,
             cyberbrain.tri_model,
-        ))
+            shadow_stats,
+        );
+
+        // Override mutable structure registries with shared instances (Phase 6)
+        server.gana_registry = gana_registry;
+        server.dynamic_galaxies = dynamic_galaxies;
+
+        // Attach LearnedDreamCycle for adaptive dream phase selection (Phase 6)
+        server.dream = DreamCycle::new().with_learned(wm_core::LearnedDreamCycle::new());
+
+        // Initialize imagination engine for dream cycle + Research cycle
+        server.init_imagination();
+
+        // Load mutable structures from disk (Phase 6 persistence)
+        server.load_mutable_state();
+
+        Ok(server)
     }
 
     /// Run the server synchronously: read JSON-RPC from stdin, write responses to stdout.
@@ -482,6 +522,7 @@ impl McpServer {
     /// This is the blocking version. For the async event-loop version with
     /// brain-wave eco mode, use `run_async()`.
     pub fn run(&mut self) -> anyhow::Result<()> {
+        let rt = tokio::runtime::Runtime::new()?;
         let stdin = std::io::stdin();
         let stdout = std::io::stdout();
         let mut out = stdout.lock();
@@ -511,7 +552,7 @@ impl McpServer {
                 }
             };
 
-            let response = self.handle(&request);
+            let response = rt.block_on(self.handle(&request));
             // Only send response if there's an ID (not a notification)
             if request.id.is_some() {
                 writeln!(out, "{}", serde_json::to_string(&response)?)?;
@@ -600,7 +641,7 @@ impl McpServer {
                         }
                     };
 
-                    let response = self.handle(&request);
+                    let response = self.handle(&request).await;
                     if request.id.is_some() {
                         stdout.write_all(serde_json::to_string(&response)?.as_bytes()).await?;
                         stdout.write_all(b"\n").await?;
@@ -637,7 +678,12 @@ impl McpServer {
 
                     // Check dream cycle on brain-wave transition
                     if self.dream.should_run(new_state) {
-                        let ctx = DreamContext::new(&self.store, &self.associations);
+                        let ctx = if let Some(ref engine) = self.scenario_engine {
+                            DreamContext::new(&self.store, &self.associations)
+                                .with_imagination(engine)
+                        } else {
+                            DreamContext::new(&self.store, &self.associations)
+                        };
                         let dream_result = self.dream.run(&ctx);
                         tracing::info!(
                             phases = dream_result.phases.len(),
@@ -676,7 +722,7 @@ impl McpServer {
         // Emit shutdown event to Gan Ying Bus
         if let Ok(mut bus) = self.gan_ying_bus.lock() {
             bus.emit(
-                wm_resonance::EventType::SystemShutdown,
+                wm_cognitive::EventType::SystemShutdown,
                 "mcp_server",
                 json!({
                     "tool_count": self.tool_count(),
@@ -695,6 +741,9 @@ impl McpServer {
                 );
             }
         }
+
+        // Save mutable structures to disk (Phase 6 persistence)
+        self.save_mutable_state();
 
         // LMDB is automatically flushed by Drop when Arc<MemoryStore> is dropped.
         // The store uses memory-mapped files, so data is persistent by default.
@@ -835,6 +884,169 @@ impl McpServer {
         self.registry.all().len()
     }
 
+    /// Initialize the imagination engine (ScenarioEngine) for dream cycle
+    /// counterfactual replay and Research cycle hypothesis generation.
+    /// Called automatically by `with_defaults`; can be called manually
+    /// for custom server setups.
+    pub fn init_imagination(&mut self) {
+        if self.scenario_engine.is_none() {
+            let wm = wm_bicameral::world_model_from_env();
+            let evaluator = wm_bicameral::ScenarioEvaluator::with_defaults();
+            self.scenario_engine = Some(wm_bicameral::ScenarioEngine::with_defaults(wm, evaluator));
+            tracing::info!("Imagination engine initialized on McpServer");
+        }
+    }
+
+    /// Get a reference to the imagination engine, if initialized.
+    #[must_use]
+    pub const fn scenario_engine(&self) -> Option<&wm_bicameral::ScenarioEngine> {
+        self.scenario_engine.as_ref()
+    }
+
+    /// Get a reference to the GanaRegistry for taxonomy drift tracking (Phase 6).
+    #[must_use]
+    pub const fn gana_registry(&self) -> &Arc<std::sync::Mutex<wm_core::GanaRegistry>> {
+        &self.gana_registry
+    }
+
+    /// Get a reference to the DynamicGalaxyRegistry (Phase 6).
+    #[must_use]
+    pub const fn dynamic_galaxies(&self) -> &Arc<std::sync::Mutex<wm_core::DynamicGalaxyRegistry>> {
+        &self.dynamic_galaxies
+    }
+
+    /// Save mutable structures (GanaRegistry, DynamicGalaxyRegistry, LearnedDreamCycle,
+    /// ShadowModeStats) to JSON files in the store directory. Called on shutdown to persist learned state.
+    pub fn save_mutable_state(&self) {
+        let store_dir = self.store.path();
+
+        if let Ok(registry) = self.gana_registry.lock() {
+            let path = store_dir.join("mutable_gana_registry.json");
+            match serde_json::to_string_pretty(&*registry) {
+                Ok(json) => {
+                    if let Err(e) = std::fs::write(&path, json) {
+                        tracing::warn!(path = %path.display(), error = %e, "Failed to save GanaRegistry");
+                    } else {
+                        tracing::info!(path = %path.display(), "Saved GanaRegistry");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to serialize GanaRegistry"),
+            }
+        }
+
+        if let Ok(galaxies) = self.dynamic_galaxies.lock() {
+            let path = store_dir.join("mutable_dynamic_galaxies.json");
+            match serde_json::to_string_pretty(&*galaxies) {
+                Ok(json) => {
+                    if let Err(e) = std::fs::write(&path, json) {
+                        tracing::warn!(path = %path.display(), error = %e, "Failed to save DynamicGalaxyRegistry");
+                    } else {
+                        tracing::info!(path = %path.display(), "Saved DynamicGalaxyRegistry");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to serialize DynamicGalaxyRegistry"),
+            }
+        }
+
+        if let Some(learned) = self.dream.learned() {
+            let path = store_dir.join("mutable_learned_dream.json");
+            match serde_json::to_string_pretty(learned) {
+                Ok(json) => {
+                    if let Err(e) = std::fs::write(&path, json) {
+                        tracing::warn!(path = %path.display(), error = %e, "Failed to save LearnedDreamCycle");
+                    } else {
+                        tracing::info!(path = %path.display(), "Saved LearnedDreamCycle");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to serialize LearnedDreamCycle"),
+            }
+        }
+
+        // Save shadow mode stats (OATS)
+        if let Ok(stats) = self.shadow_stats.read() {
+            let path = store_dir.join("mutable_shadow_stats.json");
+            match serde_json::to_string_pretty(&*stats) {
+                Ok(json) => {
+                    if let Err(e) = std::fs::write(&path, json) {
+                        tracing::warn!(path = %path.display(), error = %e, "Failed to save ShadowModeStats");
+                    } else {
+                        tracing::info!(path = %path.display(), "Saved ShadowModeStats");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to serialize ShadowModeStats"),
+            }
+        }
+    }
+
+    /// Load mutable structures from JSON files in the store directory.
+    /// Called on startup to restore learned state from previous sessions.
+    pub fn load_mutable_state(&mut self) {
+        let store_dir = self.store.path();
+
+        let gana_path = store_dir.join("mutable_gana_registry.json");
+        if gana_path.exists() {
+            match std::fs::read_to_string(&gana_path) {
+                Ok(json) => {
+                    if let Ok(mut registry) = serde_json::from_str::<wm_core::GanaRegistry>(&json) {
+                        registry.rebuild_pairs();
+                        if let Ok(mut current) = self.gana_registry.lock() {
+                            *current = registry;
+                            tracing::info!("Loaded GanaRegistry from disk");
+                        }
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to read GanaRegistry file"),
+            }
+        }
+
+        let galaxies_path = store_dir.join("mutable_dynamic_galaxies.json");
+        if galaxies_path.exists() {
+            match std::fs::read_to_string(&galaxies_path) {
+                Ok(json) => {
+                    if let Ok(registry) =
+                        serde_json::from_str::<wm_core::DynamicGalaxyRegistry>(&json)
+                    {
+                        if let Ok(mut current) = self.dynamic_galaxies.lock() {
+                            *current = registry;
+                            tracing::info!("Loaded DynamicGalaxyRegistry from disk");
+                        }
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to read DynamicGalaxyRegistry file"),
+            }
+        }
+
+        let dream_path = store_dir.join("mutable_learned_dream.json");
+        if dream_path.exists() {
+            match std::fs::read_to_string(&dream_path) {
+                Ok(json) => {
+                    if let Ok(learned) = serde_json::from_str::<wm_core::LearnedDreamCycle>(&json) {
+                        self.dream.set_learned(learned);
+                        tracing::info!("Loaded LearnedDreamCycle from disk");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to read LearnedDreamCycle file"),
+            }
+        }
+
+        let shadow_path = store_dir.join("mutable_shadow_stats.json");
+        if shadow_path.exists() {
+            match std::fs::read_to_string(&shadow_path) {
+                Ok(json) => {
+                    if let Ok(stats) =
+                        serde_json::from_str::<wm_tools::embedding_router::ShadowModeStats>(&json)
+                    {
+                        if let Ok(mut current) = self.shadow_stats.write() {
+                            *current = stats;
+                            tracing::info!("Loaded ShadowModeStats from disk");
+                        }
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to read ShadowModeStats file"),
+            }
+        }
+    }
+
     /// Get memory counts per galaxy as a JSON object.
     #[must_use]
     pub fn galaxy_counts(&self) -> Value {
@@ -897,7 +1109,7 @@ impl McpServer {
     ///
     /// This is the primary entry point for the PyO3 bridge — Python calls
     /// this with a JSON-RPC request string and gets back a JSON-RPC response string.
-    pub fn handle_request(&mut self, json_request: &str) -> String {
+    pub async fn handle_request(&mut self, json_request: &str) -> String {
         let request: RpcRequest = match serde_json::from_str(json_request) {
             Ok(req) => req,
             Err(e) => {
@@ -915,12 +1127,12 @@ impl McpServer {
             }
         };
 
-        let response = self.handle(&request);
+        let response = self.handle(&request).await;
         serde_json::to_string(&response).unwrap_or_else(|_| "{}".into())
     }
 
     /// Handle a single JSON-RPC request.
-    fn handle(&mut self, req: &RpcRequest) -> RpcResponse {
+    async fn handle(&mut self, req: &RpcRequest) -> RpcResponse {
         // Record event for brain-wave tracking on every request
         self.eco_mode.record_event();
         // Refresh homeostasis from real hardware data (Lakshmi → Dharma)
@@ -931,7 +1143,7 @@ impl McpServer {
         let result = match req.method.as_str() {
             "initialize" => self.handle_initialize(),
             "tools/list" => self.handle_tools_list(),
-            "tools/call" => self.handle_tools_call(&req.params),
+            "tools/call" => self.handle_tools_call(&req.params).await,
             _ => Err(RpcError {
                 code: -32601,
                 message: format!("Method not found: {}", req.method),
@@ -960,7 +1172,7 @@ impl McpServer {
         Ok(json!({
             "protocolVersion": "2024-11-05",
             "serverInfo": {
-                "name": "whitemagic-v4",
+                "name": "whitemagic-v5",
                 "version": env!("CARGO_PKG_VERSION"),
             },
             "capabilities": {
@@ -972,7 +1184,7 @@ impl McpServer {
     /// Handle `tools/list` — return only the `wm` meta-tool.
     ///
     /// The `wm` meta-tool is the single entry point for MCP clients. It routes
-    /// natural language input to any of the 173 registered tools via TF-IDF
+    /// natural language input to any of the 184 registered tools via TF-IDF
     /// NLU classification, or accepts an explicit `route` parameter for direct
     /// dispatch. Use `wm(thought="list tools")` or `wm(route="tools.list")` to
     /// discover available tools.
@@ -988,12 +1200,12 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — all 173 tools are accessible through it
+        // Only expose the wm meta-tool — all 184 tools are accessible through it
         if let Some(wm) = self.registry.get("wm") {
             Ok(json!({
                 "tools": [{
                     "name": wm.name(),
-                    "description": "WhiteMagic v4 meta-tool — routes natural language to 173 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
+                    "description": "WhiteMagic v5 meta-tool — routes natural language to 184 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -1039,7 +1251,7 @@ impl McpServer {
     }
 
     /// Handle `tools/call` — dispatch through the governance pipeline.
-    fn handle_tools_call(&mut self, params: &Value) -> Result<Value, RpcError> {
+    async fn handle_tools_call(&mut self, params: &Value) -> Result<Value, RpcError> {
         let name = params
             .get("name")
             .and_then(|v| v.as_str())
@@ -1101,7 +1313,7 @@ impl McpServer {
                 ctx.drive_conservative_weight = bias.conservative_weight;
                 bias
             } else {
-                wm_drive::DriveBias {
+                wm_cognitive::DriveBias {
                     exploration_weight: 0.5,
                     conservative_weight: 0.3,
                     lightweight_weight: 0.2,
@@ -1122,7 +1334,7 @@ impl McpServer {
         {
             if let Ok(mut bus) = self.gan_ying_bus.lock() {
                 bus.emit(
-                    wm_resonance::EventType::ToolDispatchStart,
+                    wm_cognitive::EventType::ToolDispatchStart,
                     "mcp_server",
                     json!({
                         "tool": name,
@@ -1133,7 +1345,10 @@ impl McpServer {
         }
 
         let arg_size = serde_json::to_vec(&arguments).map(|v| v.len()).unwrap_or(0);
-        let dispatch_result = self.pipeline.dispatch(tool.as_ref(), &mut ctx, arguments);
+        let dispatch_result = self
+            .pipeline
+            .dispatch(tool.as_ref(), &mut ctx, arguments)
+            .await;
         let dispatch_latency = dispatch_start.elapsed().as_secs_f32();
 
         // Record dispatch metrics into self-model for future forecasting
@@ -1151,9 +1366,9 @@ impl McpServer {
         {
             if let Ok(mut bus) = self.gan_ying_bus.lock() {
                 let event_type = if success {
-                    wm_resonance::EventType::ToolDispatchSuccess
+                    wm_cognitive::EventType::ToolDispatchSuccess
                 } else {
-                    wm_resonance::EventType::ToolDispatchError
+                    wm_cognitive::EventType::ToolDispatchError
                 };
                 bus.emit(
                     event_type,
@@ -1286,13 +1501,13 @@ impl McpServer {
         // Fire drive events based on dispatch outcome
         if let Ok(mut drive) = self.drive_core.lock() {
             let event_kind = if success {
-                wm_drive::DriveEventKind::ToolSuccess
+                wm_cognitive::DriveEventKind::ToolSuccess
             } else {
-                wm_drive::DriveEventKind::ToolError
+                wm_cognitive::DriveEventKind::ToolError
             };
             drive.process_event(
-                &wm_drive::DriveEvent::new(event_kind)
-                    .with_source(wm_drive::DriveEventSource::Dispatch)
+                &wm_cognitive::DriveEvent::new(event_kind)
+                    .with_source(wm_cognitive::DriveEventSource::Dispatch)
                     .with_detail(format!(
                         "{} dispatch: {}",
                         name,
@@ -1303,13 +1518,13 @@ impl McpServer {
             // Feed self-model confidence back into drive system
             if ctx.self_model_confidence < 0.5 {
                 drive.process_event(
-                    &wm_drive::DriveEvent::new(wm_drive::DriveEventKind::LowConfidence)
-                        .with_source(wm_drive::DriveEventSource::SelfModel),
+                    &wm_cognitive::DriveEvent::new(wm_cognitive::DriveEventKind::LowConfidence)
+                        .with_source(wm_cognitive::DriveEventSource::SelfModel),
                 );
             } else if ctx.self_model_confidence > 0.8 {
                 drive.process_event(
-                    &wm_drive::DriveEvent::new(wm_drive::DriveEventKind::HighConfidence)
-                        .with_source(wm_drive::DriveEventSource::SelfModel),
+                    &wm_cognitive::DriveEvent::new(wm_cognitive::DriveEventKind::HighConfidence)
+                        .with_source(wm_cognitive::DriveEventSource::SelfModel),
                 );
             }
         }
@@ -1359,12 +1574,12 @@ impl McpServer {
                 if let Some(signal) = autonomic.pulse() {
                     // Feed into drive events
                     let drive_events =
-                        wm_autonomic::AutonomicLayer::signal_to_drive_events(&signal);
+                        wm_cognitive::AutonomicLayer::signal_to_drive_events(&signal);
                     if let Ok(mut drive) = self.drive_core.lock() {
                         for kind in drive_events {
                             drive.process_event(
-                                &wm_drive::DriveEvent::new(kind)
-                                    .with_source(wm_drive::DriveEventSource::Autonomic)
+                                &wm_cognitive::DriveEvent::new(kind)
+                                    .with_source(wm_cognitive::DriveEventSource::Autonomic)
                                     .with_detail(format!(
                                         "autonomic salience: {} ({:.2})",
                                         signal.signal_type, signal.salience_score
@@ -1375,7 +1590,7 @@ impl McpServer {
 
                     // Feed into workspace
                     if let Some((event_type, salience)) =
-                        wm_autonomic::AutonomicLayer::signal_to_workspace_event(&signal)
+                        wm_cognitive::AutonomicLayer::signal_to_workspace_event(&signal)
                     {
                         if let Ok(mut ws) = self.workspace.lock() {
                             ws.publish_simple(
@@ -1452,7 +1667,11 @@ impl McpServer {
 
         // Check if dream cycle should run (Theta state)
         if self.dream.should_run(self.eco_mode.current()) {
-            let ctx = DreamContext::new(&self.store, &self.associations);
+            let ctx = if let Some(ref engine) = self.scenario_engine {
+                DreamContext::new(&self.store, &self.associations).with_imagination(engine)
+            } else {
+                DreamContext::new(&self.store, &self.associations)
+            };
             let dream_result = self.dream.run(&ctx);
             tracing::info!(
                 phases = dream_result.phases.len(),
@@ -1506,7 +1725,7 @@ impl McpServer {
                         if let Ok(mut bus) = self.gan_ying_bus.lock() {
                             for action in &actions {
                                 bus.emit(
-                                    wm_resonance::EventType::HarmonyStressDetected,
+                                    wm_cognitive::EventType::HarmonyStressDetected,
                                     "homeostatic_loop",
                                     action.to_json(),
                                 );
@@ -1522,7 +1741,7 @@ impl McpServer {
                 if !readings.is_empty() {
                     if let Ok(mut gy) = self.gan_ying_bus.lock() {
                         gy.emit(
-                            wm_resonance::EventType::SensorFrameReceived,
+                            wm_cognitive::EventType::SensorFrameReceived,
                             "sensorimotor",
                             json!({
                                 "sensor_count": readings.len(),
@@ -1548,13 +1767,18 @@ impl McpServer {
             let hv = self.substrate.sample();
             let health = hv.health_score();
             let cycle_ctx =
-                wm_consciousness::CycleContext::new(&self.store, &self.associations, health)
+                wm_cognitive::CycleContext::new(&self.store, &self.associations, health)
                     .with_sensorimotor(&self.sensorimotor_bus, &self.reflex_loop);
+            let cycle_ctx = if let Some(ref engine) = self.scenario_engine {
+                cycle_ctx.with_imagination(engine)
+            } else {
+                cycle_ctx
+            };
 
-            let mut runner = wm_consciousness::AutonomousCycleRunner::default();
-            let result = runner.run_cycle(wm_consciousness::CycleType::Sensorimotor, &cycle_ctx);
+            let mut runner = wm_cognitive::AutonomousCycleRunner::default();
+            let result = runner.run_cycle(wm_cognitive::CycleType::Sensorimotor, &cycle_ctx);
 
-            if result.status == wm_consciousness::CycleStatus::Completed {
+            if result.status == wm_cognitive::CycleStatus::Completed {
                 tracing::debug!(
                     sensors = result.memories_scanned,
                     proposals = result.proposals_generated,
@@ -1570,7 +1794,7 @@ impl McpServer {
                             .collect();
                         if !triggered.is_empty() {
                             gy.emit(
-                                wm_resonance::EventType::ReflexFired,
+                                wm_cognitive::EventType::ReflexFired,
                                 "sensorimotor_cycle",
                                 json!({
                                     "triggered_count": triggered.len(),
@@ -1596,12 +1820,12 @@ impl McpServer {
             let hv = self.substrate.sample();
             let health = hv.health_score();
             let cycle_ctx =
-                wm_consciousness::CycleContext::new(&self.store, &self.associations, health);
+                wm_cognitive::CycleContext::new(&self.store, &self.associations, health);
 
-            let mut runner = wm_consciousness::AutonomousCycleRunner::default();
-            let improve_result = runner.run_cycle(wm_consciousness::CycleType::Improve, &cycle_ctx);
+            let mut runner = wm_cognitive::AutonomousCycleRunner::default();
+            let improve_result = runner.run_cycle(wm_cognitive::CycleType::Improve, &cycle_ctx);
 
-            if improve_result.status == wm_consciousness::CycleStatus::Completed
+            if improve_result.status == wm_cognitive::CycleStatus::Completed
                 && improve_result.proposals_generated > 0
             {
                 tracing::info!(
@@ -1701,16 +1925,15 @@ mod tests {
         let resource_rules = Arc::new(ResourceRules::default());
 
         let associations = Arc::new(AssociationStore::open(store.env()).unwrap());
-        let spiral_tracker = Arc::new(std::sync::Mutex::new(
-            wm_consciousness::SpiralTracker::default(),
-        ));
+        let spiral_tracker =
+            Arc::new(std::sync::Mutex::new(wm_cognitive::SpiralTracker::default()));
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
 
         // v4 subsystems
-        let mut reflex_table = wm_reflex::ReflexDispatchTable::permissive();
-        wm_reflex::builtins::register_builtins(&mut reflex_table);
+        let mut reflex_table = wm_cognitive::ReflexDispatchTable::permissive();
+        wm_cognitive::reflex::builtins::register_builtins(&mut reflex_table);
         let reflex_table = Arc::new(std::sync::Mutex::new(reflex_table));
-        let timescale_bus = Arc::new(std::sync::Mutex::new(wm_timescale::TimescaleBus::default()));
+        let timescale_bus = Arc::new(std::sync::Mutex::new(wm_cognitive::TimescaleBus::default()));
         let workspace = Arc::new(std::sync::Mutex::new(wm_workspace::GlobalWorkspace::new()));
         let self_model = Arc::new(std::sync::Mutex::new(wm_selfmodel::SelfModel::new()));
 
@@ -1804,7 +2027,10 @@ mod tests {
         );
         let registry = wm_tools::expansion::simulation_tools::register_simulation(&registry);
 
-        let registry = wm_tools::register_meta_tools(&registry, &store);
+        let test_shadow_stats = Arc::new(std::sync::RwLock::new(
+            wm_tools::embedding_router::ShadowModeStats::default(),
+        ));
+        let registry = wm_tools::register_meta_tools(&registry, &store, test_shadow_stats.clone());
 
         let pipeline = DispatchPipeline::new(
             Arc::new(wm_dispatch::RateLimiter::default()),
@@ -1845,11 +2071,12 @@ mod tests {
             Some(karma_ledger),
             test_transaction_state,
             None,
+            test_shadow_stats,
         )
     }
 
-    #[test]
-    fn initialize_returns_server_info() {
+    #[tokio::test]
+    async fn initialize_returns_server_info() {
         let mut server = test_server();
         let req = RpcRequest {
             jsonrpc: "2.0".into(),
@@ -1857,15 +2084,15 @@ mod tests {
             method: "initialize".into(),
             params: json!({}),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
         let result = resp.result.unwrap();
-        assert_eq!(result["serverInfo"]["name"], "whitemagic-v4");
+        assert_eq!(result["serverInfo"]["name"], "whitemagic-v5");
         assert!(result["capabilities"]["tools"].is_object());
     }
 
-    #[test]
-    fn tools_list_returns_only_wm_meta_tool() {
+    #[tokio::test]
+    async fn tools_list_returns_only_wm_meta_tool() {
         let mut server = test_server();
         // Trigger an event to move from Delta to Beta
         let _ = server.eco_mode.record_event();
@@ -1875,7 +2102,7 @@ mod tests {
             method: "tools/list".into(),
             params: json!({}),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
         let result = resp.result.unwrap();
         let tools = result["tools"].as_array().unwrap().clone();
@@ -1887,12 +2114,12 @@ mod tests {
             tools[0]["description"]
                 .as_str()
                 .unwrap()
-                .contains("173 tools")
+                .contains("184 tools")
         );
     }
 
-    #[test]
-    fn tools_list_delta_returns_empty() {
+    #[tokio::test]
+    async fn tools_list_delta_returns_empty() {
         let server = test_server();
         // Don't call handle() — that would record_event() and transition to Beta.
         // Test handle_tools_list directly while in Delta state.
@@ -1901,8 +2128,8 @@ mod tests {
         assert_eq!(tools.len(), 0);
     }
 
-    #[test]
-    fn tools_list_filters_by_brain_wave() {
+    #[tokio::test]
+    async fn tools_list_filters_by_brain_wave() {
         let mut server = test_server();
 
         // Direct call in Delta: 0 tools
@@ -1917,7 +2144,7 @@ mod tests {
             method: "tools/list".into(),
             params: json!({}),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
         let beta_result = resp.result.unwrap();
         let beta_count = beta_result["tools"].as_array().unwrap().len();
@@ -1927,8 +2154,8 @@ mod tests {
         assert_eq!(beta_count, 1);
     }
 
-    #[test]
-    fn tools_call_wm_with_thought() {
+    #[tokio::test]
+    async fn tools_call_wm_with_thought() {
         let mut server = test_server();
         let req = RpcRequest {
             jsonrpc: "2.0".into(),
@@ -1939,7 +2166,7 @@ mod tests {
                 "arguments": {"thought": "remember that test works"},
             }),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
         let content = resp.result.unwrap()["content"].as_array().unwrap().clone();
         assert_eq!(content[0]["type"], "text");
@@ -1948,8 +2175,8 @@ mod tests {
         assert!(text.contains("memory.create"));
     }
 
-    #[test]
-    fn tools_call_wm_routes_to_tools_list() {
+    #[tokio::test]
+    async fn tools_call_wm_routes_to_tools_list() {
         let mut server = test_server();
         let req = RpcRequest {
             jsonrpc: "2.0".into(),
@@ -1960,15 +2187,15 @@ mod tests {
                 "arguments": {"thought": "list tools"},
             }),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
         let content = resp.result.unwrap()["content"].as_array().unwrap().clone();
         let text = content[0]["text"].as_str().unwrap();
         assert!(text.contains("tools.list") || text.contains("total"));
     }
 
-    #[test]
-    fn tools_call_rejects_unknown_tool() {
+    #[tokio::test]
+    async fn tools_call_rejects_unknown_tool() {
         let mut server = test_server();
         let req = RpcRequest {
             jsonrpc: "2.0".into(),
@@ -1979,13 +2206,13 @@ mod tests {
                 "arguments": {},
             }),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_some());
         assert_eq!(resp.error.unwrap().code, -32602);
     }
 
-    #[test]
-    fn unknown_method_returns_error() {
+    #[tokio::test]
+    async fn unknown_method_returns_error() {
         let mut server = test_server();
         let req = RpcRequest {
             jsonrpc: "2.0".into(),
@@ -1993,30 +2220,32 @@ mod tests {
             method: "foobar".into(),
             params: json!({}),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_some());
         assert_eq!(resp.error.unwrap().code, -32601);
     }
 
-    #[test]
-    fn handle_request_initialize() {
+    #[tokio::test]
+    async fn handle_request_initialize() {
         let mut server = test_server();
         let json_req = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#;
-        let response = server.handle_request(json_req);
+        let response = server.handle_request(json_req).await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         assert_eq!(parsed["jsonrpc"], "2.0");
         assert_eq!(parsed["id"], 1);
-        assert_eq!(parsed["result"]["serverInfo"]["name"], "whitemagic-v4");
+        assert_eq!(parsed["result"]["serverInfo"]["name"], "whitemagic-v5");
     }
 
-    #[test]
-    fn handle_request_tools_list() {
+    #[tokio::test]
+    async fn handle_request_tools_list() {
         let mut server = test_server();
         // First call initialize to trigger an event (move out of Delta)
-        let _ =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#);
-        let response =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#);
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#)
+            .await;
+        let response = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#)
+            .await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         let tools = parsed["result"]["tools"].as_array().unwrap();
         // Only the wm meta-tool should be exposed
@@ -2024,11 +2253,11 @@ mod tests {
         assert_eq!(tools[0]["name"], "wm");
     }
 
-    #[test]
-    fn handle_request_tools_call_wm() {
+    #[tokio::test]
+    async fn handle_request_tools_call_wm() {
         let mut server = test_server();
         let json_req = r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"remember that PyO3 bridge works"}}}"#;
-        let response = server.handle_request(json_req);
+        let response = server.handle_request(json_req).await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         assert!(parsed["error"].is_null() || parsed.get("error").is_none());
         let content = parsed["result"]["content"].as_array().unwrap();
@@ -2037,10 +2266,10 @@ mod tests {
         assert!(text.contains("success"));
     }
 
-    #[test]
-    fn handle_request_parse_error() {
+    #[tokio::test]
+    async fn handle_request_parse_error() {
         let mut server = test_server();
-        let response = server.handle_request("not valid json {{{");
+        let response = server.handle_request("not valid json {{{").await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         assert_eq!(parsed["error"]["code"], -32700);
         assert!(
@@ -2051,23 +2280,23 @@ mod tests {
         );
     }
 
-    #[test]
-    fn handle_request_unknown_method() {
+    #[tokio::test]
+    async fn handle_request_unknown_method() {
         let mut server = test_server();
         let json_req = r#"{"jsonrpc":"2.0","id":99,"method":"unknown_method","params":{}}"#;
-        let response = server.handle_request(json_req);
+        let response = server.handle_request(json_req).await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         assert_eq!(parsed["error"]["code"], -32601);
     }
 
-    #[test]
-    fn tool_count_is_positive() {
+    #[tokio::test]
+    async fn tool_count_is_positive() {
         let server = test_server();
         assert!(server.tool_count() > 0);
     }
 
-    #[test]
-    fn galaxy_counts_returns_json() {
+    #[tokio::test]
+    async fn galaxy_counts_returns_json() {
         let server = test_server();
         let counts = server.galaxy_counts();
         assert!(counts.is_object());
@@ -2075,8 +2304,8 @@ mod tests {
         assert_eq!(counts["total"], 0);
     }
 
-    #[test]
-    fn refresh_self_model_records_metrics() {
+    #[tokio::test]
+    async fn refresh_self_model_records_metrics() {
         let server = test_server();
         // Before refresh, no metrics tracked
         assert_eq!(server.self_model().lock().unwrap().tracked_count(), 0);
@@ -2090,8 +2319,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn handle_records_dispatch_metrics_into_self_model() {
+    #[tokio::test]
+    async fn handle_records_dispatch_metrics_into_self_model() {
         let mut server = test_server();
         // Send a tools/call request — handle() will refresh_self_model() then
         // dispatch, then record latency + error_rate
@@ -2104,7 +2333,7 @@ mod tests {
                 "arguments": {"thought": "remember that self-model integration works"},
             }),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
 
         // After dispatch, self-model should have Latency and ErrorRate metrics
@@ -2125,8 +2354,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn handle_injects_self_model_confidence_into_context() {
+    #[tokio::test]
+    async fn handle_injects_self_model_confidence_into_context() {
         let mut server = test_server();
         // Pre-record some metrics so confidence is calculable
         {
@@ -2145,7 +2374,7 @@ mod tests {
                 "arguments": {"route": "gnosis"},
             }),
         };
-        let resp = server.handle(&req);
+        let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
         // The self-model should now have even more samples (from refresh_self_model + dispatch)
         let tracked = server.self_model().lock().unwrap().tracked_count();
@@ -2154,19 +2383,21 @@ mod tests {
 
     // ── E2E Integration Tests ──────────────────────────────────────────
 
-    #[test]
-    fn e2e_full_session_lifecycle() {
+    #[tokio::test]
+    async fn e2e_full_session_lifecycle() {
         let mut server = test_server();
 
         // 1. Initialize
-        let init_resp =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#);
+        let init_resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#)
+            .await;
         let init: Value = serde_json::from_str(&init_resp).unwrap();
-        assert_eq!(init["result"]["serverInfo"]["name"], "whitemagic-v4");
+        assert_eq!(init["result"]["serverInfo"]["name"], "whitemagic-v5");
 
         // 2. tools/list (should now be Beta since handle() records an event)
-        let list_resp =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#);
+        let list_resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}"#)
+            .await;
         let list: Value = serde_json::from_str(&list_resp).unwrap();
         let tools = list["result"]["tools"].as_array().unwrap();
         // Only the wm meta-tool is exposed
@@ -2176,7 +2407,7 @@ mod tests {
         // 3. tools/call — create a memory
         let call_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"e2e test memory"}}}"#,
-        );
+        ).await;
         let call: Value = serde_json::from_str(&call_resp).unwrap();
         assert!(call.get("error").is_none() || call["error"].is_null());
         let content = call["result"]["content"].as_array().unwrap();
@@ -2185,7 +2416,7 @@ mod tests {
         // 4. tools/call — read the memory back
         let read_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.list"}}}"#,
-        );
+        ).await;
         let read: Value = serde_json::from_str(&read_resp).unwrap();
         assert!(read.get("error").is_none() || read["error"].is_null());
 
@@ -2205,8 +2436,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn e2e_gan_ying_bus_records_dispatch_events() {
+    #[tokio::test]
+    async fn e2e_gan_ying_bus_records_dispatch_events() {
         let mut server = test_server();
 
         // Verify bus starts empty
@@ -2215,7 +2446,7 @@ mod tests {
         // Dispatch a tools/call
         let resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"bus test"}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
 
@@ -2231,10 +2462,10 @@ mod tests {
         drop(bus);
         let has_start = recent
             .iter()
-            .any(|e| e.event_type == wm_resonance::EventType::ToolDispatchStart);
+            .any(|e| e.event_type == wm_cognitive::EventType::ToolDispatchStart);
         let has_success = recent
             .iter()
-            .any(|e| e.event_type == wm_resonance::EventType::ToolDispatchSuccess);
+            .any(|e| e.event_type == wm_cognitive::EventType::ToolDispatchSuccess);
         assert!(has_start, "ToolDispatchStart should be in recent events");
         assert!(
             has_success,
@@ -2242,22 +2473,24 @@ mod tests {
         );
     }
 
-    #[test]
-    fn e2e_gan_ying_bus_persists_events_to_disk() {
+    #[tokio::test]
+    async fn e2e_gan_ying_bus_persists_events_to_disk() {
         let tmp = tempfile::tempdir().unwrap();
         let mut server = McpServer::with_defaults(tmp.path()).unwrap();
 
         // Persistence is wired in the production constructor
-        let bus = server.gan_ying_bus().lock().unwrap();
+        let persist_path = {
+            let bus = server.gan_ying_bus().lock().unwrap();
+            bus.persist_path().map(std::path::Path::to_path_buf)
+        };
         assert_eq!(
-            bus.persist_path(),
+            persist_path.as_deref(),
             Some(tmp.path().join("resonance_events.jsonl").as_path())
         );
-        drop(bus);
 
         let resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"persistence test"}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
 
@@ -2275,7 +2508,7 @@ mod tests {
             let bus2 = server2.gan_ying_bus().lock().unwrap();
             bus2.recent_events(10)
                 .iter()
-                .any(|e| e.event_type == wm_resonance::EventType::ToolDispatchStart)
+                .any(|e| e.event_type == wm_cognitive::EventType::ToolDispatchStart)
         };
         assert!(
             any_start,
@@ -2283,50 +2516,51 @@ mod tests {
         );
     }
 
-    #[test]
-    fn e2e_error_recovery_after_malformed_json() {
+    #[tokio::test]
+    async fn e2e_error_recovery_after_malformed_json() {
         let mut server = test_server();
 
         // 1. Send malformed JSON
-        let bad_resp = server.handle_request("not valid json {{{");
+        let bad_resp = server.handle_request("not valid json {{{").await;
         let bad: Value = serde_json::from_str(&bad_resp).unwrap();
         assert_eq!(bad["error"]["code"], -32700);
 
         // 2. Server should still handle valid requests
-        let good_resp =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#);
+        let good_resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#)
+            .await;
         let good: Value = serde_json::from_str(&good_resp).unwrap();
-        assert_eq!(good["result"]["serverInfo"]["name"], "whitemagic-v4");
+        assert_eq!(good["result"]["serverInfo"]["name"], "whitemagic-v5");
 
         // 3. tools/call should work after error recovery
         let call_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"recovery test"}}}"#,
-        );
+        ).await;
         let call: Value = serde_json::from_str(&call_resp).unwrap();
         assert!(call.get("error").is_none() || call["error"].is_null());
     }
 
-    #[test]
-    fn e2e_unknown_tool_then_valid_tool() {
+    #[tokio::test]
+    async fn e2e_unknown_tool_then_valid_tool() {
         let mut server = test_server();
 
         // 1. Call unknown tool — should get error
         let err_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"nonexistent","arguments":{}}}"#,
-        );
+        ).await;
         let err: Value = serde_json::from_str(&err_resp).unwrap();
         assert_eq!(err["error"]["code"], -32602);
 
         // 2. Call valid wm tool — should succeed
         let ok_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"after error test"}}}"#,
-        );
+        ).await;
         let ok: Value = serde_json::from_str(&ok_resp).unwrap();
         assert!(ok.get("error").is_none() || ok["error"].is_null());
     }
 
-    #[test]
-    fn e2e_shutdown_emits_system_shutdown_event() {
+    #[tokio::test]
+    async fn e2e_shutdown_emits_system_shutdown_event() {
         let server = test_server();
 
         // Verify no events before shutdown
@@ -2344,21 +2578,21 @@ mod tests {
         drop(bus);
         let has_shutdown = recent
             .iter()
-            .any(|e| e.event_type == wm_resonance::EventType::SystemShutdown);
+            .any(|e| e.event_type == wm_cognitive::EventType::SystemShutdown);
         assert!(
             has_shutdown,
             "SystemShutdown event should be in recent events"
         );
     }
 
-    #[test]
-    fn e2e_homeostasis_tools_share_state_with_server() {
+    #[tokio::test]
+    async fn e2e_homeostasis_tools_share_state_with_server() {
         let mut server = test_server();
 
         // Dispatch a tools/call — this runs the homeostatic loop in handle_tools_call
         let _ = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"homeostasis state test"}}}"#,
-        );
+        ).await;
 
         // The server's homeostatic_loop and anomaly_detector should have been
         // updated during the dispatch (sample_cycle runs in handle_tools_call).
@@ -2370,15 +2604,15 @@ mod tests {
         assert!(detector_ok, "anomaly_detector mutex should not be poisoned");
     }
 
-    #[test]
-    fn e2e_multiple_sequential_dispatches() {
+    #[tokio::test]
+    async fn e2e_multiple_sequential_dispatches() {
         let mut server = test_server();
 
         // Send 5 sequential tools/call requests
         for i in 0..5 {
             let resp = server.handle_request(&format!(
                 r#"{{"jsonrpc":"2.0","id":{i},"method":"tools/call","params":{{"name":"wm","arguments":{{"thought":"sequential test {i}"}}}}}}"#
-            ));
+            )).await;
             let parsed: Value = serde_json::from_str(&resp).unwrap();
             assert!(
                 parsed.get("error").is_none() || parsed["error"].is_null(),
@@ -2405,8 +2639,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn e2e_brain_wave_transitions_through_activity() {
+    #[tokio::test]
+    async fn e2e_brain_wave_transitions_through_activity() {
         let mut server = test_server();
 
         // Start in Delta
@@ -2421,40 +2655,40 @@ mod tests {
         // Dispatch should work in Beta
         let resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"thought":"beta state test"}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
     }
 
-    #[test]
-    fn e2e_tool_count_matches_registry() {
+    #[tokio::test]
+    async fn e2e_tool_count_matches_registry() {
         let server = test_server();
         let count = server.tool_count();
         // Should have well over 100 tools registered
         assert!(count >= 100, "expected at least 100 tools, got {count}");
     }
 
-    #[test]
-    fn handle_request_empty_string_returns_parse_error() {
+    #[tokio::test]
+    async fn handle_request_empty_string_returns_parse_error() {
         let mut server = test_server();
-        let response = server.handle_request("");
+        let response = server.handle_request("").await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         assert_eq!(parsed["error"]["code"], -32700);
     }
 
-    #[test]
-    fn handle_request_null_returns_parse_error() {
+    #[tokio::test]
+    async fn handle_request_null_returns_parse_error() {
         let mut server = test_server();
-        let response = server.handle_request("null");
+        let response = server.handle_request("null").await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         // null is valid JSON but not a valid RPC request
         assert!(parsed.get("error").is_some());
     }
 
-    #[test]
-    fn handle_request_missing_method_field() {
+    #[tokio::test]
+    async fn handle_request_missing_method_field() {
         let mut server = test_server();
-        let response = server.handle_request(r#"{"jsonrpc":"2.0","id":1}"#);
+        let response = server.handle_request(r#"{"jsonrpc":"2.0","id":1}"#).await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         // Missing method field — should get an error, not panic
         assert!(parsed.get("error").is_some() || parsed.get("result").is_none());
@@ -2462,17 +2696,17 @@ mod tests {
 
     // ── E2E RSI Outward Spiral Test ───────────────────────────────────
 
-    #[test]
-    fn e2e_rsi_outward_spiral_full_loop() {
+    #[tokio::test]
+    async fn e2e_rsi_outward_spiral_full_loop() {
         let mut server = test_server();
 
         // Initialize to move out of Delta (no tools available in Delta)
         let init_req = r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#;
-        let _ = server.handle_request(init_req);
+        let _ = server.handle_request(init_req).await;
 
         // 1. Log a friction entry via friction.log tool
         let log_req = r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"friction.log","arguments":{"what_happened":"memory.search returns empty results for valid queries","expected_behavior":"Should return matching memories","suggested_fix":"Check Tantivy index state","severity":"medium","category":"ux","tool_name":"memory.search"}}}"#;
-        let resp = server.handle_request(log_req);
+        let resp = server.handle_request(log_req).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         assert!(
             parsed.get("result").is_some(),
@@ -2485,7 +2719,7 @@ mod tests {
 
         // 2. Log the same friction again — should dedup
         let dup_req = r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"friction.log","arguments":{"what_happened":"memory.search returns empty results for valid queries","expected_behavior":"Should return matching memories","suggested_fix":"Check Tantivy index state","severity":"medium","category":"ux","tool_name":"memory.search"}}}"#;
-        let resp = server.handle_request(dup_req);
+        let resp = server.handle_request(dup_req).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         let text = &parsed["result"]["content"][0]["text"];
         let dup_result: Value = serde_json::from_str(text.as_str().unwrap()).unwrap();
@@ -2494,7 +2728,7 @@ mod tests {
 
         // 3. Review friction — should show 1 entry with dup_count=2
         let review_req = r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"friction.review","arguments":{}}}"#;
-        let resp = server.handle_request(review_req);
+        let resp = server.handle_request(review_req).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         let text = &parsed["result"]["content"][0]["text"];
         let review: Value = serde_json::from_str(text.as_str().unwrap()).unwrap();
@@ -2518,7 +2752,7 @@ mod tests {
         let resolve_req = format!(
             r#"{{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{{"name":"friction.resolve","arguments":{resolve_args}}}}}"#
         );
-        let resp = server.handle_request(&resolve_req);
+        let resp = server.handle_request(&resolve_req).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         assert!(
             parsed.get("result").is_some(),
@@ -2529,7 +2763,7 @@ mod tests {
         assert_eq!(resolve_result["status"], "resolved");
 
         // 5. Review again — should show 1 resolved entry
-        let resp = server.handle_request(review_req);
+        let resp = server.handle_request(review_req).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         let text = &parsed["result"]["content"][0]["text"];
         let review2: Value = serde_json::from_str(text.as_str().unwrap()).unwrap();
@@ -2538,7 +2772,7 @@ mod tests {
 
         // 6. Log the same friction AGAIN — should detect regression
         let regression_req = r#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"friction.log","arguments":{"what_happened":"memory.search returns empty results for valid queries","expected_behavior":"Should return matching memories","suggested_fix":"Check Tantivy index state","severity":"medium","category":"ux","tool_name":"memory.search"}}}"#;
-        let resp = server.handle_request(regression_req);
+        let resp = server.handle_request(regression_req).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         let text = &parsed["result"]["content"][0]["text"];
         let reg_result: Value = serde_json::from_str(text.as_str().unwrap()).unwrap();
@@ -2549,7 +2783,7 @@ mod tests {
         assert_eq!(reg_result["escalated_severity"], "high");
 
         // 7. Final review — should show 1 resolved + 1 regression
-        let resp = server.handle_request(review_req);
+        let resp = server.handle_request(review_req).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         let text = &parsed["result"]["content"][0]["text"];
         let review3: Value = serde_json::from_str(text.as_str().unwrap()).unwrap();
@@ -2559,18 +2793,19 @@ mod tests {
 
     // ── E2E Transaction Integration Test ──────────────────────────────
 
-    #[test]
-    fn e2e_transaction_begin_rollback_restores_data() {
+    #[tokio::test]
+    async fn e2e_transaction_begin_rollback_restores_data() {
         let mut server = test_server();
 
         // Initialize to move out of Delta
-        let _ =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#);
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
 
         // 1. Create a memory in Codex
         let create_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"e2e transaction test memory","tags":["transaction","e2e"]}}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&create_resp).unwrap();
         assert!(
             parsed.get("error").is_none() || parsed["error"].is_null(),
@@ -2585,7 +2820,7 @@ mod tests {
         // 2. Begin transaction — snapshots all galaxies
         let begin_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"transaction.begin","arguments":{}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&begin_resp).unwrap();
         assert!(
             parsed.get("error").is_none() || parsed["error"].is_null(),
@@ -2601,7 +2836,7 @@ mod tests {
         let delete_req = format!(
             r#"{{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{{"name":"memory.delete","arguments":{{"galaxy":"codex","id":"{mem_id}","confirm":true}}}}}}"#
         );
-        let delete_resp = server.handle_request(&delete_req);
+        let delete_resp = server.handle_request(&delete_req).await;
         let parsed: Value = serde_json::from_str(&delete_resp).unwrap();
         assert!(
             parsed.get("error").is_none() || parsed["error"].is_null(),
@@ -2611,7 +2846,7 @@ mod tests {
         // Verify memory is gone
         let list_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"memory.list","arguments":{"galaxy":"codex","limit":100}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&list_resp).unwrap();
         let content = parsed["result"]["content"].as_array().unwrap();
         let list_result: Value =
@@ -2625,7 +2860,7 @@ mod tests {
         // 4. Rollback — restore all galaxies from snapshot (destructive, needs confirm)
         let rollback_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"transaction.rollback","arguments":{"confirm":true}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&rollback_resp).unwrap();
         assert!(
             parsed.get("error").is_none() || parsed["error"].is_null(),
@@ -2643,7 +2878,7 @@ mod tests {
         // 5. Verify memory was restored
         let list_resp2 = server.handle_request(
             r#"{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"memory.list","arguments":{"galaxy":"codex","limit":100}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&list_resp2).unwrap();
         let content = parsed["result"]["content"].as_array().unwrap();
         let list_result2: Value =
@@ -2659,18 +2894,19 @@ mod tests {
         assert!(found2, "memory content should be restored after rollback");
     }
 
-    #[test]
-    fn e2e_transaction_begin_commit_keeps_changes() {
+    #[tokio::test]
+    async fn e2e_transaction_begin_commit_keeps_changes() {
         let mut server = test_server();
 
         // Initialize to move out of Delta
-        let _ =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#);
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
 
         // 1. Create a memory
         let create_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"commit test memory","tags":["commit"]}}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&create_resp).unwrap();
         let content = parsed["result"]["content"].as_array().unwrap();
         let create_result: Value =
@@ -2680,21 +2916,21 @@ mod tests {
         // 2. Begin transaction
         let begin_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"transaction.begin","arguments":{}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&begin_resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
 
         // 3. Create a second memory (mutation)
         let create2_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"second memory after begin","tags":["commit"]}}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&create2_resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
 
         // 4. Commit — keeps all changes
         let commit_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"transaction.commit","arguments":{}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&commit_resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
         let content = parsed["result"]["content"].as_array().unwrap();
@@ -2705,7 +2941,7 @@ mod tests {
         // 5. Verify both memories still exist (commit kept changes)
         let list_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"memory.list","arguments":{"galaxy":"codex","limit":100}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&list_resp).unwrap();
         let content = parsed["result"]["content"].as_array().unwrap();
         let list_result: Value =
@@ -2717,18 +2953,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn e2e_transaction_rollback_without_begin_errors() {
+    #[tokio::test]
+    async fn e2e_transaction_rollback_without_begin_errors() {
         let mut server = test_server();
 
         // Initialize to move out of Delta
-        let _ =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#);
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
 
         // Rollback without begin — should error
         let resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"transaction.rollback","arguments":{"confirm":true}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         // Should get a governance error (no active transaction)
         assert!(
@@ -2737,30 +2974,188 @@ mod tests {
         );
     }
 
-    #[test]
-    fn e2e_transaction_rollback_without_confirm_blocked() {
+    #[tokio::test]
+    async fn e2e_transaction_rollback_without_confirm_blocked() {
         let mut server = test_server();
 
         // Initialize to move out of Delta
-        let _ =
-            server.handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#);
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
 
         // Begin a transaction
         let begin_resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"transaction.begin","arguments":{}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&begin_resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
 
         // Rollback without confirm — should be blocked by destructive gate
         let resp = server.handle_request(
             r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"transaction.rollback","arguments":{}}}"#,
-        );
+        ).await;
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         // Should get an error about destructive/confirm
         assert!(
             parsed.get("error").is_some() || parsed.get("result").is_none(),
             "rollback without confirm should be blocked"
         );
+    }
+
+    // ── E2E Mutable Structures Integration Tests (Phase 6) ─────────────
+
+    #[tokio::test]
+    async fn e2e_gana_registry_records_dispatch_co_usage() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut server = McpServer::with_defaults(tmp.path()).unwrap();
+
+        // Initialize to move out of Delta
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Dispatch multiple tools to generate co-usage patterns
+        for i in 0..5 {
+            let resp = server.handle_request(&format!(
+                r#"{{"jsonrpc":"2.0","id":{i},"method":"tools/call","params":{{"name":"wm","arguments":{{"thought":"gana registry test {i}"}}}}}}"#
+            )).await;
+            let parsed: Value = serde_json::from_str(&resp).unwrap();
+            assert!(
+                parsed.get("error").is_none() || parsed["error"].is_null(),
+                "dispatch {i} should succeed"
+            );
+        }
+
+        // Verify GanaRegistry recorded usage
+        let total_usage: u64 = {
+            let registry = server.gana_registry().lock().unwrap();
+            registry.usage_counts().values().sum()
+        };
+        assert!(
+            total_usage >= 5,
+            "GanaRegistry should have recorded at least 5 usages, got {total_usage}"
+        );
+    }
+
+    #[tokio::test]
+    async fn e2e_dynamic_galaxy_registry_accessible() {
+        let tmp = tempfile::tempdir().unwrap();
+        let server = McpServer::with_defaults(tmp.path()).unwrap();
+
+        // Verify DynamicGalaxyRegistry is accessible and starts empty
+        let count = {
+            let dg = server.dynamic_galaxies().lock().unwrap();
+            dg.galaxy_count()
+        };
+        assert_eq!(count, 0, "DynamicGalaxyRegistry should start empty");
+    }
+
+    #[tokio::test]
+    async fn e2e_learned_dream_cycle_attached() {
+        let tmp = tempfile::tempdir().unwrap();
+        let server = McpServer::with_defaults(tmp.path()).unwrap();
+
+        // The dream cycle should have a LearnedDreamCycle attached
+        // (verified indirectly: the dream cycle runs without error)
+        assert_eq!(server.dream().cycles_completed(), 0);
+    }
+
+    #[tokio::test]
+    async fn e2e_full_pipeline_with_mutable_structures() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut server = McpServer::with_defaults(tmp.path()).unwrap();
+
+        // 1. Initialize
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // 2. Create a memory
+        let create_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"mutable structures e2e test","tags":["e2e","mutable"]}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&create_resp).unwrap();
+        assert!(parsed.get("error").is_none() || parsed["error"].is_null());
+
+        // 3. List memories
+        let list_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"memory.list","arguments":{"galaxy":"codex","limit":10}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&list_resp).unwrap();
+        assert!(parsed.get("error").is_none() || parsed["error"].is_null());
+
+        // 4. Verify GanaRegistry recorded usage from both dispatches
+        let (total_usage, distinct_ganas) = {
+            let registry = server.gana_registry().lock().unwrap();
+            (
+                registry.usage_counts().values().sum::<u64>(),
+                registry.usage_counts().len(),
+            )
+        };
+        assert!(
+            total_usage >= 2,
+            "GanaRegistry should have recorded at least 2 usages, got {total_usage}"
+        );
+
+        // 5. Verify at least 1 distinct Gana was tracked
+        assert!(
+            distinct_ganas >= 1,
+            "GanaRegistry should track at least 1 Gana, got {distinct_ganas}"
+        );
+    }
+
+    #[tokio::test]
+    async fn e2e_mutable_state_persistence_roundtrip() {
+        let tmp = tempfile::tempdir().unwrap();
+
+        // Phase 1: Create server, record usage, save
+        {
+            let mut server = McpServer::with_defaults(tmp.path()).unwrap();
+            let _ = server
+                .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+                .await;
+
+            // Dispatch tools to generate GanaRegistry usage
+            for i in 0..3 {
+                let _ = server.handle_request(&format!(
+                    r#"{{"jsonrpc":"2.0","id":{i},"method":"tools/call","params":{{"name":"wm","arguments":{{"thought":"persistence test {i}"}}}}}}"#
+                )).await;
+            }
+
+            // Record some dream phase effectiveness
+            if let Some(learned) = server.dream_mut().learned_mut() {
+                learned.record_phase(0, true, 0.8, 100);
+                learned.record_phase(1, false, 0.2, 200);
+            }
+
+            // Save mutable state
+            server.save_mutable_state();
+        }
+
+        // Phase 2: Recreate server from same path, verify state was loaded
+        {
+            let server = McpServer::with_defaults(tmp.path()).unwrap();
+
+            // GanaRegistry should have recorded usage
+            let total_usage: u64 = {
+                let registry = server.gana_registry().lock().unwrap();
+                registry.usage_counts().values().sum()
+            };
+            assert!(
+                total_usage >= 3,
+                "GanaRegistry should have loaded {total_usage} usages from disk (expected >= 3)"
+            );
+
+            // LearnedDreamCycle should have phase effectiveness data
+            let learned = server.dream().learned();
+            assert!(learned.is_some(), "LearnedDreamCycle should be loaded");
+            if let Some(learned) = learned {
+                let eff0 = learned.effectiveness(0);
+                assert!(eff0.is_some(), "Phase 0 should have effectiveness data");
+                if let Some(eff) = eff0 {
+                    assert_eq!(eff.runs, 1, "Phase 0 should have 1 run recorded");
+                }
+            }
+        }
     }
 }

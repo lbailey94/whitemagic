@@ -2,7 +2,7 @@
 
 **Version**: 4.0.0
 **Date**: 2026-08-07 (Safety features: destructive tool confirmation + transaction snapshot/rollback + compartment-based access control)
-**Status**: v4.0.0 — All phases complete (0–8, A–F, R1–R7, L1–L5, Pre-N A/B/C, N1–N21) + integration wiring + E2E tests + graceful shutdown + security hardening (D1/D4/D5/D6) + RSI (Phases 1–3) + Embodiment I/O + Safety features (destructive confirmation, transaction snapshot/rollback, compartment access control). N16–N21 subsystems wired into MCP server and dispatch pipeline with cross-subsystem event flows. 2,818 tests, 176 tools (runtime-authoritative via `wm doctor`), ~112,300 lines of Rust across 19 crates. 0 clippy warnings, fmt clean. Under version control (git) as of 2026-08-04.
+**Status**: v5.2.1 — All 7 phases complete (0–8, A–F, R1–R7, L1–L5, Pre-N A/B/C, N1–N21) + integration wiring + E2E tests + graceful shutdown + security hardening + RSI + Embodiment I/O + Safety features + NLU router + learned inference router + imagination engine + self-play loop + mutable structures + persistence. 3,231 tests, 184 tools (runtime-authoritative via `wm doctor`), ~130,461 lines of Rust across 14 crates. clippy warnings: 0 (after 2 early-drop lints fixed), fmt clean. Under version control (git).
 
 ---
 

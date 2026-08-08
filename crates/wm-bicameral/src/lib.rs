@@ -1,4 +1,4 @@
-//! wm-bicameral — Bicameral reasoning for WhiteMagic v4 (Phase R5).
+//! wm-bicameral — Bicameral reasoning for WhiteMagic v5 (Phase R5).
 //!
 //! Dual-hemisphere reasoning system:
 //! - **Left hemisphere**: deterministic Rust logic (evidence-based analysis)
@@ -24,6 +24,7 @@ pub mod gated;
 pub mod grammar_schemas;
 pub mod hemisphere;
 pub mod inference_tuner;
+pub mod learned_router;
 pub mod llm;
 pub mod local_llm;
 pub mod meta_harness;
@@ -31,6 +32,7 @@ pub mod resource_governor;
 pub mod router;
 pub mod routing_metrics;
 pub mod scenario;
+pub mod self_play;
 pub mod simulation_bridge;
 pub mod speculative;
 pub mod tri_model;
@@ -59,6 +61,10 @@ pub use inference_tuner::{
     TunedConfig, TuningDecision, apply_idle_timeout, apply_to_llama_config, detect_hardware,
     profile_to_governor_mode, profile_to_hardware_metrics, recommend_config,
 };
+pub use learned_router::{
+    ClassificationSource, EdgeRuleCandidate, EdgeRuleGenerator, LearnedAssessment, LearnedRouter,
+    RoutingHistory, RoutingRecord,
+};
 pub use llm::{LlmConfig, LlmRightHemisphere};
 pub use local_llm::{LlamaConfig, LlamaLeftHemisphere};
 pub use meta_harness::{
@@ -78,6 +84,11 @@ pub use routing_metrics::{
     DriftRecommendation, DriftReport, DriftStatus, RoutingMetrics, TierStats,
 };
 pub use scenario::{ReflectionResult, Scenario, ScenarioConfig, ScenarioEngine};
+pub use self_play::{
+    AdapterUpdate, CycleResult, ExactMatchVerifier, LoRAAdapterManager, SelfPlayConfig,
+    SelfPlayLoop, SelfPlayStats, SelfPlayTask, SelfVerifier, Solution, TaskProposer, TaskSolver,
+    TaskType, ToolResultVerifier, VerificationResult, Verifier,
+};
 pub use simulation_bridge::{
     EnrichedScenario, ForecastPrior, ProbabilisticRollout, SimulationBridge, SimulationBridgeConfig,
 };
@@ -89,9 +100,10 @@ pub use tri_model::{
     TriModelConfig, TriModelHandler, TriModelManager,
 };
 pub use world_model::{
-    DualPrediction, PredictedState, PredictionSource, StubWorldModelHandler, WorldModel,
+    CacheStats, DualPrediction, PredictedState, PredictionCache, PredictionSource,
+    StubWorldModelHandler, WorldModel,
 };
-pub use world_model_handlers::{LlmTierHandler, world_model_from_env};
+pub use world_model_handlers::{LlmTierHandler, self_play_handlers_from_env, world_model_from_env};
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

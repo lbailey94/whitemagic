@@ -1,4 +1,4 @@
-//! WhiteMagic v4 Tools — 13 tools + fractal meta-tool
+//! WhiteMagic v5 Tools — 184 tools + fractal meta-tool
 //!
 //! Tools: memory.create, memory.read, memory.list, memory.delete,
 //! memory.query, memory.search, memory.associate, memory.associations,
@@ -7,12 +7,16 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::significant_drop_tightening)]
 
+pub mod embedding_router;
 pub mod expansion;
 pub mod nlu;
+
+use async_trait::async_trait;
 
 use std::sync::Arc;
 
 use serde_json::{Value, json};
+use wm_cognitive::GanYingBus;
 use wm_core::{Capability, Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
 use wm_dispatch::{ToolRegistry, ToolRegistryBuilder};
 use wm_governance::{DharmaGate, KarmaLedger, ResourceRules};
@@ -20,7 +24,6 @@ use wm_memory::{
     Association, AssociationStore, ConversationalSearch, Memory, MemoryQuery, MemoryStore,
     SearchEngine, VectorStore,
 };
-use wm_resonance::GanYingBus;
 use wm_substrate::SubstrateMonitor;
 use wm_substrate::anomaly::AnomalyDetector;
 use wm_substrate::homeostatic::HomeostaticLoop;
@@ -54,6 +57,8 @@ impl MemoryCreateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryCreateTool {
     fn name(&self) -> &str {
         "memory.create"
@@ -64,7 +69,7 @@ impl Tool for MemoryCreateTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let content = args
             .get("content")
             .and_then(|v| v.as_str())
@@ -139,6 +144,8 @@ impl MemoryReadTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryReadTool {
     fn name(&self) -> &str {
         "memory.read"
@@ -149,7 +156,7 @@ impl Tool for MemoryReadTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let id_str = args
             .get("id")
             .and_then(|v| v.as_str())
@@ -202,6 +209,8 @@ impl MemoryListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryListTool {
     fn name(&self) -> &str {
         "memory.list"
@@ -212,7 +221,7 @@ impl Tool for MemoryListTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -282,6 +291,8 @@ impl GnosisTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GnosisTool {
     fn name(&self) -> &str {
         "gnosis"
@@ -292,7 +303,7 @@ impl Tool for GnosisTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut galaxy_stats = serde_json::Map::new();
         for galaxy in Galaxy::all() {
             let count = self.store.count(galaxy).unwrap_or(0);
@@ -338,6 +349,8 @@ impl ToolsListTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ToolsListTool {
     fn name(&self) -> &str {
         "tools.list"
@@ -348,7 +361,7 @@ impl Tool for ToolsListTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let available = self.registry.available_in(ctx.brain_wave);
         let tools: Vec<Value> = available
             .iter()
@@ -401,6 +414,8 @@ impl MemoryDeleteTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryDeleteTool {
     fn name(&self) -> &str {
         "memory.delete"
@@ -411,7 +426,7 @@ impl Tool for MemoryDeleteTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let id_str = args
             .get("id")
             .and_then(|v| v.as_str())
@@ -470,6 +485,8 @@ impl MemoryQueryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryQueryTool {
     fn name(&self) -> &str {
         "memory.query"
@@ -480,7 +497,7 @@ impl Tool for MemoryQueryTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -561,6 +578,8 @@ impl MemorySearchTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemorySearchTool {
     fn name(&self) -> &str {
         "memory.search"
@@ -571,7 +590,7 @@ impl Tool for MemorySearchTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args
             .get("query")
             .and_then(|v| v.as_str())
@@ -635,6 +654,8 @@ impl MemoryChatTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryChatTool {
     fn name(&self) -> &str {
         "memory.chat"
@@ -645,7 +666,7 @@ impl Tool for MemoryChatTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args
             .get("query")
             .and_then(|v| v.as_str())
@@ -741,6 +762,8 @@ impl MemoryVectorSearchTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryVectorSearchTool {
     fn name(&self) -> &str {
         "memory.vector.search"
@@ -751,7 +774,7 @@ impl Tool for MemoryVectorSearchTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         self.ensure_loaded()?;
 
         let limit = args
@@ -850,6 +873,8 @@ impl MemoryAssociateTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryAssociateTool {
     fn name(&self) -> &str {
         "memory.associate"
@@ -860,7 +885,7 @@ impl Tool for MemoryAssociateTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let source_str = args.get("source").and_then(|v| v.as_str()).ok_or_else(|| {
             wm_core::CoreError::InvalidArgs("source (UUID string) required".into())
         })?;
@@ -916,6 +941,8 @@ impl MemoryAssociationsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for MemoryAssociationsTool {
     fn name(&self) -> &str {
         "memory.associations"
@@ -926,7 +953,7 @@ impl Tool for MemoryAssociationsTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let id_str = args
             .get("id")
             .and_then(|v| v.as_str())
@@ -1002,6 +1029,8 @@ impl KarmaReportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for KarmaReportTool {
     fn name(&self) -> &str {
         "karma.report"
@@ -1012,7 +1041,7 @@ impl Tool for KarmaReportTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let recent_count = args
             .get("limit")
             .and_then(serde_json::Value::as_u64)
@@ -1079,6 +1108,8 @@ impl DharmaStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for DharmaStatusTool {
     fn name(&self) -> &str {
         "dharma.status"
@@ -1089,7 +1120,7 @@ impl Tool for DharmaStatusTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let homeostasis = self.gate.homeostasis();
         let health = homeostasis.health_score();
 
@@ -1132,6 +1163,8 @@ impl HarmonyVectorTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for HarmonyVectorTool {
     fn name(&self) -> &str {
         "harmony.vector"
@@ -1142,7 +1175,7 @@ impl Tool for HarmonyVectorTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let hv = self.monitor.sample();
         Ok(json!({
             "status": "success",
@@ -1173,6 +1206,8 @@ impl HarmonyHistoryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for HarmonyHistoryTool {
     fn name(&self) -> &str {
         "harmony.history"
@@ -1183,7 +1218,7 @@ impl Tool for HarmonyHistoryTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(20) as usize;
         let samples: Vec<Value> = self
             .monitor
@@ -1233,6 +1268,8 @@ impl GnosisStatusTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GnosisStatusTool {
     fn name(&self) -> &str {
         "gnosis.status"
@@ -1243,7 +1280,7 @@ impl Tool for GnosisStatusTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let homeostasis = self.dharma_gate.homeostasis();
         let health = homeostasis.health_score();
         let budget_usage = self.resource_rules.budget_usage();
@@ -1301,6 +1338,8 @@ impl GnosisHistoryTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GnosisHistoryTool {
     fn name(&self) -> &str {
         "gnosis.history"
@@ -1311,7 +1350,7 @@ impl Tool for GnosisHistoryTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(20) as usize;
         let history = self.substrate.history(limit);
         let samples: Vec<Value> = history
@@ -1389,6 +1428,8 @@ impl GnosisExplainTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for GnosisExplainTool {
     fn name(&self) -> &str {
         "gnosis.explain"
@@ -1399,7 +1440,7 @@ impl Tool for GnosisExplainTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let tool_name = args
             .get("tool_name")
             .and_then(Value::as_str)
@@ -1495,6 +1536,11 @@ pub struct WmMetaTool {
     registry: Arc<ToolRegistry>,
     stats: ToolStats,
     effects: EffectRow,
+    /// Optional embedding-based NLU router. When present, used as primary router
+    /// with TF-IDF as fallback (shadow mode). When `None`, TF-IDF is used directly.
+    embedding_router: Option<Arc<embedding_router::EmbeddingRouter>>,
+    /// Shadow mode disagreement stats (shared for observability).
+    shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
 }
 
 impl WmMetaTool {
@@ -1504,15 +1550,106 @@ impl WmMetaTool {
             registry,
             stats: ToolStats::default(),
             effects: EffectRow::pure(),
+            embedding_router: None,
+            shadow_stats: Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        }
+    }
+
+    /// Create a new meta-tool with an embedding router.
+    ///
+    /// If the embedder is a stub, the embedding router will be `None` and the
+    /// TF-IDF router is used as fallback.
+    #[must_use]
+    pub fn with_embedder(
+        registry: Arc<ToolRegistry>,
+        embedder: Box<dyn wm_memory::Embedder>,
+    ) -> Self {
+        let embedding_router = embedding_router::EmbeddingRouter::new(embedder).map(Arc::new);
+        Self {
+            registry,
+            stats: ToolStats::default(),
+            effects: EffectRow::pure(),
+            embedding_router,
+            shadow_stats: Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        }
+    }
+
+    /// Create a new meta-tool with an embedding router and shared shadow stats.
+    ///
+    /// Allows the caller to hold a reference to the shadow stats for
+    /// observability and persistence.
+    #[must_use]
+    pub fn with_embedder_and_shadow_stats(
+        registry: Arc<ToolRegistry>,
+        embedder: Box<dyn wm_memory::Embedder>,
+        shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
+    ) -> Self {
+        let embedding_router = embedding_router::EmbeddingRouter::new(embedder).map(Arc::new);
+        Self {
+            registry,
+            stats: ToolStats::default(),
+            effects: EffectRow::pure(),
+            embedding_router,
+            shadow_stats,
         }
     }
 
     /// Classify natural language input into (tool_name, confidence).
     ///
-    /// Delegates to the embedding-based NLU router (`nlu::classify`) which uses
-    /// TF-IDF cosine similarity against weighted tool profiles.
+    /// When an embedding router is available, uses it as primary. Falls back to
+    /// the TF-IDF router (`nlu::classify`) when no embedding router is configured
+    /// or as a shadow-mode comparison.
     fn classify(text: &str) -> (&'static str, f64) {
         nlu::classify(text)
+    }
+
+    /// Classify using the embedding router if available, otherwise TF-IDF.
+    ///
+    /// In shadow mode (when embedding router is present), also runs TF-IDF and
+    /// logs disagreements for monitoring.
+    fn classify_with_router(&self, text: &str) -> (String, f64) {
+        if let Some(ref router) = self.embedding_router {
+            let (emb_tool, emb_conf) = router.route(text);
+
+            // Shadow mode: run TF-IDF in parallel and track disagreements
+            let (tfidf_tool, tfidf_conf) = nlu::classify(text);
+            if emb_tool != tfidf_tool {
+                tracing::debug!(
+                    query = text.chars().take(100).collect::<String>(),
+                    embedding_tool = %emb_tool,
+                    embedding_conf = emb_conf,
+                    tfidf_tool = %tfidf_tool,
+                    tfidf_conf = tfidf_conf,
+                    "shadow mode disagreement: embedding vs TF-IDF"
+                );
+            }
+
+            // Record in shadow stats tracker
+            if let Ok(mut stats) = self.shadow_stats.write() {
+                stats.record(text, &emb_tool, emb_conf, tfidf_tool, tfidf_conf);
+            }
+
+            (emb_tool, emb_conf)
+        } else {
+            let (tool, conf) = Self::classify(text);
+            (tool.to_string(), conf)
+        }
+    }
+
+    /// Get a reference to the shadow mode stats for observability.
+    #[must_use]
+    pub const fn shadow_stats(&self) -> &Arc<std::sync::RwLock<embedding_router::ShadowModeStats>> {
+        &self.shadow_stats
+    }
+
+    /// Get a reference to the embedding router, if present.
+    #[must_use]
+    pub const fn embedding_router(&self) -> Option<&Arc<embedding_router::EmbeddingRouter>> {
+        self.embedding_router.as_ref()
     }
 
     /// Returns the required parameter for a tool, if any.
@@ -1867,6 +2004,8 @@ impl WmMetaTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for WmMetaTool {
     fn name(&self) -> &str {
         "wm"
@@ -1877,7 +2016,7 @@ impl Tool for WmMetaTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
-    fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let thought = args.get("thought").and_then(|v| v.as_str()).unwrap_or("");
         let route = args.get("route").and_then(|v| v.as_str());
         let passthrough_args = args.get("args").cloned().unwrap_or(Value::Null);
@@ -1894,8 +2033,7 @@ impl Tool for WmMetaTool {
         let (tool_name, confidence) = if let Some(r) = route {
             (r.to_string(), 1.0)
         } else {
-            let (name, conf) = Self::classify(thought);
-            (name.to_string(), conf)
+            self.classify_with_router(thought)
         };
 
         // Build args for the target tool
@@ -1933,7 +2071,12 @@ impl Tool for WmMetaTool {
         let tool = self.registry.get(&tool_name);
         match tool {
             Some(t) => {
-                let result = t.call(ctx, tool_args);
+                let result = t.call(ctx, tool_args).await;
+                // OATS: record routing outcome for embedding router refinement
+                if let Some(ref router) = self.embedding_router {
+                    let success = result.is_ok();
+                    router.record_outcome(&tool_name, thought, success);
+                }
                 match result {
                     Ok(mut output) => {
                         // Augment with routing metadata
@@ -1991,7 +2134,7 @@ pub fn register_all(
     substrate: Option<Arc<SubstrateMonitor>>,
     resource_rules: &Option<Arc<ResourceRules>>,
     associations: Arc<AssociationStore>,
-    spiral_tracker: Arc<std::sync::Mutex<wm_consciousness::SpiralTracker>>,
+    spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     vector_store: Arc<std::sync::Mutex<VectorStore>>,
     conversational: Option<ConversationalSearch>,
     homeostatic_loop: Option<Arc<std::sync::Mutex<HomeostaticLoop>>>,
@@ -2091,7 +2234,12 @@ pub fn register_all(
 ///
 /// This requires a two-phase approach because tools.list needs the registry.
 /// Also creates GnosisTool with registry access for brain-wave-aware tool counting.
-pub fn register_meta_tools(registry: &ToolRegistry, store: &Arc<MemoryStore>) -> ToolRegistry {
+/// The `shadow_stats` Arc is shared between the `WmMetaTool` and `NluShadowReportTool`.
+pub fn register_meta_tools(
+    registry: &ToolRegistry,
+    store: &Arc<MemoryStore>,
+    shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
+) -> ToolRegistry {
     let base_snapshot: Vec<Arc<dyn Tool>> = registry.all();
     // Count includes old gnosis (which will be replaced with tool-count-aware version)
     let tool_count = base_snapshot.len();
@@ -2117,9 +2265,18 @@ pub fn register_meta_tools(registry: &ToolRegistry, store: &Arc<MemoryStore>) ->
     }
     wm_builder.register(tools_list.clone());
     wm_builder.register(gnosis.clone());
-    let wm = Arc::new(WmMetaTool::new(Arc::new(wm_builder.build())));
+    let wm = Arc::new(WmMetaTool::with_embedder_and_shadow_stats(
+        Arc::new(wm_builder.build()),
+        wm_memory::create_embedder(),
+        shadow_stats,
+    ));
 
-    // Build the final registry: non-gnosis + tools.list + wm + gnosis
+    // Create NLU shadow report tool sharing the same shadow stats
+    let shadow_report = Arc::new(expansion::NluShadowReportTool::new(
+        wm.shadow_stats().clone(),
+    ));
+
+    // Build the final registry: non-gnosis + tools.list + wm + gnosis + shadow report
     let mut final_builder = ToolRegistryBuilder::new();
     for tool in non_gnosis {
         final_builder.register(tool);
@@ -2127,6 +2284,7 @@ pub fn register_meta_tools(registry: &ToolRegistry, store: &Arc<MemoryStore>) ->
     final_builder.register(tools_list);
     final_builder.register(wm);
     final_builder.register(gnosis);
+    final_builder.register(shadow_report);
     final_builder.build()
 }
 
@@ -2143,9 +2301,8 @@ mod tests {
     fn test_registry_with(store: &Arc<MemoryStore>) -> ToolRegistry {
         let registry = ToolRegistry::new();
         let associations = Arc::new(AssociationStore::open(store.env()).unwrap());
-        let spiral_tracker = Arc::new(std::sync::Mutex::new(
-            wm_consciousness::SpiralTracker::default(),
-        ));
+        let spiral_tracker =
+            Arc::new(std::sync::Mutex::new(wm_cognitive::SpiralTracker::default()));
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
         register_all(
             &registry,
@@ -2168,25 +2325,25 @@ mod tests {
         )
     }
 
-    #[test]
-    fn memory_create_and_read() {
+    #[tokio::test]
+    async fn memory_create_and_read() {
         let store = test_store();
         let tool = MemoryCreateTool::new(store.clone(), None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         let args = json!({"content": "test memory content", "galaxy": "codex"});
-        let result = tool.call(&mut ctx, args).unwrap();
+        let result = tool.call(&mut ctx, args).await.unwrap();
         assert_eq!(result["status"], "success");
         let id = result["id"].as_str().unwrap();
 
         let read_tool = MemoryReadTool::new(store);
-        let result = read_tool.call(&mut ctx, json!({"id": id})).unwrap();
+        let result = read_tool.call(&mut ctx, json!({"id": id})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["content"], "test memory content");
     }
 
-    #[test]
-    fn memory_list_returns_entries() {
+    #[tokio::test]
+    async fn memory_list_returns_entries() {
         let store = test_store();
         let create = MemoryCreateTool::new(store.clone(), None);
         let mut ctx = Context::new(BrainWave::Gamma);
@@ -2194,67 +2351,74 @@ mod tests {
         for i in 0..3 {
             create
                 .call(&mut ctx, json!({"content": format!("item-{i}")}))
+                .await
                 .unwrap();
         }
 
         let list = MemoryListTool::new(store);
-        let result = list.call(&mut ctx, json!({"limit": 10})).unwrap();
+        let result = list.call(&mut ctx, json!({"limit": 10})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total"], 3);
         assert_eq!(result["returned"], 3);
     }
 
-    #[test]
-    fn gnosis_returns_system_info() {
+    #[tokio::test]
+    async fn gnosis_returns_system_info() {
         let store = test_store();
         let tool = GnosisTool::new(store);
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["version"].is_string());
     }
 
-    #[test]
-    fn memory_delete_removes_entry() {
+    #[tokio::test]
+    async fn memory_delete_removes_entry() {
         let store = test_store();
         let create = MemoryCreateTool::new(store.clone(), None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         let result = create
             .call(&mut ctx, json!({"content": "to be deleted"}))
+            .await
             .unwrap();
         let id = result["id"].as_str().unwrap();
 
         let delete = MemoryDeleteTool::new(store.clone(), None);
-        let result = delete.call(&mut ctx, json!({"id": id})).unwrap();
+        let result = delete.call(&mut ctx, json!({"id": id})).await.unwrap();
         assert_eq!(result["status"], "success");
 
         let read = MemoryReadTool::new(store);
-        let result = read.call(&mut ctx, json!({"id": id})).unwrap();
+        let result = read.call(&mut ctx, json!({"id": id})).await.unwrap();
         assert_eq!(result["status"], "not_found");
     }
 
-    #[test]
-    fn memory_query_filters_by_tags() {
+    #[tokio::test]
+    async fn memory_query_filters_by_tags() {
         let store = test_store();
         let create = MemoryCreateTool::new(store.clone(), None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         create
             .call(&mut ctx, json!({"content": "tagged", "tags": ["rust"]}))
+            .await
             .unwrap();
         create
             .call(&mut ctx, json!({"content": "untagged"}))
+            .await
             .unwrap();
 
         let query = MemoryQueryTool::new(store);
-        let result = query.call(&mut ctx, json!({"tags": ["rust"]})).unwrap();
+        let result = query
+            .call(&mut ctx, json!({"tags": ["rust"]}))
+            .await
+            .unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total"], 1);
     }
 
-    #[test]
-    fn memory_vector_search_by_embedding() {
+    #[tokio::test]
+    async fn memory_vector_search_by_embedding() {
         let store = test_store();
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
 
@@ -2272,28 +2436,35 @@ mod tests {
         // Search for vectors similar to [1, 0, 0]
         let result = tool
             .call(&mut ctx, json!({"embedding": [1.0, 0.0, 0.0], "limit": 2}))
+            .await
             .unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["total"], 2);
     }
 
-    #[test]
-    fn memory_vector_search_missing_args() {
+    #[tokio::test]
+    async fn memory_vector_search_missing_args() {
         let store = test_store();
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
 
         let tool = MemoryVectorSearchTool::new(store, vector_store);
         let mut ctx = Context::new(BrainWave::Gamma);
 
-        let result = tool.call(&mut ctx, json!({"limit": 5}));
+        let result = tool.call(&mut ctx, json!({"limit": 5})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn wm_routes_vector_search_to_memory_vector_search() {
+    #[tokio::test]
+    async fn wm_routes_vector_search_to_memory_vector_search() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
@@ -2302,23 +2473,26 @@ mod tests {
                 &mut ctx,
                 json!({"route": "memory.vector.search", "args": {"embedding": [1.0, 0.0, 0.0]}}),
             )
+            .await
             .unwrap();
 
         assert_eq!(result["status"], "success");
         assert_eq!(result["_wm_route"]["tool"], "memory.vector.search");
     }
 
-    #[test]
-    fn memory_associate_and_find() {
+    #[tokio::test]
+    async fn memory_associate_and_find() {
         let store = test_store();
         let create = MemoryCreateTool::new(store.clone(), None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         let r1 = create
             .call(&mut ctx, json!({"content": "source mem"}))
+            .await
             .unwrap();
         let r2 = create
             .call(&mut ctx, json!({"content": "target mem"}))
+            .await
             .unwrap();
         let id1 = r1["id"].as_str().unwrap();
         let id2 = r2["id"].as_str().unwrap();
@@ -2329,19 +2503,21 @@ mod tests {
                 &mut ctx,
                 json!({"source": id1, "target": id2, "weight": 0.8}),
             )
+            .await
             .unwrap();
         assert_eq!(result["status"], "success");
 
         let find = MemoryAssociationsTool::new(store);
         let result = find
             .call(&mut ctx, json!({"id": id1, "direction": "from"}))
+            .await
             .unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["returned"], 1);
     }
 
-    #[test]
-    fn karma_report_shows_entries() {
+    #[tokio::test]
+    async fn karma_report_shows_entries() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let ledger = Arc::new(KarmaLedger::new(store).unwrap());
@@ -2352,28 +2528,34 @@ mod tests {
 
         let tool = KarmaReportTool::new(ledger);
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({"limit": 5})).unwrap();
+        let result = tool.call(&mut ctx, json!({"limit": 5})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["entry_count"], 2);
         assert_eq!(result["recent_entries"].as_array().unwrap().len(), 2);
     }
 
-    #[test]
-    fn dharma_status_returns_homeostasis() {
+    #[tokio::test]
+    async fn dharma_status_returns_homeostasis() {
         let gate = Arc::new(DharmaGate::default());
         let tool = DharmaStatusTool::new(gate);
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert!(result["homeostasis"]["health_score"].is_f64());
         assert!(result["sutras"]["ahimsa"].is_string());
     }
 
-    #[test]
-    fn wm_routes_remember_to_memory_create() {
+    #[tokio::test]
+    async fn wm_routes_remember_to_memory_create() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
@@ -2382,6 +2564,7 @@ mod tests {
                 &mut ctx,
                 json!({"thought": "remember that the API uses X-User-Id headers"}),
             )
+            .await
             .unwrap();
 
         assert_eq!(result["status"], "success");
@@ -2389,11 +2572,17 @@ mod tests {
         assert!(result["id"].is_string());
     }
 
-    #[test]
-    fn wm_explicit_route() {
+    #[tokio::test]
+    async fn wm_explicit_route() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
@@ -2404,52 +2593,75 @@ mod tests {
                     "route": "gnosis"
                 }),
             )
+            .await
             .unwrap();
 
         assert_eq!(result["status"], "success");
         assert_eq!(result["_wm_route"]["tool"], "gnosis");
     }
 
-    #[test]
-    fn wm_no_input_returns_error() {
+    #[tokio::test]
+    async fn wm_no_input_returns_error() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = wm.call(&mut ctx, json!({})).unwrap();
+        let result = wm.call(&mut ctx, json!({})).await.unwrap();
 
         assert_eq!(result["status"], "error");
     }
 
-    #[test]
-    fn wm_unknown_tool_returns_error() {
+    #[tokio::test]
+    async fn wm_unknown_tool_returns_error() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
         let result = wm
             .call(&mut ctx, json!({"route": "nonexistent.tool"}))
+            .await
             .unwrap();
 
         assert_eq!(result["status"], "error");
         assert!(result["message"].as_str().unwrap().contains("Unknown tool"));
     }
 
-    #[test]
-    fn wm_missing_arg_returns_hint() {
+    #[tokio::test]
+    async fn wm_missing_arg_returns_hint() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
 
         // Route to memory.read without providing id
-        let result = wm.call(&mut ctx, json!({"route": "memory.read"})).unwrap();
+        let result = wm
+            .call(&mut ctx, json!({"route": "memory.read"}))
+            .await
+            .unwrap();
 
         assert_eq!(result["status"], "error");
         assert!(
@@ -2461,24 +2673,33 @@ mod tests {
         assert!(result["hint"].as_str().unwrap().contains("uuid"));
     }
 
-    #[test]
-    fn wm_auto_route_missing_arg_returns_hint() {
+    #[tokio::test]
+    async fn wm_auto_route_missing_arg_returns_hint() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
 
         // "recall" routes to memory.read but no UUID provided
-        let result = wm.call(&mut ctx, json!({"thought": "recall"})).unwrap();
+        let result = wm
+            .call(&mut ctx, json!({"thought": "recall"}))
+            .await
+            .unwrap();
 
         assert_eq!(result["status"], "error");
         assert!(result["hint"].as_str().unwrap().contains("uuid"));
     }
 
-    #[test]
-    fn wm_routes_karma_to_karma_report() {
+    #[tokio::test]
+    async fn wm_routes_karma_to_karma_report() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let ledger = Arc::new(KarmaLedger::new(store.clone()).unwrap());
@@ -2486,9 +2707,8 @@ mod tests {
 
         let registry = ToolRegistry::new();
         let associations = Arc::new(AssociationStore::open(store.env()).unwrap());
-        let spiral_tracker = Arc::new(std::sync::Mutex::new(
-            wm_consciousness::SpiralTracker::default(),
-        ));
+        let spiral_tracker =
+            Arc::new(std::sync::Mutex::new(wm_cognitive::SpiralTracker::default()));
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
         let registry = register_all(
             &registry,
@@ -2509,90 +2729,121 @@ mod tests {
             None,
             std::sync::Arc::new(std::sync::Mutex::new(None)),
         );
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
         let result = wm
             .call(&mut ctx, json!({"thought": "show me the karma report"}))
+            .await
             .unwrap();
 
         assert_eq!(result["status"], "success");
         assert_eq!(result["_wm_route"]["tool"], "karma.report");
     }
 
-    #[test]
-    fn tools_list_shows_all() {
+    #[tokio::test]
+    async fn tools_list_shows_all() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let list = registry.get("tools.list").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = list.call(&mut ctx, json!({})).unwrap();
+        let result = list.call(&mut ctx, json!({})).await.unwrap();
 
         assert_eq!(result["status"], "success");
         assert!(result["total"].as_u64().unwrap() >= 7);
     }
 
-    #[test]
-    fn tools_list_filters_by_brain_wave() {
+    #[tokio::test]
+    async fn tools_list_filters_by_brain_wave() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let list = registry.get("tools.list").unwrap();
 
         // Gamma: all tools available
         let mut ctx_gamma = Context::new(BrainWave::Gamma);
-        let result_gamma = list.call(&mut ctx_gamma, json!({})).unwrap();
+        let result_gamma = list.call(&mut ctx_gamma, json!({})).await.unwrap();
         let gamma_count = result_gamma["total"].as_u64().unwrap();
         assert!(gamma_count >= 7);
 
         // Alpha: only read-only tools (no writes, no expensive)
         let mut ctx_alpha = Context::new(BrainWave::Alpha);
-        let result_alpha = list.call(&mut ctx_alpha, json!({})).unwrap();
+        let result_alpha = list.call(&mut ctx_alpha, json!({})).await.unwrap();
         let alpha_count = result_alpha["total"].as_u64().unwrap();
         assert!(alpha_count < gamma_count);
         assert!(alpha_count > 0);
 
         // Delta: no tools available
         let mut ctx_delta = Context::new(BrainWave::Delta);
-        let result_delta = list.call(&mut ctx_delta, json!({})).unwrap();
+        let result_delta = list.call(&mut ctx_delta, json!({})).await.unwrap();
         assert_eq!(result_delta["total"], 0);
     }
 
-    #[test]
-    fn gnosis_includes_brain_wave_and_tool_count() {
+    #[tokio::test]
+    async fn gnosis_includes_brain_wave_and_tool_count() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let gnosis = registry.get("gnosis").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = gnosis.call(&mut ctx, json!({})).unwrap();
+        let result = gnosis.call(&mut ctx, json!({})).await.unwrap();
 
         assert_eq!(result["status"], "success");
         assert_eq!(result["brain_wave"], "Gamma");
         assert!(result["available_tools"].as_u64().unwrap() >= 9);
     }
 
-    #[test]
-    fn gnosis_available_tools_is_total_registered() {
+    #[tokio::test]
+    async fn gnosis_available_tools_is_total_registered() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let gnosis = registry.get("gnosis").unwrap();
 
         // available_tools is now a static count of registered tools,
         // not brain-wave-dependent. It should be the same in all states.
         let mut ctx_gamma = Context::new(BrainWave::Gamma);
-        let result_gamma = gnosis.call(&mut ctx_gamma, json!({})).unwrap();
+        let result_gamma = gnosis.call(&mut ctx_gamma, json!({})).await.unwrap();
         let gamma_tools = result_gamma["available_tools"].as_u64().unwrap();
 
         let mut ctx_delta = Context::new(BrainWave::Delta);
-        let result_delta = gnosis.call(&mut ctx_delta, json!({})).unwrap();
+        let result_delta = gnosis.call(&mut ctx_delta, json!({})).await.unwrap();
         let delta_tools = result_delta["available_tools"].as_u64().unwrap();
 
         assert_eq!(gamma_tools, delta_tools);
@@ -2602,15 +2853,21 @@ mod tests {
         );
     }
 
-    #[test]
-    fn expansion_brings_tool_count_to_50() {
+    #[tokio::test]
+    async fn expansion_brings_tool_count_to_50() {
         let store = test_store();
         let registry = test_registry_with(&store);
-        let registry = register_meta_tools(&registry, &store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
 
         let list = registry.get("tools.list").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = list.call(&mut ctx, json!({})).unwrap();
+        let result = list.call(&mut ctx, json!({})).await.unwrap();
 
         let total = result["total"].as_u64().unwrap();
         assert!(
@@ -2621,348 +2878,348 @@ mod tests {
 
     // ── NLU Router Expansion Tests ─────────────────────────────────────
 
-    #[test]
-    fn nlu_routes_consolidate() {
+    #[tokio::test]
+    async fn nlu_routes_consolidate() {
         let (tool, conf) = WmMetaTool::classify("consolidate memories in codex");
         assert_eq!(tool, "memory.consolidate");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_decay() {
+    #[tokio::test]
+    async fn nlu_routes_decay() {
         let (tool, conf) = WmMetaTool::classify("decay old memories");
         assert_eq!(tool, "memory.decay");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_batch_read() {
+    #[tokio::test]
+    async fn nlu_routes_batch_read() {
         let (tool, conf) = WmMetaTool::classify("batch read these memories");
         assert_eq!(tool, "memory.batch_read");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_update() {
+    #[tokio::test]
+    async fn nlu_routes_update() {
         let (tool, conf) = WmMetaTool::classify("update memory tags");
         assert_eq!(tool, "memory.update");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_tag() {
+    #[tokio::test]
+    async fn nlu_routes_tag() {
         let (tool, conf) = WmMetaTool::classify("add tag to memory");
         assert_eq!(tool, "memory.tag");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_memory_stats() {
+    #[tokio::test]
+    async fn nlu_routes_memory_stats() {
         let (tool, conf) = WmMetaTool::classify("memory stats for codex");
         assert_eq!(tool, "memory.stats");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_hybrid_recall() {
+    #[tokio::test]
+    async fn nlu_routes_hybrid_recall() {
         let (tool, conf) = WmMetaTool::classify("hybrid recall for rust");
         assert_eq!(tool, "memory.hybrid_recall");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_count() {
+    #[tokio::test]
+    async fn nlu_routes_count() {
         let (tool, conf) = WmMetaTool::classify("count memories in codex");
         assert_eq!(tool, "memory.count");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_tags() {
+    #[tokio::test]
+    async fn nlu_routes_tags() {
         let (tool, conf) = WmMetaTool::classify("list tags in codex");
         assert_eq!(tool, "memory.tags");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_associate_mine() {
+    #[tokio::test]
+    async fn nlu_routes_associate_mine() {
         let (tool, conf) = WmMetaTool::classify("mine associations in codex");
         assert_eq!(tool, "memory.associate_mine");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_session_start() {
+    #[tokio::test]
+    async fn nlu_routes_session_start() {
         let (tool, conf) = WmMetaTool::classify("start session research");
         assert_eq!(tool, "session.start");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_session_end() {
+    #[tokio::test]
+    async fn nlu_routes_session_end() {
         let (tool, conf) = WmMetaTool::classify("end session 12345");
         assert_eq!(tool, "session.end");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_session_list() {
+    #[tokio::test]
+    async fn nlu_routes_session_list() {
         let (tool, conf) = WmMetaTool::classify("list sessions");
         assert_eq!(tool, "session.list");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_citta_status() {
+    #[tokio::test]
+    async fn nlu_routes_citta_status() {
         let (tool, conf) = WmMetaTool::classify("citta status");
         assert_eq!(tool, "citta.status");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_citta_reflect() {
+    #[tokio::test]
+    async fn nlu_routes_citta_reflect() {
         let (tool, conf) = WmMetaTool::classify("reflect on recent events");
         assert_eq!(tool, "citta.reflect");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_coherence() {
+    #[tokio::test]
+    async fn nlu_routes_coherence() {
         let (tool, conf) = WmMetaTool::classify("check coherence");
         assert_eq!(tool, "citta.coherence");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_dream_status() {
+    #[tokio::test]
+    async fn nlu_routes_dream_status() {
         let (tool, conf) = WmMetaTool::classify("dream cycle status");
         assert_eq!(tool, "dream.status");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_dream_trigger() {
+    #[tokio::test]
+    async fn nlu_routes_dream_trigger() {
         let (tool, conf) = WmMetaTool::classify("trigger dream cycle");
         assert_eq!(tool, "dream.trigger");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_effectiveness() {
+    #[tokio::test]
+    async fn nlu_routes_effectiveness() {
         let (tool, conf) = WmMetaTool::classify("tool effectiveness report");
         assert_eq!(tool, "tools.effectiveness_report");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_retire() {
+    #[tokio::test]
+    async fn nlu_routes_retire() {
         let (tool, conf) = WmMetaTool::classify("retire tool memory.old");
         assert_eq!(tool, "tools.retire");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_pattern_search() {
+    #[tokio::test]
+    async fn nlu_routes_pattern_search() {
         let (tool, conf) = WmMetaTool::classify("pattern search for rust");
         assert_eq!(tool, "pattern.search");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_salience() {
+    #[tokio::test]
+    async fn nlu_routes_salience() {
         let (tool, conf) = WmMetaTool::classify("salience spotlight");
         assert_eq!(tool, "salience.spotlight");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_serendipity() {
+    #[tokio::test]
+    async fn nlu_routes_serendipity() {
         let (tool, conf) = WmMetaTool::classify("serendipity surface");
         assert_eq!(tool, "serendipity.surface");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_constellation_detect() {
+    #[tokio::test]
+    async fn nlu_routes_constellation_detect() {
         let (tool, conf) = WmMetaTool::classify("detect clusters");
         assert_eq!(tool, "constellation.detect");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_constellation_list() {
+    #[tokio::test]
+    async fn nlu_routes_constellation_list() {
         let (tool, conf) = WmMetaTool::classify("list constellations");
         assert_eq!(tool, "constellation.list");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_galaxy_stats() {
+    #[tokio::test]
+    async fn nlu_routes_galaxy_stats() {
         let (tool, conf) = WmMetaTool::classify("galaxy stats");
         assert_eq!(tool, "galaxy.stats");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_galaxy_export() {
+    #[tokio::test]
+    async fn nlu_routes_galaxy_export() {
         let (tool, conf) = WmMetaTool::classify("export galaxy codex");
         assert_eq!(tool, "galaxy.export");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_galaxy_import() {
+    #[tokio::test]
+    async fn nlu_routes_galaxy_import() {
         let (tool, conf) = WmMetaTool::classify("import galaxy codex");
         assert_eq!(tool, "galaxy.import");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_karma_history() {
+    #[tokio::test]
+    async fn nlu_routes_karma_history() {
         let (tool, conf) = WmMetaTool::classify("karma history");
         assert_eq!(tool, "karma.history");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_karma_clear() {
+    #[tokio::test]
+    async fn nlu_routes_karma_clear() {
         let (tool, conf) = WmMetaTool::classify("clear karma");
         assert_eq!(tool, "karma.clear");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_dharma_rules() {
+    #[tokio::test]
+    async fn nlu_routes_dharma_rules() {
         let (tool, conf) = WmMetaTool::classify("dharma rules");
         assert_eq!(tool, "dharma.rules");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_dharma_audit() {
+    #[tokio::test]
+    async fn nlu_routes_dharma_audit() {
         let (tool, conf) = WmMetaTool::classify("dharma audit");
         assert_eq!(tool, "dharma.audit");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_dharma_profiles() {
+    #[tokio::test]
+    async fn nlu_routes_dharma_profiles() {
         let (tool, conf) = WmMetaTool::classify("dharma profiles");
         assert_eq!(tool, "dharma.profiles");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_agent_register() {
+    #[tokio::test]
+    async fn nlu_routes_agent_register() {
         let (tool, conf) = WmMetaTool::classify("register agent worker-1");
         assert_eq!(tool, "agent.register");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_agent_list() {
+    #[tokio::test]
+    async fn nlu_routes_agent_list() {
         let (tool, conf) = WmMetaTool::classify("list agents");
         assert_eq!(tool, "agent.list");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_agent_heartbeat() {
+    #[tokio::test]
+    async fn nlu_routes_agent_heartbeat() {
         let (tool, conf) = WmMetaTool::classify("heartbeat for agent");
         assert_eq!(tool, "agent.heartbeat");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_task_distribute() {
+    #[tokio::test]
+    async fn nlu_routes_task_distribute() {
         let (tool, conf) = WmMetaTool::classify("distribute task analyze data");
         assert_eq!(tool, "task.distribute");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_task_status() {
+    #[tokio::test]
+    async fn nlu_routes_task_status() {
         let (tool, conf) = WmMetaTool::classify("task status");
         assert_eq!(tool, "task.status");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_system_health() {
+    #[tokio::test]
+    async fn nlu_routes_system_health() {
         let (tool, conf) = WmMetaTool::classify("system health check");
         assert_eq!(tool, "system.health");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_system_config() {
+    #[tokio::test]
+    async fn nlu_routes_system_config() {
         let (tool, conf) = WmMetaTool::classify("system config");
         assert_eq!(tool, "system.config");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_system_flush() {
+    #[tokio::test]
+    async fn nlu_routes_system_flush() {
         let (tool, conf) = WmMetaTool::classify("flush old memories");
         assert_eq!(tool, "system.flush");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_memory_nearby() {
+    #[tokio::test]
+    async fn nlu_routes_memory_nearby() {
         let (tool, conf) = WmMetaTool::classify("nearby memories in codex");
         assert_eq!(tool, "memory.nearby");
         assert!(conf > 0.0);
     }
 
-    #[test]
-    fn nlu_routes_empty_to_gnosis() {
+    #[tokio::test]
+    async fn nlu_routes_empty_to_gnosis() {
         let (tool, conf) = WmMetaTool::classify("");
         assert_eq!(tool, "gnosis");
         assert_eq!(conf, 0.0);
     }
 
-    #[test]
-    fn nlu_routes_unknown_to_gnosis() {
+    #[tokio::test]
+    async fn nlu_routes_unknown_to_gnosis() {
         let (tool, conf) = WmMetaTool::classify("xyzzy frobnicate");
         assert_eq!(tool, "gnosis");
         assert_eq!(conf, 0.0);
     }
 
-    #[test]
-    fn nlu_extract_payload_memory_search() {
+    #[tokio::test]
+    async fn nlu_extract_payload_memory_search() {
         let (param, value) =
             WmMetaTool::extract_payload("search for rust patterns", "memory.search").unwrap();
         assert_eq!(param, "query");
         assert_eq!(value, "rust patterns");
     }
 
-    #[test]
-    fn nlu_extract_payload_session_start() {
+    #[tokio::test]
+    async fn nlu_extract_payload_session_start() {
         let (param, value) =
             WmMetaTool::extract_payload("start session research", "session.start").unwrap();
         assert_eq!(param, "name");
         assert_eq!(value, "research");
     }
 
-    #[test]
-    fn nlu_extract_payload_agent_register() {
+    #[tokio::test]
+    async fn nlu_extract_payload_agent_register() {
         let (param, value) =
             WmMetaTool::extract_payload("register agent worker-1", "agent.register").unwrap();
         assert_eq!(param, "name");
         assert_eq!(value, "worker-1");
     }
 
-    #[test]
-    fn nlu_extract_payload_task_distribute() {
+    #[tokio::test]
+    async fn nlu_extract_payload_task_distribute() {
         let (param, value) =
             WmMetaTool::extract_payload("distribute task analyze data", "task.distribute").unwrap();
         assert_eq!(param, "task");
         assert_eq!(value, "analyze data");
     }
 
-    #[test]
-    fn nlu_count_unique_patterns() {
+    #[tokio::test]
+    async fn nlu_count_unique_patterns() {
         // Verify we have 30+ unique routing targets
         let inputs = [
             "remember",
@@ -3032,5 +3289,19 @@ mod tests {
             "Expected 30+ unique NLU targets, got {}",
             tools.len()
         );
+    }
+
+    #[tokio::test]
+    async fn nlu_routes_shadow_report() {
+        let (tool, conf) = WmMetaTool::classify("shadow mode disagreement report");
+        assert_eq!(tool, "nlu.shadow_report");
+        assert!(conf > 0.0);
+    }
+
+    #[tokio::test]
+    async fn nlu_routes_oats_report() {
+        let (tool, conf) = WmMetaTool::classify("oats disagreement nlu router");
+        assert_eq!(tool, "nlu.shadow_report");
+        assert!(conf > 0.0);
     }
 }

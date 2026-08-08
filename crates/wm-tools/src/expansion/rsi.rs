@@ -1,7 +1,7 @@
 //! Recursive Self-Improvement (RSI) tools — Phase 1: Friction logging.
 //!
 //! Tools for logging and reviewing friction points encountered during
-//! daily use of WhiteMagic v4. This is the data-collection phase of RSI:
+//! daily use of WhiteMagic v5. This is the data-collection phase of RSI:
 //! no autonomous cycles run here. The friction data feeds Phase 2
 //! (codebase-grounded improvement cycles) and Phase 3 (adversarial
 //! self-testing).
@@ -11,6 +11,8 @@
 //! - Friction entries are grounded in real usage, not self-inspection
 //! - Every entry has structured fields for actionable analysis
 //! - The outward spiral is maintained: friction → analysis → improvement → new friction
+
+use async_trait::async_trait;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -161,6 +163,8 @@ impl FrictionLogTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for FrictionLogTool {
     fn name(&self) -> &str {
         "friction.log"
@@ -174,7 +178,7 @@ impl Tool for FrictionLogTool {
     fn description(&self) -> &str {
         "Log a friction point encountered during v4 usage. Fields: what_happened (required), expected_behavior (required), suggested_fix (optional), severity (low/medium/high, default medium), category (ux/performance/error/missing_feature/confusing, default ux), tool_name (optional)."
     }
-    fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
         let what_happened = args
             .get("what_happened")
             .and_then(|v| v.as_str())
@@ -372,6 +376,8 @@ impl FrictionReviewTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for FrictionReviewTool {
     fn name(&self) -> &str {
         "friction.review"
@@ -385,7 +391,7 @@ impl Tool for FrictionReviewTool {
     fn description(&self) -> &str {
         "Review recent friction entries. Optional filters: category (ux/performance/error/missing_feature/confusing), severity (low/medium/high), limit (default 50). Returns entries plus a summary of patterns."
     }
-    fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
         let limit = args
             .get("limit")
             .and_then(serde_json::Value::as_u64)
@@ -762,6 +768,8 @@ impl FrictionAutoLogTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for FrictionAutoLogTool {
     fn name(&self) -> &str {
         "friction.auto_log"
@@ -775,7 +783,7 @@ impl Tool for FrictionAutoLogTool {
     fn description(&self) -> &str {
         "Auto-log a friction entry from a tool dispatch error. Called programmatically by the server on ToolDispatchError events, or manually to log an error. Fields: tool_name (required), error (required), latency_ms (optional)."
     }
-    fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, args: Args) -> wm_core::Result<Output> {
         let tool_name = args
             .get("tool_name")
             .and_then(|v| v.as_str())
@@ -827,6 +835,8 @@ impl ImproveProposalsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ImproveProposalsTool {
     fn name(&self) -> &str {
         "improve.proposals"
@@ -840,15 +850,15 @@ impl Tool for ImproveProposalsTool {
     fn description(&self) -> &str {
         "Run the RSI improve.scan cycle to analyze friction entries and generate concrete improvement proposals. All proposals require human review. Returns proposals grouped by category and target."
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
-        let runner = wm_consciousness::AutonomousCycleRunner::default();
-        let ctx = wm_consciousness::CycleContext::new(
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+        let runner = wm_cognitive::AutonomousCycleRunner::default();
+        let ctx = wm_cognitive::CycleContext::new(
             &self.store,
             &self.associations,
             1.0, // Full health for manual invocation
         );
         let mut runner = runner;
-        let result = runner.run_cycle(wm_consciousness::CycleType::Improve, &ctx);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Improve, &ctx);
 
         let proposals: Vec<Value> = result
             .improvements
@@ -904,6 +914,8 @@ impl RedteamProposalsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for RedteamProposalsTool {
     fn name(&self) -> &str {
         "redteam.proposals"
@@ -917,11 +929,11 @@ impl Tool for RedteamProposalsTool {
     fn description(&self) -> &str {
         "Run the RSI redteam.scan cycle to generate adversarial test proposals against v4 governance, karma, mandala, dispatch, and spiral systems. All proposals require human review."
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
-        let runner = wm_consciousness::AutonomousCycleRunner::default();
-        let ctx = wm_consciousness::CycleContext::new(&self.store, &self.associations, 1.0);
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+        let runner = wm_cognitive::AutonomousCycleRunner::default();
+        let ctx = wm_cognitive::CycleContext::new(&self.store, &self.associations, 1.0);
         let mut runner = runner;
-        let result = runner.run_cycle(wm_consciousness::CycleType::Redteam, &ctx);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Redteam, &ctx);
 
         let proposals: Vec<Value> = result
             .redteam
@@ -984,6 +996,8 @@ impl FrictionResolveTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for FrictionResolveTool {
     fn name(&self) -> &str {
         "friction.resolve"
@@ -997,7 +1011,7 @@ impl Tool for FrictionResolveTool {
         &self.effects
     }
 
-    fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let friction_id = args
             .get("friction_id")
             .and_then(|v| v.as_str())
@@ -1122,6 +1136,8 @@ impl ActiveProposalsTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for ActiveProposalsTool {
     fn name(&self) -> &str {
         "improve.active_proposals"
@@ -1135,7 +1151,7 @@ impl Tool for ActiveProposalsTool {
         &self.effects
     }
 
-    fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let memories = self.store.scan(wm_core::Galaxy::Codex, 200)?;
 
         let mut proposals: Vec<Value> = Vec::new();
@@ -1215,6 +1231,8 @@ impl RedteamFromFrictionTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for RedteamFromFrictionTool {
     fn name(&self) -> &str {
         "redteam.from_friction"
@@ -1228,7 +1246,7 @@ impl Tool for RedteamFromFrictionTool {
     fn description(&self) -> &str {
         "Synthesize adversarial test proposals from resolved and regression friction entries. Each resolved friction becomes a regression test vector; each regression becomes an escalated adversarial vector."
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
         let memories = self.store.scan(wm_core::Galaxy::Codex, 500)?;
 
         let mut proposals: Vec<Value> = Vec::new();
@@ -1370,6 +1388,8 @@ impl RedteamCoverageReportTool {
     }
 }
 
+#[async_trait]
+#[async_trait]
 impl Tool for RedteamCoverageReportTool {
     fn name(&self) -> &str {
         "redteam.coverage_report"
@@ -1383,11 +1403,11 @@ impl Tool for RedteamCoverageReportTool {
     fn description(&self) -> &str {
         "Generate a coverage report showing which target systems have covered vs uncovered adversarial test vectors, with friction-matched priorities."
     }
-    fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
-        let runner = wm_consciousness::AutonomousCycleRunner::default();
-        let ctx = wm_consciousness::CycleContext::new(&self.store, &self.associations, 1.0);
+    async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+        let runner = wm_cognitive::AutonomousCycleRunner::default();
+        let ctx = wm_cognitive::CycleContext::new(&self.store, &self.associations, 1.0);
         let mut runner = runner;
-        let result = runner.run_cycle(wm_consciousness::CycleType::Redteam, &ctx);
+        let result = runner.run_cycle(wm_cognitive::CycleType::Redteam, &ctx);
 
         use std::collections::BTreeMap;
         let mut by_system: BTreeMap<String, (u32, u32, u32)> = BTreeMap::new();
@@ -1503,8 +1523,8 @@ mod tests {
     use super::*;
     use wm_core::BrainWave;
 
-    #[test]
-    fn friction_log_creates_tagged_memory() {
+    #[tokio::test]
+    async fn friction_log_creates_tagged_memory() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionLogTool::new(store.clone(), None);
@@ -1519,7 +1539,7 @@ mod tests {
             "tool_name": "memory.search"
         });
 
-        let result = tool.call(&mut ctx, args);
+        let result = tool.call(&mut ctx, args).await;
         assert!(result.is_ok());
 
         let resp = result.unwrap();
@@ -1555,8 +1575,8 @@ mod tests {
         assert!((memories[0].metadata.importance - 0.9).abs() < 0.01);
     }
 
-    #[test]
-    fn friction_log_requires_what_happened() {
+    #[tokio::test]
+    async fn friction_log_requires_what_happened() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionLogTool::new(store, None);
@@ -1566,12 +1586,12 @@ mod tests {
             "expected_behavior": "Should work"
         });
 
-        let result = tool.call(&mut ctx, args);
+        let result = tool.call(&mut ctx, args).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn friction_log_requires_expected_behavior() {
+    #[tokio::test]
+    async fn friction_log_requires_expected_behavior() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionLogTool::new(store, None);
@@ -1581,12 +1601,12 @@ mod tests {
             "what_happened": "Something broke"
         });
 
-        let result = tool.call(&mut ctx, args);
+        let result = tool.call(&mut ctx, args).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn friction_review_finds_tagged_entries() {
+    #[tokio::test]
+    async fn friction_review_finds_tagged_entries() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
 
@@ -1605,6 +1625,7 @@ mod tests {
                     "tool_name": "tool_a"
                 }),
             )
+            .await
             .unwrap();
 
         log_tool
@@ -1618,6 +1639,7 @@ mod tests {
                     "tool_name": "tool_b"
                 }),
             )
+            .await
             .unwrap();
 
         // Create a non-friction memory (should be filtered out)
@@ -1627,7 +1649,7 @@ mod tests {
 
         // Review all friction entries
         let review_tool = FrictionReviewTool::new(store);
-        let result = review_tool.call(&mut ctx, json!({}));
+        let result = review_tool.call(&mut ctx, json!({})).await;
         assert!(result.is_ok());
 
         let resp = result.unwrap();
@@ -1638,8 +1660,8 @@ mod tests {
         assert_eq!(resp["summary"]["by_severity"]["low"], 1);
     }
 
-    #[test]
-    fn friction_review_filters_by_category() {
+    #[tokio::test]
+    async fn friction_review_filters_by_category() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let log_tool = FrictionLogTool::new(store.clone(), None);
@@ -1654,6 +1676,7 @@ mod tests {
                     "category": "error"
                 }),
             )
+            .await
             .unwrap();
 
         log_tool
@@ -1665,16 +1688,19 @@ mod tests {
                     "category": "performance"
                 }),
             )
+            .await
             .unwrap();
 
         let review_tool = FrictionReviewTool::new(store);
-        let result = review_tool.call(&mut ctx, json!({"category": "error"}));
+        let result = review_tool
+            .call(&mut ctx, json!({"category": "error"}))
+            .await;
         let resp = result.unwrap();
         assert_eq!(resp["total_friction_entries"], 1);
     }
 
-    #[test]
-    fn friction_auto_log_creates_entry() {
+    #[tokio::test]
+    async fn friction_auto_log_creates_entry() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionAutoLogTool::new(store.clone(), None);
@@ -1728,8 +1754,8 @@ mod tests {
         assert!(memories[0].content.contains("\"effectiveness\": 0.42"));
     }
 
-    #[test]
-    fn friction_auto_log_via_tool_call() {
+    #[tokio::test]
+    async fn friction_auto_log_via_tool_call() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionAutoLogTool::new(store.clone(), None);
@@ -1741,26 +1767,26 @@ mod tests {
             "latency_ms": 12.5
         });
 
-        let result = tool.call(&mut ctx, args);
+        let result = tool.call(&mut ctx, args).await;
         assert!(result.is_ok());
 
         let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
         assert_eq!(memories.len(), 1);
     }
 
-    #[test]
-    fn friction_auto_log_requires_tool_name() {
+    #[tokio::test]
+    async fn friction_auto_log_requires_tool_name() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionAutoLogTool::new(store, None);
 
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({"error": "something"}));
+        let result = tool.call(&mut ctx, json!({"error": "something"})).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn friction_log_default_severity_is_medium() {
+    #[tokio::test]
+    async fn friction_log_default_severity_is_medium() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionLogTool::new(store.clone(), None);
@@ -1773,6 +1799,7 @@ mod tests {
                 "expected_behavior": "Should not happen"
             }),
         )
+        .await
         .unwrap();
 
         let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
@@ -1790,8 +1817,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn register_rsi_adds_nine_tools() {
+    #[tokio::test]
+    async fn register_rsi_adds_nine_tools() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let associations = Arc::new(wm_memory::AssociationStore::open(store.env()).unwrap());
@@ -1809,37 +1836,37 @@ mod tests {
         assert!(registry.get("redteam.coverage_report").is_some());
     }
 
-    #[test]
-    fn redteam_proposals_returns_proposals() {
+    #[tokio::test]
+    async fn redteam_proposals_returns_proposals() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let associations = Arc::new(wm_memory::AssociationStore::open(store.env()).unwrap());
         let tool = RedteamProposalsTool::new(store, associations);
 
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({}));
+        let result = tool.call(&mut ctx, json!({})).await;
         assert!(result.is_ok());
         let resp = result.unwrap();
         assert!(resp["proposals_generated"].as_u64().unwrap_or(0) > 0);
         assert!(resp["proposals"].is_array());
     }
 
-    #[test]
-    fn improve_proposals_returns_no_proposals_when_empty() {
+    #[tokio::test]
+    async fn improve_proposals_returns_no_proposals_when_empty() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let associations = Arc::new(wm_memory::AssociationStore::open(store.env()).unwrap());
         let tool = ImproveProposalsTool::new(store, associations);
 
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({}));
+        let result = tool.call(&mut ctx, json!({})).await;
         assert!(result.is_ok());
         let resp = result.unwrap();
         assert_eq!(resp["proposals_generated"], 0);
     }
 
-    #[test]
-    fn improve_proposals_returns_proposals_from_friction() {
+    #[tokio::test]
+    async fn improve_proposals_returns_proposals_from_friction() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let associations = Arc::new(wm_memory::AssociationStore::open(store.env()).unwrap());
@@ -1858,6 +1885,7 @@ mod tests {
                     "tool_name": "tool_x"
                 }),
             )
+            .await
             .unwrap();
         log_tool
             .call(
@@ -1870,10 +1898,11 @@ mod tests {
                     "tool_name": "tool_x"
                 }),
             )
+            .await
             .unwrap();
 
         let tool = ImproveProposalsTool::new(store, associations);
-        let result = tool.call(&mut ctx, json!({}));
+        let result = tool.call(&mut ctx, json!({})).await;
         assert!(result.is_ok());
         let resp = result.unwrap();
         assert_eq!(resp["proposals_generated"], 1);
@@ -1881,8 +1910,8 @@ mod tests {
         assert_eq!(resp["proposals"][0]["pattern_count"], 2);
     }
 
-    #[test]
-    fn dispatch_telemetry_serialization_roundtrip() {
+    #[tokio::test]
+    async fn dispatch_telemetry_serialization_roundtrip() {
         let telemetry = DispatchTelemetry {
             tool: "memory.search".to_string(),
             success: false,
@@ -1933,8 +1962,8 @@ mod tests {
         assert_eq!(deserialized.response_size_bytes, 0);
     }
 
-    #[test]
-    fn friction_auto_log_anomaly_creates_entry() {
+    #[tokio::test]
+    async fn friction_auto_log_anomaly_creates_entry() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionAutoLogTool::new(store.clone(), None);
@@ -1965,8 +1994,8 @@ mod tests {
         assert_eq!(memories[0].metadata.source, "auto");
     }
 
-    #[test]
-    fn friction_dedup_log_error_increments_count() {
+    #[tokio::test]
+    async fn friction_dedup_log_error_increments_count() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionAutoLogTool::new(store.clone(), None);
@@ -2010,8 +2039,8 @@ mod tests {
         assert_eq!(dup_tag, "rsi:dup:3");
     }
 
-    #[test]
-    fn friction_dedup_log_tool_increments_count() {
+    #[tokio::test]
+    async fn friction_dedup_log_tool_increments_count() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionLogTool::new(store.clone(), None);
@@ -2026,7 +2055,7 @@ mod tests {
         });
 
         // First call: creates new
-        let result = tool.call(&mut ctx, args).unwrap();
+        let result = tool.call(&mut ctx, args).await.unwrap();
         assert_eq!(result["status"], "success");
 
         // Second call: dedup
@@ -2037,7 +2066,7 @@ mod tests {
             "category": "error",
             "tool_name": "tool_a"
         });
-        let result = tool.call(&mut ctx, args).unwrap();
+        let result = tool.call(&mut ctx, args).await.unwrap();
         assert_eq!(result["status"], "duplicate");
         assert_eq!(result["duplicate_count"], 2);
 
@@ -2049,7 +2078,7 @@ mod tests {
             "category": "error",
             "tool_name": "tool_a"
         });
-        let result = tool.call(&mut ctx, args).unwrap();
+        let result = tool.call(&mut ctx, args).await.unwrap();
         assert_eq!(result["status"], "duplicate");
         assert_eq!(result["duplicate_count"], 3);
 
@@ -2058,8 +2087,8 @@ mod tests {
         assert_eq!(memories.len(), 1);
     }
 
-    #[test]
-    fn friction_hash_is_deterministic() {
+    #[tokio::test]
+    async fn friction_hash_is_deterministic() {
         let h1 = friction_hash("tool_a", "error", "high", "something went wrong");
         let h2 = friction_hash("tool_a", "error", "high", "something went wrong");
         assert_eq!(h1, h2);
@@ -2077,8 +2106,8 @@ mod tests {
         assert_ne!(h1, h5);
     }
 
-    #[test]
-    fn active_proposals_tool_retrieves_proposals() {
+    #[tokio::test]
+    async fn active_proposals_tool_retrieves_proposals() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = ActiveProposalsTool::new(store.clone());
@@ -2104,7 +2133,7 @@ mod tests {
         store.put(wm_core::Galaxy::Codex, &other).unwrap();
 
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["active_proposals"], 1);
         assert_eq!(result["proposals"][0]["category"], "error");
@@ -2112,8 +2141,8 @@ mod tests {
         assert_eq!(result["proposals"][0]["signature"], "error:tool_a:high");
     }
 
-    #[test]
-    fn friction_resolve_tool_tags_resolved() {
+    #[tokio::test]
+    async fn friction_resolve_tool_tags_resolved() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
 
@@ -2143,6 +2172,7 @@ mod tests {
                     "resolution_method": "code_fix",
                 }),
             )
+            .await
             .unwrap();
 
         assert_eq!(result["status"], "resolved");
@@ -2161,8 +2191,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn friction_resolve_already_resolved_returns_early() {
+    #[tokio::test]
+    async fn friction_resolve_already_resolved_returns_early() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
 
@@ -2187,13 +2217,14 @@ mod tests {
                     "resolution_note": "fix again",
                 }),
             )
+            .await
             .unwrap();
 
         assert_eq!(result["status"], "already_resolved");
     }
 
-    #[test]
-    fn regression_detection_in_log_error_creates_new_entry() {
+    #[tokio::test]
+    async fn regression_detection_in_log_error_creates_new_entry() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let tool = FrictionAutoLogTool::new(store.clone(), None);
@@ -2249,8 +2280,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn redteam_from_friction_generates_regression_tests() {
+    #[tokio::test]
+    async fn redteam_from_friction_generates_regression_tests() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
 
@@ -2268,6 +2299,7 @@ mod tests {
                     "tool_name": "memory.search"
                 }),
             )
+            .await
             .unwrap();
         let friction_id = result["id"].as_str().unwrap().to_string();
 
@@ -2282,11 +2314,12 @@ mod tests {
                     "resolution_method": "code_fix"
                 }),
             )
+            .await
             .unwrap();
 
         // Now run redteam.from_friction
         let rtf_tool = RedteamFromFrictionTool::new(store);
-        let result = rtf_tool.call(&mut ctx, json!({})).unwrap();
+        let result = rtf_tool.call(&mut ctx, json!({})).await.unwrap();
 
         assert_eq!(result["status"], "success");
         assert_eq!(result["resolved_friction_count"], 1);
@@ -2305,8 +2338,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn redteam_from_friction_detects_regressions() {
+    #[tokio::test]
+    async fn redteam_from_friction_detects_regressions() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
 
@@ -2321,7 +2354,7 @@ mod tests {
             "category": "error",
             "tool_name": "memory.create"
         });
-        let result = log_tool.call(&mut ctx, args.clone()).unwrap();
+        let result = log_tool.call(&mut ctx, args.clone()).await.unwrap();
         let friction_id = result["id"].as_str().unwrap().to_string();
 
         let resolve_tool = FrictionResolveTool::new(store.clone(), None, None);
@@ -2334,14 +2367,15 @@ mod tests {
                     "resolution_method": "code_fix"
                 }),
             )
+            .await
             .unwrap();
 
         // Re-log same friction → regression
-        let _ = log_tool.call(&mut ctx, args).unwrap();
+        let _ = log_tool.call(&mut ctx, args).await.unwrap();
 
         // Run redteam.from_friction
         let rtf_tool = RedteamFromFrictionTool::new(store);
-        let result = rtf_tool.call(&mut ctx, json!({})).unwrap();
+        let result = rtf_tool.call(&mut ctx, json!({})).await.unwrap();
 
         assert_eq!(result["status"], "success");
         assert!(result["regression_count"].as_u64().unwrap() >= 1);
@@ -2361,15 +2395,15 @@ mod tests {
         );
     }
 
-    #[test]
-    fn redteam_coverage_report_returns_summary() {
+    #[tokio::test]
+    async fn redteam_coverage_report_returns_summary() {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
         let associations = Arc::new(wm_memory::AssociationStore::open(store.env()).unwrap());
         let tool = RedteamCoverageReportTool::new(store, associations);
 
         let mut ctx = Context::new(BrainWave::Gamma);
-        let result = tool.call(&mut ctx, json!({})).unwrap();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
 
         assert!(result["status"].as_str().is_some());
         assert!(result["total_vectors"].as_u64().unwrap_or(0) > 0);

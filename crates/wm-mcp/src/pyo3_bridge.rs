@@ -1,11 +1,11 @@
-//! PyO3 bridge — exposes the WhiteMagic v4 MCP server to Python.
+//! PyO3 bridge — exposes the WhiteMagic v5 MCP server to Python.
 //!
-//! When the `python` feature is enabled, this module provides a `whitemagic_v4`
+//! When the `python` feature is enabled, this module provides a `whitemagic_v5`
 //! Python extension module that can be imported from Python:
 //!
 //! ```python
-//! import whitemagic_v4
-//! server = whitemagic_v4.Server("/path/to/lmdb")
+//! import whitemagic_v5
+//! server = whitemagic_v5.Server("/path/to/lmdb")
 //! response = server.handle_request('{"jsonrpc":"2.0","id":1,"method":"tools/list"}')
 //! ```
 //!
@@ -52,7 +52,8 @@ impl PyServer {
     /// Returns:
     ///     A JSON-RPC 2.0 response string.
     fn handle_request(&mut self, json_request: &str) -> String {
-        self.inner.handle_request(json_request)
+        let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
+        rt.block_on(self.inner.handle_request(json_request))
     }
 
     /// Get the current brain-wave state as a string.
@@ -138,14 +139,14 @@ impl PyServer {
 
 /// Python module initialization.
 #[pymodule]
-pub fn whitemagic_v4(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn whitemagic_v5(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyServer>()?;
 
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
 
     m.add(
         "__doc__",
-        "WhiteMagic v4 — Cognitive OS MCP server (PyO3 bridge)",
+        "WhiteMagic v5 — Cognitive OS MCP server (PyO3 bridge)",
     )?;
 
     Ok(())

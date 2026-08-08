@@ -1,13 +1,17 @@
 //! `WhiteMagic` CLI — `wm` command
 //!
-//! Entry point for the `WhiteMagic` v4 CLI tool.
+//! Entry point for the `WhiteMagic` v5 CLI tool.
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "wm", version = "4.0.0", about = "WhiteMagic v4 — Cognitive OS")]
+#[command(name = "wm", version = "5.2.1", about = "WhiteMagic v5 — Cognitive OS")]
 struct Cli {
+    /// Path to a TOML config file. Overrides default config location.
+    #[arg(long, global = true)]
+    config: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -17,6 +21,18 @@ enum Commands {
     /// Run the MCP server (JSON-RPC over stdio)
     Serve {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Generate or show configuration
+    Config {
+        /// Print a sample config.toml to stdout
+        #[arg(long)]
+        sample: bool,
+        /// Write a sample config.toml to the default config path
+        #[arg(long)]
+        init: bool,
+        /// Path to the LMDB store directory (for --init)
         #[arg(long)]
         store: Option<PathBuf>,
     },
@@ -62,21 +78,27 @@ enum Commands {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
         store: Option<PathBuf>,
-        /// Interval between full cycle sweeps in seconds (default: 300 = 5 min)
-        #[arg(long, default_value_t = 300)]
-        cycle_interval: u64,
-        /// Interval between dream cycle runs in seconds (default: 600 = 10 min)
-        #[arg(long, default_value_t = 600)]
-        dream_interval: u64,
-        /// Minimum health score to run cycles (default: 0.3)
-        #[arg(long, default_value_t = 0.3)]
-        min_health: f32,
+        /// Interval between full cycle sweeps in seconds (overrides config)
+        #[arg(long)]
+        cycle_interval: Option<u64>,
+        /// Interval between dream cycle runs in seconds (overrides config)
+        #[arg(long)]
+        dream_interval: Option<u64>,
+        /// Minimum health score to run cycles (overrides config)
+        #[arg(long)]
+        min_health: Option<f32>,
         /// Interval between RSI Phase 4 codegen cycles in seconds (0 = disabled)
-        #[arg(long, default_value_t = 0)]
-        codegen_interval: u64,
+        #[arg(long)]
+        codegen_interval: Option<u64>,
         /// Auto-apply code patches that pass tests (dangerous)
         #[arg(long)]
         codegen_auto_apply: bool,
+        /// Interval between dedicated Research cycles in seconds (0 = run with regular cycle sweep)
+        #[arg(long)]
+        research_interval: Option<u64>,
+        /// Interval between self-play training cycles in seconds (0 = disabled)
+        #[arg(long)]
+        selfplay_interval: Option<u64>,
     },
     /// Show current brain-wave state (shorthand for stats)
     BrainWave {
@@ -130,9 +152,14 @@ fn main() -> anyhow::Result<()> {
         .with_writer(std::io::stderr)
         .init();
 
+    // Load configuration (config file + env overrides)
+    let wm_config = wm_mcp::config::WmConfig::load(cli.config.as_ref());
+    // Export config values to env vars so subsystems pick them up
+    wm_config.export_to_env();
+
     match cli.command {
         Commands::Serve { store } => {
-            let store_path = store.unwrap_or_else(default_store_path);
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
             std::fs::create_dir_all(&lmdb_path)?;
 
@@ -164,7 +191,8 @@ fn main() -> anyhow::Result<()> {
             rt.shutdown_timeout(std::time::Duration::from_millis(500));
         }
         Commands::Quickstart => {
-            run_quickstart()?;
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async { run_quickstart().await })?;
         }
         Commands::Doctor {
             store,
@@ -174,7 +202,7 @@ fn main() -> anyhow::Result<()> {
             run_doctor(store, check_integrity, repair)?;
         }
         Commands::Stats { store } => {
-            let store_path = store.unwrap_or_else(default_store_path);
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
             if !lmdb_path.exists() {
                 println!(
@@ -237,7 +265,7 @@ fn main() -> anyhow::Result<()> {
             format,
             include_negative,
         } => {
-            let store_path = store.unwrap_or_else(default_store_path);
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
             if !lmdb_path.exists() {
                 println!(
@@ -288,6 +316,36 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        Commands::Config {
+            sample,
+            init,
+            store,
+        } => {
+            if sample {
+                print!("{}", wm_mcp::config::WmConfig::sample_toml());
+                return Ok(());
+            }
+            if init {
+                let store_path = store.unwrap_or_else(|| wm_config.store_path());
+                std::fs::create_dir_all(&store_path)?;
+                let config_path = store_path.join("config.toml");
+                if config_path.exists() {
+                    println!("Config already exists at {}", config_path.display());
+                    return Ok(());
+                }
+                std::fs::write(&config_path, wm_mcp::config::WmConfig::sample_toml())?;
+                println!("Created sample config at {}", config_path.display());
+                println!("Edit it to configure LLM endpoints, embedder, and daemon schedules.");
+                return Ok(());
+            }
+            // No flags: show current effective config
+            println!("# Effective WhiteMagic Configuration");
+            println!("# (config file + env var overrides)\n");
+            let toml_str =
+                toml::to_string_pretty(&wm_config).unwrap_or_else(|e| format!("Error: {e}"));
+            println!("{toml_str}");
+            println!("# Store path: {}", wm_config.store_path().display());
+        }
         Commands::Daemon {
             store,
             cycle_interval,
@@ -295,8 +353,10 @@ fn main() -> anyhow::Result<()> {
             min_health,
             codegen_interval,
             codegen_auto_apply,
+            research_interval,
+            selfplay_interval,
         } => {
-            let store_path = store.unwrap_or_else(default_store_path);
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
             std::fs::create_dir_all(&lmdb_path)?;
 
@@ -317,16 +377,31 @@ fn main() -> anyhow::Result<()> {
                 }
             };
 
-            let config = wm_mcp::daemon::DaemonConfig {
-                cycle_interval: std::time::Duration::from_secs(cycle_interval),
-                dream_interval: std::time::Duration::from_secs(dream_interval),
-                min_health_score: min_health,
-                codegen_interval: std::time::Duration::from_secs(codegen_interval),
-                codegen_auto_apply,
-                ..Default::default()
-            };
+            // Start with config file values, then apply CLI overrides
+            let mut daemon_cfg = wm_config.daemon_durations();
+            if let Some(secs) = cycle_interval {
+                daemon_cfg.cycle_interval = std::time::Duration::from_secs(secs);
+            }
+            if let Some(secs) = dream_interval {
+                daemon_cfg.dream_interval = std::time::Duration::from_secs(secs);
+            }
+            if let Some(h) = min_health {
+                daemon_cfg.min_health_score = h;
+            }
+            if let Some(secs) = codegen_interval {
+                daemon_cfg.codegen_interval = std::time::Duration::from_secs(secs);
+            }
+            if codegen_auto_apply {
+                daemon_cfg.codegen_auto_apply = true;
+            }
+            if let Some(secs) = research_interval {
+                daemon_cfg.research_interval = std::time::Duration::from_secs(secs);
+            }
+            if let Some(secs) = selfplay_interval {
+                daemon_cfg.selfplay_interval = std::time::Duration::from_secs(secs);
+            }
 
-            wm_mcp::daemon::run_daemon(&mut server, &config)?;
+            wm_mcp::daemon::run_daemon(&mut server, &daemon_cfg)?;
         }
         Commands::BrainWave { store } => {
             run_brain_wave(store);
@@ -355,7 +430,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     let store_path = store.unwrap_or_else(default_store_path);
     let lmdb_path = store_path.join("lmdb");
 
-    println!("=== WhiteMagic v4 Doctor ===");
+    println!("=== WhiteMagic v5 Doctor ===");
     println!();
 
     // 1. LMDB store check
@@ -512,12 +587,12 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     Ok(())
 }
 
-fn run_quickstart() -> anyhow::Result<()> {
+async fn run_quickstart() -> anyhow::Result<()> {
     let store_path = default_store_path();
     let lmdb_path = store_path.join("lmdb");
     std::fs::create_dir_all(&lmdb_path)?;
 
-    println!("=== WhiteMagic v4 Quickstart ===");
+    println!("=== WhiteMagic v5 Quickstart ===");
     println!();
     println!("Initializing store at {}...", lmdb_path.display());
 
@@ -574,7 +649,7 @@ fn run_quickstart() -> anyhow::Result<()> {
             }
         }
     });
-    let response = server.handle_request(&search_request.to_string());
+    let response = server.handle_request(&search_request.to_string()).await;
     let resp: serde_json::Value = serde_json::from_str(&response).unwrap_or_default();
     if let Some(result) = resp.get("result") {
         if let Some(content) = result
@@ -665,7 +740,7 @@ fn run_quickstart() -> anyhow::Result<()> {
 }
 
 fn run_polyglot() {
-    println!("=== WhiteMagic v4 Polyglot Status ===");
+    println!("=== WhiteMagic v5 Polyglot Status ===");
     println!();
 
     let runtimes: &[(&str, &str, &str)] = &[

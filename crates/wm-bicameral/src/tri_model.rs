@@ -1,4 +1,4 @@
-//! TriModelManager — tri-model lifecycle management for WhiteMagic v4.
+//! TriModelManager — tri-model lifecycle management for WhiteMagic v5.
 //!
 //! Manages three model components with independent lifecycle:
 //! - **Autonomic** (BitMamba, always-on, ~252MB): citta heartbeats, salience,
