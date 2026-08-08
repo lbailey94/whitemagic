@@ -94,7 +94,7 @@ python python/whitemagic_v5_server.py --store ~/.local/share/whitemagic/lmdb
 
 See `python/README.md` for MCP client configuration (Claude Desktop, Cursor, Windsurf).
 
-See [docs/PROGRESS.md](docs/PROGRESS.md) for detailed phase status and v2/v4 comparison.
+See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and porting roadmap, and [docs/PROGRESS.md](docs/PROGRESS.md) for phase status.
 
 ## What's Different
 

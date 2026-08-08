@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`pipeline_karma_batched_e2e`**: Full dispatch cycle with 20 tool calls (10 honest + 10 wasteful), verifies pending buffer count, total_debt accuracy (2.0), chain integrity after flush, and persistence across ledger instances
 
 ### Metrics
-- **184 tools** (unchanged)
+- **185 tools** (unchanged)
 - **3,168 tests** (up from 3,167: +1 E2E karma batching test)
 - **0 clippy warnings**, fmt clean
 
