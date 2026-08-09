@@ -39,6 +39,7 @@ pub mod autonomous;
 pub mod bayesian_tools;
 pub mod bicameral;
 pub mod boundary;
+pub mod claims_tools;
 pub mod common;
 pub mod conformal;
 pub mod consciousness;
@@ -91,6 +92,7 @@ pub use autonomous::{
 pub use bayesian_tools::{McOptimizeTool, McSurrogateTool};
 pub use bicameral::{BicameralReasonTool, BicameralStatusTool};
 pub use boundary::{AntiLoopCheckTool, BoundaryEnforceTool};
+pub use claims_tools::{ClaimsTool, register_claims};
 pub use consciousness::{
     ApotheosisCheckTool, CittaHistoryTool, CittaReflectTool, CittaStatusTool,
     ConsciousnessDepthTool, DreamAnalyzeTool, DreamStatusTool, DreamTriggerTool, SmaranaStatusTool,
@@ -98,7 +100,7 @@ pub use consciousness::{
 };
 pub use constellation::{ConstellationDetectTool, ConstellationListTool};
 pub use correlation::{CorrelationAnalyzeTool, GodNodesTool};
-pub use dharma::{DharmaAuditTool, DharmaRulesTool};
+pub use dharma::{DharmaAcsTool, DharmaAuditTool, DharmaRulesTool};
 pub use drive::{DriveEventTool, DriveSnapshotTool};
 pub use galaxy::{
     GalaxyBackupTool, GalaxyDashboardTool, GalaxyExportTool, GalaxyHealthTool, GalaxyImportTool,
@@ -272,9 +274,10 @@ pub fn register_expansion(
             .register(Arc::new(KarmaClearTool::new(k)));
     }
     let mut reg = reg
-        // Dharma (2)
+        // Dharma (3)
         .register(Arc::new(DharmaRulesTool::new()))
         .register(Arc::new(DharmaAuditTool::new(store.clone())))
+        .register(Arc::new(DharmaAcsTool::new()))
         // Agents (8)
         .register(Arc::new(AgentRegisterTool::new(store.clone())))
         .register(Arc::new(AgentListTool::new(store.clone())))

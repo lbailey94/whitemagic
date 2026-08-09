@@ -14,6 +14,7 @@ wm-core = { workspace = true }
 wm-memory = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true, optional = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
@@ -26,3 +27,6 @@ wm-substrate = { workspace = true }
 [dev-dependencies]
 proptest = { workspace = true }
 tempfile = "3"
+
+[features]
+acs-yaml = ["dep:serde_yaml"]

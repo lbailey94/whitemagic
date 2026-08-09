@@ -5,6 +5,27 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.6.0] — 2026-08-09
+
+### ACS compliance surface (Microsoft Agent Control Specification)
+
+- **`wm-governance::acs`** — the five-checkpoint model (input / llm / state / tool_execution / output) mapped onto Dharma governance: `AcsCheckpoint`, `AcsAction` (allow→block severity ladder), `AcsRule` → `PolicyRule` conversion with sutra + OWASP mapping
+- **Policy YAML import/export** (`acs-yaml` feature, `serde_yaml`): `DharmaPolicy::to_acs_yaml()` renders the live policy as portable ACS policy YAML; `import_acs_yaml()` parses ACS policies into dharma rules unchanged. Feature-gated: `--features wm-governance/acs-yaml`
+- **`dharma.acs` tool** (202 → **203 tools**) — actions: `report` (per-checkpoint coverage table + percent), `export` (policy as ACS YAML), `import` (ACS YAML → dharma rules)
+- **`AcsComplianceReport`** — per-checkpoint coverage with `coverage_percent()`, mirroring the OWASP coverage surface; `docs/ACS_ALIGNMENT.md` published as the positioning asset
+
+### Prescience claims ledger (v26 `temporal_db` port)
+
+- **`wm-simulation::claims`** — `ClaimsLedger` with dated, falsifiable claims: `record` (source date + mandatory falsification criterion), `resolve` (validation event → validated credits lead weeks, 1 week = 1 point; falsified recorded as a miss), `status` (totals + per-domain breakdown), `list` (domain/status filters)
+- **`claims` tool** — actions: `add`, `resolve`, `status`, `list`; ledger persists to `<store>/claims_ledger.json` on shutdown, restored on startup
+- The falsified count is always reported alongside the score — honesty is part of the store, not an afterthought
+
+### Counts
+
+- 202 → **203 tools** (dharma.acs)
+- 3,311 → **3,332 tests passing, 0 failed** (+21)
+- 0 clippy warnings, fmt clean, cargo-deny all green
+
 ## [5.5.0] — 2026-08-08
 
 ### MC suite completion (v26 `mc.*` parity)

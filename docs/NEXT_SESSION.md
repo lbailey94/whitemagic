@@ -3,13 +3,14 @@
 State as of the end of the late 2026-08-08 session. Working tree has
 uncommitted changes (this session's features) — see git status.
 
-## Current State (v5.5.0)
+## Current State (v5.6.0)
 
-- **15 crates, 202 tools, 3,311 tests (0 failed), ~131,000 LOC**
+- **15 crates, 203 tools, 3,332 tests (0 failed), ~131,000 LOC**
 - 0 clippy warnings (`cargo clippy --all-targets`), fmt clean, cargo-deny all green
 - 0 lock panics in production code (72 sites converted to graceful degradation)
 - Live store: `~/Desktop/WMdata/live` — 58,617 memories / 10 galaxies
 - Conformal prediction + drift monitoring, Brier scorecard, GP/Bayesian optimization, MC suite complete
+- ACS compliance surface (`dharma.acs` report/export/import) + prescience claims ledger (`claims.*`) shipped
 - Daemon: SIGTERM graceful shutdown + stall watchdog + panic resilience
 - MCP boundary: validation enforced, request budget, rate limit, bounded reads
 
@@ -105,7 +106,7 @@ ls ~/Desktop/WMdocs    # all documentation
 
 ## Gotchas / notes
 
-- Version aligned at **5.5.0** (Cargo.toml workspace, clap attribute, README,
+- Version aligned at **5.6.0** (Cargo.toml workspace, clap attribute, README,
   CHANGELOG, PROGRESS, GAP_ANALYSIS).
 - `fuzz/corpus/` is partially gitignored: only `seed_*` files are tracked;
   libFuzzer-regenerated sha1 files stay ignored — never `git add -A fuzz/corpus/`

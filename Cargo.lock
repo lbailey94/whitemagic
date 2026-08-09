@@ -6244,6 +6244,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_yaml"
+version = "0.9.34+deprecated"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+dependencies = [
+ "indexmap 2.14.0",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
+]
+
+[[package]]
 name = "serde_yaml_ng"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7820,7 +7833,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wm-bicameral"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "ahash",
  "chrono",
@@ -7839,7 +7852,7 @@ dependencies = [
 
 [[package]]
 name = "wm-cognitive"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "ahash",
  "chrono",
@@ -7865,7 +7878,7 @@ dependencies = [
 
 [[package]]
 name = "wm-conformal"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "proptest",
  "serde",
@@ -7875,7 +7888,7 @@ dependencies = [
 
 [[package]]
 name = "wm-core"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -7894,7 +7907,7 @@ dependencies = [
 
 [[package]]
 name = "wm-dispatch"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -7915,7 +7928,7 @@ dependencies = [
 
 [[package]]
 name = "wm-governance"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "ahash",
  "chrono",
@@ -7923,6 +7936,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
+ "serde_yaml",
  "sha2 0.10.9",
  "tempfile",
  "thiserror 2.0.20",
@@ -7935,7 +7949,7 @@ dependencies = [
 
 [[package]]
 name = "wm-mcp"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7970,7 +7984,7 @@ dependencies = [
 
 [[package]]
 name = "wm-memory"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "ahash",
  "arrow",
@@ -8002,7 +8016,7 @@ dependencies = [
 
 [[package]]
 name = "wm-polyglot"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "async-trait",
  "jlrs",
@@ -8018,7 +8032,7 @@ dependencies = [
 
 [[package]]
 name = "wm-sangha"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "chrono",
  "serde",
@@ -8031,7 +8045,7 @@ dependencies = [
 
 [[package]]
 name = "wm-selfmodel"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "chrono",
  "serde",
@@ -8041,7 +8055,7 @@ dependencies = [
 
 [[package]]
 name = "wm-simulation"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "chrono",
  "serde",
@@ -8052,7 +8066,7 @@ dependencies = [
 
 [[package]]
 name = "wm-substrate"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "chrono",
  "serde",
@@ -8063,7 +8077,7 @@ dependencies = [
 
 [[package]]
 name = "wm-tools"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -8093,7 +8107,7 @@ dependencies = [
 
 [[package]]
 name = "wm-workspace"
-version = "5.5.0"
+version = "5.6.0"
 dependencies = [
  "serde",
  "serde_json",

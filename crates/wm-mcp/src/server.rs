@@ -96,6 +96,9 @@ pub struct McpServer {
     /// Brier calibration store (shared with simulation.calibrate) — persisted
     /// to `<store>/calibration_store.json` on shutdown.
     calibration_store: Option<Arc<std::sync::Mutex<wm_simulation::CalibrationStore>>>,
+    /// Prescience claims ledger (shared with claims.*) — persisted to
+    /// `<store>/claims_ledger.json` on shutdown.
+    claims_ledger: Option<Arc<std::sync::Mutex<wm_simulation::ClaimsLedger>>>,
 }
 
 /// JSON-RPC request envelope.
@@ -350,6 +353,7 @@ impl McpServer {
             shadow_stats,
             conformal_store: None,
             calibration_store: None,
+            claims_ledger: None,
         }
     }
 
@@ -617,6 +621,11 @@ impl McpServer {
             Some(Arc::clone(&calibration_store)),
             Some(Arc::clone(&self_model)),
         );
+        let claims_ledger = Arc::new(std::sync::Mutex::new(wm_simulation::ClaimsLedger::new()));
+        let registry = wm_tools::expansion::claims_tools::register_claims(
+            &registry,
+            Some(Arc::clone(&claims_ledger)),
+        );
         let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
         let shadow_stats = Arc::new(std::sync::RwLock::new(
@@ -683,6 +692,8 @@ impl McpServer {
         server.conformal_store = Some(Arc::clone(&conformal_store));
         // Attach the Brier calibration store so it auto-persists on shutdown
         server.calibration_store = Some(Arc::clone(&calibration_store));
+        // Attach the claims ledger so it auto-persists on shutdown
+        server.claims_ledger = Some(Arc::clone(&claims_ledger));
 
         // Restore persisted conformal calibration state (if any)
         let conformal_path = store_path
@@ -746,6 +757,39 @@ impl McpServer {
                 },
                 Err(e) => {
                     tracing::warn!(path = %calibration_path.display(), error = %e, "Cannot read calibration state file");
+                }
+            }
+        }
+
+        // Restore persisted prescience claims ledger (if any)
+        let claims_path = store_path
+            .parent()
+            .unwrap_or(store_path)
+            .join("claims_ledger.json");
+        if claims_path.exists() {
+            match std::fs::read_to_string(&claims_path) {
+                Ok(contents) => match serde_json::from_str::<Value>(&contents) {
+                    Ok(json) => {
+                        if let Ok(mut ledger) = claims_ledger.lock() {
+                            match ledger.from_json(&json) {
+                                Ok(()) => tracing::info!(
+                                    path = %claims_path.display(),
+                                    "Loaded persisted claims ledger"
+                                ),
+                                Err(e) => tracing::warn!(
+                                    path = %claims_path.display(),
+                                    error = %e,
+                                    "Failed to restore claims ledger"
+                                ),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(path = %claims_path.display(), error = %e, "Claims ledger file unparseable");
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!(path = %claims_path.display(), error = %e, "Cannot read claims ledger file");
                 }
             }
         }
@@ -1300,6 +1344,26 @@ impl McpServer {
                         }
                     }
                     Err(e) => tracing::warn!(error = %e, "Failed to serialize calibration state"),
+                }
+            }
+        }
+
+        // Save prescience claims ledger
+        if let Some(ledger) = &self.claims_ledger {
+            if let Ok(ledger_guard) = ledger.lock() {
+                let path = store_dir
+                    .parent()
+                    .unwrap_or(store_dir)
+                    .join("claims_ledger.json");
+                match serde_json::to_string_pretty(&ledger_guard.to_json()) {
+                    Ok(json) => {
+                        if let Err(e) = std::fs::write(&path, json) {
+                            tracing::warn!(path = %path.display(), error = %e, "Failed to save claims ledger");
+                        } else {
+                            tracing::info!(path = %path.display(), "Saved claims ledger");
+                        }
+                    }
+                    Err(e) => tracing::warn!(error = %e, "Failed to serialize claims ledger"),
                 }
             }
         }
@@ -2413,6 +2477,11 @@ mod tests {
             &registry,
             Some(Arc::clone(&calibration_store)),
             Some(Arc::clone(&self_model)),
+        );
+        let claims_ledger = Arc::new(std::sync::Mutex::new(wm_simulation::ClaimsLedger::new()));
+        let registry = wm_tools::expansion::claims_tools::register_claims(
+            &registry,
+            Some(Arc::clone(&claims_ledger)),
         );
         let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 

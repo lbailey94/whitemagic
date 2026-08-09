@@ -18,6 +18,7 @@
 
 pub mod bayesian;
 pub mod calibration;
+pub mod claims;
 pub mod counterfactual;
 pub mod forecasting;
 pub mod monte_carlo;
@@ -31,6 +32,7 @@ pub use bayesian::{
     norm_pdf,
 };
 pub use calibration::{BrierScorecard, CalibrationBin, CalibrationPrediction, CalibrationStore};
+pub use claims::{Claim, ClaimStatus, ClaimsLedger, ValidationEvent};
 pub use counterfactual::{CounterfactualEstimator, CounterfactualResult};
 pub use forecasting::{ForecastMethod, ForecastResult, Forecaster};
 pub use monte_carlo::{Distribution, McConfig, McResult, MonteCarloSimulator};
