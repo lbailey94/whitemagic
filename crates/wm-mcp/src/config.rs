@@ -206,6 +206,13 @@ pub struct DaemonConfig {
     /// Interval between self-play training cycles (seconds, 0 = disabled).
     #[serde(default)]
     pub selfplay_interval_secs: u64,
+
+    /// Watchdog stall timeout (seconds, 0 = disabled).
+    ///
+    /// If the daemon main loop doesn't tick for this long, the watchdog
+    /// forces a restart so a supervisor (Docker/systemd) brings it back.
+    #[serde(default = "default_watchdog_timeout")]
+    pub watchdog_timeout_secs: u64,
 }
 
 impl Default for DaemonConfig {
@@ -220,6 +227,7 @@ impl Default for DaemonConfig {
             codegen_auto_apply: false,
             research_interval_secs: 0,
             selfplay_interval_secs: 0,
+            watchdog_timeout_secs: 60,
         }
     }
 }
@@ -238,6 +246,9 @@ const fn default_homeostasis_interval() -> u64 {
 }
 const fn default_min_health() -> f32 {
     0.3
+}
+const fn default_watchdog_timeout() -> u64 {
+    60
 }
 
 impl WmConfig {
@@ -401,6 +412,7 @@ impl WmConfig {
             codegen_auto_apply: self.daemon.codegen_auto_apply,
             research_interval: Duration::from_secs(self.daemon.research_interval_secs),
             selfplay_interval: Duration::from_secs(self.daemon.selfplay_interval_secs),
+            watchdog_timeout: Duration::from_secs(self.daemon.watchdog_timeout_secs),
         }
     }
 
@@ -568,6 +580,8 @@ codegen_auto_apply = false
 research_interval_secs = 0
 # Self-play training cycle interval (seconds, 0 = disabled)
 selfplay_interval_secs = 0
+# Watchdog stall timeout (seconds, 0 = disabled) — force-restart on daemon hang
+watchdog_timeout_secs = 60
 "#
         .to_string()
     }
@@ -583,6 +597,7 @@ mod tests {
         assert_eq!(cfg.daemon.cycle_interval_secs, 300);
         assert_eq!(cfg.daemon.dream_interval_secs, 600);
         assert_eq!(cfg.daemon.min_health_score, 0.3);
+        assert_eq!(cfg.daemon.watchdog_timeout_secs, 60);
         assert!(!cfg.daemon.codegen_auto_apply);
     }
 
@@ -655,6 +670,7 @@ llama_endpoint = "http://localhost:8080"
                 codegen_auto_apply: true,
                 research_interval_secs: 300,
                 selfplay_interval_secs: 900,
+                watchdog_timeout_secs: 120,
             },
             ..Default::default()
         };
@@ -668,6 +684,7 @@ llama_endpoint = "http://localhost:8080"
         assert!(d.codegen_auto_apply);
         assert_eq!(d.research_interval, Duration::from_secs(300));
         assert_eq!(d.selfplay_interval, Duration::from_secs(900));
+        assert_eq!(d.watchdog_timeout, Duration::from_secs(120));
     }
 
     #[test]

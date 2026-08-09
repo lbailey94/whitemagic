@@ -23,6 +23,7 @@ wm-selfmodel = { workspace = true }
 wm-bicameral = { workspace = true }
 wm-sangha = { workspace = true }
 wm-simulation = { workspace = true }
+wm-conformal = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

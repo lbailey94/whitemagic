@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "wm", version = "5.2.2", about = "WhiteMagic v5 — Cognitive OS")]
+#[command(name = "wm", version = "5.3.0", about = "WhiteMagic v5 — Cognitive OS")]
 struct Cli {
     /// Path to a TOML config file. Overrides default config location.
     #[arg(long, global = true)]
@@ -23,6 +23,9 @@ enum Commands {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
         store: Option<PathBuf>,
+        /// Max requests served per connection before refusing (0 = unlimited, default 10000)
+        #[arg(long, default_value_t = wm_mcp::DEFAULT_MAX_REQUESTS_PER_SESSION)]
+        max_requests: u64,
     },
     /// Generate or show configuration
     Config {
@@ -99,6 +102,9 @@ enum Commands {
         /// Interval between self-play training cycles in seconds (0 = disabled)
         #[arg(long)]
         selfplay_interval: Option<u64>,
+        /// Watchdog stall timeout in seconds (0 = disabled; force-restart on daemon hang)
+        #[arg(long)]
+        watchdog_timeout: Option<u64>,
     },
     /// Show current brain-wave state (shorthand for stats)
     BrainWave {
@@ -158,7 +164,10 @@ fn main() -> anyhow::Result<()> {
     wm_config.export_to_env();
 
     match cli.command {
-        Commands::Serve { store } => {
+        Commands::Serve {
+            store,
+            max_requests,
+        } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
             std::fs::create_dir_all(&lmdb_path)?;
@@ -181,6 +190,13 @@ fn main() -> anyhow::Result<()> {
                     wm_mcp::McpServer::with_defaults(&lmdb_path)?
                 }
             };
+
+            // Boundary hardening: enforce per-session request budget
+            server.set_request_budget(max_requests);
+            tracing::info!(
+                max_requests,
+                "Request budget enforced — server refuses requests beyond the per-connection cap"
+            );
 
             // Use tokio runtime for async event loop with brain-wave eco mode
             let rt = tokio::runtime::Runtime::new()?;
@@ -357,6 +373,7 @@ fn main() -> anyhow::Result<()> {
             codegen_auto_apply,
             research_interval,
             selfplay_interval,
+            watchdog_timeout,
         } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
@@ -401,6 +418,9 @@ fn main() -> anyhow::Result<()> {
             }
             if let Some(secs) = selfplay_interval {
                 daemon_cfg.selfplay_interval = std::time::Duration::from_secs(secs);
+            }
+            if let Some(secs) = watchdog_timeout {
+                daemon_cfg.watchdog_timeout = std::time::Duration::from_secs(secs);
             }
 
             wm_mcp::daemon::run_daemon(&mut server, &daemon_cfg)?;
@@ -576,6 +596,90 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     let karma_path = lmdb_path.join("data.mdb");
     if karma_path.exists() {
         println!("[OK]   Karma chain: LMDB data file present");
+    }
+
+    // 10. Conformal calibration health
+    let conformal_path = store_path.join("conformal_store.json");
+    if conformal_path.exists() {
+        match std::fs::read_to_string(&conformal_path) {
+            Ok(contents) => match serde_json::from_str::<serde_json::Value>(&contents) {
+                Ok(json) => {
+                    let mut store = wm_tools::expansion::conformal::ConformalStore::new();
+                    match store.from_json(&json) {
+                        Ok(()) => {
+                            let clf = store.classifier.as_ref();
+                            let reg = store.regressor.as_ref();
+                            let aps = store.aps.as_ref();
+
+                            let clf_ok = clf.is_some();
+                            let reg_ok = reg.is_some();
+
+                            println!(
+                                "[{}] Conformal calibration: {}",
+                                if clf_ok || reg_ok { "OK" } else { "WARN" },
+                                conformal_path.display()
+                            );
+                            println!(
+                                "       Classifier: {}, samples: {}",
+                                if clf_ok {
+                                    format!(
+                                        "fitted (alpha={:.2})",
+                                        clf.map_or(
+                                            0.0,
+                                            wm_conformal::SplitConformalClassifier::alpha
+                                        )
+                                    )
+                                } else {
+                                    "not fitted".into()
+                                },
+                                store.classifier_samples()
+                            );
+                            println!(
+                                "       Regressor:  {}, samples: {}",
+                                if reg_ok {
+                                    format!(
+                                        "fitted (alpha={:.2})",
+                                        reg.map_or(
+                                            0.0,
+                                            wm_conformal::SplitConformalRegressor::alpha
+                                        )
+                                    )
+                                } else {
+                                    "not fitted".into()
+                                },
+                                store.regressor_samples()
+                            );
+                            println!(
+                                "       APS:        {}",
+                                if aps.is_some() {
+                                    "fitted (adaptive prediction sets)"
+                                } else {
+                                    "not fitted"
+                                }
+                            );
+                            if !clf_ok && !reg_ok {
+                                println!(
+                                    "       [WARN] Calibration samples exist but nothing is fitted — run conformal.fit_classifier / conformal.fit_regressor, then conformal.export"
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            println!("[WARN] Conformal state corrupt (parse failed: {e})");
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("[WARN] Conformal state unparseable: {e}");
+                }
+            },
+            Err(e) => {
+                println!("[WARN] Cannot read conformal state: {e}");
+            }
+        }
+    } else {
+        println!("[INFO] No conformal calibration state persisted (conformal_store.json)");
+        println!("       Calibrate via conformal.fit_classifier/fit_regressor, then persist:");
+        println!("       conformal.export > {}", conformal_path.display());
     }
 
     println!();

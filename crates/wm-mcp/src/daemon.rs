@@ -8,7 +8,7 @@
 //! dreams, and self-organizes continuously between requests.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use wm_bicameral::{
@@ -18,6 +18,31 @@ use wm_bicameral::{
 use wm_cognitive::{AutonomousCycleRunner, CycleContext, CycleStatus, CycleType};
 
 use crate::McpServer;
+
+/// Current unix time in seconds.
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+/// Run a fallible closure that may panic, recovering with a logged error.
+///
+/// Hardening: a panic inside one autonomous component must not take down
+/// the whole daemon — the watchdog recovers, logs, and the loop continues.
+#[allow(clippy::single_match_else)]
+fn resilient<T>(component: &str, f: impl FnOnce() -> T) -> Option<T> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
+        Ok(value) => Some(value),
+        Err(_) => {
+            tracing::error!(
+                component,
+                "Component panicked — recovered by daemon watchdog, continuing"
+            );
+            None
+        }
+    }
+}
 
 /// Configuration for the daemon's cycle schedule.
 #[derive(Debug, Clone)]
@@ -42,6 +67,9 @@ pub struct DaemonConfig {
     pub research_interval: Duration,
     /// Interval between self-play training cycles (0 = disabled).
     pub selfplay_interval: Duration,
+    /// Maximum time the main loop may go without a tick before the watchdog
+    /// declares it stalled and forces a restart (0 = watchdog disabled).
+    pub watchdog_timeout: Duration,
 }
 
 impl Default for DaemonConfig {
@@ -57,6 +85,7 @@ impl Default for DaemonConfig {
             codegen_auto_apply: false,
             research_interval: Duration::from_secs(0), // 0 = run with regular cycle sweep
             selfplay_interval: Duration::from_secs(0), // 0 = disabled
+            watchdog_timeout: Duration::from_secs(60), // 1 minute without a tick = stalled
         }
     }
 }
@@ -191,12 +220,54 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     if config.selfplay_interval > Duration::from_secs(0) {
         println!("  Self-play interval: {:?}", config.selfplay_interval);
     }
+    if config.watchdog_timeout > Duration::from_secs(0) {
+        println!(
+            "  Watchdog:        {:?} (force-restart on stall)",
+            config.watchdog_timeout
+        );
+    }
     println!();
     println!("Press Ctrl+C to stop.");
     println!();
 
-    while running.load(Ordering::SeqCst) {
+    // ── Watchdog ──────────────────────────────────────────────────────────
+    // A dedicated thread watches the main loop's heartbeat. If the loop
+    // stops ticking (stalled cycle, deadlock, runaway blocking call), the
+    // watchdog logs CRITICAL, gives the loop a grace window to run its
+    // graceful shutdown path, then force-exits so a supervisor (Docker
+    // restart / systemd Restart=always) brings the daemon back.
+    let last_tick = Arc::new(AtomicU64::new(now_secs()));
+    let hung = Arc::new(AtomicBool::new(false));
+    if config.watchdog_timeout > Duration::from_secs(0) {
+        let last_tick = last_tick.clone();
+        let hung = hung.clone();
+        let timeout = config.watchdog_timeout;
+        let check_interval = Duration::from_secs(1).min(timeout);
+        std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(check_interval);
+                let last = last_tick.load(Ordering::Relaxed);
+                let elapsed = now_secs().saturating_sub(last);
+                if elapsed >= timeout.as_secs().max(1) {
+                    tracing::error!(
+                        stalled_for_secs = elapsed,
+                        timeout_secs = timeout.as_secs(),
+                        "Daemon watchdog: main loop stalled — forcing shutdown for supervisor restart"
+                    );
+                    hung.store(true, Ordering::SeqCst);
+                    // Grace window: main loop may still be responsive enough to
+                    // save state; after this, hard-exit regardless.
+                    std::thread::sleep(Duration::from_secs(10));
+                    std::process::exit(1);
+                }
+            }
+        });
+    }
+
+    while running.load(Ordering::SeqCst) && !hung.load(Ordering::SeqCst) {
         let now = std::time::Instant::now();
+        // Heartbeat — tells the watchdog the loop is alive
+        last_tick.store(now_secs(), Ordering::Relaxed);
 
         // Brain-wave recompute
         if now.duration_since(last_brain_wave) >= config.brain_wave_interval {
@@ -222,14 +293,15 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             if server.dream().should_run(bw) {
                 let ctx = wm_cognitive::DreamContext::new(&store, &associations)
                     .with_imagination(&scenario_engine);
-                let result = server.dream_mut().run(&ctx);
-                tracing::info!(
-                    cycles = server.dream().cycles_completed(),
-                    success = result.success,
-                    memories = result.total_memories_processed,
-                    "Dream cycle completed"
-                );
-                stats.dream_cycles += 1;
+                if let Some(result) = resilient("dream_cycle", || server.dream_mut().run(&ctx)) {
+                    tracing::info!(
+                        cycles = server.dream().cycles_completed(),
+                        success = result.success,
+                        memories = result.total_memories_processed,
+                        "Dream cycle completed"
+                    );
+                    stats.dream_cycles += 1;
+                }
             }
             last_dream = now;
         }
@@ -242,45 +314,46 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 .with_imagination(&scenario_engine)
                 .with_dynamic_galaxies(server.dynamic_galaxies());
 
-            let results = runner.run_all(&ctx);
-            stats.cycle_sweeps += 1;
+            if let Some(results) = resilient("cycle_sweep", || runner.run_all(&ctx)) {
+                stats.cycle_sweeps += 1;
 
-            for result in &results {
-                stats.cycles_run += 1;
-                stats.proposals_generated += result.proposals_generated as u64;
-                if result.status == CycleStatus::Suspended {
-                    stats.cycles_suspended += 1;
+                for result in &results {
+                    stats.cycles_run += 1;
+                    stats.proposals_generated += result.proposals_generated as u64;
+                    if result.status == CycleStatus::Suspended {
+                        stats.cycles_suspended += 1;
+                    }
+
+                    let status_icon = match result.status {
+                        CycleStatus::Completed => "OK",
+                        CycleStatus::NoProposals => "--",
+                        CycleStatus::Suspended => "~~",
+                        CycleStatus::SkippedHealth => "SKIP",
+                        CycleStatus::SkippedTimeBudget => "TIME",
+                        CycleStatus::Error => "ERR",
+                    };
+
+                    tracing::info!(
+                        cycle = result.cycle.name(),
+                        status = status_icon,
+                        proposals = result.proposals_generated,
+                        duration_ms = result.duration_ms,
+                        notes = %result.notes,
+                        "Cycle result"
+                    );
                 }
 
-                let status_icon = match result.status {
-                    CycleStatus::Completed => "OK",
-                    CycleStatus::NoProposals => "--",
-                    CycleStatus::Suspended => "~~",
-                    CycleStatus::SkippedHealth => "SKIP",
-                    CycleStatus::SkippedTimeBudget => "TIME",
-                    CycleStatus::Error => "ERR",
-                };
-
-                tracing::info!(
-                    cycle = result.cycle.name(),
-                    status = status_icon,
-                    proposals = result.proposals_generated,
-                    duration_ms = result.duration_ms,
-                    notes = %result.notes,
-                    "Cycle result"
+                // Print summary
+                println!(
+                    "[sweep {}] {} cycles, {} proposals, {} suspended, {} dreams, {} bw-transitions",
+                    stats.cycle_sweeps,
+                    stats.cycles_run,
+                    stats.proposals_generated,
+                    stats.cycles_suspended,
+                    stats.dream_cycles,
+                    stats.brain_wave_transitions
                 );
             }
-
-            // Print summary
-            println!(
-                "[sweep {}] {} cycles, {} proposals, {} suspended, {} dreams, {} bw-transitions",
-                stats.cycle_sweeps,
-                stats.cycles_run,
-                stats.proposals_generated,
-                stats.cycles_suspended,
-                stats.dream_cycles,
-                stats.brain_wave_transitions
-            );
 
             last_cycle = now;
         }
@@ -294,21 +367,27 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 auto_apply: config.codegen_auto_apply,
                 ..Default::default()
             };
-            let result = wm_cognitive::run_code_gen_cycle(&store, &codegen_config);
-            stats.codegen_cycles += 1;
+            let result = resilient("codegen_cycle", || {
+                wm_cognitive::run_code_gen_cycle(&store, &codegen_config)
+            });
+            if result.is_some() {
+                stats.codegen_cycles += 1;
+            }
 
             tracing::info!(
-                status = ?result.status,
-                proposals = result.proposals_generated,
-                notes = %result.notes,
+                status = ?result.as_ref().map(|r| &r.status),
+                proposals = result.as_ref().map_or(0, |r| r.proposals_generated),
+                notes = %result.as_ref().map_or("panicked", |r| r.notes.as_str()),
                 "Codegen cycle result"
             );
 
-            if result.proposals_generated > 0 {
-                println!(
-                    "[codegen {}] {} patches, {}",
-                    stats.codegen_cycles, result.proposals_generated, result.notes
-                );
+            if let Some(result) = result {
+                if result.proposals_generated > 0 {
+                    println!(
+                        "[codegen {}] {} patches, {}",
+                        stats.codegen_cycles, result.proposals_generated, result.notes
+                    );
+                }
             }
 
             last_codegen = now;
@@ -322,23 +401,27 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             let ctx =
                 CycleContext::new(&store, &associations, health).with_imagination(&scenario_engine);
 
-            let result = runner.run_cycle(CycleType::Research, &ctx);
-            stats.research_cycles += 1;
-            stats.research_hypotheses += result.proposals_generated as u64;
+            let result = resilient("research_cycle", || {
+                runner.run_cycle(CycleType::Research, &ctx)
+            });
+            if let Some(result) = result {
+                stats.research_cycles += 1;
+                stats.research_hypotheses += result.proposals_generated as u64;
 
-            tracing::info!(
-                status = ?result.status,
-                hypotheses = result.proposals_generated,
-                duration_ms = result.duration_ms,
-                notes = %result.notes,
-                "Dedicated Research cycle completed"
-            );
-
-            if result.proposals_generated > 0 {
-                println!(
-                    "[research {}] {} hypotheses, {}",
-                    stats.research_cycles, result.proposals_generated, result.notes
+                tracing::info!(
+                    status = ?result.status,
+                    hypotheses = result.proposals_generated,
+                    duration_ms = result.duration_ms,
+                    notes = %result.notes,
+                    "Dedicated Research cycle completed"
                 );
+
+                if result.proposals_generated > 0 {
+                    println!(
+                        "[research {}] {} hypotheses, {}",
+                        stats.research_cycles, result.proposals_generated, result.notes
+                    );
+                }
             }
 
             last_research = now;
@@ -375,35 +458,44 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             }
             let context = context_parts.join("\n");
 
-            let results = sp_loop.run(&context);
-            let sp_stats = sp_loop.stats();
-            stats.selfplay_cycles += results.len() as u64;
-            stats.selfplay_samples += sp_stats.samples_collected;
-            stats.selfplay_adapter_updates += sp_stats.adapter_updates;
+            if let Some(results) = resilient("selfplay_cycle", || sp_loop.run(&context)) {
+                let sp_stats = sp_loop.stats();
+                stats.selfplay_cycles += results.len() as u64;
+                stats.selfplay_samples += sp_stats.samples_collected;
+                stats.selfplay_adapter_updates += sp_stats.adapter_updates;
 
-            let correct = results.iter().filter(|r| r.verification.correct).count();
-            tracing::info!(
-                cycles = results.len(),
-                correct,
-                samples = sp_stats.samples_collected,
-                adapter_version = sp_loop.adapter_version(),
-                "Self-play training cycle completed"
-            );
+                let correct = results.iter().filter(|r| r.verification.correct).count();
+                tracing::info!(
+                    cycles = results.len(),
+                    correct,
+                    samples = sp_stats.samples_collected,
+                    adapter_version = sp_loop.adapter_version(),
+                    "Self-play training cycle completed"
+                );
 
-            println!(
-                "[selfplay {}] {} cycles, {} correct, {} samples, adapter v{}",
-                stats.selfplay_cycles,
-                results.len(),
-                correct,
-                sp_stats.samples_collected,
-                sp_loop.adapter_version()
-            );
+                println!(
+                    "[selfplay {}] {} cycles, {} correct, {} samples, adapter v{}",
+                    stats.selfplay_cycles,
+                    results.len(),
+                    correct,
+                    sp_stats.samples_collected,
+                    sp_loop.adapter_version()
+                );
+            }
 
             last_selfplay = now;
         }
 
         // Sleep until next tick (check every 1 second for signals)
         std::thread::sleep(Duration::from_secs(1));
+    }
+
+    // If the watchdog declared the daemon hung, report the failure so a
+    // supervisor (Docker restart / systemd Restart=always) restarts us.
+    if hung.load(Ordering::SeqCst) {
+        tracing::error!(
+            "Daemon watchdog triggered — shutting down with failure for supervisor restart"
+        );
     }
 
     // Graceful shutdown — save mutable structures to disk
@@ -462,6 +554,9 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         println!("  SP adapter upds:  {}", stats.selfplay_adapter_updates);
     }
 
+    if hung.load(Ordering::SeqCst) {
+        anyhow::bail!("daemon watchdog triggered — main loop stalled; restart for recovery")
+    }
     Ok(())
 }
 
@@ -477,6 +572,7 @@ mod tests {
         assert_eq!(config.brain_wave_interval, Duration::from_secs(30));
         assert!((config.min_health_score - 0.3).abs() < 0.01);
         assert!(!config.serve_mcp);
+        assert_eq!(config.watchdog_timeout, Duration::from_secs(60));
     }
 
     #[test]
@@ -492,6 +588,7 @@ mod tests {
             codegen_auto_apply: true,
             research_interval: Duration::from_secs(600),
             selfplay_interval: Duration::from_secs(900),
+            watchdog_timeout: Duration::from_secs(120),
         };
         assert_eq!(config.cycle_interval, Duration::from_secs(60));
         assert_eq!(config.dream_interval, Duration::from_secs(120));
@@ -500,6 +597,19 @@ mod tests {
         assert!(config.codegen_auto_apply);
         assert_eq!(config.research_interval, Duration::from_secs(600));
         assert_eq!(config.selfplay_interval, Duration::from_secs(900));
+        assert_eq!(config.watchdog_timeout, Duration::from_secs(120));
+    }
+
+    #[test]
+    fn resilient_recovers_from_panic() {
+        let result = resilient("test", || -> u32 { panic!("boom") });
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn resilient_returns_value() {
+        let result = resilient("test", || 42u32);
+        assert_eq!(result, Some(42));
     }
 
     #[test]

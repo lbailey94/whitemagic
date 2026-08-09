@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 8, 2026 (v5.2.2 — 15 crates, 192 tools, 3,212 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Conformal prediction shipped. SIGTERM graceful shutdown. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
+**Last updated**: August 8, 2026 (v5.3.0 — 15 crates, 195 tools, 3,240 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Conformal prediction shipped. SIGTERM graceful shutdown. Boundary hardening + daemon watchdog + fuzz seed corpora. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
 
 ---
 

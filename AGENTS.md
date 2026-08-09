@@ -12,7 +12,7 @@ cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (15 crates, 192 tools, ~131,000 LOC, 3,212 tests)
+## Architecture (15 crates, 195 tools, ~131,000 LOC, 3,240 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
@@ -122,7 +122,7 @@ Makes previously fixed structures learnable:
 
 ## MCP Server
 
-The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 192 tools are accessible through the `wm` meta-tool:
+The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 195 tools are accessible through the `wm` meta-tool:
 - `wm(thought="remember that X is Y")` — NLU routing (embedding primary, TF-IDF fallback)
 - `wm(route="memory.create", args={...})` — explicit dispatch
 - `wm(thought="list tools")` or `wm(route="tools.list")` — discover all tools
