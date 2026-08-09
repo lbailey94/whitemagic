@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "wm", version = "5.3.0", about = "WhiteMagic v5 — Cognitive OS")]
+#[command(name = "wm", version = "5.4.0", about = "WhiteMagic v5 — Cognitive OS")]
 struct Cli {
     /// Path to a TOML config file. Overrides default config location.
     #[arg(long, global = true)]
@@ -26,6 +26,9 @@ enum Commands {
         /// Max requests served per connection before refusing (0 = unlimited, default 10000)
         #[arg(long, default_value_t = wm_mcp::DEFAULT_MAX_REQUESTS_PER_SESSION)]
         max_requests: u64,
+        /// Time-windowed rate cap (requests/minute, 0 = unlimited, default 600)
+        #[arg(long, default_value_t = wm_mcp::DEFAULT_RATE_LIMIT_RPM)]
+        rate_limit: u64,
     },
     /// Generate or show configuration
     Config {
@@ -167,6 +170,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Serve {
             store,
             max_requests,
+            rate_limit,
         } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
@@ -198,6 +202,13 @@ fn main() -> anyhow::Result<()> {
                 "Request budget enforced — server refuses requests beyond the per-connection cap"
             );
 
+            // Boundary hardening: time-windowed rate limit
+            server.set_rate_limit(rate_limit);
+            tracing::info!(
+                rate_limit,
+                "Rate limit enforced — bursts beyond {rate_limit} requests/min are throttled"
+            );
+
             // Use tokio runtime for async event loop with brain-wave eco mode
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async { server.run_async().await })?;
@@ -215,7 +226,10 @@ fn main() -> anyhow::Result<()> {
             check_integrity,
             repair,
         } => {
-            run_doctor(store, check_integrity, repair)?;
+            let issues = run_doctor(store, check_integrity, repair)?;
+            if issues > 0 {
+                std::process::exit(1);
+            }
         }
         Commands::Stats { store } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
@@ -449,9 +463,10 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> anyhow::Result<()> {
+fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> anyhow::Result<u32> {
     let store_path = store.unwrap_or_else(default_store_path);
     let lmdb_path = store_path.join("lmdb");
+    let mut issues = 0u32;
 
     println!("=== WhiteMagic v5 Doctor ===");
     println!();
@@ -460,7 +475,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     if !lmdb_path.exists() {
         println!("[FAIL] LMDB store not found at {}", lmdb_path.display());
         println!("  Run 'wm serve' to initialize the store.");
-        return Ok(());
+        return Ok(1);
     }
     println!("[OK]   LMDB store: {}", lmdb_path.display());
 
@@ -472,7 +487,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
             Ok(s) => s,
             Err(e) => {
                 println!("[FAIL] Cannot open server: {e}");
-                return Ok(());
+                return Ok(1);
             }
         };
         let report = wm_memory::check_integrity(server.store())?;
@@ -483,6 +498,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
                     "  [WARN] {}: {} corrupted out of {} entries",
                     gi.galaxy, gi.corrupted, gi.total
                 );
+                issues += 1;
             } else if gi.total > 0 {
                 println!("  [OK]   {}: {} entries, all valid", gi.galaxy, gi.total);
             }
@@ -516,7 +532,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         Ok(s) => s,
         Err(e) => {
             println!("[FAIL] Cannot open server: {e}");
-            return Ok(());
+            return Ok(1);
         }
     };
 
@@ -545,6 +561,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         println!("[OK]   Tantivy index: {}", tantivy_path.display());
     } else {
         println!("[WARN] Tantivy index not found (search will be unavailable)");
+        issues += 1;
     }
 
     // 4. Brain-wave state
@@ -658,22 +675,32 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
                                 }
                             );
                             if !clf_ok && !reg_ok {
-                                println!(
-                                    "       [WARN] Calibration samples exist but nothing is fitted — run conformal.fit_classifier / conformal.fit_regressor, then conformal.export"
-                                );
+                                if store.classifier_samples() > 0 || store.regressor_samples() > 0 {
+                                    println!(
+                                        "       [WARN] Calibration samples exist but nothing is fitted — run conformal.fit_classifier / conformal.fit_regressor, then conformal.export"
+                                    );
+                                    issues += 1;
+                                } else {
+                                    println!(
+                                        "       [INFO] No calibration fitted yet — calibrate via conformal.fit_classifier / conformal.fit_regressor"
+                                    );
+                                }
                             }
                         }
                         Err(e) => {
                             println!("[WARN] Conformal state corrupt (parse failed: {e})");
+                            issues += 1;
                         }
                     }
                 }
                 Err(e) => {
                     println!("[WARN] Conformal state unparseable: {e}");
+                    issues += 1;
                 }
             },
             Err(e) => {
                 println!("[WARN] Cannot read conformal state: {e}");
+                issues += 1;
             }
         }
     } else {
@@ -684,14 +711,13 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
 
     println!();
     println!("=== Doctor Summary ===");
-    let issues = 0u32;
     if issues == 0 {
         println!("All systems healthy.");
     } else {
-        println!("{issues} issue(s) found.");
+        println!("{issues} issue(s) found — exit code 1.");
     }
 
-    Ok(())
+    Ok(issues)
 }
 
 async fn run_quickstart() -> anyhow::Result<()> {

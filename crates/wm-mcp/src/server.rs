@@ -5,7 +5,7 @@
 //! - `tools/list`: returns only the `wm` meta-tool (single entry point)
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
-//! The `wm` meta-tool routes natural language to 195 tools via TF-IDF NLU
+//! The `wm` meta-tool routes natural language to 199 tools via TF-IDF NLU
 //! classification, or accepts an explicit `route` parameter for direct dispatch.
 //! Use `wm(thought="list tools")` or `wm(route="tools.list")` to discover tools.
 
@@ -75,6 +75,8 @@ pub struct McpServer {
     dispatch_count: std::sync::atomic::AtomicU64,
     /// Per-session request budget — hard cap on requests served per connection.
     request_budget: crate::input_validation::RequestBudget,
+    /// Time-windowed rate limiter — throttles request bursts at the boundary.
+    rate_window: crate::input_validation::RateWindow,
     /// Transaction state for multi-tool snapshot/rollback
     transaction_state: wm_tools::expansion::TransactionState,
     /// TriModelManager — tri-model lifecycle (autonomic/left/right)
@@ -88,6 +90,12 @@ pub struct McpServer {
     dynamic_galaxies: Arc<std::sync::Mutex<wm_core::DynamicGalaxyRegistry>>,
     /// Shadow mode stats for NLU router observability (OATS)
     shadow_stats: Arc<std::sync::RwLock<wm_tools::embedding_router::ShadowModeStats>>,
+    /// Conformal store (shared with conformal tools) — auto-persisted to
+    /// `<store>/conformal_store.json` on shutdown and restored on startup.
+    conformal_store: Option<Arc<std::sync::Mutex<wm_tools::expansion::conformal::ConformalStore>>>,
+    /// Brier calibration store (shared with simulation.calibrate) — persisted
+    /// to `<store>/calibration_store.json` on shutdown.
+    calibration_store: Option<Arc<std::sync::Mutex<wm_simulation::CalibrationStore>>>,
 }
 
 /// JSON-RPC request envelope.
@@ -331,6 +339,7 @@ impl McpServer {
             karma_ledger,
             dispatch_count: std::sync::atomic::AtomicU64::new(0),
             request_budget: crate::input_validation::RequestBudget::default(),
+            rate_window: crate::input_validation::RateWindow::default(),
             transaction_state,
             tri_model,
             scenario_engine: None,
@@ -339,6 +348,8 @@ impl McpServer {
                 std::sync::Mutex::new(wm_core::DynamicGalaxyRegistry::new()),
             ),
             shadow_stats,
+            conformal_store: None,
+            calibration_store: None,
         }
     }
 
@@ -566,6 +577,7 @@ impl McpServer {
         let registry = wm_tools::expansion::conformal::register_conformal(
             &registry,
             Arc::clone(&conformal_store),
+            Some(Arc::clone(&self_model)),
         );
         // Cyberbrain wiring — connect speculative decoder, meta-harness, dense encoder
         let cyberbrain = crate::cyberbrain::wire_cyberbrain(&Some(Arc::clone(&search)));
@@ -598,7 +610,13 @@ impl McpServer {
             Arc::clone(&sangha_chat),
             Arc::clone(&lock_manager),
         );
-        let registry = wm_tools::expansion::simulation_tools::register_simulation(&registry);
+        let calibration_store =
+            Arc::new(std::sync::Mutex::new(wm_simulation::CalibrationStore::new()));
+        let registry = wm_tools::expansion::simulation_tools::register_simulation(
+            &registry,
+            Some(Arc::clone(&calibration_store)),
+        );
+        let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
         let shadow_stats = Arc::new(std::sync::RwLock::new(
             wm_tools::embedding_router::ShadowModeStats::default(),
@@ -659,6 +677,77 @@ impl McpServer {
         // Override mutable structure registries with shared instances (Phase 6)
         server.gana_registry = gana_registry;
         server.dynamic_galaxies = dynamic_galaxies;
+
+        // Attach the shared conformal store so it auto-persists on shutdown
+        server.conformal_store = Some(Arc::clone(&conformal_store));
+        // Attach the Brier calibration store so it auto-persists on shutdown
+        server.calibration_store = Some(Arc::clone(&calibration_store));
+
+        // Restore persisted conformal calibration state (if any)
+        let conformal_path = store_path
+            .parent()
+            .unwrap_or(store_path)
+            .join("conformal_store.json");
+        if conformal_path.exists() {
+            match std::fs::read_to_string(&conformal_path) {
+                Ok(contents) => match serde_json::from_str::<Value>(&contents) {
+                    Ok(json) => {
+                        if let Ok(mut store) = conformal_store.lock() {
+                            match store.from_json(&json) {
+                                Ok(()) => tracing::info!(
+                                    path = %conformal_path.display(),
+                                    "Loaded persisted conformal calibration state"
+                                ),
+                                Err(e) => tracing::warn!(
+                                    path = %conformal_path.display(),
+                                    error = %e,
+                                    "Failed to restore conformal state"
+                                ),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(path = %conformal_path.display(), error = %e, "Conformal state file unparseable");
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!(path = %conformal_path.display(), error = %e, "Cannot read conformal state file");
+                }
+            }
+        }
+
+        // Restore persisted Brier calibration state (if any)
+        let calibration_path = store_path
+            .parent()
+            .unwrap_or(store_path)
+            .join("calibration_store.json");
+        if calibration_path.exists() {
+            match std::fs::read_to_string(&calibration_path) {
+                Ok(contents) => match serde_json::from_str::<Value>(&contents) {
+                    Ok(json) => {
+                        if let Ok(mut store) = calibration_store.lock() {
+                            match store.from_json(&json) {
+                                Ok(()) => tracing::info!(
+                                    path = %calibration_path.display(),
+                                    "Loaded persisted Brier calibration state"
+                                ),
+                                Err(e) => tracing::warn!(
+                                    path = %calibration_path.display(),
+                                    error = %e,
+                                    "Failed to restore calibration state"
+                                ),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(path = %calibration_path.display(), error = %e, "Calibration state file unparseable");
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!(path = %calibration_path.display(), error = %e, "Cannot read calibration state file");
+                }
+            }
+        }
 
         // Attach LearnedDreamCycle for adaptive dream phase selection (Phase 6)
         server.dream = DreamCycle::new().with_learned(wm_core::LearnedDreamCycle::new());
@@ -941,6 +1030,16 @@ impl McpServer {
         self.request_budget = crate::input_validation::RequestBudget::new(max_requests);
     }
 
+    /// Set the time-windowed rate limit (requests per 60s window).
+    ///
+    /// Pass `0` for unlimited. Default is [`DEFAULT_RATE_LIMIT_RPM`].
+    pub fn set_rate_limit(&mut self, requests_per_minute: u64) {
+        self.rate_window = crate::input_validation::RateWindow::new(
+            requests_per_minute,
+            std::time::Duration::from_secs(60),
+        );
+    }
+
     /// Get a mutable reference to the eco mode controller.
     pub const fn eco_mode_mut(&mut self) -> &mut EcoModeController {
         &mut self.eco_mode
@@ -1162,6 +1261,47 @@ impl McpServer {
                 Err(e) => tracing::warn!(error = %e, "Failed to serialize ShadowModeStats"),
             }
         }
+
+        // Save conformal calibration state — the doctor reads this file at
+        // `<store_root>/conformal_store.json` (store root, not lmdb dir).
+        if let Some(conformal) = &self.conformal_store {
+            if let Ok(store) = conformal.lock() {
+                let path = store_dir
+                    .parent()
+                    .unwrap_or(store_dir)
+                    .join("conformal_store.json");
+                match serde_json::to_string_pretty(&store.to_json()) {
+                    Ok(json) => {
+                        if let Err(e) = std::fs::write(&path, json) {
+                            tracing::warn!(path = %path.display(), error = %e, "Failed to save conformal state");
+                        } else {
+                            tracing::info!(path = %path.display(), "Saved conformal calibration state");
+                        }
+                    }
+                    Err(e) => tracing::warn!(error = %e, "Failed to serialize conformal state"),
+                }
+            }
+        }
+
+        // Save Brier calibration state (prediction history for the scorecard)
+        if let Some(calibration) = &self.calibration_store {
+            if let Ok(store) = calibration.lock() {
+                let path = store_dir
+                    .parent()
+                    .unwrap_or(store_dir)
+                    .join("calibration_store.json");
+                match serde_json::to_string_pretty(&store.to_json()) {
+                    Ok(json) => {
+                        if let Err(e) = std::fs::write(&path, json) {
+                            tracing::warn!(path = %path.display(), error = %e, "Failed to save calibration state");
+                        } else {
+                            tracing::info!(path = %path.display(), "Saved Brier calibration state");
+                        }
+                    }
+                    Err(e) => tracing::warn!(error = %e, "Failed to serialize calibration state"),
+                }
+            }
+        }
     }
 
     /// Load mutable structures from JSON files in the store directory.
@@ -1331,6 +1471,18 @@ impl McpServer {
             );
         }
 
+        // Boundary hardening — time-windowed rate limiting (burst throttle)
+        if let Err(retry_after) = self.rate_window.record() {
+            return error_response(
+                req.id.as_ref(),
+                -32000,
+                "Rate limit exceeded — slow down",
+                Some(
+                    json!({"retry_after_secs": retry_after, "limit_rpm": self.rate_window.limit()}),
+                ),
+            );
+        }
+
         // Boundary hardening — validate request structure + tool call params.
         // This enforces the 64KB params cap, string length limits, injection
         // filtering, SSRF protection and path-traversal protection that
@@ -1420,12 +1572,12 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — all 195 tools are accessible through it
+        // Only expose the wm meta-tool — all 199 tools are accessible through it
         if let Some(wm) = self.registry.get("wm") {
             Ok(json!({
                 "tools": [{
                     "name": wm.name(),
-                    "description": "WhiteMagic v5 meta-tool — routes natural language to 195 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
+                    "description": "WhiteMagic v5 meta-tool — routes natural language to 199 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -2223,6 +2375,7 @@ mod tests {
         let registry = wm_tools::expansion::conformal::register_conformal(
             &registry,
             Arc::clone(&conformal_store),
+            Some(Arc::clone(&self_model)),
         );
         let registry = wm_tools::expansion::bicameral::register_bicameral(
             &registry,
@@ -2253,7 +2406,13 @@ mod tests {
             Arc::clone(&sangha_chat),
             Arc::clone(&lock_manager),
         );
-        let registry = wm_tools::expansion::simulation_tools::register_simulation(&registry);
+        let calibration_store =
+            Arc::new(std::sync::Mutex::new(wm_simulation::CalibrationStore::new()));
+        let registry = wm_tools::expansion::simulation_tools::register_simulation(
+            &registry,
+            Some(Arc::clone(&calibration_store)),
+        );
+        let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
         let test_shadow_stats = Arc::new(std::sync::RwLock::new(
             wm_tools::embedding_router::ShadowModeStats::default(),
@@ -2342,7 +2501,7 @@ mod tests {
             tools[0]["description"]
                 .as_str()
                 .unwrap()
-                .contains("195 tools")
+                .contains("199 tools")
         );
     }
 
@@ -3474,6 +3633,47 @@ mod tests {
     async fn request_budget_zero_is_unlimited() {
         let mut server = test_server();
         server.set_request_budget(0);
+        for i in 1..=5 {
+            let req = json!({"jsonrpc":"2.0","id":i,"method":"initialize","params":{}}).to_string();
+            let resp = server.handle_request(&req).await;
+            let parsed: Value = serde_json::from_str(&resp).unwrap();
+            assert!(
+                parsed["error"].is_null(),
+                "request {i} should succeed: {resp}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn rate_limit_throttles_bursts() {
+        let mut server = test_server();
+        server.set_rate_limit(3);
+
+        for i in 1..=3 {
+            let req = json!({"jsonrpc":"2.0","id":i,"method":"initialize","params":{}}).to_string();
+            let resp = server.handle_request(&req).await;
+            let parsed: Value = serde_json::from_str(&resp).unwrap();
+            assert!(
+                parsed["error"].is_null(),
+                "request {i} should succeed: {resp}"
+            );
+        }
+
+        let resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":4,"method":"initialize","params":{}}"#)
+            .await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(
+            parsed["error"]["code"], -32000,
+            "burst beyond rate cap must be throttled: {resp}"
+        );
+        assert_eq!(parsed["error"]["data"]["limit_rpm"], 3);
+    }
+
+    #[tokio::test]
+    async fn rate_limit_zero_is_unlimited() {
+        let mut server = test_server();
+        server.set_rate_limit(0);
         for i in 1..=5 {
             let req = json!({"jsonrpc":"2.0","id":i,"method":"initialize","params":{}}).to_string();
             let resp = server.handle_request(&req).await;

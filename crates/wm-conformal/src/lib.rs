@@ -23,6 +23,7 @@
 pub mod calibrate;
 pub mod split;
 
+pub use calibrate::CoverageReport;
 pub use split::{
     AdaptivePredictionSets, PredictionInterval, PredictionSet, SplitConformalClassifier,
     SplitConformalRegressor,

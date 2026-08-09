@@ -1,4 +1,4 @@
-//! Simulation tools — sim.mc, sim.forecast, sim.counterfactual.
+//! Simulation tools — sim.mc, sim.forecast, sim.counterfactual, simulation.calibrate.
 //!
 //! Gana::Mound — simulation, forecasting, and causal analysis.
 
@@ -6,12 +6,12 @@
 
 use async_trait::async_trait;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
 use wm_simulation::{
-    CounterfactualEstimator, Distribution, ForecastMethod, Forecaster, McConfig,
+    CalibrationStore, CounterfactualEstimator, Distribution, ForecastMethod, Forecaster, McConfig,
     MonteCarloSimulator,
 };
 
@@ -308,15 +308,164 @@ fn parse_distribution(v: &Value) -> Result<Distribution, wm_core::CoreError> {
     }
 }
 
+// ── simulation.calibrate ─────────────────────────────────────────────
+
+/// `simulation.calibrate` — record predictions, resolve them against
+/// reality, and get an honest Brier scorecard with the Murphy
+/// decomposition (reliability / resolution / uncertainty).
+///
+/// Actions:
+/// - `record` — store a prediction with probability + confidence
+/// - `resolve` — resolve a prediction against its outcome
+/// - `scorecard` — full calibration report (default)
+pub struct SimulationCalibrateTool {
+    store: Arc<Mutex<CalibrationStore>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SimulationCalibrateTool {
+    #[must_use]
+    pub fn new(store: Arc<Mutex<CalibrationStore>>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("simulation".into())]),
+        }
+    }
+}
+
+impl Default for SimulationCalibrateTool {
+    fn default() -> Self {
+        Self::new(Arc::new(Mutex::new(CalibrationStore::new())))
+    }
+}
+
+#[async_trait]
+#[async_trait]
+impl Tool for SimulationCalibrateTool {
+    fn name(&self) -> &str {
+        "simulation.calibrate"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Mound
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let action = args
+            .get("action")
+            .and_then(Value::as_str)
+            .unwrap_or("scorecard");
+        let mut store = self
+            .store
+            .lock()
+            .map_err(|e| wm_core::CoreError::Tool(format!("calibration store lock: {e}")))?;
+
+        match action {
+            "record" => {
+                let statement = args
+                    .get("statement")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        wm_core::CoreError::InvalidArgs("statement is required for record".into())
+                    })?;
+                let probability = args
+                    .get("probability")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(0.5)
+                    .clamp(0.0, 1.0);
+                let confidence = args
+                    .get("confidence")
+                    .and_then(Value::as_f64)
+                    .unwrap_or(0.5)
+                    .clamp(0.0, 1.0);
+                let scenario = args
+                    .get("scenario")
+                    .and_then(Value::as_str)
+                    .unwrap_or("default");
+                let pred = store.record(statement, probability, confidence, scenario);
+                Ok(json!({
+                    "status": "success",
+                    "prediction_id": pred.id,
+                    "probability": pred.probability,
+                    "adjusted_probability": pred.adjusted_probability,
+                    "calibration_adjustment": store.calibration_gap(),
+                }))
+            }
+            "resolve" => {
+                let pred_id = args
+                    .get("prediction_id")
+                    .and_then(Value::as_str)
+                    .ok_or_else(|| {
+                        wm_core::CoreError::InvalidArgs(
+                            "prediction_id is required for resolve".into(),
+                        )
+                    })?;
+                let outcome = args
+                    .get("outcome")
+                    .and_then(Value::as_bool)
+                    .ok_or_else(|| {
+                        wm_core::CoreError::InvalidArgs(
+                            "outcome (boolean) is required for resolve".into(),
+                        )
+                    })?;
+                match store.resolve(pred_id, outcome) {
+                    Ok((brier, gap)) => Ok(json!({
+                        "status": "success",
+                        "prediction_id": pred_id,
+                        "brier_score": brier,
+                        "calibration_gap": gap,
+                    })),
+                    Err(e) => Err(wm_core::CoreError::InvalidArgs(e)),
+                }
+            }
+            "scorecard" => {
+                let card = store.scorecard();
+                Ok(json!({
+                    "status": "success",
+                    "total_predictions": card.total_predictions,
+                    "resolved": card.resolved,
+                    "unresolved": card.unresolved,
+                    "avg_brier_score": card.avg_brier_score,
+                    "reliability": card.reliability,
+                    "resolution": card.resolution,
+                    "uncertainty": card.uncertainty,
+                    "skill_score": card.skill_score,
+                    "calibration_gap": card.calibration_gap,
+                    "perfect_calibration": card.perfect_calibration,
+                    "good_calibration": card.good_calibration,
+                    "calibration_bins": card.calibration_bins,
+                }))
+            }
+            other => Err(wm_core::CoreError::InvalidArgs(format!(
+                "unknown action '{other}' (expected record | resolve | scorecard)"
+            ))),
+        }
+    }
+}
+
 // ── Registration ──────────────────────────────────────────────────────
 
 /// Register all simulation tools into a registry.
 #[must_use]
-pub fn register_simulation(registry: &wm_dispatch::ToolRegistry) -> wm_dispatch::ToolRegistry {
+pub fn register_simulation(
+    registry: &wm_dispatch::ToolRegistry,
+    calibration_store: Option<Arc<Mutex<CalibrationStore>>>,
+) -> wm_dispatch::ToolRegistry {
+    let calibrate = match calibration_store {
+        Some(store) => SimulationCalibrateTool::new(store),
+        None => SimulationCalibrateTool::default(),
+    };
     registry
         .register(Arc::new(SimMcTool::new()))
         .register(Arc::new(SimForecastTool::new()))
         .register(Arc::new(SimCounterfactualTool::new()))
+        .register(Arc::new(calibrate))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -441,5 +590,87 @@ mod tests {
     async fn parse_distribution_unknown_errors() {
         let result = parse_distribution(&json!({"kind": "unknown"}));
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn calibrate_record_resolve_scorecard_flow() {
+        let store = Arc::new(Mutex::new(CalibrationStore::new()));
+        let tool = SimulationCalibrateTool::new(Arc::clone(&store));
+        let mut ctx = Context::default();
+
+        // Record
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"action": "record", "statement": "It will rain", "probability": 0.8, "confidence": 0.6, "scenario": "weather"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success");
+        let pred_id = v["prediction_id"].as_str().unwrap().to_string();
+
+        // Resolve with a good outcome
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"action": "resolve", "prediction_id": pred_id, "outcome": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success");
+        assert!((v["brier_score"].as_f64().unwrap() - 0.04).abs() < 1e-9);
+
+        // Scorecard
+        let v = tool
+            .call(&mut ctx, json!({"action": "scorecard"}))
+            .await
+            .unwrap();
+        assert_eq!(v["resolved"], 1);
+        assert_eq!(v["unresolved"], 0);
+        assert!((v["avg_brier_score"].as_f64().unwrap() - 0.04).abs() < 1e-9);
+        assert_eq!(v["calibration_bins"].as_array().unwrap().len(), 10);
+    }
+
+    #[tokio::test]
+    async fn calibrate_requires_statement_and_outcome() {
+        let tool = SimulationCalibrateTool::default();
+        let mut ctx = Context::default();
+        // record without statement
+        assert!(
+            tool.call(&mut ctx, json!({"action": "record"}))
+                .await
+                .is_err()
+        );
+        // resolve without id
+        assert!(
+            tool.call(&mut ctx, json!({"action": "resolve"}))
+                .await
+                .is_err()
+        );
+        // resolve missing prediction
+        assert!(
+            tool.call(
+                &mut ctx,
+                json!({"action": "resolve", "prediction_id": "nope", "outcome": true})
+            )
+            .await
+            .is_err()
+        );
+        // unknown action
+        assert!(
+            tool.call(&mut ctx, json!({"action": "bogus"}))
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn calibrate_scorecard_defaults_to_scorecard_action() {
+        let tool = SimulationCalibrateTool::default();
+        let mut ctx = Context::default();
+        let v = tool.call(&mut ctx, json!({})).await.unwrap();
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["resolved"], 0);
+        assert_eq!(v["total_predictions"], 0);
     }
 }
