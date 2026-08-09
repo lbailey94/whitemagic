@@ -5,14 +5,14 @@
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all tests (3,192 tests)
+cargo test                     # Run all tests (3,212 tests)
 cargo test -p wm-core          # Test a single crate
 cargo bench                    # Run benchmarks (criterion)
 cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (14 crates, 185 tools, ~130,500 LOC, 3,192 tests)
+## Architecture (14 crates, 192 tools, ~131,000 LOC, 3,212 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
@@ -122,7 +122,7 @@ Makes previously fixed structures learnable:
 
 ## MCP Server
 
-The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 185 tools are accessible through the `wm` meta-tool:
+The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 192 tools are accessible through the `wm` meta-tool:
 - `wm(thought="remember that X is Y")` — NLU routing (embedding primary, TF-IDF fallback)
 - `wm(route="memory.create", args={...})` — explicit dispatch
 - `wm(thought="list tools")` or `wm(route="tools.list")` — discover all tools

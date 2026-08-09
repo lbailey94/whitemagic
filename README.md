@@ -4,7 +4,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ## Current Status
 
-**v5.2.1 — All 7 phases complete. 14 crates, 185 tools, 3,192 tests, ~130,500 LOC, 0 clippy warnings. MCP server exposes single `wm` meta-tool — all 185 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
+**v5.2.1 — All 7 phases complete. 14 crates, 192 tools, 3,212 tests, ~131,000 LOC, 0 clippy warnings. MCP server exposes single `wm` meta-tool — all 192 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
 
 ### v5 Subsystems
 
@@ -94,7 +94,7 @@ python python/whitemagic_v5_server.py --store ~/.local/share/whitemagic/lmdb
 
 See `python/README.md` for MCP client configuration (Claude Desktop, Cursor, Windsurf).
 
-See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and porting roadmap, and [docs/PROGRESS.md](docs/PROGRESS.md) for phase status.
+See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and porting roadmap, [docs/CONFORMAL_PREDICTION.md](docs/CONFORMAL_PREDICTION.md) for the conformal prediction feature, and [docs/PROGRESS.md](docs/PROGRESS.md) for phase status.
 
 ## What's Different
 
@@ -109,7 +109,7 @@ See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and port
 - **NLU router**: Two-layer system — embedding router (cosine similarity, OATS refinement) primary, TF-IDF fallback. 12 prefix routes, payload extraction. Shadow mode logs disagreements for promotion analysis.
 - **Mutable structures**: Gana taxonomy drift tracking, dynamic galaxy creation from memory clustering, learned dream cycle phase selection, learned autonomous cycle strategy. All persist to disk.
 - **Polyglot without subprocesses**: Julia embedded via jlrs, Haskell/Koka/Zig compiled to native libraries.
-- **Fractal meta-tool**: 185 tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm` — single entry point for all clients.
+- **Fractal meta-tool**: 192 tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm` — single entry point for all clients.
 - **Mandala compartments**: 4 security tiers (Research/Sandbox/Production/Secure) with isolated LMDB+Tantivy+associations per compartment.
 - **RSI pipeline**: 3-phase recursive self-improvement — friction logging, deduplication, karma-friction bridge, proactive improvement, resolution verification with regression detection, adversarial test synthesis from friction history, coverage reporting. 12 RSI tools, 8 autonomous cycle types.
 - **Fuzz testing**: 5 cargo-fuzz targets + 22 proptest tests across 4 crates.

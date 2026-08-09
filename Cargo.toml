@@ -3,6 +3,7 @@ resolver = "2"
 exclude = ["fuzz"]
 members = [
     "crates/wm-core",
+    "crates/wm-conformal",
     "crates/wm-memory",
     "crates/wm-dispatch",
     "crates/wm-cognitive",
@@ -96,6 +97,7 @@ async-trait = "0.1"
 
 # Internal crates
 wm-core = { path = "crates/wm-core" }
+wm-conformal = { path = "crates/wm-conformal" }
 wm-memory = { path = "crates/wm-memory" }
 wm-dispatch = { path = "crates/wm-dispatch" }
 wm-cognitive = { path = "crates/wm-cognitive" }

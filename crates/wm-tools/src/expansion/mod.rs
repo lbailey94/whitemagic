@@ -39,6 +39,7 @@ pub mod autonomous;
 pub mod bicameral;
 pub mod boundary;
 pub mod common;
+pub mod conformal;
 pub mod consciousness;
 pub mod constellation;
 pub mod correlation;
