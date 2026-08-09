@@ -21,6 +21,9 @@ pub mod calibration;
 pub mod counterfactual;
 pub mod forecasting;
 pub mod monte_carlo;
+pub mod pce;
+pub mod rare_event;
+pub mod sde;
 pub mod sensitivity;
 
 pub use bayesian::{
@@ -31,4 +34,7 @@ pub use calibration::{BrierScorecard, CalibrationBin, CalibrationPrediction, Cal
 pub use counterfactual::{CounterfactualEstimator, CounterfactualResult};
 pub use forecasting::{ForecastMethod, ForecastResult, Forecaster};
 pub use monte_carlo::{Distribution, McConfig, McResult, MonteCarloSimulator};
+pub use pce::{Pce, SuperforecasterResult, latin_hypercube, superforecaster};
+pub use rare_event::{ImportanceResult, SubsetResult, importance_sampling, subset_simulation};
+pub use sde::{DriftType, MlMcResult, SdeConfig, SdeResult, Solver, solve, solve_mlmc};
 pub use sensitivity::{SensitivityAnalyzer, SensitivityIndex, SensitivityResult};

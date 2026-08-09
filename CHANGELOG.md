@@ -5,6 +5,37 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.5.0] — 2026-08-08
+
+### MC suite completion (v26 `mc.*` parity)
+
+- **`mc.rare_event`** — rare-event probability estimation:
+  - *Subset simulation* (Au & Beck): Metropolis–Hastings conditional sampling with the correct φ(x')/φ(x) acceptance ratio; verified against the analytic chi-square tail P(χ²₂ > 9) ≈ 0.0111
+  - *Importance sampling* with exact likelihood-ratio weights and coefficient-of-variation diagnostics
+- **`mc.sde`** — SDE solvers: Euler–Maruyama and Milstein (with the ΔW²−Δt correction for GBM), GBM + Ornstein–Uhlenbeck drift, terminal statistics (mean/std/percentiles/min/max), and two-level MLMC extrapolation (coupled seeds)
+- **`mc.superforecaster`** — the full orchestrator:
+  - *LHS* (Latin Hypercube Sampling with Fisher–Yates stratum permutations)
+  - *PCE* surrogate (Hermite basis, normal-equation least squares) with analytic Sobol' first-order/total-effect indices
+  - *Bayesian optimization* refinement on top
+  - Verified: recovers linear surfaces (R² > 0.99), ranks dominant variables, finds 2-D optima
+
+### GP hyperparameter fitting
+
+- **`GaussianProcess::log_marginal_likelihood`** — `−½yᵀK⁻¹y − ½log|K|` from the existing Cholesky factor
+- **`GaussianProcess::fit_hyperparameters`** — optimizes (ℓ, σ_f², σ_n²) in log space using the crate's own BayesianOptimizer (dogfooding); fixes the fixed-hyperparameter limitation
+- `mc.surrogate` gains `fit_hyperparameters: true` + `hp_iterations` — verified to recover the length scale of high-frequency data
+
+### Brier → self-model monitoring (feedback triangle complete)
+
+- **New `BrierScore` self-model metric** (lower is better, warning 0.15 / critical 0.3 — the v26 "good calibration" threshold)
+- `simulation.calibrate` scorecard now records the average Brier score into the self-model and surfaces drift alerts — alongside `ConformalCoverage`, the calibration subsystem is now fully monitored: conformal (quantification) → Brier (measurement) → selfmodel (monitoring)
+
+### Counts
+
+- 199 → **202 tools** (mc.rare_event, mc.sde, mc.superforecaster)
+- 3,284 → **3,311 tests passing, 0 failed** (+27)
+- 0 clippy warnings, fmt clean, cargo-deny all green
+
 ## [5.4.0] — 2026-08-08
 
 ### Conformal drift monitoring

@@ -36,6 +36,9 @@ pub enum MetricKind {
     /// Drift monitoring: sustained drops below the target (1 − α) mean the
     /// calibration is stale and should be re-fit.
     ConformalCoverage,
+    /// Average Brier score of resolved predictions (lower is better).
+    /// Rising Brier = deteriorating calibration honesty.
+    BrierScore,
 }
 
 impl MetricKind {
@@ -55,6 +58,7 @@ impl MetricKind {
             Self::ScenarioConfidence => "scenario_confidence",
             Self::SimulationVariance => "simulation_variance",
             Self::ConformalCoverage => "conformal_coverage",
+            Self::BrierScore => "brier_score",
         }
     }
 
@@ -74,6 +78,7 @@ impl MetricKind {
             Self::ScenarioConfidence,
             Self::SimulationVariance,
             Self::ConformalCoverage,
+            Self::BrierScore,
         ]
     }
 
@@ -105,6 +110,9 @@ impl MetricKind {
             // Conservative defaults — a 90%-target calibration at 85% coverage
             // already signals drift. Users can add tighter rules per alpha.
             Self::ConformalCoverage => 0.85,
+            // Brier < 0.15 = "good calibration" (v26 threshold); 0.3 is
+            // clearly degraded (0.3 ≈ always predicting 0.5's mean error).
+            Self::BrierScore => 0.15,
         }
     }
 
@@ -121,6 +129,7 @@ impl MetricKind {
             Self::ScenarioConfidence => 0.2,
             Self::SimulationVariance => 0.5,
             Self::ConformalCoverage => 0.8,
+            Self::BrierScore => 0.3,
         }
     }
 }
@@ -442,6 +451,6 @@ mod tests {
 
     #[test]
     fn metric_kind_all_count() {
-        assert_eq!(MetricKind::all().len(), 12);
+        assert_eq!(MetricKind::all().len(), 13);
     }
 }
