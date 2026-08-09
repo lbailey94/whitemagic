@@ -13,6 +13,78 @@ pub const MAX_PARAMS_SIZE: usize = 64 * 1024; // 64 KB
 /// Maximum allowed string value length in parameters.
 pub const MAX_STRING_LEN: usize = 32 * 1024; // 32 KB
 
+/// Maximum raw request line size (bytes) — caps memory per stdin request.
+pub const MAX_REQUEST_SIZE: usize = 1024 * 1024; // 1 MB
+
+/// Default maximum requests served per connection (0 = unlimited).
+pub const DEFAULT_MAX_REQUESTS_PER_SESSION: u64 = 10_000;
+
+/// Per-session request budget — counts requests and enforces a hard cap.
+#[derive(Debug, Clone)]
+pub struct RequestBudget {
+    /// Maximum requests allowed per session (0 = unlimited).
+    max_requests: u64,
+    /// Requests consumed so far.
+    requests: u64,
+}
+
+impl Default for RequestBudget {
+    fn default() -> Self {
+        Self {
+            max_requests: DEFAULT_MAX_REQUESTS_PER_SESSION,
+            requests: 0,
+        }
+    }
+}
+
+impl RequestBudget {
+    /// Create a budget with the given request cap (0 = unlimited).
+    #[must_use]
+    pub const fn new(max_requests: u64) -> Self {
+        Self {
+            max_requests,
+            requests: 0,
+        }
+    }
+
+    /// Whether the budget has been exhausted.
+    #[must_use]
+    pub const fn is_exhausted(&self) -> bool {
+        self.max_requests > 0 && self.requests >= self.max_requests
+    }
+
+    /// Record a request. Returns `false` (and does not count) when exhausted.
+    pub const fn record(&mut self) -> bool {
+        if self.is_exhausted() {
+            return false;
+        }
+        self.requests += 1;
+        true
+    }
+
+    /// Requests consumed so far.
+    #[must_use]
+    pub const fn used(&self) -> u64 {
+        self.requests
+    }
+
+    /// Maximum allowed (0 = unlimited).
+    #[must_use]
+    pub const fn limit(&self) -> u64 {
+        self.max_requests
+    }
+
+    /// Requests remaining (0 when unlimited).
+    #[must_use]
+    pub const fn remaining(&self) -> u64 {
+        if self.max_requests == 0 {
+            0
+        } else {
+            self.max_requests.saturating_sub(self.requests)
+        }
+    }
+}
+
 /// Result of input validation.
 #[derive(Debug, Clone)]
 pub enum ValidationResult {
@@ -386,5 +458,48 @@ mod tests {
             "id": 1
         });
         assert!(validate_tools_call(&req).is_valid());
+    }
+
+    #[test]
+    fn request_budget_defaults() {
+        let budget = RequestBudget::default();
+        assert_eq!(budget.limit(), DEFAULT_MAX_REQUESTS_PER_SESSION);
+        assert_eq!(budget.used(), 0);
+        assert!(!budget.is_exhausted());
+        assert_eq!(budget.remaining(), DEFAULT_MAX_REQUESTS_PER_SESSION);
+    }
+
+    #[test]
+    fn request_budget_tracks_consumption() {
+        let mut budget = RequestBudget::new(3);
+        assert!(budget.record());
+        assert!(budget.record());
+        assert!(budget.record());
+        assert_eq!(budget.used(), 3);
+        assert!(budget.is_exhausted());
+        // Exhausted — further requests are refused and not counted
+        assert!(!budget.record());
+        assert_eq!(budget.used(), 3);
+        assert_eq!(budget.remaining(), 0);
+    }
+
+    #[test]
+    fn request_budget_zero_is_unlimited() {
+        let mut budget = RequestBudget::new(0);
+        for _ in 0..100_000 {
+            assert!(budget.record());
+        }
+        assert!(!budget.is_exhausted());
+        assert_eq!(budget.remaining(), 0);
+    }
+
+    #[test]
+    fn request_budget_partial() {
+        let mut budget = RequestBudget::new(2);
+        assert!(budget.record());
+        assert_eq!(budget.remaining(), 1);
+        assert!(budget.record());
+        assert_eq!(budget.remaining(), 0);
+        assert!(budget.is_exhausted());
     }
 }

@@ -27,7 +27,7 @@ jlrs = ["dep:jlrs"]
 [dependencies.jlrs]
 version = "0.21"
 optional = true
-features = ["async-rt", "multi-rt"]
+features = ["async-rt", "multi-rt", "julia-1-10"]
 
 [dev-dependencies]
 proptest = { workspace = true }

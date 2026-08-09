@@ -30,10 +30,10 @@ use serde::{Deserialize, Serialize};
 ///
 /// let mut cp = SplitConformalClassifier::new(0.1).unwrap(); // 90% coverage
 /// // Calibrate with (model_scores, true_label) pairs
-/// cp.add_sample(vec![0.9, 0.05, 0.05], 0);
-/// cp.add_sample(vec![0.1, 0.85, 0.05], 1);
-/// cp.add_sample(vec![0.2, 0.3, 0.5], 2);
-/// cp.fit();
+/// cp.add_sample(&[0.9, 0.05, 0.05], 0).unwrap();
+/// cp.add_sample(&[0.1, 0.85, 0.05], 1).unwrap();
+/// cp.add_sample(&[0.2, 0.3, 0.5], 2).unwrap();
+/// cp.fit().unwrap();
 ///
 /// let set = cp.predict_set(&[0.8, 0.1, 0.1]).unwrap();
 /// assert_eq!(set.classes, vec![0]);

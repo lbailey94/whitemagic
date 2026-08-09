@@ -2175,7 +2175,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wm-bicameral"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "ahash",
  "chrono",
@@ -2192,7 +2192,7 @@ dependencies = [
 
 [[package]]
 name = "wm-cognitive"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "ahash",
  "chrono",
@@ -2214,8 +2214,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "wm-conformal"
+version = "5.2.2"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "wm-core"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "ahash",
  "async-trait",
@@ -2232,7 +2241,7 @@ dependencies = [
 
 [[package]]
 name = "wm-dispatch"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "ahash",
  "async-trait",
@@ -2253,6 +2262,7 @@ name = "wm-fuzz"
 version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
+ "serde",
  "serde_json",
  "wm-core",
  "wm-dispatch",
@@ -2262,7 +2272,7 @@ dependencies = [
 
 [[package]]
 name = "wm-governance"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "ahash",
  "chrono",
@@ -2280,7 +2290,7 @@ dependencies = [
 
 [[package]]
 name = "wm-memory"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "ahash",
  "chrono",
@@ -2302,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "wm-sangha"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "chrono",
  "serde",
@@ -2313,7 +2323,7 @@ dependencies = [
 
 [[package]]
 name = "wm-selfmodel"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "chrono",
  "serde",
@@ -2323,7 +2333,7 @@ dependencies = [
 
 [[package]]
 name = "wm-simulation"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "chrono",
  "serde",
@@ -2334,7 +2344,7 @@ dependencies = [
 
 [[package]]
 name = "wm-substrate"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "chrono",
  "serde",
@@ -2344,7 +2354,7 @@ dependencies = [
 
 [[package]]
 name = "wm-tools"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "ahash",
  "async-trait",
@@ -2357,6 +2367,7 @@ dependencies = [
  "uuid",
  "wm-bicameral",
  "wm-cognitive",
+ "wm-conformal",
  "wm-core",
  "wm-dispatch",
  "wm-governance",
@@ -2370,7 +2381,7 @@ dependencies = [
 
 [[package]]
 name = "wm-workspace"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
  "serde",
  "serde_json",

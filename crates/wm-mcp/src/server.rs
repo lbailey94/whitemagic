@@ -5,13 +5,14 @@
 //! - `tools/list`: returns only the `wm` meta-tool (single entry point)
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
-//! The `wm` meta-tool routes natural language to 192 tools via TF-IDF NLU
+//! The `wm` meta-tool routes natural language to 195 tools via TF-IDF NLU
 //! classification, or accepts an explicit `route` parameter for direct dispatch.
 //! Use `wm(thought="list tools")` or `wm(route="tools.list")` to discover tools.
 
-use std::io::{BufRead, Write};
+use std::io::Write;
 use std::sync::Arc;
 
+use crate::input_validation::MAX_REQUEST_SIZE;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use wm_bicameral::{BicameralConfig, BicameralEngine, LlmRightHemisphere, RightHemisphereStub};
@@ -72,6 +73,8 @@ pub struct McpServer {
     karma_ledger: Option<Arc<KarmaLedger>>,
     /// Dispatch counter for periodic autonomous cycles
     dispatch_count: std::sync::atomic::AtomicU64,
+    /// Per-session request budget — hard cap on requests served per connection.
+    request_budget: crate::input_validation::RequestBudget,
     /// Transaction state for multi-tool snapshot/rollback
     transaction_state: wm_tools::expansion::TransactionState,
     /// TriModelManager — tri-model lifecycle (autonomic/left/right)
@@ -118,6 +121,148 @@ struct RpcError {
     message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<Value>,
+}
+
+/// Build a JSON-RPC error response.
+fn error_response(
+    id: Option<&Value>,
+    code: i32,
+    message: impl Into<String>,
+    data: Option<Value>,
+) -> RpcResponse {
+    RpcResponse {
+        jsonrpc: "2.0".into(),
+        id: id.cloned(),
+        result: None,
+        error: Some(RpcError {
+            code,
+            message: message.into(),
+            data,
+        }),
+    }
+}
+
+/// Outcome of a bounded line read.
+enum BoundedLine {
+    /// A complete line within the size cap.
+    Ok(String),
+    /// A line exceeding the cap — the rest was drained to end-of-line.
+    TooLarge,
+    /// End of stream.
+    Eof,
+}
+
+/// Read a single line from a buffered reader, capping allocation at `max` bytes.
+///
+/// Hardening: prevents a malicious MCP client from sending an unbounded
+/// request line that would grow the line buffer without limit.
+fn read_bounded_line<R: std::io::BufRead>(
+    reader: &mut R,
+    max: usize,
+) -> std::io::Result<BoundedLine> {
+    let mut buf = Vec::with_capacity(256);
+    loop {
+        let chunk = reader.fill_buf()?;
+        if chunk.is_empty() {
+            if buf.is_empty() {
+                return Ok(BoundedLine::Eof);
+            }
+            break;
+        }
+        let Some(pos) = chunk.iter().position(|&b| b == b'\n') else {
+            buf.extend_from_slice(chunk);
+            let n = chunk.len();
+            reader.consume(n);
+            if buf.len() > max {
+                drain_to_eol(reader)?;
+                return Ok(BoundedLine::TooLarge);
+            }
+            continue;
+        };
+        buf.extend_from_slice(&chunk[..pos]);
+        reader.consume(pos + 1);
+        if buf.len() > max {
+            return Ok(BoundedLine::TooLarge);
+        }
+        break;
+    }
+    if buf.ends_with(b"\r") {
+        buf.pop();
+    }
+    Ok(BoundedLine::Ok(String::from_utf8_lossy(&buf).into_owned()))
+}
+
+/// Drain a buffered reader up to and including the next newline (or EOF).
+fn drain_to_eol<R: std::io::BufRead>(reader: &mut R) -> std::io::Result<()> {
+    loop {
+        let chunk = reader.fill_buf()?;
+        if chunk.is_empty() {
+            return Ok(());
+        }
+        let Some(pos) = chunk.iter().position(|&b| b == b'\n') else {
+            let n = chunk.len();
+            reader.consume(n);
+            continue;
+        };
+        reader.consume(pos + 1);
+        return Ok(());
+    }
+}
+
+async fn read_bounded_line_async<R: tokio::io::AsyncBufRead + Unpin>(
+    reader: &mut R,
+    max: usize,
+) -> std::io::Result<BoundedLine> {
+    use tokio::io::AsyncBufReadExt;
+    let mut buf = Vec::with_capacity(256);
+    loop {
+        let chunk = reader.fill_buf().await?;
+        if chunk.is_empty() {
+            if buf.is_empty() {
+                return Ok(BoundedLine::Eof);
+            }
+            break;
+        }
+        let Some(pos) = chunk.iter().position(|&b| b == b'\n') else {
+            buf.extend_from_slice(chunk);
+            let n = chunk.len();
+            reader.consume(n);
+            if buf.len() > max {
+                drain_to_eol_async(reader).await?;
+                return Ok(BoundedLine::TooLarge);
+            }
+            continue;
+        };
+        buf.extend_from_slice(&chunk[..pos]);
+        reader.consume(pos + 1);
+        if buf.len() > max {
+            return Ok(BoundedLine::TooLarge);
+        }
+        break;
+    }
+    if buf.ends_with(b"\r") {
+        buf.pop();
+    }
+    Ok(BoundedLine::Ok(String::from_utf8_lossy(&buf).into_owned()))
+}
+
+async fn drain_to_eol_async<R: tokio::io::AsyncBufRead + Unpin>(
+    reader: &mut R,
+) -> std::io::Result<()> {
+    use tokio::io::AsyncBufReadExt;
+    loop {
+        let chunk = reader.fill_buf().await?;
+        if chunk.is_empty() {
+            return Ok(());
+        }
+        let Some(pos) = chunk.iter().position(|&b| b == b'\n') else {
+            let n = chunk.len();
+            reader.consume(n);
+            continue;
+        };
+        reader.consume(pos + 1);
+        return Ok(());
+    }
 }
 
 impl McpServer {
@@ -185,6 +330,7 @@ impl McpServer {
             friction_auto_log,
             karma_ledger,
             dispatch_count: std::sync::atomic::AtomicU64::new(0),
+            request_budget: crate::input_validation::RequestBudget::default(),
             transaction_state,
             tri_model,
             scenario_engine: None,
@@ -530,14 +676,30 @@ impl McpServer {
     ///
     /// This is the blocking version. For the async event-loop version with
     /// brain-wave eco mode, use `run_async()`.
+    #[allow(clippy::significant_drop_tightening)] // stdio locks are held for the whole session by design
     pub fn run(&mut self) -> anyhow::Result<()> {
         let rt = tokio::runtime::Runtime::new()?;
         let stdin = std::io::stdin();
         let stdout = std::io::stdout();
         let mut out = stdout.lock();
+        let mut reader = stdin.lock();
 
-        for line in stdin.lock().lines() {
-            let line = line?;
+        loop {
+            let line = match read_bounded_line(&mut reader, MAX_REQUEST_SIZE)? {
+                BoundedLine::Eof => break,
+                BoundedLine::TooLarge => {
+                    let resp = error_response(
+                        None,
+                        -32600,
+                        format!("Request too large (max {MAX_REQUEST_SIZE} bytes)"),
+                        None,
+                    );
+                    writeln!(out, "{}", serde_json::to_string(&resp)?)?;
+                    out.flush()?;
+                    continue;
+                }
+                BoundedLine::Ok(line) => line,
+            };
             if line.trim().is_empty() {
                 continue;
             }
@@ -581,7 +743,7 @@ impl McpServer {
     /// the next brain-wave state transition. Between events, the process
     /// uses zero CPU — the OS wakes it via epoll or timerfd.
     pub async fn run_async(&mut self) -> anyhow::Result<()> {
-        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::io::{AsyncWriteExt, BufReader};
         let stdin = tokio::io::stdin();
         let mut reader = BufReader::new(stdin);
         let mut stdout = tokio::io::stdout();
@@ -606,9 +768,6 @@ impl McpServer {
             let _state = self.eco_mode.recompute();
             let sleep_dur = self.eco_mode.next_transition_duration();
 
-            // Build the line buffer for this iteration
-            let mut line = String::new();
-
             tokio::select! {
                 // Signal received — graceful shutdown
                 result = &mut shutdown_signal => {
@@ -619,13 +778,24 @@ impl McpServer {
                     break;
                 }
 
-                // stdin ready — MCP request arrived
-                result = reader.read_line(&mut line) => {
-                    let n = result?;
-                    if n == 0 {
-                        // EOF — client disconnected
-                        break;
-                    }
+                // stdin ready — MCP request arrived (bounded read)
+                result = read_bounded_line_async(&mut reader, MAX_REQUEST_SIZE) => {
+                    let line = match result? {
+                        BoundedLine::Eof => break,
+                        BoundedLine::TooLarge => {
+                            let resp = error_response(
+                                None,
+                                -32600,
+                                format!("Request too large (max {MAX_REQUEST_SIZE} bytes)"),
+                                None,
+                            );
+                            stdout.write_all(serde_json::to_string(&resp)?.as_bytes()).await?;
+                            stdout.write_all(b"\n").await?;
+                            stdout.flush().await?;
+                            continue;
+                        }
+                        BoundedLine::Ok(line) => line,
+                    };
                     if line.trim().is_empty() {
                         continue;
                     }
@@ -762,6 +932,13 @@ impl McpServer {
     #[must_use]
     pub const fn eco_mode(&self) -> &EcoModeController {
         &self.eco_mode
+    }
+
+    /// Set the per-session request budget (hard cap on requests per connection).
+    ///
+    /// Pass `0` for unlimited. Default is [`DEFAULT_MAX_REQUESTS_PER_SESSION`].
+    pub const fn set_request_budget(&mut self, max_requests: u64) {
+        self.request_budget = crate::input_validation::RequestBudget::new(max_requests);
     }
 
     /// Get a mutable reference to the eco mode controller.
@@ -1142,6 +1319,40 @@ impl McpServer {
 
     /// Handle a single JSON-RPC request.
     async fn handle(&mut self, req: &RpcRequest) -> RpcResponse {
+        // Boundary hardening — enforce the per-session request budget first
+        if !self.request_budget.record() {
+            return error_response(
+                req.id.as_ref(),
+                -32000,
+                "Request budget exhausted — connection limit reached",
+                Some(
+                    json!({"used": self.request_budget.used(), "limit": self.request_budget.limit()}),
+                ),
+            );
+        }
+
+        // Boundary hardening — validate request structure + tool call params.
+        // This enforces the 64KB params cap, string length limits, injection
+        // filtering, SSRF protection and path-traversal protection that
+        // previously existed only as dead code.
+        let raw = json!({
+            "jsonrpc": req.jsonrpc,
+            "method": req.method,
+            "id": req.id,
+            "params": req.params,
+        });
+        if let crate::input_validation::ValidationResult::Invalid(reason) =
+            crate::input_validation::validate_tools_call(&raw)
+        {
+            tracing::warn!(method = %req.method, reason = %reason, "MCP request rejected by boundary validation");
+            return error_response(
+                req.id.as_ref(),
+                -32602,
+                "Invalid params",
+                Some(json!({"reason": reason})),
+            );
+        }
+
         // Record event for brain-wave tracking on every request
         self.eco_mode.record_event();
         // Refresh homeostasis from real hardware data (Lakshmi → Dharma)
@@ -1209,12 +1420,12 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — all 192 tools are accessible through it
+        // Only expose the wm meta-tool — all 195 tools are accessible through it
         if let Some(wm) = self.registry.get("wm") {
             Ok(json!({
                 "tools": [{
                     "name": wm.name(),
-                    "description": "WhiteMagic v5 meta-tool — routes natural language to 192 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
+                    "description": "WhiteMagic v5 meta-tool — routes natural language to 195 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -1920,6 +2131,7 @@ impl McpServer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::input_validation::MAX_PARAMS_SIZE;
     use std::sync::Arc;
 
     fn test_server() -> McpServer {
@@ -2130,7 +2342,7 @@ mod tests {
             tools[0]["description"]
                 .as_str()
                 .unwrap()
-                .contains("192 tools")
+                .contains("195 tools")
         );
     }
 
@@ -3172,6 +3384,169 @@ mod tests {
                     assert_eq!(eff.runs, 1, "Phase 0 should have 1 run recorded");
                 }
             }
+        }
+    }
+
+    #[tokio::test]
+    async fn boundary_validation_rejects_ssrf_url() {
+        let mut server = test_server();
+        let resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"http.fetch","arguments":{"url":"http://169.254.169.254/latest/meta-data"}}}"#)
+            .await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(
+            parsed["error"]["code"], -32602,
+            "SSRF URL must be rejected at the boundary: {resp}"
+        );
+    }
+
+    #[tokio::test]
+    async fn boundary_validation_rejects_path_traversal() {
+        let mut server = test_server();
+        let resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"file.read","arguments":{"path":"../../../etc/passwd"}}}"#)
+            .await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(
+            parsed["error"]["code"], -32602,
+            "Path traversal must be rejected at the boundary: {resp}"
+        );
+    }
+
+    #[tokio::test]
+    async fn boundary_validation_rejects_oversized_params() {
+        let mut server = test_server();
+        let huge = "x".repeat(MAX_PARAMS_SIZE + 1);
+        let body = format!(
+            r#"{{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{{"name":"memory.write","arguments":{{"content":"{huge}"}}}}}}"#
+        );
+        let resp = server.handle_request(&body).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(
+            parsed["error"]["code"], -32602,
+            "Oversized params must be rejected: {resp}"
+        );
+    }
+
+    #[tokio::test]
+    async fn boundary_validation_allows_safe_call() {
+        let mut server = test_server();
+        let resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"memory.search","arguments":{"query":"hello"}}}"#)
+            .await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        assert!(
+            parsed["error"].is_null(),
+            "Safe call should not be rejected: {resp}"
+        );
+    }
+
+    #[tokio::test]
+    async fn request_budget_rejects_after_cap() {
+        let mut server = test_server();
+        server.set_request_budget(2);
+
+        for i in 1..=2 {
+            let req = json!({"jsonrpc":"2.0","id":i,"method":"initialize","params":{}}).to_string();
+            let resp = server.handle_request(&req).await;
+            let parsed: Value = serde_json::from_str(&resp).unwrap();
+            assert!(
+                parsed["error"].is_null(),
+                "request {i} should succeed: {resp}"
+            );
+        }
+
+        let resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":3,"method":"initialize","params":{}}"#)
+            .await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        assert_eq!(
+            parsed["error"]["code"], -32000,
+            "request beyond budget must be rejected: {resp}"
+        );
+        assert_eq!(
+            parsed["error"]["data"]["limit"], 2,
+            "error should report the budget limit"
+        );
+    }
+
+    #[tokio::test]
+    async fn request_budget_zero_is_unlimited() {
+        let mut server = test_server();
+        server.set_request_budget(0);
+        for i in 1..=5 {
+            let req = json!({"jsonrpc":"2.0","id":i,"method":"initialize","params":{}}).to_string();
+            let resp = server.handle_request(&req).await;
+            let parsed: Value = serde_json::from_str(&resp).unwrap();
+            assert!(
+                parsed["error"].is_null(),
+                "request {i} should succeed: {resp}"
+            );
+        }
+    }
+
+    #[test]
+    fn bounded_line_read_returns_line() {
+        let mut input: &[u8] = b"hello world\nsecond line\n";
+        let line = read_bounded_line(&mut input, 1024).unwrap();
+        match line {
+            BoundedLine::Ok(s) => assert_eq!(s, "hello world"),
+            _ => panic!("expected a line"),
+        }
+    }
+
+    #[test]
+    fn bounded_line_read_handles_crlf() {
+        let mut input: &[u8] = b"hello\r\n";
+        let line = read_bounded_line(&mut input, 1024).unwrap();
+        match line {
+            BoundedLine::Ok(s) => assert_eq!(s, "hello"),
+            _ => panic!("expected a line"),
+        }
+    }
+
+    #[test]
+    fn bounded_line_read_detects_oversize() {
+        // 10 bytes of 'x' but max is 8 — must return TooLarge, not allocate 10 bytes
+        let mut input: &[u8] = b"xxxxxxxxxx\nrest\n";
+        let line = read_bounded_line(&mut input, 8).unwrap();
+        match line {
+            BoundedLine::TooLarge => {}
+            _ => panic!("expected TooLarge"),
+        }
+        // Stream must be positioned after the oversized line so `rest` is next
+        let next = read_bounded_line(&mut input, 1024).unwrap();
+        match next {
+            BoundedLine::Ok(s) => assert_eq!(s, "rest"),
+            _ => panic!("expected next line to be 'rest'"),
+        }
+    }
+
+    #[test]
+    fn bounded_line_read_eof() {
+        let mut input: &[u8] = b"";
+        match read_bounded_line(&mut input, 1024).unwrap() {
+            BoundedLine::Eof => {}
+            _ => panic!("expected Eof"),
+        }
+    }
+
+    #[test]
+    fn bounded_line_read_no_trailing_newline() {
+        let mut input: &[u8] = b"last line without newline";
+        let line = read_bounded_line(&mut input, 1024).unwrap();
+        match line {
+            BoundedLine::Ok(s) => assert_eq!(s, "last line without newline"),
+            _ => panic!("expected a line"),
+        }
+    }
+
+    #[test]
+    fn bounded_line_read_oversize_no_newline() {
+        let mut input: &[u8] = b"xxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+        match read_bounded_line(&mut input, 8).unwrap() {
+            BoundedLine::TooLarge => {}
+            _ => panic!("expected TooLarge"),
         }
     }
 }

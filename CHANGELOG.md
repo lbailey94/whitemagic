@@ -5,6 +5,38 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] — 2026-08-08
+
+### Boundary hardening (MCP input limits + request budget)
+
+- **Validation layer now enforced** — `validate_request`/`validate_tools_call` existed but were never wired into the request path; SSRF, path traversal, injection, and the 64KB params cap were dead code. All requests now pass boundary validation in `handle()` before any dispatch: malformed structure → `-32602`, unsafe URL → SSRF rejection, traversal → rejection, oversized params → rejection
+- **Per-session request budget**: `RequestBudget` (default 10,000 requests/connection, `0` = unlimited), enforced at the boundary with `-32000` when exhausted. Configurable via `wm serve --max-requests`
+- **Bounded stdin reads**: raw request lines capped at 1MB (`MAX_REQUEST_SIZE`) in both sync `run()` and async `run_async()` — prevents unbounded allocation from a malicious client (drains to EOL and responds `-32600`)
+- New public API: `RequestBudget`, `MAX_REQUEST_SIZE`, `MAX_PARAMS_SIZE`, `MAX_STRING_LEN`, `DEFAULT_MAX_REQUESTS_PER_SESSION`
+
+### Daemon watchdog
+
+- **Stall detection**: watchdog thread monitors the main-loop heartbeat; if no tick within `watchdog_timeout` (default 60s, `0` = disabled), logs CRITICAL, grants a 10s grace window for state saving, then force-exits (`exit(1)`) so a supervisor (Docker `restart` / systemd `Restart=always`) restarts the daemon
+- **Panic resilience**: all five heavy components (cycle sweep, dream, codegen, research, self-play) wrapped in `catch_unwind` — a panic in one component no longer kills the daemon
+- Configurable via `wm daemon --watchdog-timeout` / `config.toml [daemon] watchdog_timeout_secs`
+
+### Fuzz corpus seeds (committed)
+
+- **76 curated seeds across all 7 targets** (was: only auto-generated nlu_classify inputs, nothing tracked) — seeds committed as `seed_*` files so CI bootstraps coverage instantly; regenerated sha1 artifacts stay ignored
+- **Fuzz build fix**: `serde` was missing from `fuzz/Cargo.toml` deps — `json_rpc_parse` target did not compile
+- **`--all-features` fix**: `wm-polyglot` enabled jlrs without selecting a Julia version feature (jlrs-macros hard-error); added `julia-1-10`
+
+### Tooling
+
+- **`wm doctor` conformal calibration health** (section 10): reports classifier/regressor/APS fitted status, sample counts, and alphas from `<store>/conformal_store.json`; guides calibration/persistence when absent
+- **Count correction**: tool registry is 195 (docs previously said 192)
+- **Doctest fix**: `SplitConformalClassifier` doc example used the pre-`&[f64]` API and failed to compile
+
+### Counts
+
+- 3,212 → **3,240 tests passing, 0 failed** (28 new: budget 5, boundary 5, bounded-line 6, watchdog 3, doctest 1, +8 config/daemon)
+- 0 clippy warnings, fmt clean, cargo-deny all green
+
 ## [5.2.2] — 2026-08-08
 
 ### Conformal Prediction (net-new feature)
