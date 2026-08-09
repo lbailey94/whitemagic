@@ -31,6 +31,11 @@ pub enum MetricKind {
     ScenarioConfidence,
     /// Simulation variance (0.0–1.0) — MC std dev (lower is better).
     SimulationVariance,
+    /// Conformal empirical coverage (0.0–1.0) — fraction of prediction
+    /// sets/intervals that contained the truth in the latest monitor run.
+    /// Drift monitoring: sustained drops below the target (1 − α) mean the
+    /// calibration is stale and should be re-fit.
+    ConformalCoverage,
 }
 
 impl MetricKind {
@@ -49,6 +54,7 @@ impl MetricKind {
             Self::ResearchOutput => "research_output",
             Self::ScenarioConfidence => "scenario_confidence",
             Self::SimulationVariance => "simulation_variance",
+            Self::ConformalCoverage => "conformal_coverage",
         }
     }
 
@@ -67,6 +73,7 @@ impl MetricKind {
             Self::ResearchOutput,
             Self::ScenarioConfidence,
             Self::SimulationVariance,
+            Self::ConformalCoverage,
         ]
     }
 
@@ -79,6 +86,7 @@ impl MetricKind {
                 | Self::ImaginationQuality
                 | Self::ResearchOutput
                 | Self::ScenarioConfidence
+                | Self::ConformalCoverage
         )
     }
 
@@ -94,6 +102,9 @@ impl MetricKind {
             Self::ResearchOutput => 0.3,
             Self::ScenarioConfidence => 0.4,
             Self::SimulationVariance => 0.3, // Above this is bad
+            // Conservative defaults — a 90%-target calibration at 85% coverage
+            // already signals drift. Users can add tighter rules per alpha.
+            Self::ConformalCoverage => 0.85,
         }
     }
 
@@ -109,6 +120,7 @@ impl MetricKind {
             Self::ResearchOutput => 0.1,
             Self::ScenarioConfidence => 0.2,
             Self::SimulationVariance => 0.5,
+            Self::ConformalCoverage => 0.8,
         }
     }
 }
@@ -430,6 +442,6 @@ mod tests {
 
     #[test]
     fn metric_kind_all_count() {
-        assert_eq!(MetricKind::all().len(), 11);
+        assert_eq!(MetricKind::all().len(), 12);
     }
 }

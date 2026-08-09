@@ -37,6 +37,22 @@ impl CoverageReport {
         Self::finish(n, covered, alpha)
     }
 
+    /// Evaluate a list of prediction sets against true labels.
+    ///
+    /// `sets[i]` is the prediction set for sample `i`; `truths[i]` is the
+    /// true label. Slices must have equal length (excess is ignored).
+    #[must_use]
+    pub fn evaluate_sets(sets: &[Vec<usize>], truths: &[usize], alpha: f64) -> Self {
+        let n = sets.len().min(truths.len());
+        let covered = sets
+            .iter()
+            .zip(truths.iter())
+            .take(n)
+            .filter(|(set, t)| set.contains(t))
+            .count();
+        Self::finish(n, covered, alpha)
+    }
+
     /// Evaluate a regressor's intervals against true values.
     #[must_use]
     pub fn evaluate_regressor(
@@ -133,5 +149,33 @@ mod tests {
         let report = CoverageReport::evaluate_regressor(&[], &[], 0.1);
         assert_eq!(report.n, 0);
         assert_eq!(report.empirical_coverage, 0.0);
+    }
+
+    #[test]
+    fn evaluate_sets_counts_coverage() {
+        let sets = vec![vec![0, 1], vec![2], vec![0, 1, 2]];
+        let truths = vec![0, 2, 5];
+        let report = CoverageReport::evaluate_sets(&sets, &truths, 0.1);
+        assert_eq!(report.n, 3);
+        assert_eq!(report.covered, 2);
+        assert!((report.empirical_coverage - 2.0 / 3.0).abs() < 1e-9);
+        assert!(!report.within_guarantee);
+    }
+
+    #[test]
+    fn evaluate_sets_truncates_to_shortest() {
+        let sets = vec![vec![0]];
+        let truths = vec![0, 1, 2];
+        let report = CoverageReport::evaluate_sets(&sets, &truths, 0.1);
+        assert_eq!(report.n, 1);
+        assert_eq!(report.covered, 1);
+    }
+
+    #[test]
+    fn evaluate_sets_empty() {
+        let report = CoverageReport::evaluate_sets(&[], &[], 0.1);
+        assert_eq!(report.n, 0);
+        assert_eq!(report.empirical_coverage, 0.0);
+        assert!(!report.within_guarantee);
     }
 }

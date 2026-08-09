@@ -12,6 +12,7 @@
 //! - `conformal.predict_set` — predict a label set (with guarantee)
 //! - `conformal.predict_interval` — predict a value interval (with guarantee)
 //! - `conformal.status` — current calibration state and coverage report
+//! - `conformal.monitor` — evaluate empirical coverage + feed drift alerts
 //! - `conformal.export` / `conformal.import` — JSON persistence
 
 #![forbid(unsafe_code)]
@@ -24,6 +25,7 @@ use std::sync::{Arc, Mutex};
 use serde_json::{Value, json};
 use wm_conformal::{AdaptivePredictionSets, SplitConformalClassifier, SplitConformalRegressor};
 use wm_core::{Context, EffectRow, Gana, Tool, ToolStats};
+use wm_selfmodel::{MetricKind, SelfModel};
 
 /// Shared conformal state — one per MCP server instance.
 ///
@@ -570,6 +572,177 @@ impl Tool for ConformalStatusTool {
     }
 }
 
+// ── conformal.monitor ────────────────────────────────────────────────
+
+/// `conformal.monitor` — evaluate empirical coverage on recent observations
+/// and feed it into the self-model for live drift alerts.
+///
+/// Drift monitoring: the conformal guarantee is marginal, so calibration can
+/// go stale when the data distribution shifts. Repeated monitor calls build
+/// a `ConformalCoverage` metric history in the self-model; sustained drops
+/// below the target (1 − α) fire drift alerts via the alert engine.
+pub struct ConformalMonitorTool {
+    store: Arc<Mutex<ConformalStore>>,
+    self_model: Option<Arc<Mutex<SelfModel>>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl ConformalMonitorTool {
+    #[must_use]
+    pub fn new(
+        store: Arc<Mutex<ConformalStore>>,
+        self_model: Option<Arc<Mutex<SelfModel>>>,
+    ) -> Self {
+        Self {
+            store,
+            self_model,
+            stats: ToolStats::default(),
+            effects: EffectRow::pure(),
+        }
+    }
+}
+
+impl Default for ConformalMonitorTool {
+    fn default() -> Self {
+        Self::new(Arc::new(Mutex::new(ConformalStore::new())), None)
+    }
+}
+
+#[async_trait]
+#[async_trait]
+impl Tool for ConformalMonitorTool {
+    fn name(&self) -> &str {
+        "conformal.monitor"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Ghost
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let alpha = args.get("alpha").and_then(Value::as_f64).unwrap_or(0.1);
+        if !(0.0 < alpha && alpha < 1.0) {
+            return Err(wm_core::CoreError::InvalidArgs(format!(
+                "alpha must be in (0, 1), got {alpha}"
+            )));
+        }
+
+        // Mode 1: classification — prediction sets + true labels
+        if let (Some(sets), Some(truths)) = (
+            args.get("sets").and_then(Value::as_array),
+            args.get("truths").and_then(Value::as_array),
+        ) {
+            let sets_vec = sets
+                .iter()
+                .map(|s| {
+                    s.as_array()
+                        .map(|a| {
+                            a.iter()
+                                .filter_map(Value::as_u64)
+                                .map(|v| v as usize)
+                                .collect()
+                        })
+                        .ok_or_else(|| {
+                            wm_core::CoreError::InvalidArgs(
+                                "sets must be arrays of class indices".into(),
+                            )
+                        })
+                })
+                .collect::<Result<Vec<Vec<usize>>, _>>()?;
+            let truths_vec = truths
+                .iter()
+                .filter_map(Value::as_u64)
+                .map(|v| v as usize)
+                .collect::<Vec<_>>();
+            if sets_vec.len() != truths_vec.len() {
+                return Err(wm_core::CoreError::InvalidArgs(format!(
+                    "sets ({}) and truths ({}) length mismatch",
+                    sets_vec.len(),
+                    truths_vec.len()
+                )));
+            }
+            let report = wm_conformal::CoverageReport::evaluate_sets(&sets_vec, &truths_vec, alpha);
+            return self.finish(&report);
+        }
+
+        // Mode 2: regression — intervals + true values
+        if let (Some(intervals), Some(truths)) = (
+            args.get("intervals").and_then(Value::as_array),
+            args.get("truths").and_then(Value::as_array),
+        ) {
+            let ivs = intervals
+                .iter()
+                .map(
+                    |iv| -> Result<wm_conformal::PredictionInterval, wm_core::CoreError> {
+                        let lower = iv.get("lower").and_then(Value::as_f64).ok_or_else(|| {
+                            wm_core::CoreError::InvalidArgs("interval missing 'lower'".into())
+                        })?;
+                        let upper = iv.get("upper").and_then(Value::as_f64).ok_or_else(|| {
+                            wm_core::CoreError::InvalidArgs("interval missing 'upper'".into())
+                        })?;
+                        Ok(wm_conformal::PredictionInterval {
+                            lower,
+                            upper,
+                            point: f64::midpoint(lower, upper),
+                            alpha,
+                            guarantee: 1.0 - alpha,
+                        })
+                    },
+                )
+                .collect::<Result<Vec<_>, _>>()?;
+            let truths_vec = truths.iter().filter_map(Value::as_f64).collect::<Vec<_>>();
+            let report = wm_conformal::CoverageReport::evaluate_regressor(&ivs, &truths_vec, alpha);
+            return self.finish(&report);
+        }
+
+        Err(wm_core::CoreError::InvalidArgs(
+            "provide either (sets + truths) for classification or (intervals + truths) for regression, plus optional alpha".into(),
+        ))
+    }
+}
+
+impl ConformalMonitorTool {
+    fn finish(&self, report: &wm_conformal::CoverageReport) -> wm_core::Result<Value> {
+        // Feed empirical coverage into the self-model for drift alerts
+        let mut result = json!({
+            "n": report.n,
+            "covered": report.covered,
+            "empirical_coverage": report.empirical_coverage,
+            "target_coverage": report.target_coverage,
+            "within_guarantee": report.within_guarantee,
+            "drift": !report.within_guarantee,
+        });
+
+        if let Ok(store) = self.store.lock() {
+            result["classifier_fitted"] = json!(store.classifier.is_some());
+            result["regressor_fitted"] = json!(store.regressor.is_some());
+        }
+
+        if let Some(model) = &self.self_model {
+            if let Ok(model) = model.lock() {
+                model.record(
+                    MetricKind::ConformalCoverage,
+                    report.empirical_coverage as f32,
+                );
+                let alerts = model
+                    .check_alerts()
+                    .into_iter()
+                    .filter(|a| a.metric == MetricKind::ConformalCoverage)
+                    .map(|a| json!({"level": format!("{:?}", a.level), "message": a.message}))
+                    .collect::<Vec<_>>();
+                result["alerts"] = json!(alerts);
+            }
+        }
+
+        Ok(result)
+    }
+}
+
 // ── conformal.export / conformal.import ──────────────────────────────
 
 /// `conformal.export` — serialize the conformal store for persistence.
@@ -676,9 +849,13 @@ impl Tool for ConformalImportTool {
 // ── Registration ─────────────────────────────────────────────────────
 
 /// Register all conformal tools into a registry.
+///
+/// `self_model` (optional) enables drift monitoring: `conformal.monitor`
+/// records empirical coverage into the self-model for live alerts.
 pub fn register_conformal(
     registry: &wm_dispatch::ToolRegistry,
     store: Arc<Mutex<ConformalStore>>,
+    self_model: Option<Arc<Mutex<SelfModel>>>,
 ) -> wm_dispatch::ToolRegistry {
     registry
         .register(Arc::new(ConformalFitClassifierTool::new(Arc::clone(
@@ -690,6 +867,10 @@ pub fn register_conformal(
             &store,
         ))))
         .register(Arc::new(ConformalStatusTool::new(Arc::clone(&store))))
+        .register(Arc::new(ConformalMonitorTool::new(
+            Arc::clone(&store),
+            self_model,
+        )))
         .register(Arc::new(ConformalExportTool::new(Arc::clone(&store))))
         .register(Arc::new(ConformalImportTool::new(store)))
 }
@@ -818,5 +999,121 @@ mod tests {
         let classes = result["classes"].as_array().unwrap();
         assert!(classes.len() <= 2);
         assert_eq!(classes[0], 0);
+    }
+
+    #[tokio::test]
+    async fn monitor_classification_reports_coverage() {
+        let store = test_store();
+        let monitor = ConformalMonitorTool::new(Arc::clone(&store), None);
+        let mut ctx = Context::new(wm_core::BrainWave::Gamma);
+
+        let result = monitor
+            .call(
+                &mut ctx,
+                json!({
+                    "sets": [[0, 1], [2], [0, 1, 2]],
+                    "truths": [0, 2, 5],
+                    "alpha": 0.1
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["n"], 3);
+        assert_eq!(result["covered"], 2);
+        assert!((result["empirical_coverage"].as_f64().unwrap() - 2.0 / 3.0).abs() < 1e-9);
+        assert_eq!(result["drift"], true);
+        assert_eq!(result["classifier_fitted"], false);
+    }
+
+    #[tokio::test]
+    async fn monitor_regression_reports_coverage() {
+        let store = test_store();
+        let monitor = ConformalMonitorTool::new(Arc::clone(&store), None);
+        let mut ctx = Context::new(wm_core::BrainWave::Gamma);
+
+        let result = monitor
+            .call(
+                &mut ctx,
+                json!({
+                    "intervals": [
+                        {"lower": 0.0, "upper": 2.0},
+                        {"lower": 10.0, "upper": 12.0}
+                    ],
+                    "truths": [1.0, 11.5],
+                    "alpha": 0.1
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["n"], 2);
+        assert_eq!(result["covered"], 2);
+        assert_eq!(result["drift"], false);
+    }
+
+    #[tokio::test]
+    async fn monitor_records_coverage_into_self_model() {
+        let store = test_store();
+        let model = Arc::new(Mutex::new(wm_selfmodel::SelfModel::new()));
+        let monitor = ConformalMonitorTool::new(Arc::clone(&store), Some(Arc::clone(&model)));
+        let mut ctx = Context::new(wm_core::BrainWave::Gamma);
+
+        // Full coverage — no drift
+        let result = monitor
+            .call(&mut ctx, json!({"sets": [[0, 1], [2]], "truths": [0, 2]}))
+            .await
+            .unwrap();
+        assert_eq!(result["drift"], false);
+        assert!(result["alerts"].as_array().unwrap().is_empty());
+
+        // Sustained low coverage — drift alert should eventually fire
+        for _ in 0..12 {
+            let _ = monitor
+                .call(
+                    &mut ctx,
+                    json!({"sets": [[0], [0], [0], [0]], "truths": [1, 1, 1, 1], "alpha": 0.1}),
+                )
+                .await
+                .unwrap();
+        }
+        let model = model.lock().unwrap();
+        let alerts = model
+            .check_alerts()
+            .into_iter()
+            .filter(|a| a.metric == MetricKind::ConformalCoverage);
+        assert!(
+            alerts.clone().next().is_some(),
+            "drift should produce conformal alerts"
+        );
+        assert_eq!(
+            model.sample_count(MetricKind::ConformalCoverage),
+            13,
+            "each monitor run should record a coverage sample"
+        );
+    }
+
+    #[tokio::test]
+    async fn monitor_requires_valid_input() {
+        let store = test_store();
+        let monitor = ConformalMonitorTool::new(Arc::clone(&store), None);
+        let mut ctx = Context::new(wm_core::BrainWave::Gamma);
+
+        // No data
+        let err = monitor.call(&mut ctx, json!({})).await;
+        assert!(err.is_err());
+
+        // Bad alpha
+        let err = monitor
+            .call(
+                &mut ctx,
+                json!({"sets": [[0]], "truths": [0], "alpha": 1.5}),
+            )
+            .await;
+        assert!(err.is_err());
+
+        // Length mismatch
+        let err = monitor
+            .call(&mut ctx, json!({"sets": [[0], [1]], "truths": [0]}))
+            .await;
+        assert!(err.is_err());
     }
 }

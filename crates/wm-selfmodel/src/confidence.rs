@@ -110,6 +110,7 @@ impl ConfidenceCalibrator {
             MetricKind::ResearchOutput => (value.clamp(0.0, 1.0), 0.08),
             MetricKind::ScenarioConfidence => (value.clamp(0.0, 1.0), 0.10),
             MetricKind::SimulationVariance => (1.0 - value.clamp(0.0, 1.0), 0.05),
+            MetricKind::ConformalCoverage => (value.clamp(0.0, 1.0), 0.05),
         }
     }
 

@@ -18,9 +18,9 @@ pub mod migrate;
 mod server;
 
 pub use input_validation::{
-    DEFAULT_MAX_REQUESTS_PER_SESSION, MAX_PARAMS_SIZE, MAX_REQUEST_SIZE, MAX_STRING_LEN,
-    RequestBudget, ValidationResult, validate_request, validate_tool_call_params,
-    validate_tools_call,
+    DEFAULT_MAX_REQUESTS_PER_SESSION, DEFAULT_RATE_LIMIT_RPM, MAX_PARAMS_SIZE, MAX_REQUEST_SIZE,
+    MAX_STRING_LEN, RateWindow, RequestBudget, ValidationResult, validate_request,
+    validate_tool_call_params, validate_tools_call,
 };
 pub use server::McpServer;
 

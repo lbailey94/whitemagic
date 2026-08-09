@@ -5,6 +5,43 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.0] — 2026-08-08
+
+### Conformal drift monitoring
+
+- **`conformal.monitor` tool** — evaluate empirical coverage on recent observations (classification sets or regression intervals + truths), returns coverage report, `drift` flag, and live drift alerts
+- **`ConformalCoverage` self-model metric** — each monitor run records empirical coverage into the self-model; the alert engine fires warning/critical drift alerts when coverage persists below 0.85/0.80 (default rules, per-alpha overridable)
+- **Auto-persistence** — conformal calibration state now saves to `<store>/conformal_store.json` on shutdown and restores on startup (`wm doctor` section 10 reads the same file — the persistence loop is closed)
+- `CoverageReport::evaluate_sets` — new list-based evaluator in wm-conformal
+
+### Brier scorecard (`simulation.calibrate`)
+
+- **New `wm-simulation::calibration` module** — `CalibrationStore` (record/resolve/scorecard), `CalibrationPrediction`, `BrierScorecard` with the **Murphy decomposition**: Brier score, reliability, resolution, uncertainty, and Brier skill score (BSS) vs. climatology — beyond v26's basic average
+- **`simulation.calibrate` tool** with actions `record` / `resolve` / `scorecard`; historical calibration gap feeds a small adjustment into future predictions (v26 parity)
+- Calibration state auto-persists to `<store>/calibration_store.json` across restarts
+
+### GP surrogate + Bayesian optimization
+
+- **New `wm-simulation::bayesian` module** (pure Rust, no external linear algebra):
+  - `GaussianProcess` — RBF-kernel regression with Cholesky solve, posterior mean/variance, numerical jitter
+  - `expected_improvement` — EI acquisition with exploration bias
+  - `BayesianOptimizer` — random init → GP fit → EI-guided candidate search
+  - `Expr` — tiny safe expression evaluator (`x[0]`, `+ - * / ^`, `sin/cos/tan/exp/log/sqrt/abs`, `pi`, `e`) with structural validation, unary minus, and correct `-x^2 = -(x^2)` precedence
+- **`mc.surrogate` tool** — fit a GP response surface, predict with uncertainty at query points
+- **`mc.optimize` tool** — Bayesian optimization over `param_ranges` with a `fitness_expr` (e.g. `"-(x[0] - 3)^2 + 5"`), full iteration trace in the response
+
+### Hardening batch
+
+- **Time-windowed rate limiting at the MCP boundary** — `RateWindow` (sliding 60s window, default 600 req/min, `wm serve --rate-limit`); complements the per-connection `RequestBudget`; throttled requests get `-32000` with `retry_after_secs`
+- **`wm doctor` exit codes** — real issue counting (missing store, corruption, missing Tantivy index, conformal/calibration problems) with exit code 1 on any issue, 0 when healthy; useful for health-check automation
+- **CI fuzz corpus regression** — fuzz workflow now replays the committed seed corpora (`-runs=1000`) before the 30s timed runs
+
+### Counts
+
+- 195 → **199 tools** (conformal.monitor, simulation.calibrate, mc.surrogate, mc.optimize)
+- 3,240 → **3,284 tests passing, 0 failed** (+44)
+- 0 clippy warnings, fmt clean, cargo-deny all green
+
 ## [5.3.0] — 2026-08-08
 
 ### Boundary hardening (MCP input limits + request budget)

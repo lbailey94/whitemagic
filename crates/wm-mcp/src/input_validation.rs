@@ -19,6 +19,88 @@ pub const MAX_REQUEST_SIZE: usize = 1024 * 1024; // 1 MB
 /// Default maximum requests served per connection (0 = unlimited).
 pub const DEFAULT_MAX_REQUESTS_PER_SESSION: u64 = 10_000;
 
+/// Default time-windowed request rate cap (requests per minute, 0 = unlimited).
+pub const DEFAULT_RATE_LIMIT_RPM: u64 = 600;
+
+/// Sliding-window rate limiter for the MCP boundary.
+///
+/// Complements [`RequestBudget`] (a hard per-connection cap) with a
+/// time-windowed throttle: bursts are absorbed up to `max_per_window`
+/// within each rolling window, then requests are refused with the
+/// seconds-to-next-allowed in the error payload.
+#[derive(Debug, Clone)]
+pub struct RateWindow {
+    /// Maximum requests allowed per window (0 = unlimited).
+    max_per_window: u64,
+    /// Window length.
+    window: std::time::Duration,
+    /// Timestamps of recent requests (ms since epoch).
+    timestamps: std::collections::VecDeque<u64>,
+}
+
+impl Default for RateWindow {
+    fn default() -> Self {
+        Self::new(DEFAULT_RATE_LIMIT_RPM, std::time::Duration::from_secs(60))
+    }
+}
+
+impl RateWindow {
+    /// Create a windowed rate limiter.
+    #[must_use]
+    pub const fn new(max_per_window: u64, window: std::time::Duration) -> Self {
+        Self {
+            max_per_window,
+            window,
+            timestamps: std::collections::VecDeque::new(),
+        }
+    }
+
+    /// Whether the window is unlimited.
+    #[must_use]
+    pub const fn is_unlimited(&self) -> bool {
+        self.max_per_window == 0
+    }
+
+    /// Try to record a request. Returns `Ok(())` when allowed, or
+    /// `Err(retry_after_secs)` when the rate cap is exceeded.
+    pub fn record(&mut self) -> Result<(), u64> {
+        if self.is_unlimited() {
+            return Ok(());
+        }
+        let now = now_ms();
+        // Drop timestamps outside the window
+        while let Some(&front) = self.timestamps.front() {
+            if now.saturating_sub(front) < self.window.as_millis() as u64 {
+                break;
+            }
+            self.timestamps.pop_front();
+        }
+        if self.timestamps.len() as u64 >= self.max_per_window {
+            return Err(self.window.as_secs() + 1);
+        }
+        self.timestamps.push_back(now);
+        Ok(())
+    }
+
+    /// Requests recorded within the current window.
+    #[must_use]
+    pub fn used(&self) -> usize {
+        self.timestamps.len()
+    }
+
+    /// The configured cap (0 = unlimited).
+    #[must_use]
+    pub const fn limit(&self) -> u64 {
+        self.max_per_window
+    }
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis() as u64)
+}
+
 /// Per-session request budget — counts requests and enforces a hard cap.
 #[derive(Debug, Clone)]
 pub struct RequestBudget {
@@ -501,5 +583,54 @@ mod tests {
         assert!(budget.record());
         assert_eq!(budget.remaining(), 0);
         assert!(budget.is_exhausted());
+    }
+
+    #[test]
+    fn rate_window_defaults() {
+        let rw = RateWindow::default();
+        assert_eq!(rw.limit(), DEFAULT_RATE_LIMIT_RPM);
+        assert!(!rw.is_unlimited());
+        assert_eq!(rw.used(), 0);
+    }
+
+    #[test]
+    fn rate_window_allows_burst_under_cap() {
+        let mut rw = RateWindow::new(5, std::time::Duration::from_secs(60));
+        for _ in 0..5 {
+            assert!(rw.record().is_ok());
+        }
+        assert_eq!(rw.used(), 5);
+    }
+
+    #[test]
+    fn rate_window_rejects_over_cap_with_retry() {
+        let mut rw = RateWindow::new(3, std::time::Duration::from_secs(60));
+        for _ in 0..3 {
+            assert!(rw.record().is_ok());
+        }
+        let err = rw.record().unwrap_err();
+        assert!(err >= 60, "retry-after should be ~window length, got {err}");
+        assert_eq!(rw.used(), 3, "rejected requests are not counted");
+    }
+
+    #[test]
+    fn rate_window_zero_is_unlimited() {
+        let mut rw = RateWindow::new(0, std::time::Duration::from_secs(60));
+        for _ in 0..100_000 {
+            assert!(rw.record().is_ok());
+        }
+        assert!(rw.is_unlimited());
+    }
+
+    #[test]
+    fn rate_window_expires_sliding_window() {
+        let mut rw = RateWindow::new(2, std::time::Duration::from_millis(30));
+        assert!(rw.record().is_ok());
+        assert!(rw.record().is_ok());
+        assert!(rw.record().is_err());
+        std::thread::sleep(std::time::Duration::from_millis(60));
+        assert!(rw.record().is_ok(), "window should have rolled over");
+        // Old timestamps expired out of the window — only recent ones remain
+        assert!(rw.used() <= 2, "expired timestamps should be pruned");
     }
 }

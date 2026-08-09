@@ -36,6 +36,7 @@ pub mod anomaly;
 pub mod archaeology;
 pub mod association;
 pub mod autonomous;
+pub mod bayesian_tools;
 pub mod bicameral;
 pub mod boundary;
 pub mod common;
@@ -87,6 +88,7 @@ pub use autonomous::{
     ConsolidationCompressTool, ConsolidationConnectTool, EmergenceScanTool, RetentionPruneTool,
     SensorimotorScanTool, SpiralReportTool,
 };
+pub use bayesian_tools::{McOptimizeTool, McSurrogateTool};
 pub use bicameral::{BicameralReasonTool, BicameralStatusTool};
 pub use boundary::{AntiLoopCheckTool, BoundaryEnforceTool};
 pub use consciousness::{
