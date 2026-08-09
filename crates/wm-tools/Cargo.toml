@@ -32,6 +32,9 @@ async-trait = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 
+[features]
+acs-yaml = ["wm-governance/acs-yaml"]
+
 [dev-dependencies]
 proptest = { workspace = true }
 tempfile = "3"
