@@ -205,8 +205,8 @@ mod tests {
     #[test]
     fn alert_engine_default_has_rules() {
         let engine = AlertEngine::with_default_rules();
-        // 12 metrics * 2 rules (warning + critical) = 24
-        assert_eq!(engine.rules().len(), 24);
+        // 13 metrics * 2 rules (warning + critical) = 26
+        assert_eq!(engine.rules().len(), 26);
     }
 
     #[test]

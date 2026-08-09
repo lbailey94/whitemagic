@@ -1,7 +1,7 @@
 # WhiteMagic v5 vs v26 — Comprehensive Gap Analysis
 
 **Last updated**: August 8, 2026
-**Status**: v5.4.0 — 15 crates, 199 tools, 3,284 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. Conformal prediction shipped as a net-new feature (2026-08-08). Boundary hardening (2026-08-08).
+**Status**: v5.5.0 — 15 crates, 202 tools, 3,311 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. Conformal prediction shipped as a net-new feature (2026-08-08). Boundary hardening (2026-08-08).
 
 This document compares the **v5 Rust rewrite** against the **v26 Python codebase** (the retired reference at `~/Desktop/WHITEMAGIC`). It replaces the earlier v2/v4-era `GAP_ANALYSIS_v26_v4.md`.
 

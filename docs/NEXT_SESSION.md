@@ -3,17 +3,17 @@
 State as of the end of the late 2026-08-08 session. Working tree has
 uncommitted changes (this session's features) — see git status.
 
-## Current State (v5.4.0)
+## Current State (v5.5.0)
 
-- **15 crates, 199 tools, 3,284 tests (0 failed), ~131,000 LOC**
+- **15 crates, 202 tools, 3,311 tests (0 failed), ~131,000 LOC**
 - 0 clippy warnings (`cargo clippy --all-targets`), fmt clean, cargo-deny all green
 - 0 lock panics in production code (72 sites converted to graceful degradation)
 - Live store: `~/Desktop/WMdata/live` — 58,617 memories / 10 galaxies
-- Conformal prediction + drift monitoring, Brier scorecard, GP/Bayesian optimization
+- Conformal prediction + drift monitoring, Brier scorecard, GP/Bayesian optimization, MC suite complete
 - Daemon: SIGTERM graceful shutdown + stall watchdog + panic resilience
 - MCP boundary: validation enforced, request budget, rate limit, bounded reads
 
-## What was done this session (3 work streams)
+## What was done this session (4 work streams)
 
 1. **Conformal drift monitoring** — `conformal.monitor` tool evaluates
    empirical coverage (sets or intervals + truths) and feeds a new
@@ -33,6 +33,15 @@ uncommitted changes (this session's features) — see git status.
    boundary (`wm serve --rate-limit`, default 600/min); `wm doctor` now
    returns real issue counts with exit code 1 on problems; CI fuzz workflow
    replays the committed seed corpora before timed runs.
+5. **MC suite completion** — `mc.rare_event` (subset simulation with proper
+   MH acceptance + importance sampling), `mc.sde` (Euler/Milstein, GBM/OU,
+   two-level MLMC), `mc.superforecaster` (LHS → PCE/Sobol' → BO).
+6. **GP hyperparameter fitting** — `log_marginal_likelihood` +
+   `fit_hyperparameters` (BO over log-hyperparameters, dogfooding);
+   `mc.surrogate fit_hyperparameters: true`.
+7. **Brier → self-model** — new `BrierScore` metric (lower better, 0.15/0.3
+   alert thresholds); `simulation.calibrate` scorecard records Brier and
+   fires drift alerts. The feedback triangle is complete.
 
 ## Known environment constraint
 
@@ -96,13 +105,13 @@ ls ~/Desktop/WMdocs    # all documentation
 
 ## Gotchas / notes
 
-- Version aligned at **5.4.0** (Cargo.toml workspace, clap attribute, README,
+- Version aligned at **5.5.0** (Cargo.toml workspace, clap attribute, README,
   CHANGELOG, PROGRESS, GAP_ANALYSIS).
 - `fuzz/corpus/` is partially gitignored: only `seed_*` files are tracked;
   libFuzzer-regenerated sha1 files stay ignored — never `git add -A fuzz/corpus/`
   after a fuzz run.
 - `wm doctor`/`stats` need `--store ~/Desktop/WMdata/live` to see migrated memories.
 - The `fuzz/` crate is excluded from the workspace (`exclude = ["fuzz"]`).
-- Tool count is **199**.
+- Tool count is **202**.
 - `conformal_store.json` and `calibration_store.json` live at the **store root**
   (parent of `lmdb/`), not inside it — doctor and server agree on this path.

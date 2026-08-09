@@ -5,7 +5,7 @@
 //! - `tools/list`: returns only the `wm` meta-tool (single entry point)
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
-//! The `wm` meta-tool routes natural language to 199 tools via TF-IDF NLU
+//! The `wm` meta-tool routes natural language to 202 tools via TF-IDF NLU
 //! classification, or accepts an explicit `route` parameter for direct dispatch.
 //! Use `wm(thought="list tools")` or `wm(route="tools.list")` to discover tools.
 
@@ -615,6 +615,7 @@ impl McpServer {
         let registry = wm_tools::expansion::simulation_tools::register_simulation(
             &registry,
             Some(Arc::clone(&calibration_store)),
+            Some(Arc::clone(&self_model)),
         );
         let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
@@ -1572,12 +1573,12 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — all 199 tools are accessible through it
+        // Only expose the wm meta-tool — all 202 tools are accessible through it
         if let Some(wm) = self.registry.get("wm") {
             Ok(json!({
                 "tools": [{
                     "name": wm.name(),
-                    "description": "WhiteMagic v5 meta-tool — routes natural language to 199 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
+                    "description": "WhiteMagic v5 meta-tool — routes natural language to 202 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -2411,6 +2412,7 @@ mod tests {
         let registry = wm_tools::expansion::simulation_tools::register_simulation(
             &registry,
             Some(Arc::clone(&calibration_store)),
+            Some(Arc::clone(&self_model)),
         );
         let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
@@ -2501,7 +2503,7 @@ mod tests {
             tools[0]["description"]
                 .as_str()
                 .unwrap()
-                .contains("199 tools")
+                .contains("202 tools")
         );
     }
 

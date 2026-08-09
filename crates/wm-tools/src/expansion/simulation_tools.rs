@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
+use wm_selfmodel::{MetricKind, SelfModel};
 use wm_simulation::{
     CalibrationStore, CounterfactualEstimator, Distribution, ForecastMethod, Forecaster, McConfig,
     MonteCarloSimulator,
@@ -320,15 +321,20 @@ fn parse_distribution(v: &Value) -> Result<Distribution, wm_core::CoreError> {
 /// - `scorecard` — full calibration report (default)
 pub struct SimulationCalibrateTool {
     store: Arc<Mutex<CalibrationStore>>,
+    self_model: Option<Arc<Mutex<SelfModel>>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl SimulationCalibrateTool {
     #[must_use]
-    pub fn new(store: Arc<Mutex<CalibrationStore>>) -> Self {
+    pub fn new(
+        store: Arc<Mutex<CalibrationStore>>,
+        self_model: Option<Arc<Mutex<SelfModel>>>,
+    ) -> Self {
         Self {
             store,
+            self_model,
             stats: ToolStats::default(),
             effects: EffectRow::read_only(vec![Resource::Galaxy("simulation".into())]),
         }
@@ -337,7 +343,7 @@ impl SimulationCalibrateTool {
 
 impl Default for SimulationCalibrateTool {
     fn default() -> Self {
-        Self::new(Arc::new(Mutex::new(CalibrationStore::new())))
+        Self::new(Arc::new(Mutex::new(CalibrationStore::new())), None)
     }
 }
 
@@ -426,7 +432,7 @@ impl Tool for SimulationCalibrateTool {
             }
             "scorecard" => {
                 let card = store.scorecard();
-                Ok(json!({
+                let mut result = json!({
                     "status": "success",
                     "total_predictions": card.total_predictions,
                     "resolved": card.resolved,
@@ -440,7 +446,21 @@ impl Tool for SimulationCalibrateTool {
                     "perfect_calibration": card.perfect_calibration,
                     "good_calibration": card.good_calibration,
                     "calibration_bins": card.calibration_bins,
-                }))
+                });
+                // Feed the Brier score into the self-model for drift alerts
+                if let Some(model) = &self.self_model {
+                    if let Ok(model) = model.lock() {
+                        model.record(MetricKind::BrierScore, card.avg_brier_score as f32);
+                        let alerts = model
+                            .check_alerts()
+                            .into_iter()
+                            .filter(|a| a.metric == MetricKind::BrierScore)
+                            .map(|a| json!({"level": format!("{:?}", a.level), "message": a.message}))
+                            .collect::<Vec<_>>();
+                        result["alerts"] = json!(alerts);
+                    }
+                }
+                Ok(result)
             }
             other => Err(wm_core::CoreError::InvalidArgs(format!(
                 "unknown action '{other}' (expected record | resolve | scorecard)"
@@ -452,13 +472,17 @@ impl Tool for SimulationCalibrateTool {
 // ── Registration ──────────────────────────────────────────────────────
 
 /// Register all simulation tools into a registry.
+///
+/// `self_model` (optional) enables calibration monitoring: the scorecard
+/// records the average Brier score into the self-model for drift alerts.
 #[must_use]
 pub fn register_simulation(
     registry: &wm_dispatch::ToolRegistry,
     calibration_store: Option<Arc<Mutex<CalibrationStore>>>,
+    self_model: Option<Arc<Mutex<SelfModel>>>,
 ) -> wm_dispatch::ToolRegistry {
     let calibrate = match calibration_store {
-        Some(store) => SimulationCalibrateTool::new(store),
+        Some(store) => SimulationCalibrateTool::new(store, self_model),
         None => SimulationCalibrateTool::default(),
     };
     registry
@@ -595,7 +619,7 @@ mod tests {
     #[tokio::test]
     async fn calibrate_record_resolve_scorecard_flow() {
         let store = Arc::new(Mutex::new(CalibrationStore::new()));
-        let tool = SimulationCalibrateTool::new(Arc::clone(&store));
+        let tool = SimulationCalibrateTool::new(Arc::clone(&store), None);
         let mut ctx = Context::default();
 
         // Record
@@ -672,5 +696,54 @@ mod tests {
         assert_eq!(v["status"], "success");
         assert_eq!(v["resolved"], 0);
         assert_eq!(v["total_predictions"], 0);
+    }
+
+    #[tokio::test]
+    async fn calibrate_feeds_brier_into_self_model() {
+        let store = Arc::new(Mutex::new(CalibrationStore::new()));
+        let model = Arc::new(Mutex::new(wm_selfmodel::SelfModel::new()));
+        let tool = SimulationCalibrateTool::new(Arc::clone(&store), Some(Arc::clone(&model)));
+        let mut ctx = Context::default();
+
+        // Resolve many anti-calibrated predictions → poor Brier
+        for i in 0..14 {
+            let v = tool
+                .call(
+                    &mut ctx,
+                    json!({"action": "record", "statement": format!("pred {i}"), "probability": 0.9}),
+                )
+                .await
+                .unwrap();
+            let id = v["prediction_id"].as_str().unwrap().to_string();
+            let _ = tool
+                .call(
+                    &mut ctx,
+                    json!({"action": "resolve", "prediction_id": id, "outcome": false}),
+                )
+                .await
+                .unwrap();
+        }
+        // Repeated scorecards accumulate Brier samples → forecast → alert
+        let mut saw_alert = false;
+        for _ in 0..20 {
+            let v = tool
+                .call(&mut ctx, json!({"action": "scorecard"}))
+                .await
+                .unwrap();
+            assert!(v["avg_brier_score"].as_f64().unwrap() > 0.6);
+            if let Some(alerts) = v["alerts"].as_array() {
+                if alerts
+                    .iter()
+                    .any(|a| a["level"] == "Warning" || a["level"] == "Critical")
+                {
+                    saw_alert = true;
+                    break;
+                }
+            }
+        }
+        assert!(saw_alert, "drift should produce Brier alerts");
+
+        let model = model.lock().unwrap();
+        assert!(model.sample_count(MetricKind::BrierScore) >= 1);
     }
 }

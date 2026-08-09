@@ -109,6 +109,93 @@ impl GaussianProcess {
         self.ys.push(y);
     }
 
+    /// Set kernel hyperparameters (all clamped to positive).
+    pub fn set_hyperparameters(
+        &mut self,
+        length_scale: f64,
+        signal_variance: f64,
+        noise_variance: f64,
+    ) {
+        self.length_scale = length_scale.max(1e-6);
+        self.signal_variance = signal_variance.max(1e-9);
+        self.noise_variance = noise_variance.max(1e-12);
+        // Invalidate the previous fit
+        self.l = None;
+        self.alpha.clear();
+    }
+
+    /// Log marginal likelihood of the training data under the current
+    /// hyperparameters: `−½ yᵀK⁻¹y − ½ log|K| − ½ n log 2π`.
+    ///
+    /// Requires a successful [`fit`](Self::fit). Used for hyperparameter
+    /// optimization — higher is better.
+    pub fn log_marginal_likelihood(&self) -> Result<f64, String> {
+        let n = self.xs.len();
+        let l = self
+            .l
+            .as_ref()
+            .ok_or_else(|| "GP not fitted — call fit() first".to_string())?;
+        if n == 0 || self.alpha.len() != n {
+            return Err("GP not fitted — call fit() first".to_string());
+        }
+        // yᵀK⁻¹y = αᵀy (α = K⁻¹y)
+        let quad = self
+            .alpha
+            .iter()
+            .zip(self.ys.iter())
+            .map(|(a, y)| a * y)
+            .sum::<f64>();
+        // log|K| = 2·Σ log(L_ii)
+        let mut log_det = 0.0;
+        for i in 0..n {
+            log_det += l[i * n + i].ln();
+        }
+        log_det *= 2.0;
+        Ok((0.5 * n as f64).mul_add(-(2.0 * PI).ln(), (-0.5f64).mul_add(quad, -(0.5 * log_det))))
+    }
+
+    /// Optimize the kernel hyperparameters (length scale, signal variance,
+    /// noise variance) by maximizing the log marginal likelihood.
+    ///
+    /// Uses the crate's own [`BayesianOptimizer`] over log-space
+    /// hyperparameters (dogfooding). `iterations` GP refits after the
+    /// initial random search; `n_candidates` EI candidates per iteration.
+    pub fn fit_hyperparameters(
+        &mut self,
+        n_initial: usize,
+        iterations: usize,
+        n_candidates: usize,
+        seed: u64,
+    ) -> Result<(), String> {
+        let n = self.xs.len();
+        if n < 3 {
+            return Err(format!(
+                "need at least 3 samples for hyperparameter fitting, got {n}"
+            ));
+        }
+        // Bounds on log-hyperparameters (generous)
+        let bounds = [(-6.0, 4.0), (-8.0, 6.0), (-12.0, 2.0)]; // ln ℓ, ln σ_f², ln σ_n²
+        let gp_cell = std::cell::RefCell::new(&mut *self);
+        let mut opt = BayesianOptimizer::new(
+            |h: &[f64]| {
+                let mut gp = gp_cell.borrow_mut();
+                gp.set_hyperparameters(h[0].exp(), h[1].exp(), h[2].exp());
+                match gp.fit() {
+                    Ok(()) => gp.log_marginal_likelihood().unwrap_or(f64::NEG_INFINITY),
+                    Err(_) => f64::NEG_INFINITY,
+                }
+            },
+            seed,
+        );
+        let (_, (best, _)) = opt
+            .optimize(&bounds, n_initial.max(3), iterations, n_candidates, 0.01)
+            .map_err(|e| format!("hyperparameter optimization failed: {e}"))?;
+        // Apply the best hyperparameters
+        self.set_hyperparameters(best[0].exp(), best[1].exp(), best[2].exp());
+        self.fit()?;
+        Ok(())
+    }
+
     /// Fit the GP: compute L = cholesky(K + σ_n² I) and α = K⁻¹ y.
     ///
     /// Returns an error if fewer than 2 samples are present.
@@ -674,6 +761,7 @@ fn apply_fn(name: &str, arg: f64) -> Result<f64, String> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::suboptimal_flops)] // test data expressions, not hot paths
     use super::*;
 
     #[test]
@@ -837,5 +925,60 @@ mod tests {
         // At a known point EI ≈ 0 when far below best
         let ei = expected_improvement(&gp, &[0.0], 5.0, 0.0).unwrap();
         assert!(ei >= 0.0);
+    }
+
+    #[test]
+    fn lml_requires_fit() {
+        let gp = GaussianProcess::default();
+        assert!(gp.log_marginal_likelihood().is_err());
+    }
+
+    #[test]
+    fn lml_prefers_correct_length_scale() {
+        // Data with a short length scale (high frequency): a too-long ℓ
+        // should give a lower LML than the true ℓ.
+        let xs: Vec<f64> = (0..30).map(|i| f64::from(i) * 0.1).collect();
+        let ys: Vec<f64> = xs.iter().map(|x| (6.0_f64 * x).sin()).collect();
+
+        let mut short = GaussianProcess::new(0.3, 1.0, 1e-3);
+        let mut long = GaussianProcess::new(5.0, 1.0, 1e-3);
+        for (x, y) in xs.iter().zip(ys.iter()) {
+            short.add_sample(vec![*x], *y);
+            long.add_sample(vec![*x], *y);
+        }
+        short.fit().unwrap();
+        long.fit().unwrap();
+        let lml_short = short.log_marginal_likelihood().unwrap();
+        let lml_long = long.log_marginal_likelihood().unwrap();
+        assert!(
+            lml_short > lml_long,
+            "ℓ=0.3 ({lml_short}) should beat ℓ=5.0 ({lml_long}) on high-frequency data"
+        );
+    }
+
+    #[test]
+    fn fit_hyperparameters_recovers_signal() {
+        let mut gp = GaussianProcess::new(1.0, 1.0, 0.01);
+        let xs: Vec<f64> = (0..25).map(|i| f64::from(i) * 0.15).collect();
+        let ys: Vec<f64> = xs.iter().map(|x| (2.5_f64 * x).sin()).collect();
+        for (x, y) in xs.iter().zip(ys.iter()) {
+            gp.add_sample(vec![*x], *y);
+        }
+        gp.fit_hyperparameters(6, 8, 120, 42).unwrap();
+        // After fitting, prediction should be accurate at a held-out point
+        let (mean, _) = gp.predict(&[1.8]).unwrap();
+        let truth = (2.5_f64 * 1.8).sin();
+        assert!(
+            (mean - truth).abs() < 0.15,
+            "post-fit mean {mean} vs truth {truth}"
+        );
+    }
+
+    #[test]
+    fn fit_hyperparameters_needs_three_samples() {
+        let mut gp = GaussianProcess::default();
+        gp.add_sample(vec![0.0], 0.0);
+        gp.add_sample(vec![1.0], 1.0);
+        assert!(gp.fit_hyperparameters(3, 2, 50, 1).is_err());
     }
 }
