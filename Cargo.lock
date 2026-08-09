@@ -7864,6 +7864,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "wm-conformal"
+version = "5.2.1"
+dependencies = [
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "wm-core"
 version = "5.2.1"
 dependencies = [
@@ -8068,6 +8078,7 @@ dependencies = [
  "uuid",
  "wm-bicameral",
  "wm-cognitive",
+ "wm-conformal",
  "wm-core",
  "wm-dispatch",
  "wm-governance",

@@ -18,6 +18,7 @@ wm-governance = { workspace = true }
 wm-substrate = { workspace = true }
 wm-workspace = { workspace = true }
 wm-selfmodel = { workspace = true }
+wm-conformal = { workspace = true }
 wm-bicameral = { workspace = true }
 wm-sangha = { workspace = true }
 wm-simulation = { workspace = true }

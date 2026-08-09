@@ -5,7 +5,7 @@
 //! - `tools/list`: returns only the `wm` meta-tool (single entry point)
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
-//! The `wm` meta-tool routes natural language to 185 tools via TF-IDF NLU
+//! The `wm` meta-tool routes natural language to 192 tools via TF-IDF NLU
 //! classification, or accepts an explicit `route` parameter for direct dispatch.
 //! Use `wm(thought="list tools")` or `wm(route="tools.list")` to discover tools.
 
@@ -290,6 +290,11 @@ impl McpServer {
         // R4: self-model for predictive introspection
         let self_model = Arc::new(std::sync::Mutex::new(wm_selfmodel::SelfModel::new()));
 
+        // Conformal prediction store — distribution-free uncertainty quantification
+        let conformal_store = Arc::new(std::sync::Mutex::new(
+            wm_tools::expansion::conformal::ConformalStore::new(),
+        ));
+
         // R5: bicameral reasoning engine
         // Right hemisphere priority: BitNet (local) → LLM (cloud) → stub
         let right: Arc<dyn wm_bicameral::RightHemisphere> =
@@ -412,6 +417,10 @@ impl McpServer {
         );
         let registry =
             wm_tools::expansion::selfmodel::register_selfmodel(&registry, Arc::clone(&self_model));
+        let registry = wm_tools::expansion::conformal::register_conformal(
+            &registry,
+            Arc::clone(&conformal_store),
+        );
         // Cyberbrain wiring — connect speculative decoder, meta-harness, dense encoder
         let cyberbrain = crate::cyberbrain::wire_cyberbrain(&Some(Arc::clone(&search)));
         let registry = wm_tools::expansion::bicameral::register_bicameral(
@@ -1200,12 +1209,12 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — all 185 tools are accessible through it
+        // Only expose the wm meta-tool — all 192 tools are accessible through it
         if let Some(wm) = self.registry.get("wm") {
             Ok(json!({
                 "tools": [{
                     "name": wm.name(),
-                    "description": "WhiteMagic v5 meta-tool — routes natural language to 185 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
+                    "description": "WhiteMagic v5 meta-tool — routes natural language to 192 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -1928,6 +1937,9 @@ mod tests {
         let spiral_tracker =
             Arc::new(std::sync::Mutex::new(wm_cognitive::SpiralTracker::default()));
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
+        let conformal_store = Arc::new(std::sync::Mutex::new(
+            wm_tools::expansion::conformal::ConformalStore::new(),
+        ));
 
         // v4 subsystems
         let mut reflex_table = wm_cognitive::ReflexDispatchTable::permissive();
@@ -1996,6 +2008,10 @@ mod tests {
         );
         let registry =
             wm_tools::expansion::selfmodel::register_selfmodel(&registry, Arc::clone(&self_model));
+        let registry = wm_tools::expansion::conformal::register_conformal(
+            &registry,
+            Arc::clone(&conformal_store),
+        );
         let registry = wm_tools::expansion::bicameral::register_bicameral(
             &registry,
             &store,
@@ -2114,7 +2130,7 @@ mod tests {
             tools[0]["description"]
                 .as_str()
                 .unwrap()
-                .contains("185 tools")
+                .contains("192 tools")
         );
     }
 

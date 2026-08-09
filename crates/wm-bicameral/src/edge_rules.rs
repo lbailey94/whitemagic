@@ -170,7 +170,7 @@ impl EdgeRuleEngine {
             (
                 "version",
                 "version|what version",
-                "WhiteMagic v5 — local AI substrate with 185 tools.",
+                "WhiteMagic v5 — local AI substrate with 192 tools.",
                 1.0,
             ),
             (
