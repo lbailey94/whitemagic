@@ -149,11 +149,32 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     // Signal flag — set by ctrlc_handler in the CLI
     let running = Arc::new(AtomicBool::new(true));
     let running_clone = running.clone();
-    // Spawn a thread to wait for SIGINT via tokio
+    // Spawn a thread to wait for SIGINT or SIGTERM. SIGTERM is the
+    // standard shutdown signal for Docker/systemd deployments; handling
+    // it gracefully (flush karma + save learned state) prevents data
+    // loss on `docker stop` / `systemctl stop`.
     std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
-            let _ = tokio::signal::ctrl_c().await;
+            #[cfg(unix)]
+            {
+                let mut sigterm =
+                    tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                        .expect("failed to register SIGTERM handler");
+                tokio::select! {
+                    _ = tokio::signal::ctrl_c() => {
+                        tracing::info!("SIGINT received — initiating graceful shutdown");
+                    }
+                    _ = sigterm.recv() => {
+                        tracing::info!("SIGTERM received — initiating graceful shutdown");
+                    }
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = tokio::signal::ctrl_c().await;
+                tracing::info!("SIGINT received — initiating graceful shutdown");
+            }
             running_clone.store(false, Ordering::SeqCst);
         });
     });
