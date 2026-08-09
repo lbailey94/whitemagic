@@ -1,7 +1,7 @@
 # WhiteMagic v5 vs v26 — Comprehensive Gap Analysis
 
 **Last updated**: August 8, 2026
-**Status**: v5.2.1 — 14 crates, 185 tools, 3,192 tests, ~130,500 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code.
+**Status**: v5.2.2 — 15 crates, 192 tools, 3,212 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. Conformal prediction shipped as a net-new feature (2026-08-08).
 
 This document compares the **v5 Rust rewrite** against the **v26 Python codebase** (the retired reference at `~/Desktop/WHITEMAGIC`). It replaces the earlier v2/v4-era `GAP_ANALYSIS_v26_v4.md`.
 
@@ -62,7 +62,7 @@ v5's `forecasting.rs` has only moving-average/exp-smoothing/linear-trend. v26's 
 - `simulation.calibrate` — record → resolve → **Brier scorecard** (reliability/resolution/uncertainty)
 - `mc.surrogate` (Gaussian Process), `mc.optimize` (Bayesian optimization + EI), `mc.rare_event` (subset simulation), `mc.sde` (Euler-Maruyama/Milstein), `mc.superforecaster` (LHS→PCE→Sobol→BO orchestrator)
 - `simulation.search` — UCB1 MCTS trajectory tree search (v5's monte_carlo.rs is plain sampling)
-- **Net-new recommendation**: conformal prediction exists in NEITHER version — v5's learned router already uses it conceptually; formalize it.
+- ~~**Net-new recommendation**: conformal prediction~~ — ✅ **SHIPPED** (2026-08-08): new `wm-conformal` crate + 7 tools with distribution-free coverage guarantees. See [CONFORMAL_PREDICTION.md](CONFORMAL_PREDICTION.md).
 
 ### 3.5 Governance Depth
 - `karma.verify_chain` / `karma.anchor` / `karma.verify_anchor` — Merkle-hash-chain integrity + anchoring (v5 karma is trust-on-read)
@@ -141,6 +141,7 @@ v5's citta is status-only. v26 had real introspection:
 
 **Phase 2 — Intelligence depth:**
 4. Prediction: `simulation.calibrate` (Brier), `mc.surrogate`, `mc.optimize`, `mc.rare_event`
+   - ✅ **Conformal prediction shipped (2026-08-08)** — the net-new recommendation from §3.4 is complete; Brier/MC tooling remains open.
 5. Code: `code.graph`, `code.query`, `code.affected_by`, `fragment.search`
 6. Memory semantics: `working_memory.attend`, `reconsolidation.mark`
 

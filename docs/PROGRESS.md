@@ -1,6 +1,6 @@
-# WhiteMagic v4 — Progress & Phase Status
+# WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 7, 2026 (Safety features: destructive tool confirmation + transaction snapshot/rollback + compartment-based access control — 2,818 tests, 176 tools, ~112,300 LOC, 19 crates, 0 clippy warnings. Tool/test counts verified against runtime: `cargo test --workspace` all green, `wm doctor` reports 176 tools)
+**Last updated**: August 8, 2026 (v5.2.2 — 15 crates, 192 tools, 3,212 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Conformal prediction shipped. SIGTERM graceful shutdown. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
 
 ---
 

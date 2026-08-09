@@ -4,7 +4,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ## Current Status
 
-**v5.2.1 — All 7 phases complete. 14 crates, 192 tools, 3,212 tests, ~131,000 LOC, 0 clippy warnings. MCP server exposes single `wm` meta-tool — all 192 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
+**v5.2.2 — All 7 phases complete. 15 crates, 192 tools, 3,212 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. MCP server exposes single `wm` meta-tool — all 192 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
 
 ### v5 Subsystems
 
@@ -104,7 +104,7 @@ See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and port
 - **Brain-wave eco mode**: Five states (Gamma→Delta). Zero CPU when idle. No polling threads.
 - **Hardware-aware governance (v4)**: `wm-substrate` reads real `/proc` + `/sys` metrics. Brain-wave transitions gated by hardware health (Tiferet). Resource budgets, novelty detection, purpose requirements, human review (Yama). Full transparency via Gnosis Portals.
 - **5D holographic coordinates**: SHA-256 content encoding → spatial memory queries with `find_nearby()`.
-- **CyberBrain architecture (v4→v5)**: Consolidated to 14 crates. wm-cognitive merges 6 former crates (citta, dream, autonomous cycles, reflex, timescale, drive). wm-bicameral adds imagination engine, self-play, learned inference router.
+- **CyberBrain architecture (v4→v5)**: Consolidated to 15 crates. wm-cognitive merges 6 former crates (citta, dream, autonomous cycles, reflex, timescale, drive). wm-bicameral adds imagination engine, self-play, learned inference router. wm-conformal adds distribution-free prediction with coverage guarantees.
 - **Bicameral reasoning**: Dual-hemisphere (left: heuristic, right: LLM/stub) with 5-tier complexity-aware routing. Imagination engine for scenario planning. Self-play training loop with LoRA hot-swap.
 - **NLU router**: Two-layer system — embedding router (cosine similarity, OATS refinement) primary, TF-IDF fallback. 12 prefix routes, payload extraction. Shadow mode logs disagreements for promotion analysis.
 - **Mutable structures**: Gana taxonomy drift tracking, dynamic galaxy creation from memory clustering, learned dream cycle phase selection, learned autonomous cycle strategy. All persist to disk.

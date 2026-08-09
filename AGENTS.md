@@ -12,7 +12,7 @@ cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (14 crates, 192 tools, ~131,000 LOC, 3,212 tests)
+## Architecture (15 crates, 192 tools, ~131,000 LOC, 3,212 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
@@ -27,7 +27,7 @@ cargo fmt --all -- --check     # Format check
 
 ## v5 Implementation Phases
 
-- **Phase 1** ✅: Async + crate merge (19→14 crates, 3,009 tests)
+- **Phase 1** ✅: Async + crate merge (19→15 crates, 3,009 tests)
 - **Phase 2** ✅: Embedding NLU router (shadow mode, OATS refinement, 31 new tests)
 - **Phase 3** ✅: Learned inference router (k-NN + conformal calibration, edge rule generator, 29 new tests)
 - **Phase 4** ✅: Imagination engine (world model, scenario planning, dream cycle integration, MCP tools, daemon `--research-interval`)

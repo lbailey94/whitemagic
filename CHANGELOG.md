@@ -5,7 +5,33 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.2] — 2026-08-08
+
+### Conformal Prediction (net-new feature)
+
+- **New crate `wm-conformal`** — distribution-free uncertainty quantification with finite-sample coverage guarantees (present in neither v26 nor v5 before)
+- `SplitConformalClassifier`: label prediction sets, nonconformity `1 − score`
+- `SplitConformalRegressor`: value intervals, nonconformity absolute residual
+- `AdaptivePredictionSets` (Romano et al. 2020): smaller sets for calibrated models, with the required uniform tie-break term
+- `CoverageReport`: empirical coverage evaluation for drift monitoring
+- 7 new MCP tools: `conformal.fit_classifier`, `conformal.fit_regressor`, `conformal.predict_set`, `conformal.predict_interval`, `conformal.status`, `conformal.export`, `conformal.import`
+- Coverage guarantee statistically verified: ≈ 1−α averaged over 40 calibration draws × 80K test points (classifier 0.90, regressor 0.95, APS ≥ 0.89)
+- 20 new tests; total 3,212 passing, 0 failed
+
+### Hardening
+
+- **Daemon SIGTERM handling**: graceful shutdown (karma flush + learned-state save) on SIGTERM for Docker/systemd, alongside existing SIGINT
+- **Audit of production unwraps**: all 31 remaining sites confirmed logically guarded (length-checked slices, is_empty guards, checked_sub)
+- 0 clippy warnings, fmt clean, all cargo-deny checks passing
+
+### Tool surface
+
+- 185 → 192 tools (7 conformal)
+- Dependency audit: 2 vulnerabilities → 0 (pyo3 0.22→0.29, tantivy 0.22→0.26)
+- 72 lock()/read()/write().unwrap() panic sites → graceful degradation
+
 ## [5.2.1] — 2026-08-10
+
 
 ### Karma Ledger Optimization & Phase 7 Benchmarks
 
