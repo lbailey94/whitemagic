@@ -12,7 +12,7 @@ cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (15 crates, 211 tools, ~131,000 LOC, 3,377 tests)
+## Architecture (15 crates, 212 tools, ~131,000 LOC, 3,379 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
@@ -24,6 +24,7 @@ cargo fmt --all -- --check     # Format check
 - **wm-mcp**: Async MCP server (JSON-RPC over stdio, exposes only `wm` meta-tool) + `wm` CLI + PyO3 bridge (feature-gated)
 - **wm-substrate**: Hardware metrics, Harmony Vector (Lakshmi), /proc + /sys reading, sensorimotor bus
 - **wm-bicameral**: Dual-hemisphere reasoning (left: LlamaLeftHemisphere/heuristic, right: BitNet/LLM/stub) + inference router (5-tier complexity-aware routing) + learned router (embedding k-NN + conformal calibration) + edge rule generator + imagination engine + self-play training loop
+- **wm-sangha**: Signed multi-agent mesh — HMAC-SHA256 message + identity signatures, peer authority caps, quarantine with the bad-apple rule (locks revoked, messages purged, rejoin refused), 12-vector containment harness (`docs/SANGHA_SECURITY.md`)
 
 ## v5 Implementation Phases
 

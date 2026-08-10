@@ -5,6 +5,34 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.1] — 2026-08-10
+
+### Sangha quarantine — the bad-apple rule
+
+- **Quarantine subsystem** — `PeerDiscovery::quarantine/release_quarantine/
+  is_quarantined/quarantined` with visible `quarantine_reason`; quarantined
+  peers cannot re-register (`discover_signed` refuses until release)
+- **Community protection** — `SanghaChat::read_trusted` (verified + non-
+  quarantined senders only), `SanghaChat::purge_sender` (bad apple's words
+  removed from the logs), `ResourceLockManager::revoke_peer` (its leases
+  released so the community is never held hostage)
+- **`sangha.quarantine` tool** (211 → **212 tools**) — actions
+  `quarantine` (peer_id + reason; revokes locks, purges messages),
+  `release`, `list`
+- **Containment harness extended to 12 vectors** — the bad-apple scenario:
+  a provisioned peer goes rogue; quarantine isolates it (messages filtered,
+  locks revoked, rejoin refused) while the community keeps working;
+  explicit release restores a reformed peer
+- **`docs/SANGHA_SECURITY.md`** — threat model (July 2026 agent incidents +
+  the v2 incident), design principles, quarantine semantics, harness table,
+  honest limitations (HMAC vs Ed25519, default mesh key, manual quarantine)
+
+### Counts
+
+- 211 → **212 tools** (sangha.quarantine)
+- 3,377 → **3,379 tests passing, 0 failed** (+2)
+- 0 clippy warnings, fmt clean, cargo-deny all green
+
 ## [5.7.0] — 2026-08-10
 
 ### Governance & security tools (v26 `dharma.escalate` / `karma.*` / `sandbox.*` / `tx_firewall.*` parity)

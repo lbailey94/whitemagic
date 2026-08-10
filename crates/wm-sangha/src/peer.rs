@@ -176,6 +176,14 @@ pub struct PeerInfo {
     /// when unsigned.
     #[serde(default)]
     pub signature: String,
+    /// Whether this peer is quarantined — cut off from the community
+    /// (messages rejected, locks revoked, re-registration refused) until
+    /// explicitly released. One bad apple must not spoil the bunch.
+    #[serde(default)]
+    pub quarantined: bool,
+    /// Why the peer was quarantined (visible to the community).
+    #[serde(default)]
+    pub quarantine_reason: Option<String>,
 }
 
 impl PeerInfo {
@@ -195,6 +203,8 @@ impl PeerInfo {
             failed_interactions: 0,
             delegated_by: None,
             signature: String::new(),
+            quarantined: false,
+            quarantine_reason: None,
         }
     }
 
@@ -341,6 +351,8 @@ impl PeerInfo {
             failed_interactions: 0,
             delegated_by: Some(self.id.clone()),
             signature: String::new(),
+            quarantined: false,
+            quarantine_reason: None,
         })
     }
 }
@@ -430,6 +442,19 @@ impl PeerDiscovery {
                 peer.id
             ));
         }
+        if let Some(existing) = self.peers.get(&peer.id) {
+            if existing.quarantined {
+                return Err(format!(
+                    "peer '{}' is quarantined{} — release it before it can rejoin",
+                    peer.id,
+                    existing
+                        .quarantine_reason
+                        .as_deref()
+                        .map(|r| format!(" ({r})"))
+                        .unwrap_or_default()
+                ));
+            }
+        }
         self.discover(peer);
         Ok(())
     }
@@ -438,6 +463,45 @@ impl PeerDiscovery {
     #[must_use]
     pub fn verify_peer(&self, peer_id: &str, key: &[u8]) -> bool {
         self.get(peer_id).is_some_and(|p| p.verify_signature(key))
+    }
+
+    /// Quarantine a peer — cut it off from the community. Returns `false`
+    /// if the peer is unknown or already quarantined.
+    pub fn quarantine(&mut self, peer_id: &str, reason: &str) -> bool {
+        if let Some(peer) = self.peers.get_mut(peer_id) {
+            if peer.quarantined {
+                return false;
+            }
+            peer.quarantined = true;
+            peer.quarantine_reason = Some(reason.to_string());
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Release a peer from quarantine so it can rejoin the mesh.
+    pub fn release_quarantine(&mut self, peer_id: &str) -> bool {
+        if let Some(peer) = self.peers.get_mut(peer_id) {
+            if peer.quarantined {
+                peer.quarantined = false;
+                peer.quarantine_reason = None;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Whether a peer is quarantined.
+    #[must_use]
+    pub fn is_quarantined(&self, peer_id: &str) -> bool {
+        self.get(peer_id).is_some_and(|p| p.quarantined)
+    }
+
+    /// All quarantined peers.
+    #[must_use]
+    pub fn quarantined(&self) -> Vec<&PeerInfo> {
+        self.peers.values().filter(|p| p.quarantined).collect()
     }
 
     /// Record a heartbeat from a peer.

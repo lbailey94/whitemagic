@@ -199,6 +199,24 @@ impl ResourceLockManager {
         false
     }
 
+    /// Revoke every lock held by a peer (quarantine). Returns the number
+    /// of locks released — a bad apple cannot hold the community's
+    /// resources hostage after it is cut off.
+    pub fn revoke_peer(&mut self, peer_id: &str) -> usize {
+        let held: Vec<String> = self
+            .locks
+            .iter()
+            .filter(|(_, l)| l.holder == peer_id)
+            .map(|(resource, _)| resource.clone())
+            .collect();
+        let count = held.len();
+        for resource in held {
+            self.locks.remove(&resource);
+            self.total_releases += 1;
+        }
+        count
+    }
+
     /// Extend a lock's TTL. Returns `true` if the lock was held by the given peer.
     pub fn extend(&mut self, resource: &str, peer_id: &str, additional_sec: i64) -> bool {
         if let Some(lock) = self.locks.get_mut(resource) {
