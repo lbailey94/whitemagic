@@ -18,6 +18,7 @@ pub mod mutable;
 pub mod security;
 pub mod tool;
 
+pub use attestation::{sign_hmac, verify_hmac};
 pub use brain_wave::BrainWave;
 pub use context::Context;
 pub use coords::{Coordinate5D, HolographicCoords, Zone, find_nearby};

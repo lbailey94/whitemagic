@@ -99,6 +99,12 @@ pub struct McpServer {
     /// Prescience claims ledger (shared with claims.*) — persisted to
     /// `<store>/claims_ledger.json` on shutdown.
     claims_ledger: Option<Arc<std::sync::Mutex<wm_simulation::ClaimsLedger>>>,
+    /// Dharma escalation review queue (shared with dharma.escalate and
+    /// friends) — persisted to `<store>/escalation_queue.json`.
+    escalation_queue: Option<Arc<std::sync::Mutex<wm_governance::EscalationQueue>>>,
+    /// Transaction firewall (shared with tx_firewall.*) — persisted to
+    /// `<store>/tx_firewall_policy.json`.
+    tx_firewall: Option<Arc<wm_tools::expansion::firewall::TxFirewall>>,
 }
 
 /// JSON-RPC request envelope.
@@ -354,6 +360,8 @@ impl McpServer {
             conformal_store: None,
             calibration_store: None,
             claims_ledger: None,
+            escalation_queue: None,
+            tx_firewall: None,
         }
     }
 
@@ -551,6 +559,12 @@ impl McpServer {
         let friction_search = search.clone();
         let transaction_state: wm_tools::expansion::TransactionState =
             Arc::new(std::sync::Mutex::new(None));
+        let escalation_queue =
+            Arc::new(std::sync::Mutex::new(wm_governance::EscalationQueue::new()));
+        let firewall = Arc::new(wm_tools::expansion::firewall::TxFirewall::new());
+        let code_graph = Arc::new(std::sync::Mutex::new(
+            wm_tools::expansion::code::CodeGraph::new(),
+        ));
         let registry = wm_tools::register_all(
             &registry,
             &store,
@@ -569,6 +583,9 @@ impl McpServer {
             Some(Arc::clone(&reflex_loop)),
             Some(&gan_ying_bus),
             transaction_state.clone(),
+            Some(&escalation_queue),
+            Some(&firewall),
+            Some(&code_graph),
         );
         let registry = wm_tools::expansion::v4::register_v4(
             &registry,
@@ -600,7 +617,12 @@ impl McpServer {
         // (Gan Ying Bus already created above and shared with sensorimotor tools)
         let peer_discovery = Arc::new(std::sync::Mutex::new(PeerDiscovery::default()));
         let signal_broadcast = Arc::new(std::sync::Mutex::new(SignalBroadcast::new(100)));
-        let sangha_chat = Arc::new(std::sync::Mutex::new(SanghaChat::new(100)));
+        // Sangha chat signs every message with the mesh key, so peers can
+        // verify authorship — the trust primitive agent message boards
+        // require (cf. the July 2026 agent-incident reporting).
+        let sangha_chat = Arc::new(std::sync::Mutex::new(
+            SanghaChat::new(100).with_mesh_key(WM_MESH_KEY.as_bytes()),
+        ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
 
         let registry = wm_tools::expansion::resonance::register_resonance(
@@ -694,6 +716,9 @@ impl McpServer {
         server.calibration_store = Some(Arc::clone(&calibration_store));
         // Attach the claims ledger so it auto-persists on shutdown
         server.claims_ledger = Some(Arc::clone(&claims_ledger));
+        // Attach the escalation queue + firewall so they auto-persist
+        server.escalation_queue = Some(Arc::clone(&escalation_queue));
+        server.tx_firewall = Some(Arc::clone(&firewall));
 
         // Restore persisted conformal calibration state (if any)
         let conformal_path = store_path
@@ -824,6 +849,68 @@ impl McpServer {
                 },
                 Err(e) => {
                     tracing::warn!(path = %self_model_path.display(), error = %e, "Cannot read self-model state file");
+                }
+            }
+        }
+
+        // Restore persisted dharma escalation queue (if any)
+        let escalation_path = store_path
+            .parent()
+            .unwrap_or(store_path)
+            .join("escalation_queue.json");
+        if escalation_path.exists() {
+            match std::fs::read_to_string(&escalation_path) {
+                Ok(contents) => match serde_json::from_str::<Value>(&contents) {
+                    Ok(json) => {
+                        if let Ok(mut queue) = escalation_queue.lock() {
+                            match queue.from_json(&json) {
+                                Ok(()) => tracing::info!(
+                                    path = %escalation_path.display(),
+                                    "Loaded persisted escalation queue"
+                                ),
+                                Err(e) => tracing::warn!(
+                                    path = %escalation_path.display(),
+                                    error = %e,
+                                    "Failed to restore escalation queue"
+                                ),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(path = %escalation_path.display(), error = %e, "Escalation queue file unparseable");
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!(path = %escalation_path.display(), error = %e, "Cannot read escalation queue file");
+                }
+            }
+        }
+
+        // Restore persisted tx firewall policy (if any)
+        let firewall_path = store_path
+            .parent()
+            .unwrap_or(store_path)
+            .join("tx_firewall_policy.json");
+        if firewall_path.exists() {
+            match std::fs::read_to_string(&firewall_path) {
+                Ok(contents) => match serde_json::from_str::<Value>(&contents) {
+                    Ok(json) => match firewall.from_json(&json) {
+                        Ok(()) => tracing::info!(
+                            path = %firewall_path.display(),
+                            "Loaded persisted tx firewall policy"
+                        ),
+                        Err(e) => tracing::warn!(
+                            path = %firewall_path.display(),
+                            error = %e,
+                            "Failed to restore tx firewall policy"
+                        ),
+                    },
+                    Err(e) => {
+                        tracing::warn!(path = %firewall_path.display(), error = %e, "Tx firewall policy file unparseable");
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!(path = %firewall_path.display(), error = %e, "Cannot read tx firewall policy file");
                 }
             }
         }
@@ -1426,6 +1513,44 @@ impl McpServer {
                     }
                 }
                 Err(e) => tracing::warn!(error = %e, "Failed to serialize self-model state"),
+            }
+        }
+
+        // Save dharma escalation queue
+        if let Some(queue) = &self.escalation_queue {
+            if let Ok(queue_guard) = queue.lock() {
+                let path = store_dir
+                    .parent()
+                    .unwrap_or(store_dir)
+                    .join("escalation_queue.json");
+                match serde_json::to_string_pretty(&queue_guard.to_json()) {
+                    Ok(json) => {
+                        if let Err(e) = std::fs::write(&path, json) {
+                            tracing::warn!(path = %path.display(), error = %e, "Failed to save escalation queue");
+                        } else {
+                            tracing::info!(path = %path.display(), "Saved escalation queue");
+                        }
+                    }
+                    Err(e) => tracing::warn!(error = %e, "Failed to serialize escalation queue"),
+                }
+            }
+        }
+
+        // Save tx firewall policy
+        if let Some(firewall) = &self.tx_firewall {
+            let path = store_dir
+                .parent()
+                .unwrap_or(store_dir)
+                .join("tx_firewall_policy.json");
+            match serde_json::to_string_pretty(&firewall.to_json()) {
+                Ok(json) => {
+                    if let Err(e) = std::fs::write(&path, json) {
+                        tracing::warn!(path = %path.display(), error = %e, "Failed to save tx firewall policy");
+                    } else {
+                        tracing::info!(path = %path.display(), "Saved tx firewall policy");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to serialize tx firewall policy"),
             }
         }
     }
@@ -2406,6 +2531,11 @@ impl McpServer {
     }
 }
 
+/// Default Sangha mesh key — signs inter-agent chat messages so peers
+/// can verify authorship and tamper-resistance. In production this should
+/// be overridden with a deployment-specific secret.
+const WM_MESH_KEY: &str = "wm-sangha-mesh-v5-default-key";
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2489,6 +2619,9 @@ mod tests {
             None,
             None,
             test_transaction_state.clone(),
+            None,
+            None,
+            None,
         );
         let registry = wm_tools::expansion::v4::register_v4(
             &registry,
@@ -2518,7 +2651,12 @@ mod tests {
         let gan_ying_bus = Arc::new(std::sync::Mutex::new(GanYingBus::default()));
         let peer_discovery = Arc::new(std::sync::Mutex::new(PeerDiscovery::default()));
         let signal_broadcast = Arc::new(std::sync::Mutex::new(SignalBroadcast::new(100)));
-        let sangha_chat = Arc::new(std::sync::Mutex::new(SanghaChat::new(100)));
+        // Sangha chat signs every message with the mesh key, so peers can
+        // verify authorship — the trust primitive agent message boards
+        // require (cf. the July 2026 agent-incident reporting).
+        let sangha_chat = Arc::new(std::sync::Mutex::new(
+            SanghaChat::new(100).with_mesh_key(WM_MESH_KEY.as_bytes()),
+        ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
 
         let registry = wm_tools::expansion::resonance::register_resonance(

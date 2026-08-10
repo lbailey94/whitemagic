@@ -21,6 +21,7 @@
 #![forbid(unsafe_code)]
 
 pub mod chat;
+pub mod containment;
 pub mod hologram;
 pub mod lock;
 pub mod peer;
@@ -30,7 +31,8 @@ pub mod signal;
 #[cfg(feature = "transport")]
 pub mod transport;
 
-pub use chat::{ChatChannel, ChatMessage, SanghaChat};
+pub use chat::{ChatChannel, ChatMessage, SanghaChat, VerificationReport};
+pub use containment::{ContainmentReport, ContainmentResult, run, simulate_mesh_containment};
 pub use hologram::{ConstellationMerge, HologramEntry, HologramSync};
 pub use lock::{LockEntry, LockState, ResourceLockManager};
 pub use peer::{PeerAuthority, PeerCapability, PeerDiscovery, PeerId, PeerInfo};

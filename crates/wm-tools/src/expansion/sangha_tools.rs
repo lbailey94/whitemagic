@@ -260,7 +260,7 @@ impl Tool for SanghaChatTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Send or read messages in a Sangha chat channel (args: action=send|read, channel, sender, content)"
+        "Send, read, or verify messages in a Sangha chat channel (args: action=send|read|verify, channel, sender, content, after_id)"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let action = args.get("action").and_then(Value::as_str).unwrap_or("read");
@@ -292,6 +292,7 @@ impl Tool for SanghaChatTool {
                     "channel": msg.channel,
                     "sender": msg.sender,
                     "timestamp": msg.timestamp,
+                    "signed": !msg.signature.is_empty(),
                 }))
             }
             "read" => {
@@ -305,6 +306,7 @@ impl Tool for SanghaChatTool {
                             "sender": m.sender,
                             "content": m.content,
                             "timestamp": m.timestamp,
+                            "signed": !m.signature.is_empty(),
                         })
                     })
                     .collect();
@@ -316,8 +318,20 @@ impl Tool for SanghaChatTool {
                     "messages": msgs,
                 }))
             }
+            "verify" => {
+                let report = chat.verify_channel(channel);
+                Ok(json!({
+                    "status": "success",
+                    "channel": channel,
+                    "mesh_signing": report.mesh_signing,
+                    "checked": report.checked,
+                    "verified": report.verified,
+                    "rejected": report.rejected,
+                    "clean": report.is_clean(),
+                }))
+            }
             _ => Err(wm_core::CoreError::InvalidArgs(
-                "action must be 'send' or 'read'".into(),
+                "action must be 'send', 'read', or 'verify'".into(),
             )),
         }
     }
