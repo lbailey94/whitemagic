@@ -5,6 +5,79 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.0] — 2026-08-10
+
+### Governance & security tools (v26 `dharma.escalate` / `karma.*` / `sandbox.*` / `tx_firewall.*` parity)
+
+- **Dharma escalation** — `wm-governance::escalation` (`EscalationQueue`):
+  ambiguous verdicts (Advise/Correct) escalate to a human review queue;
+  tools `dharma.escalate`, `dharma.review_queue`, `dharma.resolve_review`
+  (allow/warn/block + score); queue persists to `<store>/escalation_queue.json`
+- **Karma chain surface** — `karma.verify_chain` (chain-integrity audit,
+  tamper detection) and `karma.anchor` (publish Merkle checkpoints of the
+  whole chain; `anchor`/`status` actions; anchor history persisted to LMDB)
+- **`sandbox.set_limits` / `sandbox.limits`** — runtime tuning of the
+  resource-limit config (per-minute write/spawn/network budgets, novelty
+  window, repeats, human-review requirement); `ResourceRules::config` is now
+  runtime-mutable
+- **`tx_firewall.set_policy` / `tx_firewall.status`** — transaction firewall
+  policy (allowed tool prefixes, max ops, rollback confirmation); persisted
+  to `<store>/tx_firewall_policy.json`
+
+### ACS Output checkpoint (L2/L3 egress policy)
+
+- `DharmaPolicy` gains `tier2_deny_unknown_egress` + `egress_allowlist`
+  (deny egress to unknown hosts, subdomain matching) and
+  `tier3_output_validation` + `output_max_bytes`; enabled in the strict
+  profile; `check_egress(host)` + `dharma.acs egress` action; egress
+  controls exported in the ACS policy YAML — the last open row of the
+  ACS_ALIGNMENT gaps table
+
+### Code structure graph (v26 `code.*` / `fragment.search` parity)
+
+- **`wm-tools::expansion::code`** — dependency-free code graph: regex-based
+  symbol extraction (Rust/Python/JS/TS/Go/Java/C/C++/Ruby/Shell/Zig/Julia),
+  cross-file call edges, imports, inheritance; tools `code.graph`,
+  `code.query` (callers/callees/path/explain/god nodes/search),
+  `code.affected_by` (reverse call-graph BFS), `fragment.search`
+  (symbol + line-level fragment search); bounded file walk (50K files,
+  1MB/file), skips target/node_modules/.git
+
+### Signed Sangha mesh (pulse-verification port)
+
+- `wm-core::sign_hmac` / `verify_hmac` shared HMAC-SHA256 primitives
+  (attestation now built on them)
+- **`ChatMessage` signatures** — every sangha message is signed with the
+  mesh key (HMAC-SHA256); `sangha.chat` gains `verify` action reporting
+  checked/verified/rejected; the server wires the mesh key at startup
+- **`PeerInfo` identity signatures** — `PeerDiscovery::discover_signed`
+  rejects unsigned or forged peer identities (wrong key, tampered
+  authority); `verify_peer` for stored identities
+- **Containment harness** (`wm-sangha::containment`) — deterministic
+  simulation of a multi-agent mesh with an adversarial peer: 8 attack
+  vectors (forged identity, forged/unsigned messages, authority
+  escalation, out-of-scope tool execution, memory writes, delegation,
+  lock theft) all contained by the governance layer; motivated by the
+  July 2026 agent-incident reporting (message-board swarms, cryptographic
+  signing proposals)
+
+### Fuzz hardening
+
+- **`web_parsers` fuzz target** — fuzzes `strip_html`, `bing_decode`,
+  `ddg_target`, `resolve_url`, `percent_encode_query`,
+  `parse_bing_results`; committed seed corpus (real Bing HTML + edge
+  cases); 4 real bugs found and fixed: relative `ck/a` decode targets,
+  byte-index panic on multibyte input in `ddg_target`, entity decoder
+  swallowing tags inside script content, stray `;`/unknown-entity leaks
+- `just fuzz` recipe + CI fuzz workflow extended to the new target
+- Web parser functions exposed as `pub` (dependency-free, fuzzable)
+
+### Counts
+
+- 211 tools (unchanged; `sangha.chat` gained a `verify` action)
+- 3,352 → **3,377 tests passing, 0 failed** (+25)
+- 0 clippy warnings, fmt clean, cargo-deny all green
+
 ## [5.6.0] — 2026-08-09
 
 ### ACS compliance surface (Microsoft Agent Control Specification)
