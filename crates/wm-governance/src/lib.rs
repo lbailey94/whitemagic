@@ -8,12 +8,14 @@
 
 pub mod acs;
 pub mod dharma_gate;
+pub mod escalation;
 pub mod karma_ledger;
 pub mod policy;
 pub mod resource_rules;
 
 pub use acs::{AcsAction, AcsCheckpoint, AcsComplianceReport, AcsExport, AcsRule};
 pub use dharma_gate::{ActionVerdict, DharmaGate, Homeostasis};
+pub use escalation::{EscalationQueue, ReviewItem, ReviewStatus};
 pub use karma_ledger::{ChainVerificationResult, Guna, KarmaEntry, KarmaLedger, MerkleCheckpoint};
 pub use policy::{
     DharmaPolicy, OwaspAgentic, OwaspComplianceReport, PolicyCheckResult, PolicyEngine, PolicyRule,

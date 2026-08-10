@@ -134,8 +134,29 @@ pub struct DharmaPolicy {
     pub max_tool_calls_per_minute: u32,
     /// Whether autonomous actions require human review.
     pub require_human_review: bool,
+    /// ACS Output checkpoint (L2): deny egress to hosts not on the
+    /// allowlist. Unknown hosts are blocked; allowlisted hosts pass.
+    #[serde(default)]
+    pub tier2_deny_unknown_egress: bool,
+    /// Hosts permitted for network egress when
+    /// `tier2_deny_unknown_egress` is enabled (e.g. "api.example.com").
+    #[serde(default)]
+    pub egress_allowlist: Vec<String>,
+    /// ACS Output checkpoint (L3): validate output size/content before it
+    /// leaves the agent.
+    #[serde(default)]
+    pub tier3_output_validation: bool,
+    /// Maximum output size (bytes) enforced when `tier3_output_validation`
+    /// is enabled.
+    #[serde(default = "default_output_max_bytes")]
+    pub output_max_bytes: u32,
     /// Custom policy rules.
     pub custom_rules: Vec<PolicyRule>,
+}
+
+/// Default output size cap: 1 MiB.
+const fn default_output_max_bytes() -> u32 {
+    1_048_576
 }
 
 impl Default for DharmaPolicy {
@@ -152,6 +173,10 @@ impl Default for DharmaPolicy {
             require_provenance: false,
             max_tool_calls_per_minute: 60,
             require_human_review: true,
+            tier2_deny_unknown_egress: false,
+            egress_allowlist: Vec::new(),
+            tier3_output_validation: false,
+            output_max_bytes: default_output_max_bytes(),
             custom_rules: vec![
                 PolicyRule {
                     id: "ahimsa_block_destructive".into(),
@@ -218,6 +243,9 @@ impl DharmaPolicy {
             require_provenance: true,
             max_tool_calls_per_minute: 15,
             require_human_review: true,
+            tier2_deny_unknown_egress: true,
+            tier3_output_validation: true,
+            output_max_bytes: 512_000,
             ..Self::default()
         }
     }
@@ -275,6 +303,37 @@ impl DharmaPolicy {
         self.enabled_rules()
             .iter()
             .any(|r| r.owasp_mappings.contains(&owasp))
+    }
+
+    /// Whether the given host is permitted for network egress.
+    ///
+    /// When `tier2_deny_unknown_egress` is enabled, only allowlisted hosts
+    /// (exact match, or subdomain of an allowlisted domain) may be reached.
+    #[must_use]
+    pub fn egress_allowed(&self, host: &str) -> bool {
+        if !self.tier2_deny_unknown_egress {
+            return true;
+        }
+        if host.is_empty() {
+            return false;
+        }
+        let host = host.to_ascii_lowercase();
+        self.egress_allowlist.iter().any(|allowed| {
+            let allowed = allowed.to_ascii_lowercase();
+            allowed == host || host.ends_with(&format!(".{allowed}"))
+        })
+    }
+
+    /// Check a network egress target against the ACS Output checkpoint.
+    /// Returns an error message when the target is denied.
+    #[must_use]
+    pub fn check_egress(&self, host: &str) -> Option<String> {
+        if self.tier2_deny_unknown_egress && !self.egress_allowed(host) {
+            return Some(format!(
+                "egress denied by tier2_deny_unknown_egress: host '{host}' is not allowlisted"
+            ));
+        }
+        None
     }
 
     /// Generate an OWASP compliance report.

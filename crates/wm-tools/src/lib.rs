@@ -2155,6 +2155,9 @@ pub fn register_all(
     reflex_loop: Option<Arc<std::sync::Mutex<ReflexLoop>>>,
     gan_ying_bus: Option<&Arc<std::sync::Mutex<GanYingBus>>>,
     transaction_state: expansion::TransactionState,
+    escalation_queue: Option<&Arc<std::sync::Mutex<wm_governance::EscalationQueue>>>,
+    firewall: Option<&Arc<expansion::firewall::TxFirewall>>,
+    code_graph: Option<&Arc<std::sync::Mutex<expansion::code::CodeGraph>>>,
 ) -> ToolRegistry {
     let mut reg = registry
         .register(Arc::new(MemoryCreateTool::new(
@@ -2197,6 +2200,11 @@ pub fn register_all(
             reflex_loop,
             gan_ying_bus,
             transaction_state,
+            resource_rules.as_ref(),
+            escalation_queue,
+            dharma.as_ref(),
+            firewall,
+            code_graph,
         );
     } else {
         reg = expansion::register_expansion(
@@ -2213,6 +2221,11 @@ pub fn register_all(
             reflex_loop,
             gan_ying_bus,
             transaction_state,
+            resource_rules.as_ref(),
+            escalation_queue,
+            dharma.as_ref(),
+            firewall,
+            code_graph,
         );
     }
     if let Some(k) = karma {
@@ -2334,6 +2347,9 @@ mod tests {
             None,
             None,
             std::sync::Arc::new(std::sync::Mutex::new(None)),
+            None,
+            None,
+            None,
         )
     }
 
@@ -2740,6 +2756,9 @@ mod tests {
             None,
             None,
             std::sync::Arc::new(std::sync::Mutex::new(None)),
+            None,
+            None,
+            None,
         );
         let registry = register_meta_tools(
             &registry,

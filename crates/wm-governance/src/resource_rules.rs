@@ -168,7 +168,7 @@ impl ResourceVerdict {
 /// from running amok — a direct response to v2's uncontrolled resource
 /// consumption and circular thinking patterns.
 pub struct ResourceRules {
-    config: ResourceRulesConfig,
+    config: RwLock<ResourceRulesConfig>,
     write_budget: RwLock<BudgetTracker>,
     spawn_budget: RwLock<BudgetTracker>,
     network_budget: RwLock<BudgetTracker>,
@@ -184,7 +184,7 @@ impl ResourceRules {
     #[must_use]
     pub fn new(config: ResourceRulesConfig) -> Self {
         Self {
-            config,
+            config: RwLock::new(config),
             write_budget: RwLock::new(BudgetTracker::default()),
             spawn_budget: RwLock::new(BudgetTracker::default()),
             network_budget: RwLock::new(BudgetTracker::default()),
@@ -192,6 +192,20 @@ impl ResourceRules {
             human_approved: RwLock::new(false),
             user_initiated: RwLock::new(true),
         }
+    }
+
+    /// Replace the resource limits configuration at runtime
+    /// (sandbox.set_limits).
+    pub fn set_config(&self, config: ResourceRulesConfig) {
+        if let Ok(mut c) = self.config.write() {
+            *c = config;
+        }
+    }
+
+    /// Current resource limits configuration.
+    #[must_use]
+    pub fn config(&self) -> ResourceRulesConfig {
+        self.config.read().map(|c| c.clone()).unwrap_or_default()
     }
 
     /// Create with default config.
@@ -248,9 +262,10 @@ impl ResourceRules {
 
         // Budgets scale with health — when stressed, budgets shrink
         let health_scale = health.clamp(0.1, 1.0);
-        let write_limit = ((self.config.max_writes_per_minute as f32) * health_scale) as u32;
-        let spawn_limit = ((self.config.max_spawns_per_minute as f32) * health_scale) as u32;
-        let network_limit = ((self.config.max_network_per_minute as f32) * health_scale) as u32;
+        let cfg = self.config();
+        let write_limit = ((cfg.max_writes_per_minute as f32) * health_scale) as u32;
+        let spawn_limit = ((cfg.max_spawns_per_minute as f32) * health_scale) as u32;
+        let network_limit = ((cfg.max_network_per_minute as f32) * health_scale) as u32;
 
         // In low-power states, budgets are further reduced
         let (write_limit, spawn_limit, network_limit) = match brain_wave {
@@ -312,22 +327,22 @@ impl ResourceRules {
         };
         if let Ok(mut novelty) = self.novelty.write() {
             let repeats = novelty.iter().filter(|s| **s == sig).count() as u32;
-            if repeats >= self.config.max_repeats {
+            if repeats >= cfg.max_repeats {
                 return ResourceVerdict::NotNovel {
                     tool_name: tool_name.to_string(),
                     repeats,
-                    max: self.config.max_repeats,
+                    max: cfg.max_repeats,
                 };
             }
             novelty.push_back(sig);
-            if novelty.len() > self.config.novelty_window {
+            if novelty.len() > cfg.novelty_window {
                 novelty.pop_front();
             }
         }
 
         // Check if autonomous action requires human review
         let user_initiated = self.user_initiated.read().map(|g| *g).unwrap_or(true);
-        if !user_initiated && self.config.require_human_review {
+        if !user_initiated && cfg.require_human_review {
             let approved = self.human_approved.read().map(|g| *g).unwrap_or(false);
             if !approved {
                 return ResourceVerdict::RequiresHumanReview {
