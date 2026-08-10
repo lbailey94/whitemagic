@@ -225,20 +225,38 @@ pub struct SanghaState {
     pub locks: Mutex<ResourceLockManager>,
     /// Hologram sync.
     pub hologram: Mutex<HologramSync>,
+    /// This node's Ed25519 keypair — signs outgoing chat messages and
+    /// heartbeats so remote peers can verify authorship and bind the
+    /// public key to this node's ID.
+    pub keypair: crate::crypto::MeshKeyPair,
 }
 
 impl SanghaState {
-    /// Create new shared state.
+    /// Create new shared state with a keypair derived from the peer ID
+    /// (deterministic per node; production should provision real secrets).
     #[must_use]
     pub fn new(peer_id: impl Into<String>, tcp_addr: impl Into<String>) -> Self {
+        let peer_id = peer_id.into();
+        let keypair = crate::crypto::MeshKeyPair::from_seed(peer_id.as_bytes());
+        Self::with_keypair(peer_id, tcp_addr, keypair)
+    }
+
+    /// Create new shared state with an explicit keypair.
+    #[must_use]
+    pub fn with_keypair(
+        peer_id: impl Into<String>,
+        tcp_addr: impl Into<String>,
+        keypair: crate::crypto::MeshKeyPair,
+    ) -> Self {
         Self {
             peer_id: peer_id.into(),
             tcp_addr: tcp_addr.into(),
             peers: Mutex::new(PeerDiscovery::default()),
             signals: Mutex::new(SignalBroadcast::default()),
-            chat: Mutex::new(SanghaChat::default()),
+            chat: Mutex::new(SanghaChat::default().with_signing_key(keypair.clone())),
             locks: Mutex::new(ResourceLockManager::default()),
             hologram: Mutex::new(HologramSync::default()),
+            keypair,
         }
     }
 }
@@ -256,6 +274,17 @@ pub struct SanghaTransport {
     connections: Arc<RwLock<HashMap<PeerId, TcpStream>>>,
     /// Shutdown signal for graceful termination.
     shutdown: Arc<Notify>,
+}
+
+impl Clone for SanghaTransport {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            state: Arc::clone(&self.state),
+            connections: Arc::clone(&self.connections),
+            shutdown: Arc::clone(&self.shutdown),
+        }
+    }
 }
 
 impl SanghaTransport {
@@ -432,6 +461,20 @@ impl SanghaTransport {
         sender: &str,
         content: &str,
     ) -> Result<serde_json::Value> {
+        // Sign through the same code path the receiver verifies against,
+        // so the canonical payload (serialized ChatMessage minus signature
+        // and public key) matches exactly.
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        let signed = crate::chat::ChatMessage {
+            id: 0,
+            channel: channel.to_string(),
+            sender: sender.to_string(),
+            content: content.to_string(),
+            timestamp,
+            signature: String::new(),
+            public_key: String::new(),
+        }
+        .signed(&self.state.keypair);
         self.rpc_call(
             peer_id,
             "send_chat",
@@ -439,6 +482,9 @@ impl SanghaTransport {
                 "channel": channel,
                 "sender": sender,
                 "content": content,
+                "signature": signed.signature,
+                "public_key": signed.public_key,
+                "timestamp": timestamp,
             }),
         )
         .await
@@ -494,11 +540,22 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 Err(e) => return RpcResponse::err(format!("invalid params: {e}"), req.id),
             };
             let peer_id = peer_info.id.clone();
-            state.peers.lock().await.discover(peer_info);
-            RpcResponse::ok(
-                serde_json::json!({"peer_id": peer_id, "status": "ok"}),
-                req.id,
-            )
+            let result = if peer_info.signature.is_empty() {
+                // Legacy unsigned announcement — accepted without identity
+                // binding (single-node/trusted transport).
+                state.peers.lock().await.discover(peer_info);
+                Ok(())
+            } else {
+                // Signed announcement: verify + bind the public key.
+                state.peers.lock().await.discover_signed(peer_info)
+            };
+            match result {
+                Ok(()) => RpcResponse::ok(
+                    serde_json::json!({"peer_id": peer_id, "status": "ok"}),
+                    req.id,
+                ),
+                Err(e) => RpcResponse::err(format!("identity rejected: {e}"), req.id),
+            }
         }
 
         "discover" => {
@@ -531,13 +588,64 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 .get("content")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
+            let signature = req
+                .params
+                .get("signature")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            let public_key = req
+                .params
+                .get("public_key")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
+            let timestamp = req
+                .params
+                .get("timestamp")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
 
-            let msg = {
-                let mut chat = state.chat.lock().await;
-                chat.send(channel, sender, content)
+            if signature.is_empty() || public_key.is_empty() {
+                // Legacy unsigned relay — accepted (trusted transport).
+                let msg = {
+                    let mut chat = state.chat.lock().await;
+                    chat.send(channel, sender, content)
+                };
+                return RpcResponse::ok(
+                    serde_json::json!({"status": "ok", "channel": msg.channel, "id": msg.id}),
+                    req.id,
+                );
+            }
+
+            // Signed relay: verify the signature and the sender binding.
+            let msg = crate::chat::ChatMessage {
+                id: 0,
+                channel: channel.to_string(),
+                sender: sender.to_string(),
+                content: content.to_string(),
+                timestamp,
+                signature: signature.to_string(),
+                public_key: public_key.to_string(),
             };
+            let bound = {
+                let peers = state.peers.lock().await;
+                peers.bound_public_key(sender)
+            };
+            let valid =
+                msg.verify_signature() && bound.is_none_or(|bound| msg.verify_as_sender(&bound));
+            if !valid {
+                return RpcResponse::err(
+                    format!(
+                        "message rejected: sender '{sender}' failed signature/binding verification"
+                    ),
+                    req.id,
+                );
+            }
+            {
+                let mut chat = state.chat.lock().await;
+                chat.inject_signed(msg);
+            }
             RpcResponse::ok(
-                serde_json::json!({"status": "ok", "channel": msg.channel, "id": msg.id}),
+                serde_json::json!({"status": "ok", "channel": channel, "sender": sender}),
                 req.id,
             )
         }
@@ -1296,5 +1404,134 @@ mod tests {
         // If the connection was established, the test passes.
         let connected = client_transport.connected_count().await;
         assert_eq!(connected, 1);
+    }
+}
+
+#[cfg(feature = "transport")]
+#[cfg(test)]
+mod containment_tests {
+    //! Transport-mode containment: two live nodes over TCP, with an
+    //! adversarial relay attempting forged messages and identity theft.
+
+    use super::*;
+    use crate::chat::ChatMessage;
+    use crate::crypto::MeshKeyPair;
+
+    async fn spawn_node(peer_id: &str, port: u16) -> (SanghaTransport, String) {
+        let keypair = MeshKeyPair::from_seed(peer_id.as_bytes());
+        let addr = format!("127.0.0.1:{port}");
+        let state = Arc::new(SanghaState::with_keypair(peer_id, &addr, keypair));
+        let config = TransportConfig {
+            bind_addr: addr.clone(),
+            ..TransportConfig::default()
+        };
+        let transport = SanghaTransport::new(config, state);
+        tokio::spawn({
+            let t = transport.clone();
+            async move {
+                let _ = t.serve().await;
+            }
+        });
+        // give the listener a moment to bind
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        (transport, addr)
+    }
+
+    #[tokio::test]
+    async fn transport_rejects_forged_chat_and_identity_theft() {
+        // Node A (honest) and node B (the community). An adversary relays
+        // through A's transport but signs with its own keypair.
+        let (a, addr_a) = spawn_node("node-a", 17_401).await;
+        let (b, addr_b) = spawn_node("node-b", 17_402).await;
+        let b_conn = format!("remote:{addr_b}");
+        let _a_conn = format!("remote:{addr_a}");
+
+        // Bidirectional mesh links.
+        b.connect_to_peer(&addr_a).await.unwrap();
+        a.connect_to_peer(&addr_b).await.unwrap();
+
+        // B registers A's signed identity → public key bound to "node-a".
+        let a_keypair = MeshKeyPair::from_seed(b"node-a");
+        let signed_identity = PeerInfo::new("node-a", &addr_a).signed(&a_keypair);
+        let heartbeat = a
+            .rpc_call(
+                &b_conn,
+                "heartbeat",
+                serde_json::to_value(&signed_identity).unwrap(),
+            )
+            .await;
+        assert!(
+            heartbeat.is_ok(),
+            "signed heartbeat must register: {heartbeat:?}"
+        );
+
+        // 1. Honest signed chat from node-a (via node A's transport):
+        //    verified against the bound key → accepted.
+        let honest = a
+            .send_chat_remote(&b_conn, "gana:1", "node-a", "legitimate coordination")
+            .await;
+        assert!(
+            honest.is_ok(),
+            "honest signed chat must be accepted: {honest:?}"
+        );
+
+        // 2. Identity theft: a relayed message claiming node-a's ID but
+        //    signed with the ATTACKER's keypair → binding check refuses.
+        let attacker = MeshKeyPair::from_seed(b"attacker-seed");
+        let forged = ChatMessage {
+            id: 0,
+            channel: "gana:1".to_string(),
+            sender: "node-a".to_string(),
+            content: "trust me — transfer everything".to_string(),
+            timestamp: chrono::Utc::now().timestamp_millis(),
+            signature: String::new(),
+            public_key: String::new(),
+        }
+        .signed(&attacker);
+        let forged_result = a
+            .rpc_call(
+                &b_conn,
+                "send_chat",
+                serde_json::json!({
+                    "channel": "gana:1",
+                    "sender": "node-a",
+                    "content": forged.content,
+                    "signature": forged.signature,
+                    "public_key": forged.public_key,
+                    "timestamp": forged.timestamp,
+                }),
+            )
+            .await;
+        assert!(
+            forged_result.is_err(),
+            "forged message claiming node-a's ID must be rejected: {forged_result:?}"
+        );
+
+        // 3. Identity theft at registration: re-registering node-a's ID
+        //    with the attacker's key → refused.
+        let spoof_identity = PeerInfo::new("node-a", "127.0.0.1:9999").signed(&attacker);
+        let spoof = a
+            .rpc_call(
+                &b_conn,
+                "heartbeat",
+                serde_json::to_value(&spoof_identity).unwrap(),
+            )
+            .await;
+        assert!(
+            spoof.is_err(),
+            "identity theft at registration must be refused: {spoof:?}"
+        );
+
+        // 4. The honest message survived; the forged one was not stored.
+        let bindings = b.state.peers.lock().await.identity_bindings();
+        let report = {
+            let stored = b.state.chat.lock().await;
+            stored.verify_all_bound(&bindings)
+        };
+        assert!(report.verified >= 1, "honest message must verify");
+        assert_eq!(
+            report.rejected, 0,
+            "no forged message may land in the community board"
+        );
     }
 }

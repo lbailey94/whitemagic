@@ -5,6 +5,48 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.2] — 2026-08-10
+
+### Ed25519 Sangha mesh (pulse-verification Tier-0 port complete)
+
+- **`wm-sangha::crypto`** — `MeshKeyPair` (Ed25519 via ed25519-dalek):
+  per-peer keypairs replace the shared HMAC secret. A compromised peer can
+  **never** forge another peer's identity or messages
+- **ChatMessage** — carries the sender's public key; `verify_signature()`
+  (self-consistent) + `verify_as_sender(bound_key)` (identity binding);
+  `send_as` (relay signing); `inject_signed` (store network-signed messages
+  as-is); `verify_channel_bound` / `verify_all_bound` enforce binding —
+  impostor keys are rejected, not just tampering
+- **PeerIdentity** — `PeerInfo` carries its Ed25519 public key; the registry
+  binds the first-seen key and **refuses re-registration with a different
+  key** (identity theft); `bound_public_key` / `identity_bindings` feed the
+  community read path
+- **Auto-quarantine policy** — `AutoQuarantineConfig` (default: 3 consecutive
+  verification failures, trust floor 0.2): `record_verification_failure` and
+  `quarantine_if_untrusted` cut the bad apple off without a human decision;
+  the community defends itself
+- **Signed transport** — `SanghaState` carries the node keypair; `send_chat`
+  RPC verifies signature + sender binding before storing (forged relays
+  rejected with an RPC error); signed heartbeats bind identities; legacy
+  unsigned relays still accepted (trusted transport)
+- **Transport-mode containment test** — two live TCP nodes: honest signed
+  chat verifies, forged message claiming a bound ID is rejected, identity
+  theft at registration is refused, and the community board stays clean
+- **Containment harness extended to 14 vectors** (auto-quarantine on repeated
+  failures + trust-floor decay)
+
+### Claims calibration scorecard
+
+- Ledger reviewed end-to-end: 9 claims (5 validated, 1 falsified, 3 pending),
+  77.14 points; mean Brier 0.082; the only miss came at the lowest confidence
+  (0.5) — calibrated shape; 0.6–0.8 bin overperforms by +0.275 (watch item)
+- Full review artifact: `~/Desktop/WMv5_CLAIMS_AND_SCORECARDS.md`
+
+### Counts
+
+- 3,379 → **3,384 tests passing, 0 failed** (+5); 137 with `transport`
+- 0 clippy warnings (default + transport features), fmt clean
+
 ## [5.7.1] — 2026-08-10
 
 ### Sangha quarantine — the bad-apple rule
