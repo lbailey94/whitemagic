@@ -120,6 +120,18 @@ impl ConfidenceCalibrator {
     pub fn is_conservative(&self) -> bool {
         self.last_confidence < 0.5
     }
+
+    /// Current calibrator state `(last_confidence, smoothing)` for persistence.
+    #[must_use]
+    pub const fn state(&self) -> (f32, f32) {
+        (self.last_confidence, self.smoothing)
+    }
+
+    /// Restore calibrator state from persisted values.
+    pub const fn restore_state(&mut self, last_confidence: f32, smoothing: f32) {
+        self.last_confidence = last_confidence.clamp(0.0, 1.0);
+        self.smoothing = smoothing.clamp(0.0, 1.0);
+    }
 }
 
 impl Default for ConfidenceCalibrator {

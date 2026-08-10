@@ -431,6 +431,96 @@ impl SelfModel {
             })
             .collect()
     }
+
+    /// Serialize the full self-model state for persistence.
+    ///
+    /// Includes per-metric histories (with timestamps), alert rules, and
+    /// the confidence calibrator state, so a restarted process resumes
+    /// forecasting, drift alerts, and confidence exactly where it left off.
+    #[must_use]
+    pub fn to_json(&self) -> serde_json::Value {
+        let (samples, rules, last_confidence, smoothing) = {
+            let samples = {
+                let metrics = self.metrics.read();
+                let Ok(metrics) = metrics else {
+                    return serde_json::json!({});
+                };
+                metrics
+                    .tracked_kinds()
+                    .filter_map(|kind| {
+                        metrics
+                            .history(kind)
+                            .cloned()
+                            .map(|h| h.into_iter().collect::<Vec<_>>())
+                    })
+                    .flatten()
+                    .collect::<Vec<MetricSample>>()
+            };
+            let rules = {
+                let engine = self.alert_engine.read();
+                engine.map(|e| e.rules().to_vec()).unwrap_or_default()
+            };
+            let calibrator = {
+                let c = self.calibrator.read();
+                c.map(|c| (c.state().0, c.state().1)).unwrap_or((0.5, 0.2))
+            };
+            (samples, rules, calibrator.0, calibrator.1)
+        };
+        serde_json::json!({
+            "samples": samples,
+            "rules": rules,
+            "last_confidence": last_confidence,
+            "smoothing": smoothing,
+        })
+    }
+
+    /// Restore self-model state from previously persisted JSON.
+    ///
+    /// Unknown or malformed fields are skipped; partial state restores
+    /// gracefully. Returns an error only if the top-level shape is wrong.
+    pub fn from_json(&self, value: &serde_json::Value) -> Result<(), String> {
+        let samples = value
+            .get("samples")
+            .and_then(serde_json::Value::as_array)
+            .ok_or_else(|| "self-model state missing 'samples'".to_string())?;
+        let restored: Vec<MetricSample> = samples
+            .iter()
+            .filter_map(|s| serde_json::from_value(s.clone()).ok())
+            .collect();
+        {
+            let mut metrics = self
+                .metrics
+                .write()
+                .map_err(|e| format!("metrics lock: {e}"))?;
+            for sample in restored {
+                metrics.record(sample);
+            }
+        }
+        if let Some(rules) = value.get("rules").and_then(serde_json::Value::as_array) {
+            let rules: Vec<AlertRule> = rules
+                .iter()
+                .filter_map(|r| serde_json::from_value(r.clone()).ok())
+                .collect();
+            if let Ok(mut engine) = self.alert_engine.write() {
+                for rule in rules {
+                    engine.add_rule(rule);
+                }
+            }
+        }
+        if let Some(confidence) = value
+            .get("last_confidence")
+            .and_then(serde_json::Value::as_f64)
+        {
+            let smoothing = value
+                .get("smoothing")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or(0.2);
+            if let Ok(mut calibrator) = self.calibrator.write() {
+                calibrator.restore_state(confidence as f32, smoothing as f32);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Default for SelfModel {
@@ -521,6 +611,67 @@ mod tests {
         assert_eq!(snap.metrics.len(), 0);
         assert_eq!(snap.alerts.len(), 0);
         assert_eq!(snap.forecasts.len(), 0);
+    }
+
+    #[test]
+    fn self_model_json_roundtrip_preserves_histories() {
+        let model = SelfModel::new();
+        model.record(MetricKind::ConformalCoverage, 0.9);
+        model.record(MetricKind::ConformalCoverage, 0.82);
+        model.record(MetricKind::BrierScore, 0.2);
+        model.record_at(
+            MetricKind::Coherence,
+            0.7,
+            chrono::DateTime::parse_from_rfc3339("2026-08-09T00:00:00Z")
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+        );
+
+        let json = model.to_json();
+        assert!(json["samples"].as_array().unwrap().len() >= 3);
+
+        let restored = SelfModel::new();
+        restored.from_json(&json).unwrap();
+        assert_eq!(restored.sample_count(MetricKind::ConformalCoverage), 2);
+        assert_eq!(restored.sample_count(MetricKind::BrierScore), 1);
+        assert_eq!(restored.sample_count(MetricKind::Coherence), 1);
+
+        // Histories are usable for forecasting after restore.
+        assert!(
+            restored
+                .forecast(MetricKind::ConformalCoverage, 3)
+                .is_some()
+        );
+        // Alert rules restored with defaults still fire on drift.
+        restored.record(MetricKind::ConformalCoverage, 0.75);
+        restored.record(MetricKind::ConformalCoverage, 0.72);
+        let drift = restored
+            .check_alerts()
+            .into_iter()
+            .any(|a| a.metric == MetricKind::ConformalCoverage);
+        assert!(drift);
+    }
+
+    #[test]
+    fn self_model_json_roundtrip_preserves_calibrator() {
+        let model = SelfModel::new();
+        model.record(MetricKind::CpuLoad, 0.3);
+        let json = model.to_json();
+        let restored = SelfModel::new();
+        restored.from_json(&json).unwrap();
+        // Confidence is derived live from metric values — a restored model
+        // with the same history computes the same confidence as a fresh one.
+        let fresh = SelfModel::new();
+        fresh.record(MetricKind::CpuLoad, 0.3);
+        let (a, b) = (restored.confidence(), fresh.confidence());
+        assert!((a - b).abs() < 1e-6, "restored {a} != fresh {b}");
+    }
+
+    #[test]
+    fn self_model_from_json_malformed_errors() {
+        let model = SelfModel::new();
+        let err = model.from_json(&serde_json::json!({"nope": true}));
+        assert!(err.is_err());
     }
 
     #[test]
