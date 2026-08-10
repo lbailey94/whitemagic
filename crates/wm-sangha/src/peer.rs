@@ -171,6 +171,11 @@ pub struct PeerInfo {
     /// Delegated by (peer ID that delegated authority to this peer, if any).
     #[serde(default)]
     pub delegated_by: Option<PeerId>,
+    /// HMAC-SHA256 signature over the identity payload (id, address,
+    /// capabilities, authority), when the mesh key is configured. Empty
+    /// when unsigned.
+    #[serde(default)]
+    pub signature: String,
 }
 
 impl PeerInfo {
@@ -189,7 +194,33 @@ impl PeerInfo {
             successful_interactions: 0,
             failed_interactions: 0,
             delegated_by: None,
+            signature: String::new(),
         }
+    }
+
+    /// Compute the identity payload to sign (all fields except the signature).
+    #[must_use]
+    pub fn signing_payload(&self) -> String {
+        let without_sig = Self {
+            signature: String::new(),
+            ..self.clone()
+        };
+        serde_json::to_string(&without_sig).unwrap_or_default()
+    }
+
+    /// Sign this peer's identity with the mesh key (HMAC-SHA256).
+    #[must_use]
+    pub fn signed(mut self, key: &[u8]) -> Self {
+        if let Some(sig) = wm_core::sign_hmac(&self.signing_payload(), key) {
+            self.signature = sig;
+        }
+        self
+    }
+
+    /// Verify this peer's identity signature against the mesh key.
+    #[must_use]
+    pub fn verify_signature(&self, key: &[u8]) -> bool {
+        wm_core::verify_hmac(&self.signing_payload(), &self.signature, key)
     }
 
     /// Record a heartbeat from this peer.
@@ -309,6 +340,7 @@ impl PeerInfo {
             successful_interactions: 0,
             failed_interactions: 0,
             delegated_by: Some(self.id.clone()),
+            signature: String::new(),
         })
     }
 }
@@ -380,6 +412,32 @@ impl PeerDiscovery {
             return; // At capacity
         }
         self.peers.insert(peer.id.clone(), peer);
+    }
+
+    /// Discover a peer whose identity signature verifies against the mesh
+    /// key. Unsigned or wrongly-signed identities are rejected — an
+    /// attacker cannot impersonate a peer by spoofing its ID.
+    pub fn discover_signed(&mut self, peer: PeerInfo, key: &[u8]) -> Result<(), String> {
+        if peer.signature.is_empty() {
+            return Err(format!(
+                "peer '{}' announced without an identity signature",
+                peer.id
+            ));
+        }
+        if !peer.verify_signature(key) {
+            return Err(format!(
+                "peer '{}' failed identity verification (bad or forged signature)",
+                peer.id
+            ));
+        }
+        self.discover(peer);
+        Ok(())
+    }
+
+    /// Verify a stored peer's identity signature against the mesh key.
+    #[must_use]
+    pub fn verify_peer(&self, peer_id: &str, key: &[u8]) -> bool {
+        self.get(peer_id).is_some_and(|p| p.verify_signature(key))
     }
 
     /// Record a heartbeat from a peer.
@@ -574,6 +632,52 @@ mod tests {
         assert_eq!(peer.address, "127.0.0.1:8080");
         assert!(peer.alive);
         assert_eq!(peer.heartbeat_count, 0);
+    }
+
+    #[test]
+    fn peer_identity_signing_verifies() {
+        let key = b"mesh-secret";
+        // Default authority is read_only.
+        let peer = PeerInfo::new("node-1", "127.0.0.1:8080");
+
+        let signed = peer.clone().signed(key);
+        assert!(!signed.signature.is_empty());
+        assert!(signed.verify_signature(key));
+
+        // Wrong key → forged identity rejected.
+        assert!(!signed.verify_signature(b"other-secret"));
+
+        // Authority tampering (escalating privileges) → rejected.
+        let mut escalated = signed;
+        escalated.authority = PeerAuthority::full();
+        assert!(!escalated.verify_signature(key));
+
+        // Unsigned identity never verifies.
+        assert!(!peer.verify_signature(key));
+    }
+
+    #[test]
+    fn discover_signed_rejects_forged_peers() {
+        let key = b"mesh-secret";
+        let mut registry = PeerDiscovery::default();
+
+        // Legitimate peer joins the mesh.
+        let legit = PeerInfo::new("node-1", "127.0.0.1:8080").signed(key);
+        assert!(registry.discover_signed(legit, key).is_ok());
+        assert!(registry.verify_peer("node-1", key));
+
+        // An attacker spoofs node-1's ID with the wrong key.
+        let spoof = PeerInfo::new("node-1", "127.0.0.1:9999").signed(b"attacker-key");
+        assert!(registry.discover_signed(spoof, key).is_err());
+
+        // An unsigned announcement is rejected outright.
+        let unsigned = PeerInfo::new("node-2", "127.0.0.1:8081");
+        assert!(registry.discover_signed(unsigned, key).is_err());
+
+        // The legit peer's identity is untouched.
+        let stored = registry.get("node-1").unwrap();
+        assert_eq!(stored.address, "127.0.0.1:8080");
+        assert!(stored.verify_signature(key));
     }
 
     #[test]

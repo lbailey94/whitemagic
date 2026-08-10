@@ -14,6 +14,31 @@ use sha2::{Digest, Sha256};
 
 type HmacSha256 = Hmac<Sha256>;
 
+/// Compute an HMAC-SHA256 signature (hex-encoded) over a payload with a key.
+///
+/// Returns `None` when the key is invalid (e.g. empty) — callers should
+/// treat that as "signing unavailable" rather than produce an unsigned
+/// artifact silently.
+#[must_use]
+pub fn sign_hmac(payload: &str, key: &[u8]) -> Option<String> {
+    let Ok(mut mac) = HmacSha256::new_from_slice(key) else {
+        return None;
+    };
+    mac.update(payload.as_bytes());
+    Some(format!("{:x}", mac.finalize().into_bytes()))
+}
+
+/// Verify an HMAC-SHA256 signature (hex-encoded) over a payload with a key.
+///
+/// An empty signature is never valid.
+#[must_use]
+pub fn verify_hmac(payload: &str, signature: &str, key: &[u8]) -> bool {
+    if signature.is_empty() {
+        return false;
+    }
+    sign_hmac(payload, key).is_some_and(|expected| expected == signature)
+}
+
 /// A tool capability manifest — declares what a tool can do and who published it.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ToolManifest {
@@ -136,9 +161,8 @@ impl ToolManifest {
     #[must_use]
     pub fn sign(mut self, key: &[u8]) -> Self {
         let payload = self.signing_payload();
-        if let Ok(mut mac) = HmacSha256::new_from_slice(key) {
-            mac.update(payload.as_bytes());
-            self.signature = format!("{:x}", mac.finalize().into_bytes());
+        if let Some(sig) = sign_hmac(&payload, key) {
+            self.signature = sig;
         }
         self
     }
@@ -148,18 +172,7 @@ impl ToolManifest {
     /// Returns true if the signature matches the current content.
     #[must_use]
     pub fn verify_signature(&self, key: &[u8]) -> bool {
-        if self.signature.is_empty() {
-            return false;
-        }
-
-        let Ok(mut mac) = HmacSha256::new_from_slice(key) else {
-            return false;
-        };
-
-        let payload = self.signing_payload();
-        mac.update(payload.as_bytes());
-        let expected = format!("{:x}", mac.finalize().into_bytes());
-        expected == self.signature
+        verify_hmac(&self.signing_payload(), &self.signature, key)
     }
 
     /// Whether this manifest declares a specific capability.
