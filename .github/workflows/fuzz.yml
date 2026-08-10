@@ -26,7 +26,7 @@ jobs:
 
       - name: Corpus regression (replay committed seeds, 1k runs each)
         run: |
-          for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation; do
+          for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers; do
             echo "--- $target ---"
             cargo fuzz run --fuzz-dir . "$target" -- -runs=1000
           done
@@ -34,7 +34,7 @@ jobs:
 
       - name: Smoke-fuzz all targets (30s each)
         run: |
-          for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation; do
+          for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers; do
             echo "--- $target ---"
             cargo fuzz run --fuzz-dir . "$target" -- -max_total_time=30
           done

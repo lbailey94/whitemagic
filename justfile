@@ -76,6 +76,14 @@ prune: clean
 audit:
     cargo deny check
 
+# Fuzz smoke: replay committed corpus seeds for every target (from fuzz/)
+fuzz:
+    cargo fuzz build --fuzz-dir fuzz
+    @for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers; do \
+        echo "--- $$target ---"; \
+        cargo fuzz run --fuzz-dir fuzz "$$target" -- -runs=1000; \
+    done
+
 # Everything: fmt + clippy + tests + dependency audit
 verify: fmt-check lint
     cargo test --all

@@ -4,7 +4,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ## Current Status
 
-**v5.6.0 — All 7 phases complete. 15 crates, 211 tools, 3,352 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. MCP server exposes single `wm` meta-tool — all 211 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
+**v5.7.0 — All 7 phases complete. 15 crates, 211 tools, 3,377 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. MCP server exposes single `wm` meta-tool — all 211 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
 
 ### v5 Subsystems
 

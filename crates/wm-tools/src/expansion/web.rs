@@ -134,7 +134,8 @@ pub(crate) fn fetch_bounded(
 /// Resolve a possibly-relative redirect target against the current URL
 /// (RFC 3986 §5.3: relative references resolve against the current path's
 /// directory).
-fn resolve_url(base: &str, location: &str) -> String {
+#[must_use]
+pub fn resolve_url(base: &str, location: &str) -> String {
     if location.starts_with("http://") || location.starts_with("https://") {
         return location.to_string();
     }
@@ -176,7 +177,8 @@ pub(crate) fn extract_title(html: &str) -> Option<String> {
 
 /// Strip HTML to plain text: drop script/style content, tags, and decode
 /// common entities. Compact and dependency-free.
-pub(crate) fn strip_html(html: &str) -> String {
+#[must_use]
+pub fn strip_html(html: &str) -> String {
     let mut out = String::with_capacity(html.len() / 2);
     let mut in_script = false;
     let mut chars = html.chars();
@@ -208,18 +210,45 @@ pub(crate) fn strip_html(html: &str) -> String {
                     out.push('\n');
                 }
             }
+            c if in_script => {} // inside <script>/<style>: drop content
             '&' => {
-                // decode entity
+                // decode entity — but only when properly terminated with
+                // ';' before any '<' (a tag must never be swallowed by the
+                // decoder). Lookahead on a cloned iterator; consume only on
+                // a confirmed entity.
+                let mut lookahead = chars.clone();
                 let mut entity = String::new();
-                for pc in chars.by_ref() {
-                    entity.push(pc);
-                    if pc == ';' || entity.len() > 12 {
-                        break;
+                let mut terminated = false;
+                for _ in 0..=12 {
+                    match lookahead.next() {
+                        Some(';') => {
+                            terminated = true;
+                            break;
+                        }
+                        Some('<') => break,
+                        Some(c) => entity.push(c),
+                        None => break,
                     }
                 }
-                out.push_str(&decode_entity(&entity));
+                if terminated {
+                    if is_known_entity(&entity) {
+                        // consume exactly the lookahead chars plus the ';'
+                        for _ in entity.chars() {
+                            chars.next();
+                        }
+                        chars.next();
+                        out.push_str(&decode_entity(&entity));
+                    } else {
+                        // unknown entity — emit '&' literally and let the
+                        // rest re-scan (prevents nested-entity leakage)
+                        out.push('&');
+                    }
+                } else {
+                    // not an entity — emit '&' literally and let the next
+                    // iteration handle whatever followed
+                    out.push('&');
+                }
             }
-            c if in_script => {} // inside <script>/<style>: drop content
             c => out.push(c),
         }
     }
@@ -251,7 +280,8 @@ pub(crate) fn strip_html(html: &str) -> String {
     result.trim().to_string()
 }
 
-/// Decode a single HTML entity (`amp;`, `#123;`, …).
+/// Decode a single HTML entity (`amp;`, `#123;`, …). Unknown entities are
+/// returned as `&name;` (browser behavior).
 fn decode_entity(entity: &str) -> String {
     let e = entity.trim_end_matches(';');
     let out = match e {
@@ -279,19 +309,40 @@ fn decode_entity(entity: &str) -> String {
     out.to_string()
 }
 
+/// Whether `entity` (without the trailing `;`) is a known entity that
+/// [`decode_entity`] will actually decode.
+fn is_known_entity(entity: &str) -> bool {
+    let e = entity.trim_end_matches(';');
+    if matches!(e, "amp" | "lt" | "gt" | "quot" | "apos" | "#39" | "nbsp") {
+        return true;
+    }
+    if let Some(num) = e.strip_prefix('#') {
+        let code = num.parse::<u32>().ok().or_else(|| {
+            num.strip_prefix('x')
+                .and_then(|h| u32::from_str_radix(h, 16).ok())
+        });
+        if let Some(code) = code {
+            return char::from_u32(code).is_some();
+        }
+    }
+    false
+}
+
 /// Extract the real target from a DuckDuckGo redirect href
 /// (`//duckduckgo.com/l/?uddg=<url-encoded>`).
-fn ddg_target(href: &str) -> Option<String> {
+#[must_use]
+pub fn ddg_target(href: &str) -> Option<String> {
     let idx = href.find("uddg=")?;
     let encoded = &href[idx + 5..];
     let end = encoded.find('&').unwrap_or(encoded.len());
+    let bytes = encoded.as_bytes();
+    let end = end.min(bytes.len());
     let mut out = Vec::new();
-    let bytes = &encoded.as_bytes()[..end];
     let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Ok(b) = u8::from_str_radix(&encoded[i + 1..i + 3], 16) {
-                out.push(b);
+    while i < end {
+        if bytes[i] == b'%' && i + 2 < end {
+            if let (Some(hi), Some(lo)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
+                out.push((hi << 4) | lo);
                 i += 3;
                 continue;
             }
@@ -302,12 +353,24 @@ fn ddg_target(href: &str) -> Option<String> {
     String::from_utf8(out).ok()
 }
 
+/// Hex digit value of a byte (uppercase or lowercase).
+#[must_use]
+const fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
+}
+
 /// Decode a Bing click-tracking link (`https://www.bing.com/ck/a?...`).
 ///
 /// The real target is carried in the `u=a1<base64url>` parameter. The href
 /// arrives HTML-escaped (`&amp;`), so unescape first, then extract and
 /// decode the base64url payload.
-fn bing_decode(href: &str) -> Option<String> {
+#[must_use]
+pub fn bing_decode(href: &str) -> Option<String> {
     let unescaped = href.replace("&amp;", "&");
     let idx = unescaped.find("u=a1")?;
     let rest = &unescaped[idx + 4..];
@@ -327,11 +390,19 @@ fn bing_decode(href: &str) -> Option<String> {
             acc &= (1 << bits) - 1;
         }
     }
-    String::from_utf8(bytes).ok()
+    let target = String::from_utf8(bytes).ok()?;
+    // Only absolute targets are useful — Bing occasionally packs relative
+    // links (e.g. its own /images/search paths) into ck/a redirects.
+    if target.starts_with("http://") || target.starts_with("https://") {
+        Some(target)
+    } else {
+        None
+    }
 }
 
 /// Percent-encode a query for a search URL.
-fn percent_encode_query(query: &str) -> String {
+#[must_use]
+pub fn percent_encode_query(query: &str) -> String {
     query
         .chars()
         .flat_map(|c| match c {
@@ -350,10 +421,10 @@ fn percent_encode_query(query: &str) -> String {
 
 /// One parsed search result.
 #[derive(Debug)]
-pub(crate) struct SearchResult {
-    pub(crate) url: String,
-    pub(crate) title: String,
-    pub(crate) snippet: String,
+pub struct SearchResult {
+    pub url: String,
+    pub title: String,
+    pub snippet: String,
 }
 
 /// Search Bing's HTML results (no API key) and parse `li.b_algo` blocks.
@@ -377,7 +448,16 @@ pub(crate) fn web_search(
     if fetched.status_code == 202 {
         return Ok(Vec::new());
     }
-    let html = fetched.raw;
+    Ok(parse_bing_results(&fetched.raw, num_results))
+}
+
+/// Parse Bing `li.b_algo` result blocks from raw HTML.
+///
+/// Public and dependency-free so it can be fuzzed directly (see
+/// `fuzz/fuzz_targets/web_parsers.rs`). Never panics — malformed markup
+/// yields fewer results or an empty list.
+#[must_use]
+pub fn parse_bing_results(html: &str, num_results: usize) -> Vec<SearchResult> {
     let lower = html.to_ascii_lowercase();
 
     let mut results: Vec<SearchResult> = Vec::new();
@@ -473,7 +553,7 @@ pub(crate) fn web_search(
         }
         pos = block + 7;
     }
-    Ok(results)
+    results
 }
 
 /// Build the common response envelope.
@@ -836,6 +916,19 @@ mod tests {
             "& <tag> \"q\" A B"
         );
         assert_eq!(strip_html("&unknown;"), "&unknown;");
+        // '&' not followed by an entity must not swallow a following tag
+        // (fuzz regression)
+        assert_eq!(
+            strip_html("Hello&<script>var x=1;</script><p>World</p>"),
+            "Hello&\nWorld"
+        );
+        // the ';' terminator must not leak into the output (fuzz regression)
+        assert_eq!(strip_html("<p>Hello&nbsp;world</p>"), "Hello world");
+        // entity inside script content must be dropped with the script
+        assert_eq!(
+            strip_html("<script>var a = 1 &amp;&amp; b;</script><p>x</p>"),
+            "x"
+        );
     }
 
     #[test]

@@ -1,7 +1,7 @@
 # WhiteMagic v5 vs v26 — Comprehensive Gap Analysis
 
 **Last updated**: August 8, 2026
-**Status**: v5.6.0 — 15 crates, 211 tools, 3,352 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. ACS compliance surface + prescience claims ledger shipped (2026-08-09).
+**Status**: v5.6.0 — 15 crates, 211 tools, 3,377 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. ACS compliance surface + prescience claims ledger shipped (2026-08-09).
 
 This document compares the **v5 Rust rewrite** against the **v26 Python codebase** (the retired reference at `~/Desktop/WHITEMAGIC`). It replaces the earlier v2/v4-era `GAP_ANALYSIS_v26_v4.md`.
 
