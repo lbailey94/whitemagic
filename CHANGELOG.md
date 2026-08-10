@@ -5,6 +5,52 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.3] — 2026-08-10 (evening)
+
+### Session ops — the last Phase-1 gap (v26 parity)
+
+- **`session.record`** — record a turn (role user/ai, turn_type, importance,
+  session_id) as a sequenced session memory in the Sessions galaxy
+- **`session.replay`** — full / selective (turn_types + min_importance) /
+  progressive (token_budget) replay modes
+- **`session.continuity`** — the last N turns of the most recent prior
+  session ("where we left off" across sessions)
+- **`session.handoff`** — transfer / accept / list: package a session with
+  its context summary for continuation on another device
+
+### External merkle anchors
+
+- **`karma.anchor`** gains `publish_path` — appends a chained record
+  (root, entry_count, chain_head, prev_hash=SHA-256 of the previous
+  record) to a versioned JSONL log. With the log in a git repo, the commit
+  history provides out-of-band verifiability the runtime cannot rewrite.
+  Live chain (38 entries) anchored to `anchors/karma_anchors.jsonl`
+
+### Claims ledger: evening review (critical pass, 29 claims)
+
+- **Date-arithmetic bug found and fixed** — `epoch_day_from_str` had a
+  constant +1,721,451-day offset (days since year 1, not 1970);
+  chrono-based fix + regression test; all ledger dates migrated
+- **claim-0005 reclassified to pending** — "10x-class efficiency gains"
+  was validated on 27% cost reduction (overclaim)
+- **claim-0009 kept validated** — event date (2026-05-08) verified before
+  its falsification deadline (2026-05-31) after date correction
+- **Morning claims merged** (claim-0020+) — including the ledger's first
+  honest falsification (the "one-off" claim falsified by Meta's incident)
+- **Ledger versioned in the repo** — `docs/CLAIMS_LEDGER.json` +
+  `docs/CLAIMS_LEDGER.md` (rendered) + `docs/CLAIMS_LEDGER_REVIEW.json`
+  (per-claim grading: 5 STRONG, 5 MODERATE, 4 WEAK, 1 reclassified)
+- Calibration: mean Brier 0.078, hit rate 0.950 vs confidence 0.735
+  (+0.215 overconfident — inflated by generous validations)
+
+### Counts (corrected)
+
+- **229 tools** (session.record, session.replay, session.continuity,
+  session.handoff) — prior entries understated the registry (real count
+  at v5.7.2 was 225, not 212); corrected across README/AGENTS/docs
+- 3,384 → **3,391 tests passing, 0 failed** (+7)
+- 0 clippy warnings (default + transport), fmt clean, cargo-deny green
+
 ## [5.7.2] — 2026-08-10
 
 ### Ed25519 Sangha mesh (pulse-verification Tier-0 port complete)

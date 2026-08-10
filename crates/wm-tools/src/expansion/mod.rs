@@ -70,6 +70,7 @@ pub mod self_play;
 pub mod selfmodel;
 pub mod sensorimotor_tools;
 pub mod session;
+pub mod session_ops;
 pub mod simulation_tools;
 pub mod system;
 pub mod tasks;
@@ -161,6 +162,10 @@ pub use sensorimotor_tools::{
     ReflexListTool, SensorHistoryTool, SensorListTool, SensorPollTool, SensorReadTool,
 };
 pub use session::{SessionCheckpointTool, SessionEndTool, SessionRecallTool, SessionStartTool};
+pub use session_ops::{
+    SessionContinuityTool, SessionHandoffTool, SessionRecordTool, SessionReplayTool,
+    register_session_ops,
+};
 pub use simulation_tools::{SimCounterfactualTool, SimForecastTool, SimMcTool};
 pub use system::{SystemConfigTool, SystemFlushTool, SystemHealthTool};
 pub use tasks::{TaskDistributeTool, TaskStatusTool};
@@ -428,6 +433,9 @@ pub fn register_expansion(
 
     // Research tools (3) — topic, repo, rabbit_hole
     reg = register_research(&reg, store);
+
+    // Session ops (4) — record, replay, continuity, handoff
+    reg = register_session_ops(&reg, store);
 
     // Dharma escalation (3) — escalate, review_queue, resolve_review
     if let (Some(queue), Some(gate)) = (escalation_queue, dharma_gate) {
