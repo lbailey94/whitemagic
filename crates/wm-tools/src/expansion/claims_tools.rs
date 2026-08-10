@@ -17,20 +17,18 @@ use serde_json::{Value, json};
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
 use wm_simulation::{ClaimStatus, ClaimsLedger};
 
-/// Epoch day for a date string "YYYY-MM-DD" (approximate, for tool input).
+/// Epoch day for a date string "YYYY-MM-DD".
+///
+/// Days since 1970-01-01 (proleptic Gregorian), matching the ledger's
+/// semantics. Uses `chrono` — the earlier hand-rolled JDN arithmetic had
+/// a constant offset of 1,721,451 days (it computed days since year 1),
+/// which shifted every recorded date by ~4,713 years.
 fn epoch_day_from_str(date: &str) -> i64 {
-    let parts: Vec<&str> = date.split('-').collect();
-    if parts.len() != 3 {
-        return 0;
-    }
-    let y: i64 = parts[0].parse().unwrap_or(1970);
-    let m: i64 = parts[1].parse().unwrap_or(1);
-    let d: i64 = parts[2].parse().unwrap_or(1);
-    // Days since 1970-01-01 (proleptic Gregorian).
-    let (y, m) = if m <= 2 { (y - 1, m + 12) } else { (y, m) };
-    let a = y / 100;
-    let b = 2 - a + a / 4;
-    (365 * (y + 4716) + (y + 4716) / 4 - b + (153 * (m + 1)) / 5 + d - 1524) - 719_163
+    chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .ok()
+        .map_or(0, |d| {
+            (d - chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()).num_days()
+        })
 }
 
 /// `claims.*` — record, resolve, and report on the prescience track record.
@@ -226,6 +224,24 @@ pub fn register_claims(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn epoch_day_matches_unix_epoch_days() {
+        // Regression: the old JDN arithmetic had a constant +1,721,451
+        // offset (days since year 1, not 1970).
+        assert_eq!(epoch_day_from_str("1970-01-01"), 0);
+        assert_eq!(epoch_day_from_str("2026-08-05"), 20_670);
+        assert_eq!(epoch_day_from_str("2025-05-26"), 20_234);
+        assert_eq!(epoch_day_from_str("2026-04-23"), 20_566);
+        // The canonical 332-day lead used throughout the tests.
+        assert_eq!(
+            epoch_day_from_str("2026-04-23") - epoch_day_from_str("2025-05-26"),
+            332
+        );
+        // Malformed input degrades to 0, never panics.
+        assert_eq!(epoch_day_from_str("garbage"), 0);
+        assert_eq!(epoch_day_from_str(""), 0);
+    }
 
     #[tokio::test]
     async fn claims_add_resolve_status_flow() {

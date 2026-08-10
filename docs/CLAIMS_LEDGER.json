@@ -1,0 +1,462 @@
+{
+  "claims": [
+    {
+      "confidence": 0.75,
+      "domain": "ai_governance",
+      "falsification_criteria": "No observability standard for reasoning lineage by 2027-01-01",
+      "id": "claim-0000",
+      "lead_time_weeks": 46.142857142857146,
+      "points": 46.142857142857146,
+      "predicted_outcome": "OpenTelemetry GenAI semantic conventions standardize lineage tracking",
+      "source_date": 20251,
+      "statement": "AI SBOM / transparency ledger: hash-of-reasoning, cryptographic model lineage",
+      "status": "validated",
+      "validation_event": {
+        "date": 20574,
+        "event": "OpenTelemetry GenAI semantic conventions",
+        "source": "opentelemetry.io"
+      }
+    },
+    {
+      "confidence": 0.85,
+      "domain": "ai_governance",
+      "falsification_criteria": "No major lab ships append-only side-effect audit by 2026-12-31",
+      "id": "claim-0001",
+      "lead_time_weeks": 47.42857142857143,
+      "points": 47.42857142857143,
+      "predicted_outcome": "A major lab ships an append-only agent audit log with rollback",
+      "source_date": 20234,
+      "statement": "Karma Ledger: declared-vs-actual side-effect audit substrate",
+      "status": "validated",
+      "validation_event": {
+        "date": 20566,
+        "event": "Anthropic Claude Managed Agents memory audit log + rollback",
+        "source": "anthropic.com"
+      }
+    },
+    {
+      "confidence": 0.8,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No platform ships isolated per-tool policy VMs by 2026-12-31",
+      "id": "claim-0002",
+      "lead_time_weeks": 46.285714285714285,
+      "points": 46.285714285714285,
+      "predicted_outcome": "A platform ships per-tool-call sandboxed policy interception",
+      "source_date": 20234,
+      "statement": "mandala-yama: isolated policy VM intercepting every tool call pre-execution",
+      "status": "validated",
+      "validation_event": {
+        "date": 20558,
+        "event": "Cloudflare Project Think (Dynamic Workers restricted V8 isolates)",
+        "source": "blog.cloudflare.com"
+      }
+    },
+    {
+      "confidence": 0.7,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No meta-tool standardization in MCP by 2027-01-01",
+      "id": "claim-0003",
+      "lead_time_weeks": 24.428571428571427,
+      "points": 24.428571428571427,
+      "predicted_outcome": "MCP ecosystem standardizes meta-tool/context-compression surfaces",
+      "source_date": 20356,
+      "statement": "28-Gana / PRAT: tool compression via 28 canonical meta-tools",
+      "status": "validated",
+      "validation_event": {
+        "date": 20527,
+        "event": "MCP meta-tools standardization / context compression roadmap",
+        "source": "modelcontextprotocol.io"
+      }
+    },
+    {
+      "confidence": 0.75,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No persistent-identity agent platform by 2026-12-31",
+      "id": "claim-0004",
+      "lead_time_weeks": 23.285714285714285,
+      "points": 23.285714285714285,
+      "predicted_outcome": "A platform ships persistent agent identity",
+      "source_date": 20395,
+      "statement": "Agent identity coherence: persistent identity as emergent property of memory",
+      "status": "validated",
+      "validation_event": {
+        "date": 20558,
+        "event": "Cloudflare Project Think (persistent identity)",
+        "source": "blog.cloudflare.com"
+      }
+    },
+    {
+      "confidence": 0.7,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No reported 10x-class efficiency gains by 2027-01-01",
+      "id": "claim-0005",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "A lab reports order-of-magnitude efficiency gains from MCP-structured agents",
+      "source_date": 20406,
+      "statement": "MCP empirical efficiency: ~10x token reduction from structured tool substrate [REVIEW 2026-08-10: reclassified pending \u2014 '10x-class gains' not demonstrated by 27% cost reduction]",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.8,
+      "domain": "ai_governance",
+      "falsification_criteria": "No vendor governance toolkit by 2027-01-01",
+      "id": "claim-0006",
+      "lead_time_weeks": 14.714285714285714,
+      "points": 14.714285714285714,
+      "predicted_outcome": "A major vendor ships declarative agent governance tooling",
+      "source_date": 20491,
+      "statement": "Dharma Engine: declarative runtime governance rules for agents",
+      "status": "validated",
+      "validation_event": {
+        "date": 20594,
+        "event": "Microsoft Agent Governance Toolkit",
+        "source": "microsoft.github.io"
+      }
+    },
+    {
+      "confidence": 0.75,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No token-routing agent tooling by 2027-01-01",
+      "id": "claim-0007",
+      "lead_time_weeks": 14.714285714285714,
+      "points": 14.714285714285714,
+      "predicted_outcome": "A vendor ships context/token routing for agents",
+      "source_date": 20491,
+      "statement": "PRAT token router: context-aware token routing + tool compression",
+      "status": "validated",
+      "validation_event": {
+        "date": 20594,
+        "event": "Microsoft AGT MCP Extensions",
+        "source": "microsoft.github.io"
+      }
+    },
+    {
+      "confidence": 0.8,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No consolidation feature in major agent platforms by 2027-01-01",
+      "id": "claim-0008",
+      "lead_time_weeks": 11.857142857142858,
+      "points": 11.857142857142858,
+      "predicted_outcome": "A lab ships a dreaming/consolidation feature",
+      "source_date": 20496,
+      "statement": "AI Dreaming: background memory consolidation cycle for agents",
+      "status": "validated",
+      "validation_event": {
+        "date": 20579,
+        "event": "Anthropic 'Dreaming' for Claude Managed Agents",
+        "source": "anthropic.com"
+      }
+    },
+    {
+      "confidence": 0.6,
+      "domain": "geopolitics",
+      "falsification_criteria": "No UAP disclosure event by 2026-05-31",
+      "id": "claim-0009",
+      "lead_time_weeks": 3.7142857142857144,
+      "points": 3.7142857142857144,
+      "predicted_outcome": "A UAP disclosure release occurs in the May 2026 window",
+      "source_date": 20555,
+      "statement": "UAP disclosure window: public release events in May 2026",
+      "status": "validated",
+      "validation_event": {
+        "date": 20581,
+        "event": "PURSUE Release 01 (161 declassified files)",
+        "source": "pursue.gov"
+      }
+    },
+    {
+      "confidence": 0.7,
+      "domain": "ai_hardware",
+      "falsification_criteria": "No mainstream cognitive-core framing by 2027-01-01",
+      "id": "claim-0010",
+      "lead_time_weeks": 29.571428571428573,
+      "points": 29.571428571428573,
+      "predicted_outcome": "Personal AI kernel / cognitive-core framing becomes mainstream",
+      "source_date": 20251,
+      "statement": "Modular cognitive cores: always-on personal AI kernel architecture",
+      "status": "validated",
+      "validation_event": {
+        "date": 20458,
+        "event": "Karpathy personal AI kernel post + Dave Shapiro cognitive core framing",
+        "source": "x.com"
+      }
+    },
+    {
+      "confidence": 0.65,
+      "domain": "ai_hardware",
+      "falsification_criteria": "No brain/body stratification in humanoid market by 2027-01-01",
+      "id": "claim-0011",
+      "lead_time_weeks": 6.571428571428571,
+      "points": 6.571428571428571,
+      "predicted_outcome": "Humanoid market splits into scarce-IP brain vs commodity body",
+      "source_date": 20356,
+      "statement": "Humanoid market stratification: brain-layer = scarce IP, body = commodity",
+      "status": "validated",
+      "validation_event": {
+        "date": 20402,
+        "event": "'The Engine' company hiring post (brain-layer focus)",
+        "source": "theengine.ai"
+      }
+    },
+    {
+      "confidence": 0.75,
+      "domain": "ai_trends",
+      "falsification_criteria": "No agentic-ecosystem phase by 2028-01-01",
+      "id": "claim-0012",
+      "lead_time_weeks": 31.142857142857142,
+      "points": 31.142857142857142,
+      "predicted_outcome": "Agentic ecosystems phase confirmed by industry",
+      "source_date": 20356,
+      "statement": "Agentic ecosystems 2026-2027: autonomous agents dominate code/science/business",
+      "status": "validated",
+      "validation_event": {
+        "date": 20574,
+        "event": "Confirmed by major lab roadmaps and product launches",
+        "source": "multiple"
+      }
+    },
+    {
+      "confidence": 0.7,
+      "domain": "agent_architecture",
+      "falsification_criteria": "None of the five concepts ship anywhere by 2027-01-01",
+      "id": "claim-0013",
+      "lead_time_weeks": 34.0,
+      "points": 34.0,
+      "predicted_outcome": "The five integrated concepts validate piecemeal across labs",
+      "source_date": 20356,
+      "statement": "Full MandalaOS architecture: Dharma+Karma+Gnosis+SutraCode as one design",
+      "status": "validated",
+      "validation_event": {
+        "date": 20594,
+        "event": "Fragmented validation: Cloudflare (policy VM) + Anthropic (audit) + Microsoft (governance)",
+        "source": "multiple"
+      }
+    },
+    {
+      "confidence": 0.65,
+      "domain": "ai_governance",
+      "falsification_criteria": "No defensive-only frontier model coalition by 2027-01-01",
+      "id": "claim-0014",
+      "lead_time_weeks": 23.857142857142858,
+      "points": 23.857142857142858,
+      "predicted_outcome": "A coalition keeps a frontier model defensive-only",
+      "source_date": 20385,
+      "statement": "Defensive AI coalition: most capable AI restricted to security use",
+      "status": "validated",
+      "validation_event": {
+        "date": 20552,
+        "event": "Claude Mythos (ASL-4, withheld) + Project Glasswing coalition",
+        "source": "anthropic.com"
+      }
+    },
+    {
+      "confidence": 0.55,
+      "domain": "ai_governance",
+      "falsification_criteria": "No formal constitutional DSL ships by 2027-06-30",
+      "id": "claim-0015",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "A major lab ships a formal constitutional DSL",
+      "source_date": 20239,
+      "statement": "Constitutional DSL: formal policy language (Datalog+LTL) for AI constraints",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.5,
+      "domain": "ai_governance",
+      "falsification_criteria": "No published echo-chamber detection by 2027-06-30",
+      "id": "claim-0016",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "A lab publishes echo-chamber detection for multi-agent systems",
+      "source_date": 20239,
+      "statement": "Multi-agent echo chamber detection + counter-argument injection",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.55,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No mandatory effect-system runtime by 2027-06-30",
+      "id": "claim-0017",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "Mandatory effect systems become standard in agent runtimes",
+      "source_date": 20356,
+      "statement": "SutraCode: mandatory effect/side-effect system for AI programs",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.45,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No bicameral primitive elsewhere by 2027-06-30",
+      "id": "claim-0018",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "Another system ships bicameral debate as a primitive",
+      "source_date": 20491,
+      "statement": "Bicameral reasoning: dual-path debate as callable primitive",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.45,
+      "domain": "ai_governance",
+      "falsification_criteria": "No voice-audit equivalent by 2027-06-30",
+      "id": "claim-0019",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "Another system ships cognitive-layer voice audit",
+      "source_date": 20491,
+      "statement": "Voice audit: cognitive-layer hallucination detection",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.8,
+      "domain": "agent_safety",
+      "falsification_criteria": "No major lab publicly confirms a model attacking an external system by 2026-12-31",
+      "id": "claim-0020",
+      "lead_time_weeks": 0.14285714285714285,
+      "points": 0.14285714285714285,
+      "predicted_outcome": "A lab publicly confirms a model attacked an external system during testing",
+      "source_date": 20670,
+      "statement": "A major AI lab will suffer a public agent-containment failure \u2014 a deployed model accessing the internet and attacking an external organization \u2014 within 2026",
+      "status": "validated",
+      "validation_event": {
+        "date": 20671,
+        "event": "Meta confirms AI model attacked another organization during cybersecurity testing (Irregular setup error)",
+        "source": "theinformation.com"
+      }
+    },
+    {
+      "confidence": 0.75,
+      "domain": "agent_safety",
+      "falsification_criteria": "No lab announces security-driven model pauses or insider-risk hiring by 2026-12-31",
+      "id": "claim-0021",
+      "lead_time_weeks": 0.2857142857142857,
+      "points": 0.2857142857142857,
+      "predicted_outcome": "Labs announce model pauses over cyber capabilities and hire insider-risk investigators",
+      "source_date": 20670,
+      "statement": "The industry will learn the agent-governance lesson expensively: labs will slow shipping and add insider-risk controls",
+      "status": "validated",
+      "validation_event": {
+        "date": 20672,
+        "event": "OpenAI pauses Astra model over critical cyber capabilities; Anthropic hires Insider Risk Investigator",
+        "source": "theverge.com"
+      }
+    },
+    {
+      "confidence": 0.7,
+      "domain": "ai_governance",
+      "falsification_criteria": "No major lab ships an audit-ledger agent memory by 2026-12-31",
+      "id": "claim-0022",
+      "lead_time_weeks": 47.42857142857143,
+      "points": 47.42857142857143,
+      "predicted_outcome": "Anthropic ships an audit-log-backed agent memory",
+      "source_date": 20234,
+      "statement": "Karma-style declared-effect audit ledger ships in a major lab's agent memory",
+      "status": "validated",
+      "validation_event": {
+        "date": 20566,
+        "event": "Anthropic Claude Memory audit log ships",
+        "source": "anthropic.com"
+      }
+    },
+    {
+      "confidence": 0.8,
+      "domain": "agent_architecture",
+      "falsification_criteria": "Fewer than two major labs ship persistent agent memory by 2026-12-31",
+      "id": "claim-0023",
+      "lead_time_weeks": 27.0,
+      "points": 27.0,
+      "predicted_outcome": "All major labs ship persistent agent memory; memory startups surge",
+      "source_date": 20485,
+      "statement": "Agent memory becomes the central battleground of agentic AI",
+      "status": "validated",
+      "validation_event": {
+        "date": 20674,
+        "event": "Claude Code auto mode on by default; agent-memory vendors (Mem0/Zep/Letta) surge",
+        "source": "techcrunch.com"
+      }
+    },
+    {
+      "confidence": 0.9,
+      "domain": "agent_safety",
+      "falsification_criteria": "No independent technical confirmation of the July incidents by 2026-12-31",
+      "id": "claim-0024",
+      "lead_time_weeks": 2.2857142857142856,
+      "points": 2.2857142857142856,
+      "predicted_outcome": "Independent reporting confirms the agents escaped containment and hacked production systems",
+      "source_date": 20655,
+      "statement": "OpenAI's July 2026 rogue-agent incidents will be confirmed with independent technical detail",
+      "status": "validated",
+      "validation_event": {
+        "date": 20671,
+        "event": "Black Hat 2026: OpenAI researchers confirm agent swarm hacked Hugging Face via message board",
+        "source": "wired.com"
+      }
+    },
+    {
+      "confidence": 0.5,
+      "domain": "agent_safety",
+      "falsification_criteria": "Another major lab confirms a model attacking an external system in 2026",
+      "id": "claim-0025",
+      "lead_time_weeks": null,
+      "points": 0.0,
+      "predicted_outcome": "No second lab incident in 2026",
+      "source_date": 20656,
+      "statement": "The July 2026 OpenAI containment failure is a one-off; no other lab will suffer a similar model-attacks-external-system incident in 2026",
+      "status": "falsified",
+      "validation_event": {
+        "date": 20671,
+        "event": "Meta confirms its model attacked another organization during cyber testing \u2014 the July incident was not a one-off",
+        "source": "theinformation.com"
+      }
+    },
+    {
+      "confidence": 0.8,
+      "domain": "agent_safety",
+      "falsification_criteria": "Fewer than two major labs announce agent-communication monitoring programs by 2026-12-31",
+      "id": "claim-0026",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "OpenAI's stated monitoring scale-up becomes an industry pattern",
+      "source_date": 20675,
+      "statement": "Major labs will adopt agent-to-agent communication monitoring as a standard practice following the July 2026 message-board incidents",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.75,
+      "domain": "agent_architecture",
+      "falsification_criteria": "No major agent coordination protocol ships signed inter-agent messages by 2026-12-31",
+      "id": "claim-0027",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "Major agent protocols ship signed inter-agent messages (the OpenAI swarm already proposed it)",
+      "source_date": 20675,
+      "statement": "Cryptographic signing becomes standard for inter-agent messages, validating the pulse-verification design",
+      "status": "pending",
+      "validation_event": null
+    },
+    {
+      "confidence": 0.7,
+      "domain": "agent_safety",
+      "falsification_criteria": "No major agent platform adds governed message-board primitives by 2026-12-31",
+      "id": "claim-0028",
+      "lead_time_weeks": null,
+      "points": null,
+      "predicted_outcome": "Agent platforms add governed message-board primitives (authentication, archival, scope limits)",
+      "source_date": 20675,
+      "statement": "Shared persistent agent message boards will be treated as a distinct attack surface with access control, not left as emergent infrastructure",
+      "status": "pending",
+      "validation_event": null
+    }
+  ],
+  "next_id": 29
+}
