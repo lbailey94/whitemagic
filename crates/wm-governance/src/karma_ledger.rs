@@ -97,6 +97,8 @@ pub struct KarmaLedger {
     pending: std::sync::Mutex<PendingWrites>,
     /// Auto-flush threshold (0 = flush after every record).
     flush_threshold: usize,
+    /// Published Merkle anchors (karma.anchor).
+    anchors: std::sync::Mutex<Vec<MerkleCheckpoint>>,
 }
 
 /// Internal chain state protected by mutex.
@@ -211,6 +213,7 @@ impl KarmaLedger {
             }),
             pending: std::sync::Mutex::new(PendingWrites::new()),
             flush_threshold,
+            anchors: std::sync::Mutex::new(Vec::new()),
         };
         ledger.load_state()?;
         Ok(ledger)
@@ -889,6 +892,31 @@ impl KarmaLedger {
             }
             None => Ok(None),
         }
+    }
+
+    /// Publish a Merkle anchor and record it in the anchor history
+    /// (karma.anchor). The anchor is persisted to LMDB and kept in the
+    /// in-memory anchor list for this process.
+    pub fn anchor(&self) -> Result<MerkleCheckpoint> {
+        let checkpoint = self.publish_merkle_root()?;
+        if let Ok(mut anchors) = self.anchors.lock() {
+            anchors.push(checkpoint.clone());
+        }
+        Ok(checkpoint)
+    }
+
+    /// All anchors published in this process, plus the last persisted one
+    /// (karma.anchor_status). Newest first.
+    pub fn anchors(&self) -> Result<Vec<MerkleCheckpoint>> {
+        let mut all: Vec<MerkleCheckpoint> =
+            self.anchors.lock().map(|a| a.clone()).unwrap_or_default();
+        if let Some(persisted) = self.get_merkle_root()? {
+            if !all.iter().any(|a| a.root == persisted.root) {
+                all.push(persisted);
+            }
+        }
+        all.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        Ok(all)
     }
 }
 

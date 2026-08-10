@@ -227,7 +227,39 @@ impl AcsExport for DharmaPolicy {
         }
         #[cfg(feature = "acs-yaml")]
         {
-            serde_yaml::to_string(&rules).unwrap_or_else(|_| "[]\n".to_string())
+            // Policy header with the ACS egress/output controls (Output
+            // checkpoint), then the converted rules.
+            let mut doc: Vec<Value> = Vec::new();
+            doc.push(json!({
+                "id": "policy_egress",
+                "checkpoint": "output",
+                "action": if self.tier2_deny_unknown_egress { "block" } else { "log" },
+                "condition": format!(
+                    "tier2_deny_unknown_egress={} allowlist={:?}",
+                    self.tier2_deny_unknown_egress, self.egress_allowlist
+                ),
+                "scope": Some("egress"),
+            }));
+            doc.push(json!({
+                "id": "policy_output_validation",
+                "checkpoint": "output",
+                "action": if self.tier3_output_validation { "warn" } else { "log" },
+                "condition": format!(
+                    "tier3_output_validation={} output_max_bytes={}",
+                    self.tier3_output_validation, self.output_max_bytes
+                ),
+                "scope": Some("output"),
+            }));
+            for rule in rules {
+                doc.push(json!({
+                    "id": rule.id,
+                    "checkpoint": checkpoint_for_rule(rule).as_str(),
+                    "action": if rule.sutra == "Ahimsa" { "block" } else { "warn" },
+                    "condition": format!("sutra == {:?}", rule.sutra),
+                    "scope": Some("galaxy"),
+                }));
+            }
+            serde_yaml::to_string(&doc).unwrap_or_else(|_| "[]\n".to_string())
         }
         #[cfg(not(feature = "acs-yaml"))]
         {
@@ -255,7 +287,7 @@ impl AcsExport for DharmaPolicy {
             covered_count: covered.len(),
             covered,
             missing,
-            policy_version: "5.6.0".to_string(),
+            policy_version: "5.7.0".to_string(),
         }
     }
 }

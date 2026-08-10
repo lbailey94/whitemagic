@@ -40,6 +40,7 @@ pub mod bayesian_tools;
 pub mod bicameral;
 pub mod boundary;
 pub mod claims_tools;
+pub mod code;
 pub mod common;
 pub mod conformal;
 pub mod consciousness;
@@ -47,6 +48,7 @@ pub mod constellation;
 pub mod correlation;
 pub mod dharma;
 pub mod drive;
+pub mod firewall;
 pub mod galaxy;
 pub mod graph;
 pub mod homeostasis;
@@ -62,6 +64,7 @@ pub mod reasoning;
 pub mod research;
 pub mod resonance;
 pub mod rsi;
+pub mod sandbox;
 pub mod sangha_tools;
 pub mod self_play;
 pub mod selfmodel;
@@ -102,7 +105,10 @@ pub use consciousness::{
 };
 pub use constellation::{ConstellationDetectTool, ConstellationListTool};
 pub use correlation::{CorrelationAnalyzeTool, GodNodesTool};
-pub use dharma::{DharmaAcsTool, DharmaAuditTool, DharmaRulesTool};
+pub use dharma::{
+    DharmaAcsTool, DharmaAuditTool, DharmaEscalateTool, DharmaResolveReviewTool,
+    DharmaReviewQueueTool, DharmaRulesTool,
+};
 pub use drive::{DriveEventTool, DriveSnapshotTool};
 pub use galaxy::{
     GalaxyBackupTool, GalaxyDashboardTool, GalaxyExportTool, GalaxyHealthTool, GalaxyImportTool,
@@ -116,7 +122,7 @@ pub use homeostasis::{
 pub use imagination::{
     ImaginePredictTool, ImagineReflectTool, ImagineScenarioTool, register_imagination,
 };
-pub use karma::{KarmaClearTool, KarmaHistoryTool};
+pub use karma::{KarmaAnchorTool, KarmaClearTool, KarmaHistoryTool, KarmaVerifyChainTool};
 pub use knowledge_graph::{KgExtractTool, KgQueryTool, KgTopTool};
 pub use memory_ops::{
     MemoryBatchReadTool, MemoryConsolidateTool, MemoryDecayTool, MemoryDeduplicateTool,
@@ -192,6 +198,11 @@ pub fn register_expansion(
     reflex_loop: Option<Arc<std::sync::Mutex<ReflexLoop>>>,
     gan_ying_bus: Option<&Arc<std::sync::Mutex<GanYingBus>>>,
     transaction_state: TransactionState,
+    resource_rules: Option<&Arc<wm_governance::ResourceRules>>,
+    escalation_queue: Option<&Arc<std::sync::Mutex<wm_governance::EscalationQueue>>>,
+    dharma_gate: Option<&Arc<wm_governance::DharmaGate>>,
+    firewall: Option<&Arc<crate::expansion::firewall::TxFirewall>>,
+    code_graph: Option<&Arc<std::sync::Mutex<crate::expansion::code::CodeGraph>>>,
 ) -> wm_dispatch::ToolRegistry {
     let mut reg = registry
         // Memory ops (7)
@@ -277,7 +288,9 @@ pub fn register_expansion(
     if let Some(k) = karma {
         reg = reg
             .register(Arc::new(KarmaHistoryTool::new(k.clone())))
-            .register(Arc::new(KarmaClearTool::new(k)));
+            .register(Arc::new(KarmaVerifyChainTool::new(k.clone())))
+            .register(Arc::new(KarmaClearTool::new(k.clone())))
+            .register(Arc::new(KarmaAnchorTool::new(k)));
     }
     let mut reg = reg
         // Dharma (3)
@@ -414,6 +427,30 @@ pub fn register_expansion(
 
     // Research tools (3) — topic, repo, rabbit_hole
     reg = register_research(&reg, store);
+
+    // Dharma escalation (3) — escalate, review_queue, resolve_review
+    if let (Some(queue), Some(gate)) = (escalation_queue, dharma_gate) {
+        reg = reg
+            .register(Arc::new(DharmaEscalateTool::new(
+                gate.clone(),
+                queue.clone(),
+            )))
+            .register(Arc::new(DharmaReviewQueueTool::new(queue.clone())))
+            .register(Arc::new(DharmaResolveReviewTool::new(queue.clone())));
+    }
+
+    // Sandbox tools (2) — set_limits, limits
+    reg = crate::expansion::sandbox::register_sandbox(&reg, resource_rules);
+
+    // Transaction firewall (2) — set_policy, status
+    if let Some(fw) = firewall {
+        reg = crate::expansion::firewall::register_firewall(&reg, fw.clone());
+    }
+
+    // Code graph tools (4) — graph, query, affected_by, fragment.search
+    if let Some(cg) = code_graph {
+        reg = crate::expansion::code::register_code(&reg, cg.clone());
+    }
 
     reg
 }
