@@ -664,7 +664,7 @@ impl McpServer {
             reflex_table,
             timescale_bus,
             workspace,
-            self_model,
+            self_model.clone(),
             bicameral,
             drive_core,
             autonomic,
@@ -790,6 +790,40 @@ impl McpServer {
                 },
                 Err(e) => {
                     tracing::warn!(path = %claims_path.display(), error = %e, "Cannot read claims ledger file");
+                }
+            }
+        }
+
+        // Restore persisted self-model state (metric histories, alert rules,
+        // calibrator) — `wm doctor` also reads this file for live drift health.
+        let self_model_path = store_path
+            .parent()
+            .unwrap_or(store_path)
+            .join("self_model.json");
+        if self_model_path.exists() {
+            match std::fs::read_to_string(&self_model_path) {
+                Ok(contents) => match serde_json::from_str::<Value>(&contents) {
+                    Ok(json) => {
+                        if let Ok(model) = self_model.lock() {
+                            match model.from_json(&json) {
+                                Ok(()) => tracing::info!(
+                                    path = %self_model_path.display(),
+                                    "Loaded persisted self-model state"
+                                ),
+                                Err(e) => tracing::warn!(
+                                    path = %self_model_path.display(),
+                                    error = %e,
+                                    "Failed to restore self-model state"
+                                ),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(path = %self_model_path.display(), error = %e, "Self-model state file unparseable");
+                    }
+                },
+                Err(e) => {
+                    tracing::warn!(path = %self_model_path.display(), error = %e, "Cannot read self-model state file");
                 }
             }
         }
@@ -1365,6 +1399,33 @@ impl McpServer {
                     }
                     Err(e) => tracing::warn!(error = %e, "Failed to serialize claims ledger"),
                 }
+            }
+        }
+
+        // Save self-model state (metric histories, alert rules, calibrator) —
+        // `wm doctor` reads this file at `<store_root>/self_model.json` for
+        // live conformal coverage / Brier drift health.
+        {
+            let path = store_dir
+                .parent()
+                .unwrap_or(store_dir)
+                .join("self_model.json");
+            let model_json = match self.self_model.lock() {
+                Ok(model) => model.to_json(),
+                Err(e) => {
+                    tracing::warn!(error = %e, "Failed to lock self-model for save");
+                    serde_json::json!({})
+                }
+            };
+            match serde_json::to_string_pretty(&model_json) {
+                Ok(json) => {
+                    if let Err(e) = std::fs::write(&path, json) {
+                        tracing::warn!(path = %path.display(), error = %e, "Failed to save self-model state");
+                    } else {
+                        tracing::info!(path = %path.display(), "Saved self-model state");
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to serialize self-model state"),
             }
         }
     }
@@ -3586,6 +3647,18 @@ mod tests {
                 learned.record_phase(1, false, 0.2, 200);
             }
 
+            // Record conformal coverage in the self-model (drift health)
+            server
+                .self_model()
+                .lock()
+                .unwrap()
+                .record(wm_selfmodel::MetricKind::ConformalCoverage, 0.92);
+            server
+                .self_model()
+                .lock()
+                .unwrap()
+                .record(wm_selfmodel::MetricKind::ConformalCoverage, 0.88);
+
             // Save mutable state
             server.save_mutable_state();
         }
@@ -3614,6 +3687,17 @@ mod tests {
                     assert_eq!(eff.runs, 1, "Phase 0 should have 1 run recorded");
                 }
             }
+
+            // Self-model should have restored conformal coverage history
+            assert_eq!(
+                server
+                    .self_model()
+                    .lock()
+                    .unwrap()
+                    .sample_count(wm_selfmodel::MetricKind::ConformalCoverage),
+                2,
+                "Self-model conformal coverage history should restore from disk"
+            );
         }
     }
 

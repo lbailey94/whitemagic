@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`wm-governance::acs`** — the five-checkpoint model (input / llm / state / tool_execution / output) mapped onto Dharma governance: `AcsCheckpoint`, `AcsAction` (allow→block severity ladder), `AcsRule` → `PolicyRule` conversion with sutra + OWASP mapping
 - **Policy YAML import/export** (`acs-yaml` feature, `serde_yaml`): `DharmaPolicy::to_acs_yaml()` renders the live policy as portable ACS policy YAML; `import_acs_yaml()` parses ACS policies into dharma rules unchanged. Feature-gated: `--features wm-governance/acs-yaml`
-- **`dharma.acs` tool** (202 → **203 tools**) — actions: `report` (per-checkpoint coverage table + percent), `export` (policy as ACS YAML), `import` (ACS YAML → dharma rules)
+- **`dharma.acs` tool** (202 → **204 tools**, with `claims`) — actions: `report` (per-checkpoint coverage table + percent), `export` (policy as ACS YAML), `import` (ACS YAML → dharma rules)
 - **`AcsComplianceReport`** — per-checkpoint coverage with `coverage_percent()`, mirroring the OWASP coverage surface; `docs/ACS_ALIGNMENT.md` published as the positioning asset
 
 ### Prescience claims ledger (v26 `temporal_db` port)
@@ -20,10 +20,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`claims` tool** — actions: `add`, `resolve`, `status`, `list`; ledger persists to `<store>/claims_ledger.json` on shutdown, restored on startup
 - The falsified count is always reported alongside the score — honesty is part of the store, not an afterthought
 
+### Self-model persistence + doctor drift health
+
+- **`SelfModel::to_json()` / `from_json()`** — full state persistence: per-metric
+  histories with timestamps, alert rules, and confidence calibrator state. A
+  restarted process resumes forecasting, drift alerts, and confidence exactly
+  where it left off. Persisted to `<store>/self_model.json` on shutdown,
+  restored on startup
+- **`wm doctor` live drift health** — reads the persisted self-model and reports
+  latest conformal coverage + Brier score with the same thresholds as the alert
+  engine (0.85/0.80 coverage warning/critical, 0.15/0.30 Brier), including
+  trend direction and exit code contribution on critical drift. The
+  conformal → monitor → doctor loop is now closed
+- E2E: mutable-state persistence roundtrip now also verifies self-model
+  history restore
+
 ### Counts
 
-- 202 → **203 tools** (dharma.acs)
-- 3,311 → **3,332 tests passing, 0 failed** (+21)
+- 202 → **204 tools** (claims, dharma.acs)
+- 3,311 → **3,335 tests passing, 0 failed** (+24)
 - 0 clippy warnings, fmt clean, cargo-deny all green
 
 ## [5.5.0] — 2026-08-08

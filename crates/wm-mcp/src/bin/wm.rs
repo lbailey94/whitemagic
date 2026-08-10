@@ -709,6 +709,101 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         println!("       conformal.export > {}", conformal_path.display());
     }
 
+    // 11. Live calibration drift health (from persisted self-model metrics)
+    //     conformal.monitor / simulation.calibrate feed empirical coverage and
+    //     Brier scores into the self-model; the server persists it on shutdown
+    //     to `<store_root>/self_model.json`. The doctor reads the latest
+    //     values and applies the same alert thresholds as the alert engine.
+    let self_model_path = store_path.join("self_model.json");
+    if self_model_path.exists() {
+        match std::fs::read_to_string(&self_model_path) {
+            Ok(contents) => match serde_json::from_str::<serde_json::Value>(&contents) {
+                Ok(json) => {
+                    let samples = json
+                        .get("samples")
+                        .and_then(serde_json::Value::as_array)
+                        .cloned()
+                        .unwrap_or_default();
+                    for (key, name, warning, critical, higher_is_better) in [
+                        ("conformal_coverage", "Conformal coverage", 0.85, 0.80, true),
+                        ("brier_score", "Brier score", 0.15, 0.30, false),
+                    ] {
+                        let values: Vec<f64> = samples
+                            .iter()
+                            .filter_map(|s| {
+                                if s.get("kind").and_then(serde_json::Value::as_str) == Some(key) {
+                                    s.get("value").and_then(serde_json::Value::as_f64)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        if values.is_empty() {
+                            println!("[INFO] {name}: no samples recorded yet");
+                            println!(
+                                "       Run conformal.monitor (coverage) / simulation.calibrate (Brier) to build history"
+                            );
+                            continue;
+                        }
+                        let latest = *values.last().unwrap_or(&0.0);
+                        let bad = if higher_is_better {
+                            latest < critical
+                        } else {
+                            latest > critical
+                        };
+                        let warn = if higher_is_better {
+                            latest < warning
+                        } else {
+                            latest > warning
+                        };
+                        println!(
+                            "[{}] {name}: latest {latest:.3} ({} samples, {} trend)",
+                            if bad {
+                                "FAIL"
+                            } else if warn {
+                                "WARN"
+                            } else {
+                                "OK"
+                            },
+                            values.len(),
+                            if values.len() >= 2 {
+                                let a = values[values.len() - 2];
+                                if latest > a {
+                                    "rising"
+                                } else if latest < a {
+                                    "falling"
+                                } else {
+                                    "flat"
+                                }
+                            } else {
+                                "n/a"
+                            }
+                        );
+                        if bad {
+                            println!(
+                                "       [WARN] Below/above the {critical} critical threshold — calibration may have drifted; run conformal.monitor to evaluate live coverage"
+                            );
+                            issues += 1;
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("[WARN] Self-model state unparseable: {e}");
+                    issues += 1;
+                }
+            },
+            Err(e) => {
+                println!("[WARN] Cannot read self-model state: {e}");
+                issues += 1;
+            }
+        }
+    } else {
+        println!("[INFO] No self-model state persisted (self_model.json)");
+        println!(
+            "       Feed conformal.monitor / simulation.calibrate, then let the server save on shutdown"
+        );
+    }
+
     println!();
     println!("=== Doctor Summary ===");
     if issues == 0 {
