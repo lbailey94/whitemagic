@@ -59,6 +59,7 @@ pub mod nlu_tools;
 pub mod patterns;
 pub mod pipeline;
 pub mod reasoning;
+pub mod research;
 pub mod resonance;
 pub mod rsi;
 pub mod sangha_tools;
@@ -132,6 +133,9 @@ pub use pipeline::{
     PipelineCreateTool, PipelineListTool, PipelineStatusTool, SkillInvokeTool, SkillListTool,
 };
 pub use reasoning::{ExplainTool, ReasoningBicameralTool, ThinkTool};
+pub use research::{
+    ResearchRabbitHoleTool, ResearchRepoTool, ResearchTopicTool, register_research,
+};
 pub use resonance::{BusEmitTool, BusRecentTool, BusStatsTool};
 pub use rsi::{
     ActiveProposalsTool, DispatchTelemetry, FrictionAutoLogTool, FrictionLogTool,
@@ -407,6 +411,9 @@ pub fn register_expansion(
 
     // Web research tools (4) — fetch, deep_fetch, search, search_and_read
     reg = register_web(&reg);
+
+    // Research tools (3) — topic, repo, rabbit_hole
+    reg = register_research(&reg, store);
 
     reg
 }

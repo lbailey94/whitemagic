@@ -29,16 +29,16 @@ const USER_AGENT: &str = "WhiteMagic/5.6 (local research agent)";
 const MAX_REDIRECTS: u32 = 5;
 
 /// Result of a bounded fetch.
-struct Fetched {
-    url: String,
-    title: String,
+pub(crate) struct Fetched {
+    pub(crate) url: String,
+    pub(crate) title: String,
     /// Plain-text content (tags stripped, entities decoded).
-    content: String,
+    pub(crate) content: String,
     /// Raw body bytes (UTF-8 lossy) — used by search parsers.
-    raw: String,
-    status_code: u16,
-    duration_ms: f64,
-    pages: u32,
+    pub(crate) raw: String,
+    pub(crate) status_code: u16,
+    pub(crate) duration_ms: f64,
+    pub(crate) pages: u32,
 }
 
 /// Validate a URL for SSRF safety.
@@ -53,7 +53,7 @@ fn safe_url(url: &str) -> Result<String, wm_core::CoreError> {
 
 /// GET with manual redirect following — every hop re-validated for SSRF,
 /// body bounded, per-hop timeout.
-fn fetch_bounded(
+pub(crate) fn fetch_bounded(
     start_url: &str,
     max_chars: usize,
     timeout: Duration,
@@ -159,7 +159,7 @@ fn resolve_url(base: &str, location: &str) -> String {
 }
 
 /// Extract the first `<title>…</title>`.
-fn extract_title(html: &str) -> Option<String> {
+pub(crate) fn extract_title(html: &str) -> Option<String> {
     let lower = html.to_ascii_lowercase();
     let start = lower.find("<title")?;
     let gt = lower[start..].find('>')? + start + 1;
@@ -176,7 +176,7 @@ fn extract_title(html: &str) -> Option<String> {
 
 /// Strip HTML to plain text: drop script/style content, tags, and decode
 /// common entities. Compact and dependency-free.
-fn strip_html(html: &str) -> String {
+pub(crate) fn strip_html(html: &str) -> String {
     let mut out = String::with_capacity(html.len() / 2);
     let mut in_script = false;
     let mut chars = html.chars();
@@ -350,10 +350,10 @@ fn percent_encode_query(query: &str) -> String {
 
 /// One parsed search result.
 #[derive(Debug)]
-struct SearchResult {
-    url: String,
-    title: String,
-    snippet: String,
+pub(crate) struct SearchResult {
+    pub(crate) url: String,
+    pub(crate) title: String,
+    pub(crate) snippet: String,
 }
 
 /// Search Bing's HTML results (no API key) and parse `li.b_algo` blocks.
@@ -362,7 +362,7 @@ struct SearchResult {
 /// DuckDuckGo serves a bot-detection challenge (HTTP 202). If the markup
 /// changes such that no results parse, an empty result list is returned —
 /// callers surface that gracefully.
-fn web_search(
+pub(crate) fn web_search(
     query: &str,
     num_results: usize,
     timeout: Duration,

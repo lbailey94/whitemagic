@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 9, 2026 (v5.6.0 — 15 crates, 208 tools, 3,345 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. ACS compliance surface + prescience claims ledger shipped. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
+**Last updated**: August 9, 2026 (v5.6.0 — 15 crates, 211 tools, 3,352 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. ACS compliance surface + prescience claims ledger shipped. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
 
 ---
 
