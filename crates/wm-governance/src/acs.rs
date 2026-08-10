@@ -287,7 +287,7 @@ impl AcsExport for DharmaPolicy {
             covered_count: covered.len(),
             covered,
             missing,
-            policy_version: "5.7.0".to_string(),
+            policy_version: "5.7.1".to_string(),
         }
     }
 }

@@ -235,6 +235,53 @@ impl SanghaChat {
         }
     }
 
+    /// Read messages from a channel, protected by the community rule:
+    /// only messages that **verify against the mesh key and come from a
+    /// non-quarantined sender** are returned. A bad apple's messages are
+    /// cut off without disrupting the rest of the channel.
+    #[must_use]
+    pub fn read_trusted(
+        &self,
+        channel: &str,
+        after_id: Option<u64>,
+        key: &[u8],
+        quarantined: &[String],
+    ) -> Vec<ChatMessage> {
+        let Some(msgs) = self.channels.get(channel) else {
+            return Vec::new();
+        };
+        msgs.iter()
+            .filter(|m| after_id.is_none_or(|id| m.id > id))
+            .filter(|m| m.verify_signature(key))
+            .filter(|m| !quarantined.iter().any(|q| q == &m.sender))
+            .cloned()
+            .collect()
+    }
+
+    /// Purge every message sent by a peer from the log — used when the
+    /// peer is quarantined, so the bad apple's words do not linger in
+    /// the community's channels. Returns the number of messages removed.
+    pub fn purge_sender(&mut self, sender: &str, channel: Option<&str>) -> usize {
+        let mut removed = 0usize;
+        match channel {
+            Some(ch) => {
+                if let Some(msgs) = self.channels.get_mut(ch) {
+                    let before = msgs.len();
+                    msgs.retain(|m| m.sender != sender);
+                    removed = before - msgs.len();
+                }
+            }
+            None => {
+                for msgs in self.channels.values_mut() {
+                    let before = msgs.len();
+                    msgs.retain(|m| m.sender != sender);
+                    removed += before - msgs.len();
+                }
+            }
+        }
+        removed
+    }
+
     /// Inject a message directly into the channel log, bypassing signing.
     ///
     /// Intentionally exposed for adversarial testing: simulates an attacker

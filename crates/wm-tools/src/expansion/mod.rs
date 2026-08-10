@@ -149,7 +149,8 @@ pub use rsi::{
     RedteamFromFrictionTool, RedteamProposalsTool, friction_hash, friction_hash_exists,
 };
 pub use sangha_tools::{
-    SanghaChatTool, SanghaDiscoverTool, SanghaLocksTool, SanghaPeersTool, SanghaSignalTool,
+    SanghaChatTool, SanghaDiscoverTool, SanghaLocksTool, SanghaPeersTool, SanghaQuarantineTool,
+    SanghaSignalTool,
 };
 pub use self_play::{
     SelfPlayExportTool, SelfPlayRunTool, SelfPlayStatusTool, SharedSelfPlayLoop,

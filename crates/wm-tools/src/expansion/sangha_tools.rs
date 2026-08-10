@@ -440,6 +440,167 @@ impl Tool for SanghaLocksTool {
     }
 }
 
+// ── sangha.quarantine ─────────────────────────────────────────────────
+
+/// `sangha.quarantine` — community governance for the Sangha mesh.
+///
+/// Cuts a bad apple off from the mesh (quarantine), restores it (release),
+/// or inspects the quarantine list. A quarantined peer's messages are
+/// purged and filtered out by the community read path, its locks are
+/// revoked, and it cannot re-register until released — one bad apple must
+/// not spoil the whole bunch.
+pub struct SanghaQuarantineTool {
+    discovery: Arc<Mutex<PeerDiscovery>>,
+    chat: Arc<Mutex<SanghaChat>>,
+    lock_manager: Arc<Mutex<ResourceLockManager>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SanghaQuarantineTool {
+    pub fn new(
+        discovery: Arc<Mutex<PeerDiscovery>>,
+        chat: Arc<Mutex<SanghaChat>>,
+        lock_manager: Arc<Mutex<ResourceLockManager>>,
+    ) -> Self {
+        Self {
+            discovery,
+            chat,
+            lock_manager,
+            stats: ToolStats::default(),
+            effects: EffectRow {
+                writes: vec![Resource::Galaxy("sangha".into())],
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for SanghaQuarantineTool {
+    fn name(&self) -> &str {
+        "sangha.quarantine"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Room
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Community governance for the Sangha mesh (actions: quarantine, release, list). quarantine: peer_id (required) + reason — revokes the peer's locks and purges its messages; release: peer_id; list: show quarantined peers."
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let action = args.get("action").and_then(Value::as_str).unwrap_or("list");
+        match action {
+            "quarantine" => {
+                let peer_id = args.get("peer_id").and_then(Value::as_str).ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs("peer_id required for quarantine".into())
+                })?;
+                let reason = args
+                    .get("reason")
+                    .and_then(Value::as_str)
+                    .unwrap_or("community governance action");
+                let mut discovery = self
+                    .discovery
+                    .lock()
+                    .map_err(|e| wm_core::CoreError::Tool(format!("sangha discovery lock: {e}")))?;
+                let quarantined = discovery.quarantine(peer_id, reason);
+                // Revoke everything the bad apple holds so the community
+                // is never held hostage by its resources.
+                let revoked = if quarantined {
+                    self.lock_manager
+                        .lock()
+                        .map(|mut lm| lm.revoke_peer(peer_id))
+                        .unwrap_or(0)
+                } else {
+                    0
+                };
+                // Purge the bad apple's messages from every channel so its
+                // words do not linger in the community's logs.
+                let purged = if quarantined {
+                    self.chat
+                        .lock()
+                        .map(|mut c| {
+                            let channel = args
+                                .get("channel")
+                                .and_then(Value::as_str)
+                                .map(str::to_string);
+                            c.purge_sender(peer_id, channel.as_deref())
+                        })
+                        .unwrap_or(0)
+                } else {
+                    0
+                };
+                Ok(json!({
+                    "status": if quarantined { "success" } else { "error" },
+                    "action": "quarantine",
+                    "peer_id": peer_id,
+                    "quarantined": quarantined,
+                    "reason": reason,
+                    "locks_revoked": revoked,
+                    "messages_purged": purged,
+                    "message": if quarantined {
+                        format!("peer {peer_id} quarantined ({reason}); {revoked} lock(s) revoked, {purged} message(s) purged")
+                    } else {
+                        format!("peer {peer_id} unknown or already quarantined")
+                    },
+                }))
+            }
+            "release" => {
+                let peer_id = args.get("peer_id").and_then(Value::as_str).ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs("peer_id required for release".into())
+                })?;
+                let mut discovery = self
+                    .discovery
+                    .lock()
+                    .map_err(|e| wm_core::CoreError::Tool(format!("sangha discovery lock: {e}")))?;
+                let released = discovery.release_quarantine(peer_id);
+                Ok(json!({
+                    "status": if released { "success" } else { "error" },
+                    "action": "release",
+                    "peer_id": peer_id,
+                    "released": released,
+                    "message": if released {
+                        format!("peer {peer_id} released from quarantine — it may rejoin the mesh")
+                    } else {
+                        format!("peer {peer_id} not quarantined or unknown")
+                    },
+                }))
+            }
+            "list" => {
+                let discovery = self
+                    .discovery
+                    .lock()
+                    .map_err(|e| wm_core::CoreError::Tool(format!("sangha discovery lock: {e}")))?;
+                let quarantined: Vec<Value> = discovery
+                    .quarantined()
+                    .iter()
+                    .map(|p| {
+                        json!({
+                            "peer_id": p.id,
+                            "address": p.address,
+                            "reason": p.quarantine_reason,
+                        })
+                    })
+                    .collect();
+                Ok(json!({
+                    "status": "success",
+                    "action": "list",
+                    "quarantined_count": quarantined.len(),
+                    "quarantined": quarantined,
+                }))
+            }
+            other => Err(wm_core::CoreError::InvalidArgs(format!(
+                "unknown sangha.quarantine action: {other}"
+            ))),
+        }
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────
 
 fn parse_capability(s: &str) -> PeerCapability {
@@ -478,10 +639,15 @@ pub fn register_sangha(
 ) -> wm_dispatch::ToolRegistry {
     registry
         .register(Arc::new(SanghaPeersTool::new(discovery.clone())))
-        .register(Arc::new(SanghaDiscoverTool::new(discovery)))
+        .register(Arc::new(SanghaDiscoverTool::new(discovery.clone())))
         .register(Arc::new(SanghaSignalTool::new(broadcast)))
-        .register(Arc::new(SanghaChatTool::new(chat)))
-        .register(Arc::new(SanghaLocksTool::new(lock_manager)))
+        .register(Arc::new(SanghaChatTool::new(chat.clone())))
+        .register(Arc::new(SanghaLocksTool::new(lock_manager.clone())))
+        .register(Arc::new(SanghaQuarantineTool::new(
+            discovery,
+            chat,
+            lock_manager,
+        )))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -501,6 +667,69 @@ mod tests {
     }
     fn test_locks() -> Arc<Mutex<ResourceLockManager>> {
         Arc::new(Mutex::new(ResourceLockManager::default()))
+    }
+
+    #[tokio::test]
+    async fn sangha_quarantine_isolates_and_releases() {
+        let discovery = test_discovery();
+        let chat = test_chat();
+        let locks = test_locks();
+        let tool = SanghaQuarantineTool::new(discovery.clone(), chat.clone(), locks.clone());
+        let mut ctx = Context::default();
+
+        // Register a rogue peer via the discovery directly.
+        {
+            let rogue = PeerInfo::new("rogue-1", "127.0.0.1:9001");
+            discovery
+                .lock()
+                .unwrap()
+                .discover_signed(rogue.signed(b"mesh-secret"), b"mesh-secret")
+                .unwrap();
+        }
+        // It holds a lock that must be revoked on quarantine.
+        locks
+            .lock()
+            .unwrap()
+            .acquire_with_ttl("res:1", "rogue-1", 3600);
+        // And its messages must be purged on quarantine.
+        chat.lock().unwrap().send("gana:1", "rogue-1", "poison");
+
+        // Quarantine it.
+        let q = tool
+            .call(
+                &mut ctx,
+                json!({"action": "quarantine", "peer_id": "rogue-1", "reason": "malicious posts"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(q["status"], "success");
+        assert_eq!(q["locks_revoked"], 1);
+        assert_eq!(q["messages_purged"], 1);
+        assert!(discovery.lock().unwrap().is_quarantined("rogue-1"));
+        assert!(chat.lock().unwrap().read("gana:1", None).is_empty());
+
+        // List shows it.
+        let list = tool
+            .call(&mut ctx, json!({"action": "list"}))
+            .await
+            .unwrap();
+        assert_eq!(list["quarantined_count"], 1);
+
+        // Release restores it.
+        let rel = tool
+            .call(&mut ctx, json!({"action": "release", "peer_id": "rogue-1"}))
+            .await
+            .unwrap();
+        assert_eq!(rel["status"], "success");
+        assert!(!discovery.lock().unwrap().is_quarantined("rogue-1"));
+    }
+
+    #[tokio::test]
+    async fn sangha_quarantine_requires_peer_id() {
+        let tool = SanghaQuarantineTool::new(test_discovery(), test_chat(), test_locks());
+        let mut ctx = Context::default();
+        let result = tool.call(&mut ctx, json!({"action": "quarantine"})).await;
+        assert!(result.is_err());
     }
     #[tokio::test]
     async fn sangha_peers_returns_list() {

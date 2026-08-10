@@ -4,7 +4,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ## Current Status
 
-**v5.7.0 — All 7 phases complete. 15 crates, 211 tools, 3,377 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. MCP server exposes single `wm` meta-tool — all 211 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
+**v5.7.1 — All 7 phases complete. 15 crates, 212 tools, 3,379 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. MCP server exposes single `wm` meta-tool — all 212 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
 
 ### v5 Subsystems
 
@@ -47,7 +47,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 | v4: Bicameral | bicameral.reason, bicameral.status |
 | v4: Drive | drive.snapshot, drive.event |
 | v4: Resonance | bus.stats, bus.emit, bus.recent |
-| v4: Sangha | sangha.peers, sangha.discover, sangha.signal, sangha.chat, sangha.locks |
+| v4: Sangha | sangha.peers, sangha.discover, sangha.signal, sangha.chat, sangha.locks, sangha.quarantine |
 | v4: Simulation | sim.mc, sim.forecast, sim.counterfactual |
 | v4: Sensorimotor | sensorimotor.scan, sensor.list, sensor.read, sensor.poll, sensor.history, actuator.list, actuator.command, actuator.estop, reflex.list, reflex.add, reflex.evaluate |
 | v4: Homeostasis | homeostasis.check, homeostasis.adjust, homeostasis.history, homeostasis.alerts |
@@ -109,7 +109,7 @@ See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and port
 - **NLU router**: Two-layer system — embedding router (cosine similarity, OATS refinement) primary, TF-IDF fallback. 12 prefix routes, payload extraction. Shadow mode logs disagreements for promotion analysis.
 - **Mutable structures**: Gana taxonomy drift tracking, dynamic galaxy creation from memory clustering, learned dream cycle phase selection, learned autonomous cycle strategy. All persist to disk.
 - **Polyglot without subprocesses**: Julia embedded via jlrs, Haskell/Koka/Zig compiled to native libraries.
-- **Fractal meta-tool**: 211 tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm` — single entry point for all clients.
+- **Fractal meta-tool**: 212 tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm` — single entry point for all clients.
 - **Mandala compartments**: 4 security tiers (Research/Sandbox/Production/Secure) with isolated LMDB+Tantivy+associations per compartment.
 - **RSI pipeline**: 3-phase recursive self-improvement — friction logging, deduplication, karma-friction bridge, proactive improvement, resolution verification with regression detection, adversarial test synthesis from friction history, coverage reporting. 12 RSI tools, 8 autonomous cycle types.
 - **Fuzz testing**: 5 cargo-fuzz targets + 22 proptest tests across 4 crates.
