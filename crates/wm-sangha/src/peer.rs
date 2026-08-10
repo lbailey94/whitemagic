@@ -171,11 +171,16 @@ pub struct PeerInfo {
     /// Delegated by (peer ID that delegated authority to this peer, if any).
     #[serde(default)]
     pub delegated_by: Option<PeerId>,
-    /// HMAC-SHA256 signature over the identity payload (id, address,
-    /// capabilities, authority), when the mesh key is configured. Empty
-    /// when unsigned.
+    /// Ed25519 signature over the identity payload (id, address,
+    /// capabilities, authority, public key). Empty when unsigned.
     #[serde(default)]
     pub signature: String,
+    /// The peer's Ed25519 public key (hex) — its mesh identity. The
+    /// community binds this key to the peer ID on first registration and
+    /// rejects any later announcement that claims the same ID with a
+    /// different key.
+    #[serde(default)]
+    pub public_key: String,
     /// Whether this peer is quarantined — cut off from the community
     /// (messages rejected, locks revoked, re-registration refused) until
     /// explicitly released. One bad apple must not spoil the bunch.
@@ -203,34 +208,45 @@ impl PeerInfo {
             failed_interactions: 0,
             delegated_by: None,
             signature: String::new(),
+            public_key: String::new(),
             quarantined: false,
             quarantine_reason: None,
         }
     }
 
-    /// Compute the identity payload to sign (all fields except the signature).
+    /// Compute the identity payload to sign (all fields except the
+    /// signature and public key).
     #[must_use]
     pub fn signing_payload(&self) -> String {
         let without_sig = Self {
             signature: String::new(),
+            public_key: String::new(),
             ..self.clone()
         };
         serde_json::to_string(&without_sig).unwrap_or_default()
     }
 
-    /// Sign this peer's identity with the mesh key (HMAC-SHA256).
+    /// Sign this peer's identity with its own Ed25519 keypair. The public
+    /// key is embedded in the record and bound to the peer ID by the
+    /// registry on registration.
     #[must_use]
-    pub fn signed(mut self, key: &[u8]) -> Self {
-        if let Some(sig) = wm_core::sign_hmac(&self.signing_payload(), key) {
-            self.signature = sig;
-        }
+    pub fn signed(mut self, keypair: &crate::crypto::MeshKeyPair) -> Self {
+        self.public_key = keypair.public_key_hex();
+        self.signature = keypair.sign_hex(&self.signing_payload());
         self
     }
 
-    /// Verify this peer's identity signature against the mesh key.
+    /// Verify this peer's identity signature against its own public key.
     #[must_use]
-    pub fn verify_signature(&self, key: &[u8]) -> bool {
-        wm_core::verify_hmac(&self.signing_payload(), &self.signature, key)
+    pub fn verify_signature(&self) -> bool {
+        if self.public_key.is_empty() || self.signature.is_empty() {
+            return false;
+        }
+        crate::crypto::MeshKeyPair::verify_hex(
+            &self.signing_payload(),
+            &self.signature,
+            &self.public_key,
+        )
     }
 
     /// Record a heartbeat from this peer.
@@ -351,6 +367,7 @@ impl PeerInfo {
             failed_interactions: 0,
             delegated_by: Some(self.id.clone()),
             signature: String::new(),
+            public_key: String::new(),
             quarantined: false,
             quarantine_reason: None,
         })
@@ -377,6 +394,29 @@ impl Default for PeerDiscoveryConfig {
     }
 }
 
+/// Automatic quarantine policy — the community defends itself without
+/// waiting for a human decision.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoQuarantineConfig {
+    /// Whether auto-quarantine is active.
+    pub enabled: bool,
+    /// A peer is auto-quarantined after this many consecutive
+    /// verification failures (forged/unsigned messages, bad identities).
+    pub max_verification_failures: u32,
+    /// A peer whose trust score falls below this floor is auto-quarantined.
+    pub trust_floor: f32,
+}
+
+impl Default for AutoQuarantineConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            max_verification_failures: 3,
+            trust_floor: 0.2,
+        }
+    }
+}
+
 /// Peer discovery and registry — tracks all known peers in the mesh.
 pub struct PeerDiscovery {
     config: PeerDiscoveryConfig,
@@ -385,6 +425,10 @@ pub struct PeerDiscovery {
     total_heartbeats: u64,
     /// Total peers ever discovered (including evicted).
     total_discovered: u64,
+    /// Auto-quarantine policy.
+    auto_quarantine: AutoQuarantineConfig,
+    /// Consecutive verification failures per peer.
+    verification_failures: HashMap<PeerId, u32>,
 }
 
 impl Default for PeerDiscovery {
@@ -412,7 +456,110 @@ impl PeerDiscovery {
             peers: HashMap::new(),
             total_heartbeats: 0,
             total_discovered: 0,
+            auto_quarantine: AutoQuarantineConfig::default(),
+            verification_failures: HashMap::new(),
         }
+    }
+
+    /// Configure the automatic quarantine policy.
+    #[must_use]
+    pub const fn with_auto_quarantine(mut self, config: AutoQuarantineConfig) -> Self {
+        self.auto_quarantine = config;
+        self
+    }
+
+    /// Current auto-quarantine policy.
+    #[must_use]
+    pub fn auto_quarantine_config(&self) -> AutoQuarantineConfig {
+        self.auto_quarantine.clone()
+    }
+
+    /// Record a verification failure for a peer (forged signature, binding
+    /// mismatch, bad identity). When the configured threshold is reached
+    /// the peer is **automatically quarantined** — the community cuts the
+    /// bad apple off without waiting for a human decision. Returns `true`
+    /// if this failure triggered a new quarantine.
+    pub fn record_verification_failure(&mut self, peer_id: &str) -> bool {
+        let n = {
+            let failures = self
+                .verification_failures
+                .entry(peer_id.to_string())
+                .or_insert(0);
+            *failures += 1;
+            *failures
+        };
+        let already_quarantined = self.is_quarantined(peer_id);
+        if self.auto_quarantine.enabled
+            && n >= self.auto_quarantine.max_verification_failures
+            && !already_quarantined
+        {
+            self.quarantine(
+                peer_id,
+                &format!("auto-quarantine: {n} consecutive verification failures"),
+            );
+            return true;
+        }
+        false
+    }
+
+    /// Clear a peer's verification-failure counter (after a success).
+    pub fn record_verification_success(&mut self, peer_id: &str) {
+        self.verification_failures.remove(peer_id);
+    }
+
+    /// Record a failed interaction for a peer (trust decay) — delegates to
+    /// the peer's own `record_failure`.
+    pub fn record_failure_for(&mut self, peer_id: &str) -> bool {
+        if let Some(peer) = self.peers.get_mut(peer_id) {
+            peer.record_failure();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// The quarantine reason for a peer, if it is quarantined.
+    #[must_use]
+    pub fn quarantine_reason_of(&self, peer_id: &str) -> Option<String> {
+        self.get(peer_id)
+            .filter(|p| p.quarantined)
+            .and_then(|p| p.quarantine_reason.clone())
+    }
+
+    /// Consecutive verification failures for a peer.
+    #[must_use]
+    pub fn verification_failures(&self, peer_id: &str) -> u32 {
+        self.verification_failures
+            .get(peer_id)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// Quarantine a peer whose trust score has fallen below the configured
+    /// floor (trust decay → automatic isolation). Returns `true` if a new
+    /// quarantine was applied.
+    pub fn quarantine_if_untrusted(&mut self, peer_id: &str) -> bool {
+        if !self.auto_quarantine.enabled {
+            return false;
+        }
+        if self.is_quarantined(peer_id) {
+            return false;
+        }
+        let untrusted = self
+            .get(peer_id)
+            .is_some_and(|p| p.trust_score < self.auto_quarantine.trust_floor);
+        if untrusted {
+            self.quarantine(
+                peer_id,
+                &format!(
+                    "auto-quarantine: trust {:.2} fell below the {:.2} floor",
+                    self.get(peer_id).map_or(0.0, |p| p.trust_score),
+                    self.auto_quarantine.trust_floor
+                ),
+            );
+            return true;
+        }
+        false
     }
 
     /// Discover a new peer (or update an existing one).
@@ -426,17 +573,21 @@ impl PeerDiscovery {
         self.peers.insert(peer.id.clone(), peer);
     }
 
-    /// Discover a peer whose identity signature verifies against the mesh
-    /// key. Unsigned or wrongly-signed identities are rejected — an
-    /// attacker cannot impersonate a peer by spoofing its ID.
-    pub fn discover_signed(&mut self, peer: PeerInfo, key: &[u8]) -> Result<(), String> {
-        if peer.signature.is_empty() {
+    /// Discover a peer whose identity is self-signed with its own Ed25519
+    /// keypair, and bind the public key to the peer ID. Unsigned or
+    /// wrongly-signed identities are rejected — an attacker cannot
+    /// impersonate a peer by spoofing its ID, because the first-seen
+    /// public key is bound and any later announcement claiming the same
+    /// ID with a different key is refused. Quarantined peers cannot
+    /// re-register until released.
+    pub fn discover_signed(&mut self, peer: PeerInfo) -> Result<(), String> {
+        if peer.signature.is_empty() || peer.public_key.is_empty() {
             return Err(format!(
                 "peer '{}' announced without an identity signature",
                 peer.id
             ));
         }
-        if !peer.verify_signature(key) {
+        if !peer.verify_signature() {
             return Err(format!(
                 "peer '{}' failed identity verification (bad or forged signature)",
                 peer.id
@@ -454,6 +605,12 @@ impl PeerDiscovery {
                         .unwrap_or_default()
                 ));
             }
+            if existing.public_key != peer.public_key {
+                return Err(format!(
+                    "peer '{}' identity theft refused: public key changed from {} to {}",
+                    peer.id, existing.public_key, peer.public_key
+                ));
+            }
         }
         self.discover(peer);
         Ok(())
@@ -461,8 +618,25 @@ impl PeerDiscovery {
 
     /// Verify a stored peer's identity signature against the mesh key.
     #[must_use]
-    pub fn verify_peer(&self, peer_id: &str, key: &[u8]) -> bool {
-        self.get(peer_id).is_some_and(|p| p.verify_signature(key))
+    pub fn verify_peer(&self, peer_id: &str) -> bool {
+        self.get(peer_id).is_some_and(PeerInfo::verify_signature)
+    }
+
+    /// The public key bound to a peer ID, if registered.
+    #[must_use]
+    pub fn bound_public_key(&self, peer_id: &str) -> Option<String> {
+        self.get(peer_id).map(|p| p.public_key.clone())
+    }
+
+    /// Identity bindings for all registered peers (sender → public key),
+    /// for the community read path.
+    #[must_use]
+    pub fn identity_bindings(&self) -> std::collections::HashMap<String, String> {
+        self.peers
+            .iter()
+            .map(|(id, p)| (id.clone(), p.public_key.clone()))
+            .filter(|(_, pk)| !pk.is_empty())
+            .collect()
     }
 
     /// Quarantine a peer — cut it off from the community. Returns `false`
@@ -700,48 +874,103 @@ mod tests {
 
     #[test]
     fn peer_identity_signing_verifies() {
-        let key = b"mesh-secret";
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"node-1-seed");
         // Default authority is read_only.
         let peer = PeerInfo::new("node-1", "127.0.0.1:8080");
 
-        let signed = peer.clone().signed(key);
+        let signed = peer.clone().signed(&kp);
         assert!(!signed.signature.is_empty());
-        assert!(signed.verify_signature(key));
+        assert_eq!(signed.public_key, kp.public_key_hex());
+        assert!(signed.verify_signature());
 
         // Wrong key → forged identity rejected.
-        assert!(!signed.verify_signature(b"other-secret"));
+        let other = crate::crypto::MeshKeyPair::from_seed(b"other-seed");
+        assert!(!crate::crypto::MeshKeyPair::verify_hex(
+            &signed.signing_payload(),
+            &signed.signature,
+            &other.public_key_hex()
+        ));
 
         // Authority tampering (escalating privileges) → rejected.
         let mut escalated = signed;
         escalated.authority = PeerAuthority::full();
-        assert!(!escalated.verify_signature(key));
+        assert!(!escalated.verify_signature());
 
         // Unsigned identity never verifies.
-        assert!(!peer.verify_signature(key));
+        assert!(!peer.verify_signature());
+    }
+
+    #[test]
+    fn auto_quarantine_triggers_on_repeated_failures() {
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"node-seed");
+        let mut registry = PeerDiscovery::default();
+        registry
+            .discover_signed(PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp))
+            .unwrap();
+
+        // Two failures: nothing yet.
+        assert!(!registry.record_verification_failure("node-1"));
+        assert!(!registry.record_verification_failure("node-1"));
+        assert!(!registry.is_quarantined("node-1"));
+        assert_eq!(registry.verification_failures("node-1"), 2);
+
+        // Third failure crosses the default threshold (3) → auto-quarantine.
+        assert!(registry.record_verification_failure("node-1"));
+        assert!(registry.is_quarantined("node-1"));
+        let reason = registry.quarantine_reason_of("node-1").unwrap();
+        assert!(reason.contains("auto-quarantine"), "reason: {reason}");
+
+        // A success resets the counter (post-release).
+        registry.release_quarantine("node-1");
+        registry.record_verification_success("node-1");
+        assert_eq!(registry.verification_failures("node-1"), 0);
+    }
+
+    #[test]
+    fn auto_quarantine_triggers_on_trust_floor() {
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"node-seed");
+        let mut registry = PeerDiscovery::default();
+        registry
+            .discover_signed(PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp))
+            .unwrap();
+
+        // Decay trust below the default floor (0.2).
+        for _ in 0..12 {
+            registry.record_failure_for("node-1");
+        }
+        assert!(registry.quarantine_if_untrusted("node-1"));
+        assert!(registry.is_quarantined("node-1"));
     }
 
     #[test]
     fn discover_signed_rejects_forged_peers() {
-        let key = b"mesh-secret";
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"node-1-seed");
+        let attacker = crate::crypto::MeshKeyPair::from_seed(b"attacker-seed");
         let mut registry = PeerDiscovery::default();
 
-        // Legitimate peer joins the mesh.
-        let legit = PeerInfo::new("node-1", "127.0.0.1:8080").signed(key);
-        assert!(registry.discover_signed(legit, key).is_ok());
-        assert!(registry.verify_peer("node-1", key));
+        // Legitimate peer joins the mesh; its public key is bound to the ID.
+        let legit = PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp);
+        assert!(registry.discover_signed(legit).is_ok());
+        assert!(registry.verify_peer("node-1"));
+        assert_eq!(
+            registry.bound_public_key("node-1").as_deref(),
+            Some(kp.public_key_hex().as_str())
+        );
 
-        // An attacker spoofs node-1's ID with the wrong key.
-        let spoof = PeerInfo::new("node-1", "127.0.0.1:9999").signed(b"attacker-key");
-        assert!(registry.discover_signed(spoof, key).is_err());
+        // An attacker spoofs node-1's ID with a DIFFERENT key → refused
+        // (identity theft: the bound public key changed).
+        let spoof = PeerInfo::new("node-1", "127.0.0.1:9999").signed(&attacker);
+        assert!(registry.discover_signed(spoof).is_err());
 
         // An unsigned announcement is rejected outright.
         let unsigned = PeerInfo::new("node-2", "127.0.0.1:8081");
-        assert!(registry.discover_signed(unsigned, key).is_err());
+        assert!(registry.discover_signed(unsigned).is_err());
 
         // The legit peer's identity is untouched.
         let stored = registry.get("node-1").unwrap();
         assert_eq!(stored.address, "127.0.0.1:8080");
-        assert!(stored.verify_signature(key));
+        assert_eq!(stored.public_key, kp.public_key_hex());
+        assert!(stored.verify_signature());
     }
 
     #[test]

@@ -617,11 +617,13 @@ impl McpServer {
         // (Gan Ying Bus already created above and shared with sensorimotor tools)
         let peer_discovery = Arc::new(std::sync::Mutex::new(PeerDiscovery::default()));
         let signal_broadcast = Arc::new(std::sync::Mutex::new(SignalBroadcast::new(100)));
-        // Sangha chat signs every message with the mesh key, so peers can
-        // verify authorship — the trust primitive agent message boards
-        // require (cf. the July 2026 agent-incident reporting).
+        // Sangha chat signs every message with the node's Ed25519
+        // keypair, so peers can verify authorship and identity binding —
+        // the trust primitive agent message boards require (cf. the July
+        // 2026 agent-incident reporting).
         let sangha_chat = Arc::new(std::sync::Mutex::new(
-            SanghaChat::new(100).with_mesh_key(WM_MESH_KEY.as_bytes()),
+            SanghaChat::new(100)
+                .with_signing_key(wm_sangha::MeshKeyPair::from_seed(WM_MESH_KEY.as_bytes())),
         ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
 
@@ -2531,9 +2533,9 @@ impl McpServer {
     }
 }
 
-/// Default Sangha mesh key — signs inter-agent chat messages so peers
-/// can verify authorship and tamper-resistance. In production this should
-/// be overridden with a deployment-specific secret.
+/// Default seed for the node's Sangha signing keypair — signs inter-agent
+/// chat messages so peers can verify authorship and tamper-resistance. In
+/// production this should be overridden with a deployment-specific secret.
 const WM_MESH_KEY: &str = "wm-sangha-mesh-v5-default-key";
 
 #[cfg(test)]
@@ -2651,11 +2653,13 @@ mod tests {
         let gan_ying_bus = Arc::new(std::sync::Mutex::new(GanYingBus::default()));
         let peer_discovery = Arc::new(std::sync::Mutex::new(PeerDiscovery::default()));
         let signal_broadcast = Arc::new(std::sync::Mutex::new(SignalBroadcast::new(100)));
-        // Sangha chat signs every message with the mesh key, so peers can
-        // verify authorship — the trust primitive agent message boards
-        // require (cf. the July 2026 agent-incident reporting).
+        // Sangha chat signs every message with the node's Ed25519
+        // keypair, so peers can verify authorship and identity binding —
+        // the trust primitive agent message boards require (cf. the July
+        // 2026 agent-incident reporting).
         let sangha_chat = Arc::new(std::sync::Mutex::new(
-            SanghaChat::new(100).with_mesh_key(WM_MESH_KEY.as_bytes()),
+            SanghaChat::new(100)
+                .with_signing_key(wm_sangha::MeshKeyPair::from_seed(WM_MESH_KEY.as_bytes())),
         ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
 

@@ -1,10 +1,11 @@
 //! Inter-agent chat — topic-based messaging with persisted log.
 //!
-//! Messages are signed with the mesh key (HMAC-SHA256) when one is
-//! configured, so peers can verify authorship and tamper-resistance —
-//! the "message board" trust primitive that the July 2026 agent-incident
+//! Messages are signed with each sender's Ed25519 keypair, so peers can
+//! verify authorship, tamper-resistance, and identity binding — the
+//! "message board" trust primitive that the July 2026 agent-incident
 //! reports showed emerging organically (agents proposing cryptographic
-//! signing to root out imposters). WhiteMagic ships it by design.
+//! signing to root out imposters). WhiteMagic ships it by design, with
+//! asymmetric keys so no peer can forge another's identity.
 
 #![forbid(unsafe_code)]
 
@@ -12,6 +13,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::crypto::MeshKeyPair;
 use crate::peer::PeerId;
 
 // ── Chat Channel ──────────────────────────────────────────────────────
@@ -58,10 +60,14 @@ pub struct ChatMessage {
     pub content: String,
     /// Timestamp (Unix milliseconds).
     pub timestamp: i64,
-    /// HMAC-SHA256 signature over the message (hex), when the mesh key is
-    /// configured. Empty when unsigned.
+    /// Ed25519 signature over the message (hex), when the chat is
+    /// signing. Empty when unsigned.
     #[serde(default)]
     pub signature: String,
+    /// Sender's Ed25519 public key (hex) — the identity the signature
+    /// must verify against, and which the community binds to the peer ID.
+    #[serde(default)]
+    pub public_key: String,
 }
 
 impl ChatMessage {
@@ -75,32 +81,46 @@ impl ChatMessage {
             "content": self.content,
             "timestamp": self.timestamp,
             "signature": self.signature,
+            "public_key": self.public_key,
         })
     }
 
-    /// Compute the payload to sign (all fields except the signature).
+    /// Compute the payload to sign (all fields except signature and
+    /// public key).
     #[must_use]
     pub fn signing_payload(&self) -> String {
         let without_sig = Self {
             signature: String::new(),
+            public_key: String::new(),
             ..self.clone()
         };
         serde_json::to_string(&without_sig).unwrap_or_default()
     }
 
-    /// Sign this message with the mesh key (HMAC-SHA256).
+    /// Sign this message with the sender's keypair.
     #[must_use]
-    pub fn signed(mut self, key: &[u8]) -> Self {
-        if let Some(sig) = wm_core::sign_hmac(&self.signing_payload(), key) {
-            self.signature = sig;
-        }
+    pub fn signed(mut self, keypair: &MeshKeyPair) -> Self {
+        self.public_key = keypair.public_key_hex();
+        self.signature = keypair.sign_hex(&self.signing_payload());
         self
     }
 
-    /// Verify this message's signature against the mesh key.
+    /// Verify the signature against the public key carried on the message
+    /// (self-consistent check — detects tampering and forgery).
     #[must_use]
-    pub fn verify_signature(&self, key: &[u8]) -> bool {
-        wm_core::verify_hmac(&self.signing_payload(), &self.signature, key)
+    pub fn verify_signature(&self) -> bool {
+        if self.public_key.is_empty() || self.signature.is_empty() {
+            return false;
+        }
+        MeshKeyPair::verify_hex(&self.signing_payload(), &self.signature, &self.public_key)
+    }
+
+    /// Verify the message AND that the carried public key matches the key
+    /// the community has bound to this sender. An impostor cannot reuse a
+    /// peer ID with a different key.
+    #[must_use]
+    pub fn verify_as_sender(&self, bound_public_key: &str) -> bool {
+        self.verify_signature() && self.public_key == bound_public_key
     }
 }
 
@@ -118,9 +138,9 @@ pub struct SanghaChat {
     max_per_channel: usize,
     /// Total messages sent.
     total_messages: u64,
-    /// Mesh key (HMAC-SHA256) — signs every message sent and verifies
-    /// on read when configured.
-    mesh_key: Option<Vec<u8>>,
+    /// Ed25519 keypair — signs every message sent by this node and is
+    /// used to verify on read when configured.
+    signing_key: Option<MeshKeyPair>,
 }
 
 impl Default for SanghaChat {
@@ -134,7 +154,7 @@ impl std::fmt::Debug for SanghaChat {
         f.debug_struct("SanghaChat")
             .field("channels", &self.channels.len())
             .field("total_messages", &self.total_messages)
-            .field("signed", &self.mesh_key.is_some())
+            .field("signed", &self.signing_key.is_some())
             .finish_non_exhaustive()
     }
 }
@@ -169,22 +189,22 @@ impl SanghaChat {
             channels: HashMap::new(),
             max_per_channel,
             total_messages: 0,
-            mesh_key: None,
+            signing_key: None,
         }
     }
 
-    /// Configure the mesh key so every message is signed on send and can
-    /// be verified on read.
+    /// Configure the node's Ed25519 keypair so every message is signed
+    /// on send and can be verified on read.
     #[must_use]
-    pub fn with_mesh_key(mut self, key: impl Into<Vec<u8>>) -> Self {
-        self.mesh_key = Some(key.into());
+    pub fn with_signing_key(mut self, keypair: MeshKeyPair) -> Self {
+        self.signing_key = Some(keypair);
         self
     }
 
     /// Whether this chat is signing messages.
     #[must_use]
     pub const fn is_signing(&self) -> bool {
-        self.mesh_key.is_some()
+        self.signing_key.is_some()
     }
 
     /// Send a message to a channel.
@@ -207,10 +227,52 @@ impl SanghaChat {
             content: sanitized,
             timestamp: chrono::Utc::now().timestamp_millis(),
             signature: String::new(),
+            public_key: String::new(),
         };
-        if let Some(key) = &self.mesh_key {
-            msg = msg.signed(key);
+        if let Some(keypair) = &self.signing_key {
+            msg = msg.signed(keypair);
         }
+        self.next_msg_id += 1;
+        self.total_messages += 1;
+
+        let msgs = self.channels.entry(channel.to_string()).or_default();
+        if msgs.len() >= self.max_per_channel {
+            msgs.remove(0);
+        }
+        msgs.push(msg.clone());
+        msg
+    }
+
+    /// Send a message **as a specific peer**, signing it with that peer's
+    /// keypair.
+    ///
+    /// Used by mesh relays that forward messages on behalf of the
+    /// originating peer — the signature proves the peer, not the relay,
+    /// authored the message.
+    pub fn send_as(
+        &mut self,
+        channel: &str,
+        sender: &str,
+        content: impl Into<String>,
+        keypair: &MeshKeyPair,
+    ) -> ChatMessage {
+        let raw_content = content.into();
+        let sanitized: String = raw_content
+            .chars()
+            .filter(|c| !c.is_control() || *c == '\n' || *c == '\t')
+            .take(4096)
+            .collect();
+
+        let msg = ChatMessage {
+            id: self.next_msg_id,
+            channel: channel.to_string(),
+            sender: sender.to_string(),
+            content: sanitized,
+            timestamp: chrono::Utc::now().timestamp_millis(),
+            signature: String::new(),
+            public_key: String::new(),
+        }
+        .signed(keypair);
         self.next_msg_id += 1;
         self.total_messages += 1;
 
@@ -236,15 +298,20 @@ impl SanghaChat {
     }
 
     /// Read messages from a channel, protected by the community rule:
-    /// only messages that **verify against the mesh key and come from a
-    /// non-quarantined sender** are returned. A bad apple's messages are
-    /// cut off without disrupting the rest of the channel.
+    /// only messages that **verify against the sender's bound public key
+    /// and come from a non-quarantined sender** are returned. A bad
+    /// apple's messages are cut off without disrupting the rest of the
+    /// channel.
+    ///
+    /// `bindings` maps sender peer ID → the public key the community has
+    /// bound to it. Messages whose carried public key does not match the
+    /// binding are rejected (identity theft).
     #[must_use]
     pub fn read_trusted(
         &self,
         channel: &str,
         after_id: Option<u64>,
-        key: &[u8],
+        bindings: &HashMap<String, String>,
         quarantined: &[String],
     ) -> Vec<ChatMessage> {
         let Some(msgs) = self.channels.get(channel) else {
@@ -252,10 +319,29 @@ impl SanghaChat {
         };
         msgs.iter()
             .filter(|m| after_id.is_none_or(|id| m.id > id))
-            .filter(|m| m.verify_signature(key))
+            .filter(|m| {
+                bindings
+                    .get(&m.sender)
+                    .is_some_and(|pk| m.verify_as_sender(pk))
+            })
             .filter(|m| !quarantined.iter().any(|q| q == &m.sender))
             .cloned()
             .collect()
+    }
+
+    /// Store a pre-signed message received from the network as-is.
+    ///
+    /// The signature is preserved so verification passes later can judge
+    /// it against the sender's bound public key (unlike [`send`], which
+    /// signs with this node's own keypair).
+    pub fn inject_signed(&mut self, msg: ChatMessage) {
+        self.next_msg_id = self.next_msg_id.max(msg.id + 1);
+        self.total_messages += 1;
+        let msgs = self.channels.entry(msg.channel.clone()).or_default();
+        if msgs.len() >= self.max_per_channel {
+            msgs.remove(0);
+        }
+        msgs.push(msg);
     }
 
     /// Purge every message sent by a peer from the log — used when the
@@ -303,7 +389,7 @@ impl SanghaChat {
     /// enforce signatures).
     #[must_use]
     pub fn verify_channel(&self, channel: &str) -> VerificationReport {
-        let Some(key) = &self.mesh_key else {
+        let Some(_keypair) = &self.signing_key else {
             let checked = self.channel_message_count(channel);
             return VerificationReport {
                 checked,
@@ -319,7 +405,78 @@ impl SanghaChat {
         if let Some(msgs) = self.channels.get(channel) {
             for msg in msgs {
                 report.checked += 1;
-                if msg.verify_signature(key) {
+                if msg.verify_signature() {
+                    report.verified += 1;
+                } else {
+                    report.rejected += 1;
+                }
+            }
+        }
+        report
+    }
+
+    /// Verify a channel with identity binding: each message must be signed
+    /// by the public key the community has bound to its sender. Catches
+    /// impostor keys, not just tampering.
+    #[must_use]
+    pub fn verify_channel_bound(
+        &self,
+        channel: &str,
+        bindings: &HashMap<String, String>,
+    ) -> VerificationReport {
+        if self.signing_key.is_none() {
+            let checked = self.channel_message_count(channel);
+            return VerificationReport {
+                checked,
+                verified: checked,
+                rejected: 0,
+                mesh_signing: false,
+            };
+        }
+        let mut report = VerificationReport {
+            mesh_signing: true,
+            ..VerificationReport::default()
+        };
+        if let Some(msgs) = self.channels.get(channel) {
+            for msg in msgs {
+                report.checked += 1;
+                if bindings
+                    .get(&msg.sender)
+                    .is_some_and(|pk| msg.verify_as_sender(pk))
+                {
+                    report.verified += 1;
+                } else {
+                    report.rejected += 1;
+                }
+            }
+        }
+        report
+    }
+
+    /// Verify all messages in every channel with identity binding.
+    #[must_use]
+    pub fn verify_all_bound(&self, bindings: &HashMap<String, String>) -> VerificationReport {
+        if self.signing_key.is_none() {
+            return VerificationReport {
+                checked: self.total_messages as usize,
+                verified: self.total_messages as usize,
+                rejected: 0,
+                mesh_signing: false,
+            };
+        }
+        let mut report = VerificationReport {
+            checked: 0,
+            verified: 0,
+            rejected: 0,
+            mesh_signing: true,
+        };
+        for msgs in self.channels.values() {
+            for msg in msgs {
+                report.checked += 1;
+                if bindings
+                    .get(&msg.sender)
+                    .is_some_and(|pk| msg.verify_as_sender(pk))
+                {
                     report.verified += 1;
                 } else {
                     report.rejected += 1;
@@ -332,14 +489,14 @@ impl SanghaChat {
     /// Verify all messages in every channel against the mesh key.
     #[must_use]
     pub fn verify_all(&self) -> VerificationReport {
-        let Some(key) = &self.mesh_key else {
+        if self.signing_key.is_none() {
             return VerificationReport {
                 checked: self.total_messages as usize,
                 verified: self.total_messages as usize,
                 rejected: 0,
                 mesh_signing: false,
             };
-        };
+        }
         let mut report = VerificationReport {
             checked: 0,
             verified: 0,
@@ -349,7 +506,7 @@ impl SanghaChat {
         for msgs in self.channels.values() {
             for msg in msgs {
                 report.checked += 1;
-                if msg.verify_signature(key) {
+                if msg.verify_signature() {
                     report.verified += 1;
                 } else {
                     report.rejected += 1;
@@ -495,6 +652,7 @@ mod tests {
             content: "hello".to_string(),
             timestamp: 12345,
             signature: String::new(),
+            public_key: String::new(),
         };
         let json = msg.to_json();
         assert_eq!(json["id"], 1);
@@ -504,7 +662,7 @@ mod tests {
 
     #[test]
     fn signed_message_verifies_and_detects_tampering() {
-        let key = b"mesh-secret";
+        let kp = MeshKeyPair::from_seed(b"node-1-seed");
         let msg = ChatMessage {
             id: 1,
             channel: "gana:1".to_string(),
@@ -512,18 +670,28 @@ mod tests {
             content: "coordinate on exploit".to_string(),
             timestamp: 12345,
             signature: String::new(),
+            public_key: String::new(),
         };
-        let signed = msg.signed(key);
+        let signed = msg.signed(&kp);
         assert!(!signed.signature.is_empty());
-        assert!(signed.verify_signature(key));
+        assert_eq!(signed.public_key, kp.public_key_hex());
+        assert!(signed.verify_signature());
+        // Identity binding: the carried key must match the bound key.
+        assert!(signed.verify_as_sender(&kp.public_key_hex()));
+        assert!(!signed.verify_as_sender(&MeshKeyPair::from_seed(b"other").public_key_hex()));
 
         // Wrong key → rejected (an imposter peer cannot forge messages).
-        assert!(!signed.verify_signature(b"other-secret"));
+        let other = MeshKeyPair::from_seed(b"other-seed");
+        assert!(!MeshKeyPair::verify_hex(
+            &signed.signing_payload(),
+            &signed.signature,
+            &other.public_key_hex()
+        ));
 
         // Tampered content → rejected.
         let mut tampered = signed;
         tampered.content = "coordinate on something else".to_string();
-        assert!(!tampered.verify_signature(key));
+        assert!(!tampered.verify_signature());
 
         // Unsigned message never verifies.
         let unsigned = ChatMessage {
@@ -533,16 +701,17 @@ mod tests {
             content: "coordinate on exploit".to_string(),
             timestamp: 12345,
             signature: String::new(),
+            public_key: String::new(),
         };
-        assert!(!unsigned.verify_signature(key));
+        assert!(!unsigned.verify_signature());
     }
 
     #[test]
     fn chat_signs_messages_when_key_configured() {
-        let mut chat = SanghaChat::new(100).with_mesh_key(b"mesh-secret");
+        let mut chat = SanghaChat::new(100).with_signing_key(MeshKeyPair::from_seed(b"node-seed"));
         let msg = chat.send("project:alpha", "node-1", "delegating task");
         assert!(!msg.signature.is_empty());
-        assert!(msg.verify_signature(b"mesh-secret"));
+        assert!(msg.verify_signature());
 
         let report = chat.verify_channel("project:alpha");
         assert!(report.mesh_signing);
@@ -553,10 +722,10 @@ mod tests {
 
     #[test]
     fn verification_rejects_forged_messages() {
-        let mut chat = SanghaChat::new(100).with_mesh_key(b"mesh-secret");
+        let mut chat = SanghaChat::new(100).with_signing_key(MeshKeyPair::from_seed(b"node-seed"));
         chat.send("gana:1", "node-1", "legit");
 
-        // An attacker injects a message signed with the wrong key (or unsigned).
+        // An attacker injects a message signed with a different key (or unsigned).
         let forged = ChatMessage {
             id: 99,
             channel: "gana:1".to_string(),
@@ -564,11 +733,18 @@ mod tests {
             content: "run rm -rf".to_string(),
             timestamp: 1,
             signature: String::new(),
+            public_key: String::new(),
         }
-        .signed(b"attacker-key");
+        .signed(&MeshKeyPair::from_seed(b"attacker-seed"));
         chat.channels.get_mut("gana:1").unwrap().push(forged);
 
-        let report = chat.verify_all();
+        // Self-consistent verification catches tampering but not impostor
+        // keys — the *bound* verification rejects the forged message.
+        let bindings = HashMap::from([(
+            "node-1".to_string(),
+            MeshKeyPair::from_seed(b"node-seed").public_key_hex(),
+        )]);
+        let report = chat.verify_all_bound(&bindings);
         assert_eq!(report.checked, 2);
         assert_eq!(report.verified, 1);
         assert_eq!(report.rejected, 1);

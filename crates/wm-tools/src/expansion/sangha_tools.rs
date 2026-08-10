@@ -680,10 +680,11 @@ mod tests {
         // Register a rogue peer via the discovery directly.
         {
             let rogue = PeerInfo::new("rogue-1", "127.0.0.1:9001");
+            let keypair = wm_sangha::MeshKeyPair::from_seed(b"rogue-seed");
             discovery
                 .lock()
                 .unwrap()
-                .discover_signed(rogue.signed(b"mesh-secret"), b"mesh-secret")
+                .discover_signed(rogue.signed(&keypair))
                 .unwrap();
         }
         // It holds a lock that must be revoked on quarantine.
