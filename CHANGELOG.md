@@ -51,10 +51,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependency-free HTML tooling: compact tag/entity stripper + RFC 3986
   relative-URL resolution + base64url decoder (no scraper crate)
 
+### Research tools (v26 `research_*` parity, phase-1 gap port)
+
+- **`research.topic`** — deep research pipeline: search → fetch top sources →
+  extractive key-term analysis (cross-source frequency, stopword-filtered) →
+  synthesis; stores the report in the Research galaxy when
+  `store_memories: true` (returns `memory_id`)
+- **`research.repo`** — GitHub repo deep-read: raw README candidates first,
+  rendered page fallback; returns description, section outline, full content
+- **`research.rabbit_hole`** — bounded recursive spiral: search the topic,
+  extract unfamiliar terms from titles/snippets, search each term, fetch top
+  results, recurse one level deeper, synthesize the whole exploration
+  (depth capped at 3, term parallelism capped at 12)
+- All synthesis is extractive (no LLM dependency) — the pipeline works
+  air-gapped against the search backend
+
 ### Counts
 
-- 204 → **208 tools** (web.fetch, web.search, web.search_and_read, web.deep_fetch)
-- 3,335 → **3,345 tests passing, 0 failed** (+10)
+- 208 → **211 tools** (research.topic, research.repo, research.rabbit_hole)
+- 3,345 → **3,352 tests passing, 0 failed** (+7)
 - 0 clippy warnings, fmt clean, cargo-deny all green
 
 ## [5.5.0] — 2026-08-08
