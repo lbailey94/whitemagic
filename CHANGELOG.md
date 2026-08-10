@@ -35,10 +35,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - E2E: mutable-state persistence roundtrip now also verifies self-model
   history restore
 
+### Web research tools (v26 `web_research` parity, phase-1 gap port)
+
+- **`web.fetch`** — fetch a URL and return clean text (title, content,
+  status code, duration); default 30K chars
+- **`web.deep_fetch`** — full-content retrieval up to 200K chars
+- **`web.search`** — no-API-key web search via the Bing HTML endpoint
+  (`li.b_algo` parsing, `ck/a` click-link decoding to real URLs)
+- **`web.search_and_read`** — search + fetch top results in one call
+  (`fetched_count` reports how many pages were retrieved)
+- Safety: every URL (and every redirect hop) passes the `is_url_safe` SSRF
+  guard; bodies are bounded (1MB raw budget, `Read::take` truncation);
+  timeouts bounded; DuckDuckGo's bot-challenge (HTTP 202) is detected and
+  degrades to an empty result list instead of an error
+- Dependency-free HTML tooling: compact tag/entity stripper + RFC 3986
+  relative-URL resolution + base64url decoder (no scraper crate)
+
 ### Counts
 
-- 202 → **204 tools** (claims, dharma.acs)
-- 3,311 → **3,335 tests passing, 0 failed** (+24)
+- 204 → **208 tools** (web.fetch, web.search, web.search_and_read, web.deep_fetch)
+- 3,335 → **3,345 tests passing, 0 failed** (+10)
 - 0 clippy warnings, fmt clean, cargo-deny all green
 
 ## [5.5.0] — 2026-08-08

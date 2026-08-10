@@ -72,6 +72,7 @@ pub mod tasks;
 pub mod tools_mgmt;
 pub mod transaction;
 pub mod v4;
+pub mod web;
 
 // Re-export all tool structs for registration
 pub use additional::{
@@ -160,6 +161,7 @@ pub use v4::{
     ReflexDispatchTool, ReflexStatusTool, TimescaleHooksTool, TimescaleStatusTool,
     WorkspaceEventsTool, WorkspacePublishTool, WorkspaceSpotlightTool, WorkspaceStatsTool,
 };
+pub use web::{WebDeepFetchTool, WebFetchTool, WebSearchAndReadTool, WebSearchTool, register_web};
 
 use std::sync::Arc;
 use wm_cognitive::GanYingBus;
@@ -402,6 +404,9 @@ pub fn register_expansion(
 
     // Self-play tools (3) — training loop, status, export
     reg = register_self_play(&reg, store, new_shared_loop());
+
+    // Web research tools (4) — fetch, deep_fetch, search, search_and_read
+    reg = register_web(&reg);
 
     reg
 }

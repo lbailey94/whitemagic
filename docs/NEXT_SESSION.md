@@ -5,7 +5,7 @@ uncommitted changes (this session's features) — see git status.
 
 ## Current State (v5.6.0)
 
-- **15 crates, 204 tools, 3,335 tests (0 failed), ~131,000 LOC**
+- **15 crates, 208 tools, 3,345 tests (0 failed), ~131,000 LOC**
 - 0 clippy warnings (`cargo clippy --all-targets`), fmt clean, cargo-deny all green
 - 0 lock panics in production code (72 sites converted to graceful degradation)
 - Live store: `~/Desktop/WMdata/live` — 58,617 memories / 10 galaxies
