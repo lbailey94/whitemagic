@@ -52,6 +52,74 @@ The persistence infrastructure is in place:
 - Loaded on startup via `load_mutable_state()`
 - Stats accumulate across restarts once a real embedder is configured
 
+## First Data Collection — 2026-08-11 (real embedder, 115 queries)
+
+**Setup**: nomic-embed-text-v1.5 (Q4_K_M, 768-dim) via llama-server `--embeddings`
+(`WM_EMBEDDER_ENDPOINT=http://127.0.0.1:8081`, `WM_EMBEDDER_TIMEOUT_MS=120000`),
+`wm serve` against a scratch store, 115 natural-language thoughts driven through
+the `wm` meta-tool. Collector: `scripts/collect_shadow_data.py`.
+
+**Result: NOT promotion-ready. Disagreement rate 42.6%** (49/115) vs the 20% gate.
+The embedding router loses to TF-IDF on many core patterns:
+
+- **Destructive misroute**: "show my karma" / "check the karma chain" → `karma.clear`
+  (the wipe tool — only the destructive-confirm gate prevents damage)
+- "remember/keep X" → `memory.list` instead of `memory.create`
+- "review the friction log" / "auto log friction" → `friction.log` (write) not `friction.review`
+- "list tools" → `memory.list`; "record that the server restarted" → `session.recall`
+- Claims/session/system families collapse onto near-arbitrary high-similarity tools
+  (`workspace.spotlight`, `selfmodel.alerts`, `dream.status`, `gnosis`)
+
+The pattern: with 169 tool descriptions at ~768-dim cosine, top-1 selection is
+dominated by description vocabulary overlap, not intent. Confidence scores are
+uniformly 0.5–0.8, so `MIN_THRESHOLD` fallback never fires.
+
+**Infrastructure findings fixed on the way**:
+- `nlu.shadow_report` was unreachable — registered only at top level, not inside
+  the `wm` meta-tool routing registry (MCP exposes only `wm`). Fixed in
+  `crates/wm-tools/src/lib.rs` (`register_meta_tools`): the shadow report tool is
+  now registered into `wm_builder`.
+- Embedding-batch timeout: 229 tool descriptions took 56s on CPU at default
+  `WM_EMBEDDER_TIMEOUT_MS=30000` → silent router disable. Raised to 120s in the
+  collector; worth bumping the default for real deployments.
+- Dispatch-pipeline rate limiter (default 60 RPM/tool + 10 burst) caps `wm` at
+  70 calls/min — collector paces in 60-query batches.
+
+**Caveats**: the sample is synthetic (scripted queries, not organic daemon
+traffic) and single-backend (nomic-embed vs the documented bge-small). A fairer
+test would run the daemon live with `WM_EMBEDDER_ENDPOINT` set and let shadow
+stats accumulate over real usage.
+
+## Router Improvement — 2026-08-11 (second run, same corpus)
+
+Two changes were made and re-tested:
+
+1. **Real registry descriptions** (`EmbeddingRouter::with_descriptions`): the
+   meta-tool now embeds the live registry's prose `description()` strings
+   (228 tools) instead of the static keyword-mashup profiles (169 tools).
+   Coverage 169 → 228 tools.
+2. **Margin fallback** (`route_with_margin` + `MIN_MARGIN = 0.02`): when the
+   top-1 vs top-2 cosine margin is below 0.02, the TF-IDF choice wins
+   (`classify_with_router`). Near-ties mean intent can't be separated.
+
+**Observed dispatch fixes (dangerous misroutes eliminated)**:
+- "show my karma" → `karma.report` (was `karma.clear` — destructive tool)
+- "research the topic of memory consolidation" → `emergence.scan`
+  (was `memory.delete` — destructive tool)
+- "review the friction log" → `friction.review` (was `friction.log` — writer)
+- "add/resolve a claim" → `claims`; "check the karma chain" → `karma.verify_chain`;
+  "hand off the session" → `session.handoff`; "research a github repo" →
+  `research.repo`; "fetch the url and summarize" → `web.fetch`
+- Regression tests added: `with_descriptions` coverage, `route_with_margin`
+  margin semantics, `wm_routes_shadow_report_inside_meta_tool`
+
+**Caveat**: raw shadow disagreement ROSE to ~55% (44/81 in the second run) —
+the metric counts *any* divergence, and the embedding router now often
+diverges *correctly* (claims/web/session families where TF-IDF chose
+`gnosis`/`karma.report`/`memory.list`). The promotion gate (< 20% divergence)
+is still not met, but dispatch quality — the thing that matters — improved
+markedly, and all destructive misroutes are gone.
+
 ## Path to Promotion (Step 2.8)
 
 To retire TF-IDF and promote the embedding router to sole primary:
@@ -66,12 +134,17 @@ To retire TF-IDF and promote the embedding router to sole primary:
 
 ## Recommendation
 
-**Step 2.8 remains correctly deferred.** The infrastructure is production-ready, but no shadow mode data exists because no real embedder has been deployed. The decision to retire TF-IDF should be made after:
+**Step 2.8 remains deferred.** First real data (2026-08-11) shows the embedding
+router is *worse* than TF-IDF at 42.6% disagreement, so promotion would degrade
+routing. Likely improvers before retesting:
 
-- At least 1,000 shadow mode queries (10x the minimum threshold)
-- Disagreement rate consistently < 15% (below the 20% gate, with margin)
-- Manual review of top disagreement pairs to verify embedding router is correct (not TF-IDF) on disagreements
-- OATS refinement has been applied and validated
+- **Better tool descriptions**: `tool_descriptions()` drives the whole router —
+  intent-anchored descriptions (verbs + example queries per tool) would sharpen
+  top-1 selection far more than embedding tweaks
+- **Intent-aware threshold**: require a gap (e.g., best > second-best + margin)
+  instead of plain top-1; fall back to TF-IDF on ties
+- **A2A routing test**: collect 1,000+ organic queries via the live daemon before
+  any promotion decision
 
 ## Key Files
 
@@ -80,3 +153,4 @@ To retire TF-IDF and promote the embedding router to sole primary:
 - `crates/wm-tools/src/expansion/nlu_tools.rs` — `NluShadowReportTool` MCP tool
 - `crates/wm-mcp/src/server.rs` — `save_mutable_state()` / `load_mutable_state()` (persistence)
 - `crates/wm-memory/src/embedder.rs` — `create_embedder()` (embedder selection)
+- `scripts/collect_shadow_data.py` — shadow data collection driver (2026-08-11)

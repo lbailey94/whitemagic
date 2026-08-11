@@ -5,7 +5,7 @@
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all tests (3,212 tests)
+cargo test                     # Run all tests (3,391 tests)
 cargo test -p wm-core          # Test a single crate
 cargo bench                    # Run benchmarks (criterion)
 cargo clippy --all-targets     # Lint (0 warnings)
@@ -123,7 +123,7 @@ Makes previously fixed structures learnable:
 
 ## MCP Server
 
-The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 211 tools are accessible through the `wm` meta-tool:
+The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 229 tools are accessible through the `wm` meta-tool:
 - `wm(thought="remember that X is Y")` — NLU routing (embedding primary, TF-IDF fallback)
 - `wm(route="memory.create", args={...})` — explicit dispatch
 - `wm(thought="list tools")` or `wm(route="tools.list")` — discover all tools

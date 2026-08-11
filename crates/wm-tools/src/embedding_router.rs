@@ -39,6 +39,15 @@ const OATS_MIN_OBSERVATIONS: usize = 10;
 /// Minimum cosine similarity to return a match (below this → gnosis fallback).
 const MIN_THRESHOLD: f64 = 0.10;
 
+/// Minimum margin between top-1 and top-2 before the embedding router's
+/// choice is trusted.
+///
+/// Near-ties (margin below this) mean the description vocabulary cannot
+/// separate intent — the caller should defer to the TF-IDF router. Derived
+/// from the 2026-08-11 shadow data: ambiguous queries produced confident-
+/// looking top-1 scores (0.5–0.8) with the correct tool often runner-up.
+pub const MIN_MARGIN: f64 = 0.02;
+
 /// Outcome statistics for a single tool (OATS data).
 #[derive(Debug, Clone)]
 pub struct OutcomeStats {
@@ -130,6 +139,23 @@ impl EmbeddingRouter {
     /// This allows the caller to gracefully fall back to the TF-IDF router.
     #[must_use]
     pub fn new(embedder: Box<dyn Embedder>) -> Option<Self> {
+        Self::with_descriptions(embedder, tool_descriptions())
+    }
+
+    /// Create a new embedding router from explicit (tool, description) pairs.
+    ///
+    /// Unlike [`Self::new`] — which uses the static keyword profiles from
+    /// `nlu.rs` (169 tools, keyword-mashup descriptions) — this accepts
+    /// descriptions from the live tool registry (all 229 tools, prose
+    /// descriptions). Sentence-style descriptions embed far better than
+    /// bare keyword lists; the 2026-08-11 shadow run (42.6% disagreement)
+    /// showed keyword-mashup top-1 selection collapsing onto arbitrary
+    /// high-similarity tools.
+    #[must_use]
+    pub fn with_descriptions(
+        embedder: Box<dyn Embedder>,
+        descriptions: Vec<(String, String)>,
+    ) -> Option<Self> {
         // Stub embedders produce hash-based embeddings with no semantic similarity.
         // Don't use the embedding router with them — fall back to TF-IDF.
         if embedder.backend_name() == "stub" {
@@ -141,8 +167,6 @@ impl EmbeddingRouter {
 
         let dim = embedder.dimension();
 
-        // Generate tool descriptions from profiles and embed them in one batch.
-        let descriptions = tool_descriptions();
         let texts: Vec<&str> = descriptions.iter().map(|(_, d)| d.as_str()).collect();
         let embeddings = embedder.embed_batch(&texts).ok()?;
 
@@ -181,16 +205,29 @@ impl EmbeddingRouter {
     /// the minimum threshold.
     #[must_use]
     pub fn route(&self, query: &str) -> (String, f64) {
+        match self.route_with_margin(query) {
+            Some((t, c, _)) => (t, c),
+            None => ("gnosis".into(), 0.0),
+        }
+    }
+
+    /// Route a query, returning (tool, confidence, margin).
+    ///
+    /// `margin` is the score gap between the top-1 and top-2 tools. Small
+    /// margins indicate the descriptions cannot separate intent — callers
+    /// should defer to the TF-IDF router when `margin < MIN_MARGIN`.
+    #[must_use]
+    pub fn route_with_margin(&self, query: &str) -> Option<(String, f64, f64)> {
         let lower = query.to_lowercase();
         if lower.trim().is_empty() {
-            return ("gnosis".into(), 0.0);
+            return None;
         }
 
         let query_emb = match self.embedder.embed(&lower) {
             Ok(emb) => emb,
             Err(e) => {
                 tracing::warn!(error = %e, "embedding router: query embedding failed");
-                return ("gnosis".into(), 0.0);
+                return None;
             }
         };
 
@@ -203,11 +240,12 @@ impl EmbeddingRouter {
 
         // Score each tool by cosine similarity to (optionally refined) embedding
         let Ok(stats_lock) = self.outcome_stats.read() else {
-            return (String::new(), 0.0);
+            return None;
         };
 
         let mut best_tool = "gnosis".to_string();
         let mut best_score = 0.0_f64;
+        let mut second_score = 0.0_f64;
 
         for (name, base_emb) in &self.tool_embeddings {
             let refined = self.oats_refine(name, base_emb, &stats_lock);
@@ -223,18 +261,21 @@ impl EmbeddingRouter {
             }
 
             if score > best_score {
+                second_score = best_score;
                 best_score = score;
                 best_tool.clone_from(name);
+            } else if score > second_score {
+                second_score = score;
             }
         }
 
         drop(stats_lock);
 
         if best_score < MIN_THRESHOLD {
-            return ("gnosis".into(), 0.0);
+            return None;
         }
 
-        (best_tool, best_score)
+        Some((best_tool, best_score, best_score - second_score))
     }
 
     /// OATS: interpolate tool embedding toward success centroid.
@@ -698,6 +739,54 @@ mod tests {
             router.is_none(),
             "embedding router should return None for stub embedder"
         );
+    }
+
+    #[test]
+    fn embedding_router_with_descriptions_covers_registry_tools() {
+        let embedder = Box::new(KeywordEmbedder::new(vec![
+            "memory", "karma", "session", "list",
+        ]));
+        let descriptions = vec![
+            (
+                "memory.create".to_string(),
+                "remember and store information in persistent memory".to_string(),
+            ),
+            (
+                "karma.clear".to_string(),
+                "wipe and reset the karma ledger entries".to_string(),
+            ),
+            (
+                "session.list".to_string(),
+                "list all recorded sessions".to_string(),
+            ),
+        ];
+        let router =
+            EmbeddingRouter::with_descriptions(embedder, descriptions).expect("should init");
+        assert_eq!(router.tool_count(), 3);
+        let (tool, _) = router.route("show me the sessions");
+        assert_eq!(
+            tool, "session.list",
+            "registry-description routing should find session.list"
+        );
+    }
+
+    #[test]
+    fn route_with_margin_returns_positive_margin() {
+        let keywords: Vec<&str> = TOOL_PROFILES
+            .iter()
+            .flat_map(|p| p.keywords.iter().map(|(t, _)| *t))
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+        let embedder = Box::new(KeywordEmbedder::new(keywords));
+        let router = EmbeddingRouter::new(embedder).expect("should init");
+
+        let (tool, conf, margin) = router
+            .route_with_margin("remember that the sky is blue")
+            .expect("clear match should return Some");
+        assert_eq!(tool, "memory.create");
+        assert!(conf > 0.0);
+        assert!(margin >= 0.0, "margin should be non-negative");
     }
 
     // --- Mock embedder for testing ---

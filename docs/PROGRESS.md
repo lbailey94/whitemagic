@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 9, 2026 (v5.6.0 — 15 crates, 229 tools, 3,377 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. ACS compliance surface + prescience claims ledger shipped. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
+**Last updated**: August 11, 2026 (v5.7.4 — 15 crates, 229 tools, 3,391 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
 
 ---
 
@@ -2876,6 +2876,6 @@ Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
 - `benchmark_pipeline_overhead` assertion gated to `#[cfg(not(debug_assertions))]` — debug builds have unoptimized async/await overhead (~16µs) that exceeds the 5µs budget
 
 ### Final v5 Metrics
-- **14 crates**, **185 tools**, **~128,500 LOC**
-- **3,168 tests**, 0 clippy warnings, fmt clean
-- All 7 phases complete
+- **15 crates**, **229 tools**, **~131,000 LOC**
+- **3,391 tests**, 0 clippy warnings, fmt clean
+- All 7 phases complete + v26 parity (web/research/session tools) + NLU routers + imagination + self-play + mutable structures

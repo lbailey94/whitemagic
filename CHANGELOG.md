@@ -5,6 +5,54 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.4] — 2026-08-11
+
+### Forensic memory recovery
+
+- **`wm_forensic`** binary (`crates/wm-mcp/src/bin/wm_forensic.rs`) — carves
+  deleted memories out of raw LMDB pages (deletes free pages but don't zero
+  them until reuse). `extract` scans data.mdb for target UUIDs and decodes
+  msgpack `Memory` nodes (direct + overflow-page references); `restore` puts
+  them back with original IDs + tantivy re-indexing. E2E verified:
+  create → delete → carve → restore → readable
+
+### NLU routing (first real shadow data)
+
+- **`EmbeddingRouter::with_descriptions`** — embeds the live registry's prose
+  descriptions (228 tools) instead of static keyword-mashup profiles (169)
+- **Margin fallback** — `route_with_margin` + `MIN_MARGIN = 0.02`; near-tie
+  embedding choices defer to the TF-IDF router
+- First shadow-mode data collection (115 queries, nomic-embed via llama-server):
+  dangerous misroutes eliminated — "show my karma" no longer routes to
+  `karma.clear` (destructive), "research the topic of memory consolidation"
+  no longer routes to `memory.delete` (destructive)
+- **`nlu.shadow_report` reachability fixed** — was registered top-level only
+  and unreachable through `wm(route=...)` (MCP exposes only `wm`); now
+  registered inside the meta-tool routing registry + regression test
+- `scripts/collect_shadow_data.py` — shadow-mode data collection driver
+
+### Claims ledger (morning review)
+
+- **claim-0029** (conf 0.65) — org-injectable policy hooks become standard
+  after Anthropic's inference hooks beta
+- **claim-0030** (conf 0.70) — per-agent spending caps/wallets become standard
+  after Cloudflare Wallets/cloudflare.pay
+- **claim-0031** (conf 0.60) — EU AI Act Art. 50 first significant enforcement
+  within 12 months
+- 32 claims total (19 validated, 1 falsified, 12 pending); live ledger == docs
+
+### Docs
+
+- NEXT_SESSION.md rewritten for v5.7.3-era state; PROGRESS.md + AGENTS.md
+  counts corrected (229 tools, 3,391 tests); shadow-mode analysis note updated
+  with both data runs
+
+### Counts
+
+- 3,391 → **3,394 tests passing, 0 failed** (+3: with_descriptions coverage,
+  route_with_margin, shadow_report reachability)
+- 0 clippy warnings (default + transport), fmt clean
+
 ## [5.7.3] — 2026-08-10 (evening)
 
 ### Session ops — the last Phase-1 gap (v26 parity)

@@ -1,8 +1,8 @@
 # WhiteMagic Claims Ledger — Versioned Prescience Record
 
-**Exported**: 2026-08-10 · **Source**: `WMData/live/claims_ledger.json` · **Review**: `docs/CLAIMS_LEDGER_REVIEW.json`
+**Exported**: 2026-08-11 · **Source**: `WMData/live/claims_ledger.json` · **Review**: `docs/CLAIMS_LEDGER_REVIEW.json`
 
-**29 claims — 19 validated, 1 falsified, 9 pending · 434.9 points**
+**32 claims — 19 validated, 1 falsified, 12 pending · 434.9 points**
 
 Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit rate 0.950 (**+0.215 overconfident**) · the only miss at confidence 0.5 (correct shape).
 
@@ -208,3 +208,18 @@ Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit 
 - **Statement**: Shared persistent agent message boards will be treated as a distinct attack surface with access control, not left as emergent infrastructure
 - **Outcome**: Agent platforms add governed message-board primitives (authentication, archival, scope limits)
 - **Falsification**: No major agent platform adds governed message-board primitives by 2026-12-31
+
+### claim-0029 — pending (confidence 0.65, source 2026-08-11)
+- **Statement**: Org-injectable policy interception hooks: enterprises route agent decisions through their own allow-or-deny security servers — validating the mandala-yama / dharma policy-VM thesis
+- **Outcome**: A second major agent platform ships org-injectable policy interception hooks (Anthropic inference hooks beta is the first)
+- **Falsification**: No second major agent platform ships org-injectable policy hooks by 2027-06-30
+
+### claim-0030 — pending (confidence 0.70, source 2026-08-11)
+- **Statement**: Per-agent spending governance: capped wallets and authorized-payee limits for autonomous agents — validating the resource-governance design
+- **Outcome**: Per-agent spending caps/wallets become a standard agent platform feature (Cloudflare Wallets/cloudflare.pay is the first)
+- **Falsification**: Fewer than two major agent platforms ship per-agent spending caps by 2027-06-30
+
+### claim-0031 — pending (confidence 0.60, source 2026-08-11)
+- **Statement**: Regulatory enforcement: EU AI Act Article 50 transparency rules produce a first significant action
+- **Outcome**: EU AI Office issues a first significant Article 50 enforcement action (fine ≥ €1M or major chatbot withdrawal)
+- **Falsification**: No significant Article 50 enforcement action by 2027-08-11

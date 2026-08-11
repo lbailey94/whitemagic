@@ -1578,7 +1578,7 @@ impl WmMetaTool {
         registry: Arc<ToolRegistry>,
         embedder: Box<dyn wm_memory::Embedder>,
     ) -> Self {
-        let embedding_router = embedding_router::EmbeddingRouter::new(embedder).map(Arc::new);
+        let embedding_router = Self::build_embedding_router(&registry, embedder).map(Arc::new);
         Self {
             registry,
             stats: ToolStats::default(),
@@ -1600,7 +1600,7 @@ impl WmMetaTool {
         embedder: Box<dyn wm_memory::Embedder>,
         shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
     ) -> Self {
-        let embedding_router = embedding_router::EmbeddingRouter::new(embedder).map(Arc::new);
+        let embedding_router = Self::build_embedding_router(&registry, embedder).map(Arc::new);
         Self {
             registry,
             stats: ToolStats::default(),
@@ -1608,6 +1608,27 @@ impl WmMetaTool {
             embedding_router,
             shadow_stats,
         }
+    }
+
+    /// Build an embedding router from the live registry's tool descriptions.
+    ///
+    /// Uses prose descriptions from the registered tools (name + description),
+    /// which embed far better than the static keyword-mashup profiles. Only
+    /// falls back to the static profiles when the registry has no tools (e.g.
+    /// in unit tests that call `with_embedder` directly).
+    fn build_embedding_router(
+        registry: &ToolRegistry,
+        embedder: Box<dyn wm_memory::Embedder>,
+    ) -> Option<embedding_router::EmbeddingRouter> {
+        let tools = registry.all_ref();
+        if tools.is_empty() {
+            return embedding_router::EmbeddingRouter::new(embedder);
+        }
+        let descriptions: Vec<(String, String)> = tools
+            .iter()
+            .map(|t| (t.name().to_string(), t.description().to_string()))
+            .collect();
+        embedding_router::EmbeddingRouter::with_descriptions(embedder, descriptions)
     }
 
     /// Classify natural language input into (tool_name, confidence).
@@ -1622,10 +1643,16 @@ impl WmMetaTool {
     /// Classify using the embedding router if available, otherwise TF-IDF.
     ///
     /// In shadow mode (when embedding router is present), also runs TF-IDF and
-    /// logs disagreements for monitoring.
+    /// logs disagreements for monitoring. When the embedding router's top-1 vs
+    /// top-2 margin is below `MIN_MARGIN`, the TF-IDF choice is used instead —
+    /// near-ties mean the descriptions cannot separate intent (2026-08-11
+    /// shadow data: keyword-mashup top-1 collapsed onto arbitrary tools).
     fn classify_with_router(&self, text: &str) -> (String, f64) {
         if let Some(ref router) = self.embedding_router {
-            let (emb_tool, emb_conf) = router.route(text);
+            let (emb_tool, emb_conf, margin) = match router.route_with_margin(text) {
+                Some(t) => t,
+                None => ("gnosis".into(), 0.0, 0.0),
+            };
 
             // Shadow mode: run TF-IDF in parallel and track disagreements
             let (tfidf_tool, tfidf_conf) = nlu::classify(text);
@@ -1634,6 +1661,7 @@ impl WmMetaTool {
                     query = text.chars().take(100).collect::<String>(),
                     embedding_tool = %emb_tool,
                     embedding_conf = emb_conf,
+                    margin = margin,
                     tfidf_tool = %tfidf_tool,
                     tfidf_conf = tfidf_conf,
                     "shadow mode disagreement: embedding vs TF-IDF"
@@ -1645,7 +1673,13 @@ impl WmMetaTool {
                 stats.record(text, &emb_tool, emb_conf, tfidf_tool, tfidf_conf);
             }
 
-            (emb_tool, emb_conf)
+            // Margin fallback: defer to TF-IDF when the embedding router
+            // cannot separate the top candidates.
+            if margin < embedding_router::MIN_MARGIN {
+                (tfidf_tool.to_string(), tfidf_conf)
+            } else {
+                (emb_tool, emb_conf)
+            }
         } else {
             let (tool, conf) = Self::classify(text);
             (tool.to_string(), conf)
@@ -2290,15 +2324,19 @@ pub fn register_meta_tools(
     }
     wm_builder.register(tools_list.clone());
     wm_builder.register(gnosis.clone());
+
+    // Create NLU shadow report tool sharing the same shadow stats.
+    // Registered inside the wm meta-tool's routing registry so
+    // `wm(route="nlu.shadow_report")` is reachable — the MCP boundary only
+    // exposes the `wm` meta-tool, so top-level-only registration was unreachable.
+    let shadow_report = Arc::new(expansion::NluShadowReportTool::new(Arc::clone(
+        &shadow_stats,
+    )));
+    wm_builder.register(shadow_report.clone());
     let wm = Arc::new(WmMetaTool::with_embedder_and_shadow_stats(
         Arc::new(wm_builder.build()),
         wm_memory::create_embedder(),
         shadow_stats,
-    ));
-
-    // Create NLU shadow report tool sharing the same shadow stats
-    let shadow_report = Arc::new(expansion::NluShadowReportTool::new(
-        wm.shadow_stats().clone(),
     ));
 
     // Build the final registry: non-gnosis + tools.list + wm + gnosis + shadow report
@@ -2506,6 +2544,35 @@ mod tests {
 
         assert_eq!(result["status"], "success");
         assert_eq!(result["_wm_route"]["tool"], "memory.vector.search");
+    }
+
+    #[tokio::test]
+    async fn wm_routes_shadow_report_inside_meta_tool() {
+        // The MCP boundary only exposes the `wm` meta-tool, so observability
+        // tools must be reachable through it. Regression test: `nlu.shadow_report`
+        // was top-level-only and returned "Unknown tool" via wm(route=...).
+        let store = test_store();
+        let registry = test_registry_with(&store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
+
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = wm
+            .call(&mut ctx, json!({"route": "nlu.shadow_report"}))
+            .await
+            .unwrap();
+
+        assert_eq!(result["_wm_route"]["tool"], "nlu.shadow_report");
+        assert!(
+            result.get("total_queries").is_some(),
+            "expected shadow report payload"
+        );
     }
 
     #[tokio::test]
