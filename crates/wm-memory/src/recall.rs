@@ -653,6 +653,7 @@ mod tests {
             memory_id: id.to_string(),
             galaxy: Galaxy::Codex.db_name().to_string(),
             score: 5.0,
+            normalized_score: 0.0,
             content: "test".into(),
         }];
         let results = fuse(&bm25, &[], 10);
@@ -682,6 +683,7 @@ mod tests {
             memory_id: id.to_string(),
             galaxy: Galaxy::Codex.db_name().to_string(),
             score: 5.0,
+            normalized_score: 0.0,
             content: "test content".into(),
         }];
         let vector = vec![VectorSearchResult {
@@ -705,12 +707,14 @@ mod tests {
                 memory_id: id1.to_string(),
                 galaxy: Galaxy::Codex.db_name().to_string(),
                 score: 3.0,
+                normalized_score: 0.0,
                 content: "lower".into(),
             },
             SearchResult {
                 memory_id: id2.to_string(),
                 galaxy: Galaxy::Codex.db_name().to_string(),
                 score: 8.0,
+                normalized_score: 0.0,
                 content: "higher".into(),
             },
         ];
@@ -726,6 +730,7 @@ mod tests {
                 memory_id: Uuid::new_v4().to_string(),
                 galaxy: Galaxy::Codex.db_name().to_string(),
                 score: 1.0 + i as f32,
+                normalized_score: 0.0,
                 content: format!("content {i}"),
             })
             .collect();
@@ -740,6 +745,7 @@ mod tests {
             memory_id: id.to_string(),
             galaxy: Galaxy::Codex.db_name().to_string(),
             score: 100.0,
+            normalized_score: 0.0,
             content: "test".into(),
         }];
         let results = fuse(&bm25, &[], 10);
@@ -774,6 +780,7 @@ mod tests {
             memory_id: id.to_string(),
             galaxy: Galaxy::Codex.db_name().to_string(),
             score: 5.0,
+            normalized_score: 0.0,
             content: "test".into(),
         }];
         let results = fuse_results_inner(

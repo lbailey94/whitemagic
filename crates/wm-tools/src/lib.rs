@@ -89,6 +89,14 @@ impl Tool for MemoryCreateTool {
             })
             .unwrap_or_default();
 
+        if let Some(search) = &self.search {
+            if search.is_readonly() {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "read-only mode: memory.create disabled (another process owns the index)"
+                        .into(),
+                ));
+            }
+        }
         let mut memory = Memory::new(galaxy, content.to_string());
         memory.metadata.tags = tags;
         let id = memory.metadata.id;
@@ -439,6 +447,14 @@ impl Tool for MemoryDeleteTool {
             .unwrap_or("codex");
         let galaxy = parse_galaxy(galaxy_str)?;
 
+        if let Some(search) = &self.search {
+            if search.is_readonly() {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "read-only mode: memory.delete disabled (another process owns the index)"
+                        .into(),
+                ));
+            }
+        }
         let deleted = self.store.delete(galaxy, id)?;
 
         // Remove from Tantivy index if search engine is available (non-fatal)
@@ -563,15 +579,17 @@ impl Tool for MemoryQueryTool {
 /// Full-text search via Tantivy (BM25 scoring).
 pub struct MemorySearchTool {
     search: Arc<SearchEngine>,
+    store: Arc<MemoryStore>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl MemorySearchTool {
     #[must_use]
-    pub fn new(search: Arc<SearchEngine>) -> Self {
+    pub fn new(search: Arc<SearchEngine>, store: Arc<MemoryStore>) -> Self {
         Self {
             search,
+            store,
             stats: ToolStats::default(),
             effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
         }
@@ -599,24 +617,44 @@ impl Tool for MemorySearchTool {
             .get("limit")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(20) as usize;
+        let min_score = args
+            .get("min_score")
+            .and_then(serde_json::Value::as_f64)
+            .map(|v| v as f32)
+            .filter(|v| *v > 0.0);
+        let min_score_ratio = args
+            .get("min_score_ratio")
+            .and_then(serde_json::Value::as_f64)
+            .map(|v| v as f32)
+            .filter(|v| *v > 0.0 && *v < 1.0);
         let galaxy_str = args.get("galaxy").and_then(|v| v.as_str());
 
-        let results = if let Some(g) = galaxy_str {
-            let galaxy = parse_galaxy(g)?;
-            self.search.search_in_galaxy(query, Some(galaxy), limit)?
-        } else {
-            self.search.search(query, limit)?
+        let mut opts = wm_memory::SearchOptions {
+            limit,
+            min_score,
+            relative_floor: min_score_ratio,
+            ..wm_memory::SearchOptions::default()
         };
+        if let Some(g) = galaxy_str {
+            opts.galaxy = Some(parse_galaxy(g)?);
+        }
+        let results = self.search.search_opt(query, &opts)?;
 
+        // Stale verification: index entries whose memory no longer exists in
+        // LMDB are dropped, and the preview comes from the verified LMDB copy.
         let entries: Vec<Value> = results
             .iter()
-            .map(|r| {
-                json!({
+            .filter_map(|r| {
+                let galaxy = wm_core::Galaxy::from_db_name(&r.galaxy)?;
+                let id = uuid::Uuid::parse_str(&r.memory_id).ok()?;
+                let mem = self.store.get(galaxy, id).ok().flatten()?;
+                Some(json!({
                     "memory_id": r.memory_id,
                     "galaxy": r.galaxy,
                     "score": r.score,
-                    "content_preview": r.content.chars().take(120).collect::<String>(),
-                })
+                    "normalized_score": r.normalized_score,
+                    "content_preview": wm_memory::scrub_text(&mem.content).chars().take(120).collect::<String>(),
+                }))
             })
             .collect();
 
@@ -2218,7 +2256,7 @@ pub fn register_all(
     }
 
     if let Some(s) = search {
-        reg = reg.register(Arc::new(MemorySearchTool::new(s.clone())));
+        reg = reg.register(Arc::new(MemorySearchTool::new(s.clone(), store.clone())));
         // Pass search to expansion tools
         reg = expansion::register_expansion(
             &reg,

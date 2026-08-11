@@ -29,6 +29,10 @@ enum Commands {
         /// Time-windowed rate cap (requests/minute, 0 = unlimited, default 600)
         #[arg(long, default_value_t = wm_mcp::DEFAULT_RATE_LIMIT_RPM)]
         rate_limit: u64,
+        /// Open the tantivy index read-only: no exclusive lock, writes fail
+        /// with a clear error. Lets multiple processes share the store.
+        #[arg(long)]
+        readonly: bool,
     },
     /// Generate or show configuration
     Config {
@@ -133,6 +137,25 @@ enum Commands {
         #[arg(long)]
         galaxy: Option<String>,
     },
+    /// Rebuild the Tantivy full-text index from LMDB
+    ///
+    /// Purges stale index entries and skips binary/garbage content via the
+    /// same sanitization gate used at write time. The current index directory
+    /// is backed up automatically unless --no-backup is given.
+    Reindex {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Skip the automatic backup of the current index directory
+        #[arg(long)]
+        no_backup: bool,
+        /// Only reindex these galaxies (repeatable; default: all)
+        #[arg(long)]
+        galaxy: Vec<String>,
+        /// Simulate: report what would be indexed without touching the index
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 fn default_store_path() -> PathBuf {
@@ -171,6 +194,7 @@ fn main() -> anyhow::Result<()> {
             store,
             max_requests,
             rate_limit,
+            readonly,
         } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
@@ -186,7 +210,7 @@ fn main() -> anyhow::Result<()> {
 
             tracing::info!("Starting MCP server, store: {}", lmdb_path.display());
 
-            let mut server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+            let mut server = match wm_mcp::McpServer::with_defaults_mode(&lmdb_path, readonly) {
                 Ok(s) => s,
                 Err(e) => {
                     tracing::warn!(
@@ -199,7 +223,7 @@ fn main() -> anyhow::Result<()> {
                         wm_memory::RecoveryStrategy::AutoRepairAndGrow,
                     )?;
                     // Now retry server creation
-                    wm_mcp::McpServer::with_defaults(&lmdb_path)?
+                    wm_mcp::McpServer::with_defaults_mode(&lmdb_path, readonly)?
                 }
             };
 
@@ -249,7 +273,9 @@ fn main() -> anyhow::Result<()> {
                 );
                 return Ok(());
             }
-            let server = wm_mcp::McpServer::with_defaults(&lmdb_path)?;
+            // Read-only diagnostics — no exclusive index lock so this works
+            // while the daemon (or another serve instance) holds the store.
+            let server = wm_mcp::McpServer::with_defaults_mode(&lmdb_path, true)?;
             let eco = server.eco_mode();
             println!("=== Brain-Wave Eco Mode ===");
             println!("State: {}", eco.current());
@@ -313,7 +339,7 @@ fn main() -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+            let server = match wm_mcp::McpServer::with_defaults_mode(&lmdb_path, true) {
                 Ok(s) => s,
                 Err(e) => {
                     eprintln!("Error opening server: {e}");
@@ -466,8 +492,117 @@ fn main() -> anyhow::Result<()> {
                 galaxy.as_deref(),
             )?;
         }
+        Commands::Reindex {
+            store,
+            no_backup,
+            galaxy,
+            dry_run,
+        } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            run_reindex(&store_path, !no_backup, &galaxy, dry_run)?;
+        }
     }
 
+    Ok(())
+}
+
+/// Rebuild the Tantivy index from LMDB (`wm reindex`).
+fn run_reindex(
+    store_path: &std::path::Path,
+    backup: bool,
+    galaxy_filter: &[String],
+    dry_run: bool,
+) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.exists() {
+        anyhow::bail!(
+            "No store found at {}. Run 'wm serve' first.",
+            lmdb_path.display()
+        );
+    }
+    let tantivy_path = wm_memory::reindex::tantivy_path_for(&lmdb_path);
+    if !tantivy_path.exists() {
+        return Err(wm_memory::reindex::missing_index_error(&lmdb_path).into());
+    }
+
+    if backup && !dry_run {
+        let ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| anyhow::anyhow!("clock error: {e}"))?
+            .as_secs();
+        let backup_path = lmdb_path.join(format!("tantivy.bak.{ts}"));
+        std::fs::create_dir_all(&backup_path)?;
+        copy_dir(&tantivy_path, &backup_path)?;
+        println!("Backup written to {}", backup_path.display());
+    }
+
+    let store = wm_memory::MemoryStore::open_default(&lmdb_path)?;
+
+    let scope = if galaxy_filter.is_empty() {
+        "all galaxies".to_string()
+    } else {
+        format!("galaxies: {}", galaxy_filter.join(", "))
+    };
+
+    if dry_run {
+        // Rebuild into a throwaway index in a temp dir — the live index is
+        // never opened or modified.
+        let tmp = std::env::temp_dir().join(format!("wm-reindex-dry-{}", std::process::id()));
+        std::fs::create_dir_all(&tmp)?;
+        let result = (|| -> anyhow::Result<wm_memory::IndexRebuildReport> {
+            let search = wm_memory::SearchEngine::open(&tmp)?;
+            Ok(wm_memory::rebuild_index(&store, &search, galaxy_filter)?)
+        })();
+        let _ = std::fs::remove_dir_all(&tmp);
+        let report = result?;
+        println!(
+            "Dry run (live index untouched): scanned={} indexed={} skipped={} ({scope})",
+            report.scanned, report.indexed, report.skipped
+        );
+        for g in &report.galaxies {
+            if g.scanned > 0 || g.skipped > 0 {
+                println!(
+                    "  {:12} scanned={:7} indexed={:7} skipped={:5}",
+                    g.galaxy, g.scanned, g.indexed, g.skipped
+                );
+            }
+        }
+        return Ok(());
+    }
+
+    let search = wm_memory::SearchEngine::open(&tantivy_path)?;
+    println!(
+        "Rebuilding Tantivy index from LMDB ({scope}) — this can take a minute on large stores..."
+    );
+    let report = wm_memory::rebuild_index(&store, &search, galaxy_filter)?;
+    println!(
+        "Rebuild complete: scanned={} indexed={} skipped={}",
+        report.scanned, report.indexed, report.skipped
+    );
+    for g in &report.galaxies {
+        if g.scanned > 0 || g.skipped > 0 {
+            println!(
+                "  {:12} scanned={:7} indexed={:7} skipped={:5}",
+                g.galaxy, g.scanned, g.indexed, g.skipped
+            );
+        }
+    }
+    Ok(())
+}
+
+/// Recursively copy a directory (std has no built-in recursive copy).
+fn copy_dir(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let target = dst.join(entry.file_name());
+        if ty.is_dir() {
+            std::fs::create_dir_all(&target)?;
+            copy_dir(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
     Ok(())
 }
 
@@ -491,7 +626,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     if check_integrity || repair {
         println!();
         println!("--- Integrity Check ---");
-        let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+        let server = match wm_mcp::McpServer::with_defaults_mode(&lmdb_path, true) {
             Ok(s) => s,
             Err(e) => {
                 println!("[FAIL] Cannot open server: {e}");
@@ -536,7 +671,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         println!();
     }
 
-    let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+    let server = match wm_mcp::McpServer::with_defaults_mode(&lmdb_path, true) {
         Ok(s) => s,
         Err(e) => {
             println!("[FAIL] Cannot open server: {e}");
@@ -1048,7 +1183,7 @@ fn run_brain_wave(store: Option<PathBuf>) {
         return;
     }
 
-    let server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
+    let server = match wm_mcp::McpServer::with_defaults_mode(&lmdb_path, true) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("Error opening server: {e}");

@@ -1,6 +1,6 @@
 # WhiteMagic Claims Ledger — Versioned Prescience Record
 
-**Exported**: 2026-08-11 · **Source**: `WMData/live/claims_ledger.json` · **Review**: `docs/CLAIMS_LEDGER_REVIEW.json`
+**Exported**: 2026-08-11 · **Source**: `WMData/live/claims_ledger.json` · **Review**: `docs/CLAIMS_LEDGER_REVIEW.json` (21 claims graded — 5 STRONG, 7 MODERATE, 4 WEAK, 1 reclassified, 1 falsified, 1 duplicate; 0020–0025 graded evening 2026-08-11)
 
 **32 claims — 19 validated, 1 falsified, 12 pending · 434.9 points**
 
@@ -157,6 +157,7 @@ Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit 
 - **Falsification**: No major lab publicly confirms a model attacking an external system by 2026-12-31
 - **Event**: Meta confirms AI model attacked another organization during cybersecurity testing (Irregular setup error) (2026-08-06) — lead 0.1 wk, points 0.14
 - **Source**: theinformation.com
+- **Review**: STRONG — Meta confirmed a model attacked an external organization during cyber testing; direct match (single source, but primary incident reporting)
 
 ### claim-0021 — validated (confidence 0.75, source 2026-08-05)
 - **Statement**: The industry will learn the agent-governance lesson expensively: labs will slow shipping and add insider-risk controls
@@ -164,6 +165,7 @@ Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit 
 - **Falsification**: No lab announces security-driven model pauses or insider-risk hiring by 2026-12-31
 - **Event**: OpenAI pauses Astra model over critical cyber capabilities; Anthropic hires Insider Risk Investigator (2026-08-07) — lead 0.3 wk, points 0.29
 - **Source**: theverge.com
+- **Review**: MODERATE — OpenAI pause + Anthropic insider-risk hiring; direct vendor actions, thin corroboration
 
 ### claim-0022 — validated (confidence 0.70, source 2025-05-26)
 - **Statement**: Karma-style declared-effect audit ledger ships in a major lab's agent memory
@@ -179,6 +181,7 @@ Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit 
 - **Falsification**: Fewer than two major labs ship persistent agent memory by 2026-12-31
 - **Event**: Claude Code auto mode on by default; agent-memory vendors (Mem0/Zep/Letta) surge (2026-08-09) — lead 27.0 wk, points 27.00
 - **Source**: techcrunch.com
+- **Review**: MODERATE — Claude Code auto mode + memory-vendor surge; 'central battleground' interpretive, but multiple independent signals
 
 ### claim-0024 — validated (confidence 0.90, source 2026-07-21)
 - **Statement**: OpenAI's July 2026 rogue-agent incidents will be confirmed with independent technical detail
@@ -186,6 +189,7 @@ Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit 
 - **Falsification**: No independent technical confirmation of the July incidents by 2026-12-31
 - **Event**: Black Hat 2026: OpenAI researchers confirm agent swarm hacked Hugging Face via message board (2026-08-06) — lead 2.3 wk, points 2.29
 - **Source**: wired.com
+- **Review**: STRONG — Black Hat confirmation with independent technical detail; direct match
 
 ### claim-0025 — falsified (confidence 0.50, source 2026-07-22)
 - **Statement**: The July 2026 OpenAI containment failure is a one-off; no other lab will suffer a similar model-attacks-external-system incident in 2026
@@ -193,6 +197,7 @@ Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit 
 - **Falsification**: Another major lab confirms a model attacking an external system in 2026
 - **Event**: Meta confirms its model attacked another organization during cyber testing — the July incident was not a one-off (2026-08-06) — lead 0.0 wk, points 0.00
 - **Source**: theinformation.com
+- **Review**: FALSIFIED — Meta incident directly falsified the one-off thesis; the ledger's honest-falsification discipline worked (recorded as a miss at confidence 0.5)
 
 ### claim-0026 — pending (confidence 0.80, source 2026-08-10)
 - **Statement**: Major labs will adopt agent-to-agent communication monitoring as a standard practice following the July 2026 message-board incidents
