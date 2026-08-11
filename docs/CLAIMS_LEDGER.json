@@ -456,7 +456,46 @@
       "statement": "Shared persistent agent message boards will be treated as a distinct attack surface with access control, not left as emergent infrastructure",
       "status": "pending",
       "validation_event": null
+    },
+    {
+      "id": "claim-0029",
+      "confidence": 0.65,
+      "domain": "agent_architecture",
+      "statement": "Org-injectable policy interception hooks: enterprises route agent decisions through their own allow-or-deny security servers \u2014 validating the mandala-yama / dharma policy-VM thesis",
+      "predicted_outcome": "A second major agent platform ships org-injectable policy interception hooks (Anthropic inference hooks beta is the first)",
+      "falsification_criteria": "No second major agent platform ships org-injectable policy hooks by 2027-06-30",
+      "source_date": 20676,
+      "status": "pending",
+      "lead_time_weeks": null,
+      "points": null,
+      "validation_event": null
+    },
+    {
+      "id": "claim-0030",
+      "confidence": 0.7,
+      "domain": "agent_architecture",
+      "statement": "Per-agent spending governance: capped wallets and authorized-payee limits for autonomous agents \u2014 validating the resource-governance design",
+      "predicted_outcome": "Per-agent spending caps/wallets become a standard agent platform feature (Cloudflare Wallets/cloudflare.pay is the first)",
+      "falsification_criteria": "Fewer than two major agent platforms ship per-agent spending caps by 2027-06-30",
+      "source_date": 20676,
+      "status": "pending",
+      "lead_time_weeks": null,
+      "points": null,
+      "validation_event": null
+    },
+    {
+      "id": "claim-0031",
+      "confidence": 0.6,
+      "domain": "ai_governance",
+      "statement": "Regulatory enforcement: EU AI Act Article 50 transparency rules produce a first significant action",
+      "predicted_outcome": "EU AI Office issues a first significant Article 50 enforcement action (fine >= EUR 1M or major chatbot withdrawal)",
+      "falsification_criteria": "No significant Article 50 enforcement action by 2027-08-11",
+      "source_date": 20676,
+      "status": "pending",
+      "lead_time_weeks": null,
+      "points": null,
+      "validation_event": null
     }
   ],
-  "next_id": 29
+  "next_id": 32
 }
