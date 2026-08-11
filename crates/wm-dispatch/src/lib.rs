@@ -15,6 +15,6 @@ pub mod speculative;
 pub use circuit_breaker::{BreakerConfig, BreakerState, CircuitBreaker, CircuitBreakerRegistry};
 pub use composition::{CompositionConfig, CompositionPattern, CompositionTracker};
 pub use pipeline::DispatchPipeline;
-pub use rate_limiter::{RateLimiter, SlidingWindow};
+pub use rate_limiter::{RateLimiter, RateLimiterConfig, SlidingWindow};
 pub use registry::{ToolRegistry, ToolRegistryBuilder};
 pub use speculative::{CheckResult, SpeculativeExecutor, ValidationResult};

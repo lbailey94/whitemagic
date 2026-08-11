@@ -3,12 +3,125 @@
 //! Provides O(1) per-check rate limiting using lock-free atomics.
 //! Per-tool and global RPM enforcement with burst allowance.
 //!
+//! # Configuration
+//!
+//! Limits are configurable via `RateLimiterConfig` (defaults in
+//! [`RateLimiterConfig::default`]) or the environment:
+//!
+//! | Variable | Default | Description |
+//! |----------|---------|-------------|
+//! | `WM_DISPATCH_GLOBAL_RPM` | 300 | Max total dispatches/min across all tools |
+//! | `WM_DISPATCH_TOOL_RPM` | 60 | Default per-tool RPM limit |
+//! | `WM_DISPATCH_BURST` | 10 | Extra burst capacity per tool |
+//! | `WM_DISPATCH_TOOL_OVERRIDES` | — | `tool:rpm,tool2:rpm2` per-tool overrides |
+//!
 //! Ported from v2-reference/safety/rate_limiter.rs — PyO3 and lazy_static removed.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// Default limits — the values used by [`RateLimiter::default`].
+pub const DEFAULT_GLOBAL_RPM: u64 = 300;
+pub const DEFAULT_TOOL_RPM: u64 = 60;
+pub const DEFAULT_BURST: u64 = 10;
+
+/// Configuration for a [`RateLimiter`].
+///
+/// Built from `RateLimiterConfig::default()`, optionally overridden by
+/// `WM_DISPATCH_*` environment variables (see module docs).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RateLimiterConfig {
+    /// Max total dispatches per minute across all tools (0 = unlimited).
+    pub global_rpm: u64,
+    /// Default per-tool dispatches per minute (0 = unlimited).
+    pub default_tool_rpm: u64,
+    /// Extra burst capacity per tool window.
+    pub burst_allowance: u64,
+    /// Per-tool RPM overrides: tool name → RPM.
+    pub tool_overrides: HashMap<String, u64>,
+}
+
+impl Default for RateLimiterConfig {
+    fn default() -> Self {
+        Self {
+            global_rpm: DEFAULT_GLOBAL_RPM,
+            default_tool_rpm: DEFAULT_TOOL_RPM,
+            burst_allowance: DEFAULT_BURST,
+            tool_overrides: HashMap::new(),
+        }
+    }
+}
+
+impl RateLimiterConfig {
+    /// Build a config from `WM_DISPATCH_*` environment variables.
+    ///
+    /// Unset variables keep their defaults. Malformed values are ignored with
+    /// a warning (a bad env var should not take the system down).
+    #[must_use]
+    pub fn from_env() -> Self {
+        Self::from_env_impl(
+            std::env::var("WM_DISPATCH_GLOBAL_RPM").ok(),
+            std::env::var("WM_DISPATCH_TOOL_RPM").ok(),
+            std::env::var("WM_DISPATCH_BURST").ok(),
+            std::env::var("WM_DISPATCH_TOOL_OVERRIDES").ok(),
+        )
+    }
+
+    /// Pure parsing used by [`Self::from_env`]; testable without touching
+    /// process environment state.
+    #[must_use]
+    fn from_env_impl(
+        global_rpm: Option<String>,
+        tool_rpm: Option<String>,
+        burst: Option<String>,
+        overrides: Option<String>,
+    ) -> Self {
+        let mut config = Self::default();
+        if let Some(v) = global_rpm {
+            if let Ok(rpm) = v.parse::<u64>() {
+                config.global_rpm = rpm;
+            } else {
+                tracing::warn!("WM_DISPATCH_GLOBAL_RPM invalid ({v}), keeping default");
+            }
+        }
+        if let Some(v) = tool_rpm {
+            if let Ok(rpm) = v.parse::<u64>() {
+                config.default_tool_rpm = rpm;
+            } else {
+                tracing::warn!("WM_DISPATCH_TOOL_RPM invalid ({v}), keeping default");
+            }
+        }
+        if let Some(v) = burst {
+            if let Ok(burst) = v.parse::<u64>() {
+                config.burst_allowance = burst;
+            } else {
+                tracing::warn!("WM_DISPATCH_BURST invalid ({v}), keeping default");
+            }
+        }
+        if let Some(v) = overrides {
+            for pair in v.split(',') {
+                let pair = pair.trim();
+                if pair.is_empty() {
+                    continue;
+                }
+                let Some((tool, rpm)) = pair.split_once(':') else {
+                    tracing::warn!("WM_DISPATCH_TOOL_OVERRIDES entry '{pair}' missing ':' — skipping");
+                    continue;
+                };
+                if let Ok(rpm) = rpm.trim().parse::<u64>() {
+                    config.tool_overrides.insert(tool.trim().to_string(), rpm);
+                } else {
+                    tracing::warn!(
+                        "WM_DISPATCH_TOOL_OVERRIDES entry '{pair}' has invalid rpm — skipping"
+                    );
+                }
+            }
+        }
+        config
+    }
+}
 
 /// A sliding-window counter using two half-windows for smooth transitions.
 ///
@@ -160,6 +273,22 @@ impl RateLimiter {
         }
     }
 
+    /// Create a rate limiter from a [`RateLimiterConfig`].
+    ///
+    /// Per-tool overrides from the config are applied immediately.
+    #[must_use]
+    pub fn from_config(config: &RateLimiterConfig) -> Self {
+        let limiter = Self::new(
+            config.global_rpm,
+            config.default_tool_rpm,
+            config.burst_allowance,
+        );
+        for (tool, rpm) in &config.tool_overrides {
+            limiter.set_override(tool, *rpm);
+        }
+        limiter
+    }
+
     /// Set a per-tool RPM override.
     pub fn set_override(&self, tool: &str, rpm: u64) {
         if let Ok(mut guard) = self.overrides.write() {
@@ -227,7 +356,7 @@ impl RateLimiter {
 
 impl Default for RateLimiter {
     fn default() -> Self {
-        Self::new(300, 60, 10)
+        Self::from_config(&RateLimiterConfig::default())
     }
 }
 
@@ -301,6 +430,79 @@ mod tests {
     fn default_rate_limiter() {
         let limiter = RateLimiter::default();
         assert!(limiter.try_acquire("any_tool").is_ok());
+    }
+
+    // ── RateLimiterConfig tests ─────────────────────────────────────
+
+    #[test]
+    fn config_defaults_match_legacy_values() {
+        let config = RateLimiterConfig::default();
+        assert_eq!(config.global_rpm, 300);
+        assert_eq!(config.default_tool_rpm, 60);
+        assert_eq!(config.burst_allowance, 10);
+        assert!(config.tool_overrides.is_empty());
+    }
+
+    #[test]
+    fn config_from_env_applies_overrides() {
+        let config = RateLimiterConfig::from_env_impl(
+            Some("5000".to_string()),
+            Some("250".to_string()),
+            Some("40".to_string()),
+            Some("wm:2000, memory.search: 120 ,badtool:xyz".to_string()),
+        );
+        assert_eq!(config.global_rpm, 5000);
+        assert_eq!(config.default_tool_rpm, 250);
+        assert_eq!(config.burst_allowance, 40);
+        assert_eq!(config.tool_overrides.get("wm"), Some(&2000));
+        assert_eq!(config.tool_overrides.get("memory.search"), Some(&120));
+        assert!(!config.tool_overrides.contains_key("badtool"));
+    }
+
+    #[test]
+    fn config_from_env_ignores_invalid_values() {
+        let config = RateLimiterConfig::from_env_impl(
+            Some("not-a-number".to_string()),
+            Some("0".to_string()),
+            None,
+            None,
+        );
+        assert_eq!(config.global_rpm, DEFAULT_GLOBAL_RPM, "invalid rpm keeps default");
+        assert_eq!(config.default_tool_rpm, 0, "valid 0 means unlimited");
+        assert_eq!(config.burst_allowance, DEFAULT_BURST);
+    }
+
+    #[test]
+    fn config_from_env_empty_overrides_ignored() {
+        let config = RateLimiterConfig::from_env_impl(None, None, None, Some(String::new()));
+        assert!(config.tool_overrides.is_empty());
+    }
+
+    #[test]
+    fn rate_limiter_from_config_applies_overrides() {
+        let config = RateLimiterConfig {
+            global_rpm: 100_000,
+            default_tool_rpm: 5,
+            burst_allowance: 0,
+            tool_overrides: std::collections::HashMap::from([("wm".to_string(), 5000)]),
+        };
+        let limiter = RateLimiter::from_config(&config);
+        // Other tools stay at the default cap...
+        for _ in 0..5 {
+            assert!(limiter.try_acquire("other_tool").is_ok());
+        }
+        assert!(
+            limiter.try_acquire("other_tool").is_err(),
+            "default cap (5) enforced for non-overridden tools"
+        );
+        // ...while the overridden tool gets its higher cap.
+        for _ in 0..5000 {
+            assert!(limiter.try_acquire("wm").is_ok());
+        }
+        assert!(
+            limiter.try_acquire("wm").is_err(),
+            "override cap (5000) should be enforced after burst"
+        );
     }
 
     // ── Property-based tests (proptest) ─────────────────────────────

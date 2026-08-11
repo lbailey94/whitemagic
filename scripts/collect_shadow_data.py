@@ -175,6 +175,10 @@ def main():
     parser.add_argument("--store", default="/tmp/wm-shadow-collect")
     parser.add_argument("--binary", default=str(Path(__file__).resolve().parent.parent / "target/debug/wm"))
     parser.add_argument("--endpoint", default="http://127.0.0.1:8081")
+    parser.add_argument("--cooldown-every", type=int, default=60,
+                        help="batch size before a 62s cooldown (dispatch rate window); 0 = never")
+    parser.add_argument("--dim", type=int, default=None,
+                        help="embedding dimension (WM_EMBEDDER_DIM); defaults to 768 (nomic-embed)")
     args = parser.parse_args()
 
     store = Path(args.store)
@@ -184,7 +188,7 @@ def main():
 
     env = os.environ.copy()
     env["WM_EMBEDDER_ENDPOINT"] = args.endpoint
-    env["WM_EMBEDDER_DIM"] = "768"
+    env["WM_EMBEDDER_DIM"] = str(args.dim if args.dim is not None else 768)
     env["WM_EMBEDDER_MODEL"] = "local"
     env["WM_EMBEDDER_TIMEOUT_MS"] = "120000"
     env["RUST_LOG"] = "info"
@@ -212,9 +216,11 @@ def main():
         results = []
         t0 = time.perf_counter()
         for i, q in enumerate(QUERIES):
-            # Dispatch pipeline per-tool limit: 60 RPM + 10 burst = 70 calls/min
-            # for `wm`. Batch in 60-slot windows with a cooldown between.
-            if i > 0 and i % 60 == 0:
+            # Dispatch pipeline per-tool limit (60 RPM + 10 burst default).
+            # Batch within the window; cooldown only when the server's own
+            # limiter is at defaults. --cooldown-every 0 disables (e.g. when
+            # WM_DISPATCH_TOOL_RPM is raised).
+            if args.cooldown_every > 0 and i > 0 and i % args.cooldown_every == 0:
                 print(f"  ...cooldown at query {i} (dispatch rate window)")
                 time.sleep(62)
             resp = rpc(proc, "tools/call", {

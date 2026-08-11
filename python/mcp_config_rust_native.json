@@ -5,10 +5,17 @@
       "args": [
         "serve",
         "--store",
-        "/home/lucas/Desktop/WMv5/.whitemagic"
+        "/home/lucas/Desktop/WMdata/live"
       ],
       "env": {
-        "RUST_LOG": "info"
+        "RUST_LOG": "info",
+        "WM_EMBEDDER_ENDPOINT": "http://127.0.0.1:8081",
+        "WM_EMBEDDER_MODEL": "local",
+        "WM_EMBEDDER_DIM": "384",
+        "WM_EMBEDDER_TIMEOUT_MS": "120000",
+        "WM_DISPATCH_TOOL_RPM": "600",
+        "WM_DISPATCH_GLOBAL_RPM": "3000",
+        "WM_DISPATCH_BURST": "50"
       }
     }
   }

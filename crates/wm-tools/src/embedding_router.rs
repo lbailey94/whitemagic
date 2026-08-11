@@ -25,7 +25,7 @@
 //! `None` from `new()`, and the caller falls back to the TF-IDF router.
 
 use ahash::AHashMap;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use wm_memory::Embedder;
 
 use crate::nlu::{PREFIX_ROUTES, TOOL_PROFILES, ToolProfile};
@@ -127,6 +127,14 @@ pub struct EmbeddingRouter {
     outcome_stats: RwLock<AHashMap<String, OutcomeStats>>,
     /// Embedding dimensionality.
     dim: usize,
+    /// Whether to apply the TF-IDF prefix-route bonus.
+    ///
+    /// `true` for the legacy keyword-profile path (`new`), where descriptions
+    /// are bare keyword lists and the verb bonus compensates. `false` for
+    /// anchored descriptions (`with_descriptions`), where the bonus fights
+    /// the intent anchors ("list tools" was boosted toward memory.list despite
+    /// tools.list carrying the exact anchor).
+    apply_prefix_bonus: bool,
 }
 
 impl EmbeddingRouter {
@@ -139,7 +147,7 @@ impl EmbeddingRouter {
     /// This allows the caller to gracefully fall back to the TF-IDF router.
     #[must_use]
     pub fn new(embedder: Box<dyn Embedder>) -> Option<Self> {
-        Self::with_descriptions(embedder, tool_descriptions())
+        Self::new_with_descriptions(embedder, tool_descriptions(), true)
     }
 
     /// Create a new embedding router from explicit (tool, description) pairs.
@@ -155,6 +163,14 @@ impl EmbeddingRouter {
     pub fn with_descriptions(
         embedder: Box<dyn Embedder>,
         descriptions: Vec<(String, String)>,
+    ) -> Option<Self> {
+        Self::new_with_descriptions(embedder, descriptions, false)
+    }
+
+    fn new_with_descriptions(
+        embedder: Box<dyn Embedder>,
+        descriptions: Vec<(String, String)>,
+        apply_prefix_bonus: bool,
     ) -> Option<Self> {
         // Stub embedders produce hash-based embeddings with no semantic similarity.
         // Don't use the embedding router with them — fall back to TF-IDF.
@@ -196,6 +212,7 @@ impl EmbeddingRouter {
             embedder,
             outcome_stats: RwLock::new(AHashMap::new()),
             dim,
+            apply_prefix_bonus,
         })
     }
 
@@ -231,12 +248,19 @@ impl EmbeddingRouter {
             }
         };
 
-        // Prefix route bonus (same logic as TF-IDF router)
-        let first_word = lower.split_whitespace().next().unwrap_or("");
-        let prefix_bonus: Option<(&str, f64)> = PREFIX_ROUTES
-            .iter()
-            .find(|(verb, _, _)| *verb == first_word)
-            .map(|(_, tool, bonus)| (*tool, *bonus));
+        // Prefix route bonus — only on the legacy keyword-profile path, where
+        // descriptions are bare keyword lists and the verb bonus compensates.
+        // On the anchored path it fights the intent anchors ("list tools" was
+        // boosted toward memory.list despite tools.list carrying the anchor).
+        let prefix_bonus: Option<(&str, f64)> = if self.apply_prefix_bonus {
+            let first_word = lower.split_whitespace().next().unwrap_or("");
+            PREFIX_ROUTES
+                .iter()
+                .find(|(verb, _, _)| *verb == first_word)
+                .map(|(_, tool, bonus)| (*tool, *bonus))
+        } else {
+            None
+        };
 
         // Score each tool by cosine similarity to (optionally refined) embedding
         let Ok(stats_lock) = self.outcome_stats.read() else {
@@ -550,6 +574,347 @@ pub fn tool_descriptions() -> Vec<(String, String)> {
 fn profile_to_description(profile: &ToolProfile) -> String {
     let keywords: Vec<&str> = profile.keywords.iter().map(|(t, _)| *t).collect();
     format!("{} {}", profile.tool_name, keywords.join(" "))
+}
+
+/// Intent anchors: natural-language phrasings users say when they mean a tool.
+///
+/// The registry's `description()` strings describe *what a tool does* (display
+/// prose) but rarely match how users phrase intent. The 2026-08-11 shadow runs
+/// showed top-1 cosine collapsing onto arbitrary tools for common phrasings
+/// ("show my karma" → karma.clear). Anchors are appended to the embedded text
+/// so the vector for each tool covers user phrasing, not just docstring prose.
+static INTENT_ANCHORS: &[(&str, &[&str])] = &[
+    // Memory
+    (
+        "memory.create",
+        &[
+            "remember that",
+            "store this note",
+            "save this thought",
+            "memorize this",
+            "keep this in memory",
+            "note that",
+            "record that",
+        ],
+    ),
+    (
+        "memory.read",
+        &[
+            "get memory by id",
+            "read this memory",
+            "recall what I said",
+            "fetch memory",
+        ],
+    ),
+    (
+        "memory.list",
+        &[
+            "list my memories",
+            "show my recent memories",
+            "what memories do I have",
+            "find memories about",
+            "memories in the codex galaxy",
+        ],
+    ),
+    (
+        "memory.search",
+        &[
+            "search my memories for",
+            "find memory about",
+            "memory search",
+            "search for rust",
+            "search memories",
+        ],
+    ),
+    (
+        "memory.vector.search",
+        &[
+            "find memory about search",
+            "semantic search",
+            "similar memories",
+        ],
+    ),
+    (
+        "memory.count",
+        &["count my memories", "how many memories", "memory count"],
+    ),
+    ("memory.tags", &["what tags do I have", "show memory tags"]),
+    (
+        "memory.delete",
+        &["delete memory", "remove memory", "forget this memory"],
+    ),
+    // Galaxy
+    (
+        "galaxy.list",
+        &["list galaxies", "what galaxies exist", "show the galaxies"],
+    ),
+    (
+        "galaxy.stats",
+        &[
+            "galaxy stats",
+            "stats for the codex galaxy",
+            "how many memories are in",
+            "show galaxy info",
+        ],
+    ),
+    (
+        "galaxy.create",
+        &["create a new galaxy", "new galaxy called", "make a galaxy"],
+    ),
+    ("galaxy.health", &["check galaxy health", "galaxy health"]),
+    (
+        "galaxy.taxonomy",
+        &["gana taxonomy", "show the gana taxonomy"],
+    ),
+    // Session
+    ("session.start", &["start a session", "begin a new session"]),
+    ("session.end", &["end the session", "close the session"]),
+    (
+        "session.list",
+        &[
+            "what sessions do I have",
+            "list sessions",
+            "show session history",
+        ],
+    ),
+    (
+        "session.record",
+        &["record this session turn", "log this session turn"],
+    ),
+    (
+        "session.replay",
+        &["replay the session", "replay last session"],
+    ),
+    (
+        "session.recall",
+        &[
+            "recall the session context",
+            "session history",
+            "previous session",
+            "record that the server restarted",
+        ],
+    ),
+    (
+        "session.handoff",
+        &[
+            "hand off the session",
+            "transfer session",
+            "session handoff",
+        ],
+    ),
+    // Karma
+    (
+        "karma.report",
+        &[
+            "show my karma",
+            "karma status",
+            "check my karma",
+            "karma balance",
+            "karma report",
+            "karma ledger status",
+        ],
+    ),
+    (
+        "karma.history",
+        &["karma history", "past karma entries", "recent karma"],
+    ),
+    (
+        "karma.clear",
+        &["clear karma", "wipe karma", "reset karma", "purge karma"],
+    ),
+    (
+        "karma.verify_chain",
+        &[
+            "check the karma chain",
+            "verify chain integrity",
+            "karma chain",
+        ],
+    ),
+    (
+        "karma.anchor",
+        &["anchor the karma chain", "publish anchor", "merkle anchor"],
+    ),
+    // Friction / RSI
+    (
+        "friction.log",
+        &["log friction", "log an error", "log friction entry"],
+    ),
+    (
+        "friction.review",
+        &[
+            "review the friction log",
+            "review friction",
+            "friction review",
+        ],
+    ),
+    (
+        "friction.auto_log",
+        &["auto log friction", "automatically log friction"],
+    ),
+    (
+        "friction.resolve",
+        &["resolve friction", "resolve this friction"],
+    ),
+    (
+        "improve.proposals",
+        &[
+            "what proposals are active",
+            "improvement proposals",
+            "list proposals",
+        ],
+    ),
+    // Claims
+    (
+        "claims",
+        &[
+            "add a claim",
+            "resolve a claim",
+            "claims status",
+            "what claims are pending",
+            "list claims",
+        ],
+    ),
+    // Transaction
+    ("transaction.begin", &["begin a transaction"]),
+    ("transaction.commit", &["commit the transaction"]),
+    ("transaction.rollback", &["rollback the transaction"]),
+    // Tools / meta
+    (
+        "tools.list",
+        &[
+            "list tools",
+            "what tools do you have",
+            "tools list",
+            "list all tools",
+        ],
+    ),
+    (
+        "nlu.shadow_report",
+        &["nlu shadow report", "show shadow mode stats"],
+    ),
+    (
+        "nlu.classify",
+        &["nlu classification test", "classify this query"],
+    ),
+    (
+        "state.snapshot",
+        &[
+            "what is the brain wave state",
+            "brain wave state",
+            "current brain wave",
+        ],
+    ),
+    (
+        "system.stats",
+        &["system stats", "show resource usage", "system stats please"],
+    ),
+    (
+        "system.health",
+        &[
+            "health check",
+            "doctor check",
+            "run a health check",
+            "system health",
+        ],
+    ),
+    (
+        "galaxy.dashboard",
+        &["consciousness dashboard", "display the dashboard"],
+    ),
+    (
+        "consciousness.depth",
+        &["consciousness depth", "depth of consciousness"],
+    ),
+    // Web / research
+    (
+        "web.fetch",
+        &[
+            "fetch this webpage",
+            "fetch the url and summarize",
+            "fetch url",
+        ],
+    ),
+    ("web.search", &["search the web for", "web search"]),
+    (
+        "web.search_and_read",
+        &["search and read", "search the web and read"],
+    ),
+    ("web.deep_fetch", &["deep fetch", "deep fetch this page"]),
+    (
+        "research.topic",
+        &[
+            "research the topic of",
+            "research topic",
+            "do a deep search on",
+        ],
+    ),
+    (
+        "research.repo",
+        &["research a github repo", "research repo", "github repo"],
+    ),
+    (
+        "research.rabbit_hole",
+        &["rabbit hole research", "rabbit hole"],
+    ),
+    // Self-play
+    (
+        "selfplay.run",
+        &["run selfplay", "start selfplay", "run training"],
+    ),
+    ("selfplay.status", &["selfplay status", "training status"]),
+    (
+        "selfplay.export",
+        &["export training data", "export selfplay data"],
+    ),
+    // Simulation / imagination
+    (
+        "sim.mc",
+        &[
+            "run a simulation",
+            "monte carlo simulation",
+            "simulate this",
+        ],
+    ),
+    (
+        "imagine.scenario",
+        &["imagine a scenario", "scenario planning"],
+    ),
+    (
+        "imagine.reflect",
+        &["reflect on this scenario", "counterfactual replay"],
+    ),
+    (
+        "gnosis",
+        &[
+            "what is your gana",
+            "who are you",
+            "what do I know about the wm project",
+        ],
+    ),
+];
+
+/// Merge registry tool descriptions with intent anchors for embedding.
+///
+/// Each description becomes: `"<name>: <registry description> — users say:
+/// <anchors joined>"`. Tools without anchors keep their prose description.
+#[must_use]
+pub fn anchored_descriptions(tools: &[Arc<dyn wm_core::Tool>]) -> Vec<(String, String)> {
+    tools
+        .iter()
+        .map(|t| {
+            let name = t.name();
+            let desc = t.description();
+            let anchors = INTENT_ANCHORS
+                .iter()
+                .find(|(n, _)| *n == name)
+                .map(|(_, a)| a);
+            let text = match anchors {
+                Some(anchors) => format!("{name}: {desc} — users say: {}", anchors.join("; ")),
+                None => format!("{name}: {desc}"),
+            };
+            (name.to_string(), text)
+        })
+        .collect()
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
