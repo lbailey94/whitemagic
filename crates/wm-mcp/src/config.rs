@@ -407,7 +407,6 @@ impl WmConfig {
             brain_wave_interval: Duration::from_secs(self.daemon.brain_wave_interval_secs),
             homeostasis_interval: Duration::from_secs(self.daemon.homeostasis_interval_secs),
             min_health_score: self.daemon.min_health_score,
-            serve_mcp: false,
             codegen_interval: Duration::from_secs(self.daemon.codegen_interval_secs),
             codegen_auto_apply: self.daemon.codegen_auto_apply,
             research_interval: Duration::from_secs(self.daemon.research_interval_secs),

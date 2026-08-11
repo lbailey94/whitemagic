@@ -1672,7 +1672,9 @@ impl WmMetaTool {
             }
 
             // Margin fallback: defer to TF-IDF when the embedding router
-            // cannot separate the top candidates.
+            // cannot separate the top candidates. TF-IDF's keyword-driven
+            // picks stay reliable even at low confidence (2026-08-11 data:
+            // a confidence floor on this fallback caused net regressions).
             if margin < embedding_router::MIN_MARGIN {
                 (tfidf_tool.to_string(), tfidf_conf)
             } else {
@@ -2297,6 +2299,20 @@ pub fn register_meta_tools(
     store: &Arc<MemoryStore>,
     shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
 ) -> ToolRegistry {
+    register_meta_tools_with_router(registry, store, shadow_stats).0
+}
+
+/// Register the meta-tools and return the embedding router alongside.
+///
+/// The router is returned so the caller can persist/restore OATS outcome
+/// stats (`save_oats` / `load_oats`) across restarts — the outcome-aware
+/// refinement that makes NLU routing learn from dispatch outcomes.
+#[must_use]
+pub fn register_meta_tools_with_router(
+    registry: &ToolRegistry,
+    store: &Arc<MemoryStore>,
+    shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
+) -> (ToolRegistry, Option<Arc<embedding_router::EmbeddingRouter>>) {
     let base_snapshot: Vec<Arc<dyn Tool>> = registry.all();
     // Count includes old gnosis (which will be replaced with tool-count-aware version)
     let tool_count = base_snapshot.len();
@@ -2336,6 +2352,7 @@ pub fn register_meta_tools(
         wm_memory::create_embedder(),
         shadow_stats,
     ));
+    let router = wm.embedding_router().cloned();
 
     // Build the final registry: non-gnosis + tools.list + wm + gnosis + shadow report
     let mut final_builder = ToolRegistryBuilder::new();
@@ -2346,7 +2363,7 @@ pub fn register_meta_tools(
     final_builder.register(wm);
     final_builder.register(gnosis);
     final_builder.register(shadow_report);
-    final_builder.build()
+    (final_builder.build(), router)
 }
 
 #[cfg(test)]

@@ -90,6 +90,9 @@ pub struct McpServer {
     dynamic_galaxies: Arc<std::sync::Mutex<wm_core::DynamicGalaxyRegistry>>,
     /// Shadow mode stats for NLU router observability (OATS)
     shadow_stats: Arc<std::sync::RwLock<wm_tools::embedding_router::ShadowModeStats>>,
+    /// NLU embedding router (OATS outcome stats) — persisted to
+    /// `<store>/mutable_oats.json` on shutdown and restored on startup.
+    embedding_router: Option<Arc<wm_tools::embedding_router::EmbeddingRouter>>,
     /// Conformal store (shared with conformal tools) — auto-persisted to
     /// `<store>/conformal_store.json` on shutdown and restored on startup.
     conformal_store: Option<Arc<std::sync::Mutex<wm_tools::expansion::conformal::ConformalStore>>>,
@@ -357,6 +360,7 @@ impl McpServer {
                 std::sync::Mutex::new(wm_core::DynamicGalaxyRegistry::new()),
             ),
             shadow_stats,
+            embedding_router: None,
             conformal_store: None,
             calibration_store: None,
             claims_ledger: None,
@@ -652,14 +656,15 @@ impl McpServer {
         );
         let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
-        let shadow_stats = Arc::new(std::sync::RwLock::new(
-            wm_tools::embedding_router::ShadowModeStats::default(),
-        ));
-        let registry = wm_tools::register_meta_tools(&registry, &store, shadow_stats.clone());
-
         let gana_registry = Arc::new(std::sync::Mutex::new(wm_core::GanaRegistry::new()));
         let dynamic_galaxies =
             Arc::new(std::sync::Mutex::new(wm_core::DynamicGalaxyRegistry::new()));
+
+        let shadow_stats = Arc::new(std::sync::RwLock::new(
+            wm_tools::embedding_router::ShadowModeStats::default(),
+        ));
+        let (registry, embedding_router) =
+            wm_tools::register_meta_tools_with_router(&registry, &store, shadow_stats.clone());
 
         let pipeline = DispatchPipeline::new(
             std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
@@ -713,6 +718,10 @@ impl McpServer {
         // Override mutable structure registries with shared instances (Phase 6)
         server.gana_registry = gana_registry;
         server.dynamic_galaxies = dynamic_galaxies;
+
+        // Attach the NLU embedding router so OATS outcome stats auto-persist
+        // on shutdown and are restored on startup (mutable_oats.json)
+        server.embedding_router = embedding_router;
 
         // Attach the shared conformal store so it auto-persists on shutdown
         server.conformal_store = Some(Arc::clone(&conformal_store));
@@ -1432,6 +1441,22 @@ impl McpServer {
             }
         }
 
+        // Save OATS outcome stats (the NLU router's learned refinement).
+        // Without this the router's success/failure centroids are lost on
+        // every restart and OATS never accumulates cross-session learning.
+        if let Some(router) = &self.embedding_router {
+            let path = store_dir.join("mutable_oats.json");
+            if let Some(json) = router.save_oats() {
+                if let Err(e) = std::fs::write(&path, json) {
+                    tracing::warn!(path = %path.display(), error = %e, "Failed to save OATS");
+                } else {
+                    tracing::info!(path = %path.display(), "Saved OATS outcome stats");
+                }
+            } else {
+                tracing::warn!("Failed to serialize OATS outcome stats");
+            }
+        }
+
         // Save conformal calibration state — the doctor reads this file at
         // `<store_root>/conformal_store.json` (store root, not lmdb dir).
         if let Some(conformal) = &self.conformal_store {
@@ -1624,6 +1649,18 @@ impl McpServer {
                     }
                 }
                 Err(e) => tracing::warn!(error = %e, "Failed to read ShadowModeStats file"),
+            }
+        }
+
+        let oats_path = store_dir.join("mutable_oats.json");
+        if oats_path.exists() {
+            match std::fs::read_to_string(&oats_path) {
+                Ok(json) => {
+                    if let Some(router) = &self.embedding_router {
+                        router.load_oats(&json);
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to read OATS file"),
             }
         }
     }
@@ -2546,6 +2583,16 @@ mod tests {
     use crate::input_validation::MAX_PARAMS_SIZE;
     use std::sync::Arc;
 
+    /// Store path for tests: a nested dir inside the tempdir so that
+    /// `store.path().parent()` (where self_model.json etc. live) stays inside
+    /// the tempdir. Passing the tempdir root directly made those files land
+    /// in the shared `/tmp` — cross-test pollution of self_model.json.
+    fn test_store_path(tmp: &tempfile::TempDir) -> std::path::PathBuf {
+        let dir = tmp.path().join("lmdb");
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
     fn test_server() -> McpServer {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
@@ -3139,7 +3186,7 @@ mod tests {
     #[tokio::test]
     async fn e2e_gan_ying_bus_persists_events_to_disk() {
         let tmp = tempfile::tempdir().unwrap();
-        let mut server = McpServer::with_defaults(tmp.path()).unwrap();
+        let mut server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
 
         // Persistence is wired in the production constructor
         let persist_path = {
@@ -3148,7 +3195,11 @@ mod tests {
         };
         assert_eq!(
             persist_path.as_deref(),
-            Some(tmp.path().join("resonance_events.jsonl").as_path())
+            Some(
+                test_store_path(&tmp)
+                    .join("resonance_events.jsonl")
+                    .as_path()
+            )
         );
 
         let resp = server.handle_request(
@@ -3157,7 +3208,7 @@ mod tests {
         let parsed: Value = serde_json::from_str(&resp).unwrap();
         assert!(parsed.get("error").is_none() || parsed["error"].is_null());
 
-        let log = std::fs::read_to_string(tmp.path().join("resonance_events.jsonl"))
+        let log = std::fs::read_to_string(test_store_path(&tmp).join("resonance_events.jsonl"))
             .expect("persistence log should exist after dispatch");
         assert!(
             log.contains("tool_dispatch_start"),
@@ -3166,7 +3217,7 @@ mod tests {
 
         // A fresh server over the same store seeds its recent buffer from the log
         drop(server);
-        let server2 = McpServer::with_defaults(tmp.path()).unwrap();
+        let server2 = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
         let any_start = {
             let bus2 = server2.gan_ying_bus().lock().unwrap();
             bus2.recent_events(10)
@@ -3670,7 +3721,7 @@ mod tests {
     #[tokio::test]
     async fn e2e_gana_registry_records_dispatch_co_usage() {
         let tmp = tempfile::tempdir().unwrap();
-        let mut server = McpServer::with_defaults(tmp.path()).unwrap();
+        let mut server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
 
         // Initialize to move out of Delta
         let _ = server
@@ -3703,7 +3754,7 @@ mod tests {
     #[tokio::test]
     async fn e2e_dynamic_galaxy_registry_accessible() {
         let tmp = tempfile::tempdir().unwrap();
-        let server = McpServer::with_defaults(tmp.path()).unwrap();
+        let server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
 
         // Verify DynamicGalaxyRegistry is accessible and starts empty
         let count = {
@@ -3716,7 +3767,7 @@ mod tests {
     #[tokio::test]
     async fn e2e_learned_dream_cycle_attached() {
         let tmp = tempfile::tempdir().unwrap();
-        let server = McpServer::with_defaults(tmp.path()).unwrap();
+        let server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
 
         // The dream cycle should have a LearnedDreamCycle attached
         // (verified indirectly: the dream cycle runs without error)
@@ -3726,7 +3777,7 @@ mod tests {
     #[tokio::test]
     async fn e2e_full_pipeline_with_mutable_structures() {
         let tmp = tempfile::tempdir().unwrap();
-        let mut server = McpServer::with_defaults(tmp.path()).unwrap();
+        let mut server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
 
         // 1. Initialize
         let _ = server
@@ -3773,7 +3824,7 @@ mod tests {
 
         // Phase 1: Create server, record usage, save
         {
-            let mut server = McpServer::with_defaults(tmp.path()).unwrap();
+            let mut server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
             let _ = server
                 .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
                 .await;
@@ -3809,7 +3860,7 @@ mod tests {
 
         // Phase 2: Recreate server from same path, verify state was loaded
         {
-            let server = McpServer::with_defaults(tmp.path()).unwrap();
+            let server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
 
             // GanaRegistry should have recorded usage
             let total_usage: u64 = {
@@ -3842,6 +3893,121 @@ mod tests {
                 2,
                 "Self-model conformal coverage history should restore from disk"
             );
+        }
+    }
+
+    /// Deterministic test embedder — returns fixed vectors so the embedding
+    /// router can be constructed without a live llama-server.
+    struct FixedEmbedder {
+        dim: usize,
+    }
+
+    impl wm_memory::Embedder for FixedEmbedder {
+        fn embed_batch(&self, texts: &[&str]) -> wm_core::Result<Vec<Vec<f32>>> {
+            Ok(texts
+                .iter()
+                .enumerate()
+                .map(|(i, _)| {
+                    let mut v = vec![0.0; self.dim];
+                    v[i % self.dim] = 1.0;
+                    v
+                })
+                .collect())
+        }
+        fn dimension(&self) -> usize {
+            self.dim
+        }
+        fn is_available(&self) -> bool {
+            true
+        }
+        fn backend_name(&self) -> &'static str {
+            "fixed-test"
+        }
+    }
+
+    #[tokio::test]
+    async fn e2e_oats_persistence_roundtrip() {
+        let tmp = tempfile::tempdir().unwrap();
+
+        let oats_file = test_store_path(&tmp).join("mutable_oats.json");
+        assert!(!oats_file.exists(), "no OATS file before save");
+
+        // Phase 1: server with an injected embedding router; record outcomes;
+        // save. The router is normally built by with_defaults when a real
+        // embedder is configured — here we inject one to exercise the
+        // persistence wiring.
+        {
+            let mut server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
+            let descriptions = vec![
+                (
+                    "memory.create".to_string(),
+                    "remember and store information in persistent memory".to_string(),
+                ),
+                (
+                    "memory.list".to_string(),
+                    "list all stored memories".to_string(),
+                ),
+            ];
+            let router = wm_tools::embedding_router::EmbeddingRouter::with_descriptions(
+                Box::new(FixedEmbedder { dim: 8 }),
+                descriptions,
+            )
+            .expect("router should init with fixed embedder");
+            let router = Arc::new(router);
+            server.embedding_router = Some(Arc::clone(&router));
+
+            router.record_outcome("memory.create", "remember the sky is blue", true);
+            router.record_outcome("memory.create", "store a thought", true);
+            router.record_outcome("memory.list", "show all memories", false);
+
+            server.save_mutable_state();
+            assert!(
+                oats_file.exists(),
+                "mutable_oats.json should be written on save"
+            );
+        }
+
+        // Phase 2: fresh server on the same path; inject a fresh router; load
+        // state; verify the OATS counts and centroids came back.
+        {
+            let server = McpServer::with_defaults(&test_store_path(&tmp)).unwrap();
+            assert!(server.embedding_router.is_none());
+
+            let descriptions = vec![
+                (
+                    "memory.create".to_string(),
+                    "remember and store information in persistent memory".to_string(),
+                ),
+                (
+                    "memory.list".to_string(),
+                    "list all stored memories".to_string(),
+                ),
+            ];
+            let router = wm_tools::embedding_router::EmbeddingRouter::with_descriptions(
+                Box::new(FixedEmbedder { dim: 8 }),
+                descriptions,
+            )
+            .expect("router should init with fixed embedder");
+            let router = Arc::new(router);
+            let mut server = server;
+            server.embedding_router = Some(Arc::clone(&router));
+            server.load_mutable_state();
+
+            let counts = router.outcome_counts();
+            let create = counts
+                .iter()
+                .find(|(n, _, _)| n == "memory.create")
+                .expect("memory.create should have OATS stats");
+            assert_eq!(
+                create.1, 2,
+                "memory.create success count should restore to 2"
+            );
+            let list = counts
+                .iter()
+                .find(|(n, _, _)| n == "memory.list")
+                .expect("memory.list should have OATS stats");
+            assert_eq!(list.1, 0, "memory.list success count should restore to 0");
+            assert_eq!(list.2, 1, "memory.list failure count should restore to 1");
         }
     }
 

@@ -57,8 +57,6 @@ pub struct DaemonConfig {
     pub homeostasis_interval: Duration,
     /// Minimum health score to run cycles.
     pub min_health_score: f32,
-    /// Whether to also serve MCP requests (dual mode).
-    pub serve_mcp: bool,
     /// Interval between RSI Phase 4 code generation cycles (0 = disabled).
     pub codegen_interval: Duration,
     /// Whether to auto-apply code patches that pass tests.
@@ -80,7 +78,6 @@ impl Default for DaemonConfig {
             brain_wave_interval: Duration::from_secs(30),  // 30 seconds
             homeostasis_interval: Duration::from_secs(60), // 1 minute
             min_health_score: 0.3,
-            serve_mcp: false,
             codegen_interval: Duration::from_secs(0), // disabled by default
             codegen_auto_apply: false,
             research_interval: Duration::from_secs(0), // 0 = run with regular cycle sweep
@@ -213,7 +210,6 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     println!("  Dream interval:  {:?}", config.dream_interval);
     println!("  Brain-wave tick: {:?}", config.brain_wave_interval);
     println!("  Min health:      {:.2}", config.min_health_score);
-    println!("  MCP serve:       {}", config.serve_mcp);
     if config.research_interval > Duration::from_secs(0) {
         println!("  Research interval: {:?}", config.research_interval);
     }
@@ -571,7 +567,6 @@ mod tests {
         assert_eq!(config.dream_interval, Duration::from_secs(600));
         assert_eq!(config.brain_wave_interval, Duration::from_secs(30));
         assert!((config.min_health_score - 0.3).abs() < 0.01);
-        assert!(!config.serve_mcp);
         assert_eq!(config.watchdog_timeout, Duration::from_secs(60));
     }
 
@@ -583,7 +578,6 @@ mod tests {
             brain_wave_interval: Duration::from_secs(10),
             homeostasis_interval: Duration::from_secs(30),
             min_health_score: 0.5,
-            serve_mcp: true,
             codegen_interval: Duration::from_secs(1800),
             codegen_auto_apply: true,
             research_interval: Duration::from_secs(600),
@@ -592,7 +586,6 @@ mod tests {
         };
         assert_eq!(config.cycle_interval, Duration::from_secs(60));
         assert_eq!(config.dream_interval, Duration::from_secs(120));
-        assert!(config.serve_mcp);
         assert_eq!(config.codegen_interval, Duration::from_secs(1800));
         assert!(config.codegen_auto_apply);
         assert_eq!(config.research_interval, Duration::from_secs(600));
