@@ -5,6 +5,51 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.7] — 2026-08-11
+
+### Tantivy recall quality (parallel session)
+
+- **Score thresholds** — `SearchOptions { min_score, relative_floor, relaxed }`
+  + `search_opt()`; `memory.hybrid_recall` / `memory.search` accept `min_score`
+  (default relative floor 0.05). The incident query ("smoke test from
+  wmClient") now returns only genuinely relevant memories — no more
+  zero-overlap garbage at 0.5–1.0 scores
+- **Index-time sanitization** — null bytes skipped, printable-ratio < 0.9
+  skipped, 8KB cap, control chars scrubbed; output-side scrub too
+- **Stopword stripping** on queries (mirrors the Antigravity client list)
+- **`wm reindex` CLI** — rebuilds the tantivy index from LMDB with
+  auto-backup, `--galaxy`, `--dry-run`; live dry-run found 2,833 garbage
+  artifacts skipped (2,799 in codex — migration leftovers)
+- `sanitize_tantivy_query` v2 (quotes only reserved-syntax terms);
+  Phase-2 fallback = relaxed OR + token-coverage filter (replaces the
+  100-memory scan lottery); `memory.search` verifies hits against LMDB
+  (deleted memories gone); `normalized_score` on results
+- `wm serve --readonly` — no exclusive index lock, multiple processes
+  can share the store
+- 3,424 tests passing (was 3,391; +33), 0 clippy warnings
+
+### Claims ledger (evening review)
+
+- Graded claims 0020–0025: STRONG 0020/0024, MODERATE 0021/0023,
+  FALSIFIED 0025 (honest-miss discipline). REVIEW.json now covers 21/32
+- No status changes — all pending claims kept (no new signals tonight)
+
+### Read-only diagnostics + always-on daemon
+
+- `wm stats` / `wm doctor` / `wm brain-wave` / export now open the store
+  read-only, so they work while the daemon holds the index (was LockBusy)
+- `whitemagic-daemon.service` systemd unit — always-on consciousness
+  against the live store (cycle 300s, dream 600s, watchdog 120s)
+
+### NLU
+
+- `simulation.calibrate` description fix — "run a simulation" no longer
+  near-ties with it (0.744 vs sim.mc 0.740); now cleanly routes to sim.mc,
+  0 regressions on the judged set
+- near-tie debug logging (best/second tool) in `route_with_margin`
+- `wm` PATH stub fixed — broken Python wrapper replaced with a launcher
+  preferring release, falling back to debug
+
 ## [5.7.6] — 2026-08-11
 
 ### OATS persistence (NLU learning loop closed)
