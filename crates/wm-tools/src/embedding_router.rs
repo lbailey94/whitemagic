@@ -897,13 +897,26 @@ static INTENT_ANCHORS: &[(&str, &[&str])] = &[
 ///
 /// Each description becomes: `"<name>: <registry description> — users say:
 /// <anchors joined>"`. Tools without anchors keep their prose description.
+///
+/// Tools whose `description()` is the Gana-level fallback (the default
+/// `Tool::description()` returns `gana().description()`, so ~45 tools across
+/// the registry embed to one of 28 shared vectors — e.g. all conformal.* and
+/// selfmodel.* tools) get a synthesized description from their dotted name:
+/// `"conformal.monitor"` → `"conformal monitor — monitor conformal
+/// prediction coverage and drift"`. Without this the router's margin
+/// calculation collapses on families with shared Gana text.
 #[must_use]
 pub fn anchored_descriptions(tools: &[Arc<dyn wm_core::Tool>]) -> Vec<(String, String)> {
     tools
         .iter()
         .map(|t| {
             let name = t.name();
-            let desc = t.description();
+            let gana_fallback = t.gana().description() == t.description();
+            let desc = if gana_fallback {
+                synthesize_description(name)
+            } else {
+                t.description().to_string()
+            };
             let anchors = INTENT_ANCHORS
                 .iter()
                 .find(|(n, _)| *n == name)
@@ -915,6 +928,24 @@ pub fn anchored_descriptions(tools: &[Arc<dyn wm_core::Tool>]) -> Vec<(String, S
             (name.to_string(), text)
         })
         .collect()
+}
+
+/// Build a description from a dotted tool name when the tool has no explicit
+/// description (falls back to its Gana's generic text).
+///
+/// `"conformal.monitor"` → `"conformal monitor — monitor conformal prediction
+/// coverage and drift"`. The family verb (the last segment) is repeated as a
+/// verb so the embedded text carries tool-specific intent instead of the
+/// shared Gana vector.
+fn synthesize_description(name: &str) -> String {
+    let parts: Vec<&str> = name.split('.').collect();
+    if parts.len() < 2 {
+        return format!("{name} — {name} operations");
+    }
+    let family = parts[..parts.len() - 1].join(" ");
+    let verb = parts[parts.len() - 1];
+    let verb_hyphen = verb.replace('_', "-");
+    format!("{family} {verb_hyphen} — {family} {verb} operations and status")
 }
 
 // ── Tests ────────────────────────────────────────────────────────────

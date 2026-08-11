@@ -56,6 +56,9 @@ impl Tool for McSurrogateTool {
     fn stats(&self) -> &ToolStats {
         &self.stats
     }
+    fn description(&self) -> &str {
+        "Fit a Gaussian process surrogate model to observations (args: x_train, y_train, length_scale, sigma_f, fit_hyperparameters) — Bayesian optimization of expensive functions"
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let x_train = args
             .get("x_train")
@@ -329,6 +332,9 @@ impl Tool for McRareEventTool {
     fn stats(&self) -> &ToolStats {
         &self.stats
     }
+    fn description(&self) -> &str {
+        "Estimate the probability of rare events with subset simulation or importance sampling (args: method, dim, n_samples, threshold, g_expr, seed)"
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let method = args
             .get("method")
@@ -435,6 +441,9 @@ impl Tool for McSdeTool {
     fn stats(&self) -> &ToolStats {
         &self.stats
     }
+    fn description(&self) -> &str {
+        "Simulate stochastic differential equations with Euler or Milstein solvers (args: drift_type, solver, x0, t_end, n_steps, n_paths, mu, sigma)"
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let drift = DriftType::parse(
             args.get("drift_type")
@@ -531,6 +540,9 @@ impl Tool for McSuperforecasterTool {
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
+    }
+    fn description(&self) -> &str {
+        "Run a superforecaster pipeline: Latin hypercube sampling, polynomial chaos expansion, Sobol sensitivity, then Bayesian optimization (args: param_ranges, budget, seed)"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let ranges = args

@@ -149,6 +149,36 @@ TF-IDF-margin issues): "search the web for rust benchmarks" → memory.search
 "run a simulation" → margin-fallback to pipeline.status (TF-IDF wins the
 near-tie, and TF-IDF is wrong), "create a new galaxy" → session.start.
 
+## Router Fixes — 2026-08-11 (afternoon)
+
+1. **Missing descriptions synthesized** (`anchored_descriptions`): 45 tools
+   (~20% of the registry) had no explicit `description()`, so they fell back
+   to their Gana's generic text — all conformal.*, selfmodel.*, and several
+   others embedded to one of 28 shared vectors. The margin calculation
+   collapsed on whole families. Tools with the Gana fallback now get a
+   synthesized description from their dotted name ("conformal.monitor" →
+   "conformal monitor — conformal monitor operations and status").
+2. **mc.* family descriptions added**: all 5 `mc.*` tools in
+   `bayesian_tools.rs` (surrogate/optimize/rare_event/sde/superforecaster)
+   and `simulation.calibrate` had no descriptions — identical vectors →
+   guaranteed near-ties. Given proper descriptions.
+3. **OATS persistence wired** (`save_mutable_state` → `mutable_oats.json`,
+   restored in `load_mutable_state`): the router's outcome-aware refinement
+   now survives restarts. Regression test `e2e_oats_persistence_roundtrip`.
+4. **Test isolation fix**: `with_defaults(tmp.path())` in tests put
+   `self_model.json` etc. in the shared `/tmp` — cross-test pollution made
+   `e2e_mutable_state_persistence_roundtrip` flaky. Tests now use a nested
+   store dir (`test_store_path`).
+5. **Verified margin behavior**: "run a simulation" → sim.mc 0.74 with
+   margin 0.011 — the fallback fires because sim.mc vs runner-up is a real
+   near-tie, not a description artifact. TF-IDF's low-confidence picks
+   (pipeline.status 0.23) still win these. A confidence floor on the
+   fallback was tried and reverted — net regression on the judged set.
+
+Measured on the corrected 56-query judged set (real registry tools only):
+nomic 31, bge 33, anchored+synthesized 38 (42 counting correct `?`-status
+rows: selfplay.run/status/export, nlu.shadow_report).
+
 **Infrastructure (2026-08-11)**:
 - Dispatch rate limiter configurable: `RateLimiterConfig` +
   `WM_DISPATCH_GLOBAL_RPM` / `WM_DISPATCH_TOOL_RPM` / `WM_DISPATCH_BURST` /

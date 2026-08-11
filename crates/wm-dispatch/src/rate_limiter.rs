@@ -107,7 +107,9 @@ impl RateLimiterConfig {
                     continue;
                 }
                 let Some((tool, rpm)) = pair.split_once(':') else {
-                    tracing::warn!("WM_DISPATCH_TOOL_OVERRIDES entry '{pair}' missing ':' — skipping");
+                    tracing::warn!(
+                        "WM_DISPATCH_TOOL_OVERRIDES entry '{pair}' missing ':' — skipping"
+                    );
                     continue;
                 };
                 if let Ok(rpm) = rpm.trim().parse::<u64>() {
@@ -467,7 +469,10 @@ mod tests {
             None,
             None,
         );
-        assert_eq!(config.global_rpm, DEFAULT_GLOBAL_RPM, "invalid rpm keeps default");
+        assert_eq!(
+            config.global_rpm, DEFAULT_GLOBAL_RPM,
+            "invalid rpm keeps default"
+        );
         assert_eq!(config.default_tool_rpm, 0, "valid 0 means unlimited");
         assert_eq!(config.burst_allowance, DEFAULT_BURST);
     }
