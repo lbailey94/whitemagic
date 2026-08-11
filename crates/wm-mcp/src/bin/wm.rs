@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "wm", version = "5.7.4", about = "WhiteMagic v5 — Cognitive OS")]
+#[command(name = "wm", version = "5.7.6", about = "WhiteMagic v5 — Cognitive OS")]
 struct Cli {
     /// Path to a TOML config file. Overrides default config location.
     #[arg(long, global = true)]

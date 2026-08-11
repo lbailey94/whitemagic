@@ -5,6 +5,74 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.6] — 2026-08-11
+
+### OATS persistence (NLU learning loop closed)
+
+- `save_mutable_state` now writes the router's OATS outcome stats to
+  `mutable_oats.json`; `load_mutable_state` restores them on startup —
+  the outcome-aware refinement survives restarts for the first time
+- `register_meta_tools_with_router` returns the router so the server can
+  persist it; regression test `e2e_oats_persistence_roundtrip`
+- Test isolation fix: tests passed the tempdir root to `with_defaults`,
+  putting `self_model.json` etc. in shared `/tmp` — cross-test pollution
+  made `e2e_mutable_state_persistence_roundtrip` flaky (6 vs 2 samples).
+  Tests now use a nested store dir (`test_store_path`)
+
+### NLU router descriptions (systematic fix)
+
+- ~45 tools had no explicit `description()` and embedded to one of 28
+  shared Gana-level vectors (all conformal.*, selfmodel.*, several
+  others) — the margin calculation collapsed on whole families.
+  `anchored_descriptions` now synthesizes a description from the dotted
+  tool name for Gana-fallback tools
+- All 6 `mc.*` / simulation tools (surrogate, optimize, rare_event, sde,
+  superforecaster, simulation.calibrate) got proper descriptions —
+  they previously shared the identical Gana vector ("Foresight,
+  simulation, convergence"), guaranteeing near-ties
+- Verified margin behavior: "run a simulation" → sim.mc 0.74 with margin
+  0.011 is a genuine near-tie, not a description artifact; a confidence
+  floor on the margin fallback was tried and reverted (net regression)
+- Judged dispatch set (56 queries, real registry tools only): nomic 31,
+  bge 33, anchored+synthesized 38 (42 counting correct `?`-status rows)
+
+### Daemon
+
+- Removed dead `serve_mcp` config — documented and printed but never
+  consumed by `run_daemon` (daemon cycles dispatch tools directly and
+  do not serve MCP)
+
+### Counts
+
+- 3,400 tests passing (0 failed), 0 clippy warnings, fmt clean
+
+## [5.7.5] — 2026-08-11
+
+### Configurable dispatch rate limits
+
+- `RateLimiterConfig` + `WM_DISPATCH_GLOBAL_RPM` / `WM_DISPATCH_TOOL_RPM` /
+  `WM_DISPATCH_BURST` / `WM_DISPATCH_TOOL_OVERRIDES` env vars, wired into
+  the serve pipeline with a startup log line; defaults unchanged (300/60/10).
+  The `wm` meta-tool was capped at 70 calls/min — the shadow collector now
+  drives 115/115 queries with zero rate-limit losses. 4 new tests
+
+### Intent-anchored NLU router
+
+- `INTENT_ANCHORS`: per-tool natural phrasings appended to embedded tool
+  descriptions ("users say: ...") — fixes top-1 collapse on common queries
+  ("list tools" → tools.list, "fetch this webpage" → web.fetch, "show my
+  karma" → karma.report)
+- Prefix-route bonus removed from the anchored path (it fought the anchors);
+  `route_with_margin` + `MIN_MARGIN = 0.02` defers to TF-IDF on near-ties
+- Embedder A/B (115-query corpus): bge-small-en-v1.5 vs nomic-embed-text —
+  near-tie quality; bge wins operationally (canonical model, 37MB vs 84MB,
+  ~20% faster, matches `WM_EMBEDDER_DIM=384` default)
+- Live shadow collection: `whitemagic-embedder.service` systemd user unit,
+  `scripts/live_shadow_serve.sh`, rust-native MCP config → live store with
+  embedder env; real MCP sessions accumulate shadow stats, persisted on
+  shutdown
+- `scripts/collect_shadow_data.py`: `--cooldown-every` / `--dim` flags
+
 ## [5.7.4] — 2026-08-11
 
 ### Forensic memory recovery
