@@ -662,7 +662,9 @@ impl McpServer {
             Arc::new(std::sync::Mutex::new(wm_core::DynamicGalaxyRegistry::new()));
 
         let pipeline = DispatchPipeline::new(
-            std::sync::Arc::new(wm_dispatch::RateLimiter::default()),
+            std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
+                &wm_dispatch::RateLimiterConfig::from_env(),
+            )),
             std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
             dharma_gate.clone(),
             Some(karma_ledger.clone()),

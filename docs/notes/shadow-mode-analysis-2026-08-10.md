@@ -90,6 +90,77 @@ traffic) and single-backend (nomic-embed vs the documented bge-small). A fairer
 test would run the daemon live with `WM_EMBEDDER_ENDPOINT` set and let shadow
 stats accumulate over real usage.
 
+## Embedder A/B — 2026-08-11 (nomic-embed vs bge-small, same corpus)
+
+Both models ran the same 115-query corpus through the identical improved
+router (registry descriptions + margin fallback). bge-small-en-v1.5 q8_0
+(384-dim, 37MB) vs nomic-embed-text-v1.5 Q4_K_M (768-dim, 84MB):
+
+| Metric | nomic-embed | bge-small |
+|---|---|---|
+| Embed dim | 768 | 384 |
+| Router init batch (228 descs) | ~45-56s CPU | ~30s CPU |
+| Per-query dispatch latency | ~410 ms | ~334 ms |
+| Raw disagreement rate | ~55% | ~59% |
+| Correct on 27-query judged set | 13 | 12 |
+| Destructive misroutes | none | none |
+
+**Verdict: near-tie on quality; bge-small wins operationally.** It is the
+documented canonical model (FastEmbed/BGE-Small-EN-V1.5 per the local-AI
+mapping docs), matches the codebase's default `WM_EMBEDDER_DIM=384`, is
+half the size, and ~20% faster. Both models share the same fundamental
+limitation: top-1 cosine over prose descriptions collapses intent-fuzzy
+queries onto arbitrary tools — the fix is intent-anchored descriptions
+(task 1), which benefits either model equally.
+
+## Intent-Anchored Descriptions — 2026-08-11 (third run, same corpus)
+
+Two more changes, measured on a 56-query judged dispatch set (correct
+routes):
+
+| Config | Correct |
+|---|---|
+| nomic-embed + prose descriptions | 28/56 |
+| bge-small + prose descriptions | 31/56 |
+| **bge-small + intent anchors** | **34/56** (38 counting `?`-status rows that were actually correct: selfplay.run/status/export, nlu.shadow_report) |
+
+Changes:
+1. **`INTENT_ANCHORS`** (`embedding_router.rs`): per-tool natural phrasings
+   appended to the embedded text — `"<name>: <description> — users say:
+   <anchors>"`. Anchors cover the failure families from the shadow runs
+   (memory/session/karma/friction/claims/web/research/selfplay/sim/system).
+   Applied via `anchored_descriptions()` in the meta-tool's registry path.
+2. **Prefix bonus removed from the anchored path**: the TF-IDF
+   `PREFIX_ROUTES` bonus ("list" → memory.list ×1.3) fought the anchors —
+   "list tools" was boosted toward memory.list despite `tools.list`
+   carrying the exact anchor. Now `apply_prefix_bonus` is `true` only for
+   the legacy keyword-profile constructor; anchored descriptions encode
+   verb mapping natively.
+
+**Fixed by anchors**: "list tools"/"list all tools" → `tools.list`,
+"fetch this webpage"/"fetch the url and summarize" → `web.fetch`,
+"what is the brain wave state" → `state.snapshot`, "record this session
+turn" → `session.record`, "review the friction log" → `friction.review`,
+"show my karma" → `karma.report`, handoff/claims/session families.
+
+**Still failing** (no anchor can fully fix — description-quality or
+TF-IDF-margin issues): "search the web for rust benchmarks" → memory.search
+("search" dominates), "keep this note in memory" → memory.list,
+"run a simulation" → margin-fallback to pipeline.status (TF-IDF wins the
+near-tie, and TF-IDF is wrong), "create a new galaxy" → session.start.
+
+**Infrastructure (2026-08-11)**:
+- Dispatch rate limiter configurable: `RateLimiterConfig` +
+  `WM_DISPATCH_GLOBAL_RPM` / `WM_DISPATCH_TOOL_RPM` / `WM_DISPATCH_BURST` /
+  `WM_DISPATCH_TOOL_OVERRIDES` (`wm serve` logs the active limits). Defaults
+  unchanged (300/60/10). Collector now runs 115/115 queries with no losses.
+- Live shadow collection: `whitemagic-embedder.service` systemd user unit
+  (bge-small on :8081, auto-restart) + `scripts/live_shadow_serve.sh`
+  (serve against the live store with embedder + raised dispatch limits) +
+  `python/mcp_config_rust_native.json` pointed at the live store with
+  embedder env. Every real MCP session now accumulates shadow stats,
+  persisted to `<store>/lmdb/mutable_shadow_stats.json` on shutdown.
+
 ## Router Improvement — 2026-08-11 (second run, same corpus)
 
 Two changes were made and re-tested:

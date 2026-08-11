@@ -176,6 +176,14 @@ fn main() -> anyhow::Result<()> {
             let lmdb_path = store_path.join("lmdb");
             std::fs::create_dir_all(&lmdb_path)?;
 
+            let dispatch_cfg = wm_dispatch::RateLimiterConfig::from_env();
+            tracing::info!(
+                global_rpm = dispatch_cfg.global_rpm,
+                tool_rpm = dispatch_cfg.default_tool_rpm,
+                burst = dispatch_cfg.burst_allowance,
+                "Dispatch rate limits (WM_DISPATCH_* or defaults)"
+            );
+
             tracing::info!("Starting MCP server, store: {}", lmdb_path.display());
 
             let mut server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {

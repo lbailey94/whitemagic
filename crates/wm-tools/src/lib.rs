@@ -1612,10 +1612,11 @@ impl WmMetaTool {
 
     /// Build an embedding router from the live registry's tool descriptions.
     ///
-    /// Uses prose descriptions from the registered tools (name + description),
-    /// which embed far better than the static keyword-mashup profiles. Only
-    /// falls back to the static profiles when the registry has no tools (e.g.
-    /// in unit tests that call `with_embedder` directly).
+    /// Uses prose descriptions from the registered tools (name + description)
+    /// augmented with intent anchors (natural query phrasings per tool), which
+    /// embed far better than the static keyword-mashup profiles. Only falls
+    /// back to the static profiles when the registry has no tools (e.g. in
+    /// unit tests that call `with_embedder` directly).
     fn build_embedding_router(
         registry: &ToolRegistry,
         embedder: Box<dyn wm_memory::Embedder>,
@@ -1624,10 +1625,7 @@ impl WmMetaTool {
         if tools.is_empty() {
             return embedding_router::EmbeddingRouter::new(embedder);
         }
-        let descriptions: Vec<(String, String)> = tools
-            .iter()
-            .map(|t| (t.name().to_string(), t.description().to_string()))
-            .collect();
+        let descriptions = embedding_router::anchored_descriptions(tools);
         embedding_router::EmbeddingRouter::with_descriptions(embedder, descriptions)
     }
 
