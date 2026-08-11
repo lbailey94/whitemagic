@@ -4,7 +4,7 @@ State as of the morning 2026-08-11 session. Working tree has uncommitted
 changes (claims ledger morning review, shadow-mode data collection, and a
 bug fix) — see git status.
 
-## Current State (v5.7.4)
+## Current State (v5.7.6)
 
 - **15 crates, 229 tools, 3,391 tests (0 failed), ~131,000 LOC**
 - 0 clippy warnings (`cargo clippy --all-targets`), fmt clean, cargo-deny all green
@@ -71,7 +71,7 @@ ls ~/Desktop/WMdocs    # all documentation
 
 ## Gotchas / notes
 
-- Version aligned at **5.7.4** (Cargo.toml workspace, clap attribute, README, CHANGELOG).
+- Version aligned at **5.7.6** (Cargo.toml workspace, clap attribute, README, CHANGELOG).
 - `nlu.shadow_report` now reachable ONLY via `wm(route="nlu.shadow_report")` (it is registered inside the meta-tool registry — do not move it back to top-level-only).
 - Embedder init embeds ~229 tool descriptions in one HTTP batch — on CPU this takes ~45–60s; the 30s default `WM_EMBEDDER_TIMEOUT_MS` silently disables the router (falls back to TF-IDF). Use 120s+ on CPU.
 - Dispatch pipeline rate limiter: 60 RPM/tool + 10 burst default — a data-collection run needs cooldowns between 60-query batches.
