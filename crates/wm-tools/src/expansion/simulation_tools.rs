@@ -362,6 +362,9 @@ impl Tool for SimulationCalibrateTool {
     fn stats(&self) -> &ToolStats {
         &self.stats
     }
+    fn description(&self) -> &str {
+        "Record, resolve, and scorecard calibrated predictions — Brier score decomposition (reliability, resolution, uncertainty) for probabilistic forecasts (args: action=record|resolve|scorecard, ...)"
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let action = args
             .get("action")

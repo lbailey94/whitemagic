@@ -347,6 +347,40 @@ impl MemoryStore {
         Ok(memories)
     }
 
+    /// Scan every memory in the galaxy (unordered by LMDB page layout).
+    ///
+    /// Used by maintenance tooling (e.g. index rebuild). The full galaxy is
+    /// materialized in memory — prefer [`Self::scan`] for bounded reads.
+    pub fn scan_all(&self, galaxy: Galaxy) -> Result<Vec<Memory>> {
+        let db = self.galaxy_db(galaxy)?;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+
+        let mut cursor = tx
+            .open_ro_cursor(db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
+
+        let mut memories = Vec::new();
+        for (i, (_key, val)) in cursor.iter().enumerate() {
+            match rmp_serde::from_slice::<Memory>(val) {
+                Ok(memory) => memories.push(memory),
+                Err(e) => {
+                    tracing::warn!(
+                        "Skipping corrupted entry at index {i} in galaxy {:?}: {e}",
+                        galaxy
+                    );
+                }
+            }
+        }
+
+        drop(cursor);
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(memories)
+    }
+
     /// Count entries in a galaxy.
     pub fn count(&self, galaxy: Galaxy) -> Result<usize> {
         let db = self.galaxy_db(galaxy)?;

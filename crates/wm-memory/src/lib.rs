@@ -18,6 +18,7 @@ pub mod memory;
 pub mod predictive_cache;
 pub mod recall;
 pub mod recovery;
+pub mod reindex;
 pub mod search;
 pub mod semantic;
 pub mod store;
@@ -44,7 +45,11 @@ pub use recovery::{
     GalaxyIntegrity, IntegrityReport, QuarantineEntry, RecoveryStrategy, RepairReport,
     check_integrity, grow_map_size, open_with_recovery, repair,
 };
-pub use search::{SearchEngine, SearchResult};
+pub use reindex::{GalaxyRebuildStats, IndexRebuildReport, rebuild_index};
+pub use search::{
+    MAX_INDEX_CONTENT_LEN, MIN_PRINTABLE_RATIO, STOPWORDS, SearchEngine, SearchOptions,
+    SearchResult, sanitize_content_for_index, sanitize_tantivy_query, scrub_text, strip_stopwords,
+};
 pub use semantic::{SemanticEncoder, SemanticScores};
 pub use store::MemoryQuery;
 pub use store::MemoryStore;

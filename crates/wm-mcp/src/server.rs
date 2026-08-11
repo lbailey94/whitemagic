@@ -424,12 +424,26 @@ impl McpServer {
 
     /// Create a new MCP server with default tools and full governance pipeline.
     pub fn with_defaults(store_path: &std::path::Path) -> anyhow::Result<Self> {
+        Self::with_defaults_mode(store_path, false)
+    }
+
+    /// Like `with_defaults`, but with a read-only tantivy index when
+    /// `readonly` is set — no exclusive index lock, so multiple processes can
+    /// share the store for searches. Writes fail with a clear error.
+    pub fn with_defaults_mode(
+        store_path: &std::path::Path,
+        readonly: bool,
+    ) -> anyhow::Result<Self> {
         let store = std::sync::Arc::new(MemoryStore::open_default(store_path)?);
 
         // Open Tantivy search index alongside LMDB
         let search_path = store_path.join("tantivy");
         std::fs::create_dir_all(&search_path)?;
-        let search = std::sync::Arc::new(SearchEngine::open(&search_path)?);
+        let search = std::sync::Arc::new(if readonly {
+            SearchEngine::open_readonly(&search_path)?
+        } else {
+            SearchEngine::open(&search_path)?
+        });
 
         let karma_ledger = std::sync::Arc::new(KarmaLedger::new(store.clone())?);
         let dharma_gate = std::sync::Arc::new(DharmaGate::default());

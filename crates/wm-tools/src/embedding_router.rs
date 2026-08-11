@@ -269,6 +269,7 @@ impl EmbeddingRouter {
 
         let mut best_tool = "gnosis".to_string();
         let mut best_score = 0.0_f64;
+        let mut second_tool = String::new();
         let mut second_score = 0.0_f64;
 
         for (name, base_emb) in &self.tool_embeddings {
@@ -286,10 +287,12 @@ impl EmbeddingRouter {
 
             if score > best_score {
                 second_score = best_score;
+                second_tool.clone_from(&best_tool);
                 best_score = score;
                 best_tool.clone_from(name);
             } else if score > second_score {
                 second_score = score;
+                second_tool.clone_from(name);
             }
         }
 
@@ -297,6 +300,17 @@ impl EmbeddingRouter {
 
         if best_score < MIN_THRESHOLD {
             return None;
+        }
+
+        if best_score - second_score < MIN_MARGIN {
+            tracing::debug!(
+                query = %lower,
+                best_tool = %best_tool,
+                best_score,
+                second_tool = %second_tool,
+                second_score,
+                "embedding router: near-tie"
+            );
         }
 
         Some((best_tool, best_score, best_score - second_score))
@@ -857,6 +871,15 @@ static INTENT_ANCHORS: &[(&str, &[&str])] = &[
         &["rabbit hole research", "rabbit hole"],
     ),
     // Self-play
+    (
+        "simulation.calibrate",
+        &[
+            "calibrate my predictions",
+            "record a prediction",
+            "brier scorecard",
+            "resolve a forecast",
+        ],
+    ),
     (
         "selfplay.run",
         &["run selfplay", "start selfplay", "run training"],

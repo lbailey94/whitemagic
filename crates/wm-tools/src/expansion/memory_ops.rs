@@ -277,6 +277,14 @@ impl Tool for MemoryUpdateTool {
             .ok_or_else(|| wm_core::CoreError::InvalidArgs("Missing 'id'".into()))?;
         let id = uuid::Uuid::parse_str(id_str)
             .map_err(|e| wm_core::CoreError::InvalidArgs(format!("Invalid UUID: {e}")))?;
+        if let Some(search) = &self.search {
+            if search.is_readonly() {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "read-only mode: memory.update disabled (another process owns the index)"
+                        .into(),
+                ));
+            }
+        }
         let mut mem = self.store.get(galaxy, id)?.ok_or_else(|| {
             wm_core::CoreError::NotFound(format!(
                 "Memory {id} not found in {}",
@@ -518,20 +526,41 @@ impl Tool for MemoryHybridRecallTool {
             .get("min_importance")
             .and_then(serde_json::Value::as_f64)
             .unwrap_or(0.0) as f32;
+        // Absolute BM25 floor (0 / absent = disabled). Clients that set a
+        // meaningful `minScore` finally get what they asked for.
+        let min_score = args
+            .get("min_score")
+            .and_then(serde_json::Value::as_f64)
+            .map(|v| v as f32)
+            .filter(|v| *v > 0.0);
+        // Relative floor default: reject hits below 5% of the top score.
+        let min_score_ratio = args
+            .get("min_score_ratio")
+            .and_then(serde_json::Value::as_f64)
+            .map(|v| v as f32)
+            .filter(|v| *v > 0.0 && *v < 1.0)
+            .unwrap_or(0.05);
         let mut results = Vec::new();
-        // Phase 1: full-text search if available
+        // Phase 1: full-text search (conjunction + score floors)
         if let Some(ref search) = self.search {
             if !query.is_empty() {
-                let hits = search.search(query, limit * 2)?;
+                let opts = wm_memory::SearchOptions {
+                    limit: limit * 2,
+                    min_score,
+                    relative_floor: Some(min_score_ratio),
+                    ..wm_memory::SearchOptions::default()
+                };
+                let hits = search.search_opt(query, &opts)?;
                 for hit in hits {
                     if let Ok(id) = uuid::Uuid::parse_str(&hit.memory_id) {
                         if let Ok(Some(mem)) = self.store.get(galaxy, id) {
                             if mem.metadata.importance >= min_importance {
                                 results.push(json!({
                                     "id": mem.metadata.id,
-                                    "content": &mem.content,
+                                    "content": wm_memory::scrub_text(&mem.content),
                                     "importance": mem.metadata.importance,
                                     "score": hit.score,
+                                    "normalized_score": hit.normalized_score,
                                     "source": "fts",
                                 }));
                             }
@@ -540,29 +569,41 @@ impl Tool for MemoryHybridRecallTool {
                 }
             }
         }
-        // Phase 2: fallback to scan + content contains
+        // Phase 2: fallback — relaxed OR search (replaces the old
+        // `scan(galaxy, 100)` lottery, which only ever saw the first 100
+        // memories by cursor order).
         if results.is_empty() && !query.is_empty() {
-            let memories = self.store.scan(galaxy, 100)?;
-            for mem in memories
-                .iter()
-                .filter(|m| m.metadata.importance >= min_importance)
-            {
-                if mem.content.to_lowercase().contains(&query.to_lowercase()) {
-                    results.push(json!({
-                        "id": mem.metadata.id,
-                        "content": &mem.content,
-                        "importance": mem.metadata.importance,
-                        "score": 0.5,
-                        "source": "scan",
-                    }));
-                }
-                if results.len() >= limit {
-                    break;
+            if let Some(ref search) = self.search {
+                let opts = wm_memory::SearchOptions {
+                    limit: limit * 2,
+                    min_score,
+                    relative_floor: Some(min_score_ratio),
+                    relaxed: true,
+                    ..wm_memory::SearchOptions::default()
+                };
+                let hits = search.search_opt(query, &opts)?;
+                for hit in hits {
+                    if let Ok(id) = uuid::Uuid::parse_str(&hit.memory_id) {
+                        if let Ok(Some(mem)) = self.store.get(galaxy, id) {
+                            if mem.metadata.importance >= min_importance {
+                                results.push(json!({
+                                    "id": mem.metadata.id,
+                                    "content": wm_memory::scrub_text(&mem.content),
+                                    "importance": mem.metadata.importance,
+                                    "score": hit.score,
+                                    "normalized_score": hit.normalized_score,
+                                    "source": "fts_relaxed",
+                                }));
+                            }
+                        }
+                    }
                 }
             }
         }
-        // Phase 3: if no query, return by importance
-        if results.is_empty() {
+        // Phase 3: only when NO query was given, return by importance.
+        // (With a query, empty results are final — a score threshold must
+        // not be bypassed by a scan-based fallback.)
+        if results.is_empty() && query.is_empty() {
             let mut memories = self.store.scan(galaxy, 100)?;
             memories.sort_by(|a, b| {
                 b.metadata
@@ -1371,5 +1412,235 @@ mod tests {
             Gana::WinnowingBasket
         );
         assert_eq!(MemoryExportTool::new(store).gana(), Gana::WinnowingBasket);
+    }
+
+    // ── hybrid_recall incident regression tests ─────────────────────────
+    //
+    // Mirrors the 2026-08-11 incident: `memory.hybrid_recall` with query
+    // "smoke test from wmClient" and limit 20 returned 20 unrelated memories
+    // at BM25 scores 0.5–1.0 with zero query-token overlap. The fix adds
+    // stopword stripping, conjunction, score floors and a relaxed OR fallback
+    // that replaces the `scan(galaxy, 100)` lottery.
+
+    /// Build a store + tantivy index pair where the memory and its index
+    /// document are kept in sync (as the write path does).
+    fn hybrid_fixture() -> (tempfile::TempDir, Arc<MemoryStore>, Arc<SearchEngine>) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(dir.path()).unwrap());
+        let tantivy_dir = dir.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy_dir).unwrap();
+        let search = Arc::new(SearchEngine::open(&tantivy_dir).unwrap());
+        (dir, store, search)
+    }
+
+    fn index_memory(
+        store: &Arc<MemoryStore>,
+        search: &Arc<SearchEngine>,
+        galaxy: Galaxy,
+        content: &str,
+    ) {
+        let mem = Memory::new(galaxy, content.to_string());
+        let id = mem.metadata.id;
+        store.put(galaxy, &mem).unwrap();
+        let mut writer = search.writer().unwrap();
+        search
+            .add_document(
+                &mut writer,
+                &id.to_string(),
+                galaxy.db_name(),
+                content,
+                &mem.metadata.tags,
+                mem.metadata.created_at.timestamp(),
+            )
+            .unwrap();
+        search.commit(&mut writer).unwrap();
+    }
+
+    #[tokio::test]
+    async fn hybrid_recall_incident_query_returns_only_relevant() {
+        let (_dir, store, search) = hybrid_fixture();
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "smoke test from wmClient: verify recall",
+        );
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "NES Evolution and Impact: a history of the console wars",
+        );
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "Insights on The Gateless Gate: koans and zen practice",
+        );
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "What the tweet is really saying: a thread analysis",
+        );
+
+        let tool = MemoryHybridRecallTool::new(store, Some(search));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "smoke test from wmClient", "limit": 20}),
+            )
+            .await
+            .unwrap();
+
+        let results = v["results"].as_array().unwrap();
+        assert_eq!(
+            results.len(),
+            1,
+            "incident query must not return unrelated memories: {results:?}"
+        );
+        let hit = &results[0];
+        assert_eq!(hit["source"], "fts");
+        assert!(
+            hit["content"]
+                .as_str()
+                .unwrap()
+                .contains("smoke test from wmClient")
+        );
+        assert!(hit["normalized_score"].as_f64().unwrap() > 0.0);
+        assert_eq!(v["count"], 1);
+    }
+
+    #[tokio::test]
+    async fn hybrid_recall_filters_stale_index_entries() {
+        // A document indexed in tantivy but absent from LMDB must not be
+        // returned (the old code wasted top-K slots on these).
+        let (_dir, store, search) = hybrid_fixture();
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "rust memory about ownership",
+        );
+        {
+            let mut writer = search.writer().unwrap();
+            search
+                .add_document(
+                    &mut writer,
+                    "99999999-9999-9999-9999-999999999999",
+                    "codex",
+                    "rust ghost memory",
+                    &[],
+                    1700000000,
+                )
+                .unwrap();
+            search.commit(&mut writer).unwrap();
+        }
+
+        let tool = MemoryHybridRecallTool::new(store, Some(search));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"query": "rust", "limit": 10}))
+            .await
+            .unwrap();
+        let results = v["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1);
+        assert_ne!(
+            results[0]["id"].as_str().unwrap(),
+            "99999999-9999-9999-9999-999999999999"
+        );
+    }
+
+    #[tokio::test]
+    async fn hybrid_recall_respects_min_score_arg() {
+        let (_dir, store, search) = hybrid_fixture();
+        index_memory(&store, &search, Galaxy::Codex, "alpha");
+        let filler = format!("alpha {}", "zzz ".repeat(400));
+        index_memory(&store, &search, Galaxy::Codex, &filler);
+
+        // No threshold: both match.
+        let tool = MemoryHybridRecallTool::new(store.clone(), Some(search.clone()));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"query": "alpha", "limit": 10}))
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 2);
+
+        // min_score between the two scores: only the strong match remains.
+        let scores: Vec<f64> = v["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["score"].as_f64().unwrap())
+            .collect();
+        let lo = scores.iter().copied().fold(f64::MAX, f64::min);
+        let hi = scores.iter().copied().fold(0.0, f64::max);
+        let mid = f64::midpoint(hi, lo);
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "alpha", "limit": 10, "min_score": mid}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 1);
+        assert!((v["results"][0]["score"].as_f64().unwrap() - hi).abs() < 1e-3);
+    }
+
+    #[tokio::test]
+    async fn hybrid_recall_relaxed_fallback_finds_partial_matches() {
+        // Phase 1 (strict conjunction) finds nothing; the relaxed OR fallback
+        // must find partial matches instead of the old scan(galaxy, 100) lottery.
+        let (_dir, store, search) = hybrid_fixture();
+        index_memory(&store, &search, Galaxy::Codex, "alpha only here");
+        index_memory(&store, &search, Galaxy::Codex, "alpha beta gamma delta");
+
+        let tool = MemoryHybridRecallTool::new(store, Some(search));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"query": "alpha beta gamma", "limit": 10}))
+            .await
+            .unwrap();
+        let results = v["results"].as_array().unwrap();
+        // Strict conjunction matches the full doc; the fallback only runs when
+        // phase 1 is empty, so here we expect the strict hit.
+        assert_eq!(results.len(), 1);
+        assert!(
+            results[0]["content"]
+                .as_str()
+                .unwrap()
+                .contains("alpha beta gamma")
+        );
+
+        // When nothing matches all terms, the relaxed fallback kicks in —
+        // with 2/4 token coverage required, only the near-full doc survives.
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "alpha beta gamma zeta", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        let results = v["results"].as_array().unwrap();
+        assert_eq!(
+            results.len(),
+            1,
+            "relaxed fallback must require 2/4 token coverage: {results:?}"
+        );
+        assert!(
+            results[0]["content"]
+                .as_str()
+                .unwrap()
+                .contains("alpha beta gamma")
+        );
+        for r in results {
+            assert!(
+                matches!(r["source"].as_str(), Some("fts_relaxed")),
+                "fallback results should be tagged fts_relaxed"
+            );
+        }
     }
 }
