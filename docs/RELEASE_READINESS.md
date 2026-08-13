@@ -278,11 +278,46 @@ The release candidate is **no-go** if any item below fails:
 - Secondary-index update and filtered-reindex tests
 - Destructive NLU reachability test
 - Release configuration launch test
+- **Fresh-install rehearsal**: `cargo clean` followed by a clean
+  `cargo build --release` and the full gate run, simulating a new machine
+  (no incremental caches, no pre-existing store).
+- **Clean-machine client handshake**: the curated smoke test run against the
+  release binary with no prior store and a standards-compliant MCP handshake
+  (initialize → notifications → ping → tools/list).
 
 The release candidate may ship without a live embedder, LLM endpoint, daemon,
 Sangha mesh, self-play adapter training, or polyglot runtime. Those capabilities
 must either be tested in their own feature matrix or clearly labeled optional
 and experimental.
+
+## Public-Claims Discipline
+
+Every benchmark, test count, performance number, or feature claim in the
+README, website, registry listing, or launch content must cite a fresh run
+against the release commit, stamped with configuration and date. Stale counts
+or unreproduced claims are release blockers, not documentation bugs.
+
+- Counts (`3,470 tests`, `229 tools`) must come from a run of the release
+  commit.
+- Benchmarks must come from the release binary on a named machine
+  configuration.
+- Claims written without a cited run are removed or marked `[Speculative]`
+  until a run exists.
+
+## Launch Assets
+
+Ported from the retired documentation vault for the release:
+
+- `SECURITY.md`, `PRIVACY_POLICY.md`, `TERMS_OF_SERVICE.md`,
+  `CODE_OF_CONDUCT.md`, `CITATION.cff` — legal kit.
+- `docs/VOICE_TONE_GUIDE.md` — launch copy rules.
+- `docs/MCP_CONFIG_GUIDE.md` — per-client MCP configuration.
+- `docs/QUICKSTART.md` — five-minute install + verify path.
+- `docs/MCP_REGISTRY_LISTING.md` — registry copy and quality checklist.
+- `docs/MODEL_GUIDE.md` — one-page agent primer for the curated profile.
+
+See [`docs/PRE_RELEASE_LAUNCH_PLAN.md`](PRE_RELEASE_LAUNCH_PLAN.md) for the
+full port inventory and execution order.
 
 ## Documentation Plan
 

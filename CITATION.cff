@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: WhiteMagic
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - name: WhiteMagic Contributors
+repository-code: "https://github.com/lbailey94/whitemagic-site-private"
+url: "https://github.com/lbailey94/whitemagic-site-private"
+license: MIT
+version: 5.8.0
+date-released: "2026-08-13"
