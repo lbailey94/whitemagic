@@ -1,4 +1,4 @@
-//! WhiteMagic v5 Tools — 184 tools + fractal meta-tool
+//! WhiteMagic v5 Tools — 229 tools + fractal meta-tool
 //!
 //! Tools: memory.create, memory.read, memory.list, memory.delete,
 //! memory.query, memory.search, memory.associate, memory.associations,
@@ -18,7 +18,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 use wm_cognitive::GanYingBus;
 use wm_core::{Capability, Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
-use wm_dispatch::{ToolRegistry, ToolRegistryBuilder};
+use wm_dispatch::{DispatchPipeline, ToolRegistry, ToolRegistryBuilder};
 use wm_governance::{DharmaGate, KarmaLedger, ResourceRules};
 use wm_memory::{
     Association, AssociationStore, ConversationalSearch, Memory, MemoryQuery, MemoryStore,
@@ -1591,6 +1591,11 @@ pub struct WmMetaTool {
     embedding_router: Option<Arc<embedding_router::EmbeddingRouter>>,
     /// Shadow mode disagreement stats (shared for observability).
     shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
+    /// Optional dispatch pipeline. When present, inner tool calls are dispatched
+    /// through the full governance chain (effect check, destructive confirmation,
+    /// dharma gate, rate limit, circuit breaker, karma record, stats). When
+    /// `None` (e.g. in unit tests), inner calls bypass the pipeline.
+    pipeline: Option<Arc<DispatchPipeline>>,
 }
 
 impl WmMetaTool {
@@ -1604,6 +1609,7 @@ impl WmMetaTool {
             shadow_stats: Arc::new(std::sync::RwLock::new(
                 embedding_router::ShadowModeStats::default(),
             )),
+            pipeline: None,
         }
     }
 
@@ -1625,6 +1631,7 @@ impl WmMetaTool {
             shadow_stats: Arc::new(std::sync::RwLock::new(
                 embedding_router::ShadowModeStats::default(),
             )),
+            pipeline: None,
         }
     }
 
@@ -1645,6 +1652,27 @@ impl WmMetaTool {
             effects: EffectRow::pure(),
             embedding_router,
             shadow_stats,
+            pipeline: None,
+        }
+    }
+
+    /// Create a new meta-tool with an embedding router, shared shadow stats,
+    /// and a dispatch pipeline for governance-gated inner dispatch.
+    #[must_use]
+    pub fn with_router_shadow_stats_and_pipeline(
+        registry: Arc<ToolRegistry>,
+        embedder: Box<dyn wm_memory::Embedder>,
+        shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
+        pipeline: Option<Arc<DispatchPipeline>>,
+    ) -> Self {
+        let embedding_router = Self::build_embedding_router(&registry, embedder).map(Arc::new);
+        Self {
+            registry,
+            stats: ToolStats::default(),
+            effects: EffectRow::pure(),
+            embedding_router,
+            shadow_stats,
+            pipeline,
         }
     }
 
@@ -1683,12 +1711,17 @@ impl WmMetaTool {
     /// top-2 margin is below `MIN_MARGIN`, the TF-IDF choice is used instead —
     /// near-ties mean the descriptions cannot separate intent (2026-08-11
     /// shadow data: keyword-mashup top-1 collapsed onto arbitrary tools).
-    fn classify_with_router(&self, text: &str) -> (String, f64) {
+    ///
+    /// Returns the query embedding alongside the routing decision when the
+    /// embedding router computed one, so the caller can reuse it for OATS
+    /// outcome recording (one embedder round-trip instead of two).
+    fn classify_with_router(&self, text: &str) -> (String, f64, Option<Vec<f32>>) {
         if let Some(ref router) = self.embedding_router {
-            let (emb_tool, emb_conf, margin) = match router.route_with_margin(text) {
-                Some(t) => t,
-                None => ("gnosis".into(), 0.0, 0.0),
-            };
+            let (emb_tool, emb_conf, margin, query_emb) =
+                match router.route_with_margin_and_embedding(text) {
+                    Some(t) => t,
+                    None => ("gnosis".into(), 0.0, 0.0, Vec::new()),
+                };
 
             // Shadow mode: run TF-IDF in parallel and track disagreements
             let (tfidf_tool, tfidf_conf) = nlu::classify(text);
@@ -1713,14 +1746,16 @@ impl WmMetaTool {
             // cannot separate the top candidates. TF-IDF's keyword-driven
             // picks stay reliable even at low confidence (2026-08-11 data:
             // a confidence floor on this fallback caused net regressions).
-            if margin < embedding_router::MIN_MARGIN {
+            let selected = if margin < embedding_router::MIN_MARGIN {
                 (tfidf_tool.to_string(), tfidf_conf)
             } else {
                 (emb_tool, emb_conf)
-            }
+            };
+            let query_emb = (!query_emb.is_empty()).then_some(query_emb);
+            (selected.0, selected.1, query_emb)
         } else {
             let (tool, conf) = Self::classify(text);
-            (tool.to_string(), conf)
+            (tool.to_string(), conf, None)
         }
     }
 
@@ -2114,8 +2149,8 @@ impl Tool for WmMetaTool {
         }
 
         // Explicit routing
-        let (tool_name, confidence) = if let Some(r) = route {
-            (r.to_string(), 1.0)
+        let (tool_name, confidence, query_emb) = if let Some(r) = route {
+            (r.to_string(), 1.0, None)
         } else {
             self.classify_with_router(thought)
         };
@@ -2155,11 +2190,38 @@ impl Tool for WmMetaTool {
         let tool = self.registry.get(&tool_name);
         match tool {
             Some(t) => {
-                let result = t.call(ctx, tool_args).await;
-                // OATS: record routing outcome for embedding router refinement
+                // Hard gate: destructive tools are unreachable via natural-language
+                // routing — they require an explicit route= plus `confirm: true`,
+                // which the dispatch pipeline enforces below. This makes it
+                // structurally impossible for fuzzy NLU to destroy data.
+                if route.is_none() && t.effects().destructive {
+                    return Ok(json!({
+                        "status": "error",
+                        "message": format!(
+                            "tool '{tool_name}' is destructive and cannot be reached via natural language — use wm(route='{tool_name}', args={{...}}) with \"confirm\": true"
+                        ),
+                        "_wm_route": { "tool": tool_name, "confidence": confidence },
+                    }));
+                }
+                // Route through the full governance pipeline when attached:
+                // destructive confirmation, dharma gate, rate limit, circuit
+                // breaker, karma record, and per-tool stats all apply to the
+                // inner tool. Falls back to a direct call when no pipeline is
+                // attached (e.g. unit tests).
+                let result = match &self.pipeline {
+                    Some(p) => p.dispatch(t.as_ref(), ctx, tool_args).await,
+                    None => t.call(ctx, tool_args).await,
+                };
+                // OATS: record routing outcome for embedding router refinement.
+                // Reuse the query embedding computed during routing so the
+                // embedder is called once per NLU request, not twice.
                 if let Some(ref router) = self.embedding_router {
                     let success = result.is_ok();
-                    router.record_outcome(&tool_name, thought, success);
+                    if let Some(emb) = &query_emb {
+                        router.record_outcome_with_embedding(&tool_name, thought, success, emb);
+                    } else {
+                        router.record_outcome(&tool_name, thought, success);
+                    }
                 }
                 match result {
                     Ok(mut output) => {
@@ -2337,7 +2399,7 @@ pub fn register_meta_tools(
     store: &Arc<MemoryStore>,
     shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
 ) -> ToolRegistry {
-    register_meta_tools_with_router(registry, store, shadow_stats).0
+    register_meta_tools_with_router(registry, store, shadow_stats, None).0
 }
 
 /// Register the meta-tools and return the embedding router alongside.
@@ -2345,11 +2407,16 @@ pub fn register_meta_tools(
 /// The router is returned so the caller can persist/restore OATS outcome
 /// stats (`save_oats` / `load_oats`) across restarts — the outcome-aware
 /// refinement that makes NLU routing learn from dispatch outcomes.
+///
+/// When `pipeline` is `Some`, the `wm` meta-tool dispatches inner tools through
+/// the full governance pipeline (destructive confirmation, dharma gate, rate
+/// limit, circuit breaker, karma record, per-tool stats).
 #[must_use]
 pub fn register_meta_tools_with_router(
     registry: &ToolRegistry,
     store: &Arc<MemoryStore>,
     shadow_stats: Arc<std::sync::RwLock<embedding_router::ShadowModeStats>>,
+    pipeline: Option<Arc<DispatchPipeline>>,
 ) -> (ToolRegistry, Option<Arc<embedding_router::EmbeddingRouter>>) {
     let base_snapshot: Vec<Arc<dyn Tool>> = registry.all();
     // Count includes old gnosis (which will be replaced with tool-count-aware version)
@@ -2385,10 +2452,11 @@ pub fn register_meta_tools_with_router(
         &shadow_stats,
     )));
     wm_builder.register(shadow_report.clone());
-    let wm = Arc::new(WmMetaTool::with_embedder_and_shadow_stats(
+    let wm = Arc::new(WmMetaTool::with_router_shadow_stats_and_pipeline(
         Arc::new(wm_builder.build()),
         wm_memory::create_embedder(),
         shadow_stats,
+        pipeline,
     ));
     let router = wm.embedding_router().cloned();
 
@@ -2897,6 +2965,126 @@ mod tests {
 
         assert_eq!(result["status"], "success");
         assert_eq!(result["_wm_route"]["tool"], "karma.report");
+    }
+
+    /// Build a registry with the wm meta-tool wired to a real DispatchPipeline,
+    /// so inner tool calls are governance-gated (destructive confirm, etc.).
+    fn test_registry_with_pipeline(
+        store: &Arc<MemoryStore>,
+    ) -> (ToolRegistry, Arc<DispatchPipeline>) {
+        let registry = test_registry_with(store);
+        let pipeline = Arc::new(DispatchPipeline::with_defaults());
+        let (registry, _router) = register_meta_tools_with_router(
+            &registry,
+            store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+            Some(pipeline.clone()),
+        );
+        (registry, pipeline)
+    }
+
+    #[tokio::test]
+    async fn wm_route_destructive_without_confirm_blocked_by_pipeline() {
+        let store = test_store();
+        let (registry, _pipeline) = test_registry_with_pipeline(&store);
+
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = wm
+            .call(
+                &mut ctx,
+                json!({"route": "memory.delete", "args": {"id": "00000000-0000-0000-0000-000000000001"}}),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result["status"], "error");
+        assert!(
+            result["error"].as_str().unwrap().contains("destructive"),
+            "expected destructive-gate message, got: {result}"
+        );
+        assert!(result["error"].as_str().unwrap().contains("confirm"));
+    }
+
+    #[tokio::test]
+    async fn wm_route_destructive_with_confirm_proceeds() {
+        let store = test_store();
+        let (registry, _pipeline) = test_registry_with_pipeline(&store);
+
+        // Create a real memory to delete.
+        let memory = Memory::new(Galaxy::Codex, "delete me via wm route".into());
+        let id = memory.metadata.id;
+        store.put(Galaxy::Codex, &memory).unwrap();
+
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = wm
+            .call(
+                &mut ctx,
+                json!({"route": "memory.delete", "args": {"id": id.to_string(), "galaxy": "codex", "confirm": true}}),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result["status"], "success");
+        assert_eq!(result["_wm_route"]["tool"], "memory.delete");
+        assert!(store.get(Galaxy::Codex, id).unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn wm_thought_cannot_reach_destructive_tool() {
+        let store = test_store();
+        let (registry, _pipeline) = test_registry_with_pipeline(&store);
+
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        // "delete memory <uuid>" routes to memory.delete via NLU — must be
+        // structurally blocked even with confirm present in extracted payload.
+        let result = wm
+            .call(
+                &mut ctx,
+                json!({"thought": "delete memory 00000000-0000-0000-0000-000000000001"}),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result["status"], "error");
+        assert!(
+            result["message"]
+                .as_str()
+                .unwrap()
+                .contains("cannot be reached via natural language"),
+            "expected NLU hard-block message, got: {result}"
+        );
+    }
+
+    #[tokio::test]
+    async fn wm_thought_cannot_reach_destructive_tool_even_with_confirm() {
+        let store = test_store();
+        let (registry, _pipeline) = test_registry_with_pipeline(&store);
+
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        // An LLM that guesses the confirm requirement (and supplies the id)
+        // must still be blocked — NLU routing is structurally barred from
+        // destructive tools.
+        let result = wm
+            .call(
+                &mut ctx,
+                json!({"thought": "delete memory 00000000-0000-0000-0000-000000000001", "args": {"confirm": true, "id": "00000000-0000-0000-0000-000000000001"}}),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result["status"], "error");
+        assert!(
+            result["message"]
+                .as_str()
+                .unwrap()
+                .contains("cannot be reached via natural language")
+        );
     }
 
     #[tokio::test]

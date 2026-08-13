@@ -5,19 +5,26 @@
 //! 2. Dharma gate — ethical governance verdict
 //! 3. Rate limit — sliding window per-tool + global
 //! 4. Circuit breaker — fault tolerance, fast-fail on repeated errors
-//! 5. Tool call — execute the tool
+//! 5. Tool call — execute the tool (optionally bounded by a dispatch timeout)
 //! 6. Karma record — declared vs actual effects, SHA-256 chain to LMDB
 //! 7. Stats — success/failure and latency tracking
 
 #[cfg(test)]
 use async_trait::async_trait;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use wm_core::{Args, Context, CoreError, Output, Result, Tool};
 
 use crate::circuit_breaker::CircuitBreakerRegistry;
 use crate::rate_limiter::RateLimiter;
 use wm_governance::{ActionVerdict, DharmaGate, KarmaLedger};
+
+/// Default dispatch timeout (300s) applied by [`DispatchPipeline::from_env`]
+/// when `WM_DISPATCH_TIMEOUT_MS` is unset.
+///
+/// Generous enough for LLM-backed tools (research, self-play) while still
+/// bounding a hung call.
+pub const DEFAULT_DISPATCH_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// The dispatch pipeline processes tool calls through governance,
 /// rate limiting, circuit breaking, and karma tracking before and after
@@ -29,6 +36,10 @@ pub struct DispatchPipeline {
     karma_ledger: Option<Arc<KarmaLedger>>,
     /// Optional GanaRegistry for tracking co-usage patterns (Phase 6)
     gana_registry: Option<Arc<std::sync::Mutex<wm_core::GanaRegistry>>>,
+    /// Optional upper bound on tool execution. When a call exceeds it, the
+    /// future is dropped and a `CoreError::Tool` timeout error is returned, so
+    /// one hung tool can't wedge the server's event loop or block shutdown.
+    dispatch_timeout: Option<Duration>,
 }
 
 impl DispatchPipeline {
@@ -45,7 +56,37 @@ impl DispatchPipeline {
             dharma_gate,
             karma_ledger,
             gana_registry: None,
+            dispatch_timeout: None,
         }
+    }
+
+    /// Parse the dispatch timeout from `WM_DISPATCH_TIMEOUT_MS`.
+    ///
+    /// Unset → [`DEFAULT_DISPATCH_TIMEOUT`]; `0` → disabled; other values are
+    /// milliseconds. Invalid values fall back to the default.
+    #[must_use]
+    pub fn timeout_from_env() -> Option<Duration> {
+        match std::env::var("WM_DISPATCH_TIMEOUT_MS") {
+            Ok(v) => match v.trim().parse::<u64>() {
+                Ok(0) => None,
+                Ok(ms) => Some(Duration::from_millis(ms)),
+                Err(_) => {
+                    tracing::warn!(
+                        value = %v,
+                        "WM_DISPATCH_TIMEOUT_MS is not a valid millisecond count — using default"
+                    );
+                    Some(DEFAULT_DISPATCH_TIMEOUT)
+                }
+            },
+            Err(_) => Some(DEFAULT_DISPATCH_TIMEOUT),
+        }
+    }
+
+    /// Bound tool execution with a timeout (`None` disables the bound).
+    #[must_use]
+    pub const fn with_dispatch_timeout(mut self, timeout: Option<Duration>) -> Self {
+        self.dispatch_timeout = timeout;
+        self
     }
 
     /// Create a pipeline with default components and no karma ledger.
@@ -249,8 +290,27 @@ impl DispatchPipeline {
             }
         }
 
-        // 5. Tool call
-        let result = tool.call(ctx, args).await;
+        // 5. Tool call — optionally bounded so a hung tool can't wedge the
+        // server's event loop or delay graceful shutdown.
+        let result = if let Some(timeout) = self.dispatch_timeout {
+            if let Ok(res) = tokio::time::timeout(timeout, tool.call(ctx, args)).await {
+                res
+            } else {
+                tracing::error!(
+                    tool = tool.name(),
+                    timeout_ms = timeout.as_millis(),
+                    "tool dispatch timed out"
+                );
+                self.circuit_breakers.record_failure(tool.name());
+                return Err(CoreError::Tool(format!(
+                    "tool '{}' timed out after {}ms",
+                    tool.name(),
+                    timeout.as_millis()
+                )));
+            }
+        } else {
+            tool.call(ctx, args).await
+        };
         let elapsed = start.elapsed();
 
         // 6. Stats + circuit breaker feedback + karma record
@@ -406,6 +466,67 @@ mod tests {
         let pipeline = DispatchPipeline::with_defaults();
         let mut ctx = Context::new(BrainWave::Gamma);
         let tool = TestTool::new("test_tool", EffectRow::pure());
+
+        let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
+        assert!(result.is_ok());
+    }
+
+    struct HangingTool {
+        effects: EffectRow,
+        stats: ToolStats,
+    }
+
+    impl HangingTool {
+        fn new() -> Self {
+            Self {
+                effects: EffectRow::pure(),
+                stats: ToolStats::default(),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl Tool for HangingTool {
+        fn name(&self) -> &str {
+            "hanging_tool"
+        }
+        fn gana(&self) -> Gana {
+            Gana::Heart
+        }
+        fn effects(&self) -> &EffectRow {
+            &self.effects
+        }
+        async fn call(&self, _ctx: &mut Context, _args: Args) -> Result<Output> {
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            Ok(serde_json::json!("never reached"))
+        }
+        fn stats(&self) -> &ToolStats {
+            &self.stats
+        }
+    }
+
+    #[tokio::test]
+    async fn pipeline_dispatch_timeout_bounds_hung_tool() {
+        let pipeline = DispatchPipeline::with_defaults()
+            .with_dispatch_timeout(Some(Duration::from_millis(50)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = HangingTool::new();
+
+        let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
+        assert!(result.is_err());
+        let msg = result.err().unwrap().to_string();
+        assert!(
+            msg.contains("timed out"),
+            "expected timeout error, got: {msg}"
+        );
+    }
+
+    #[tokio::test]
+    async fn pipeline_dispatch_with_timeout_allows_fast_tool() {
+        let pipeline = DispatchPipeline::with_defaults()
+            .with_dispatch_timeout(Some(Duration::from_millis(500)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new("fast_tool", EffectRow::pure());
 
         let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
         assert!(result.is_ok());

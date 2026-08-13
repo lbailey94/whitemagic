@@ -72,7 +72,7 @@ fn bench_transaction_rollback_empty(c: &mut Criterion) {
             },
             |(store, state, _tmp)| {
                 let rt = Runtime::new().unwrap();
-                let tool = TransactionRollbackTool::new(store, state);
+                let tool = TransactionRollbackTool::new(store, state, None);
                 rt.block_on(tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})))
                     .unwrap();
             },
@@ -104,7 +104,7 @@ fn bench_transaction_rollback_with_memories(c: &mut Criterion) {
                 },
                 |(store, state, _tmp)| {
                     let rt = Runtime::new().unwrap();
-                    let tool = TransactionRollbackTool::new(store, state);
+                    let tool = TransactionRollbackTool::new(store, state, None);
                     rt.block_on(
                         tool.call(&mut Context::new(BrainWave::Gamma), serde_json::json!({})),
                     )

@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
-use wm_memory::{Memory, MemoryStore, content_hash as compute_hash};
+use wm_memory::{Memory, MemoryStore, SearchEngine, content_hash as compute_hash};
 
 pub struct AgentRegisterTool {
     store: Arc<MemoryStore>,
@@ -556,14 +556,16 @@ impl Tool for AgentHeartbeatHistoryTool {
 /// `agent.deregister` — remove an agent from the registry.
 pub struct AgentDeregisterTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl AgentDeregisterTool {
-    pub fn new(store: Arc<MemoryStore>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
         Self {
             store,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("substrate".into())],
@@ -613,6 +615,7 @@ impl Tool for AgentDeregisterTool {
 
         self.store
             .delete(Galaxy::Substrate, agent_mem.metadata.id)?;
+        super::common::deindex(self.search.as_deref(), &agent_mem.metadata.id.to_string());
 
         Ok(json!({
             "status": "success",
@@ -751,7 +754,7 @@ mod tests {
         let mut ctx = Context::default();
         let _ = reg.call(&mut ctx, json!({"name": "worker-6"})).await;
 
-        let tool = AgentDeregisterTool::new(store.clone());
+        let tool = AgentDeregisterTool::new(store.clone(), None);
         let result = tool.call(&mut ctx, json!({"agent_id": "worker-6"})).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap()["deregistered"], true);

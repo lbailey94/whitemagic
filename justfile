@@ -14,7 +14,12 @@ test:
 test-fast:
     cargo test --all -- --test-threads=8
 
+# Lint all crates (default features — no Julia required)
 lint:
+    cargo clippy --all-targets
+
+# Lint including polyglot feature builds (requires a Julia install)
+lint-all:
     cargo clippy --all-targets --all-features
 
 fmt:
@@ -59,11 +64,10 @@ doctor:
 brain-wave:
     cargo run --release --bin wm -- brain-wave
 
-# Full workspace verification: fmt + clippy + tests
-verify:
-    cargo fmt --all -- --check
-    cargo clippy --all-targets --all-features
+# Full workspace verification: fmt + clippy + tests + dependency audit
+verify: fmt-check lint
     cargo test --all
+    cargo deny check
 
 # Remove all build artifacts (reclaims ~8GB)
 prune: clean
