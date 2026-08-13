@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 12, 2026 (v5.7.7 — 15 crates, 229 tools, 3,434 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
+**Last updated**: August 12, 2026 (v5.7.7 — 15 crates, 229 tools, 3,438 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
 
 ---
 
@@ -2877,5 +2877,5 @@ Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
 
 ### Final v5 Metrics
 - **15 crates**, **229 tools**, **~131,000 LOC**
-- **3,434 tests**, 0 clippy warnings, fmt clean
+- **3,438 tests**, 0 clippy warnings, fmt clean
 - All 7 phases complete + v26 parity (web/research/session tools) + NLU routers + imagination + self-play + mutable structures

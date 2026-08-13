@@ -339,6 +339,54 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                     );
                 }
 
+                // WS-4: Proactive Improvement Surfacing — persist Improve
+                // proposals as Codex memories with rsi:proposal:active tags so
+                // `improve.proposals` can surface them. (Previously done on the
+                // request path in the MCP server; moved here with the cycle
+                // scheduler.)
+                for result in &results {
+                    for proposal in &result.improvements {
+                        let content = format!(
+                            "## Improvement Proposal\n\n\
+                             **Category:** {}\n\n\
+                             **Severity:** {}\n\n\
+                             **Target:** {}\n\n\
+                             **Problem:** {}\n\n\
+                             **Recommended action:** {}\n\n\
+                             **Pattern count:** {}",
+                            proposal.category,
+                            proposal.severity,
+                            proposal.target,
+                            proposal.problem,
+                            proposal.recommended_action,
+                            proposal.pattern_count,
+                        );
+                        let mut memory = wm_memory::Memory::new(wm_core::Galaxy::Codex, content);
+                        let signature = format!(
+                            "{}:{}:{}",
+                            proposal.category, proposal.target, proposal.severity
+                        );
+                        memory.metadata.tags = vec![
+                            "rsi:proposal".to_string(),
+                            "rsi:proposal:active".to_string(),
+                            format!("rsi:proposal:sig:{signature}"),
+                            format!("rsi:severity:{}", proposal.severity),
+                            format!("rsi:category:{}", proposal.category),
+                            format!("rsi:tool:{}", proposal.target),
+                        ];
+                        memory.metadata.source = "auto".to_string();
+                        memory.metadata.source_trust = 0.8;
+                        memory.metadata.importance = match proposal.severity.as_str() {
+                            "high" => 0.9,
+                            "medium" => 0.6,
+                            _ => 0.3,
+                        };
+                        if let Err(e) = store.put(wm_core::Galaxy::Codex, &memory) {
+                            tracing::warn!("Failed to store proposal memory: {e}");
+                        }
+                    }
+                }
+
                 // Print summary
                 println!(
                     "[sweep {}] {} cycles, {} proposals, {} suspended, {} dreams, {} bw-transitions",

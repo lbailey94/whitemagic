@@ -1704,58 +1704,86 @@ impl WmMetaTool {
         nlu::classify(text)
     }
 
-    /// Classify using the embedding router if available, otherwise TF-IDF.
-    ///
-    /// In shadow mode (when embedding router is present), also runs TF-IDF and
-    /// logs disagreements for monitoring. When the embedding router's top-1 vs
-    /// top-2 margin is below `MIN_MARGIN`, the TF-IDF choice is used instead —
-    /// near-ties mean the descriptions cannot separate intent (2026-08-11
-    /// shadow data: keyword-mashup top-1 collapsed onto arbitrary tools).
+    /// Classification core shared by the async wrapper. Runs the embedding
+    /// router (and shadow TF-IDF comparison) synchronously — callers place it
+    /// on the blocking pool because the HTTP embedder does synchronous
+    /// network I/O (ureq), which must not run on the tokio worker thread.
     ///
     /// Returns the query embedding alongside the routing decision when the
     /// embedding router computed one, so the caller can reuse it for OATS
     /// outcome recording (one embedder round-trip instead of two).
-    fn classify_with_router(&self, text: &str) -> (String, f64, Option<Vec<f32>>) {
-        if let Some(ref router) = self.embedding_router {
-            let (emb_tool, emb_conf, margin, query_emb) =
-                match router.route_with_margin_and_embedding(text) {
-                    Some(t) => t,
-                    None => ("gnosis".into(), 0.0, 0.0, Vec::new()),
-                };
-
-            // Shadow mode: run TF-IDF in parallel and track disagreements
-            let (tfidf_tool, tfidf_conf) = nlu::classify(text);
-            if emb_tool != tfidf_tool {
-                tracing::debug!(
-                    query = text.chars().take(100).collect::<String>(),
-                    embedding_tool = %emb_tool,
-                    embedding_conf = emb_conf,
-                    margin = margin,
-                    tfidf_tool = %tfidf_tool,
-                    tfidf_conf = tfidf_conf,
-                    "shadow mode disagreement: embedding vs TF-IDF"
-                );
-            }
-
-            // Record in shadow stats tracker
-            if let Ok(mut stats) = self.shadow_stats.write() {
-                stats.record(text, &emb_tool, emb_conf, tfidf_tool, tfidf_conf);
-            }
-
-            // Margin fallback: defer to TF-IDF when the embedding router
-            // cannot separate the top candidates. TF-IDF's keyword-driven
-            // picks stay reliable even at low confidence (2026-08-11 data:
-            // a confidence floor on this fallback caused net regressions).
-            let selected = if margin < embedding_router::MIN_MARGIN {
-                (tfidf_tool.to_string(), tfidf_conf)
-            } else {
-                (emb_tool, emb_conf)
+    fn classify_with_router_inner(
+        router: &embedding_router::EmbeddingRouter,
+        shadow_stats: &std::sync::RwLock<embedding_router::ShadowModeStats>,
+        text: &str,
+    ) -> (String, f64, Option<Vec<f32>>) {
+        let (emb_tool, emb_conf, margin, query_emb) =
+            match router.route_with_margin_and_embedding(text) {
+                Some(t) => t,
+                None => ("gnosis".into(), 0.0, 0.0, Vec::new()),
             };
-            let query_emb = (!query_emb.is_empty()).then_some(query_emb);
-            (selected.0, selected.1, query_emb)
+
+        // Shadow mode: run TF-IDF in parallel and track disagreements
+        let (tfidf_tool, tfidf_conf) = nlu::classify(text);
+        if emb_tool != tfidf_tool {
+            tracing::debug!(
+                query = text.chars().take(100).collect::<String>(),
+                embedding_tool = %emb_tool,
+                embedding_conf = emb_conf,
+                margin = margin,
+                tfidf_tool = %tfidf_tool,
+                tfidf_conf = tfidf_conf,
+                "shadow mode disagreement: embedding vs TF-IDF"
+            );
+        }
+
+        // Record in shadow stats tracker
+        if let Ok(mut stats) = shadow_stats.write() {
+            stats.record(text, &emb_tool, emb_conf, tfidf_tool, tfidf_conf);
+        }
+
+        // Margin fallback: defer to TF-IDF when the embedding router
+        // cannot separate the top candidates. TF-IDF's keyword-driven
+        // picks stay reliable even at low confidence (2026-08-11 data:
+        // a confidence floor on this fallback caused net regressions).
+        let selected = if margin < embedding_router::MIN_MARGIN {
+            (tfidf_tool.to_string(), tfidf_conf)
         } else {
+            (emb_tool, emb_conf)
+        };
+        let query_emb = (!query_emb.is_empty()).then_some(query_emb);
+        (selected.0, selected.1, query_emb)
+    }
+
+    /// Classify a thought off the async worker thread.
+    ///
+    /// The embedding router performs synchronous HTTP against the embedder
+    /// endpoint (`ureq`); running it inline on the tokio worker would block
+    /// every other dispatch on that worker for the duration of the embedder
+    /// round-trip. Falls back to TF-IDF on the current thread when no
+    /// embedding router is configured or the blocking task fails to join.
+    async fn classify_async(&self, text: &str) -> (String, f64, Option<Vec<f32>>) {
+        let Some(router) = self.embedding_router.clone() else {
             let (tool, conf) = Self::classify(text);
-            (tool.to_string(), conf, None)
+            return (tool.to_string(), conf, None);
+        };
+        let shadow_stats = Arc::clone(&self.shadow_stats);
+        let text_owned = text.to_string();
+        let fallback_text = text_owned.clone();
+        match tokio::task::spawn_blocking(move || {
+            Self::classify_with_router_inner(&router, &shadow_stats, &text_owned)
+        })
+        .await
+        {
+            Ok(result) => result,
+            Err(join_err) => {
+                tracing::warn!(
+                    error = %join_err,
+                    "NLU blocking classifier task failed — falling back to TF-IDF"
+                );
+                let (tool, conf) = Self::classify(&fallback_text);
+                (tool.to_string(), conf, None)
+            }
         }
     }
 
@@ -2152,7 +2180,7 @@ impl Tool for WmMetaTool {
         let (tool_name, confidence, query_emb) = if let Some(r) = route {
             (r.to_string(), 1.0, None)
         } else {
-            self.classify_with_router(thought)
+            self.classify_async(thought).await
         };
 
         // Build args for the target tool
@@ -2214,13 +2242,21 @@ impl Tool for WmMetaTool {
                 };
                 // OATS: record routing outcome for embedding router refinement.
                 // Reuse the query embedding computed during routing so the
-                // embedder is called once per NLU request, not twice.
+                // embedder is called once per NLU request, not twice. When no
+                // embedding is available (explicit route= or router fallback),
+                // the re-embed does synchronous HTTP — run it on the blocking
+                // pool instead of the tokio worker.
                 if let Some(ref router) = self.embedding_router {
                     let success = result.is_ok();
                     if let Some(emb) = &query_emb {
                         router.record_outcome_with_embedding(&tool_name, thought, success, emb);
                     } else {
-                        router.record_outcome(&tool_name, thought, success);
+                        let router = Arc::clone(router);
+                        let tool_name_owned = tool_name.clone();
+                        let thought_owned = thought.to_string();
+                        tokio::task::spawn_blocking(move || {
+                            router.record_outcome(&tool_name_owned, &thought_owned, success);
+                        });
                     }
                 }
                 match result {
@@ -3084,6 +3120,65 @@ mod tests {
                 .as_str()
                 .unwrap()
                 .contains("cannot be reached via natural language")
+        );
+    }
+
+    /// Deterministic fake embedder — exercises the embedding router path
+    /// without the stub auto-detect kicking in (backend name != "stub").
+    struct FakeVecEmbedder;
+
+    impl wm_memory::Embedder for FakeVecEmbedder {
+        fn embed_batch(&self, texts: &[&str]) -> wm_core::Result<Vec<Vec<f32>>> {
+            Ok(texts
+                .iter()
+                .map(|t| {
+                    let mut v = vec![0.0_f32; 16];
+                    for (i, b) in t.bytes().take(16).enumerate() {
+                        v[i] = f32::from(b) / 255.0;
+                    }
+                    v
+                })
+                .collect())
+        }
+        fn dimension(&self) -> usize {
+            16
+        }
+        fn is_available(&self) -> bool {
+            true
+        }
+        fn backend_name(&self) -> &'static str {
+            "fake"
+        }
+    }
+
+    #[tokio::test]
+    async fn wm_classify_async_routes_off_thread_with_embedding_router() {
+        let store = test_store();
+        let registry = test_registry_with(&store);
+        let shadow = std::sync::Arc::new(std::sync::RwLock::new(
+            embedding_router::ShadowModeStats::default(),
+        ));
+        let router = embedding_router::EmbeddingRouter::with_descriptions(
+            Box::new(FakeVecEmbedder),
+            embedding_router::tool_descriptions(),
+        )
+        .expect("fake-embedder router should build");
+        let mut meta = WmMetaTool::with_router_shadow_stats_and_pipeline(
+            std::sync::Arc::new(registry),
+            wm_memory::create_embedder(),
+            shadow,
+            None,
+        );
+        meta.embedding_router = Some(std::sync::Arc::new(router));
+
+        // Runs through spawn_blocking; on the current-thread test runtime this
+        // proves the classification path is runtime-agnostic and completes.
+        let (tool, conf, emb) = meta.classify_async("remember the meeting notes").await;
+        assert!(!tool.is_empty());
+        assert!(conf >= 0.0);
+        assert!(
+            emb.is_some(),
+            "query embedding should be returned for OATS reuse"
         );
     }
 

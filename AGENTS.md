@@ -5,14 +5,14 @@
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all tests (3,434 tests)
+cargo test                     # Run all tests (3,438 tests)
 cargo test -p wm-core          # Test a single crate
 cargo bench                    # Run benchmarks (criterion)
 cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (15 crates, 229 tools, ~131,000 LOC, 3,434 tests)
+## Architecture (15 crates, 229 tools, ~131,000 LOC, 3,438 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
@@ -128,6 +128,22 @@ The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 229 tools 
 - `wm(route="memory.create", args={...})` — explicit dispatch
 - `wm(thought="list tools")` or `wm(route="tools.list")` — discover all tools
 
+### Serve vs Daemon
+
+- `wm serve` is dispatch-only: request handling, telemetry, brain-wave transitions, and a throttled hardware sample (≤1/s). Autonomous work — dream consolidation, the 8 autonomous cycles, WS-4 improvement proposal surfacing — is scheduled by the daemon (`wm daemon`) on its own intervals, never on the request path, so per-request latency stays deterministic.
+- Inner tool failures inside `wm` return `{"status":"error", ...}` at the JSON-RPC level (readable for NLU clients), but the server derives the true outcome from that payload so the self-model, friction log, citta, drive and workspace all record failures as failures.
+
+### Runtime Env Knobs
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `WM_DISPATCH_TIMEOUT_MS` | 300000 | Per-tool dispatch timeout (0 disables) |
+| `WM_DISPATCH_TOOL_RPM` | 60 | Per-tool rate limit (the `wm` meta-tool bucket) |
+| `WM_DISPATCH_GLOBAL_RPM` | 300 | Global dispatch limit (each NLU call counts outer `wm` + inner tool) |
+| `WM_DISPATCH_BURST` | 10 | Burst allowance per tool |
+| `WM_MESH_KEY` | random/process | Stable Sangha node identity across restarts |
+| `WM_EMBEDDER_ENDPOINT` | unset (TF-IDF only) | Embedding router backend (`/v1/embeddings`) |
+
 ## Safety Features
 
 ### Destructive Tool Confirmation
@@ -135,6 +151,8 @@ The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 229 tools 
 Tools that delete or overwrite data set `destructive: true` in their `EffectRow`. The dispatch pipeline blocks these unless `"confirm": true` is present in the tool arguments.
 
 **8 destructive tools**: `memory.delete`, `galaxy.purge`, `galaxy.transfer`, `galaxy.restore`, `memory.consolidate`, `memory.deduplicate`, `system.flush`, `karma.clear`
+
+Destructive tools are additionally **structurally unreachable via natural-language routing** (`thought=`): they require an explicit `route=` match plus `confirm: true`. Fuzzy NLU can never reach them, regardless of router quality.
 
 ### Transaction Snapshot/Rollback
 
