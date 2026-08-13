@@ -67,7 +67,7 @@ impl Tool for ClaimsTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Prescience claims ledger (actions: add, resolve, status, list). add requires statement, domain, source_date (YYYY-MM-DD), predicted_outcome, confidence, falsification_criteria. resolve requires claim_id, validated (bool), event, event_date (YYYY-MM-DD)."
+        "Prescience claims ledger (actions: add, resolve, status, list, calibration). add requires statement, domain, source_date (YYYY-MM-DD), predicted_outcome, confidence, falsification_criteria. resolve requires claim_id, validated (bool), event, event_date (YYYY-MM-DD). calibration reports the resolved track record: Brier, calibration gap, Wilson hit-rate interval, and recalibrated pending confidences."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let action = args
@@ -183,6 +183,45 @@ impl Tool for ClaimsTool {
                 }))
             }
             "status" => Ok(ledger.status()),
+            "calibration" => {
+                let cal = ledger.calibration();
+                let interpretation = if cal.calibration_gap > 0.05 {
+                    "overconfident"
+                } else if cal.calibration_gap < -0.05 {
+                    "underconfident"
+                } else {
+                    "calibrated"
+                };
+                // Pending claims get a recalibrated confidence alongside the
+                // raw record — the raw value is history and is never edited.
+                let pending: Vec<Value> = ledger
+                    .claims
+                    .iter()
+                    .filter(|c| c.status == ClaimStatus::Pending)
+                    .map(|c| {
+                        json!({
+                            "id": c.id,
+                            "confidence": c.confidence,
+                            "calibrated_confidence": ledger.calibrated_confidence(c.confidence),
+                        })
+                    })
+                    .collect();
+                Ok(json!({
+                    "status": "success",
+                    "resolved": cal.resolved,
+                    "validated": cal.validated,
+                    "falsified": cal.falsified,
+                    "mean_confidence": cal.mean_confidence,
+                    "hit_rate": cal.hit_rate,
+                    "calibration_gap": cal.calibration_gap,
+                    "interpretation": interpretation,
+                    "brier": cal.brier,
+                    "hit_rate_ci95_low": cal.hit_rate_ci95.0,
+                    "hit_rate_ci95_high": cal.hit_rate_ci95.1,
+                    "shrinkage": cal.shrinkage,
+                    "pending_recalibrated": pending,
+                }))
+            }
             "list" => {
                 let domain = args.get("domain").and_then(Value::as_str);
                 let status = match args.get("status").and_then(Value::as_str) {
@@ -389,5 +428,93 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(status["falsified"], 1);
+    }
+
+    #[tokio::test]
+    async fn claims_calibration_action_reports_and_recalibrates() {
+        let ledger = Arc::new(Mutex::new(ClaimsLedger::new()));
+        let tool = ClaimsTool::new(ledger);
+        let mut ctx = Context::default();
+
+        // One validated (0.6) and one falsified (0.4) claim — mean confidence
+        // 0.5 equals the hit rate, so the ledger reads as calibrated — plus
+        // one pending (0.9).
+        let a = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "action": "add",
+                    "statement": "A",
+                    "domain": "test",
+                    "source_date": "2026-01-01",
+                    "predicted_outcome": "X",
+                    "confidence": 0.6,
+                    "falsification_criteria": "not X"
+                }),
+            )
+            .await
+            .unwrap();
+        let a_id = a["claim_id"].as_str().unwrap().to_string();
+        let b = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "action": "add",
+                    "statement": "B",
+                    "domain": "test",
+                    "source_date": "2026-01-01",
+                    "predicted_outcome": "Y",
+                    "confidence": 0.4,
+                    "falsification_criteria": "not Y"
+                }),
+            )
+            .await
+            .unwrap();
+        let b_id = b["claim_id"].as_str().unwrap().to_string();
+        tool.call(
+            &mut ctx,
+            json!({
+                "action": "add",
+                "statement": "C",
+                "domain": "test",
+                "source_date": "2026-01-01",
+                "predicted_outcome": "Z",
+                "confidence": 0.9,
+                "falsification_criteria": "not Z"
+            }),
+        )
+        .await
+        .unwrap();
+        tool.call(
+            &mut ctx,
+            json!({"action": "resolve", "claim_id": a_id, "validated": true, "event": "e", "event_date": "2026-01-08"}),
+        )
+        .await
+        .unwrap();
+        tool.call(
+            &mut ctx,
+            json!({"action": "resolve", "claim_id": b_id, "validated": false, "event": "e", "event_date": "2026-01-08"}),
+        )
+        .await
+        .unwrap();
+
+        let cal = tool
+            .call(&mut ctx, json!({"action": "calibration"}))
+            .await
+            .unwrap();
+        assert_eq!(cal["status"], "success");
+        assert_eq!(cal["resolved"], 2);
+        assert_eq!(cal["validated"], 1);
+        assert_eq!(cal["falsified"], 1);
+        assert_eq!(cal["interpretation"], "calibrated");
+        assert_eq!(cal["pending_recalibrated"].as_array().unwrap().len(), 1);
+        let pending = &cal["pending_recalibrated"][0];
+        assert!((pending["confidence"].as_f64().unwrap() - 0.9).abs() < 1e-12);
+        // n=2, w=2/22, hit_rate=0.5 → 0.9 + w*(0.5-0.9) < 0.9.
+        let recal = pending["calibrated_confidence"].as_f64().unwrap();
+        assert!(
+            recal < 0.9 && recal > 0.8,
+            "pending 0.9 must shrink toward 0.5 hit rate, got {recal}"
+        );
     }
 }

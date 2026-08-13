@@ -434,12 +434,54 @@ impl McpServer {
         Self::with_defaults_mode(store_path, false)
     }
 
+    /// Resolve the tool surface profile from the environment.
+    ///
+    /// `WM_TOOL_ALLOWLIST` (comma-separated tool-name prefixes) wins; otherwise
+    /// `WM_TOOL_PROFILE` (`full` | `curated` | `minimal`, default `full`).
+    /// Invalid names log a warning and fall back to the full surface.
+    fn tool_profile_from_env() -> &'static wm_tools::profiles::ToolProfile {
+        if let Ok(allow) = std::env::var("WM_TOOL_ALLOWLIST") {
+            if let Some(profile) = wm_tools::profiles::allowlist_from_env(&allow) {
+                tracing::info!(
+                    allowlist = %allow,
+                    "WM_TOOL_ALLOWLIST tool surface in effect"
+                );
+                return Box::leak(Box::new(profile));
+            }
+        }
+        match std::env::var("WM_TOOL_PROFILE").ok().as_deref() {
+            Some(name) => wm_tools::profiles::profile_from_name(name).unwrap_or_else(|| {
+                tracing::warn!(
+                    profile = name,
+                    "unknown WM_TOOL_PROFILE — using full tool surface"
+                );
+                &wm_tools::profiles::PROFILE_FULL
+            }),
+            None => &wm_tools::profiles::PROFILE_FULL,
+        }
+    }
+
     /// Like `with_defaults`, but with a read-only tantivy index when
     /// `readonly` is set — no exclusive index lock, so multiple processes can
     /// share the store for searches. Writes fail with a clear error.
     pub fn with_defaults_mode(
         store_path: &std::path::Path,
         readonly: bool,
+    ) -> anyhow::Result<Self> {
+        let profile = Self::tool_profile_from_env();
+        Self::with_defaults_mode_profile(store_path, readonly, profile)
+    }
+
+    /// `with_defaults_mode` plus an explicit tool surface profile.
+    ///
+    /// The full registry is built first (governance internals need their
+    /// tools regardless), then filtered to the profile before the `wm`
+    /// meta-tool is layered on — so the profile curates both direct dispatch
+    /// and NLU routing.
+    pub fn with_defaults_mode_profile(
+        store_path: &std::path::Path,
+        readonly: bool,
+        profile: &wm_tools::profiles::ToolProfile,
     ) -> anyhow::Result<Self> {
         let store = std::sync::Arc::new(MemoryStore::open_default(store_path)?);
 
@@ -701,6 +743,20 @@ impl McpServer {
             .with_gana_registry(gana_registry.clone())
             .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env()),
         );
+
+        // Curate the tool surface to the active profile BEFORE the meta-tools
+        // are layered on — the `wm` meta-tool then routes only within the
+        // curated surface, and direct dispatch of filtered tools fails with
+        // "Unknown tool". Full-surface internals (karma, friction, governance
+        // tools) were already constructed above and keep working internally.
+        let registry = wm_tools::profiles::apply_profile(registry, profile);
+        if profile.name != "full" {
+            tracing::info!(
+                profile = profile.name,
+                tools = registry.len(),
+                "Tool surface profile applied"
+            );
+        }
 
         let (registry, embedding_router) = wm_tools::register_meta_tools_with_router(
             &registry,
@@ -3750,6 +3806,54 @@ mod tests {
         assert!(
             review["total_friction_entries"].as_u64().unwrap() >= 1,
             "inner wm failure should be friction-logged, got: {review}"
+        );
+    }
+
+    #[tokio::test]
+    async fn e2e_curated_profile_filters_tool_surface() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut server = McpServer::with_defaults_mode_profile(
+            &test_store_path(&tmp),
+            false,
+            &wm_tools::profiles::PROFILE_CURATED,
+        )
+        .unwrap();
+
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Memory-hierarchy tools stay reachable through the meta-tool.
+        let create_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"curated profile test"}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&create_resp).unwrap();
+        assert!(
+            parsed.get("error").is_none() || parsed["error"].is_null(),
+            "memory.create should work under curated profile, got: {parsed}"
+        );
+
+        // Full-surface tools are filtered out: direct dispatch fails…
+        let resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"redteam.proposals","arguments":{}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        assert!(
+            parsed.get("error").is_some(),
+            "redteam.proposals should be filtered out under curated profile, got: {parsed}"
+        );
+
+        // …and the wm meta-tool cannot route to them either.
+        let resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"route":"redteam.proposals"}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let routed: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(routed["status"], "error");
+        assert!(
+            routed["message"].as_str().unwrap().contains("Unknown tool"),
+            "wm routing must not reach filtered tools, got: {routed}"
         );
     }
 

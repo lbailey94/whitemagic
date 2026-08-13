@@ -33,6 +33,11 @@ enum Commands {
         /// with a clear error. Lets multiple processes share the store.
         #[arg(long)]
         readonly: bool,
+        /// Tool surface profile: full | curated | minimal. Curated exposes
+        /// the memory-hierarchy surface (memory, session, claims,
+        /// transactions); full exposes all tools. Overrides WM_TOOL_PROFILE.
+        #[arg(long, default_value = "full")]
+        profile: String,
     },
     /// Generate or show configuration
     Config {
@@ -195,7 +200,15 @@ fn main() -> anyhow::Result<()> {
             max_requests,
             rate_limit,
             readonly,
+            profile,
         } => {
+            // CLI flag wins over config/env for the tool surface profile.
+            // `std::env::set_var` is unsafe in Rust 2024 (not thread-safe);
+            // main() is single-threaded here, before any runtime is spawned.
+            #[allow(unsafe_code)]
+            unsafe {
+                std::env::set_var("WM_TOOL_PROFILE", &profile);
+            }
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
             std::fs::create_dir_all(&lmdb_path)?;

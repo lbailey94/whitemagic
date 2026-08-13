@@ -4,7 +4,36 @@
 
 **32 claims — 19 validated, 1 falsified, 12 pending · 434.9 points**
 
-Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit rate 0.950 (**+0.215 overconfident**) · the only miss at confidence 0.5 (correct shape).
+Calibration (20 resolved): mean Brier **0.078** · mean confidence 0.735 vs hit rate 0.950 (**calibration gap −0.215: underconfident** — stated confidences ran *below* the realized validation rate; the earlier "overconfident" label was sign-flipped). The only miss is at confidence 0.5 (correct shape). Wilson 95% CI for the hit rate: **[0.764, 0.991]**.
+
+## Calibration method (2026-08-12)
+
+`claims` tool action `calibration` reports the resolved track record and recalibrates pending confidences via empirical-Bayes shrinkage toward the observed hit rate:
+
+```
+calibrated = raw + w · (hit_rate − raw),   w = n / (n + 20)
+```
+
+With n = 20 resolved claims, w = 0.5 — the base rate gets half the weight of the raw confidence; more resolutions → stronger shrinkage. Raw confidences in the ledger are **never edited** — they are historical artifacts; calibrated values are reported alongside them.
+
+Pending claims, recalibrated:
+
+| Claim | Raw | Calibrated |
+|---|---|---|
+| claim-0026 | 0.80 | **0.875** |
+| claim-0027 | 0.75 | **0.850** |
+| claim-0005 | 0.70 | **0.825** |
+| claim-0028 | 0.70 | **0.825** |
+| claim-0030 | 0.70 | **0.825** |
+| claim-0029 | 0.65 | **0.800** |
+| claim-0031 | 0.60 | **0.775** |
+| claim-0015 | 0.55 | **0.750** |
+| claim-0017 | 0.55 | **0.750** |
+| claim-0016 | 0.50 | **0.725** |
+| claim-0018 | 0.45 | **0.700** |
+| claim-0019 | 0.45 | **0.700** |
+
+Note the direction: the ledger's own record says its confidences were *too low*, so calibration raises them. With only 20 resolutions this is an estimate (hence the Wilson interval), not a claim about the future.
 
 ## Claims
 
