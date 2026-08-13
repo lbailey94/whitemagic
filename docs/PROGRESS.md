@@ -77,8 +77,8 @@ process-level checks passed.
   describes the active profile and registry-derived tool count instead of the
   hardcoded 229-tool archive surface.
 
-Remaining release blockers: privacy/model-exclusion enforcement, curated
-contract schemas, native client configs, and optional-feature coverage.
+Remaining release blockers: effect inventory audit, curated contract
+schemas, and hybrid-recall semantic documentation.
 
 ---
 
@@ -137,6 +137,31 @@ workflows updated.
 - The first smoke run against a stale release binary failed exactly as
   intended (rollback regenerated UUIDs in the old build), confirming the gate
   detects untested binaries.
+
+---
+
+## Session 2026-08-13 (afternoon, batch 5): privacy enforcement and packaging
+
+Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean,
+curated smoke test passing.
+
+- **`is_private` enforcement**: private memories are excluded from
+  memory.read (`not_found`), list, query, search, hybrid_recall, batch_read
+  (counted as misses), sort, filter, nearby, vector.search, and chat
+  (`ConversationalConfig::exclude_private`, default on). Regression tests at
+  tool and MCP levels.
+- **`model_exclude` enforcement**: excluded memories are filtered from think,
+  explain, reasoning.bicameral, bicameral hemisphere evidence, imagination
+  scenario context, and self-play task context. Regression test covers the
+  reasoning evidence path.
+- **Explicit claims routes**: `claims.add/resolve/status/list/calibration`
+  alias tools; dead `galaxy.list` curated prefix removed.
+- **`wm quickstart` fix**: seeded memories go through the dispatch pipeline so
+  the demo search works on a fresh store.
+- **Release checksums**: per-platform sha256 files generated and uploaded in
+  the release workflow; README documents verification.
+- **Benchmark comparison repaired**: PR results are compared against an
+  imported baseline from the base branch instead of base-vs-itself.
 
 ---
 

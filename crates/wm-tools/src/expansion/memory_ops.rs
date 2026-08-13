@@ -206,12 +206,19 @@ impl Tool for MemoryBatchReadTool {
             if let Some(id_str) = id_val.as_str() {
                 if let Ok(id) = uuid::Uuid::parse_str(id_str) {
                     match self.store.get(galaxy, id)? {
-                        Some(mem) => results.push(json!({
-                            "id": mem.metadata.id,
-                            "content": mem.content,
-                            "tags": mem.metadata.tags,
-                            "importance": mem.metadata.importance,
-                        })),
+                        Some(mem) if crate::expansion::common::mcp_visible(&mem) => {
+                            results.push(json!({
+                                "id": mem.metadata.id,
+                                "content": mem.content,
+                                "tags": mem.metadata.tags,
+                                "importance": mem.metadata.importance,
+                            }));
+                        }
+                        // Private memories are treated like misses — they never
+                        // appear in MCP responses.
+                        Some(_) => {
+                            misses += 1;
+                        }
                         None => {
                             misses += 1;
                         }
@@ -560,7 +567,9 @@ impl Tool for MemoryHybridRecallTool {
                 for hit in hits {
                     if let Ok(id) = uuid::Uuid::parse_str(&hit.memory_id) {
                         if let Ok(Some(mem)) = self.store.get(galaxy, id) {
-                            if mem.metadata.importance >= min_importance {
+                            if mem.metadata.importance >= min_importance
+                                && crate::expansion::common::mcp_visible(&mem)
+                            {
                                 results.push(json!({
                                     "id": mem.metadata.id,
                                     "content": wm_memory::scrub_text(&mem.content),
@@ -591,7 +600,9 @@ impl Tool for MemoryHybridRecallTool {
                 for hit in hits {
                     if let Ok(id) = uuid::Uuid::parse_str(&hit.memory_id) {
                         if let Ok(Some(mem)) = self.store.get(galaxy, id) {
-                            if mem.metadata.importance >= min_importance {
+                            if mem.metadata.importance >= min_importance
+                                && crate::expansion::common::mcp_visible(&mem)
+                            {
                                 results.push(json!({
                                     "id": mem.metadata.id,
                                     "content": wm_memory::scrub_text(&mem.content),
@@ -619,7 +630,10 @@ impl Tool for MemoryHybridRecallTool {
             });
             for mem in memories
                 .iter()
-                .filter(|m| m.metadata.importance >= min_importance)
+                .filter(|m| {
+                    m.metadata.importance >= min_importance
+                        && crate::expansion::common::mcp_visible(m)
+                })
                 .take(limit)
             {
                 results.push(json!({
@@ -689,6 +703,8 @@ impl Tool for MemorySortTool {
             .unwrap_or(50) as usize;
 
         let mut memories = self.store.scan(galaxy, 10_000)?;
+        // Private memories never appear in MCP responses.
+        memories.retain(crate::expansion::common::mcp_visible);
 
         match sort_by {
             "importance" => memories.sort_by(|a, b| {
@@ -809,6 +825,10 @@ impl Tool for MemoryFilterTool {
         let filtered: Vec<&wm_memory::Memory> = memories
             .iter()
             .filter(|m| {
+                // Private memories never appear in MCP responses.
+                if !crate::expansion::common::mcp_visible(m) {
+                    return false;
+                }
                 if m.metadata.importance < min_importance || m.metadata.importance > max_importance
                 {
                     return false;
@@ -1548,6 +1568,92 @@ mod tests {
             )
             .unwrap();
         search.commit(&mut writer).unwrap();
+    }
+
+    #[tokio::test]
+    async fn hybrid_recall_excludes_private_memories() {
+        let (_dir, store, search) = hybrid_fixture();
+
+        // Private memory, indexed exactly like the write path.
+        let mut priv_mem = Memory::new(Galaxy::Codex, "private secret plan alpha".to_string());
+        priv_mem.metadata.is_private = true;
+        let id = priv_mem.metadata.id;
+        store.put(Galaxy::Codex, &priv_mem).unwrap();
+        {
+            let mut writer = search.writer().unwrap();
+            search
+                .add_document(
+                    &mut writer,
+                    &id.to_string(),
+                    "codex",
+                    "private secret plan alpha",
+                    &[],
+                    priv_mem.metadata.created_at.timestamp(),
+                )
+                .unwrap();
+            search.commit(&mut writer).unwrap();
+        }
+
+        // Public memory with overlapping terms.
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "public plan alpha documentation",
+        );
+
+        let tool = MemoryHybridRecallTool::new(store.clone(), Some(search.clone()));
+        let v = tool
+            .call(
+                &mut Context::default(),
+                json!({"query": "plan alpha", "galaxy": "codex"}),
+            )
+            .await
+            .unwrap();
+        let results = v["results"].as_array().unwrap();
+        let contents: Vec<&str> = results
+            .iter()
+            .filter_map(|r| r["content"].as_str())
+            .collect();
+        assert!(
+            !contents.iter().any(|c| c.contains("private")),
+            "private memory leaked through hybrid recall: {results:?}"
+        );
+        assert!(
+            contents.iter().any(|c| c.contains("public")),
+            "public memory missing from hybrid recall: {results:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn batch_read_treats_private_as_miss() {
+        let store = test_store();
+        let mut priv_mem = Memory::new(Galaxy::Codex, "private batch note".into());
+        priv_mem.metadata.is_private = true;
+        let priv_id = priv_mem.metadata.id;
+        store.put(Galaxy::Codex, &priv_mem).unwrap();
+        let pub_mem = Memory::new(Galaxy::Codex, "public batch note".into());
+        let pub_id = pub_mem.metadata.id;
+        store.put(Galaxy::Codex, &pub_mem).unwrap();
+
+        let tool = MemoryBatchReadTool::new(store);
+        let v = tool
+            .call(
+                &mut Context::default(),
+                json!({"galaxy": "codex", "ids": [priv_id.to_string(), pub_id.to_string()]}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["found"], 1);
+        assert_eq!(v["misses"], 1);
+        assert!(
+            !v["memories"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|m| m["content"].as_str().unwrap_or("").contains("private")),
+            "private memory leaked through batch_read: {v}"
+        );
     }
 
     #[tokio::test]

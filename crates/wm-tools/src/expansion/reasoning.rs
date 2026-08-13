@@ -114,6 +114,10 @@ impl Tool for ReasoningBicameralTool {
         for galaxy in &galaxies {
             let mems = self.store.scan(*galaxy, scan_limit)?;
             for mem in mems {
+                // model_exclude memories never enter reasoning evidence.
+                if mem.metadata.model_exclude {
+                    continue;
+                }
                 let content_lower = mem.content.to_lowercase();
                 if !topic_words.iter().any(|tw| content_lower.contains(tw)) {
                     continue;
@@ -261,6 +265,10 @@ impl Tool for ThinkTool {
         for galaxy in &galaxies {
             let mems = self.store.scan(*galaxy, max_memories)?;
             for mem in mems {
+                // model_exclude memories never enter model context.
+                if mem.metadata.model_exclude {
+                    continue;
+                }
                 let content_lower = mem.content.to_lowercase();
                 let mut score = 0u32;
                 for word in &query_words {
@@ -478,6 +486,10 @@ impl Tool for ExplainTool {
         for galaxy in Galaxy::all() {
             let mems = self.store.scan(galaxy, 500)?;
             for mem in mems {
+                // model_exclude memories never enter model context.
+                if mem.metadata.model_exclude {
+                    continue;
+                }
                 // Skip the target memory itself
                 if Some(mem.metadata.id) == target_id {
                     continue;
@@ -698,6 +710,38 @@ mod tests {
         let tool = ThinkTool::new(store);
         let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn model_excluded_memories_never_enter_evidence() {
+        let (_tmp, store) = open_store();
+        seed_memories(&store);
+        // A private-to-model memory that matches the query strongly.
+        let mut excluded = wm_memory::Memory::new(
+            Galaxy::Codex,
+            "rust programming secret internal design".to_string(),
+        );
+        excluded.metadata.model_exclude = true;
+        excluded.metadata.importance = 1.0;
+        store.put(Galaxy::Codex, &excluded).unwrap();
+
+        let tool = ThinkTool::new(store);
+        let result = tool
+            .call(
+                &mut Context::default(),
+                json!({"query": "rust programming", "depth": "standard"}),
+            )
+            .await
+            .unwrap();
+        let obj = result.as_object().unwrap();
+        let top = obj["relevant_memories"].as_array().unwrap();
+        for m in top {
+            let preview = m["content_preview"].as_str().unwrap_or("");
+            assert!(
+                !preview.contains("secret"),
+                "model_exclude memory leaked into reasoning evidence: {m}"
+            );
+        }
     }
 
     #[tokio::test]

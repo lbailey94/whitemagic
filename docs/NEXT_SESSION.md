@@ -47,8 +47,8 @@ verified.
 
 ## Hard Blockers
 
-- Privacy and model-exclusion flags are not consistently enforced on read
-  paths, and some effect declarations still understate real side effects.
+- Some effect declarations still understate real side effects (effect inventory
+  audit remains open).
 - The curated contract still needs native argument schemas, a documented
   hybrid-recall semantic decision, and export/backup/index-health workflow
   docs.

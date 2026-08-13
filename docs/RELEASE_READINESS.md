@@ -84,8 +84,13 @@ Open work:
 - ~~Reject unknown compartments instead of granting full access.~~ ✅ Fixed
   2026-08-13 — unknown compartment values now fail closed for both reads and
   writes.
-- Enforce `is_private` on MCP responses and `model_exclude` on model evidence
-  and reasoning paths.
+- ~~Enforce `is_private` on MCP responses and `model_exclude` on model evidence
+  and reasoning paths.~~ ✅ Fixed 2026-08-13 — `is_private` memories are
+  excluded from memory.read/list/query/search/hybrid_recall/batch_read/sort/
+  filter/nearby/vector.search/chat responses (read reports `not_found`);
+  `model_exclude` memories are filtered from reasoning, think, explain,
+  bicameral hemisphere evidence, imagination scenario context, and self-play
+  task context.
 - Audit every `EffectRow` against actual writes, network calls, process calls,
   actuator calls, and broad scans. Put resource rules and transaction firewall
   decisions on the central dispatch path or explicitly remove their claims.
@@ -94,8 +99,8 @@ Acceptance criteria:
 
 - ✅ A negative test proves every mutating registered tool fails in read-only mode.
 - ✅ Unknown compartment values fail closed.
-- Private memories never appear in MCP read/search/list/query results.
-- Excluded memories never enter model context or reasoning evidence.
+- ✅ Private memories never appear in MCP read/search/list/query results.
+- ✅ Excluded memories never enter model context or reasoning evidence.
 - A generated or tested effect inventory matches the registered tool behavior.
 - Natural-language calls cannot reach destructive tools, including rollback.
 

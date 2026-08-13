@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`wm quickstart` fix** — seeded memories are created through the dispatch
   pipeline so the Tantivy index is populated; the demo search previously
   returned nothing on a fresh store and printed empty previews.
+- **Privacy enforcement** — `is_private` memories are excluded from MCP
+  read/list/query/search/hybrid/vector/chat/batch responses (read reports
+  `not_found`); `model_exclude` memories are filtered from reasoning,
+  bicameral, imagination, and self-play context gathering.
+- **Explicit claims routes** — `claims.add/resolve/status/list/calibration`
+  aliases alongside the action-based `claims` tool.
+- **Release checksums** — per-platform sha256 files generated and uploaded
+  with release binaries.
 
 ## [5.7.7] — 2026-08-11
 
