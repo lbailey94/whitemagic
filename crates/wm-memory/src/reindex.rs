@@ -46,6 +46,65 @@ pub struct IndexRebuildReport {
     pub galaxies: Vec<GalaxyRebuildStats>,
 }
 
+/// Per-galaxy consistency check result.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GalaxyConsistency {
+    /// Galaxy database name.
+    pub galaxy: String,
+    /// Memories in LMDB.
+    pub lmdb_count: usize,
+    /// Documents in Tantivy.
+    pub tantivy_count: usize,
+    /// True when counts differ (index is stale or has orphan documents).
+    pub drift: bool,
+}
+
+/// Consistency check report comparing LMDB to Tantivy.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConsistencyReport {
+    /// Per-galaxy comparison.
+    pub galaxies: Vec<GalaxyConsistency>,
+    /// Total LMDB memories across all galaxies.
+    pub total_lmdb: usize,
+    /// Total Tantivy documents across all galaxies.
+    pub total_tantivy: usize,
+    /// True if any galaxy has drift.
+    pub has_drift: bool,
+}
+
+/// Check consistency between LMDB store and Tantivy index.
+///
+/// Compares memory counts in LMDB to document counts in Tantivy for each
+/// galaxy. A mismatch indicates the index is stale (LMDB has memories that
+/// Tantivy doesn't) or has orphan documents (Tantivy has documents that
+/// LMDB doesn't — e.g. from a failed delete).
+///
+/// Note: content that fails sanitization is intentionally not indexed, so
+/// a small drift is expected when memories contain binary/garbage content.
+/// The caller should use `IndexHealth::failures` to distinguish best-effort
+/// skips from actual indexing failures.
+#[must_use]
+pub fn check_consistency(store: &MemoryStore, search: &SearchEngine) -> ConsistencyReport {
+    let mut report = ConsistencyReport::default();
+    for galaxy in Galaxy::memory_galaxies() {
+        let lmdb_count = store.count(galaxy).unwrap_or(0);
+        let tantivy_count = search.count_docs_in_galaxy(galaxy.db_name()).unwrap_or(0);
+        let drift = lmdb_count != tantivy_count;
+        report.total_lmdb += lmdb_count;
+        report.total_tantivy += tantivy_count;
+        if drift {
+            report.has_drift = true;
+        }
+        report.galaxies.push(GalaxyConsistency {
+            galaxy: galaxy.db_name().to_string(),
+            lmdb_count,
+            tantivy_count,
+            drift,
+        });
+    }
+    report
+}
+
 /// Rebuild the Tantivy index from LMDB contents.
 ///
 /// With no filter, all existing index documents are deleted and every memory
@@ -259,6 +318,92 @@ mod tests {
             research.len(),
             1,
             "filtered rebuild must preserve documents in unselected galaxies"
+        );
+    }
+
+    #[test]
+    fn consistency_check_no_drift_when_indexed() {
+        let (_tmp, store, search) = setup();
+        put_and_index(&store, &search, Galaxy::Codex, "hello world");
+        put_and_index(&store, &search, Galaxy::Codex, "another memory");
+
+        let report = check_consistency(&store, &search);
+        assert!(!report.has_drift, "no drift expected when all indexed");
+        let codex = report
+            .galaxies
+            .iter()
+            .find(|g| g.galaxy == "codex")
+            .unwrap();
+        assert_eq!(codex.lmdb_count, 2);
+        assert_eq!(codex.tantivy_count, 2);
+    }
+
+    #[test]
+    fn consistency_check_detects_drift() {
+        let (_tmp, store, search) = setup();
+        // Write to LMDB without indexing → drift.
+        let mem = Memory::new(Galaxy::Codex, "unindexed".to_string());
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let report = check_consistency(&store, &search);
+        assert!(
+            report.has_drift,
+            "drift expected when LMDB has unindexed memory"
+        );
+        let codex = report
+            .galaxies
+            .iter()
+            .find(|g| g.galaxy == "codex")
+            .unwrap();
+        assert_eq!(codex.lmdb_count, 1);
+        assert_eq!(codex.tantivy_count, 0);
+    }
+
+    #[test]
+    fn index_health_tracks_successes() {
+        let (_tmp, store, search) = setup();
+        put_and_index(&store, &search, Galaxy::Codex, "test content");
+
+        let health = search.health().snapshot();
+        let successes = health
+            .get("successes")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0);
+        assert!(successes > 0, "expected at least one success");
+        let failures = health
+            .get("failures")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0);
+        assert_eq!(failures, 0);
+        assert_eq!(
+            health.get("degraded").and_then(serde_json::Value::as_bool),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn consistency_check_ignores_non_memory_galaxies() {
+        let (_tmp, store, search) = setup();
+        put_and_index(&store, &search, Galaxy::Codex, "indexed memory");
+
+        // Write raw bytes into the Karma galaxy (non-memory data).
+        // Karma is not a memory galaxy and is intentionally not indexed in Tantivy.
+        store.put_raw(Galaxy::Karma, b"key1", b"value1").unwrap();
+
+        let report = check_consistency(&store, &search);
+        assert!(
+            !report.has_drift,
+            "karma entries should not cause drift — non-memory galaxies are excluded"
+        );
+        // Only memory galaxies should appear in the report.
+        let galaxy_names: Vec<_> = report.galaxies.iter().map(|g| g.galaxy.as_str()).collect();
+        assert!(
+            !galaxy_names.contains(&"karma"),
+            "karma should not appear in consistency report"
+        );
+        assert!(
+            !galaxy_names.contains(&"dharma"),
+            "dharma should not appear in consistency report"
         );
     }
 }

@@ -6,9 +6,12 @@
 
 ## Current State
 
-- v5.8.0, 15 crates, 229 registered tool implementations, 3,504 tests.
+- v5.8.0, 15 crates, 229 registered tool implementations, 3,510 tests.
 - `cargo test --workspace`, format check, clippy (`-D warnings`), and release
   binary build all passed on 2026-08-13.
+- **All P0 and P1 release gates are now complete.** P2 (NLU abstention,
+  router labeling) is post-release. Phase B (v5.9 PET hardening) is the next
+  major theme.
 - Phase A of PET hardening (A1–A3) is complete and committed (`1dc29b6`):
   ResourceRules on the dispatch path, the effect inventory audit as CI tests,
   and the append-only write-audit journal.
@@ -26,33 +29,25 @@ daemon, NLU promotion, learned routing, imagination, self-play, Sangha, and
 polyglot features remain optional or experimental until their live behavior is
 verified.
 
-## Tomorrow's Order
+## Next Steps
 
-1. ~~Add regression tests for profile precedence, read-only writes, unknown
-   compartments, and profile-aware discovery.~~ ✅ done 2026-08-13
-2. ~~Fix the profile and read-only boundaries.~~ ✅ done 2026-08-13
-3. ~~Make transaction rollback exact and failure-safe, preserving IDs and all
-   metadata.~~ ✅ done 2026-08-13
-4. ~~Fix secondary-index overwrite behavior and filtered reindexing.~~ ✅ done
-   2026-08-13
-5. ~~Add the committed curated process smoke test, then wire it into CI and the
-   release workflow.~~ ✅ done 2026-08-13 — `scripts/curated_smoke_test.py`
-   covers the full curated workflow, restart persistence, and read-only
-   enforcement; wired into `ci.yml` and `release.yml`.
-6. ~~Update client configurations and v5 documentation from verified behavior.~~
-   ✅ done 2026-08-13 — client config templates now launch the native binary
-   with `--profile curated`; CHANGELOG gained an unreleased hardening section.
-7. Only after the release gates are green, retest the embedding router and add
-   abstention if the labeled results justify it.
+All P0 and P1 release gates are complete. The next session should:
+
+1. **Run the full release gate** on a clean build (`cargo clean && cargo build --release`).
+2. **Tag the release candidate** (`v5.8.0-rc1`) and push to trigger the release workflow.
+3. **Fresh-install rehearsal**: run `scripts/install.sh` against the RC, then `wm doctor`, then `scripts/curated_smoke_test.py`.
+4. **P2 items** (post-release): NLU abstention, router labeling, self-play/imagination labeling.
+5. **Phase B** (v5.9): B4 sandbox, B5 store seal/verify, B6 untrusted `_meta`, B7 store permissions.
 
 ## Hard Blockers
 
 - ~~Some effect declarations still understate real side effects (effect inventory
   audit remains open).~~ ✅ Closed 2026-08-13 — the audit is 16 CI tests; 13
   false declarations fixed.
-- The curated contract still needs export/backup/index-health workflow docs
-  (native argument schemas and the hybrid-recall semantic decision are
-  settled).
+- ~~The curated contract still needs export/backup/index-health workflow docs.~~
+  ✅ Closed 2026-08-13 — `docs/OPERATIONS.md` covers the full workflow.
+
+**No hard blockers remain.** All P0 and P1 release gates are complete.
 
 ## Verification Commands
 
@@ -62,11 +57,12 @@ cargo test --workspace --all-targets
 cargo clippy --all-targets -- -D warnings
 cargo build --release --bin wm
 wm doctor --store ~/Desktop/WMdata/live
+python3 scripts/curated_smoke_test.py --binary target/release/wm
 ```
 
-The smoke test should eventually be a repository script rather than an ad hoc
-stdin sequence. It must use a fresh temporary store, explicit curated routing,
-restart the binary, and assert JSON results rather than only process exit code.
+The smoke test is a committed repository script (`scripts/curated_smoke_test.py`).
+It uses a fresh temporary store, explicit curated routing, restarts the binary,
+and asserts JSON results rather than only process exit code.
 
 ## Defer
 
@@ -100,18 +96,32 @@ complete 2026-08-13, committed as `1dc29b6`:
 
 Remaining release gates, in order, before Phase B (v5.9 PET hardening):
 
-1. **P0**: prove natural-language calls cannot reach destructive tools (the
+1. ~~**P0**: prove natural-language calls cannot reach destructive tools (the
    acceptance line is still open — the structural gate exists, the test does
-   not).
-2. **P0**: define the LMDB/Tantivy consistency contract — expose degraded
-   index state and a safe rebuild path.
-3. **P0**: search health must report stale or unavailable indexes instead of
-   silently saying healthy.
-4. **P1**: export, backup, index-health, and recovery workflow docs.
-5. **P1**: release checksums and a short install path for published binaries;
-   client config examples that launch the same versioned binary.
-6. **P1**: optional features (Julia/Python/LanceDB/ONNX) tested or explicitly
-   marked unsupported for the release.
+   not).~~ ✅ Done 2026-08-13 — destructive gate moved before required-arg
+   check; comprehensive sweep test covers all destructive tools.
+2. ~~**P0**: define the LMDB/Tantivy consistency contract — expose degraded
+   index state and a safe rebuild path.~~ ✅ Done 2026-08-13 — `IndexHealth`
+   tracks successes/failures; `check_consistency()` detects LMDB/Tantivy drift;
+   `system.health` and `wm doctor` report degraded state.
+3. ~~**P0**: search health must report stale or unavailable indexes instead of
+   silently saying healthy.~~ ✅ Done 2026-08-13 — `system.health` reports
+   `index_health` and `index_consistency`; `wm doctor` prints `[WARN]` with
+   remediation guidance.
+4. ~~**P1**: export, backup, index-health, and recovery workflow docs.~~
+   ✅ Done 2026-08-13 — `docs/OPERATIONS.md` covers export (galaxy.export,
+   galaxy.backup, training data), backup (cold + hot), index health (wm doctor,
+   system.health, consistency model), and recovery (corruption, map full,
+   Tantivy rebuild, restore from backup).
+5. ~~**P1**: release checksums and a short install path for published binaries;
+   client config examples that launch the same versioned binary.~~ ✅ Done
+   2026-08-13 — `scripts/install.sh` downloads, verifies SHA-256, and installs
+   to `~/.local/bin/wm`. Release workflow already generates per-platform
+   checksums.
+6. ~~**P1**: optional features (Julia/Python/LanceDB/ONNX) tested or explicitly
+   marked unsupported for the release.~~ ✅ Done 2026-08-13 — feature support
+   matrix in `RELEASE_READINESS.md` documents CI status and release status for
+   all optional features.
 7. **P2** (post-release): NLU abstention, router labeling, self-play/imagination
    labeling.
 

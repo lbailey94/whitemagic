@@ -1,9 +1,9 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Target session:** 2026-08-13
+**Last updated:** 2026-08-13 (evening)
 **Version under review:** v5.8.0
-**Status:** Feature phases complete; release stabilization is not complete
+**Status:** All P0 and P1 release gates complete. P2 items are post-release. Ready for release candidate tag.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
@@ -27,9 +27,10 @@ release scope until the memory boundary is dependable.
 
 ## Evidence So Far
 
-Verified on 2026-08-13 (Phase A of PET hardening, committed as `1dc29b6`):
+Verified on 2026-08-13 (Phase A of PET hardening, committed as `1dc29b6`;
+P0/P1 gates completed evening 2026-08-13):
 
-- `cargo test --workspace`: 3,504 tests passed.
+- `cargo test --workspace`: 3,510 tests passed.
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - `cargo build --release --bin wm`: passed.
@@ -136,7 +137,14 @@ Acceptance criteria:
   effect audit suite (16 tests in `crates/wm-mcp/src/effect_audit.rs`) proves
   no tool mutates the store without declaring it, and that the
   release-surface mutators actually mutate and cover the change.
-- Natural-language calls cannot reach destructive tools, including rollback.
+- ~~Natural-language calls cannot reach destructive tools, including rollback.~~
+  ✅ Fixed 2026-08-13 — the destructive gate in `WmMetaTool::call` now fires
+  *before* the required-arg check (was after, causing the gate message to be
+  masked by missing-arg errors). A comprehensive sweep test
+  (`nlu_cannot_reach_any_destructive_tool`) iterates every registered
+  destructive tool and verifies none can return success via NLU, using both
+  bare tool names and natural-language phrases. Existing per-tool tests
+  cover `memory.delete` with and without `confirm: true`.
 
 ### P0: Store and Transaction Correctness
 
@@ -163,8 +171,21 @@ Open work:
   removes the previous record's index entries on overwrite; `memory.update`
   recomputes the content hash when content changes. Regression tests cover
   tags, importance ranges, and content hashes.
-- Define the LMDB/Tantivy consistency contract. If indexing is asynchronous or
-  best-effort, expose degraded index state and provide a safe rebuild path.
+- ~~Define the LMDB/Tantivy consistency contract. If indexing is asynchronous or
+  best-effort, expose degraded index state and provide a safe rebuild path.~~
+  ✅ Done 2026-08-13 — `IndexHealth` struct tracks successes/failures/last_error
+  on every `add_document` call. `check_consistency()` compares LMDB memory counts
+  to Tantivy doc counts per galaxy, returning a `ConsistencyReport` with drift
+  detection. `system.health` tool now reports `index_health` (degraded flag,
+  failure count, last error) and `index_consistency` (per-galaxy drift, total
+  counts). When no search engine is configured, reports `unavailable` with
+  `degraded: true` instead of silently healthy. `wm doctor` opens the Tantivy
+  index read-only and runs the same consistency + health checks, printing
+  `[WARN]` lines with `wm reindex` remediation guidance. Safe rebuild path:
+  `wm reindex` (full) or `wm reindex --galaxy <name>` (filtered) reconstructs
+  the index from LMDB. 6 new tests cover consistency no-drift, drift detection,
+  index health tracking, system.health with search, drift detection via tool,
+  and unavailable-index honesty.
 - ~~Fix filtered reindexing so `--galaxy codex` cannot delete documents from other
   galaxies.~~ ✅ Fixed 2026-08-13 — filtered rebuilds delete and re-index only
   the selected galaxies; regression test proves unselected galaxies keep their
@@ -177,8 +198,14 @@ Acceptance criteria:
 - ✅ Update tests prove old tags, importance values, timestamps, and hashes are no
   longer queryable.
 - ✅ A filtered reindex preserves all unselected galaxies.
-- Search health reports stale or unavailable indexes instead of silently saying
-  the system is healthy.
+- ~~Search health reports stale or unavailable indexes instead of silently saying
+  the system is healthy.~~ ✅ Done 2026-08-13 — `system.health` now includes
+  `index_health` and `index_consistency` fields. When the search engine is
+  absent, reports `{"status": "unavailable", "degraded": true}`. When present,
+  reports success/failure counts, degraded flag, last error, per-galaxy drift,
+  and total LMDB vs Tantivy counts. `wm doctor` performs the same checks and
+  prints actionable `[WARN]` lines. The `healthy` field is now `false` when the
+  index is degraded or drifted.
 
 ### P1: Curated Product Contract
 
@@ -239,12 +266,33 @@ Open work:
   fixed.~~ ✅ Done 2026-08-13 — all four client config templates launch the
   native binary with `--profile curated` (paths are local-dev templates;
   generic install-path docs remain packaging work).
-- Add release checksums and a short install path for the published binaries.
+- ~~Add release checksums and a short install path for the published binaries.~~
+  ✅ Done 2026-08-13 — `scripts/install.sh` downloads the release binary for
+  the user's platform, verifies the SHA-256 checksum, and installs to
+  `~/.local/bin/wm`. The release workflow already generates per-platform
+  checksums and publishes them alongside the binaries. Usage:
+  `curl -fsSL https://raw.githubusercontent.com/lucas/whitemagic/main/scripts/install.sh | sh`
 - ~~Compile and test the optional Python, ONNX, LanceDB, and other supported
   feature combinations in a separate compatibility job.~~ ✅ Done 2026-08-13 —
   CI gained an optional-feature build matrix for `wm-mcp/python`,
   `wm-memory/lancedb`, and `wm-memory/onnx`. Julia is excluded until a CI
   runner with a Julia runtime is provided.
+
+  Optional feature support matrix for the v5.8 release:
+
+  | Feature | Crate | Cargo feature | CI status | Release status |
+  |---------|-------|---------------|-----------|----------------|
+  | Python (PyO3) | wm-mcp | `python` | Build-only | Supported (opt-in) |
+  | LanceDB vectors | wm-memory | `lancedb` | Build-only | Supported (opt-in) |
+  | ONNX embedder | wm-memory | `onnx` | Build-only | Supported (opt-in) |
+  | Julia (jlrs) | wm-polyglot | `julia` | Not in CI | Unsupported — requires Julia 1.10+ runtime; compile from source with `--features wm-polyglot/julia` |
+  | Haskell | wm-polyglot | — (FFI) | Not in CI | Unsupported — requires GHC/libghc; compile from source |
+  | Zig | wm-polyglot | — (C ABI) | Not in CI | Unsupported — requires Zig compiler; compile from source |
+  | Koka | wm-polyglot | — (C ABI) | Not in CI | Unsupported — requires Koka compiler; compile from source |
+
+  The release binary is built with default features (no optional features
+  enabled). Users who need Python, LanceDB, or ONNX support should build
+  from source with the appropriate `--features` flag.
 - ~~Repair the benchmark comparison job before treating performance regressions as
   gated.~~ ✅ Done 2026-08-13 — PR results are compared against an imported
   baseline from the base branch (advisory, posted to the step summary).
@@ -253,9 +301,13 @@ Acceptance criteria:
 
 - ✅ One documented command creates a fresh store and completes the smoke test.
 - ✅ Release CI exercises at least one Linux release binary end to end.
-- Client configuration examples launch the same versioned binary that was built.
-- Optional features are either tested or explicitly marked unsupported for the
-  release.
+- ~~Client configuration examples launch the same versioned binary that was built.~~
+  ✅ Done 2026-08-13 — `docs/MCP_CONFIG_GUIDE.md` references `~/.local/bin/wm`
+  (the `install.sh` install path) in all config templates.
+- ~~Optional features are either tested or explicitly marked unsupported for the
+  release.~~ ✅ Done 2026-08-13 — feature support matrix documents CI status and
+  release status for all optional features (Python, LanceDB, ONNX, Julia,
+  Haskell, Zig, Koka).
 
 ### P2: Router and Research Surfaces
 
@@ -274,26 +326,26 @@ Open work after P0/P1:
 - Treat routing-table consolidation, the `McpServer` split, and a tool
   scaffolding macro as maintainability follow-ups, not release blockers.
 
-## Tomorrow's Execution Order
+## Next Execution Order
 
-The next session should be a stabilization sprint in this order:
+All P0 and P1 items are complete. The next steps are:
 
-1. Add regression tests for profile precedence, read-only writes, unknown
-   compartments, and exact route/profile discovery.
-2. Fix the profile and read-only boundary so the release smoke test has a
-   truthful foundation.
-3. Implement exact, failure-safe transaction restore and add identity/metadata
-   assertions.
-4. Fix secondary-index update semantics and filtered reindex behavior.
-5. Add the committed curated process smoke test and wire it into CI/release.
-6. Update client configs, README, Python documentation, and the changelog to
-   match verified behavior.
-7. Only if the blockers are green, run the embedder shadow set and decide
-   whether NLU needs an abstention or description-quality iteration.
-
-If the full list does not fit in one session, stop after the first green release
-gate rather than starting another research subsystem. The correct partial
-outcome is a smaller, safer release candidate with clearly deferred features.
+1. **Release gate run**: execute every item in the Release Gate section
+   against the current commit on a clean machine (`cargo clean` first).
+2. **Tag the release candidate**: `git tag v5.8.0-rc1` and push to trigger
+   the release workflow (per-platform binaries + checksums).
+3. **Fresh-install rehearsal**: run `scripts/install.sh` against the RC,
+   then `wm doctor`, then `scripts/curated_smoke_test.py`.
+4. **P2 items** (post-release, not blockers):
+   - NLU abstention with confidence/margin thresholds
+   - Router quality evaluation against a labeled corpus
+   - Learned inference router promotion or library-only labeling
+   - Self-play/imagination experimental labeling
+5. **Phase B** (v5.9 PET hardening theme):
+   - B4: sandbox mode for tool execution
+   - B5: store seal/verify (tamper detection)
+   - B6: untrusted `_meta` handling by default
+   - B7: store permission hygiene (`0700`)
 
 ## Release Gate
 
@@ -311,6 +363,7 @@ The release candidate is **no-go** if any item below fails:
 - Exact transaction rollback and commit-cleanup tests
 - Secondary-index update and filtered-reindex tests
 - Destructive NLU reachability test
+- Index consistency and health reporting test (system.health + wm doctor)
 - Release configuration launch test
 - **Fresh-install rehearsal**: `cargo clean` followed by a clean
   `cargo build --release` and the full gate run, simulating a new machine
@@ -331,7 +384,7 @@ README, website, registry listing, or launch content must cite a fresh run
 against the release commit, stamped with configuration and date. Stale counts
 or unreproduced claims are release blockers, not documentation bugs.
 
-- Counts (`3,470 tests`, `229 tools`) must come from a run of the release
+- Counts (`3,510 tests`, `229 tools`) must come from a run of the release
   commit.
 - Benchmarks must come from the release binary on a named machine
   configuration.

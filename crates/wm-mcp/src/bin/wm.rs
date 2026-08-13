@@ -723,10 +723,67 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         }
     }
 
-    // 3. Tantivy search index
+    // 3. Tantivy search index — check directory, then consistency with LMDB
     let tantivy_path = lmdb_path.join("tantivy");
     if tantivy_path.exists() {
         println!("[OK]   Tantivy index: {}", tantivy_path.display());
+
+        // Consistency check: compare LMDB memory counts to Tantivy doc counts.
+        // If they differ, the index is stale (best-effort indexing failures,
+        // skipped sanitization, or orphan documents from failed deletes).
+        match wm_memory::SearchEngine::open_readonly(&tantivy_path) {
+            Ok(search) => {
+                let consistency = wm_memory::check_consistency(server.store(), &search);
+                if consistency.has_drift {
+                    let drifted: Vec<_> = consistency.galaxies.iter().filter(|g| g.drift).collect();
+                    println!(
+                        "[WARN] Index consistency: {} galaxy(ies) drifted (LMDB={}, Tantivy={})",
+                        drifted.len(),
+                        consistency.total_lmdb,
+                        consistency.total_tantivy
+                    );
+                    for g in &drifted {
+                        println!(
+                            "       {} — LMDB={}, Tantivy={} (run 'wm reindex' to rebuild)",
+                            g.galaxy, g.lmdb_count, g.tantivy_count
+                        );
+                    }
+                    issues += 1;
+                } else {
+                    println!(
+                        "[OK]   Index consistency: LMDB={} Tantivy={} (no drift)",
+                        consistency.total_lmdb, consistency.total_tantivy
+                    );
+                }
+
+                // Index health: report failures if any
+                let health = search.health().snapshot();
+                let failures = health
+                    .get("failures")
+                    .and_then(serde_json::Value::as_u64)
+                    .unwrap_or(0);
+                if failures > 0 {
+                    let last_error = health
+                        .get("last_error")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("unknown");
+                    println!(
+                        "[WARN] Index health: {failures} failure(s) since startup — last error: {last_error}"
+                    );
+                    issues += 1;
+                } else {
+                    let successes = health
+                        .get("successes")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0);
+                    println!("[OK]   Index health: {successes} successful operations, 0 failures");
+                }
+            }
+            Err(e) => {
+                println!("[WARN] Cannot open Tantivy index for consistency check: {e}");
+                issues += 1;
+            }
+        }
     } else {
         println!("[WARN] Tantivy index not found (search will be unavailable)");
         issues += 1;

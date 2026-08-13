@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 12, 2026 (evening) (v5.7.7 - 15 crates, 229 tools, 3,447 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. Feature phases are complete; release stabilization remains open. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+**Last updated**: August 13, 2026 (evening) (v5.8.0 - 15 crates, 229 tools, 3,510 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. All P0 and P1 release gates complete. Feature phases complete; P2 items are post-release. Phase B (v5.9 PET hardening) is the next major theme.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
 
 ---
 
@@ -39,14 +39,14 @@ Verified evidence:
 - Explicit curated-process create/search/hybrid/session/transaction/claims
   rehearsal passed, including restart persistence.
 
-Release blockers:
+Release blockers (all resolved as of 2026-08-13 evening):
 
-- Store-wide read-only enforcement is incomplete.
-- Transaction rollback is bounded and does not preserve exact records.
-- Compartment and privacy boundaries are not uniformly fail-closed.
-- CLI profile precedence and profile-aware discovery are inconsistent.
-- LMDB secondary-index and Tantivy consistency need repair tests.
-- CI and release workflows lack a repeatable process-level curated smoke test.
+- ~~Store-wide read-only enforcement is incomplete.~~ ✅ Fixed 2026-08-13 (batch 5)
+- ~~Transaction rollback is bounded and does not preserve exact records.~~ ✅ Fixed 2026-08-13 (batch 2)
+- ~~Compartment and privacy boundaries are not uniformly fail-closed.~~ ✅ Fixed 2026-08-13 (batch 1 + batch 5)
+- ~~CLI profile precedence and profile-aware discovery are inconsistent.~~ ✅ Fixed 2026-08-13 (batch 1)
+- ~~LMDB secondary-index and Tantivy consistency need repair tests.~~ ✅ Fixed 2026-08-13 (batch 3 + evening P0-2)
+- ~~CI and release workflows lack a repeatable process-level curated smoke test.~~ ✅ Fixed 2026-08-13 (batch 4)
 
 The release target is the local-first memory and session-continuity workflow.
 Embedding NLU, learned routing, self-play, imagination, Sangha, polyglot, and
@@ -204,6 +204,39 @@ release build clean, curated smoke test passing against the 5.8.0 binary.
   runtime); python feature verified locally.
 - **Version 5.8.0**: workspace, CLI, README, and changelog bumped; the
   hardening batches are now documented as 5.8.0 changes.
+
+---
+
+## Session 2026-08-13 (evening): P0/P1 release gates complete
+
+Verified: 3,510 tests, 0 clippy warnings, fmt clean.
+
+- **P0-1: Destructive-via-NLU sweep** (`wm-tools/src/lib.rs`): comprehensive
+  test iterates all registered destructive tools and verifies none can be
+  reached via `thought=` (NLU). Gate ordering fixed — destructive check now
+  precedes required-arg validation so the gate message is always returned.
+- **P0-2: LMDB/Tantivy consistency contract** (`wm-memory/src/search.rs`,
+  `wm-memory/src/reindex.rs`): `IndexHealth` struct tracks
+  successes/failures/last_error on every `add_document` call.
+  `check_consistency()` compares LMDB memory counts to Tantivy doc counts per
+  galaxy, returning a `ConsistencyReport` with drift detection.
+  `count_docs_in_galaxy()` added to `SearchEngine`.
+- **P0-3: Search-health honesty** (`wm-tools/src/expansion/system.rs`,
+  `wm-mcp/src/bin/wm.rs`): `system.health` now reports `index_health`
+  (degraded, failures, last error) and `index_consistency` (per-galaxy drift,
+  total counts). When no search engine is configured, reports `unavailable`
+  with `degraded: true`. `wm doctor` opens Tantivy read-only and runs the same
+  checks with `[WARN]` lines and `wm reindex` remediation guidance.
+- **P1-4: Operations docs** (`docs/OPERATIONS.md`): export, backup, index
+  health, consistency model, and recovery workflows documented.
+- **P1-5: Install script** (`scripts/install.sh`): downloads release binary,
+  verifies SHA-256 checksum, installs to `~/.local/bin/wm`.
+- **P1-6: Optional features matrix** (`docs/RELEASE_READINESS.md`): feature
+  support table for Python, LanceDB, ONNX, Julia, Haskell, Zig, Koka with CI
+  status and release status.
+- 6 new tests: consistency no-drift, drift detection, index health tracking,
+  system.health with search, drift detection via tool, unavailable-index
+  honesty.
 
 ---
 

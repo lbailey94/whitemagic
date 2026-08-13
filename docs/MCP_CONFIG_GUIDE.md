@@ -7,11 +7,20 @@ The release binary is a single static executable: `wm`. The MCP server is the
 
 ## Native (recommended)
 
+Install the release binary:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lucas/whitemagic/main/scripts/install.sh | sh
+```
+
+This installs `wm` to `~/.local/bin/wm` with SHA-256 checksum verification.
+Then use `~/.local/bin/wm` as the command in your MCP client config:
+
 ```json
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "/path/to/wm",
+      "command": "~/.local/bin/wm",
       "args": ["serve", "--profile", "curated"],
       "env": {
         "RUST_LOG": "warn"
@@ -28,7 +37,7 @@ different location to use a specific store:
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "/path/to/wm",
+      "command": "~/.local/bin/wm",
       "args": ["serve", "--profile", "curated", "--store", "/path/to/store"]
     }
   }
@@ -43,7 +52,7 @@ When another process (e.g. `wm daemon`) owns the store, add `--readonly`:
 {
   "mcpServers": {
     "whitemagic-readonly": {
-      "command": "/path/to/wm",
+      "command": "~/.local/bin/wm",
       "args": ["serve", "--profile", "curated", "--readonly", "--store", "/path/to/store"]
     }
   }
