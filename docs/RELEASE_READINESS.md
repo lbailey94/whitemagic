@@ -1,7 +1,7 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Last updated:** 2026-08-13 (evening)
+**Last updated:** 2026-08-13 (evening, RC1 tagged)
 **Version under review:** v5.8.0
 **Status:** All P0 and P1 release gates complete. P2 items are post-release. Ready for release candidate tag.
 
@@ -30,7 +30,11 @@ release scope until the memory boundary is dependable.
 Verified on 2026-08-13 (Phase A of PET hardening, committed as `1dc29b6`;
 P0/P1 gates completed evening 2026-08-13):
 
-- `cargo test --workspace`: 3,510 tests passed.
+- `cargo test --workspace`: 3,511 tests passed.
+- Consistency check fix: `check_consistency()` now iterates `memory_galaxies()`
+  (10) instead of `all()` (14), preventing false-positive drift from non-memory
+  galaxies (Karma, Dharma, Associations, Embeddings) that are intentionally not
+  indexed in Tantivy.
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - `cargo build --release --bin wm`: passed.
@@ -384,7 +388,7 @@ README, website, registry listing, or launch content must cite a fresh run
 against the release commit, stamped with configuration and date. Stale counts
 or unreproduced claims are release blockers, not documentation bugs.
 
-- Counts (`3,510 tests`, `229 tools`) must come from a run of the release
+- Counts (`3,511 tests`, `229 tools`) must come from a run of the release
   commit.
 - Benchmarks must come from the release binary on a named machine
   configuration.

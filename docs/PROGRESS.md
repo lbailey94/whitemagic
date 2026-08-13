@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 13, 2026 (evening) (v5.8.0 - 15 crates, 229 tools, 3,510 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. All P0 and P1 release gates complete. Feature phases complete; P2 items are post-release. Phase B (v5.9 PET hardening) is the next major theme.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+**Last updated**: August 13, 2026 (evening, RC1 tagged) (v5.8.0 - 15 crates, 229 tools, 3,511 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. All P0 and P1 release gates complete. Feature phases complete; P2 items are post-release. Phase B (v5.9 PET hardening) is the next major theme.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
 
 ---
 
@@ -209,7 +209,7 @@ release build clean, curated smoke test passing against the 5.8.0 binary.
 
 ## Session 2026-08-13 (evening): P0/P1 release gates complete
 
-Verified: 3,510 tests, 0 clippy warnings, fmt clean.
+Verified: 3,511 tests, 0 clippy warnings, fmt clean. Release gate run passed from `cargo clean`. Tagged v5.8.0-rc1.
 
 - **P0-1: Destructive-via-NLU sweep** (`wm-tools/src/lib.rs`): comprehensive
   test iterates all registered destructive tools and verifies none can be

@@ -6,9 +6,11 @@
 
 ## Current State
 
-- v5.8.0, 15 crates, 229 registered tool implementations, 3,510 tests.
+- v5.8.0, 15 crates, 229 registered tool implementations, 3,511 tests.
 - `cargo test --workspace`, format check, clippy (`-D warnings`), and release
-  binary build all passed on 2026-08-13.
+  binary build all passed on 2026-08-13 from `cargo clean`.
+- **Release gate run complete. Tagged v5.8.0-rc1.** Fresh-install rehearsal
+  passed (quickstart + doctor + curated smoke test, all healthy).
 - **All P0 and P1 release gates are now complete.** P2 (NLU abstention,
   router labeling) is post-release. Phase B (v5.9 PET hardening) is the next
   major theme.
@@ -31,13 +33,14 @@ verified.
 
 ## Next Steps
 
-All P0 and P1 release gates are complete. The next session should:
+Release gate run complete. Tag `v5.8.0-rc1` created locally (no remote
+configured — push when ready). Remaining work:
 
-1. **Run the full release gate** on a clean build (`cargo clean && cargo build --release`).
-2. **Tag the release candidate** (`v5.8.0-rc1`) and push to trigger the release workflow.
-3. **Fresh-install rehearsal**: run `scripts/install.sh` against the RC, then `wm doctor`, then `scripts/curated_smoke_test.py`.
-4. **P2 items** (post-release): NLU abstention, router labeling, self-play/imagination labeling.
-5. **Phase B** (v5.9): B4 sandbox, B5 store seal/verify, B6 untrusted `_meta`, B7 store permissions.
+1. **Push the tag** to trigger `release.yml` (per-platform binaries + checksums).
+2. **Fresh-install rehearsal on a clean machine**: download via `install.sh`,
+   run `wm doctor`, run `scripts/curated_smoke_test.py`.
+3. **P2 items** (post-release): NLU abstention, router labeling, self-play/imagination labeling.
+4. **Phase B** (v5.9): B7 store permissions, B6 untrusted `_meta`, B5 store seal/verify, B4 sandbox.
 
 ## Hard Blockers
 
