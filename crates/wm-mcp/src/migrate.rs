@@ -99,6 +99,7 @@ struct V2Memory {
     source_trust: String,
     version: i64,
     agent_id: String,
+    metadata: String,
 }
 
 fn row_to_v2_memory(row: &Row) -> rusqlite::Result<V2Memory> {
@@ -142,6 +143,7 @@ fn row_to_v2_memory(row: &Row) -> rusqlite::Result<V2Memory> {
             .unwrap_or_else(|_| "user".to_string()),
         version: row.get::<_, i64>("version").unwrap_or(1),
         agent_id: row.get::<_, String>("agent_id").unwrap_or_default(),
+        metadata: row.get::<_, String>("metadata").unwrap_or_default(),
     })
 }
 
@@ -184,6 +186,91 @@ fn v2_to_v5_memory(v2: &V2Memory, tags: &[String], galaxy: Galaxy) -> Memory {
     };
     // Set coords based on original creation time
     mem.metadata.coords = wm_core::HolographicCoords::new(galaxy, created_at.timestamp() as u64);
+    mem
+}
+
+/// Parse a v26 session turn from the row metadata, returning
+/// `(session_id, sequence, role, turn_type)` when the row is a full turn.
+fn session_turn_fields(v2: &V2Memory) -> Option<(String, u64, String, String)> {
+    let meta: serde_json::Value = serde_json::from_str(&v2.metadata).ok()?;
+    let sid = meta.get("session_id")?.as_str()?.to_string();
+    let seq = meta.get("sequence")?.as_u64()?;
+    let role = meta.get("role")?.as_str()?.to_string();
+    if role != "user" && role != "ai" {
+        return None;
+    }
+    let turn_type = meta
+        .get("turn_type")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("message")
+        .to_string();
+    Some((sid, seq, role, turn_type))
+}
+
+/// Convert a v26 session row into a v5 `session_turn` memory, preserving the
+/// original UUID so re-migration overwrites rather than duplicates.
+fn v2_session_to_turn(
+    v2: &V2Memory,
+    tags: &[String],
+    sid: &str,
+    seq: u64,
+    role: &str,
+    turn_type: &str,
+) -> Memory {
+    let mut mem = v2_to_v5_memory(v2, tags, Galaxy::Sessions);
+    let timestamp = mem.metadata.created_at.timestamp_millis();
+    mem.content = serde_json::json!({
+        "type": "session_turn",
+        "session_id": sid,
+        "sequence": seq,
+        "role": role,
+        "turn_type": turn_type,
+        "importance": mem.metadata.importance,
+        "content": v2.content,
+        "timestamp": timestamp,
+    })
+    .to_string();
+    mem.metadata.tags = vec![
+        "session".to_string(),
+        "turn".to_string(),
+        role.to_string(),
+        turn_type.to_string(),
+        format!("session:{sid}"),
+    ];
+    mem.metadata.memory_type = MemoryType::Citta;
+    mem
+}
+
+/// Build a v5 `session_start` memory for a legacy session, with a
+/// deterministic UUID so re-migration is idempotent.
+fn legacy_session_start(sid: &str, earliest: DateTime<Utc>) -> Memory {
+    let id = Uuid::new_v5(
+        &Uuid::NAMESPACE_URL,
+        format!("session-start:{sid}").as_bytes(),
+    );
+    let mut mem = Memory::new(
+        Galaxy::Sessions,
+        serde_json::json!({
+            "type": "session_start",
+            "title": format!("Legacy session {}", &sid[..sid.len().min(8)]),
+            "user": "legacy",
+        })
+        .to_string(),
+    );
+    mem.metadata.id = id;
+    mem.metadata.galaxy = Galaxy::Sessions;
+    mem.metadata.content_hash = wm_memory::content_hash(&mem.content);
+    mem.metadata.tags = vec![
+        "session".to_string(),
+        "start".to_string(),
+        format!("session:{sid}"),
+    ];
+    mem.metadata.importance = 0.7;
+    mem.metadata.created_at = earliest;
+    mem.metadata.accessed_at = earliest;
+    mem.metadata.memory_type = MemoryType::Citta;
+    mem.metadata.coords =
+        wm_core::HolographicCoords::new(Galaxy::Sessions, earliest.timestamp() as u64);
     mem
 }
 
@@ -230,7 +317,7 @@ fn migrate_database(
         "SELECT id, galaxy, content, memory_type, created_at, accessed_at, access_count, \
          emotional_valence, importance, neuro_score, novelty_score, recall_count, \
          half_life_days, is_protected, is_private, model_exclude, content_hash, \
-         source_trust, version, agent_id FROM memories",
+         source_trust, version, agent_id, metadata FROM memories",
     )?;
 
     let rows = stmt.query_map([], row_to_v2_memory)?;
@@ -239,6 +326,8 @@ fn migrate_database(
     let mut by_galaxy: HashMap<Galaxy, Vec<Memory>> = HashMap::new();
     let mut total_read = 0usize;
     let mut total_skipped = 0usize;
+    // Legacy session reconstruction: first turn timestamp per session id.
+    let mut session_earliest: HashMap<String, DateTime<Utc>> = HashMap::new();
 
     for row in rows {
         let v2 = row?;
@@ -255,8 +344,38 @@ fn migrate_database(
         };
 
         let tags = tag_map.get(&v2.id).cloned().unwrap_or_default();
-        let mem = v2_to_v5_memory(&v2, &tags, galaxy);
+
+        // Sessions conversion: v26 stored turn fields in the `metadata`
+        // column; the v5 session tools require `session_turn` JSON content.
+        // Rows with full turn metadata are converted; plain rows migrate as-is.
+        let mem = if galaxy == Galaxy::Sessions {
+            if let Some((sid, seq, role, turn_type)) = session_turn_fields(&v2) {
+                let created = parse_timestamp(&v2.created_at);
+                session_earliest
+                    .entry(sid.clone())
+                    .and_modify(|e| {
+                        if created < *e {
+                            *e = created;
+                        }
+                    })
+                    .or_insert(created);
+                v2_session_to_turn(&v2, &tags, &sid, seq, &role, &turn_type)
+            } else {
+                v2_to_v5_memory(&v2, &tags, galaxy)
+            }
+        } else {
+            v2_to_v5_memory(&v2, &tags, galaxy)
+        };
         by_galaxy.entry(galaxy).or_default().push(mem);
+    }
+
+    // One session_start marker per legacy session so session.list,
+    // session.record (without an explicit id), and continuity all resolve.
+    for (sid, earliest) in &session_earliest {
+        by_galaxy
+            .entry(Galaxy::Sessions)
+            .or_default()
+            .push(legacy_session_start(sid, *earliest));
     }
 
     let mut total_written = 0usize;
@@ -277,11 +396,15 @@ fn migrate_database(
             // Batch write in chunks of 500 to keep transactions reasonable
             for chunk in memories.chunks(500) {
                 store.put_batch(*galaxy, chunk)?;
-                // Index each memory into Tantivy
+                // Index each memory into Tantivy. Delete first so
+                // re-migration overwrites documents instead of duplicating
+                // them (Tantivy documents are not keyed).
                 for mem in chunk {
+                    let id_str = mem.metadata.id.to_string();
+                    search.delete_document(&mut writer, &id_str)?;
                     search.add_document(
                         &mut writer,
-                        &mem.metadata.id.to_string(),
+                        &id_str,
                         galaxy.db_name(),
                         &mem.content,
                         &mem.metadata.tags,
@@ -626,6 +749,66 @@ mod tests {
     }
 
     #[test]
+    fn v2_session_row_converts_to_session_turn() {
+        let v2 = V2Memory {
+            id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
+            galaxy: "sessions".to_string(),
+            content: "decide to ship curated".to_string(),
+            memory_type: "CITTA".to_string(),
+            created_at: "2026-07-01T00:00:00Z".to_string(),
+            accessed_at: "2026-07-01T00:00:00Z".to_string(),
+            access_count: 0,
+            emotional_valence: 0.0,
+            importance: 0.7,
+            neuro_score: 0.5,
+            novelty_score: 1.0,
+            recall_count: 0,
+            half_life_days: 30.0,
+            is_protected: false,
+            is_private: false,
+            model_exclude: false,
+            content_hash: String::new(),
+            source_trust: "user".to_string(),
+            version: 1,
+            agent_id: String::new(),
+            metadata: r#"{"session_id":"3f697650-e40f-4c01-af72-8f757add5e8f","sequence":3,"role":"user","turn_type":"decision"}"#.to_string(),
+        };
+        let (sid, seq, role, tt) = session_turn_fields(&v2).unwrap();
+        assert_eq!(sid, "3f697650-e40f-4c01-af72-8f757add5e8f");
+        assert_eq!(seq, 3);
+        assert_eq!(role, "user");
+        assert_eq!(tt, "decision");
+
+        let mem = v2_session_to_turn(&v2, &[], &sid, seq, &role, &tt);
+        let turn: serde_json::Value = serde_json::from_str(&mem.content).unwrap();
+        assert_eq!(turn["type"], "session_turn");
+        assert_eq!(turn["session_id"], sid.as_str());
+        assert_eq!(turn["sequence"], 3);
+        assert_eq!(turn["role"], "user");
+        assert_eq!(turn["turn_type"], "decision");
+        assert_eq!(turn["content"], "decide to ship curated");
+        assert_eq!(mem.metadata.galaxy, Galaxy::Sessions);
+        assert_eq!(mem.metadata.memory_type, MemoryType::Citta);
+        assert!(mem.metadata.tags.contains(&"session".to_string()));
+        assert!(mem.metadata.tags.contains(&"turn".to_string()));
+        assert!(mem.metadata.tags.contains(&format!("session:{sid}")));
+    }
+
+    #[test]
+    fn legacy_session_start_is_deterministic() {
+        let earliest = parse_timestamp("2026-07-01T00:00:00Z");
+        let a = legacy_session_start("3f697650-e40f-4c01-af72-8f757add5e8f", earliest);
+        let b = legacy_session_start("3f697650-e40f-4c01-af72-8f757add5e8f", earliest);
+        assert_eq!(
+            a.metadata.id, b.metadata.id,
+            "re-migration must be idempotent"
+        );
+        let content: serde_json::Value = serde_json::from_str(&a.content).unwrap();
+        assert_eq!(content["type"], "session_start");
+        assert!(a.metadata.tags.contains(&"start".to_string()));
+    }
+
+    #[test]
     fn v2_to_v5_memory_preserves_fields() {
         let v2 = V2Memory {
             id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
@@ -648,6 +831,7 @@ mod tests {
             source_trust: "user".to_string(),
             version: 2,
             agent_id: "test-agent".to_string(),
+            metadata: String::new(),
         };
         let tags = vec!["rust".to_string(), "memory".to_string()];
         let mem = v2_to_v5_memory(&v2, &tags, Galaxy::Codex);
@@ -692,6 +876,7 @@ mod tests {
             source_trust: "user".to_string(),
             version: 1,
             agent_id: String::new(),
+            metadata: String::new(),
         };
         let mem = v2_to_v5_memory(&v2, &[], Galaxy::Universal);
         assert_eq!(mem.metadata.agent_id, "system");
@@ -724,6 +909,7 @@ mod tests {
             source_trust: "user".to_string(),
             version: 0,
             agent_id: String::new(),
+            metadata: String::new(),
         };
         let mem = v2_to_v5_memory(&v2, &[], Galaxy::Universal);
         assert_eq!(
