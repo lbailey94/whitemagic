@@ -141,6 +141,17 @@ cargo build --release
 ./target/release/wm serve --profile curated
 ```
 
+### Install from a release
+
+Each release ships per-platform binaries plus a `.sha256` checksum file.
+Download both for your platform and verify before running:
+
+```bash
+sha256sum -c wm-linux-x86_64.sha256   # after renaming the checksum file to match
+chmod +x wm
+./wm serve --profile curated
+```
+
 ## Architecture
 
 See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) for the release plan and [docs/STRATEGY.md](docs/STRATEGY.md) for the full architecture document.
