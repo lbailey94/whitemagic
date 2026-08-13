@@ -1,5 +1,9 @@
 # WhiteMagic v5 — Architecture & Strategy
 
+> Historical v5 implementation strategy. The feature phases described here are
+> complete, but the current release status is maintained in
+> [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md).
+
 **Version**: 5.0.0 (Phase 1 complete)
 **Date**: August 8, 2026
 **Status**: Phase 1 (Foundation) complete — 14 crates, 176 tools, ~112K LOC Rust, 3,009 tests, 0 clippy warnings

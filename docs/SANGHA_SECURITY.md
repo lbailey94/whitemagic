@@ -1,5 +1,9 @@
 # Sangha Mesh Security — Signed Coordination, Containment, and the Bad-Apple Rule
 
+> Historical security design snapshot for v5.7.1. Revalidate implementation and
+> feature status before treating Sangha as a release capability; current release
+> scope is defined in [`RELEASE_READINESS.md`](RELEASE_READINESS.md).
+
 **Date**: 2026-08-10
 **Version**: 5.7.1
 **Scope**: `wm-sangha` (peer discovery, inter-agent chat, resource locks, quarantine)

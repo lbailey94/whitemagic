@@ -1,5 +1,8 @@
 # WhiteMagic v5 vs v26 — Comprehensive Gap Analysis
 
+> Historical gap analysis. Use [`RELEASE_READINESS.md`](RELEASE_READINESS.md)
+> for the current v5.7.7 release scope and blockers.
+
 **Last updated**: August 8, 2026
 **Status**: v5.6.0 — 15 crates, 229 tools, 3,377 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. ACS compliance surface + prescience claims ledger shipped (2026-08-09).
 

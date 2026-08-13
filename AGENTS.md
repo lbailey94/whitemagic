@@ -1,5 +1,9 @@
 # AGENTS.md — WhiteMagic v5 Developer Guide
 
+The feature phases are complete, but release stabilization is still in
+progress. Use [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) as the
+source of truth for blockers, acceptance tests, and the next execution order.
+
 ## Build
 
 ```bash
@@ -20,7 +24,7 @@ cargo fmt --all -- --check     # Format check
 - **wm-cognitive**: Citta cycle, dream cycle, brain-wave eco mode, 7 autonomous cycles, spiral tracker, reflex, timescale, drive, resonance, autonomic (merged from 6 crates in v5 Phase 1)
 - **wm-governance**: Dharma rules, karma ledger (SHA-256 chain), resource rules, mandala compartments, policy engine
 - **wm-polyglot**: Julia (jlrs), Haskell (FFI), Zig (C ABI), Koka (C ABI)
-- **wm-tools**: 229 tool implementations organized by Gana + `wm` meta-tool with NLU routing (embedding router + TF-IDF fallback + 12 prefix routes)
+- **wm-tools**: 229 tool implementations organized by Gana + `wm` meta-tool with explicit routing and optional NLU (embedding router + TF-IDF fallback + 12 prefix routes)
 - **wm-mcp**: Async MCP server (JSON-RPC over stdio, exposes only `wm` meta-tool) + `wm` CLI + PyO3 bridge (feature-gated)
 - **wm-substrate**: Hardware metrics, Harmony Vector (Lakshmi), /proc + /sys reading, sensorimotor bus
 - **wm-bicameral**: Dual-hemisphere reasoning (left: LlamaLeftHemisphere/heuristic, right: BitNet/LLM/stub) + inference router (5-tier complexity-aware routing) + learned router (embedding k-NN + conformal calibration) + edge rule generator + imagination engine + self-play training loop
@@ -32,9 +36,9 @@ cargo fmt --all -- --check     # Format check
 - **Phase 2** ✅: Embedding NLU router (shadow mode, OATS refinement, 31 new tests)
 - **Phase 3** ✅: Learned inference router (k-NN + conformal calibration, edge rule generator, 29 new tests)
 - **Phase 4** ✅: Imagination engine (world model, scenario planning, dream cycle integration, MCP tools, daemon `--research-interval`)
-- **Phase 5** ✅: Self-play training loop (proposer/solver/verifier, LoRA hot-swap, 3 MCP tools, daemon `--selfplay-interval`, 27 tests)
+- **Phase 5** ✅: Self-play training loop (proposer/solver/verifier, training-data export, 3 MCP tools, daemon `--selfplay-interval`, 27 tests; live LoRA training/hot-swap remains experimental)
 - **Phase 6** ✅: Mutable structures (GanaRegistry drift, DynamicGalaxyRegistry, LearnedDreamCycle, LearnedCycleStrategy, 31 tests + 4 E2E wiring tests)
-- **Phase 7** 🔄: Polish & verification (wiring complete, benchmarks passing, docs updated)
+- **Phase 7** 🔄: Release stabilization (feature wiring complete; boundary, storage, smoke-test, packaging, and documentation gates remain)
 
 ## RSI Pipeline (Phases 1–3 Complete)
 
@@ -46,19 +50,20 @@ cargo fmt --all -- --check     # Format check
 
 ## NLU Routing (v5 Phases 2–3)
 
-The `wm` meta-tool routes natural language to tools via a two-layer system:
+The `wm` meta-tool supports explicit routing plus a two-layer natural-language
+convenience system:
 
 ### Layer 1: Embedding NLU Router (Phase 2)
 - `EmbeddingRouter` in `wm-tools/src/embedding_router.rs` — cosine similarity against pre-computed tool embeddings
 - OATS (Outcome-Aware Tool Selection): offline embedding refinement from success/failure centroids (α=0.15, min 10 observations)
 - OATS persistence: `save_oats()` / `load_oats()` serialize outcome stats to JSON for cross-restart learning
-- Shadow mode: embedding router primary, TF-IDF fallback runs alongside; `ShadowModeStats` tracks disagreements, samples, and promotion readiness (rate < 20%, ≥ 100 queries)
+- Shadow mode: embedding and TF-IDF results run alongside for evaluation; explicit routing remains the reliable release path until labeled results support promotion
 - `nlu.shadow_report` MCP tool: returns disagreement analytics, top disagreement pairs, recent samples, and promotion readiness assessment
 - Shadow stats persisted to `mutable_shadow_stats.json` on daemon shutdown
 - Stub embedder detected at init → TF-IDF used directly (no semantic degradation)
 
 ### Layer 2: Learned Inference Router (Phase 3)
-- `LearnedRouter` in `wm-bicameral/src/learned_router.rs` — embedding k-NN (k=5) + conformal calibration
+- `LearnedRouter` in `wm-bicameral/src/learned_router.rs` — experimental embedding k-NN (k=5) + conformal calibration
 - Replaces 20 regex complexity patterns for inference tier selection
 - Cold-start fallback to `ComplexityClassifier` (regex) when history < 10 records
 - `EdgeRuleGenerator`: auto-promotes high-frequency simple responses to edge rules (frequency ≥ 5, confidence > 0.9, response < 200 chars)
@@ -123,8 +128,10 @@ Makes previously fixed structures learnable:
 
 ## MCP Server
 
-The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 229 tools are accessible through the `wm` meta-tool:
-- `wm(thought="remember that X is Y")` — NLU routing (embedding primary, TF-IDF fallback)
+The MCP server exposes a **single tool** (`wm`) via `tools/list`. The full
+archive is accessible through the `wm` meta-tool; the curated profile is the
+release surface:
+- `wm(thought="remember that X is Y")` — optional NLU routing (TF-IDF fallback)
 - `wm(route="memory.create", args={...})` — explicit dispatch
 - `wm(thought="list tools")` or `wm(route="tools.list")` — discover all tools
 
@@ -138,10 +145,10 @@ The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 229 tools 
 229 tools is an archive, not a v1 product. Profiles curate which tools the `wm` meta-tool can route to (filtering happens before the meta-tools are layered on, so both NLU routing and direct dispatch respect the profile):
 
 - `full` (default) — every tool
-- `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims`, `transaction.*`, `galaxy.list`, `gnosis`, `tools.list`, `nlu.shadow_report`
+- `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims`, `transaction.*`, diagnostics, `tools.list`, `nlu.shadow_report`
 - `minimal` — `memory.create/read/list/query/search/chat/associate/associations`, `tools.list`, `gnosis`
 
-Select via `wm serve --profile curated`, `WM_TOOL_PROFILE=curated`, or `WM_TOOL_ALLOWLIST=memory,session,claims` (comma-separated prefixes, wins over `WM_TOOL_PROFILE`). Full-surface internals (karma, friction, governance) keep working regardless — only the boundary shrinks.
+Select via `wm serve --profile curated` or `WM_TOOL_ALLOWLIST=memory,session,claims` (comma-separated prefixes). Use the explicit CLI flag in v5.7.7; CLI/environment profile precedence is a release blocker tracked in `docs/RELEASE_READINESS.md`. Full-surface internals (karma, friction, governance) keep working regardless — only the boundary shrinks.
 
 ### Runtime Env Knobs
 
@@ -156,6 +163,10 @@ Select via `wm serve --profile curated`, `WM_TOOL_PROFILE=curated`, or `WM_TOOL_
 | `WM_TOOL_PROFILE` | `full` | Tool surface: `full` \| `curated` \| `minimal` |
 | `WM_TOOL_ALLOWLIST` | unset | Comma-separated tool-name prefixes (wins over profile) |
 
+`WM_TOOL_PROFILE` is the server-level configuration path. The CLI currently
+overwrites it with its default unless `--profile` is supplied; this precedence
+is intentionally tracked as a release blocker rather than hidden from users.
+
 ## Claims Ledger Calibration
 
 The claims ledger grades its own track record. `claims` tool action `calibration` reports the resolved set: Brier, mean confidence vs hit rate, the signed calibration gap (positive = overconfident, negative = underconfident), a Wilson 95% interval for the hit rate, and recalibrated confidences for pending claims via empirical-Bayes shrinkage toward the observed hit rate (w = n/(n + 20)). Raw confidences are never edited — calibrated values are reported alongside. As of 2026-08-12: 20 resolved, Brier 0.078, gap **−0.215 (underconfident)**; see `docs/CLAIMS_LEDGER.md`.
@@ -166,14 +177,14 @@ The claims ledger grades its own track record. `claims` tool action `calibration
 
 Tools that delete or overwrite data set `destructive: true` in their `EffectRow`. The dispatch pipeline blocks these unless `"confirm": true` is present in the tool arguments.
 
-**8 destructive tools**: `memory.delete`, `galaxy.purge`, `galaxy.transfer`, `galaxy.restore`, `memory.consolidate`, `memory.deduplicate`, `system.flush`, `karma.clear`
+**9 destructive tools**: `memory.delete`, `galaxy.purge`, `galaxy.transfer`, `galaxy.restore`, `memory.consolidate`, `memory.deduplicate`, `system.flush`, `karma.clear`, `transaction.rollback`
 
 Destructive tools are additionally **structurally unreachable via natural-language routing** (`thought=`): they require an explicit `route=` match plus `confirm: true`. Fuzzy NLU can never reach them, regardless of router quality.
 
 ### Transaction Snapshot/Rollback
 
 Three tools provide multi-tool atomic sequences:
-- `transaction.begin` — snapshots all memory galaxies into Journals, stores backup ID in shared state
+- `transaction.begin` — snapshots memory galaxies into Journals, stores backup ID in shared state; exact restore semantics are a release gate
 - `transaction.commit` — clears transaction state, keeping all changes
 - `transaction.rollback` — restores all galaxies from snapshot (destructive, requires `confirm: true`)
 
@@ -182,7 +193,10 @@ Three tools provide multi-tool atomic sequences:
 `Context` carries `compartment` and `user_id` from MCP request `_meta`. Galaxy access is enforced via `can_access_galaxy()` and `can_write_galaxy()`:
 - `sandbox` — Tutorial, Research only
 - `production` — all memory galaxies
-- `secure` — all galaxies including system galaxies
+- `secure` — user memory galaxies, with system galaxies still restricted
+
+Unknown compartment values currently fail open and are a release blocker. Do
+not treat MCP `_meta.user_id` as authenticated authorization.
 
 ## Conventions
 

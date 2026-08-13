@@ -1,5 +1,9 @@
 # Migration Guide: WhiteMagic v2 → v4
 
+> Historical v2-to-v4 migration guide. For the current v5 migration command and
+> release workflow, start with [`README.md`](../README.md) and
+> [`RELEASE_READINESS.md`](RELEASE_READINESS.md).
+
 This guide helps you migrate from WhiteMagic v2 (Python) to v4 (Rust).
 
 ## Overview

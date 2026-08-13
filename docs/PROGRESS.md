@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 12, 2026 (evening) (v5.7.7 — 15 crates, 229 tools, 3,447 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
+**Last updated**: August 12, 2026 (evening) (v5.7.7 - 15 crates, 229 tools, 3,447 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. Feature phases are complete; release stabilization remains open. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
 
 ---
 
@@ -22,6 +22,36 @@ Two batches, both verified (3,447 tests, 0 clippy warnings, fmt clean):
 - **Embedder off the tokio worker**: NLU classification + OATS re-embed run on the blocking pool
 - **Claims calibration**: `claims` tool `calibration` action — Brier, signed calibration gap, Wilson 95% hit-rate interval, empirical-Bayes recalibration of pending confidences (w = n/(n+20)); raw record never edited. Live ledger: 20 resolved, Brier 0.078, gap **−0.215 (underconfident — the earlier "overconfident" label was sign-flipped)**, hit-rate CI [0.764, 0.991]
 - **Tool surface profiles**: `full` (default) / `curated` (memory hierarchy) / `minimal` + `WM_TOOL_ALLOWLIST` prefix allowlist; `wm serve --profile curated`; filtering happens before the meta-tools so NLU routing respects the profile (E2E test)
+
+---
+
+## Release Stabilization Review - 2026-08-12
+
+The feature roadmap is complete, but the release candidate is not yet approved.
+The next session is a stabilization sprint, not another feature phase.
+
+Verified evidence:
+
+- `cargo test --workspace --quiet`: 3,447 tests passed.
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy --all-targets -- -D warnings`: passed.
+- `cargo build --release --bin wm`: passed.
+- Explicit curated-process create/search/hybrid/session/transaction/claims
+  rehearsal passed, including restart persistence.
+
+Release blockers:
+
+- Store-wide read-only enforcement is incomplete.
+- Transaction rollback is bounded and does not preserve exact records.
+- Compartment and privacy boundaries are not uniformly fail-closed.
+- CLI profile precedence and profile-aware discovery are inconsistent.
+- LMDB secondary-index and Tantivy consistency need repair tests.
+- CI and release workflows lack a repeatable process-level curated smoke test.
+
+The release target is the local-first memory and session-continuity workflow.
+Embedding NLU, learned routing, self-play, imagination, Sangha, polyglot, and
+autonomous expansion are optional or experimental until their live paths meet
+separate acceptance criteria. See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md).
 
 ---
 
@@ -2766,7 +2796,7 @@ New autonomous cycle type that polls sensors, evaluates reflex rules, executes a
 **Galaxy access enforcement** via `can_access_galaxy()` and `can_write_galaxy()`:
 - `sandbox` — Tutorial, Research only
 - `production` — all memory galaxies
-- `secure` — all galaxies including system galaxies
+- `secure` — user memory galaxies, with system galaxies still restricted
 
 **MCP server wiring**: `Context` populated from MCP request `_meta` metadata
 
@@ -2797,9 +2827,11 @@ New autonomous cycle type that polls sensors, evaluates reflex rules, executes a
 
 ---
 
-## v5 Strategy Implementation — COMPLETE
+## v5 Feature Strategy Implementation — COMPLETE; Release Stabilization OPEN
 
-Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
+Detailed feature plan in `STRATEGY_V5.md`. All 7 feature phases are complete;
+release boundary, storage, smoke-test, packaging, and documentation gates are
+tracked in `RELEASE_READINESS.md`.
 
 ### Phase 1: Foundation (Async + Crate Merge) ✅
 - **Crate merge**: 19 → 14 (wm-cognitive absorbs wm-consciousness, wm-reflex, wm-timescale, wm-drive, wm-resonance, wm-autonomic)
@@ -2810,11 +2842,12 @@ Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
 ### Phase 2: Embedding NLU Router ✅ (shadow mode)
 - **`EmbeddingRouter`** (`wm-tools/src/embedding_router.rs`): cosine similarity against pre-computed tool embeddings
 - **OATS** (Outcome-Aware Tool Selection): offline embedding refinement from success/failure centroids
-- **Shadow mode**: embedding router primary, TF-IDF fallback runs alongside
+- **Shadow mode**: embedding and TF-IDF results run alongside for evaluation;
+  explicit routing remains the reliable release path
 - **31 new tests**
 - Step 2.8 (remove TF-IDF) deferred until production accuracy validation
 
-### Phase 3: Learned Inference Router ✅ (shadow mode)
+### Phase 3: Learned Inference Router ✅ (experimental/shadow mode)
 - **`LearnedRouter`** (`wm-bicameral/src/learned_router.rs`): embedding k-NN (k=5) + conformal calibration
 - **`EdgeRuleGenerator`**: auto-promotes high-frequency simple responses to compiled edge rules
 - **29 new tests**
@@ -2839,7 +2872,7 @@ Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
 - **`LearnedCycleStrategy`**: learned autonomous cycle strategies (4 strategies)
 - 31 new tests
 
-### Phase 7: Polish & Verification ✅
+### Phase 7: Feature Wiring ✅; Release Verification OPEN
 - **Mutable structures wiring**: All 4 mutable structures integrated into live pipeline
   - `GanaRegistry` → `DispatchPipeline` via `with_gana_registry()`
   - `LearnedDreamCycle` → `DreamCycle` via `with_learned()`
@@ -2848,6 +2881,8 @@ Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
 - **Persistence**: All mutable structures save/load JSON state on daemon startup/shutdown
 - **E2E integration tests**: GanaRegistry recording, DynamicGalaxyRegistry access, LearnedDreamCycle attachment, full pipeline integration, persistence roundtrip
 - **All benchmarks passing**: dream, reflex, RSI, self-play, router, pipeline, mutable structures
+- **Release gates remain open**: boundary enforcement, exact rollback, index
+  consistency, process smoke coverage, packaging, and documentation.
 
 ### v5.2.1: Karma Ledger Optimization & Benchmarks
 
