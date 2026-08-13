@@ -80,5 +80,17 @@ restart the binary, and assert JSON results rather than only process exit code.
 - `docs/notes/shadow-mode-analysis-2026-08-10.md`: embedding-router quality data.
 - `docs/PROGRESS.md`: implementation history and verified phase work.
 - `docs/RELEASE_READINESS.md`: blockers, acceptance criteria, and no-go gates.
+- `docs/PET_HARDENING.md`: next-session hardening plan (Phase A: ResourceRules
+  wiring, effect inventory audit, write-audit trail).
 - `scripts/collect_shadow_data.py`: router data collection, requiring a live
   embedder endpoint.
+
+## Next Session Start
+
+Begin with Phase A of `docs/PET_HARDENING.md`:
+
+1. Wire `ResourceRules` into the dispatch pipeline.
+2. Build the effect inventory audit as tests.
+3. Add the write-audit trail to the store mutation paths.
+
+Also use `whitemagic-dev` session.continuity at session start (see AGENTS.md).

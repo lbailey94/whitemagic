@@ -326,6 +326,9 @@ full port inventory and execution order.
 - `docs/RELEASE_READINESS.md`: this plan, gates, and decisions.
 - `docs/PRE_RELEASE_LAUNCH_PLAN.md`: launch actions distilled from the retired
   WMdocs vault (assets to reuse, ideas to port, items to skip).
+- `docs/PET_HARDENING.md`: post-release hardening strategy — trustworthy
+  declarations, sandbox/seal/identity hardening, and insider-accident
+  resistance.
 - `docs/ARCHIVE_CAPABILITY_MAP.md`: vetted ideas from the retired projects and
   the v6+ research direction.
 - `docs/NEXT_SESSION.md`: the current execution slice only.
