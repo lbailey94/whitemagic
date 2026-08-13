@@ -30,6 +30,8 @@ use wm_substrate::anomaly::AnomalyDetector;
 use wm_substrate::homeostatic::HomeostaticLoop;
 use wm_substrate::sensorimotor::{ReflexLoop, SensorimotorBus};
 
+use crate::expansion::common::{bool_prop, int_prop, num_prop, schema, str_array_prop, str_prop};
+
 // ── Tool: memory.create ──────────────────────────────────────────────
 
 /// Create a memory in a galaxy.
@@ -69,6 +71,16 @@ impl Tool for MemoryCreateTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "content": str_prop("Memory content (text)"),
+                "galaxy": str_prop("Target galaxy (default codex)"),
+                "tags": str_array_prop("Optional tags"),
+            }),
+            &["content"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let content = args
@@ -165,6 +177,15 @@ impl Tool for MemoryReadTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "id": str_prop("Memory UUID"),
+                "galaxy": str_prop("Galaxy containing the memory (default codex)"),
+            }),
+            &["id"],
+        )
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let id_str = args
             .get("id")
@@ -240,6 +261,15 @@ impl Tool for MemoryListTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "galaxy": str_prop("Galaxy to list (default codex)"),
+                "limit": int_prop("Maximum entries (default 20)"),
+            }),
+            &[],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args
@@ -391,6 +421,7 @@ impl Tool for ToolsListTool {
                     "name": t.name(),
                     "gana": format!("{:?}", t.gana()),
                     "description": t.description(),
+                    "input_schema": t.input_schema(),
                 })
             })
             .collect();
@@ -446,6 +477,16 @@ impl Tool for MemoryDeleteTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "id": str_prop("Memory UUID"),
+                "galaxy": str_prop("Galaxy containing the memory (default codex)"),
+                "confirm": bool_prop("Required — memory.delete is destructive"),
+            }),
+            &["id", "confirm"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let id_str = args
@@ -525,6 +566,19 @@ impl Tool for MemoryQueryTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "query": str_prop("Query text (used by the meta-tool's routing validation)"),
+                "galaxy": str_prop("Galaxy to query (default codex)"),
+                "tags": str_array_prop("Filter: memories with all of these tags"),
+                "min_importance": num_prop("Filter: minimum importance (0-1)"),
+                "max_importance": num_prop("Filter: maximum importance (0-1)"),
+                "limit": int_prop("Maximum entries (default 50)"),
+            }),
+            &[],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy_str = args
@@ -621,6 +675,18 @@ impl Tool for MemorySearchTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "query": str_prop("Full-text query"),
+                "galaxy": str_prop("Galaxy filter (default: all galaxies)"),
+                "limit": int_prop("Maximum results (default 20)"),
+                "min_score": num_prop("Absolute BM25 score floor"),
+                "min_score_ratio": num_prop("Relative floor: reject hits below this fraction of the top score"),
+            }),
+            &["query"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args
@@ -722,6 +788,16 @@ impl Tool for MemoryChatTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "query": str_prop("Conversational query"),
+                "galaxy": str_prop("Optional galaxy filter"),
+                "limit": int_prop("Maximum results"),
+            }),
+            &["query"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args
@@ -3226,6 +3302,56 @@ mod tests {
 
         assert_eq!(result["status"], "success");
         assert!(result["total"].as_u64().unwrap() >= 7);
+    }
+
+    #[tokio::test]
+    async fn tools_list_exposes_curated_argument_schemas() {
+        let store = test_store();
+        let registry = test_registry_with(&store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
+
+        let list = registry.get("tools.list").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = list.call(&mut ctx, json!({})).await.unwrap();
+
+        let tools = result["tools"].as_array().unwrap();
+        let create = tools
+            .iter()
+            .find(|t| t["name"] == "memory.create")
+            .expect("tools.list must include memory.create");
+        let schema = &create["input_schema"];
+        assert_eq!(schema["type"], "object");
+        assert!(
+            schema["properties"].get("content").is_some(),
+            "memory.create schema must describe content, got: {schema}"
+        );
+        assert!(
+            schema["required"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|r| r == "content"),
+            "memory.create schema must require content"
+        );
+
+        let rollback = tools
+            .iter()
+            .find(|t| t["name"] == "transaction.rollback")
+            .expect("tools.list must include transaction.rollback");
+        assert!(
+            rollback["input_schema"]["required"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|r| r == "confirm"),
+            "transaction.rollback schema must require confirm"
+        );
     }
 
     #[tokio::test]

@@ -20,6 +20,48 @@ pub const fn model_visible(mem: &Memory) -> bool {
     !mem.metadata.model_exclude
 }
 
+// ── JSON-Schema helpers for `Tool::input_schema()` ─────────────────────
+
+/// Build an object schema from properties and required keys.
+#[must_use]
+pub fn schema(properties: &serde_json::Value, required: &[&str]) -> serde_json::Value {
+    serde_json::json!({
+        "type": "object",
+        "properties": properties,
+        "required": required,
+    })
+}
+
+/// A string property.
+#[must_use]
+pub fn str_prop(description: &str) -> serde_json::Value {
+    serde_json::json!({"type": "string", "description": description})
+}
+
+/// A number property.
+#[must_use]
+pub fn num_prop(description: &str) -> serde_json::Value {
+    serde_json::json!({"type": "number", "description": description})
+}
+
+/// An integer property.
+#[must_use]
+pub fn int_prop(description: &str) -> serde_json::Value {
+    serde_json::json!({"type": "integer", "description": description})
+}
+
+/// A boolean property.
+#[must_use]
+pub fn bool_prop(description: &str) -> serde_json::Value {
+    serde_json::json!({"type": "boolean", "description": description})
+}
+
+/// An array property with string items.
+#[must_use]
+pub fn str_array_prop(description: &str) -> serde_json::Value {
+    serde_json::json!({"type": "array", "items": {"type": "string"}, "description": description})
+}
+
 /// De-index a memory from the Tantivy full-text index.
 ///
 /// Best-effort and non-fatal: an index failure is logged and ignored, so the

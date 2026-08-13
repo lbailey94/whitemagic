@@ -101,6 +101,18 @@ impl Tool for SessionRecordTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "content": super::common::str_prop("Turn content"),
+                "role": super::common::str_prop("user | ai (default user)"),
+                "turn_type": super::common::str_prop("message, decision, breakthrough, question, answer, code_change, error, summary, context"),
+                "importance": super::common::num_prop("0-1 importance (default 0.5)"),
+                "session_id": super::common::str_prop("Target session (default: most recent session)"),
+            }),
+            &["content"],
+        )
+    }
     fn description(&self) -> &str {
         "Record a conversation turn as persistent session memory. Args: content (required), role (user|ai, default user), turn_type (default message), importance (0-1, default 0.5), session_id (optional — defaults to the most recent session)."
     }
@@ -207,6 +219,19 @@ impl Tool for SessionReplayTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "mode": super::common::str_prop("full | selective | progressive (default full)"),
+                "session_id": super::common::str_prop("Target session (default: most recent)"),
+                "n": super::common::int_prop("Maximum turns (default 50)"),
+                "turn_types": super::common::str_array_prop("Selective mode: turn types to keep"),
+                "min_importance": super::common::num_prop("Selective mode floor (default 0.7)"),
+                "token_budget": super::common::int_prop("Progressive mode token budget (default 2000)"),
+            }),
+            &[],
+        )
     }
     fn description(&self) -> &str {
         "Replay session turns. Args: mode (full|selective|progressive, default full), session_id (optional), n (default 50), turn_types (list, for selective), min_importance (0-1, default 0.7, for selective), token_budget (default 2000, for progressive)."
@@ -320,6 +345,15 @@ impl Tool for SessionContinuityTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "current_session_id": super::common::str_prop("Session to exclude (optional)"),
+                "n": super::common::int_prop("Number of prior turns (default 10)"),
+            }),
+            &[],
+        )
+    }
     fn description(&self) -> &str {
         "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off'). Args: current_session_id (optional, excluded), n (default 10)."
     }
@@ -395,6 +429,17 @@ impl Tool for SessionHandoffTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "action": super::common::str_prop("transfer | accept | list"),
+                "session_id": super::common::str_prop("transfer: session to hand off"),
+                "message": super::common::str_prop("transfer: handoff note"),
+                "handoff_id": super::common::str_prop("accept: handoff to accept"),
+            }),
+            &["action"],
+        )
     }
     fn description(&self) -> &str {
         "Transfer or resume a session across devices (actions: transfer, accept, list). transfer: session_id (required) + message; accept: handoff_id; list: pending handoffs."

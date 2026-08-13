@@ -526,7 +526,7 @@ impl Tool for MemoryHybridRecallTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Hybrid recall: combine full-text search with metadata filtering"
+        "Hybrid recall: Tantivy BM25 full-text search combined with importance and metadata filtering (not vector fusion — semantic recall is separate until the embedding write path is wired end to end)"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;

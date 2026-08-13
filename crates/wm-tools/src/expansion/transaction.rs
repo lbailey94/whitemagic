@@ -110,6 +110,9 @@ impl Tool for TransactionBeginTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(&json!({}), &[])
+    }
     fn description(&self) -> &str {
         "Begin a transaction — snapshots all memory galaxies (exact records) for potential rollback"
     }
@@ -210,6 +213,9 @@ impl Tool for TransactionCommitTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(&json!({}), &[])
+    }
     fn description(&self) -> &str {
         "Commit a transaction — keeps all changes, removes the rollback snapshot"
     }
@@ -289,6 +295,14 @@ impl Tool for TransactionRollbackTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "confirm": super::common::bool_prop("Required — transaction.rollback is destructive"),
+            }),
+            &["confirm"],
+        )
     }
     fn description(&self) -> &str {
         "Rollback a transaction — restores exact pre-transaction records"

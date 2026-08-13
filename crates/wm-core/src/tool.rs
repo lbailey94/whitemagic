@@ -205,6 +205,14 @@ pub trait Tool: Send + Sync {
     fn description(&self) -> &str {
         self.gana().description()
     }
+
+    /// JSON-Schema-style description of the accepted arguments.
+    ///
+    /// Defaults to an empty object (no schema). Curated tools override this
+    /// so `tools.list` can show clients the argument contract.
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({})
+    }
 }
 
 #[cfg(test)]

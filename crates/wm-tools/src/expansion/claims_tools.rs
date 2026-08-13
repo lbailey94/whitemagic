@@ -66,6 +66,24 @@ impl Tool for ClaimsTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "action": super::common::str_prop("add | resolve | status | list | calibration (default status)"),
+                "statement": super::common::str_prop("add: claim statement"),
+                "domain": super::common::str_prop("add: domain"),
+                "source_date": super::common::str_prop("add: YYYY-MM-DD"),
+                "predicted_outcome": super::common::str_prop("add: predicted outcome"),
+                "confidence": super::common::num_prop("add: 0-1 confidence"),
+                "falsification_criteria": super::common::str_prop("add: how this claim could be falsified"),
+                "claim_id": super::common::str_prop("resolve: claim identifier"),
+                "validated": super::common::bool_prop("resolve: did the claim validate?"),
+                "event": super::common::str_prop("resolve: what happened"),
+                "event_date": super::common::str_prop("resolve: YYYY-MM-DD"),
+            }),
+            &["action"],
+        )
+    }
     fn description(&self) -> &str {
         "Prescience claims ledger (actions: add, resolve, status, list, calibration). add requires statement, domain, source_date (YYYY-MM-DD), predicted_outcome, confidence, falsification_criteria. resolve requires claim_id, validated (bool), event, event_date (YYYY-MM-DD). calibration reports the resolved track record: Brier, calibration gap, Wilson hit-rate interval, and recalibrated pending confidences."
     }
@@ -304,6 +322,45 @@ impl Tool for ClaimsAliasTool {
     }
     fn effects(&self) -> &EffectRow {
         self.inner.effects()
+    }
+    fn input_schema(&self) -> Value {
+        match self.action {
+            "calibration" => super::common::schema(&json!({}), &[]),
+            "status" => super::common::schema(&json!({}), &[]),
+            "list" => super::common::schema(
+                &json!({
+                    "domain": super::common::str_prop("Filter by domain"),
+                    "status": super::common::str_prop("Filter: validated | falsified | pending"),
+                }),
+                &[],
+            ),
+            "add" => super::common::schema(
+                &json!({
+                    "statement": super::common::str_prop("Claim statement"),
+                    "domain": super::common::str_prop("Domain"),
+                    "source_date": super::common::str_prop("YYYY-MM-DD"),
+                    "predicted_outcome": super::common::str_prop("Predicted outcome"),
+                    "confidence": super::common::num_prop("0-1 confidence"),
+                    "falsification_criteria": super::common::str_prop("How this claim could be falsified"),
+                }),
+                &[
+                    "statement",
+                    "source_date",
+                    "predicted_outcome",
+                    "falsification_criteria",
+                ],
+            ),
+            "resolve" => super::common::schema(
+                &json!({
+                    "claim_id": super::common::str_prop("Claim identifier"),
+                    "validated": super::common::bool_prop("Did the claim validate?"),
+                    "event": super::common::str_prop("What happened"),
+                    "event_date": super::common::str_prop("YYYY-MM-DD"),
+                }),
+                &["claim_id", "validated", "event", "event_date"],
+            ),
+            _ => super::common::schema(&json!({}), &[]),
+        }
     }
     fn description(&self) -> &str {
         match self.action {
