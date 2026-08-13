@@ -174,11 +174,15 @@ run.
 
 Open work:
 
-- Add a committed process-level smoke test for initialize, tools/list, curated
+- ~~Add a committed process-level smoke test for initialize, tools/list, curated
   dispatch, restart persistence, session continuity, rollback, and claims
-  calibration.
-- Run the smoke test against a fresh temporary store in CI and in the release
-  workflow using the release binary.
+  calibration.~~ ✅ Done 2026-08-13 — `scripts/curated_smoke_test.py` asserts
+  JSON payloads for the full curated workflow, restart persistence (exact UUID
+  preservation), and read-only enforcement.
+- ~~Run the smoke test against a fresh temporary store in CI and in the release
+  workflow using the release binary.~~ ✅ Done 2026-08-13 — `ci.yml` gained a
+  curated smoke job; `release.yml` runs the smoke test against the freshly
+  built Linux release binary before artifact upload.
 - Add native curated MCP configurations for Claude Desktop, Cursor, and
   Windsurf. Include an explicit `--profile curated` until profile precedence is
   fixed.
@@ -190,8 +194,8 @@ Open work:
 
 Acceptance criteria:
 
-- One documented command creates a fresh store and completes the smoke test.
-- Release CI exercises at least one Linux release binary end to end.
+- ✅ One documented command creates a fresh store and completes the smoke test.
+- ✅ Release CI exercises at least one Linux release binary end to end.
 - Client configuration examples launch the same versioned binary that was built.
 - Optional features are either tested or explicitly marked unsupported for the
   release.

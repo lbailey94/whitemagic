@@ -78,7 +78,7 @@ process-level checks passed.
   hardcoded 229-tool archive surface.
 
 Remaining release blockers: privacy/model-exclusion enforcement, curated
-contract schemas, and the committed process smoke test.
+contract schemas, native client configs, and optional-feature coverage.
 
 ---
 
@@ -118,6 +118,25 @@ Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean.
   and re-indexes only the selected galaxies; the old behavior wiped the whole
   index and destroyed search documents for other galaxies. Regression test
   proves unselected galaxies keep their documents.
+
+---
+
+## Session 2026-08-13 (morning, batch 4): curated process smoke test in CI/release
+
+Verified: smoke test passes against the fresh release binary; CI/release
+workflows updated.
+
+- **`scripts/curated_smoke_test.py`**: asserts JSON payloads for the full
+  curated workflow — initialize, profile-aware `tools/list`, memory
+  create/search/hybrid recall, session start, transaction
+  begin/create/rollback, claims calibration, restart persistence (exact UUID
+  preservation), and read-only enforcement (reads succeed, mutations refused).
+- **CI wiring**: `ci.yml` gained a curated smoke job running the release binary
+  on Ubuntu. `release.yml` runs the smoke test against the freshly built Linux
+  release binary before artifact upload.
+- The first smoke run against a stale release binary failed exactly as
+  intended (rollback regenerated UUIDs in the old build), confirming the gate
+  detects untested binaries.
 
 ---
 

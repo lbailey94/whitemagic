@@ -35,8 +35,10 @@ verified.
    metadata.~~ ✅ done 2026-08-13
 4. ~~Fix secondary-index overwrite behavior and filtered reindexing.~~ ✅ done
    2026-08-13
-5. Add the committed curated process smoke test, then wire it into CI and the
-   release workflow.
+5. ~~Add the committed curated process smoke test, then wire it into CI and the
+   release workflow.~~ ✅ done 2026-08-13 — `scripts/curated_smoke_test.py`
+   covers the full curated workflow, restart persistence, and read-only
+   enforcement; wired into `ci.yml` and `release.yml`.
 6. Update client configurations and v5 documentation from verified behavior.
 7. Only after the release gates are green, retest the embedding router and add
    abstention if the labeled results justify it.
