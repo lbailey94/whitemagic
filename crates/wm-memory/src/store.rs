@@ -237,6 +237,16 @@ impl MemoryStore {
             .env
             .begin_rw_txn()
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+
+        // Overwrite semantics: capture the previous record (if any) so its
+        // index entries can be removed before the new ones are added.
+        // Otherwise stale tags, importance values, timestamps, and content
+        // hashes stay queryable after updates.
+        let existing = tx
+            .get(db, key)
+            .ok()
+            .and_then(|bytes| rmp_serde::from_slice::<Memory>(bytes).ok());
+
         match tx.put(db, key, &val, lmdb::WriteFlags::default()) {
             Ok(()) => {}
             Err(lmdb::Error::MapFull) => {
@@ -250,6 +260,9 @@ impl MemoryStore {
                 tx.abort();
                 return Err(CoreError::Memory(format!("LMDB put failed: {e}")));
             }
+        }
+        if let Some(existing) = existing {
+            self.index_dbs.remove(&mut tx, galaxy, &existing)?;
         }
         self.index_dbs.add(&mut tx, galaxy, memory)?;
         tx.commit()
@@ -912,6 +925,77 @@ mod tests {
 
         let limited = store.scan(Galaxy::Codex, 3).unwrap();
         assert_eq!(limited.len(), 3);
+    }
+
+    #[test]
+    fn overwrite_removes_stale_index_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        // Original record: tag "alpha", importance 0.9.
+        let mut mem = Memory::new(Galaxy::Codex, "overwrite target".to_string());
+        mem.metadata.tags = vec!["alpha".to_string()];
+        mem.metadata.importance = 0.9;
+        let id = mem.metadata.id;
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        // Overwrite with tag "beta", importance 0.1, new content hash.
+        let mut updated = Memory::new(Galaxy::Codex, "overwritten content".to_string());
+        updated.metadata.id = id;
+        updated.metadata.tags = vec!["beta".to_string()];
+        updated.metadata.importance = 0.1;
+        store.put(Galaxy::Codex, &updated).unwrap();
+
+        // Stale entries must be gone, new entries must be queryable.
+        let tx = store.env().begin_ro_txn().unwrap();
+        let by_alpha = store
+            .index_dbs()
+            .find_by_tag(&tx, Galaxy::Codex, "alpha")
+            .unwrap();
+        let by_beta = store
+            .index_dbs()
+            .find_by_tag(&tx, Galaxy::Codex, "beta")
+            .unwrap();
+        assert!(
+            by_alpha.is_empty(),
+            "stale tag index entries must be removed on overwrite"
+        );
+        assert_eq!(by_beta, vec![id]);
+
+        let by_importance = store
+            .index_dbs()
+            .find_by_importance_range(&tx, Galaxy::Codex, 0.0, 0.2)
+            .unwrap();
+        assert!(
+            by_importance.contains(&id),
+            "new importance must be indexed"
+        );
+        let by_high = store
+            .index_dbs()
+            .find_by_importance_range(&tx, Galaxy::Codex, 0.8, 1.0)
+            .unwrap();
+        assert!(
+            !by_high.contains(&id),
+            "stale importance index entries must be removed on overwrite"
+        );
+
+        let old_hash = content_hash("overwrite target");
+        let new_hash = content_hash("overwritten content");
+        assert_eq!(
+            store
+                .index_dbs()
+                .find_by_content_hash(&tx, Galaxy::Codex, &old_hash)
+                .unwrap(),
+            None,
+            "stale content-hash index entry must be removed"
+        );
+        assert_eq!(
+            store
+                .index_dbs()
+                .find_by_content_hash(&tx, Galaxy::Codex, &new_hash)
+                .unwrap(),
+            Some(id)
+        );
     }
 
     #[test]

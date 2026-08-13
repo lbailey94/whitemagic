@@ -305,6 +305,9 @@ impl Tool for MemoryUpdateTool {
         }
         if let Some(content) = args.get("content").and_then(|v| v.as_str()) {
             mem.content = content.to_string();
+            // Content changes invalidate the hash — keep it in sync so
+            // dedup and content-hash lookups stay truthful.
+            mem.metadata.content_hash = wm_memory::content_hash(content);
         }
         self.store.put(galaxy, &mem)?;
 
@@ -1148,6 +1151,35 @@ mod tests {
         assert_eq!(v["returned"], 3);
         let mems = v["memories"].as_array().unwrap();
         assert!(mems[0]["importance"].as_f64().unwrap() >= mems[1]["importance"].as_f64().unwrap());
+    }
+
+    #[tokio::test]
+    async fn memory_update_content_recomputes_hash() {
+        let store = test_store();
+        let mem = Memory::new(Galaxy::Codex, "original text".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let id = mem.metadata.id;
+        let original_hash = mem.metadata.content_hash.clone();
+
+        let tool = MemoryUpdateTool::new(store.clone(), None);
+        let v = tool
+            .call(
+                &mut Context::default(),
+                json!({"galaxy": "codex", "id": id.to_string(), "content": "changed text"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success");
+
+        // Regression: content updates used to keep the old content hash,
+        // leaving dedup and hash lookups pointing at stale content.
+        let stored = store.get(Galaxy::Codex, id).unwrap().unwrap();
+        assert_eq!(stored.content, "changed text");
+        assert_eq!(
+            stored.metadata.content_hash,
+            wm_memory::content_hash("changed text")
+        );
+        assert_ne!(stored.metadata.content_hash, original_hash);
     }
 
     #[tokio::test]
