@@ -41,6 +41,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --all-targets
 
+  smoke:
+    name: Curated Smoke Test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --bin wm
+      - run: python3 scripts/curated_smoke_test.py
+
   test-macos:
     name: Tests (macOS)
     runs-on: macos-latest

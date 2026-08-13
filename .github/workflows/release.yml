@@ -44,6 +44,10 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }} --bin wm
 
+      - name: Smoke test curated workflow (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: python3 scripts/curated_smoke_test.py --binary target/${{ matrix.target }}/release/wm
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
