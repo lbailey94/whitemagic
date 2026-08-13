@@ -37,6 +37,12 @@ use wm_substrate::sensorimotor::{ReflexLoop, SensorimotorBus};
 use wm_tools::expansion::rsi::{DispatchTelemetry, FrictionAutoLogTool};
 use wm_workspace::GlobalWorkspace;
 
+/// Minimum interval between hardware samples taken on the request path.
+///
+/// /proc and /sys reads are throttled to at most once per second so the MCP
+/// hot path stays cheap; the daemon samples on its own schedule regardless.
+const HARDWARE_SAMPLE_INTERVAL_MS: u64 = 1_000;
+
 /// MCP server state.
 #[allow(dead_code)]
 pub struct McpServer {
@@ -71,8 +77,9 @@ pub struct McpServer {
     friction_auto_log: Arc<FrictionAutoLogTool>,
     /// Karma ledger for WS-3 bidirectional bridge
     karma_ledger: Option<Arc<KarmaLedger>>,
-    /// Dispatch counter for periodic autonomous cycles
-    dispatch_count: std::sync::atomic::AtomicU64,
+    /// Epoch-ms timestamp of the last hardware sample taken on the request
+    /// path — throttles /proc + /sys sampling (see `HARDWARE_SAMPLE_INTERVAL_MS`).
+    last_hardware_sample_ms: std::sync::atomic::AtomicU64,
     /// Per-session request budget — hard cap on requests served per connection.
     request_budget: crate::input_validation::RequestBudget,
     /// Time-windowed rate limiter — throttles request bursts at the boundary.
@@ -349,7 +356,7 @@ impl McpServer {
             reflex_loop,
             friction_auto_log,
             karma_ledger,
-            dispatch_count: std::sync::atomic::AtomicU64::new(0),
+            last_hardware_sample_ms: std::sync::atomic::AtomicU64::new(0),
             request_budget: crate::input_validation::RequestBudget::default(),
             rate_window: crate::input_validation::RateWindow::default(),
             transaction_state,
@@ -2041,15 +2048,31 @@ impl McpServer {
             .await;
         let dispatch_latency = dispatch_start.elapsed().as_secs_f32();
 
+        // The `wm` meta-tool reports inner tool failures as structured
+        // `{"status":"error", ...}` payloads (Ok at the JSON-RPC level) so
+        // NLU clients get readable errors. Derive the true dispatch outcome
+        // from that payload so the self-model, friction logging, citta, drive
+        // and workspace layers all see inner failures as failures.
+        let (success, inner_error) = match (&dispatch_result, name) {
+            (Ok(v), "wm") if v.get("status").and_then(Value::as_str) == Some("error") => (
+                false,
+                v.get("error")
+                    .or_else(|| v.get("message"))
+                    .and_then(Value::as_str)
+                    .map(ToString::to_string),
+            ),
+            (Ok(_), _) => (true, None),
+            (Err(_), _) => (false, None),
+        };
+
         // Record dispatch metrics into self-model for future forecasting
         if let Ok(model) = self.self_model.lock() {
             model.record(wm_selfmodel::MetricKind::Latency, dispatch_latency);
-            let error_rate = if dispatch_result.is_ok() { 0.0 } else { 1.0 };
+            let error_rate = if success { 0.0 } else { 1.0 };
             model.record(wm_selfmodel::MetricKind::ErrorRate, error_rate);
         }
 
         // Citta heartbeat — post-dispatch consciousness update
-        let success = dispatch_result.is_ok();
         let effectiveness = tool.stats().effectiveness_f32();
 
         // ── Gan Ying Bus: emit ToolDispatchComplete/Error event ──
@@ -2076,7 +2099,7 @@ impl McpServer {
         // ── RSI Phase 2: Rich friction logging with telemetry ──
         let error_msg = match &dispatch_result {
             Err(e) => format!("{e}"),
-            Ok(_) => String::new(),
+            Ok(_) => inner_error.unwrap_or_default(),
         };
         let tool_stats_snapshot = tool.stats().snapshot();
         let response_size = match &dispatch_result {
@@ -2355,34 +2378,10 @@ impl McpServer {
         let health_score = self.dharma_gate.homeostasis().health_score();
         let _ = self.eco_mode.apply_harmony(health_score);
 
-        // Check if dream cycle should run (Theta state)
-        if self.dream.should_run(self.eco_mode.current()) {
-            let ctx = if let Some(ref engine) = self.scenario_engine {
-                DreamContext::new(&self.store, &self.associations).with_imagination(engine)
-            } else {
-                DreamContext::new(&self.store, &self.associations)
-            };
-            let dream_result = self.dream.run(&ctx);
-            tracing::info!(
-                phases = dream_result.phases.len(),
-                duration_ms = dream_result.total_duration.as_millis(),
-                "Dream cycle completed"
-            );
-
-            // Publish dream completion to workspace
-            if let Ok(mut ws) = self.workspace.lock() {
-                ws.publish_simple(
-                    wm_workspace::CoreId::Dream,
-                    wm_workspace::EventType::NovelDetection,
-                    0.5,
-                    0.8,
-                    json!({
-                        "phases": dream_result.phases.len(),
-                        "duration_ms": dream_result.total_duration.as_millis(),
-                    }),
-                );
-            }
-        }
+        // Dream cycles are NOT run on the request path. The daemon
+        // (`wm daemon`) owns dream scheduling via DreamCycle::should_run on
+        // its interval — running the 12-phase consolidation cycle inline made
+        // per-request latency nondeterministic (a full store pass on Theta).
 
         // ── Deep Integration: Timescale tick ──
         // Tick the timescale bus to execute any due hooks
@@ -2399,7 +2398,23 @@ impl McpServer {
         // loop cycle, and emit any corrective actions to the Gan Ying Bus.
         // Also poll the sensorimotor bus and emit SensorFrameReceived events
         // so that subsystems can react to sensor data in real time.
-        {
+        //
+        // Throttled to at most once per second: /proc and /sys sampling on
+        // every request added syscall + file I/O overhead to the hot path for
+        // near-zero information gain. The daemon also refreshes homeostasis
+        // on its own interval.
+        let sample_epoch_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+        let last_sample_ms = self
+            .last_hardware_sample_ms
+            .load(std::sync::atomic::Ordering::Relaxed);
+        let should_sample_hardware =
+            sample_epoch_ms.saturating_sub(last_sample_ms) >= HARDWARE_SAMPLE_INTERVAL_MS;
+        if should_sample_hardware {
+            self.last_hardware_sample_ms
+                .store(sample_epoch_ms, std::sync::atomic::Ordering::Relaxed);
             let hv = self.substrate.sample();
             if let Ok(mut detector) = self.anomaly_detector.lock() {
                 let alerts = detector.check(&hv);
@@ -2447,141 +2462,11 @@ impl McpServer {
             }
         }
 
-        // ── Periodic Sensorimotor Autonomous Cycle ──
-        // Run the full sensorimotor cycle (poll → evaluate reflexes → execute commands)
-        // every 10 dispatches for self-regulated embodiment.
-        let count = self
-            .dispatch_count
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if count % 10 == 0 && count > 0 {
-            let hv = self.substrate.sample();
-            let health = hv.health_score();
-            let cycle_ctx =
-                wm_cognitive::CycleContext::new(&self.store, &self.associations, health)
-                    .with_sensorimotor(&self.sensorimotor_bus, &self.reflex_loop);
-            let cycle_ctx = if let Some(ref engine) = self.scenario_engine {
-                cycle_ctx.with_imagination(engine)
-            } else {
-                cycle_ctx
-            };
-
-            let mut runner = wm_cognitive::AutonomousCycleRunner::default();
-            let result = runner.run_cycle(wm_cognitive::CycleType::Sensorimotor, &cycle_ctx);
-
-            if result.status == wm_cognitive::CycleStatus::Completed {
-                tracing::debug!(
-                    sensors = result.memories_scanned,
-                    proposals = result.proposals_generated,
-                    "Periodic sensorimotor cycle completed"
-                );
-                // Emit ReflexFired events for any triggered reflexes
-                if result.proposals_generated > 0 {
-                    if let Ok(mut gy) = self.gan_ying_bus.lock() {
-                        let triggered: Vec<_> = result
-                            .sensorimotor
-                            .iter()
-                            .filter(|s| s.reflex_triggered)
-                            .collect();
-                        if !triggered.is_empty() {
-                            gy.emit(
-                                wm_cognitive::EventType::ReflexFired,
-                                "sensorimotor_cycle",
-                                json!({
-                                    "triggered_count": triggered.len(),
-                                    "sensors": triggered.iter().map(|s| json!({
-                                        "sensor_id": s.sensor_id,
-                                        "actuator_id": s.actuator_id,
-                                        "command_value": s.command_value,
-                                    })).collect::<Vec<_>>(),
-                                }),
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── WS-4: Proactive Improvement Surfacing ──
-        // Trigger Improve cycle every 50 dispatches or on Theta/Delta (idle states)
-        let should_run_improve = count > 0 && count % 50 == 0;
-        let bw = self.eco_mode.current();
-        let is_idle = matches!(bw, wm_core::BrainWave::Theta | wm_core::BrainWave::Delta);
-        if should_run_improve || is_idle {
-            let hv = self.substrate.sample();
-            let health = hv.health_score();
-            let cycle_ctx =
-                wm_cognitive::CycleContext::new(&self.store, &self.associations, health);
-
-            let mut runner = wm_cognitive::AutonomousCycleRunner::default();
-            let improve_result = runner.run_cycle(wm_cognitive::CycleType::Improve, &cycle_ctx);
-
-            if improve_result.status == wm_cognitive::CycleStatus::Completed
-                && improve_result.proposals_generated > 0
-            {
-                tracing::info!(
-                    proposals = improve_result.proposals_generated,
-                    friction_scanned = improve_result.memories_scanned,
-                    "Proactive improve cycle generated proposals"
-                );
-
-                // Store proposals as Codex memories with rsi:proposal:active tag
-                for proposal in &improve_result.improvements {
-                    let content = format!(
-                        "## Improvement Proposal\n\n\
-                         **Category:** {}\n\n\
-                         **Severity:** {}\n\n\
-                         **Target:** {}\n\n\
-                         **Problem:** {}\n\n\
-                         **Recommended action:** {}\n\n\
-                         **Pattern count:** {}",
-                        proposal.category,
-                        proposal.severity,
-                        proposal.target,
-                        proposal.problem,
-                        proposal.recommended_action,
-                        proposal.pattern_count,
-                    );
-                    let mut memory = wm_memory::Memory::new(wm_core::Galaxy::Codex, content);
-                    let signature = format!(
-                        "{}:{}:{}",
-                        proposal.category, proposal.target, proposal.severity
-                    );
-                    memory.metadata.tags = vec![
-                        "rsi:proposal".to_string(),
-                        "rsi:proposal:active".to_string(),
-                        format!("rsi:proposal:sig:{signature}"),
-                        format!("rsi:severity:{}", proposal.severity),
-                        format!("rsi:category:{}", proposal.category),
-                        format!("rsi:tool:{}", proposal.target),
-                    ];
-                    memory.metadata.source = "auto".to_string();
-                    memory.metadata.source_trust = 0.8;
-                    memory.metadata.importance = match proposal.severity.as_str() {
-                        "high" => 0.9,
-                        "medium" => 0.6,
-                        _ => 0.3,
-                    };
-                    if let Err(e) = self.store.put(wm_core::Galaxy::Codex, &memory) {
-                        tracing::warn!("Failed to store proposal memory: {e}");
-                    }
-                }
-
-                // Emit workspace event with high salience
-                if let Ok(mut ws) = self.workspace.lock() {
-                    ws.publish_simple(
-                        wm_workspace::CoreId::Autonomous,
-                        wm_workspace::EventType::AttentionRequest,
-                        0.8,
-                        0.8,
-                        json!({
-                            "proposals": improve_result.proposals_generated,
-                            "friction_scanned": improve_result.memories_scanned,
-                            "notes": improve_result.notes,
-                        }),
-                    );
-                }
-            }
-        }
+        // Autonomous cycles (Sensorimotor, Improve, WS-4 proposal surfacing)
+        // are NOT run on the request path. The daemon's cycle sweep owns all
+        // 8 cycle types on its own interval — running them inline keyed off
+        // request counts duplicated the scheduler and added multi-millisecond
+        // (dream: multi-second) latency spikes to user requests.
 
         let result = dispatch_result.map_err(|e| RpcError {
             code: -32603,
@@ -3822,6 +3707,49 @@ mod tests {
         assert!(
             memories.iter().any(|m| m["id"] == mem_id),
             "memory should survive a blocked destructive call"
+        );
+    }
+
+    #[tokio::test]
+    async fn e2e_wm_inner_failure_recorded_as_failure_telemetry() {
+        let mut server = test_server();
+
+        // Initialize to move out of Delta
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // A successful NLU request first, to establish a baseline (no error)
+        let ok_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.list","args":{"galaxy":"codex","limit":1}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&ok_resp).unwrap();
+        assert!(parsed.get("error").is_none() || parsed["error"].is_null());
+
+        // Inner failure: route to a tool that doesn't exist. The meta-tool
+        // returns `{"status":"error", ...}` as a successful JSON-RPC result —
+        // the request as a whole must still be seen as a failure by the
+        // telemetry layers (friction auto-log below), not as a success.
+        let fail_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wm","arguments":{"route":"no.such.tool"}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&fail_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let fail_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(fail_result["status"], "error");
+
+        // The inner failure must surface in the friction log — this is the
+        // regression test for inner errors being swallowed as successes.
+        let review_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"friction.review","arguments":{}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&review_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let review: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert!(
+            review["total_friction_entries"].as_u64().unwrap() >= 1,
+            "inner wm failure should be friction-logged, got: {review}"
         );
     }
 

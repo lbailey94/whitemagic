@@ -87,8 +87,3 @@ fuzz:
         echo "--- $$target ---"; \
         cargo fuzz run --fuzz-dir fuzz "$$target" -- -runs=1000; \
     done
-
-# Everything: fmt + clippy + tests + dependency audit
-verify: fmt-check lint
-    cargo test --all
-    cargo deny check
