@@ -77,9 +77,29 @@ process-level checks passed.
   describes the active profile and registry-derived tool count instead of the
   hardcoded 229-tool archive surface.
 
-Remaining release blockers: exact transaction rollback, secondary-index and
-filtered-reindex correctness, privacy/model-exclusion enforcement, curated
-contract schemas, and the committed process smoke test.
+Remaining release blockers: secondary-index and filtered-reindex correctness,
+privacy/model-exclusion enforcement, curated contract schemas, and the
+committed process smoke test.
+
+---
+
+## Session 2026-08-13 (morning, batch 2): exact transaction rollback
+
+Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean.
+
+- **Exact snapshots** (`wm-tools/src/expansion/transaction.rs`):
+  `transaction.begin` serializes complete `Memory` records and scans every
+  memory galaxy — no 10,000-record truncation.
+- **Exact restore**: rollback restores byte-equivalent records (original UUIDs,
+  timestamps, hashes, coordinates, privacy flags, provenance) via `batch_put`;
+  legacy field-level snapshots still restore through a fallback parser.
+- **Failure-safe rollback**: the active transaction is cleared only after
+  snapshot validation and restoration succeed; a failed restore keeps the
+  transaction retryable.
+- **Snapshot cleanup**: commit (and rollback, via galaxy restore) removes the
+  journal snapshot so transactions do not accumulate recovery data.
+- **New tests**: exact-record roundtrip, 10,001-memory no-truncation, commit
+  cleanup, failed-rollback state retention (10 transaction tests total).
 
 ---
 

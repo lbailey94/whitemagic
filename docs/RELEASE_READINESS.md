@@ -106,15 +106,19 @@ semantics across LMDB and Tantivy.
 
 Open work:
 
-- Redesign transaction snapshots around exact serialized records or an undo
-  journal. Preserve IDs, timestamps, hashes, coordinates, tags, privacy flags,
-  provenance, embeddings, and versions.
-- Remove the 10,000-memory snapshot ceiling or make truncation an explicit
-  failure. Do not claim a complete rollback after a bounded scan.
-- Keep transaction state available until snapshot validation and restoration
-  succeed. Make restore retryable after a partial failure.
-- Delete or mark committed journal snapshots so every transaction does not leave
-  permanent recovery data.
+- ~~Redesign transaction snapshots around exact serialized records or an undo
+  journal.~~ ✅ Fixed 2026-08-13 — snapshots serialize complete `Memory`
+  records; rollback restores byte-equivalent records with original UUIDs,
+  timestamps, hashes, coordinates, privacy flags, and provenance (legacy
+  snapshots still restore via field-level fallback).
+- ~~Remove the 10,000-memory snapshot ceiling.~~ ✅ Fixed 2026-08-13 —
+  snapshots scan every memory; regression test covers 10,001 records.
+- ~~Keep transaction state available until snapshot validation and restoration
+  succeed.~~ ✅ Fixed 2026-08-13 — rollback validates and restores before
+  clearing the active transaction; a failed restore keeps the transaction
+  retryable.
+- ~~Delete or mark committed journal snapshots.~~ ✅ Fixed 2026-08-13 — commit
+  removes the rollback snapshot and de-indexes it.
 - Remove stale LMDB secondary index entries before overwriting a memory. Recompute
   content hashes when content changes.
 - Define the LMDB/Tantivy consistency contract. If indexing is asynchronous or
@@ -124,8 +128,8 @@ Open work:
 
 Acceptance criteria:
 
-- Rollback restores byte-equivalent memory records and original UUIDs.
-- Rollback tests cover metadata, indexes, search results, and a failed restore.
+- ✅ Rollback restores byte-equivalent memory records and original UUIDs.
+- ✅ Rollback tests cover metadata, indexes, search results, and a failed restore.
 - Update tests prove old tags, importance values, timestamps, and hashes are no
   longer queryable.
 - A filtered reindex preserves all unselected galaxies.

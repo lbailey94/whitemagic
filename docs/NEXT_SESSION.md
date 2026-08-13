@@ -31,8 +31,8 @@ verified.
 1. ~~Add regression tests for profile precedence, read-only writes, unknown
    compartments, and profile-aware discovery.~~ ✅ done 2026-08-13
 2. ~~Fix the profile and read-only boundaries.~~ ✅ done 2026-08-13
-3. Make transaction rollback exact and failure-safe, preserving IDs and all
-   metadata.
+3. ~~Make transaction rollback exact and failure-safe, preserving IDs and all
+   metadata.~~ ✅ done 2026-08-13
 4. Fix secondary-index overwrite behavior and filtered reindexing.
 5. Add the committed curated process smoke test, then wire it into CI and the
    release workflow.
@@ -42,7 +42,6 @@ verified.
 
 ## Hard Blockers
 
-- Transaction rollback snapshots are bounded and do not preserve exact records.
 - Privacy and model-exclusion flags are not consistently enforced on read
   paths, and some effect declarations still understate real side effects.
 - Tool discovery contains a dead curated route (`galaxy.list`), and the
