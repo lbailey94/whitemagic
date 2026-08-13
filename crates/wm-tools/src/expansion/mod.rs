@@ -328,7 +328,13 @@ pub fn register_expansion(
         .register(Arc::new(TaskDistributeTool::new(store.clone())))
         .register(Arc::new(TaskStatusTool::new(store.clone())))
         // System (3)
-        .register(Arc::new(SystemHealthTool::new(store.clone())))
+        .register(Arc::new(
+            if let Some(ref se) = search {
+                SystemHealthTool::with_search(store.clone(), se.clone())
+            } else {
+                SystemHealthTool::new(store.clone())
+            },
+        ))
         .register(Arc::new(SystemConfigTool::new()))
         .register(Arc::new(SystemFlushTool::new(store.clone(), search.clone())))
         // Association mining (1)

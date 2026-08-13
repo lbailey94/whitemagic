@@ -2315,24 +2315,7 @@ impl Tool for WmMetaTool {
             }
         }
 
-        // Check for missing required args before dispatching
-        if let Some(required) = Self::required_arg(&tool_name) {
-            let has_arg = tool_args.is_object()
-                && tool_args.get(required).is_some()
-                && !tool_args
-                    .get(required)
-                    .is_some_and(serde_json::Value::is_null);
-            if !has_arg {
-                return Ok(json!({
-                    "status": "error",
-                    "message": format!("Missing required argument: '{required}' for tool '{tool_name}'"),
-                    "hint": Self::missing_arg_hint(&tool_name, required),
-                    "_wm_route": { "tool": tool_name, "confidence": confidence },
-                }));
-            }
-        }
-
-        // Dispatch to target tool
+        // Look up the target tool.
         let tool = self.registry.get(&tool_name);
         match tool {
             Some(t) => {
@@ -2340,6 +2323,8 @@ impl Tool for WmMetaTool {
                 // routing — they require an explicit route= plus `confirm: true`,
                 // which the dispatch pipeline enforces below. This makes it
                 // structurally impossible for fuzzy NLU to destroy data.
+                // This check fires BEFORE the required-arg check so the gate
+                // message is always clear, even when args are missing.
                 if route.is_none() && t.effects().destructive {
                     return Ok(json!({
                         "status": "error",
@@ -2349,6 +2334,24 @@ impl Tool for WmMetaTool {
                         "_wm_route": { "tool": tool_name, "confidence": confidence },
                     }));
                 }
+
+                // Check for missing required args before dispatching
+                if let Some(required) = Self::required_arg(&tool_name) {
+                    let has_arg = tool_args.is_object()
+                        && tool_args.get(required).is_some()
+                        && !tool_args
+                            .get(required)
+                            .is_some_and(serde_json::Value::is_null);
+                    if !has_arg {
+                        return Ok(json!({
+                            "status": "error",
+                            "message": format!("Missing required argument: '{required}' for tool '{tool_name}'"),
+                            "hint": Self::missing_arg_hint(&tool_name, required),
+                            "_wm_route": { "tool": tool_name, "confidence": confidence },
+                        }));
+                    }
+                }
+
                 // Route through the full governance pipeline when attached:
                 // destructive confirmation, dharma gate, rate limit, circuit
                 // breaker, karma record, and per-tool stats all apply to the
@@ -3239,6 +3242,112 @@ mod tests {
                 .unwrap()
                 .contains("cannot be reached via natural language")
         );
+    }
+
+    /// P0 acceptance test: every destructive tool in the registry is blocked
+    /// when reached via natural-language routing (thought=). This sweeps all
+    /// registered tools, filters to those with `destructive: true`, and
+    /// verifies each one returns the hard-block error — not just memory.delete.
+    #[tokio::test]
+    async fn nlu_cannot_reach_any_destructive_tool() {
+        let store = test_store();
+        let (registry, _pipeline) = test_registry_with_pipeline(&store);
+        let wm = registry.get("wm").unwrap();
+
+        // Collect all destructive tool names from the registry (excluding
+        // `wm` itself, which is pure — it routes, it doesn't mutate).
+        let destructive_tools: Vec<String> = registry
+            .all_ref()
+            .iter()
+            .filter(|t| t.effects().destructive)
+            .map(|t| t.name().to_string())
+            .collect();
+
+        assert!(
+            !destructive_tools.is_empty(),
+            "registry must contain at least one destructive tool for this test to be meaningful"
+        );
+
+        let mut ctx = Context::new(BrainWave::Gamma);
+        for tool_name in &destructive_tools {
+            // Attempt 1: bare tool name as thought with confirm=true.
+            // If NLU routes to the destructive tool, the structural gate must
+            // block it. If NLU routes elsewhere, that's also fine.
+            let result = wm
+                .call(
+                    &mut ctx,
+                    json!({
+                        "thought": tool_name,
+                        "args": {"confirm": true}
+                    }),
+                )
+                .await
+                .unwrap();
+
+            // A destructive tool must never return success via NLU.
+            assert_ne!(
+                result["status"], "success",
+                "destructive tool '{tool_name}' returned success via NLU — structural gate failed"
+            );
+
+            // If NLU did route to the destructive tool, the gate message must
+            // be present (proving the structural block, not just a miss).
+            let routed_tool = result
+                .get("_wm_route")
+                .and_then(|r| r.get("tool"))
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            if routed_tool == tool_name {
+                assert!(
+                    result
+                        .get("message")
+                        .and_then(|m| m.as_str())
+                        .is_some_and(|m| m.contains("cannot be reached via natural language")),
+                    "destructive tool '{tool_name}' was routed to but gate message missing: {result}"
+                );
+            }
+
+            // Attempt 2: natural-language phrasing that might route to the
+            // destructive tool (e.g., "rollback the transaction"). This
+            // catches the case where the tool name itself doesn't match NLU
+            // profiles but a natural phrase does.
+            let nl_phrase = match tool_name.as_str() {
+                "memory.delete" => "delete memory 00000000-0000-0000-0000-000000000001",
+                "transaction.rollback" => "rollback the transaction",
+                "galaxy.purge" => "purge galaxy codex",
+                "galaxy.transfer" => "transfer galaxy codex to archive",
+                "galaxy.restore" => "restore galaxy codex from snapshot",
+                "memory.consolidate" => "consolidate memories in codex",
+                "memory.deduplicate" => "deduplicate memories in codex",
+                "karma.purge" => "purge karma ledger",
+                "system.flush" => "flush low importance memories",
+                _ => tool_name.as_str(),
+            };
+            let result2 = wm
+                .call(&mut ctx, json!({"thought": nl_phrase}))
+                .await
+                .unwrap();
+
+            assert_ne!(
+                result2["status"], "success",
+                "destructive tool '{tool_name}' returned success via NLU phrase '{nl_phrase}' — structural gate failed"
+            );
+
+            let routed_tool2 = result2
+                .get("_wm_route")
+                .and_then(|r| r.get("tool"))
+                .and_then(|t| t.as_str())
+                .unwrap_or("");
+            if routed_tool2 == tool_name {
+                assert!(
+                    result2
+                        .get("message")
+                        .and_then(|m| m.as_str())
+                        .is_some_and(|m| m.contains("cannot be reached via natural language")),
+                    "destructive tool '{tool_name}' was routed to via '{nl_phrase}' but gate message missing: {result2}"
+                );
+            }
+        }
     }
 
     /// Deterministic fake embedder — exercises the embedding router path

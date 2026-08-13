@@ -11,6 +11,7 @@ use wm_memory::{MemoryStore, SearchEngine};
 
 pub struct SystemHealthTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -19,6 +20,18 @@ impl SystemHealthTool {
     pub fn new(store: Arc<MemoryStore>) -> Self {
         Self {
             store,
+            search: None,
+            stats: ToolStats::default(),
+            effects: EffectRow::pure(),
+        }
+    }
+
+    /// Create with a search engine for index health reporting.
+    #[must_use]
+    pub fn with_search(store: Arc<MemoryStore>, search: Arc<SearchEngine>) -> Self {
+        Self {
+            store,
+            search: Some(search),
             stats: ToolStats::default(),
             effects: EffectRow::pure(),
         }
@@ -38,7 +51,7 @@ impl Tool for SystemHealthTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Overall system health check — galaxy counts, store path"
+        "Overall system health check — galaxy counts, store path, index health"
     }
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut total = 0usize;
@@ -58,13 +71,55 @@ impl Tool for SystemHealthTool {
                 Err(e) => failed_galaxies.push(format!("{}: {e}", galaxy.db_name())),
             }
         }
+
+        // Index health: report degraded state and consistency drift.
+        // When no search engine is configured, report `unavailable` so
+        // callers know search is not functional — not silently healthy.
+        let (index_health, index_consistency) = match &self.search {
+            Some(search) => {
+                let health = search.health().snapshot();
+                let consistency = wm_memory::check_consistency(&self.store, search);
+                let consistency_json = serde_json::json!({
+                    "has_drift": consistency.has_drift,
+                    "total_lmdb": consistency.total_lmdb,
+                    "total_tantivy": consistency.total_tantivy,
+                    "drifted_galaxies": consistency
+                        .galaxies
+                        .iter()
+                        .filter(|g| g.drift)
+                        .map(|g| serde_json::json!({
+                            "galaxy": g.galaxy,
+                            "lmdb_count": g.lmdb_count,
+                            "tantivy_count": g.tantivy_count,
+                        }))
+                        .collect::<Vec<_>>(),
+                });
+                (health, consistency_json)
+            }
+            None => (
+                serde_json::json!({"status": "unavailable", "degraded": true}),
+                serde_json::json!({"status": "unavailable"}),
+            ),
+        };
+
+        let index_degraded = index_health
+            .get("degraded")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(true);
+        let index_drift = index_consistency
+            .get("has_drift")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+
         Ok(json!({
             "status": "success",
-            "healthy": failed_galaxies.is_empty(),
+            "healthy": failed_galaxies.is_empty() && !index_degraded && !index_drift,
             "store_path": self.store.path().display().to_string(),
             "total_memories": total,
             "galaxies_with_data": galaxies_with_data,
             "failed_galaxies": failed_galaxies,
+            "index_health": index_health,
+            "index_consistency": index_consistency,
             "version": env!("CARGO_PKG_VERSION"),
         }))
     }
@@ -207,12 +262,57 @@ mod tests {
     async fn system_health_reports_failures_honestly() {
         let dir = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(dir.path()).unwrap());
+        // No search engine → index_health reports unavailable, degraded=true.
         let tool = SystemHealthTool::new(store);
 
         let v = tool.call(&mut Context::default(), json!({})).await.unwrap();
         assert_eq!(v["status"], "success");
-        assert_eq!(v["healthy"], true);
+        // healthy is false because index is unavailable (degraded).
+        assert_eq!(v["healthy"], false);
+        assert_eq!(v["index_health"]["status"], "unavailable");
+        assert_eq!(v["index_health"]["degraded"], true);
         assert!(v.get("failed_galaxies").is_some());
         assert_eq!(v["failed_galaxies"].as_array().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn system_health_with_search_reports_index_consistency() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(dir.path()).unwrap());
+        let tantivy_path = dir.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy_path).unwrap();
+        let search = Arc::new(SearchEngine::open(&tantivy_path).unwrap());
+        let tool = SystemHealthTool::with_search(store.clone(), search.clone());
+
+        let v = tool.call(&mut Context::default(), json!({})).await.unwrap();
+        assert_eq!(v["status"], "success");
+        // No memories, no drift → healthy.
+        assert_eq!(v["healthy"], true);
+        assert_eq!(v["index_health"]["degraded"], false);
+        assert_eq!(v["index_health"]["failures"], 0);
+        assert_eq!(v["index_consistency"]["has_drift"], false);
+        assert_eq!(v["index_consistency"]["total_lmdb"], 0);
+        assert_eq!(v["index_consistency"]["total_tantivy"], 0);
+    }
+
+    #[tokio::test]
+    async fn system_health_detects_index_drift() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(dir.path()).unwrap());
+        let tantivy_path = dir.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy_path).unwrap();
+        let search = Arc::new(SearchEngine::open(&tantivy_path).unwrap());
+
+        // Write a memory to LMDB without indexing it in Tantivy → drift.
+        let mem = wm_memory::Memory::new(Galaxy::Codex, "unindexed content".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let tool = SystemHealthTool::with_search(store.clone(), search.clone());
+        let v = tool.call(&mut Context::default(), json!({})).await.unwrap();
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["healthy"], false);
+        assert_eq!(v["index_consistency"]["has_drift"], true);
+        assert_eq!(v["index_consistency"]["total_lmdb"], 1);
+        assert_eq!(v["index_consistency"]["total_tantivy"], 0);
     }
 }

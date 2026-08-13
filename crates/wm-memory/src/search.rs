@@ -18,6 +18,7 @@ use wm_core::{CoreError, Galaxy, Result};
 
 use std::path::Path;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tantivy::{
     Index, IndexReader, IndexWriter, ReloadPolicy,
     collector::TopDocs,
@@ -204,6 +205,54 @@ pub struct SearchResult {
     pub content: String,
 }
 
+/// Tracked health of the Tantivy index relative to LMDB.
+///
+/// Because Tantivy indexing is best-effort (an indexing failure does not
+/// roll back the LMDB write), the index can drift from the store. This
+/// struct tracks successes and failures so `wm doctor` and `system.health`
+/// can report degraded state instead of silently claiming healthy.
+#[derive(Debug, Default)]
+pub struct IndexHealth {
+    /// Successful index/deindex operations since startup.
+    pub successes: AtomicU64,
+    /// Failed index/deindex operations since startup.
+    pub failures: AtomicU64,
+    /// Last error message (empty string if none).
+    last_error: Mutex<String>,
+}
+
+impl IndexHealth {
+    fn record_success(&self) {
+        self.successes.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn record_failure(&self, err: &str) {
+        self.failures.fetch_add(1, Ordering::Relaxed);
+        if let Ok(mut guard) = self.last_error.lock() {
+            *guard = err.to_string();
+        }
+    }
+
+    /// Snapshot the health as a JSON value for tool output.
+    #[must_use]
+    pub fn snapshot(&self) -> serde_json::Value {
+        let successes = self.successes.load(Ordering::Relaxed);
+        let failures = self.failures.load(Ordering::Relaxed);
+        let last_error = self
+            .last_error
+            .lock()
+            .map(|g| g.clone())
+            .unwrap_or_default();
+        let degraded = failures > 0;
+        serde_json::json!({
+            "successes": successes,
+            "failures": failures,
+            "degraded": degraded,
+            "last_error": if last_error.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(last_error) },
+        })
+    }
+}
+
 /// The full-text search engine backed by Tantivy.
 pub struct SearchEngine {
     index: Index,
@@ -214,6 +263,9 @@ pub struct SearchEngine {
     field_content: Field,
     field_tags: Field,
     field_timestamp: Field,
+    /// Tracked index health — failures are recorded so callers can detect
+    /// degraded state instead of silently reporting healthy.
+    health: IndexHealth,
 }
 
 impl SearchEngine {
@@ -266,6 +318,7 @@ impl SearchEngine {
             field_content,
             field_tags,
             field_timestamp,
+            health: IndexHealth::default(),
         })
     }
 
@@ -295,7 +348,30 @@ impl SearchEngine {
             field_content,
             field_tags,
             field_timestamp,
+            health: IndexHealth::default(),
         })
+    }
+
+    /// Returns a snapshot of index health (success/failure counts, degraded
+    /// flag, last error).
+    #[must_use]
+    pub const fn health(&self) -> &IndexHealth {
+        &self.health
+    }
+
+    /// Count the number of indexed documents for a specific galaxy.
+    ///
+    /// Used by consistency checks to compare Tantivy doc counts against
+    /// LMDB memory counts. Returns 0 if the index is empty or the galaxy
+    /// has no documents.
+    pub fn count_docs_in_galaxy(&self, galaxy: &str) -> Result<usize> {
+        let searcher = self.reader.searcher();
+        let term = tantivy::Term::from_field_text(self.field_galaxy, galaxy);
+        let query = tantivy::query::TermQuery::new(term, tantivy::schema::IndexRecordOption::Basic);
+        let count = searcher
+            .search(&query, &tantivy::collector::Count)
+            .map_err(|e| CoreError::Memory(format!("Tantivy count_docs: {e}")))?;
+        Ok(count)
     }
 
     /// True when the engine was opened read-only (no tantivy writer).
@@ -351,10 +427,17 @@ impl SearchEngine {
             self.field_tags => tags_str,
             self.field_timestamp => timestamp,
         );
-        writer
-            .add_document(doc)
-            .map_err(|e| CoreError::Memory(format!("Tantivy add_document: {e}")))?;
-        Ok(())
+        match writer.add_document(doc) {
+            Ok(_) => {
+                self.health.record_success();
+                Ok(())
+            }
+            Err(e) => {
+                let msg = format!("Tantivy add_document: {e}");
+                self.health.record_failure(&msg);
+                Err(CoreError::Memory(msg))
+            }
+        }
     }
 
     /// Delete documents by memory ID.

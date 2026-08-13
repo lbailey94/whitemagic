@@ -45,10 +45,14 @@ pub use recovery::{
     GalaxyIntegrity, IntegrityReport, QuarantineEntry, RecoveryStrategy, RepairReport,
     check_integrity, grow_map_size, open_with_recovery, repair,
 };
-pub use reindex::{GalaxyRebuildStats, IndexRebuildReport, rebuild_index};
+pub use reindex::{
+    ConsistencyReport, GalaxyConsistency, GalaxyRebuildStats, IndexRebuildReport,
+    check_consistency, rebuild_index,
+};
 pub use search::{
-    MAX_INDEX_CONTENT_LEN, MIN_PRINTABLE_RATIO, STOPWORDS, SearchEngine, SearchOptions,
-    SearchResult, sanitize_content_for_index, sanitize_tantivy_query, scrub_text, strip_stopwords,
+    IndexHealth, MAX_INDEX_CONTENT_LEN, MIN_PRINTABLE_RATIO, STOPWORDS, SearchEngine,
+    SearchOptions, SearchResult, sanitize_content_for_index, sanitize_tantivy_query, scrub_text,
+    strip_stopwords,
 };
 pub use semantic::{SemanticEncoder, SemanticScores};
 pub use store::MemoryQuery;
