@@ -5,14 +5,14 @@
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all tests (3,438 tests)
+cargo test                     # Run all tests (3,447 tests)
 cargo test -p wm-core          # Test a single crate
 cargo bench                    # Run benchmarks (criterion)
 cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (15 crates, 229 tools, ~131,000 LOC, 3,438 tests)
+## Architecture (15 crates, 229 tools, ~131,000 LOC, 3,447 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
@@ -133,6 +133,16 @@ The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 229 tools 
 - `wm serve` is dispatch-only: request handling, telemetry, brain-wave transitions, and a throttled hardware sample (≤1/s). Autonomous work — dream consolidation, the 8 autonomous cycles, WS-4 improvement proposal surfacing — is scheduled by the daemon (`wm daemon`) on its own intervals, never on the request path, so per-request latency stays deterministic.
 - Inner tool failures inside `wm` return `{"status":"error", ...}` at the JSON-RPC level (readable for NLU clients), but the server derives the true outcome from that payload so the self-model, friction log, citta, drive and workspace all record failures as failures.
 
+### Tool Surface Profiles
+
+229 tools is an archive, not a v1 product. Profiles curate which tools the `wm` meta-tool can route to (filtering happens before the meta-tools are layered on, so both NLU routing and direct dispatch respect the profile):
+
+- `full` (default) — every tool
+- `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims`, `transaction.*`, `galaxy.list`, `gnosis`, `tools.list`, `nlu.shadow_report`
+- `minimal` — `memory.create/read/list/query/search/chat/associate/associations`, `tools.list`, `gnosis`
+
+Select via `wm serve --profile curated`, `WM_TOOL_PROFILE=curated`, or `WM_TOOL_ALLOWLIST=memory,session,claims` (comma-separated prefixes, wins over `WM_TOOL_PROFILE`). Full-surface internals (karma, friction, governance) keep working regardless — only the boundary shrinks.
+
 ### Runtime Env Knobs
 
 | Variable | Default | Purpose |
@@ -143,6 +153,12 @@ The MCP server exposes a **single tool** (`wm`) via `tools/list`. All 229 tools 
 | `WM_DISPATCH_BURST` | 10 | Burst allowance per tool |
 | `WM_MESH_KEY` | random/process | Stable Sangha node identity across restarts |
 | `WM_EMBEDDER_ENDPOINT` | unset (TF-IDF only) | Embedding router backend (`/v1/embeddings`) |
+| `WM_TOOL_PROFILE` | `full` | Tool surface: `full` \| `curated` \| `minimal` |
+| `WM_TOOL_ALLOWLIST` | unset | Comma-separated tool-name prefixes (wins over profile) |
+
+## Claims Ledger Calibration
+
+The claims ledger grades its own track record. `claims` tool action `calibration` reports the resolved set: Brier, mean confidence vs hit rate, the signed calibration gap (positive = overconfident, negative = underconfident), a Wilson 95% interval for the hit rate, and recalibrated confidences for pending claims via empirical-Bayes shrinkage toward the observed hit rate (w = n/(n + 20)). Raw confidences are never edited — calibrated values are reported alongside. As of 2026-08-12: 20 resolved, Brier 0.078, gap **−0.215 (underconfident)**; see `docs/CLAIMS_LEDGER.md`.
 
 ## Safety Features
 

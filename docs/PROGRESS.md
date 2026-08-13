@@ -1,6 +1,27 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 12, 2026 (v5.7.7 — 15 crates, 229 tools, 3,438 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
+**Last updated**: August 12, 2026 (evening) (v5.7.7 — 15 crates, 229 tools, 3,447 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics. Phase-1 gap porting complete (web/research/session v26 parity), external merkle anchors, claims ledger evening review. Counts verified: `cargo test --workspace` all green, `wm doctor` on the live store)
+
+---
+
+## Session 2026-08-12 (evening): safety hardening, deterministic request path, claims calibration, curated profiles
+
+Two batches, both verified (3,447 tests, 0 clippy warnings, fmt clean):
+
+### Batch 1 — governance gates are real now (`f239aba`)
+
+- `wm` meta-tool inner dispatch runs through the full governance pipeline (destructive confirm, dharma, rate limit, circuit breaker, karma, stats) — the documented gate now applies to NLU-routed calls, not just direct-by-name calls
+- Destructive tools structurally unreachable via natural language (`thought=`); require explicit `route=` + `confirm: true`
+- `stem()` unicode panic fixed (character-aware); Tantivy index drift fixed across 8 mutation paths via shared `deindex`/`index_memory` helpers
+- Dispatch timeout (`WM_DISPATCH_TIMEOUT_MS`, default 300s); one embedder round-trip per NLU request; random per-process mesh identity when `WM_MESH_KEY` unset; justfile works without Julia
+
+### Batch 2 — truthful telemetry, deterministic latency, calibrated claims, curated surface (`cb0d35d` + this session)
+
+- **Telemetry truth**: inner `wm` failures (`{"status":"error"}` payloads) are derived as dispatch failures by the server — self-model error rate, friction auto-log, citta, drive, workspace, WS-3 karma bridge all record failures as failures (E2E regression test)
+- **Request path is dispatch-only**: dream/improve/sensorimotor cycles removed from `handle_tools_call`; the daemon owns autonomous scheduling (WS-4 proposal persistence moved there); hardware sampling throttled to ≤1/s; dream still runs on the idle timer arm
+- **Embedder off the tokio worker**: NLU classification + OATS re-embed run on the blocking pool
+- **Claims calibration**: `claims` tool `calibration` action — Brier, signed calibration gap, Wilson 95% hit-rate interval, empirical-Bayes recalibration of pending confidences (w = n/(n+20)); raw record never edited. Live ledger: 20 resolved, Brier 0.078, gap **−0.215 (underconfident — the earlier "overconfident" label was sign-flipped)**, hit-rate CI [0.764, 0.991]
+- **Tool surface profiles**: `full` (default) / `curated` (memory hierarchy) / `minimal` + `WM_TOOL_ALLOWLIST` prefix allowlist; `wm serve --profile curated`; filtering happens before the meta-tools so NLU routing respects the profile (E2E test)
 
 ---
 
@@ -2877,5 +2898,5 @@ Detailed plan in `STRATEGY_V5.md`. All 7 phases complete.
 
 ### Final v5 Metrics
 - **15 crates**, **229 tools**, **~131,000 LOC**
-- **3,438 tests**, 0 clippy warnings, fmt clean
+- **3,447 tests**, 0 clippy warnings, fmt clean
 - All 7 phases complete + v26 parity (web/research/session tools) + NLU routers + imagination + self-play + mutable structures

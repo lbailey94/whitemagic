@@ -4,7 +4,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ## Current Status
 
-**v5.7.7 — All 7 phases complete. 15 crates, 229 tools, 3,438 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. MCP server exposes single `wm` meta-tool — all 229 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
+**v5.7.7 — All 7 phases complete. 15 crates, 229 tools, 3,447 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities, 0 lock panics in production code. MCP server exposes single `wm` meta-tool — all 229 tools accessible via NLU routing (embedding primary, TF-IDF fallback) or explicit dispatch.**
 
 ### v5 Subsystems
 
@@ -61,6 +61,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ```bash
 wm serve       # Start MCP server (async, tokio, brain-wave eco mode)
+wm serve --profile curated   # Memory-hierarchy surface only (memory/session/claims/transactions)
 wm daemon      # Persistent daemon — autonomous cycles, dream, self-play (--cycle-interval, --dream-interval, --research-interval, --selfplay-interval)
 wm doctor      # Health check — LMDB, Tantivy, citta, dream, tools (--store flag)
 wm quickstart  # 6-step guided setup
@@ -69,6 +70,15 @@ wm brain-wave  # Brain-wave state shorthand (--store flag)
 wm polyglot    # Polyglot runtime status
 wm migrate     # Migrate legacy v26 SQLite memories into the v5 store
 ```
+
+### Tool Surface Profiles
+
+`wm serve` exposes a curated subset of the 229-tool surface via profiles (see AGENTS.md):
+
+- `--profile full` (default) — everything
+- `--profile curated` — the memory-hierarchy product surface: memory, session, claims, transactions, galaxy.list, tools.list
+- `--profile minimal` — core memory CRUD + search/chat
+- `WM_TOOL_ALLOWLIST=memory,session` — arbitrary prefix allowlist via env
 
 ### Migrating from v26
 
@@ -113,6 +123,7 @@ See [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and port
 - **Mandala compartments**: 4 security tiers (Research/Sandbox/Production/Secure) with isolated LMDB+Tantivy+associations per compartment.
 - **RSI pipeline**: 3-phase recursive self-improvement — friction logging, deduplication, karma-friction bridge, proactive improvement, resolution verification with regression detection, adversarial test synthesis from friction history, coverage reporting. 12 RSI tools, 8 autonomous cycle types.
 - **Fuzz testing**: 5 cargo-fuzz targets + 22 proptest tests across 4 crates.
+- **Self-grading claims ledger**: 32 dated falsifiable predictions with Brier scorecard, signed calibration gap, Wilson hit-rate interval, and empirical-Bayes recalibration of pending confidences (`claims` tool `calibration` action — the record is never edited, only re-read through its own track record).
 - **Cross-platform CI**: Linux, macOS, Windows test jobs + benchmark-on-release-tag.
 
 ## Quick Start
@@ -131,7 +142,7 @@ See [docs/STRATEGY.md](docs/STRATEGY.md) for the full architecture document.
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all 3,438 tests
+cargo test                     # Run all 3,447 tests
 cargo clippy --all-targets     # Lint (0 warnings)
 cargo build --release --features python -p wm-mcp  # Build with PyO3 bindings
 cargo build --features wm-memory/lancedb  # Build with LanceDB vector search

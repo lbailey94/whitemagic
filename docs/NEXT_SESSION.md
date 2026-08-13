@@ -1,5 +1,12 @@
 # Next Session Handoff — 2026-08-11 (morning)
 
+> **Evening 2026-08-12 addendum**: see `docs/PROGRESS.md` "Session 2026-08-12 (evening)" — two hardening batches landed (`f239aba`, `cb0d35d`, plus claims calibration + curated tool profiles). 3,447 tests, 0 clippy warnings. Remaining backlog after this evening:
+> 1. Embedding router improvement (intent-anchored descriptions) + shadow-data retest — needs llama-server; no longer safety-critical (NLU hard gate landed)
+> 2. Routing-table consolidation (TOOL_PROFILES / PREFIX_ROUTES / extract_payload → one table + startup consistency test)
+> 3. McpServer god-struct split (40+ fields)
+> 4. Tool scaffolding macro (30 lines × 229 tools)
+> 5. Release packaging: zero-config quickstart verification, MCP client configs for the curated profile
+
 State as of the morning 2026-08-11 session. Working tree has uncommitted
 changes (claims ledger morning review, shadow-mode data collection, and a
 bug fix) — see git status.
@@ -12,7 +19,7 @@ bug fix) — see git status.
 - Live store: `~/Desktop/WMdata/live` — 58,617 memories / 10 galaxies
 - **Phase-1 gap porting COMPLETE** (v26 parity): web (`web.fetch/deep_fetch/search/search_and_read`), research (`research.topic/repo/rabbit_hole`), session (`session.record/replay/continuity/handoff`)
 - External merkle anchors: `karma.anchor` `publish_path` → chained JSONL at `anchors/karma_anchors.jsonl` (38 entries)
-- Claims ledger versioned in repo: `docs/CLAIMS_LEDGER.json` + `.md` + `CLAIMS_LEDGER_REVIEW.json`; 32 claims (19 validated, 1 falsified, 12 pending); calibration mean Brier 0.078, **+0.215 overconfident**
+- Claims ledger versioned in repo: `docs/CLAIMS_LEDGER.json` + `.md` + `CLAIMS_LEDGER_REVIEW.json`; 32 claims (19 validated, 1 falsified, 12 pending); calibration mean Brier 0.078, **gap −0.215 (underconfident — fixed 2026-08-12: was mislabeled overconfident; see CLAIMS_LEDGER.md calibration section)**
 - Conformal drift monitoring, Brier scorecard, GP/Bayesian optimization, MC suite, ACS compliance, self-play, imagination, learned router, mutable structures — all wired and persisting
 
 ## What was done this session (2026-08-11 morning)

@@ -95,6 +95,54 @@ pub struct ClaimsLedger {
     next_id: u64,
 }
 
+/// Prior-strength constant for the empirical-Bayes confidence shrinkage.
+///
+/// Calibrated confidence = raw + w·(hit_rate − raw) with w = n/(n + k).
+/// With n resolved claims and k = 20, a base rate estimated from 20 samples
+/// carries half the weight of the raw confidence; fewer samples → weaker
+/// shrinkage, more → stronger. Exposed in the calibration report so the
+/// effective weight is always visible.
+pub const CALIBRATION_PRIOR_SAMPLES: f64 = 20.0;
+
+/// Calibration of the resolved claims — the prescience track record's
+/// honesty statement. Computed over validated + falsified claims.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaimCalibration {
+    /// Number of resolved claims.
+    pub resolved: usize,
+    /// Validated / falsified counts.
+    pub validated: usize,
+    pub falsified: usize,
+    /// Mean self-reported confidence over resolved claims.
+    pub mean_confidence: f64,
+    /// Observed validation rate (validated / resolved).
+    pub hit_rate: f64,
+    /// mean_confidence − hit_rate. Positive = overconfident,
+    /// negative = underconfident (standard convention).
+    pub calibration_gap: f64,
+    /// Mean Brier score over resolved claims (lower is better).
+    pub brier: f64,
+    /// Wilson 95% confidence interval (lower, upper) for the hit rate.
+    pub hit_rate_ci95: (f64, f64),
+    /// Effective shrinkage weight w = n/(n + CALIBRATION_PRIOR_SAMPLES).
+    pub shrinkage: f64,
+}
+
+/// Wilson score 95% confidence interval for a binomial rate.
+#[must_use]
+pub fn wilson95(successes: usize, n: usize) -> (f64, f64) {
+    if n == 0 {
+        return (0.0, 1.0);
+    }
+    let z = 1.959_964;
+    let nf = n as f64;
+    let p = successes as f64 / nf;
+    let denom = 1.0 + z * z / nf;
+    let center = (p + z * z / (2.0 * nf)) / denom;
+    let margin = z * (p * (1.0 - p) / nf + z * z / (4.0 * nf * nf)).sqrt() / denom;
+    ((center - margin).max(0.0), (center + margin).min(1.0))
+}
+
 impl ClaimsLedger {
     /// Create an empty ledger.
     #[must_use]
@@ -261,6 +309,90 @@ impl ClaimsLedger {
             .filter(|c| status.is_none_or(|s| c.status == s))
             .cloned()
             .collect()
+    }
+
+    /// Calibration report over resolved (validated + falsified) claims.
+    #[must_use]
+    pub fn calibration(&self) -> ClaimCalibration {
+        let resolved: Vec<&Claim> = self
+            .claims
+            .iter()
+            .filter(|c| c.status != ClaimStatus::Pending)
+            .collect();
+        let n = resolved.len();
+        let validated = resolved
+            .iter()
+            .filter(|c| c.status == ClaimStatus::Validated)
+            .count();
+        let falsified = n - validated;
+
+        if n == 0 {
+            return ClaimCalibration {
+                resolved: 0,
+                validated: 0,
+                falsified: 0,
+                mean_confidence: 0.0,
+                hit_rate: 0.0,
+                calibration_gap: 0.0,
+                brier: 0.0,
+                hit_rate_ci95: (0.0, 1.0),
+                shrinkage: 0.0,
+            };
+        }
+
+        let nf = n as f64;
+        let mean_confidence = resolved.iter().map(|c| c.confidence).sum::<f64>() / nf;
+        let hit_rate = validated as f64 / nf;
+        let brier = resolved
+            .iter()
+            .map(|c| {
+                let y = if c.status == ClaimStatus::Validated {
+                    1.0
+                } else {
+                    0.0
+                };
+                (c.confidence - y).powi(2)
+            })
+            .sum::<f64>()
+            / nf;
+
+        ClaimCalibration {
+            resolved: n,
+            validated,
+            falsified,
+            mean_confidence,
+            hit_rate,
+            calibration_gap: mean_confidence - hit_rate,
+            brier,
+            hit_rate_ci95: wilson95(validated, n),
+            shrinkage: nf / (nf + CALIBRATION_PRIOR_SAMPLES),
+        }
+    }
+
+    /// Empirical-Bayes calibrated confidence for a raw confidence.
+    ///
+    /// Shrinks the raw confidence toward the observed hit rate, weighted by
+    /// resolved sample size (w = n/(n + k)). Identity when nothing is
+    /// resolved — the record is never edited, only re-read through the lens
+    /// of its own track record.
+    #[must_use]
+    pub fn calibrated_confidence(&self, raw: f64) -> f64 {
+        let validated = self
+            .claims
+            .iter()
+            .filter(|c| c.status == ClaimStatus::Validated)
+            .count();
+        let resolved = self
+            .claims
+            .iter()
+            .filter(|c| c.status != ClaimStatus::Pending)
+            .count();
+        if resolved == 0 {
+            return raw.clamp(0.0, 1.0);
+        }
+        let hit_rate = validated as f64 / resolved as f64;
+        let w = resolved as f64 / (resolved as f64 + CALIBRATION_PRIOR_SAMPLES);
+        w.mul_add(hit_rate - raw, raw).clamp(0.0, 1.0)
     }
 
     /// Serialize to JSON for persistence.
@@ -454,5 +586,88 @@ mod tests {
         let mut ledger = ClaimsLedger::new();
         let claim = ledger.record("Vague", "test", epoch_day(2026, 1, 1), "X", 0.5, "");
         assert!(claim.falsification_criteria.is_empty());
+    }
+
+    #[test]
+    fn calibration_empty_ledger_is_identity() {
+        let ledger = ClaimsLedger::new();
+        let cal = ledger.calibration();
+        assert_eq!(cal.resolved, 0);
+        assert_eq!(cal.calibration_gap, 0.0);
+        assert_eq!(cal.hit_rate_ci95, (0.0, 1.0));
+        assert_eq!(ledger.calibrated_confidence(0.8), 0.8);
+    }
+
+    #[test]
+    fn calibration_reports_gap_brier_and_shrinkage() {
+        let mut ledger = ClaimsLedger::new();
+        // 3 validated at 0.6/0.7/0.8, 1 falsified at 0.5.
+        let ids: Vec<String> = [0.6, 0.7, 0.8, 0.5]
+            .iter()
+            .map(|c| {
+                let claim = ledger.record("C", "test", epoch_day(2026, 1, 1), "X", *c, "not X");
+                claim.id
+            })
+            .collect();
+        for (i, id) in ids.iter().enumerate() {
+            ledger
+                .resolve(id, i < 3, "ev", epoch_day(2026, 1, 15), None)
+                .unwrap();
+        }
+
+        let cal = ledger.calibration();
+        assert_eq!(cal.resolved, 4);
+        assert_eq!(cal.validated, 3);
+        assert_eq!(cal.falsified, 1);
+        assert!((cal.mean_confidence - 0.65).abs() < 1e-12);
+        assert!((cal.hit_rate - 0.75).abs() < 1e-12);
+        // Underconfident: stated confidences run BELOW the realized hit rate.
+        assert!((cal.calibration_gap - (0.65 - 0.75)).abs() < 1e-12);
+        assert!(cal.calibration_gap < 0.0);
+        // Brier: (0.4^2 + 0.3^2 + 0.2^2 + 0.5^2) / 4 = (0.16+0.09+0.04+0.25)/4.
+        assert!((cal.brier - 0.135).abs() < 1e-12);
+        // Shrinkage weight n/(n+k) = 4/24 = 1/6.
+        assert!((cal.shrinkage - 1.0 / 6.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn calibrated_confidence_shrinks_toward_hit_rate() {
+        let mut ledger = ClaimsLedger::new();
+        let ok = ledger.record("A", "test", epoch_day(2026, 1, 1), "X", 0.7, "not X");
+        let miss = ledger.record("B", "test", epoch_day(2026, 1, 1), "Y", 0.5, "not Y");
+        ledger
+            .resolve(&ok.id, true, "ev", epoch_day(2026, 1, 8), None)
+            .unwrap();
+        ledger
+            .resolve(&miss.id, false, "ev", epoch_day(2026, 1, 8), None)
+            .unwrap();
+
+        // n=2, k=20 → w=2/22. hit_rate=0.5. raw 0.8 → 0.8 + w*(0.5-0.8).
+        let w = 2.0_f64 / 22.0;
+        let expected = w.mul_add(0.5_f64 - 0.8, 0.8);
+        let got = ledger.calibrated_confidence(0.8);
+        assert!((got - expected).abs() < 1e-12);
+        assert!(
+            got < 0.8,
+            "overconfident raw confidences must be pulled down"
+        );
+        // Underconfident raw confidences are pulled up.
+        assert!(ledger.calibrated_confidence(0.2) > 0.2);
+        // Clamped to [0, 1] even with extreme inputs.
+        assert_eq!(ledger.calibrated_confidence(1.5), 1.0);
+    }
+
+    #[test]
+    fn wilson_interval_matches_known_values() {
+        // 19/20 successes: p̂ = 0.95 → CI ≈ [0.764, 0.991].
+        let (lo, hi) = wilson95(19, 20);
+        assert!(lo > 0.75 && lo < 0.78, "lo {lo}");
+        assert!(hi > 0.98 && hi < 1.0, "hi {hi}");
+        // 0/0 → full range.
+        assert_eq!(wilson95(0, 0), (0.0, 1.0));
+        // 0/10 → [0, ~0.28].
+        let (lo, hi) = wilson95(0, 10);
+        assert_eq!(lo, 0.0);
+        assert!(hi < 0.35);
     }
 }

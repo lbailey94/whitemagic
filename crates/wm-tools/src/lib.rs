@@ -10,6 +10,7 @@
 pub mod embedding_router;
 pub mod expansion;
 pub mod nlu;
+pub mod profiles;
 
 use async_trait::async_trait;
 
