@@ -1195,7 +1195,10 @@ impl McpServer {
                     };
 
                     let response = self.handle(&request).await;
-                    if request.id.is_some() {
+                    // Respond to requests (id present) and to ping (no id but
+                    // the spec requires an empty-result response).
+                    // Notifications (notifications/*) get no response.
+                    if request.id.is_some() || request.method == "ping" {
                         stdout.write_all(serde_json::to_string(&response)?.as_bytes()).await?;
                         stdout.write_all(b"\n").await?;
                         stdout.flush().await?;
@@ -1884,26 +1887,29 @@ impl McpServer {
             );
         }
 
-        // Boundary hardening — validate request structure + tool call params.
+        // Boundary hardening — validate tool call params (tools/call only;
+        // other methods such as ping or initialize have their own shapes).
         // This enforces the 64KB params cap, string length limits, injection
         // filtering, SSRF protection and path-traversal protection that
         // previously existed only as dead code.
-        let raw = json!({
-            "jsonrpc": req.jsonrpc,
-            "method": req.method,
-            "id": req.id,
-            "params": req.params,
-        });
-        if let crate::input_validation::ValidationResult::Invalid(reason) =
-            crate::input_validation::validate_tools_call(&raw)
-        {
-            tracing::warn!(method = %req.method, reason = %reason, "MCP request rejected by boundary validation");
-            return error_response(
-                req.id.as_ref(),
-                -32602,
-                "Invalid params",
-                Some(json!({"reason": reason})),
-            );
+        if req.method == "tools/call" {
+            let raw = json!({
+                "jsonrpc": req.jsonrpc,
+                "method": req.method,
+                "id": req.id,
+                "params": req.params,
+            });
+            if let crate::input_validation::ValidationResult::Invalid(reason) =
+                crate::input_validation::validate_tools_call(&raw)
+            {
+                tracing::warn!(method = %req.method, reason = %reason, "MCP request rejected by boundary validation");
+                return error_response(
+                    req.id.as_ref(),
+                    -32602,
+                    "Invalid params",
+                    Some(json!({"reason": reason})),
+                );
+            }
         }
 
         // Record event for brain-wave tracking on every request
@@ -1917,6 +1923,10 @@ impl McpServer {
             "initialize" => self.handle_initialize(),
             "tools/list" => self.handle_tools_list(),
             "tools/call" => self.handle_tools_call(&req.params).await,
+            // MCP liveness check — the spec requires an empty result response
+            // even though ping carries no id. Clients like opencode stall the
+            // connection when this goes unanswered.
+            "ping" => Ok(json!({})),
             _ => Err(RpcError {
                 code: -32601,
                 message: format!("Method not found: {}", req.method),
@@ -3034,6 +3044,18 @@ mod tests {
         let response = server.handle_request(json_req).await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         assert_eq!(parsed["error"]["code"], -32601);
+    }
+
+    #[tokio::test]
+    async fn handle_request_ping_responds() {
+        let mut server = test_server();
+        // ping has no id — the MCP spec still requires an empty result.
+        let response = server
+            .handle_request(r#"{"jsonrpc":"2.0","method":"ping"}"#)
+            .await;
+        let parsed: Value = serde_json::from_str(&response).unwrap();
+        assert_eq!(parsed["result"], json!({}));
+        assert!(parsed.get("error").is_none());
     }
 
     #[tokio::test]
