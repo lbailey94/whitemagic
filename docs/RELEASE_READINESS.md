@@ -183,9 +183,11 @@ Open work:
   workflow using the release binary.~~ ✅ Done 2026-08-13 — `ci.yml` gained a
   curated smoke job; `release.yml` runs the smoke test against the freshly
   built Linux release binary before artifact upload.
-- Add native curated MCP configurations for Claude Desktop, Cursor, and
+- ~~Add native curated MCP configurations for Claude Desktop, Cursor, and
   Windsurf. Include an explicit `--profile curated` until profile precedence is
-  fixed.
+  fixed.~~ ✅ Done 2026-08-13 — all four client config templates launch the
+  native binary with `--profile curated` (paths are local-dev templates;
+  generic install-path docs remain packaging work).
 - Add release checksums and a short install path for the published binaries.
 - Compile and test the optional Python, ONNX, LanceDB, and other supported
   feature combinations in a separate compatibility job.

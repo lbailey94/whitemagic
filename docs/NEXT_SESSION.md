@@ -39,7 +39,9 @@ verified.
    release workflow.~~ ✅ done 2026-08-13 — `scripts/curated_smoke_test.py`
    covers the full curated workflow, restart persistence, and read-only
    enforcement; wired into `ci.yml` and `release.yml`.
-6. Update client configurations and v5 documentation from verified behavior.
+6. ~~Update client configurations and v5 documentation from verified behavior.~~
+   ✅ done 2026-08-13 — client config templates now launch the native binary
+   with `--profile curated`; CHANGELOG gained an unreleased hardening section.
 7. Only after the release gates are green, retest the embedding router and add
    abstention if the labeled results justify it.
 
