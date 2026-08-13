@@ -994,7 +994,9 @@ async fn run_quickstart() -> anyhow::Result<()> {
 
     let mut server = wm_mcp::McpServer::with_defaults(&lmdb_path)?;
 
-    // Step 1: Create memories
+    // Step 1: Create memories — dispatched through the server's pipeline so
+    // the Tantivy index is populated. (Direct LMDB writes left the index
+    // empty and step 3's search returned nothing on a fresh store.)
     println!();
     println!("--- Step 1: Create memories ---");
 
@@ -1013,16 +1015,41 @@ async fn run_quickstart() -> anyhow::Result<()> {
         ),
     ];
 
+    for (content, tags) in &memories {
+        let create_request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "wm",
+                "arguments": {
+                    "route": "memory.create",
+                    "args": {"galaxy": "codex", "content": content, "tags": tags}
+                }
+            }
+        });
+        let response = server.handle_request(&create_request.to_string()).await;
+        let resp: serde_json::Value = serde_json::from_str(&response).unwrap_or_default();
+        if let Some(text) = resp
+            .get("result")
+            .and_then(|r| r.get("content"))
+            .and_then(|c| c.get(0))
+            .and_then(|c| c.get("text"))
+            .and_then(|t| t.as_str())
+        {
+            if let Ok(created) = serde_json::from_str::<serde_json::Value>(text) {
+                if created.get("status").and_then(|s| s.as_str()) == Some("success") {
+                    let id = created.get("id").and_then(|v| v.as_str()).unwrap_or("?");
+                    println!("  Created: [{id}] \"{}\"", &content[..50]);
+                    continue;
+                }
+            }
+        }
+        println!("  (Failed to create: \"{}\")", &content[..50]);
+    }
+
     {
         let store = server.store();
-        for (content, tags) in &memories {
-            let mut mem = wm_memory::Memory::new(wm_core::Galaxy::Codex, content.to_string());
-            mem.metadata.tags = tags.iter().map(std::string::ToString::to_string).collect();
-            let id = mem.metadata.id;
-            store.put(wm_core::Galaxy::Codex, &mem)?;
-            println!("  Created: [{}] \"{}\"", id, &content[..50]);
-        }
-
         // Step 2: List memories
         println!();
         println!("--- Step 2: List memories in Codex galaxy ---");
@@ -1064,7 +1091,10 @@ async fn run_quickstart() -> anyhow::Result<()> {
                             .and_then(serde_json::Value::as_f64)
                             .unwrap_or(0.0);
                         let galaxy = r.get("galaxy").and_then(|g| g.as_str()).unwrap_or("?");
-                        let preview = r.get("content").and_then(|c| c.as_str()).unwrap_or("");
+                        let preview = r
+                            .get("content_preview")
+                            .and_then(|c| c.as_str())
+                            .unwrap_or("");
                         println!(
                             "    score={:.3} galaxy={} preview=\"{}\"",
                             score,
