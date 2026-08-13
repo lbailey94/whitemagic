@@ -1928,7 +1928,7 @@ mod tests {
                 call_count: 23,
                 success_count: 19,
                 p50_latency_ns: 12_000_000,
-                p99_latency_ns: 89_000_000,
+                peak_latency_ns: 89_000_000,
                 cpu_time_ns: 276_000_000,
                 lmdb_pages_touched: 142,
                 last_used_unix: 1723000000,
@@ -1956,7 +1956,7 @@ mod tests {
         assert_eq!(deserialized.tool_stats.call_count, 23);
         assert_eq!(deserialized.tool_stats.success_count, 19);
         assert_eq!(deserialized.tool_stats.p50_latency_ns, 12_000_000);
-        assert_eq!(deserialized.tool_stats.p99_latency_ns, 89_000_000);
+        assert_eq!(deserialized.tool_stats.peak_latency_ns, 89_000_000);
         assert!(deserialized.routed_via_wm);
         assert_eq!(deserialized.arg_size_bytes, 156);
         assert_eq!(deserialized.response_size_bytes, 0);

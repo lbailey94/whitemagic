@@ -2221,8 +2221,8 @@ impl McpServer {
         if success {
             // Anomaly detection on successful dispatches (suppressed in
             // read-only mode — friction auto-log writes to the store).
-            let p99_ms = telemetry.tool_stats.p99_latency_ns as f32 / 1_000_000.0;
-            if !self.readonly && p99_ms > 0.0 && telemetry.latency_ms > p99_ms {
+            let peak_ms = telemetry.tool_stats.peak_latency_ns as f32 / 1_000_000.0;
+            if !self.readonly && peak_ms > 0.0 && telemetry.latency_ms > peak_ms {
                 if let Err(e) = self
                     .friction_auto_log
                     .log_anomaly(&telemetry, "high_latency")

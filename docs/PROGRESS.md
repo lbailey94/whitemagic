@@ -165,6 +165,28 @@ curated smoke test passing.
 
 ---
 
+## Session 2026-08-13 (afternoon, batch 6): full-surface hygiene fixes
+
+Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean.
+
+- **Tool stats honesty** (`wm-core/src/tool.rs`): the p99 field was never
+  updated (the high-latency anomaly path could not fire). Replaced with a
+  documented peak-latency field (`fetch_max`) plus an EWMA central estimate.
+- **`bus.emit` effects** (`wm-core/src/effects.rs`, `resonance.rs`): declared
+  read-only while mutating the bus and its persistent log; now declares
+  `Resource::EventBus` + `Resource::Filesystem` writes.
+- **`system.health` honesty** (`expansion/system.rs`): galaxy-count failures
+  are reported in `failed_galaxies` with `healthy: false` instead of being
+  silently converted to zero.
+- **`session.start` NLU payload** (`lib.rs`): emits `title` instead of `name`
+  (which the tool never read), so natural-language session starts carry their
+  name.
+- **Web timeout validation** (`expansion/web.rs`): negative `timeout_secs`
+  values are clamped instead of panicking `Duration::from_secs_f64`.
+- Regression tests for each fix.
+
+---
+
 ## Phase 0: Foundation — COMPLETE
 
 All deliverables verified, 101 tests passing, zero compiler warnings.

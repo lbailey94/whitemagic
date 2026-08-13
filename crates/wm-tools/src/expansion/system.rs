@@ -43,19 +43,28 @@ impl Tool for SystemHealthTool {
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let mut total = 0usize;
         let mut galaxies_with_data = 0usize;
+        let mut failed_galaxies: Vec<String> = Vec::new();
         for galaxy in Galaxy::all() {
-            let count = self.store.count(galaxy).unwrap_or(0);
-            if count > 0 {
-                total += count;
-                galaxies_with_data += 1;
+            match self.store.count(galaxy) {
+                Ok(count) => {
+                    if count > 0 {
+                        total += count;
+                        galaxies_with_data += 1;
+                    }
+                }
+                // Storage errors must not be silently converted to zero
+                // counts — the old behavior reported healthy: true with no
+                // signal that galaxy reads were failing.
+                Err(e) => failed_galaxies.push(format!("{}: {e}", galaxy.db_name())),
             }
         }
         Ok(json!({
             "status": "success",
-            "healthy": true,
+            "healthy": failed_galaxies.is_empty(),
             "store_path": self.store.path().display().to_string(),
             "total_memories": total,
             "galaxies_with_data": galaxies_with_data,
+            "failed_galaxies": failed_galaxies,
             "version": env!("CARGO_PKG_VERSION"),
         }))
     }
@@ -184,5 +193,24 @@ impl Tool for SystemFlushTool {
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wm_memory::MemoryStore;
+
+    #[tokio::test]
+    async fn system_health_reports_failures_honestly() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(dir.path()).unwrap());
+        let tool = SystemHealthTool::new(store);
+
+        let v = tool.call(&mut Context::default(), json!({})).await.unwrap();
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["healthy"], true);
+        assert!(v.get("failed_galaxies").is_some());
+        assert_eq!(v["failed_galaxies"].as_array().unwrap().len(), 0);
     }
 }

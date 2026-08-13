@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   aliases alongside the action-based `claims` tool.
 - **Release checksums** — per-platform sha256 files generated and uploaded
   with release binaries.
+- **Full-surface hygiene** — `bus.emit` now declares its bus/filesystem writes
+  (`Resource::EventBus` added); `system.health` reports failed galaxies instead
+  of claiming healthy; `session.start` NLU payload uses `title` (the old
+  `name` key silently created "Untitled Session" entries); web tools clamp
+  negative timeouts instead of panicking; tool stats track a true peak latency
+  so the high-latency anomaly path can fire.
 
 ## [5.7.7] — 2026-08-11
 
