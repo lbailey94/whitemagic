@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   curated workflow (memory, sessions, transactions, claims calibration,
   restart persistence, read-only enforcement) against the release binary and is
   wired into CI and the release workflow.
+- **`wm quickstart` fix** — seeded memories are created through the dispatch
+  pipeline so the Tantivy index is populated; the demo search previously
+  returned nothing on a fresh store and printed empty previews.
 
 ## [5.7.7] — 2026-08-11
 
