@@ -131,22 +131,79 @@ impl Tool for SessionListTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "List all sessions in the Sessions galaxy"
+        "List session summaries in the Sessions galaxy (turns grouped by session)"
     }
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let memories = self.store.scan_all(Galaxy::Sessions)?;
-        let sessions: Vec<Value> = memories
-            .iter()
-            .filter(|m| m.metadata.tags.contains(&"session".to_string()))
-            .map(|m| {
+
+        // Group turns and start markers into session summaries.
+        #[derive(Default)]
+        struct Summary {
+            title: Option<String>,
+            turns: u64,
+            earliest: Option<chrono::DateTime<chrono::Utc>>,
+            latest: Option<chrono::DateTime<chrono::Utc>>,
+        }
+        let mut summaries: std::collections::HashMap<String, Summary> =
+            std::collections::HashMap::new();
+
+        for m in &memories {
+            if let Ok(v) = serde_json::from_str::<Value>(&m.content) {
+                // session_start: session id lives in the tag.
+                if v.get("type").and_then(Value::as_str) == Some("session_start") {
+                    if let Some(sid) = m
+                        .metadata
+                        .tags
+                        .iter()
+                        .find_map(|t| t.strip_prefix("session:"))
+                    {
+                        let entry = summaries.entry(sid.to_string()).or_default();
+                        entry.title = v.get("title").and_then(Value::as_str).map(String::from);
+                    }
+                    continue;
+                }
+                // session_turn (and other session memories): session id in content.
+                if let Some(sid) = v.get("session_id").and_then(Value::as_str) {
+                    let entry = summaries.entry(sid.to_string()).or_default();
+                    let ts = m.metadata.created_at;
+                    entry.earliest = Some(entry.earliest.map_or(ts, |e| e.min(ts)));
+                    entry.latest = Some(entry.latest.map_or(ts, |l| l.max(ts)));
+                    if v.get("sequence").and_then(Value::as_u64).is_some() {
+                        entry.turns += 1;
+                    }
+                }
+            }
+        }
+
+        let mut sessions: Vec<(String, Summary)> = summaries.into_iter().collect();
+        // Most recently active sessions first.
+        sessions.sort_by_key(|(_, s)| {
+            std::cmp::Reverse(
+                s.latest
+                    .unwrap_or(chrono::DateTime::<chrono::Utc>::UNIX_EPOCH),
+            )
+        });
+        let total = sessions.len();
+        sessions.truncate(100);
+
+        let sessions: Vec<Value> = sessions
+            .into_iter()
+            .map(|(sid, s)| {
                 json!({
-                    "id": m.metadata.id,
-                    "tags": m.metadata.tags,
-                    "created_at": m.metadata.created_at.to_rfc3339(),
+                    "session_id": sid,
+                    "title": s.title.unwrap_or_else(|| format!("Session {}", &sid[..sid.len().min(8)])),
+                    "turns": s.turns,
+                    "first_activity": s.earliest.map(|t| t.to_rfc3339()),
+                    "last_activity": s.latest.map(|t| t.to_rfc3339()),
                 })
             })
             .collect();
-        Ok(json!({ "status": "success", "count": sessions.len(), "sessions": sessions }))
+
+        Ok(json!({
+            "status": "success",
+            "count": total,
+            "sessions": sessions,
+        }))
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
