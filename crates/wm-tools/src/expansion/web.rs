@@ -618,10 +618,13 @@ impl Tool for WebFetchTool {
             .get("max_chars")
             .and_then(Value::as_u64)
             .unwrap_or(30_000) as usize;
+        // Negative or non-finite timeouts used to reach
+        // Duration::from_secs_f64 and panic the tool.
         let timeout = args
             .get("timeout_secs")
             .and_then(Value::as_f64)
-            .unwrap_or(15.0);
+            .unwrap_or(15.0)
+            .clamp(0.0, 300.0);
         let url = safe_url(url)?;
         let fetched = tokio::task::spawn_blocking(move || {
             fetch_bounded(&url, max_chars, Duration::from_secs_f64(timeout))
@@ -685,7 +688,8 @@ impl Tool for WebDeepFetchTool {
         let timeout = args
             .get("timeout_secs")
             .and_then(Value::as_f64)
-            .unwrap_or(30.0);
+            .unwrap_or(30.0)
+            .clamp(0.0, 300.0);
         let url = safe_url(url)?;
         let fetched = tokio::task::spawn_blocking(move || {
             fetch_bounded(&url, max_chars, Duration::from_secs_f64(timeout))
@@ -746,7 +750,8 @@ impl Tool for WebSearchTool {
         let timeout = args
             .get("timeout_secs")
             .and_then(Value::as_f64)
-            .unwrap_or(10.0);
+            .unwrap_or(10.0)
+            .clamp(0.0, 300.0);
         let query = query.to_string();
         let query_for_task = query.clone();
         let results = tokio::task::spawn_blocking(move || {
@@ -823,10 +828,12 @@ impl Tool for WebSearchAndReadTool {
             .get("max_chars_per_page")
             .and_then(Value::as_u64)
             .unwrap_or(15_000) as usize;
+        // Clamp like web.fetch — negative timeouts must not panic the tool.
         let timeout = args
             .get("timeout_secs")
             .and_then(Value::as_f64)
-            .unwrap_or(15.0);
+            .unwrap_or(15.0)
+            .clamp(0.0, 300.0);
         let query = query.to_string();
         let query_for_task = query.clone();
         let results = tokio::task::spawn_blocking(move || {
@@ -897,6 +904,24 @@ pub fn register_web(registry: &wm_dispatch::ToolRegistry) -> wm_dispatch::ToolRe
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn negative_timeout_does_not_panic() {
+        // Regression: negative timeout_secs reached Duration::from_secs_f64
+        // and panicked the tool. The value is clamped; the fetch then fails
+        // normally against an invalid URL instead of panicking.
+        let tool = WebFetchTool::new();
+        let result = tool
+            .call(
+                &mut Context::default(),
+                json!({"url": "http://127.0.0.1:1/never", "timeout_secs": -5.0}),
+            )
+            .await;
+        assert!(
+            result.is_err(),
+            "unroutable local URL should fail, not panic"
+        );
+    }
 
     #[test]
     fn html_stripping_removes_tags_and_scripts() {

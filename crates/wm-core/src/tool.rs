@@ -26,10 +26,12 @@ pub struct ToolStats {
     pub call_count: AtomicU64,
     /// Number of successful calls
     pub success_count: AtomicU64,
-    /// P50 latency in nanoseconds
+    /// Central latency estimate in nanoseconds (exponential moving average
+    /// of recent call latencies — not an exact median).
     pub p50_latency_ns: AtomicU64,
-    /// P99 latency in nanoseconds
-    pub p99_latency_ns: AtomicU64,
+    /// Highest latency seen in nanoseconds. The high-latency anomaly path
+    /// compares new calls against this peak.
+    pub peak_latency_ns: AtomicU64,
     /// Total CPU time consumed in nanoseconds
     pub cpu_time_ns: AtomicU64,
     /// Total LMDB pages touched
@@ -46,8 +48,17 @@ impl ToolStats {
         self.call_count.fetch_add(1, Ordering::Relaxed);
         self.success_count.fetch_add(1, Ordering::Relaxed);
         let latency_ns = latency.as_nanos() as u64;
-        // Simple P50/P50 update — in production, use a lock-free histogram
-        self.p50_latency_ns.store(latency_ns, Ordering::Relaxed);
+        // Exponential moving average (alpha = 0.5) of recent latencies —
+        // an honest approximation of the central value without a histogram.
+        self.p50_latency_ns
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |old| {
+                Some(old / 2 + latency_ns / 2)
+            })
+            .ok();
+        // Peak latency: the high-latency anomaly path compares new calls
+        // against the worst latency ever seen.
+        self.peak_latency_ns
+            .fetch_max(latency_ns, Ordering::Relaxed);
         self.cpu_time_ns
             .fetch_add(cpu_time.as_nanos() as u64, Ordering::Relaxed);
         self.last_used_unix.store(
@@ -65,7 +76,13 @@ impl ToolStats {
     pub fn record_failure(&self, latency: Duration) {
         self.call_count.fetch_add(1, Ordering::Relaxed);
         let latency_ns = latency.as_nanos() as u64;
-        self.p50_latency_ns.store(latency_ns, Ordering::Relaxed);
+        self.p50_latency_ns
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |old| {
+                Some(old / 2 + latency_ns / 2)
+            })
+            .ok();
+        self.peak_latency_ns
+            .fetch_max(latency_ns, Ordering::Relaxed);
         self.last_used_unix.store(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -132,7 +149,7 @@ impl ToolStats {
             call_count: self.call_count.load(Ordering::Relaxed),
             success_count: self.success_count.load(Ordering::Relaxed),
             p50_latency_ns: self.p50_latency_ns.load(Ordering::Relaxed),
-            p99_latency_ns: self.p99_latency_ns.load(Ordering::Relaxed),
+            peak_latency_ns: self.peak_latency_ns.load(Ordering::Relaxed),
             cpu_time_ns: self.cpu_time_ns.load(Ordering::Relaxed),
             lmdb_pages_touched: self.lmdb_pages_touched.load(Ordering::Relaxed),
             last_used_unix: self.last_used_unix.load(Ordering::Relaxed),
@@ -148,10 +165,10 @@ pub struct ToolStatsSnapshot {
     pub call_count: u64,
     /// Number of successful calls
     pub success_count: u64,
-    /// P50 latency in nanoseconds
+    /// Central latency estimate in nanoseconds (EWMA).
     pub p50_latency_ns: u64,
-    /// P99 latency in nanoseconds
-    pub p99_latency_ns: u64,
+    /// Highest latency seen in nanoseconds.
+    pub peak_latency_ns: u64,
     /// Total CPU time consumed in nanoseconds
     pub cpu_time_ns: u64,
     /// Total LMDB pages touched
@@ -233,5 +250,22 @@ mod tests {
             stats.record_success(Duration::from_millis(1), Duration::from_millis(1));
         }
         assert!(stats.is_hot(1000));
+    }
+
+    #[test]
+    fn stats_track_peak_latency() {
+        // Regression: the peak (formerly mislabeled "p99") field was never
+        // updated, so the high-latency anomaly path could never fire.
+        let stats = ToolStats::default();
+        stats.record_success(Duration::from_millis(10), Duration::from_millis(1));
+        assert_eq!(stats.peak_latency_ns.load(Ordering::Relaxed), 10_000_000);
+        stats.record_failure(Duration::from_millis(25));
+        assert_eq!(stats.peak_latency_ns.load(Ordering::Relaxed), 25_000_000);
+        stats.record_success(Duration::from_millis(5), Duration::from_millis(1));
+        assert_eq!(
+            stats.peak_latency_ns.load(Ordering::Relaxed),
+            25_000_000,
+            "peak latency must never decrease"
+        );
     }
 }

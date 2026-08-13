@@ -30,6 +30,8 @@ pub enum Resource {
     Inference,
     /// User session state
     Session,
+    /// The Gan Ying event bus (persisted to a JSONL log when enabled)
+    EventBus,
 }
 
 /// A capability that a tool may invoke.

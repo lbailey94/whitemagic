@@ -1990,9 +1990,12 @@ impl WmMetaTool {
             "session.start" => {
                 for prefix in &["start session ", "new session ", "begin session "] {
                     if lower.starts_with(prefix) {
-                        let name = thought[prefix.len()..].trim().to_string();
-                        if !name.is_empty() {
-                            return Some(("name".into(), name));
+                        let title = thought[prefix.len()..].trim().to_string();
+                        if !title.is_empty() {
+                            // `title` is the argument the session tool reads;
+                            // the old payload key was "name", which silently
+                            // created "Untitled Session" entries.
+                            return Some(("title".into(), title));
                         }
                     }
                 }
@@ -3653,9 +3656,12 @@ mod tests {
 
     #[tokio::test]
     async fn nlu_extract_payload_session_start() {
+        // Regression: the payload key was "name", which session.start never
+        // reads — natural-language session starts silently created
+        // "Untitled Session" entries.
         let (param, value) =
             WmMetaTool::extract_payload("start session research", "session.start").unwrap();
-        assert_eq!(param, "name");
+        assert_eq!(param, "title");
         assert_eq!(value, "research");
     }
 

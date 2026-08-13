@@ -81,7 +81,13 @@ impl BusEmitTool {
         Self {
             bus,
             stats: ToolStats::default(),
-            effects: EffectRow::read_only(vec![Resource::Galaxy("resonance".into())]),
+            // Truthful effects: emitting mutates the bus and, when
+            // persistence is enabled, appends to the resonance event log.
+            // It was previously declared read-only.
+            effects: EffectRow {
+                writes: vec![Resource::EventBus, Resource::Filesystem],
+                ..Default::default()
+            },
         }
     }
 }
@@ -266,6 +272,17 @@ mod tests {
         let stats_tool = BusStatsTool::new(bus);
         let v2 = stats_tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(v2["events_emitted"], 1);
+    }
+
+    #[test]
+    fn bus_emit_declares_writes() {
+        // Regression: bus.emit was declared read-only while it mutated the
+        // event bus (and its persistent JSONL log when enabled).
+        let tool = BusEmitTool::new(test_bus());
+        assert!(
+            tool.effects().writes.contains(&wm_core::Resource::EventBus),
+            "bus.emit must declare an EventBus write"
+        );
     }
 
     #[tokio::test]
