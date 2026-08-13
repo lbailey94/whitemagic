@@ -4011,6 +4011,22 @@ mod tests {
             json!(expected),
             "inner tools.list must report the active profile registry size"
         );
+        // The curated surface must not expose galaxy management tools and
+        // must expose the explicit claims routes.
+        let names: Vec<&str> = listed["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|t| t["name"].as_str())
+            .collect();
+        assert!(
+            !names.iter().any(|n| n.starts_with("galaxy.")),
+            "curated tools.list must exclude galaxy tools, got: {names:?}"
+        );
+        assert!(
+            names.contains(&"claims.calibration"),
+            "curated tools.list must include claims.calibration, got: {names:?}"
+        );
     }
 
     #[tokio::test]
