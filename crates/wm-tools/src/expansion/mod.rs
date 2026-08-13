@@ -427,7 +427,9 @@ pub fn register_expansion(
             transaction_state.clone(),
         )))
         .register(Arc::new(TransactionCommitTool::new(
+            store.clone(),
             transaction_state.clone(),
+            search.clone(),
         )))
         .register(Arc::new(TransactionRollbackTool::new(
             store.clone(),
