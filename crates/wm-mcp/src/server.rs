@@ -5,7 +5,7 @@
 //! - `tools/list`: returns only the `wm` meta-tool (single entry point)
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
-//! The `wm` meta-tool routes natural language to 202 tools via TF-IDF NLU
+//! The `wm` meta-tool routes natural language to 229 tools via TF-IDF NLU
 //! classification, or accepts an explicit `route` parameter for direct dispatch.
 //! Use `wm(thought="list tools")` or `wm(route="tools.list")` to discover tools.
 
@@ -41,7 +41,7 @@ use wm_workspace::GlobalWorkspace;
 #[allow(dead_code)]
 pub struct McpServer {
     registry: ToolRegistry,
-    pipeline: DispatchPipeline,
+    pipeline: Arc<DispatchPipeline>,
     eco_mode: EcoModeController,
     citta: CittaHeartbeat,
     dream: DreamCycle,
@@ -291,7 +291,7 @@ impl McpServer {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         registry: ToolRegistry,
-        pipeline: DispatchPipeline,
+        pipeline: Arc<DispatchPipeline>,
         eco_mode: EcoModeController,
         store: Arc<MemoryStore>,
         associations: Arc<AssociationStore>,
@@ -374,7 +374,7 @@ impl McpServer {
     #[allow(clippy::too_many_arguments)]
     pub fn with_default_eco(
         registry: ToolRegistry,
-        pipeline: DispatchPipeline,
+        pipeline: Arc<DispatchPipeline>,
         store: Arc<MemoryStore>,
         associations: Arc<AssociationStore>,
         substrate: Arc<SubstrateMonitor>,
@@ -640,8 +640,7 @@ impl McpServer {
         // the trust primitive agent message boards require (cf. the July
         // 2026 agent-incident reporting).
         let sangha_chat = Arc::new(std::sync::Mutex::new(
-            SanghaChat::new(100)
-                .with_signing_key(wm_sangha::MeshKeyPair::from_seed(WM_MESH_KEY.as_bytes())),
+            SanghaChat::new(100).with_signing_key(mesh_signing_key()),
         ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
 
@@ -677,18 +676,31 @@ impl McpServer {
         let shadow_stats = Arc::new(std::sync::RwLock::new(
             wm_tools::embedding_router::ShadowModeStats::default(),
         ));
-        let (registry, embedding_router) =
-            wm_tools::register_meta_tools_with_router(&registry, &store, shadow_stats.clone());
 
-        let pipeline = DispatchPipeline::new(
-            std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
-                &wm_dispatch::RateLimiterConfig::from_env(),
-            )),
-            std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
-            dharma_gate.clone(),
-            Some(karma_ledger.clone()),
-        )
-        .with_gana_registry(gana_registry.clone());
+        // Build the pipeline BEFORE the meta-tools so the `wm` meta-tool can
+        // dispatch inner tools through the full governance chain (destructive
+        // confirmation, dharma gate, rate limit, circuit breaker, karma, stats).
+        // Bound tool execution with WM_DISPATCH_TIMEOUT_MS (default 300s) so a
+        // hung tool can't wedge the stdio loop or block graceful shutdown.
+        let pipeline = Arc::new(
+            DispatchPipeline::new(
+                std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
+                    &wm_dispatch::RateLimiterConfig::from_env(),
+                )),
+                std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
+                dharma_gate.clone(),
+                Some(karma_ledger.clone()),
+            )
+            .with_gana_registry(gana_registry.clone())
+            .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env()),
+        );
+
+        let (registry, embedding_router) = wm_tools::register_meta_tools_with_router(
+            &registry,
+            &store,
+            shadow_stats.clone(),
+            Some(pipeline.clone()),
+        );
 
         let friction_auto_log = Arc::new(FrictionAutoLogTool::new(
             store.clone(),
@@ -1862,7 +1874,7 @@ impl McpServer {
     /// Handle `tools/list` — return only the `wm` meta-tool.
     ///
     /// The `wm` meta-tool is the single entry point for MCP clients. It routes
-    /// natural language input to any of the 184 registered tools via TF-IDF
+    /// natural language input to any of the 229 registered tools via TF-IDF
     /// NLU classification, or accepts an explicit `route` parameter for direct
     /// dispatch. Use `wm(thought="list tools")` or `wm(route="tools.list")` to
     /// discover available tools.
@@ -1878,12 +1890,12 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — all 202 tools are accessible through it
+        // Only expose the wm meta-tool — all 229 tools are accessible through it
         if let Some(wm) = self.registry.get("wm") {
             Ok(json!({
                 "tools": [{
                     "name": wm.name(),
-                    "description": "WhiteMagic v5 meta-tool — routes natural language to 202 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
+                    "description": "WhiteMagic v5 meta-tool — routes natural language to 229 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -2586,10 +2598,27 @@ impl McpServer {
     }
 }
 
-/// Default seed for the node's Sangha signing keypair — signs inter-agent
-/// chat messages so peers can verify authorship and tamper-resistance. In
-/// production this should be overridden with a deployment-specific secret.
-const WM_MESH_KEY: &str = "wm-sangha-mesh-v5-default-key";
+/// Build the node's Sangha signing keypair.
+///
+/// Seeded from `WM_MESH_KEY` when set (stable node identity across restarts).
+/// When unset, a random per-process key is used — the node appears as a fresh
+/// identity each restart, but a hardcoded default would be shared by every
+/// WhiteMagic node, letting anyone impersonate another node's messages.
+fn mesh_signing_key() -> wm_sangha::MeshKeyPair {
+    match std::env::var("WM_MESH_KEY") {
+        Ok(key) if !key.is_empty() => wm_sangha::MeshKeyPair::from_seed(key.as_bytes()),
+        _ => {
+            tracing::warn!(
+                "WM_MESH_KEY not set — using a random per-process Sangha identity; \
+                 set WM_MESH_KEY for a stable node identity across restarts"
+            );
+            let mut seed = [0u8; 32];
+            seed[..16].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
+            seed[16..].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
+            wm_sangha::MeshKeyPair::from_secret(seed)
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -2721,8 +2750,7 @@ mod tests {
         // the trust primitive agent message boards require (cf. the July
         // 2026 agent-incident reporting).
         let sangha_chat = Arc::new(std::sync::Mutex::new(
-            SanghaChat::new(100)
-                .with_signing_key(wm_sangha::MeshKeyPair::from_seed(WM_MESH_KEY.as_bytes())),
+            SanghaChat::new(100).with_signing_key(mesh_signing_key()),
         ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
 
@@ -2754,13 +2782,20 @@ mod tests {
         let test_shadow_stats = Arc::new(std::sync::RwLock::new(
             wm_tools::embedding_router::ShadowModeStats::default(),
         ));
-        let registry = wm_tools::register_meta_tools(&registry, &store, test_shadow_stats.clone());
 
-        let pipeline = DispatchPipeline::new(
+        // Build the pipeline BEFORE the meta-tools so the wm meta-tool's inner
+        // dispatch is governance-gated (destructive confirm, dharma, rate limit).
+        let pipeline = Arc::new(DispatchPipeline::new(
             Arc::new(wm_dispatch::RateLimiter::default()),
             Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
             dharma_gate.clone(),
             Some(karma_ledger.clone()),
+        ));
+        let (registry, _router) = wm_tools::register_meta_tools_with_router(
+            &registry,
+            &store,
+            test_shadow_stats.clone(),
+            Some(pipeline.clone()),
         );
 
         let friction_auto_log =
@@ -2838,7 +2873,7 @@ mod tests {
             tools[0]["description"]
                 .as_str()
                 .unwrap()
-                .contains("202 tools")
+                .contains("229 tools")
         );
     }
 
@@ -3727,6 +3762,172 @@ mod tests {
         assert!(
             parsed.get("error").is_some() || parsed.get("result").is_none(),
             "rollback without confirm should be blocked"
+        );
+    }
+
+    // ── E2E: wm meta-tool inner dispatch is governance-gated ───────────
+
+    #[tokio::test]
+    async fn e2e_wm_route_destructive_without_confirm_blocked() {
+        let mut server = test_server();
+
+        // Initialize to move out of Delta
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Create a memory via the wm meta-tool
+        let create_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"e2e destructive gate test"}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&create_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let create_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(create_result["status"], "success");
+        let mem_id = create_result["id"].as_str().unwrap().to_string();
+
+        // Delete via wm(route=...) WITHOUT confirm — must be blocked by the
+        // pipeline's destructive gate, even though the request went through NLU
+        // explicit routing.
+        let delete_req = format!(
+            r#"{{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{{"name":"wm","arguments":{{"route":"memory.delete","args":{{"galaxy":"codex","id":"{mem_id}"}}}}}}}}"#
+        );
+        let delete_resp = server.handle_request(&delete_req).await;
+        let parsed: Value = serde_json::from_str(&delete_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let delete_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(
+            delete_result["status"], "error",
+            "wm(route=memory.delete) without confirm must fail, got: {delete_result}"
+        );
+        assert!(
+            delete_result["error"]
+                .as_str()
+                .unwrap()
+                .contains("destructive"),
+            "expected destructive-gate message, got: {delete_result}"
+        );
+
+        // The memory must still exist
+        let list_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.list","args":{"galaxy":"codex","limit":100}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&list_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let list_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        let memories = list_result["memories"].as_array().unwrap();
+        assert!(
+            memories.iter().any(|m| m["id"] == mem_id),
+            "memory should survive a blocked destructive call"
+        );
+    }
+
+    #[tokio::test]
+    async fn e2e_wm_thought_cannot_delete_memory() {
+        let mut server = test_server();
+
+        // Initialize to move out of Delta
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Create a memory via the wm meta-tool
+        let create_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"e2e NLU hard-block test"}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&create_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let create_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(create_result["status"], "success");
+        let mem_id = create_result["id"].as_str().unwrap().to_string();
+
+        // Natural-language delete — structurally blocked (NLU hard gate)
+        let delete_req = format!(
+            r#"{{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{{"name":"wm","arguments":{{"thought":"delete memory {mem_id}"}}}}}}"#
+        );
+        let delete_resp = server.handle_request(&delete_req).await;
+        let parsed: Value = serde_json::from_str(&delete_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let delete_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(
+            delete_result["status"], "error",
+            "NLU delete must be blocked, got: {delete_result}"
+        );
+        assert!(
+            delete_result["message"]
+                .as_str()
+                .unwrap()
+                .contains("cannot be reached via natural language"),
+            "expected NLU hard-block message, got: {delete_result}"
+        );
+
+        // The memory must still exist
+        let list_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.list","args":{"galaxy":"codex","limit":100}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&list_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let list_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        let memories = list_result["memories"].as_array().unwrap();
+        assert!(
+            memories.iter().any(|m| m["id"] == mem_id),
+            "memory should survive an NLU delete attempt"
+        );
+    }
+
+    #[tokio::test]
+    async fn e2e_wm_route_destructive_with_confirm_succeeds() {
+        let mut server = test_server();
+
+        // Initialize to move out of Delta
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Create a memory via the wm meta-tool
+        let create_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"e2e confirm-path test"}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&create_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let create_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(create_result["status"], "success");
+        let mem_id = create_result["id"].as_str().unwrap().to_string();
+
+        // Delete via wm(route=...) WITH confirm — must succeed
+        let delete_req = format!(
+            r#"{{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{{"name":"wm","arguments":{{"route":"memory.delete","args":{{"galaxy":"codex","id":"{mem_id}","confirm":true}}}}}}}}"#
+        );
+        let delete_resp = server.handle_request(&delete_req).await;
+        let parsed: Value = serde_json::from_str(&delete_resp).unwrap();
+        assert!(
+            parsed.get("error").is_none() || parsed["error"].is_null(),
+            "wm(route=memory.delete) with confirm should succeed, got: {parsed}"
+        );
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let delete_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(delete_result["status"], "success");
+
+        // The memory must be gone
+        let list_resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.list","args":{"galaxy":"codex","limit":100}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&list_resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let list_result: Value =
+            serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        let memories = list_result["memories"].as_array().unwrap();
+        assert!(
+            !memories.iter().any(|m| m["id"] == mem_id),
+            "memory should be deleted after confirmed destructive call"
         );
     }
 

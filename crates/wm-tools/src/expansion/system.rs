@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
-use wm_memory::MemoryStore;
+use wm_memory::{MemoryStore, SearchEngine};
 
 pub struct SystemHealthTool {
     store: Arc<MemoryStore>,
@@ -119,14 +119,16 @@ impl Tool for SystemConfigTool {
 /// `system.flush` — flush/cleanup old memories (gentle GC).
 pub struct SystemFlushTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl SystemFlushTool {
-    pub fn new(store: Arc<MemoryStore>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
         Self {
             store,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("universal".into())],
@@ -169,6 +171,7 @@ impl Tool for SystemFlushTool {
                     && !mem.metadata.tags.contains(&"system".to_string())
                 {
                     self.store.delete(galaxy, mem.metadata.id)?;
+                    super::common::deindex(self.search.as_deref(), &mem.metadata.id.to_string());
                     flushed += 1;
                 }
             }

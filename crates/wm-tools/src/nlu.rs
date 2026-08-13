@@ -2221,9 +2221,14 @@ fn stem(word: &str) -> String {
     // Handle -ing (searching → search, storing → store)
     if w.ends_with("ing") && w.len() > 4 {
         let base = &w[..w.len() - 3];
-        // Double consonant check: running → run
-        if base.len() >= 2 && base.chars().last() == base.chars().nth(base.len() - 2) {
-            return base[..base.len() - 1].to_string();
+        // Double consonant check: running → run (character-aware — the old
+        // byte-index comparison could panic on non-ASCII words like "xéing"
+        // and "éing", which slice mid-character).
+        if let Some(last) = base.chars().last() {
+            let is_double_consonant = base.chars().rev().nth(1) == Some(last);
+            if is_double_consonant {
+                return base[..base.len() - last.len_utf8()].to_string();
+            }
         }
         // Check if this base needs 'e' restoration (e-dropping verb)
         if E_DROPPING_BASES.binary_search(&base).is_ok() {
@@ -3011,6 +3016,31 @@ mod tests {
         let (tool5, _) = classify("list memories");
         let (tool6, _) = classify("list memory");
         assert_eq!(tool5, tool6);
+    }
+
+    #[test]
+    fn stem_handles_unicode_without_panicking() {
+        // Regression: the -ing double-consonant check sliced by byte index,
+        // panicking on words whose base ends in a multi-byte character.
+        assert_eq!(stem("xéing"), "xé");
+        assert_eq!(stem("éing"), "é");
+        assert_eq!(stem("caféing"), "café");
+        // ASCII behavior unchanged
+        assert_eq!(stem("running"), "run");
+        assert_eq!(stem("swimming"), "swim");
+        assert_eq!(stem("searching"), "search");
+        assert_eq!(stem("typing"), "typ");
+        assert_eq!(stem("memories"), "memory");
+        assert_eq!(stem("stored"), "store");
+    }
+
+    #[test]
+    fn classify_handles_unicode_thoughts_without_panicking() {
+        // Full pipeline: tokenize → stem on multibyte input must not panic.
+        let (tool, _conf) = classify("caféing sur les mémoires");
+        assert!(!tool.is_empty());
+        let (tool2, _conf2) = classify("mémoire éing recherche");
+        assert!(!tool2.is_empty());
     }
 
     #[test]

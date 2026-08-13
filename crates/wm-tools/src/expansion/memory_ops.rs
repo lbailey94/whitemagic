@@ -16,14 +16,16 @@ use super::common::{galaxy_name, parse_galaxy, parse_galaxy_or};
 /// `memory.consolidate` — deduplicate memories by content_hash within a galaxy.
 pub struct MemoryConsolidateTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl MemoryConsolidateTool {
-    pub fn new(store: Arc<MemoryStore>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
         Self {
             store,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("codex".into())],
@@ -63,6 +65,7 @@ impl Tool for MemoryConsolidateTool {
             if let Some(existing_id) = seen_hashes.get(hash) {
                 if *existing_id != mem.metadata.id {
                     self.store.delete(galaxy, mem.metadata.id)?;
+                    super::common::deindex(self.search.as_deref(), &mem.metadata.id.to_string());
                     duplicates += 1;
                 }
             } else {
@@ -850,14 +853,16 @@ impl Tool for MemoryFilterTool {
 /// `memory.deduplicate` — find and merge duplicate memories by content similarity.
 pub struct MemoryDeduplicateTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl MemoryDeduplicateTool {
-    pub fn new(store: Arc<MemoryStore>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
         Self {
             store,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("codex".into())],
@@ -914,6 +919,10 @@ impl Tool for MemoryDeduplicateTool {
                             }));
                             if !dry_run {
                                 self.store.delete(galaxy, mem.metadata.id)?;
+                                super::common::deindex(
+                                    self.search.as_deref(),
+                                    &mem.metadata.id.to_string(),
+                                );
                             }
                         }
                     } else {
@@ -948,6 +957,10 @@ impl Tool for MemoryDeduplicateTool {
                             }));
                             if !dry_run {
                                 self.store.delete(galaxy, memories[j].metadata.id)?;
+                                super::common::deindex(
+                                    self.search.as_deref(),
+                                    &memories[j].metadata.id.to_string(),
+                                );
                                 removed_count += 1;
                             }
                             break;
@@ -1251,7 +1264,7 @@ mod tests {
             &Memory::new(Galaxy::Codex, "unique content".into()),
         );
 
-        let tool = MemoryDeduplicateTool::new(store.clone());
+        let tool = MemoryDeduplicateTool::new(store.clone(), None);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"mode": "hash", "dry_run": true}))
@@ -1276,7 +1289,7 @@ mod tests {
             &Memory::new(Galaxy::Codex, "unique content".into()),
         );
 
-        let tool = MemoryDeduplicateTool::new(store.clone());
+        let tool = MemoryDeduplicateTool::new(store.clone(), None);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"mode": "hash", "dry_run": false}))
@@ -1290,6 +1303,55 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn memory_deduplicate_deindexes_removed_memories() {
+        // Regression: deduplicate used to delete from LMDB without de-indexing,
+        // so full-text search kept returning the removed duplicate.
+        let (_dir, store, search) = hybrid_fixture();
+
+        let m1 = Memory::new(Galaxy::Codex, "index drift duplicate".into());
+        let m2 = Memory::new(Galaxy::Codex, "index drift duplicate".into());
+        let id1 = m1.metadata.id;
+        let id2 = m2.metadata.id;
+        let _ = store.put(Galaxy::Codex, &m1);
+        let _ = store.put(Galaxy::Codex, &m2);
+        for mem in [&m1, &m2] {
+            let mut writer = search.writer().unwrap();
+            search
+                .add_document(
+                    &mut writer,
+                    &mem.metadata.id.to_string(),
+                    mem.metadata.galaxy.db_name(),
+                    &mem.content,
+                    &mem.metadata.tags,
+                    mem.metadata.created_at.timestamp(),
+                )
+                .unwrap();
+            search.commit(&mut writer).unwrap();
+        }
+
+        // Precondition: both duplicates are searchable.
+        let before = search.search_ids("index drift", 100).unwrap();
+        assert_eq!(before.len(), 2);
+
+        let tool = MemoryDeduplicateTool::new(store.clone(), Some(search.clone()));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"mode": "hash", "dry_run": false}))
+            .await
+            .unwrap();
+        assert_eq!(v["removed"], 1);
+
+        // The surviving memory is still searchable; the removed one is gone.
+        // (LMDB scan order is by UUID, so either duplicate may be the keeper.)
+        let after = search.search_ids("index drift", 100).unwrap();
+        assert_eq!(after.len(), 1, "search index should only contain survivors");
+        assert!(
+            after.contains(&id1) || after.contains(&id2),
+            "survivor should be one of the original memories"
+        );
+    }
+
+    #[tokio::test]
     async fn memory_deduplicate_content_mode() {
         let store = test_store();
         let m1 = Memory::new(Galaxy::Codex, "same text".into());
@@ -1297,7 +1359,7 @@ mod tests {
         let _ = store.put(Galaxy::Codex, &m1);
         let _ = store.put(Galaxy::Codex, &m2);
 
-        let tool = MemoryDeduplicateTool::new(store);
+        let tool = MemoryDeduplicateTool::new(store, None);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"mode": "content", "dry_run": true}))
@@ -1318,7 +1380,7 @@ mod tests {
             &Memory::new(Galaxy::Codex, "content b".into()),
         );
 
-        let tool = MemoryDeduplicateTool::new(store);
+        let tool = MemoryDeduplicateTool::new(store, None);
         let mut ctx = Context::default();
         let v = tool.call(&mut ctx, json!({})).await.unwrap();
         assert_eq!(v["duplicates_found"], 0);
@@ -1327,7 +1389,7 @@ mod tests {
     #[tokio::test]
     async fn memory_deduplicate_invalid_mode() {
         let store = test_store();
-        let tool = MemoryDeduplicateTool::new(store);
+        let tool = MemoryDeduplicateTool::new(store, None);
         let mut ctx = Context::default();
         let result = tool.call(&mut ctx, json!({"mode": "invalid"})).await;
         assert!(result.is_err());
@@ -1408,7 +1470,7 @@ mod tests {
             Gana::WinnowingBasket
         );
         assert_eq!(
-            MemoryDeduplicateTool::new(store.clone()).gana(),
+            MemoryDeduplicateTool::new(store.clone(), None).gana(),
             Gana::WinnowingBasket
         );
         assert_eq!(MemoryExportTool::new(store).gana(), Gana::WinnowingBasket);

@@ -235,6 +235,20 @@ impl EmbeddingRouter {
     /// should defer to the TF-IDF router when `margin < MIN_MARGIN`.
     #[must_use]
     pub fn route_with_margin(&self, query: &str) -> Option<(String, f64, f64)> {
+        self.route_with_margin_and_embedding(query)
+            .map(|(tool, conf, margin, _)| (tool, conf, margin))
+    }
+
+    /// Route a query, also returning the query embedding.
+    ///
+    /// The embedding is what [`record_outcome_with_embedding`](Self::record_outcome_with_embedding)
+    /// needs — returning it here lets callers embed each query once instead of
+    /// twice (embedder HTTP round-trips dominate NLU latency).
+    #[must_use]
+    pub fn route_with_margin_and_embedding(
+        &self,
+        query: &str,
+    ) -> Option<(String, f64, f64, Vec<f32>)> {
         let lower = query.to_lowercase();
         if lower.trim().is_empty() {
             return None;
@@ -313,7 +327,7 @@ impl EmbeddingRouter {
             );
         }
 
-        Some((best_tool, best_score, best_score - second_score))
+        Some((best_tool, best_score, best_score - second_score, query_emb))
     }
 
     /// OATS: interpolate tool embedding toward success centroid.
@@ -344,19 +358,36 @@ impl EmbeddingRouter {
         if query.trim().is_empty() {
             return;
         }
-
         let query_emb = match self.embedder.embed(&query.to_lowercase()) {
             Ok(emb) => emb,
             Err(_) => return,
         };
+        self.record_outcome_with_embedding(tool_name, query, success, &query_emb);
+    }
 
+    /// Record a routing outcome reusing a query embedding already computed by
+    /// the router.
+    ///
+    /// Callers that routed through [`route_with_margin`](Self::route_with_margin)
+    /// should pass the embedding back here so the query is embedded only once
+    /// instead of twice (HTTP embedder round-trips dominate NLU latency).
+    pub fn record_outcome_with_embedding(
+        &self,
+        tool_name: &str,
+        query: &str,
+        success: bool,
+        query_emb: &[f32],
+    ) {
+        if query.trim().is_empty() {
+            return;
+        }
         let Ok(mut stats) = self.outcome_stats.write() else {
             return;
         };
         let stat = stats
             .entry(tool_name.to_string())
             .or_insert_with(|| OutcomeStats::new(self.dim));
-        stat.record(&query_emb, success);
+        stat.record(query_emb, success);
     }
 
     /// Number of tool embeddings in the router.

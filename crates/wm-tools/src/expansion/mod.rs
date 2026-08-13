@@ -212,17 +212,20 @@ pub fn register_expansion(
 ) -> wm_dispatch::ToolRegistry {
     let mut reg = registry
         // Memory ops (7)
-        .register(Arc::new(MemoryConsolidateTool::new(store.clone())))
+        .register(Arc::new(MemoryConsolidateTool::new(
+            store.clone(),
+            search.clone(),
+        )))
         .register(Arc::new(MemoryDecayTool::new(store.clone())))
         .register(Arc::new(MemoryBatchReadTool::new(store.clone())))
         .register(Arc::new(MemoryUpdateTool::new(store.clone(), search.clone())))
         .register(Arc::new(MemoryTagTool::new(store.clone())))
         .register(Arc::new(MemoryStatsTool::new(store.clone())))
-        .register(Arc::new(MemoryHybridRecallTool::new(store.clone(), search)))
+        .register(Arc::new(MemoryHybridRecallTool::new(store.clone(), search.clone())))
         // Memory ops Tier 7 (4) — WinnowingBasket
         .register(Arc::new(MemorySortTool::new(store.clone())))
         .register(Arc::new(MemoryFilterTool::new(store.clone())))
-        .register(Arc::new(MemoryDeduplicateTool::new(store.clone())))
+        .register(Arc::new(MemoryDeduplicateTool::new(store.clone(), search.clone())))
         .register(Arc::new(MemoryExportTool::new(store.clone())))
         // Session (4)
         .register(Arc::new(SessionStartTool::new(store.clone())))
@@ -248,14 +251,20 @@ pub fn register_expansion(
         .register(Arc::new(GalaxyStatsTool::new(store.clone())))
         .register(Arc::new(GalaxyExportTool::new(store.clone())))
         .register(Arc::new(GalaxyImportTool::new(store.clone())))
-        .register(Arc::new(GalaxyTransferTool::new(store.clone())))
+        .register(Arc::new(GalaxyTransferTool::new(
+            store.clone(),
+            search.clone(),
+        )))
         .register(Arc::new(GalaxyMergeTool::new(store.clone())))
         .register(Arc::new(GalaxySnapshotTool::new(store.clone())))
-        .register(Arc::new(GalaxyRestoreTool::new(store.clone())))
+        .register(Arc::new(GalaxyRestoreTool::new(
+            store.clone(),
+            search.clone(),
+        )))
         .register(Arc::new(GalaxyDashboardTool::new(store.clone())))
         .register(Arc::new(GalaxyBackupTool::new(store.clone())))
         .register(Arc::new(GalaxyTaxonomyTool::new(store.clone())))
-        .register(Arc::new(GalaxyPurgeTool::new(store.clone())))
+        .register(Arc::new(GalaxyPurgeTool::new(store.clone(), search.clone())))
         .register(Arc::new(GalaxyHealthTool::new(store.clone())))
         // Knowledge graph (3)
         .register(Arc::new(KgExtractTool::new(store.clone())))
@@ -311,14 +320,17 @@ pub fn register_expansion(
         .register(Arc::new(AgentDescriptionsTool::new(store.clone())))
         .register(Arc::new(AgentCapabilitiesTool::new(store.clone())))
         .register(Arc::new(AgentHeartbeatHistoryTool::new(store.clone())))
-        .register(Arc::new(AgentDeregisterTool::new(store.clone())))
+        .register(Arc::new(AgentDeregisterTool::new(
+            store.clone(),
+            search.clone(),
+        )))
         // Tasks (2)
         .register(Arc::new(TaskDistributeTool::new(store.clone())))
         .register(Arc::new(TaskStatusTool::new(store.clone())))
         // System (3)
         .register(Arc::new(SystemHealthTool::new(store.clone())))
         .register(Arc::new(SystemConfigTool::new()))
-        .register(Arc::new(SystemFlushTool::new(store.clone())))
+        .register(Arc::new(SystemFlushTool::new(store.clone(), search.clone())))
         // Association mining (1)
         .register(Arc::new(MemoryAssociateMineTool::new(store.clone())))
         // Additional (5)
@@ -420,6 +432,7 @@ pub fn register_expansion(
         .register(Arc::new(TransactionRollbackTool::new(
             store.clone(),
             transaction_state,
+            search,
         )));
 
     // Imagination tools (3) — scenario generation, prediction, reflection

@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
-use wm_memory::{Memory, MemoryStore};
+use wm_memory::{Memory, MemoryStore, SearchEngine};
 
 use super::common::galaxy_name;
 use wm_core::Galaxy;
@@ -179,15 +179,21 @@ impl Tool for TransactionCommitTool {
 pub struct TransactionRollbackTool {
     store: Arc<MemoryStore>,
     state: TransactionState,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl TransactionRollbackTool {
-    pub fn new(store: Arc<MemoryStore>, state: TransactionState) -> Self {
+    pub fn new(
+        store: Arc<MemoryStore>,
+        state: TransactionState,
+        search: Option<Arc<SearchEngine>>,
+    ) -> Self {
         Self {
             store,
             state,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("universal".into())],
@@ -262,7 +268,12 @@ impl Tool for TransactionRollbackTool {
                 None => continue,
             };
 
-            // Clear existing memories in this galaxy (single transaction)
+            // Clear existing memories in this galaxy (single transaction) and
+            // de-index them so full-text search doesn't return stale hits.
+            let existing = self.store.scan(galaxy, 10_000)?;
+            for mem in &existing {
+                super::common::deindex(self.search.as_deref(), &mem.metadata.id.to_string());
+            }
             total_cleared += self.store.clear_galaxy(galaxy)?;
 
             // Restore from snapshot (single transaction via batch_put)
@@ -293,6 +304,9 @@ impl Tool for TransactionRollbackTool {
                 to_put.push(mem);
             }
             total_restored += self.store.batch_put(galaxy, &to_put)?;
+            for mem in &to_put {
+                super::common::index_memory(self.search.as_deref(), mem);
+            }
         }
 
         Ok(json!({
@@ -366,7 +380,7 @@ mod tests {
         assert_eq!(store.count(Galaxy::Codex).unwrap(), 0);
 
         // Rollback
-        let rollback = TransactionRollbackTool::new(store.clone(), state);
+        let rollback = TransactionRollbackTool::new(store.clone(), state, None);
         let result = rollback
             .call(&mut Context::new(BrainWave::Gamma), json!({}))
             .await;
@@ -404,7 +418,7 @@ mod tests {
     async fn transaction_rollback_without_begin_errors() {
         let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(None));
-        let rollback = TransactionRollbackTool::new(store, state);
+        let rollback = TransactionRollbackTool::new(store, state, None);
         let result = rollback
             .call(&mut Context::new(BrainWave::Gamma), json!({}))
             .await;
@@ -415,7 +429,7 @@ mod tests {
     async fn transaction_rollback_is_destructive() {
         let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(None));
-        let rollback = TransactionRollbackTool::new(store, state);
+        let rollback = TransactionRollbackTool::new(store, state, None);
         assert!(rollback.effects().destructive);
     }
 }

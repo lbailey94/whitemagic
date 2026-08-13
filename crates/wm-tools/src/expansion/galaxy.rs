@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
-use wm_memory::{Memory, MemoryStore};
+use wm_memory::{Memory, MemoryStore, SearchEngine};
 
 use super::common::{galaxy_name, parse_galaxy, parse_galaxy_or};
 
@@ -207,14 +207,16 @@ impl Tool for GalaxyImportTool {
 /// galaxy, then deletes them from the source. Optionally filters by tags.
 pub struct GalaxyTransferTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl GalaxyTransferTool {
-    pub fn new(store: Arc<MemoryStore>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
         Self {
             store,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![
@@ -289,6 +291,7 @@ impl Tool for GalaxyTransferTool {
             self.store.put(to_galaxy, &new_mem)?;
 
             self.store.delete(from_galaxy, mem.metadata.id)?;
+            super::common::deindex(self.search.as_deref(), &mem.metadata.id.to_string());
             transferred += 1;
         }
 
@@ -499,14 +502,16 @@ impl Tool for GalaxySnapshotTool {
 /// into the target galaxy. Optionally clears the target first.
 pub struct GalaxyRestoreTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl GalaxyRestoreTool {
-    pub fn new(store: Arc<MemoryStore>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
         Self {
             store,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("codex".into())],
@@ -570,6 +575,7 @@ impl Tool for GalaxyRestoreTool {
             let existing = self.store.scan(target_galaxy, 10_000)?;
             for mem in &existing {
                 self.store.delete(target_galaxy, mem.metadata.id)?;
+                super::common::deindex(self.search.as_deref(), &mem.metadata.id.to_string());
             }
         }
 
@@ -593,6 +599,7 @@ impl Tool for GalaxyRestoreTool {
                 mem.metadata.importance = imp as f32;
             }
             self.store.put(target_galaxy, &mem)?;
+            super::common::index_memory(self.search.as_deref(), &mem);
             restored += 1;
         }
 
@@ -854,14 +861,16 @@ impl Tool for GalaxyTaxonomyTool {
 /// `galaxy.purge` — delete all memories from a specific galaxy.
 pub struct GalaxyPurgeTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl GalaxyPurgeTool {
-    pub fn new(store: Arc<MemoryStore>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
         Self {
             store,
+            search,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("codex".into())],
@@ -897,6 +906,7 @@ impl Tool for GalaxyPurgeTool {
         let count = memories.len();
         for mem in &memories {
             self.store.delete(galaxy, mem.metadata.id)?;
+            super::common::deindex(self.search.as_deref(), &mem.metadata.id.to_string());
         }
 
         Ok(json!({
@@ -1025,7 +1035,7 @@ mod tests {
         assert_eq!(store.count(Galaxy::Codex).unwrap(), 1);
         assert_eq!(store.count(Galaxy::Research).unwrap(), 0);
 
-        let tool = GalaxyTransferTool::new(Arc::new(store));
+        let tool = GalaxyTransferTool::new(Arc::new(store), None);
         let result = tool
             .call(
                 &mut Context::default(),
@@ -1041,7 +1051,7 @@ mod tests {
     #[tokio::test]
     async fn galaxy_transfer_same_galaxy_errors() {
         let (_tmp, store) = open_store();
-        let tool = GalaxyTransferTool::new(Arc::new(store));
+        let tool = GalaxyTransferTool::new(Arc::new(store), None);
         let result = tool
             .call(
                 &mut Context::default(),
@@ -1054,7 +1064,7 @@ mod tests {
     #[tokio::test]
     async fn galaxy_transfer_missing_params_errors() {
         let (_tmp, store) = open_store();
-        let tool = GalaxyTransferTool::new(Arc::new(store));
+        let tool = GalaxyTransferTool::new(Arc::new(store), None);
         assert!(
             tool.call(&mut Context::default(), json!({"from_galaxy": "codex"}))
                 .await
@@ -1076,7 +1086,7 @@ mod tests {
         store.put(Galaxy::Codex, &mem1).unwrap();
         store.put(Galaxy::Codex, &mem2).unwrap();
 
-        let tool = GalaxyTransferTool::new(Arc::new(store));
+        let tool = GalaxyTransferTool::new(Arc::new(store), None);
         let result = tool
             .call(
                 &mut Context::default(),
@@ -1155,7 +1165,7 @@ mod tests {
         let _ = store.delete(Galaxy::Codex, mem2.metadata.id);
         assert_eq!(store.count(Galaxy::Codex).unwrap(), 0);
 
-        let restore_tool = GalaxyRestoreTool::new(store.clone());
+        let restore_tool = GalaxyRestoreTool::new(store.clone(), None);
         let restore_result = restore_tool
             .call(
                 &mut Context::default(),
@@ -1177,7 +1187,7 @@ mod tests {
     #[tokio::test]
     async fn galaxy_restore_not_found_errors() {
         let (_tmp, store) = open_store();
-        let tool = GalaxyRestoreTool::new(Arc::new(store));
+        let tool = GalaxyRestoreTool::new(Arc::new(store), None);
         let result = tool
             .call(
                 &mut Context::default(),
@@ -1190,7 +1200,7 @@ mod tests {
     #[tokio::test]
     async fn galaxy_restore_missing_snapshot_id_errors() {
         let (_tmp, store) = open_store();
-        let tool = GalaxyRestoreTool::new(Arc::new(store));
+        let tool = GalaxyRestoreTool::new(Arc::new(store), None);
         let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
@@ -1199,7 +1209,7 @@ mod tests {
     async fn galaxy_tool_names_are_correct() {
         let store = Arc::new(open_store().1);
         assert_eq!(
-            GalaxyTransferTool::new(store.clone()).name(),
+            GalaxyTransferTool::new(store.clone(), None).name(),
             "galaxy.transfer"
         );
         assert_eq!(GalaxyMergeTool::new(store.clone()).name(), "galaxy.merge");
@@ -1207,16 +1217,19 @@ mod tests {
             GalaxySnapshotTool::new(store.clone()).name(),
             "galaxy.snapshot"
         );
-        assert_eq!(GalaxyRestoreTool::new(store).name(), "galaxy.restore");
+        assert_eq!(GalaxyRestoreTool::new(store, None).name(), "galaxy.restore");
     }
 
     #[tokio::test]
     async fn galaxy_tool_ganas_are_correct() {
         let store = Arc::new(open_store().1);
-        assert_eq!(GalaxyTransferTool::new(store.clone()).gana(), Gana::Neck);
+        assert_eq!(
+            GalaxyTransferTool::new(store.clone(), None).gana(),
+            Gana::Neck
+        );
         assert_eq!(GalaxyMergeTool::new(store.clone()).gana(), Gana::Neck);
         assert_eq!(GalaxySnapshotTool::new(store.clone()).gana(), Gana::Void);
-        assert_eq!(GalaxyRestoreTool::new(store).gana(), Gana::Void);
+        assert_eq!(GalaxyRestoreTool::new(store, None).gana(), Gana::Void);
     }
 
     #[tokio::test]
@@ -1273,7 +1286,7 @@ mod tests {
         store.put(Galaxy::Codex, &mem2).unwrap();
         assert_eq!(store.count(Galaxy::Codex).unwrap(), 2);
 
-        let tool = GalaxyPurgeTool::new(store);
+        let tool = GalaxyPurgeTool::new(store, None);
         let result = tool
             .call(&mut Context::default(), json!({"galaxy": "codex"}))
             .await
@@ -1285,7 +1298,7 @@ mod tests {
     #[tokio::test]
     async fn galaxy_purge_missing_param_errors() {
         let store = Arc::new(open_store().1);
-        let tool = GalaxyPurgeTool::new(store);
+        let tool = GalaxyPurgeTool::new(store, None);
         let result = tool.call(&mut Context::default(), json!({})).await;
         assert!(result.is_err());
     }
@@ -1328,7 +1341,10 @@ mod tests {
             GalaxyTaxonomyTool::new(store.clone()).name(),
             "galaxy.taxonomy"
         );
-        assert_eq!(GalaxyPurgeTool::new(store.clone()).name(), "galaxy.purge");
+        assert_eq!(
+            GalaxyPurgeTool::new(store.clone(), None).name(),
+            "galaxy.purge"
+        );
         assert_eq!(GalaxyHealthTool::new(store).name(), "galaxy.health");
     }
 
@@ -1338,7 +1354,7 @@ mod tests {
         assert_eq!(GalaxyDashboardTool::new(store.clone()).gana(), Gana::Void);
         assert_eq!(GalaxyBackupTool::new(store.clone()).gana(), Gana::Void);
         assert_eq!(GalaxyTaxonomyTool::new(store.clone()).gana(), Gana::Void);
-        assert_eq!(GalaxyPurgeTool::new(store.clone()).gana(), Gana::Void);
+        assert_eq!(GalaxyPurgeTool::new(store.clone(), None).gana(), Gana::Void);
         assert_eq!(GalaxyHealthTool::new(store).gana(), Gana::Void);
     }
 }
