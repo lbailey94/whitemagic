@@ -77,9 +77,8 @@ process-level checks passed.
   describes the active profile and registry-derived tool count instead of the
   hardcoded 229-tool archive surface.
 
-Remaining release blockers: secondary-index and filtered-reindex correctness,
-privacy/model-exclusion enforcement, curated contract schemas, and the
-committed process smoke test.
+Remaining release blockers: privacy/model-exclusion enforcement, curated
+contract schemas, and the committed process smoke test.
 
 ---
 
@@ -100,6 +99,25 @@ Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean.
   journal snapshot so transactions do not accumulate recovery data.
 - **New tests**: exact-record roundtrip, 10,001-memory no-truncation, commit
   cleanup, failed-rollback state retention (10 transaction tests total).
+
+---
+
+## Session 2026-08-13 (morning, batch 3): storage consistency fixes
+
+Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean.
+
+- **Secondary-index overwrite** (`wm-memory/src/store.rs`): `put` removes the
+  previous record's index entries before adding new ones, so stale tags,
+  importance values, timestamps, and content hashes are no longer queryable
+  after updates. Regression test covers all four index types.
+- **Content-hash sync** (`wm-tools/src/expansion/memory_ops.rs`):
+  `memory.update` recomputes the content hash when content changes, keeping
+  dedup and hash lookups truthful.
+- **Filtered reindex safety** (`wm-memory/src/reindex.rs` +
+  `SearchEngine::delete_by_galaxy`): `wm reindex --galaxy codex` now deletes
+  and re-indexes only the selected galaxies; the old behavior wiped the whole
+  index and destroyed search documents for other galaxies. Regression test
+  proves unselected galaxies keep their documents.
 
 ---
 

@@ -48,10 +48,11 @@ pub struct IndexRebuildReport {
 
 /// Rebuild the Tantivy index from LMDB contents.
 ///
-/// All existing index documents are deleted first, then every memory in every
-/// galaxy is re-indexed. Content that fails [`sanitize_content_for_index`] is
-/// skipped (counted in the report). `galaxy_filter` restricts the rebuild to
-/// the named galaxies (empty = all galaxies).
+/// With no filter, all existing index documents are deleted and every memory
+/// in every galaxy is re-indexed. With a filter, only the selected galaxies
+/// are deleted and re-indexed — documents belonging to other galaxies are
+/// left untouched. Content that fails [`sanitize_content_for_index`] is
+/// skipped (counted in the report).
 ///
 /// NOTE: the existing index directory must be backed up by the caller before
 /// this runs — deletion is permanent once committed.
@@ -63,13 +64,24 @@ pub fn rebuild_index(
     let mut report = IndexRebuildReport::default();
     {
         let mut writer = search.writer()?;
-        writer
-            .as_mut()
-            .ok_or_else(|| {
-                CoreError::Memory("Tantivy writer unavailable: index opened read-only".into())
-            })?
-            .delete_all_documents()
-            .map_err(|e| CoreError::Memory(format!("Tantivy delete_all_documents: {e}")))?;
+        if galaxy_filter.is_empty() {
+            writer
+                .as_mut()
+                .ok_or_else(|| {
+                    CoreError::Memory("Tantivy writer unavailable: index opened read-only".into())
+                })?
+                .delete_all_documents()
+                .map_err(|e| CoreError::Memory(format!("Tantivy delete_all_documents: {e}")))?;
+        } else {
+            // Filtered rebuild: remove only the selected galaxies' documents.
+            // The old behavior deleted everything first, so `--galaxy codex`
+            // silently wiped search documents for every other galaxy.
+            for galaxy in Galaxy::all() {
+                if galaxy_filter.iter().any(|g| g == galaxy.db_name()) {
+                    search.delete_by_galaxy(&mut writer, galaxy.db_name())?;
+                }
+            }
+        }
 
         for galaxy in Galaxy::all() {
             if !galaxy_filter.is_empty() && !galaxy_filter.iter().any(|g| g == galaxy.db_name()) {
@@ -237,5 +249,16 @@ mod tests {
         assert_eq!(report.indexed, 1);
         assert_eq!(report.galaxies.len(), 1);
         assert_eq!(report.galaxies[0].galaxy, "codex");
+
+        // Regression: the filtered rebuild used to delete ALL documents first,
+        // so documents from unselected galaxies vanished from the index.
+        let codex = search.search("codex memory", 10).unwrap();
+        assert_eq!(codex.len(), 1);
+        let research = search.search("research memory", 10).unwrap();
+        assert_eq!(
+            research.len(),
+            1,
+            "filtered rebuild must preserve documents in unselected galaxies"
+        );
     }
 }

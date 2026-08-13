@@ -367,6 +367,19 @@ impl SearchEngine {
         Ok(())
     }
 
+    /// Delete every document belonging to a galaxy.
+    ///
+    /// Used by filtered reindexing so `--galaxy codex` removes only codex
+    /// documents instead of wiping the entire index.
+    pub fn delete_by_galaxy(&self, writer: &mut Option<IndexWriter>, galaxy: &str) -> Result<()> {
+        let writer = writer.as_mut().ok_or_else(|| {
+            CoreError::Memory("Tantivy writer unavailable: index opened read-only".into())
+        })?;
+        let term = tantivy::Term::from_field_text(self.field_galaxy, galaxy);
+        writer.delete_term(term);
+        Ok(())
+    }
+
     /// Commit pending index changes and reload the reader.
     pub fn commit(&self, writer: &mut Option<IndexWriter>) -> Result<()> {
         let writer = writer.as_mut().ok_or_else(|| {

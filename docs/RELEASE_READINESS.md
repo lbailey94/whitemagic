@@ -119,20 +119,25 @@ Open work:
   retryable.
 - ~~Delete or mark committed journal snapshots.~~ ✅ Fixed 2026-08-13 — commit
   removes the rollback snapshot and de-indexes it.
-- Remove stale LMDB secondary index entries before overwriting a memory. Recompute
-  content hashes when content changes.
+- ~~Remove stale LMDB secondary index entries before overwriting a memory. Recompute
+  content hashes when content changes.~~ ✅ Fixed 2026-08-13 — `MemoryStore::put`
+  removes the previous record's index entries on overwrite; `memory.update`
+  recomputes the content hash when content changes. Regression tests cover
+  tags, importance ranges, and content hashes.
 - Define the LMDB/Tantivy consistency contract. If indexing is asynchronous or
   best-effort, expose degraded index state and provide a safe rebuild path.
-- Fix filtered reindexing so `--galaxy codex` cannot delete documents from other
-  galaxies.
+- ~~Fix filtered reindexing so `--galaxy codex` cannot delete documents from other
+  galaxies.~~ ✅ Fixed 2026-08-13 — filtered rebuilds delete and re-index only
+  the selected galaxies; regression test proves unselected galaxies keep their
+  documents.
 
 Acceptance criteria:
 
 - ✅ Rollback restores byte-equivalent memory records and original UUIDs.
 - ✅ Rollback tests cover metadata, indexes, search results, and a failed restore.
-- Update tests prove old tags, importance values, timestamps, and hashes are no
+- ✅ Update tests prove old tags, importance values, timestamps, and hashes are no
   longer queryable.
-- A filtered reindex preserves all unselected galaxies.
+- ✅ A filtered reindex preserves all unselected galaxies.
 - Search health reports stale or unavailable indexes instead of silently saying
   the system is healthy.
 

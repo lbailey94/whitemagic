@@ -33,7 +33,8 @@ verified.
 2. ~~Fix the profile and read-only boundaries.~~ ✅ done 2026-08-13
 3. ~~Make transaction rollback exact and failure-safe, preserving IDs and all
    metadata.~~ ✅ done 2026-08-13
-4. Fix secondary-index overwrite behavior and filtered reindexing.
+4. ~~Fix secondary-index overwrite behavior and filtered reindexing.~~ ✅ done
+   2026-08-13
 5. Add the committed curated process smoke test, then wire it into CI and the
    release workflow.
 6. Update client configurations and v5 documentation from verified behavior.
