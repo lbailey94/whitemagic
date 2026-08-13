@@ -289,6 +289,8 @@ and experimental.
 - `README.md`: product promise, curated surface, honest maturity language, and
   release-readiness link.
 - `docs/RELEASE_READINESS.md`: this plan, gates, and decisions.
+- `docs/PRE_RELEASE_LAUNCH_PLAN.md`: launch actions distilled from the retired
+  WMdocs vault (assets to reuse, ideas to port, items to skip).
 - `docs/ARCHIVE_CAPABILITY_MAP.md`: vetted ideas from the retired projects and
   the v6+ research direction.
 - `docs/NEXT_SESSION.md`: the current execution slice only.

@@ -4,6 +4,18 @@ The feature phases are complete, but release stabilization is still in
 progress. Use [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) as the
 source of truth for blockers, acceptance tests, and the next execution order.
 
+## Session Continuity
+
+At the start of a working session, recall where the previous session left off
+through the `whitemagic-dev` MCP tool (curated profile, writable store):
+
+- `wm(route="session.continuity", args={"n": 5})` — the tail of the most
+  recent prior session.
+- `wm(route="session.replay", args={"mode": "progressive", "session_id": "<id>", "token_budget": 600})` — budgeted recall of a specific session.
+- `wm(route="session.list")` — session summaries.
+
+Record meaningful turns as you go: `wm(route="session.record", args={"content": "...", "role": "ai", "turn_type": "decision"|"breakthrough"|"summary", "importance": 0.8})`.
+
 ## Build
 
 ```bash
