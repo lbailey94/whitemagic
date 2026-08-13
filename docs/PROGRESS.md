@@ -187,6 +187,26 @@ Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean.
 
 ---
 
+## Session 2026-08-13 (afternoon, batch 7): curated contract and 5.8.0
+
+Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean,
+release build clean, curated smoke test passing against the 5.8.0 binary.
+
+- **Hybrid-recall semantics decided**: `memory.hybrid_recall` is Tantivy BM25 +
+  importance/metadata filtering; the description now says so explicitly.
+  Vector fusion stays separate until the embedding write path is wired.
+- **Native argument schemas**: `Tool::input_schema()` (default empty)
+  implemented for the core curated tools (memory CRUD/search/query/chat,
+  sessions, transactions, claims + aliases) and surfaced in `tools.list`
+  output. Test asserts memory.create/transaction.rollback schema content.
+- **Optional-feature CI matrix**: `wm-mcp/python`, `wm-memory/lancedb`,
+  `wm-memory/onnx` build jobs (Julia excluded until a runner provides a Julia
+  runtime); python feature verified locally.
+- **Version 5.8.0**: workspace, CLI, README, and changelog bumped; the
+  hardening batches are now documented as 5.8.0 changes.
+
+---
+
 ## Phase 0: Foundation — COMPLETE
 
 All deliverables verified, 101 tests passing, zero compiler warnings.

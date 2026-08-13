@@ -4,7 +4,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ## Current Status
 
-**v5.7.7 — Feature phases complete; release stabilization in progress. 15 crates, 229 registered tool implementations, 3,447 tests, ~131,000 LOC, 0 clippy warnings, and 0 dependency vulnerabilities. The release target is the curated local memory/session MCP workflow; explicit routing is the reliable contract, while semantic NLU and the broader cognitive surface remain optional or experimental.**
+**v5.8.0 — Feature phases complete; release stabilization in progress. 15 crates, 229 registered tool implementations, 3,447+ tests, ~131,000 LOC, 0 clippy warnings, and 0 dependency vulnerabilities. The release target is the curated local memory/session MCP workflow; explicit routing is the reliable contract, while semantic NLU and the broader cognitive surface remain optional or experimental.**
 
 The product promise is local-first memory and session continuity for coding
 agents: remember project context, find it after restart, and carry work across
@@ -84,7 +84,7 @@ wm migrate     # Migrate legacy v26 SQLite memories into the v5 store
 - `--profile minimal` — core memory CRUD + search/chat
 - `WM_TOOL_ALLOWLIST=memory,session` — arbitrary prefix allowlist via env
 
-Use the explicit `--profile` flag with v5.7.7. CLI/environment profile
+Use the explicit `--profile` flag with v5.8.0. CLI/environment profile
 precedence is being hardened before release; see
 [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md).
 

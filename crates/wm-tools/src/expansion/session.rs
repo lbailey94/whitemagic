@@ -41,6 +41,15 @@ impl Tool for SessionStartTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "title": super::common::str_prop("Session title"),
+                "user": super::common::str_prop("User identifier (default 'default')"),
+            }),
+            &[],
+        )
+    }
     fn description(&self) -> &str {
         "Start a new session — creates a session memory in Sessions galaxy"
     }

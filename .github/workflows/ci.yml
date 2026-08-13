@@ -51,6 +51,22 @@ jobs:
       - run: cargo build --release --bin wm
       - run: python3 scripts/curated_smoke_test.py
 
+  optional-features:
+    name: Optional Feature Builds
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - "wm-mcp/python"
+          - "wm-memory/lancedb"
+          - "wm-memory/onnx"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --features "${{ matrix.features }}"
+
   test-macos:
     name: Tests (macOS)
     runs-on: macos-latest

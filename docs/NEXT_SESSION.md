@@ -6,7 +6,7 @@
 
 ## Current State
 
-- v5.7.7, 15 crates, 229 registered tool implementations, 3,447 tests.
+- v5.8.0, 15 crates, 229 registered tool implementations, 3,447+ tests.
 - `cargo test --workspace --quiet`, format check, clippy, and release binary
   build passed on 2026-08-12.
 - Explicit curated-profile rehearsal passed create, search, FTS-based hybrid

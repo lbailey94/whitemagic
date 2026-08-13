@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-08-12
 **Target session:** 2026-08-13
-**Version under review:** v5.7.7
+**Version under review:** v5.8.0
 **Status:** Feature phases complete; release stabilization is not complete
 
 This document is the release-readiness source of truth. `README.md` should
@@ -163,10 +163,17 @@ Open work:
   such as `claims.calibration`. Document the chosen route exactly.~~ ✅ Done
   2026-08-13 — explicit alias routes `claims.add/resolve/status/list/calibration`
   are registered alongside the action-based `claims` tool, with tests.
-- Decide whether `memory.hybrid_recall` means FTS plus metadata or true vector
-  plus FTS fusion. Align the name, description, implementation, and tests.
-- Add generated or native argument schemas for the curated tools. The generic
-  `args` object is acceptable internally but weak for client onboarding.
+- ~~Decide whether `memory.hybrid_recall` means FTS plus metadata or true vector
+  plus FTS fusion. Align the name, description, implementation, and tests.~~ ✅
+  Decided 2026-08-13 — `memory.hybrid_recall` is Tantivy BM25 + importance/
+  metadata filtering; the tool description states this explicitly. Vector
+  fusion remains a separate capability until the embedding write path is wired
+  end to end.
+- ~~Add generated or native argument schemas for the curated tools. The generic
+  `args` object is acceptable internally but weak for client onboarding.~~ ✅
+  Done 2026-08-13 — `Tool::input_schema()` (default empty) implemented for the
+  core curated tools (memory CRUD/search/query/chat, sessions, transactions,
+  claims + aliases) and surfaced in `tools.list` output, with tests.
 - Add export, backup, index-health, and recovery instructions to the core
   workflow.
 
@@ -199,10 +206,14 @@ Open work:
   native binary with `--profile curated` (paths are local-dev templates;
   generic install-path docs remain packaging work).
 - Add release checksums and a short install path for the published binaries.
-- Compile and test the optional Python, ONNX, LanceDB, and other supported
-  feature combinations in a separate compatibility job.
-- Repair the benchmark comparison job before treating performance regressions as
-  gated.
+- ~~Compile and test the optional Python, ONNX, LanceDB, and other supported
+  feature combinations in a separate compatibility job.~~ ✅ Done 2026-08-13 —
+  CI gained an optional-feature build matrix for `wm-mcp/python`,
+  `wm-memory/lancedb`, and `wm-memory/onnx`. Julia is excluded until a CI
+  runner with a Julia runtime is provided.
+- ~~Repair the benchmark comparison job before treating performance regressions as
+  gated.~~ ✅ Done 2026-08-13 — PR results are compared against an imported
+  baseline from the base branch (advisory, posted to the step summary).
 
 Acceptance criteria:
 
