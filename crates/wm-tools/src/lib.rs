@@ -179,14 +179,25 @@ impl Tool for MemoryReadTool {
         let galaxy = parse_galaxy(galaxy_str)?;
 
         match self.store.get(galaxy, id)? {
-            Some(memory) => Ok(json!({
-                "status": "success",
-                "id": memory.metadata.id.to_string(),
-                "galaxy": memory.metadata.galaxy.db_name(),
-                "content": memory.content,
-                "tags": memory.metadata.tags,
-                "created_at": memory.metadata.created_at.to_rfc3339(),
-            })),
+            Some(memory) => {
+                if memory.metadata.is_private {
+                    // Private memories never appear in MCP responses —
+                    // treat them as not found rather than leaking content.
+                    return Ok(json!({
+                        "status": "not_found",
+                        "id": id_str,
+                        "galaxy": galaxy.db_name(),
+                    }));
+                }
+                Ok(json!({
+                    "status": "success",
+                    "id": memory.metadata.id.to_string(),
+                    "galaxy": memory.metadata.galaxy.db_name(),
+                    "content": memory.content,
+                    "tags": memory.metadata.tags,
+                    "created_at": memory.metadata.created_at.to_rfc3339(),
+                }))
+            }
             None => Ok(json!({
                 "status": "not_found",
                 "id": id_str,
@@ -246,6 +257,7 @@ impl Tool for MemoryListTool {
 
         let entries: Vec<Value> = memories
             .iter()
+            .filter(|m| crate::expansion::common::mcp_visible(m))
             .map(|m| {
                 json!({
                     "id": m.metadata.id.to_string(),
@@ -552,6 +564,7 @@ impl Tool for MemoryQueryTool {
 
         let entries: Vec<Value> = memories
             .iter()
+            .filter(|m| crate::expansion::common::mcp_visible(m))
             .map(|m| {
                 json!({
                     "id": m.metadata.id.to_string(),
@@ -643,12 +656,17 @@ impl Tool for MemorySearchTool {
 
         // Stale verification: index entries whose memory no longer exists in
         // LMDB are dropped, and the preview comes from the verified LMDB copy.
+        // Private memories are dropped here too — they never appear in MCP
+        // search responses.
         let entries: Vec<Value> = results
             .iter()
             .filter_map(|r| {
                 let galaxy = wm_core::Galaxy::from_db_name(&r.galaxy)?;
                 let id = uuid::Uuid::parse_str(&r.memory_id).ok()?;
                 let mem = self.store.get(galaxy, id).ok().flatten()?;
+                if !crate::expansion::common::mcp_visible(&mem) {
+                    return None;
+                }
                 Some(json!({
                     "memory_id": r.memory_id,
                     "galaxy": r.galaxy,
@@ -871,22 +889,26 @@ impl Tool for MemoryVectorSearchTool {
 
         let entries: Vec<Value> = results
             .iter()
-            .map(|r| {
-                // Try to fetch content preview
-                let content_preview = self
-                    .store
-                    .get(r.galaxy, r.memory_id)
-                    .ok()
-                    .flatten()
+            .filter_map(|r| {
+                // Fetch content preview from the verified LMDB copy. Private
+                // memories never appear in MCP vector search responses.
+                // Vector-store entries without a backing memory keep their
+                // slot with an empty preview (unverifiable, no content leak).
+                let stored = self.store.get(r.galaxy, r.memory_id).ok().flatten();
+                if let Some(mem) = &stored {
+                    if !crate::expansion::common::mcp_visible(mem) {
+                        return None;
+                    }
+                }
+                let preview = stored
                     .map(|m| m.content.chars().take(120).collect::<String>())
                     .unwrap_or_default();
-
-                json!({
+                Some(json!({
                     "memory_id": r.memory_id.to_string(),
                     "galaxy": r.galaxy.db_name(),
                     "score": r.score,
-                    "content_preview": content_preview,
-                })
+                    "content_preview": preview,
+                }))
             })
             .collect();
 

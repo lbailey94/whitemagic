@@ -60,6 +60,10 @@ impl ImagineScenarioTool {
         for galaxy in wm_core::Galaxy::memory_galaxies() {
             if let Ok(mems) = self.store.scan(galaxy, limit) {
                 for mem in mems {
+                    // model_exclude memories never enter scenario context.
+                    if mem.metadata.model_exclude {
+                        continue;
+                    }
                     let content_lower = mem.content.to_lowercase();
                     if topic_words.iter().any(|w| content_lower.contains(w)) {
                         context_parts.push(format!("- {}", mem.content));

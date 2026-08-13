@@ -405,6 +405,17 @@ impl RecallEngine {
             .unwrap_or_default()
     }
 
+    /// Whether a memory is flagged `is_private` (missing memories count as
+    /// private — they cannot be verified visible).
+    #[must_use]
+    pub fn is_private(&self, id: Uuid, galaxy: Galaxy) -> bool {
+        self.store
+            .get(galaxy, id)
+            .ok()
+            .flatten()
+            .is_none_or(|m| m.metadata.is_private)
+    }
+
     /// Get memory importance by ID.
     fn get_memory_importance(&self, id: Uuid, galaxy: Galaxy) -> f32 {
         self.store

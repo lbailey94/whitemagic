@@ -176,6 +176,9 @@ pub struct ConversationalConfig {
     pub default_limit: usize,
     /// Whether to enable query caching.
     pub enable_cache: bool,
+    /// Whether to exclude `is_private` memories from results. Default on —
+    /// MCP chat must not surface private memories.
+    pub exclude_private: bool,
 }
 
 impl Default for ConversationalConfig {
@@ -185,6 +188,7 @@ impl Default for ConversationalConfig {
             snippet_length: 200,
             default_limit: 10,
             enable_cache: true,
+            exclude_private: true,
         }
     }
 }
@@ -444,9 +448,14 @@ impl ConversationalSearch {
             }
         }
 
-        // Convert to conversational results
+        // Convert to conversational results. Private memories are excluded
+        // when `exclude_private` is set (default) — MCP chat must not surface
+        // them.
         results
             .into_iter()
+            .filter(|r| {
+                !self.config.exclude_private || !self.recall.is_private(r.memory_id, r.galaxy)
+            })
             .map(|r| {
                 let snippet = if r.content.len() > self.config.snippet_length {
                     format!("{}...", &r.content[..self.config.snippet_length])

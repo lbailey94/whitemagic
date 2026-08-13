@@ -86,6 +86,10 @@ impl Tool for BicameralReasonTool {
         for galaxy in &galaxies {
             let mems = self.store.scan(*galaxy, scan_limit)?;
             for mem in mems {
+                // model_exclude memories never enter hemisphere evidence.
+                if mem.metadata.model_exclude {
+                    continue;
+                }
                 let content_lower = mem.content.to_lowercase();
                 if topic_words.iter().any(|tw| content_lower.contains(tw)) {
                     evidence.push(mem.content.chars().take(200).collect());

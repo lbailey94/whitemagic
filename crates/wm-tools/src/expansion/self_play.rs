@@ -206,6 +206,10 @@ impl SelfPlayRunTool {
         for galaxy in wm_core::Galaxy::memory_galaxies() {
             if let Ok(mems) = self.store.scan(galaxy, 10) {
                 for mem in mems.iter().take(3) {
+                    // model_exclude memories never enter task context.
+                    if mem.metadata.model_exclude {
+                        continue;
+                    }
                     parts.push(format!("- {}", mem.content));
                 }
             }

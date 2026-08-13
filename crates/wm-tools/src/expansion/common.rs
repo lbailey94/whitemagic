@@ -3,7 +3,22 @@
 #![forbid(unsafe_code)]
 
 use wm_core::{CoreError, Galaxy};
-use wm_memory::SearchEngine;
+use wm_memory::{Memory, SearchEngine};
+
+/// MCP visibility: memories flagged `is_private` never appear in MCP read,
+/// search, list, query, or recall responses. Local maintenance paths
+/// (export, doctor, reindex) may still see them.
+#[must_use]
+pub const fn mcp_visible(mem: &Memory) -> bool {
+    !mem.metadata.is_private
+}
+
+/// Model visibility: memories flagged `model_exclude` never enter model
+/// context windows or reasoning evidence.
+#[must_use]
+pub const fn model_visible(mem: &Memory) -> bool {
+    !mem.metadata.model_exclude
+}
 
 /// De-index a memory from the Tantivy full-text index.
 ///

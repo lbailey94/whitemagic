@@ -4030,6 +4030,89 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn private_memories_never_appear_in_mcp_read_paths() {
+        let mut server = test_server();
+
+        // Seed one private and one public memory directly in the store.
+        let mut priv_mem = wm_memory::Memory::new(wm_core::Galaxy::Codex, "top secret note".into());
+        priv_mem.metadata.is_private = true;
+        let priv_id = priv_mem.metadata.id;
+        server
+            .store()
+            .put(wm_core::Galaxy::Codex, &priv_mem)
+            .unwrap();
+        let pub_mem = wm_memory::Memory::new(wm_core::Galaxy::Codex, "public note".into());
+        let pub_id = pub_mem.metadata.id;
+        server
+            .store()
+            .put(wm_core::Galaxy::Codex, &pub_mem)
+            .unwrap();
+
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // memory.read of a private memory reports not_found.
+        let read_req = format!(
+            r#"{{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{{"name":"wm","arguments":{{"route":"memory.read","args":{{"galaxy":"codex","id":"{priv_id}"}}}}}}}}"#
+        );
+        let resp = server.handle_request(&read_req).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let read: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(
+            read["status"], "not_found",
+            "private memory.read must report not_found, got: {read}"
+        );
+
+        // memory.list excludes private memories.
+        let resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.list","args":{"galaxy":"codex","limit":50}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let list: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        let ids: Vec<&str> = list["memories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|m| m["id"].as_str())
+            .collect();
+        let priv_str = priv_id.to_string();
+        let pub_str = pub_id.to_string();
+        assert!(
+            !ids.contains(&priv_str.as_str()),
+            "private memory leaked through list: {list}"
+        );
+        assert!(
+            ids.contains(&pub_str.as_str()),
+            "public memory missing from list: {list}"
+        );
+
+        // memory.query excludes private memories.
+        let resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.query","args":{"galaxy":"codex","limit":50,"query":"note"}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let query: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        let qids: Vec<&str> = query["memories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|m| m["id"].as_str())
+            .collect();
+        assert!(
+            !qids.contains(&priv_str.as_str()),
+            "private memory leaked through query: {query}"
+        );
+        assert!(
+            qids.contains(&pub_str.as_str()),
+            "public memory missing from query: {query}"
+        );
+    }
+
+    #[tokio::test]
     async fn e2e_wm_thought_cannot_delete_memory() {
         let mut server = test_server();
 
