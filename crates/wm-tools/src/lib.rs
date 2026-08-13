@@ -417,11 +417,18 @@ impl Tool for ToolsListTool {
         let tools: Vec<Value> = available
             .iter()
             .map(|t| {
+                // MCP tool annotations derived from the declared effects —
+                // clients and registries use these for safety decisions.
+                let effects = t.effects();
                 json!({
                     "name": t.name(),
                     "gana": format!("{:?}", t.gana()),
                     "description": t.description(),
                     "input_schema": t.input_schema(),
+                    "annotations": {
+                        "readOnlyHint": effects.writes.is_empty(),
+                        "destructiveHint": effects.destructive,
+                    },
                 })
             })
             .collect();
@@ -3351,6 +3358,23 @@ mod tests {
                 .iter()
                 .any(|r| r == "confirm"),
             "transaction.rollback schema must require confirm"
+        );
+
+        // MCP annotations derived from EffectRow.
+        let annotations = &create["annotations"];
+        assert_eq!(annotations["readOnlyHint"], false, "memory.create writes");
+        assert_eq!(annotations["destructiveHint"], false);
+        assert_eq!(
+            rollback["annotations"]["destructiveHint"], true,
+            "transaction.rollback is destructive"
+        );
+        let list_tool = tools
+            .iter()
+            .find(|t| t["name"] == "memory.list")
+            .expect("tools.list must include memory.list");
+        assert_eq!(
+            list_tool["annotations"]["readOnlyHint"], true,
+            "memory.list is read-only"
         );
     }
 

@@ -50,6 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `name` key silently created "Untitled Session" entries); web tools clamp
   negative timeouts instead of panicking; tool stats track a true peak latency
   so the high-latency anomaly path can fire.
+- **MCP tool annotations** — `tools.list` now reports `readOnlyHint` and
+  `destructiveHint` derived from each tool's declared effects, so clients and
+  registries can make safety decisions without knowing tool internals.
+- **Release assets** — legal kit (SECURITY/PRIVACY/TERMS/COC/CITATION), voice
+  and tone guide, MCP configuration guide, quickstart, registry listing kit,
+  and an agent-facing model guide, plus public-claims and fresh-install gates
+  in the release checklist.
 
 ## [5.7.7] — 2026-08-11
 

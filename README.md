@@ -112,7 +112,7 @@ python python/whitemagic_v5_server.py --store ~/.local/share/whitemagic/lmdb
 
 See `python/README.md` for MCP client configuration (Claude Desktop, Cursor, Windsurf).
 
-See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) for the release plan and acceptance gates, [docs/ARCHIVE_CAPABILITY_MAP.md](docs/ARCHIVE_CAPABILITY_MAP.md) for vetted capabilities from previous versions and the v6+ direction, [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and porting roadmap, [docs/CONFORMAL_PREDICTION.md](docs/CONFORMAL_PREDICTION.md) for the conformal prediction feature, and [docs/PROGRESS.md](docs/PROGRESS.md) for phase status.
+See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) for the release plan and acceptance gates, [docs/PRE_RELEASE_LAUNCH_PLAN.md](docs/PRE_RELEASE_LAUNCH_PLAN.md) for launch actions, [docs/QUICKSTART.md](docs/QUICKSTART.md) for the five-minute install path, [docs/MCP_CONFIG_GUIDE.md](docs/MCP_CONFIG_GUIDE.md) for client configuration, [docs/MODEL_GUIDE.md](docs/MODEL_GUIDE.md) for the agent primer, [docs/ARCHIVE_CAPABILITY_MAP.md](docs/ARCHIVE_CAPABILITY_MAP.md) for vetted capabilities from previous versions and the v6+ direction, [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and porting roadmap, [docs/CONFORMAL_PREDICTION.md](docs/CONFORMAL_PREDICTION.md) for the conformal prediction feature, and [docs/PROGRESS.md](docs/PROGRESS.md) for phase status.
 
 ## What's Different
 
