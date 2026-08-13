@@ -63,8 +63,18 @@ fn parse_v2_id(id_str: &str) -> Uuid {
 }
 
 /// Parse a v2 timestamp string into a DateTime<Utc>.
+///
+/// Accepts RFC3339 with an offset, or a naive `YYYY-MM-DDTHH:MM:SS[.f]`
+/// (the v26 SQLite format, which has no timezone) treated as UTC.
 fn parse_timestamp(ts: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(ts).map_or_else(|_| Utc::now(), |dt| dt.with_timezone(&Utc))
+    DateTime::parse_from_rfc3339(ts)
+        .map(|dt| dt.with_timezone(&Utc))
+        .or_else(|_| {
+            chrono::NaiveDateTime::parse_from_str(ts, "%Y-%m-%dT%H:%M:%S%.f")
+                .or_else(|_| chrono::NaiveDateTime::parse_from_str(ts, "%Y-%m-%dT%H:%M:%S"))
+                .map(|naive| DateTime::from_naive_utc_and_offset(naive, Utc))
+        })
+        .unwrap_or_else(|_| Utc::now())
 }
 
 /// Map v26 source_trust string to v5 f32 trust score.
@@ -723,6 +733,15 @@ mod tests {
         let ts = "2026-01-01T12:00:00Z";
         let parsed = parse_timestamp(ts);
         assert_eq!(parsed.to_rfc3339(), "2026-01-01T12:00:00+00:00");
+    }
+
+    #[test]
+    fn parse_timestamp_naive_assumes_utc() {
+        // v26 SQLite timestamps have no timezone offset; the old parser
+        // treated them as invalid and fell back to `now` at migration time.
+        let ts = "2026-07-27T00:52:53.421443";
+        let parsed = parse_timestamp(ts);
+        assert_eq!(parsed.to_rfc3339(), "2026-07-27T00:52:53.421443+00:00");
     }
 
     #[test]
