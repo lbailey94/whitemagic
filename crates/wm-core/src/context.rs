@@ -47,6 +47,9 @@ pub struct Context {
     pub drive_conservative_weight: f32,
     /// Last Gana dispatched in this context (for co-usage tracking, Phase 6)
     pub last_gana: Option<crate::Gana>,
+    /// Read-only server mode — the dispatch pipeline refuses any tool that
+    /// declares writes while this is set.
+    pub readonly: bool,
 }
 
 impl Context {
@@ -72,6 +75,7 @@ impl Context {
             drive_exploration_weight: 0.5,
             drive_conservative_weight: 0.3,
             last_gana: None,
+            readonly: false,
         }
     }
 
@@ -125,7 +129,8 @@ impl Context {
                     | Galaxy::Tutorial
                     | Galaxy::Universal
             ),
-            Some(_) => true,
+            // Unknown compartment values fail closed — no galaxy access.
+            Some(_) => false,
         }
     }
 
@@ -138,7 +143,8 @@ impl Context {
             None => true,
             Some("sandbox") => matches!(galaxy, Galaxy::Tutorial),
             Some("production" | "secure") => self.can_access_galaxy(galaxy),
-            Some(_) => true,
+            // Unknown compartment values fail closed — no write access.
+            Some(_) => false,
         }
     }
 }
@@ -204,5 +210,20 @@ mod tests {
         assert!(ctx.can_write_galaxy(Galaxy::Codex));
         // Secure still can't access non-memory galaxies
         assert!(!ctx.can_access_galaxy(Galaxy::Karma));
+    }
+
+    #[test]
+    fn unknown_compartment_fails_closed() {
+        let ctx = make_ctx("bogus");
+        for g in Galaxy::all() {
+            assert!(
+                !ctx.can_access_galaxy(g),
+                "unknown compartment must not read {g:?}"
+            );
+            assert!(
+                !ctx.can_write_galaxy(g),
+                "unknown compartment must not write {g:?}"
+            );
+        }
     }
 }

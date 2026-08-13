@@ -78,6 +78,41 @@ pub fn profile_from_name(name: &str) -> Option<&'static ToolProfile> {
     }
 }
 
+/// Resolve the active tool profile with explicit precedence:
+///
+/// 1. `WM_TOOL_ALLOWLIST` — an explicit prefix allowlist always wins.
+/// 2. CLI `--profile` flag.
+/// 3. `WM_TOOL_PROFILE` environment variable.
+/// 4. Default: `full`.
+///
+/// Unknown profile names log a warning and fall back to the full surface.
+#[must_use]
+pub fn resolve_tool_profile(
+    cli_profile: Option<&str>,
+    env_profile: Option<&str>,
+    env_allowlist: Option<&str>,
+) -> &'static ToolProfile {
+    if let Some(allow) = env_allowlist {
+        if let Some(profile) = allowlist_from_env(allow) {
+            tracing::info!(
+                allowlist = %allow,
+                "WM_TOOL_ALLOWLIST tool surface in effect"
+            );
+            return Box::leak(Box::new(profile));
+        }
+    }
+    match cli_profile.or(env_profile) {
+        Some(name) => profile_from_name(name).unwrap_or_else(|| {
+            tracing::warn!(
+                profile = name,
+                "unknown tool surface profile — using full tool surface"
+            );
+            &PROFILE_FULL
+        }),
+        None => &PROFILE_FULL,
+    }
+}
+
 /// Build a profile from a comma-separated allowlist of tool-name prefixes
 /// (e.g. `memory,session,claims`). Empty segments are ignored.
 #[must_use]
@@ -148,5 +183,29 @@ mod tests {
         let registry = ToolRegistry::new();
         let out = apply_profile(registry, &PROFILE_FULL);
         assert_eq!(out.len(), 0);
+    }
+
+    #[test]
+    fn resolve_profile_precedence() {
+        // CLI flag wins over the environment variable.
+        assert_eq!(
+            resolve_tool_profile(Some("curated"), Some("minimal"), None).name,
+            "curated"
+        );
+        // Environment is used when the CLI flag is absent.
+        assert_eq!(
+            resolve_tool_profile(None, Some("minimal"), None).name,
+            "minimal"
+        );
+        // An explicit allowlist wins over both.
+        let resolved =
+            resolve_tool_profile(Some("curated"), Some("minimal"), Some("memory,session"));
+        assert_eq!(resolved.name, "allowlist");
+        assert_eq!(resolved.prefixes, &["memory", "session"]);
+        // All absent → full surface.
+        assert_eq!(resolve_tool_profile(None, None, None).name, "full");
+        // Unknown names fall back to full.
+        assert_eq!(resolve_tool_profile(Some("bogus"), None, None).name, "full");
+        assert_eq!(resolve_tool_profile(None, Some("bogus"), None).name, "full");
     }
 }

@@ -115,6 +115,13 @@ pub struct McpServer {
     /// Transaction firewall (shared with tx_firewall.*) — persisted to
     /// `<store>/tx_firewall_policy.json`.
     tx_firewall: Option<Arc<wm_tools::expansion::firewall::TxFirewall>>,
+    /// Read-only server mode (`--readonly`) — the dispatch pipeline refuses
+    /// every tool that declares writes, and telemetry/mutable-state writes
+    /// are suppressed.
+    readonly: bool,
+    /// Active tool surface profile name — reported in `tools/list` so
+    /// discovery reflects the profile instead of the full archive.
+    profile_name: &'static str,
 }
 
 /// JSON-RPC request envelope.
@@ -373,7 +380,24 @@ impl McpServer {
             claims_ledger: None,
             escalation_queue: None,
             tx_firewall: None,
+            readonly: false,
+            profile_name: "full",
         }
+    }
+
+    /// Mark the server read-only — the dispatch pipeline refuses declared
+    /// writes and telemetry/mutable-state persistence is suppressed.
+    #[must_use]
+    pub const fn with_readonly(mut self, readonly: bool) -> Self {
+        self.readonly = readonly;
+        self
+    }
+
+    /// Set the active tool surface profile name for `tools/list` text.
+    #[must_use]
+    pub const fn with_profile_name(mut self, name: &'static str) -> Self {
+        self.profile_name = name;
+        self
     }
 
     /// Create a new MCP server with the given registry and pipeline, using
@@ -436,29 +460,15 @@ impl McpServer {
 
     /// Resolve the tool surface profile from the environment.
     ///
-    /// `WM_TOOL_ALLOWLIST` (comma-separated tool-name prefixes) wins; otherwise
+    /// `WM_TOOL_ALLOWLIST` (comma-separated tool-name prefixes) wins; then
     /// `WM_TOOL_PROFILE` (`full` | `curated` | `minimal`, default `full`).
     /// Invalid names log a warning and fall back to the full surface.
     fn tool_profile_from_env() -> &'static wm_tools::profiles::ToolProfile {
-        if let Ok(allow) = std::env::var("WM_TOOL_ALLOWLIST") {
-            if let Some(profile) = wm_tools::profiles::allowlist_from_env(&allow) {
-                tracing::info!(
-                    allowlist = %allow,
-                    "WM_TOOL_ALLOWLIST tool surface in effect"
-                );
-                return Box::leak(Box::new(profile));
-            }
-        }
-        match std::env::var("WM_TOOL_PROFILE").ok().as_deref() {
-            Some(name) => wm_tools::profiles::profile_from_name(name).unwrap_or_else(|| {
-                tracing::warn!(
-                    profile = name,
-                    "unknown WM_TOOL_PROFILE — using full tool surface"
-                );
-                &wm_tools::profiles::PROFILE_FULL
-            }),
-            None => &wm_tools::profiles::PROFILE_FULL,
-        }
+        wm_tools::profiles::resolve_tool_profile(
+            None,
+            std::env::var("WM_TOOL_PROFILE").ok().as_deref(),
+            std::env::var("WM_TOOL_ALLOWLIST").ok().as_deref(),
+        )
     }
 
     /// Like `with_defaults`, but with a read-only tantivy index when
@@ -738,7 +748,12 @@ impl McpServer {
                 )),
                 std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
                 dharma_gate.clone(),
-                Some(karma_ledger.clone()),
+                // Read-only mode must not record karma entries (LMDB writes).
+                if readonly {
+                    None
+                } else {
+                    Some(karma_ledger.clone())
+                },
             )
             .with_gana_registry(gana_registry.clone())
             .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env()),
@@ -798,11 +813,13 @@ impl McpServer {
             sensorimotor_bus,
             reflex_loop,
             friction_auto_log,
-            Some(karma_ledger),
+            if readonly { None } else { Some(karma_ledger) },
             transaction_state,
             cyberbrain.tri_model,
             shadow_stats,
-        );
+        )
+        .with_readonly(readonly)
+        .with_profile_name(profile.name);
 
         // Override mutable structure registries with shared instances (Phase 6)
         server.gana_registry = gana_registry;
@@ -1278,8 +1295,11 @@ impl McpServer {
             }
         }
 
-        // Save mutable structures to disk (Phase 6 persistence)
-        self.save_mutable_state();
+        // Save mutable structures to disk (Phase 6 persistence). Read-only
+        // mode must not write any state files.
+        if !self.readonly {
+            self.save_mutable_state();
+        }
 
         // LMDB is automatically flushed by Drop when Arc<MemoryStore> is dropped.
         // The store uses memory-mapped files, so data is persistent by default.
@@ -1937,10 +1957,11 @@ impl McpServer {
     /// Handle `tools/list` — return only the `wm` meta-tool.
     ///
     /// The `wm` meta-tool is the single entry point for MCP clients. It routes
-    /// natural language input to any of the 229 registered tools via TF-IDF
-    /// NLU classification, or accepts an explicit `route` parameter for direct
+    /// natural language input to the active tool surface via TF-IDF NLU
+    /// classification, or accepts an explicit `route` parameter for direct
     /// dispatch. Use `wm(thought="list tools")` or `wm(route="tools.list")` to
-    /// discover available tools.
+    /// discover available tools. The description reflects the active profile
+    /// instead of advertising the full archive surface.
     ///
     /// In Delta (dormant) state, no tools are returned.
     fn handle_tools_list(&self) -> Result<Value, RpcError> {
@@ -1953,12 +1974,26 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — all 229 tools are accessible through it
+        // Only expose the wm meta-tool — the routeable surface depends on the
+        // active tool profile, so discovery text is generated from the
+        // registry rather than hardcoded full-surface counts.
         if let Some(wm) = self.registry.get("wm") {
+            let tool_count = self
+                .registry
+                .all()
+                .iter()
+                .filter(|t| {
+                    !["wm", "tools.list", "gnosis", "nlu.shadow_report"].contains(&t.name())
+                })
+                .count();
+            let description = format!(
+                "WhiteMagic v5 meta-tool — {} tool surface ({} tools). Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create'), and args= for passthrough arguments. Say 'list tools' to discover available tools.",
+                self.profile_name, tool_count
+            );
             Ok(json!({
                 "tools": [{
                     "name": wm.name(),
-                    "description": "WhiteMagic v5 meta-tool — routes natural language to 229 tools across 28 Ganas. Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create', 'tools.list', 'friction.log'), and args= for passthrough arguments. Say 'list tools' to discover all available tools.",
+                    "description": description,
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -1968,7 +2003,7 @@ impl McpServer {
                             },
                             "route": {
                                 "type": "string",
-                                "description": "Explicit tool name for direct dispatch (e.g. 'memory.create', 'tools.list', 'friction.log', 'redteam.proposals').",
+                                "description": "Explicit tool name for direct dispatch (e.g. 'memory.create', 'tools.list').",
                             },
                             "args": {
                                 "type": "object",
@@ -2027,6 +2062,9 @@ impl McpServer {
             .unwrap_or_else(|| json!({}));
 
         let mut ctx = Context::new(self.eco_mode.current());
+        // Read-only mode: the dispatch pipeline refuses every tool that
+        // declares writes (both direct dispatch and inner `wm` routing).
+        ctx.readonly = self.readonly;
 
         // Extract agent identity from request _meta (MCP standard metadata field)
         if let Some(meta) = params.get("_meta") {
@@ -2181,16 +2219,17 @@ impl McpServer {
         };
 
         if success {
-            // Anomaly detection on successful dispatches
+            // Anomaly detection on successful dispatches (suppressed in
+            // read-only mode — friction auto-log writes to the store).
             let p99_ms = telemetry.tool_stats.p99_latency_ns as f32 / 1_000_000.0;
-            if p99_ms > 0.0 && telemetry.latency_ms > p99_ms {
+            if !self.readonly && p99_ms > 0.0 && telemetry.latency_ms > p99_ms {
                 if let Err(e) = self
                     .friction_auto_log
                     .log_anomaly(&telemetry, "high_latency")
                 {
                     tracing::warn!("Failed to auto-log anomaly entry: {e}");
                 }
-            } else if effectiveness < 0.3 && telemetry.tool_stats.call_count > 5 {
+            } else if !self.readonly && effectiveness < 0.3 && telemetry.tool_stats.call_count > 5 {
                 // Only flag low_effectiveness after enough calls for a
                 // meaningful success rate. Skip on fresh processes where
                 // stats haven't accumulated yet (avoids false positives).
@@ -2200,7 +2239,7 @@ impl McpServer {
                 {
                     tracing::warn!("Failed to auto-log anomaly entry: {e}");
                 }
-            } else if ctx.karma_debt > 0.5 {
+            } else if !self.readonly && ctx.karma_debt > 0.5 {
                 if let Err(e) = self
                     .friction_auto_log
                     .log_anomaly(&telemetry, "high_karma_debt")
@@ -2208,8 +2247,10 @@ impl McpServer {
                     tracing::warn!("Failed to auto-log anomaly entry: {e}");
                 }
             }
-        } else if let Err(e) = self.friction_auto_log.log_error(&telemetry) {
-            tracing::warn!("Failed to auto-log friction entry: {e}");
+        } else if !self.readonly {
+            if let Err(e) = self.friction_auto_log.log_error(&telemetry) {
+                tracing::warn!("Failed to auto-log friction entry: {e}");
+            }
         }
 
         // WS-3: Bidirectional karma-friction bridge
@@ -2253,7 +2294,10 @@ impl McpServer {
                 );
                 let hash_tag = format!("rsi:hash:{hash}");
                 // Only log if no existing governance friction with this hash
-                if !wm_tools::expansion::friction_hash_exists(&self.store, &hash_tag) {
+                // (and never in read-only mode — the friction log writes).
+                if !self.readonly
+                    && !wm_tools::expansion::friction_hash_exists(&self.store, &hash_tag)
+                {
                     if let Err(e) = self.friction_auto_log.log_error(&gov_telemetry) {
                         tracing::warn!("Failed to auto-log governance friction: {e}");
                     }
@@ -2810,11 +2854,14 @@ mod tests {
         assert_eq!(tools.len(), 1);
         assert_eq!(tools[0]["name"], "wm");
         assert!(tools[0]["inputSchema"].is_object());
+        let description = tools[0]["description"].as_str().unwrap();
         assert!(
-            tools[0]["description"]
-                .as_str()
-                .unwrap()
-                .contains("229 tools")
+            description.contains("meta-tool") && description.contains("tool surface"),
+            "tools/list description should describe the active surface, got: {description}"
+        );
+        assert!(
+            !description.contains("229 tools"),
+            "tools/list description must not advertise the full archive surface"
         );
     }
 
@@ -3854,6 +3901,115 @@ mod tests {
         assert!(
             routed["message"].as_str().unwrap().contains("Unknown tool"),
             "wm routing must not reach filtered tools, got: {routed}"
+        );
+    }
+
+    #[tokio::test]
+    async fn readonly_mode_blocks_all_mutations() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut server = McpServer::with_defaults_mode(&test_store_path(&tmp), true).unwrap();
+
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Every mutating tool in the curated surface must fail under --readonly.
+        // Regression: `--readonly` used to protect only the Tantivy writer,
+        // while session.start and transaction.begin kept writing to LMDB.
+        for (route, args) in [
+            (
+                "memory.create",
+                r#"{"galaxy":"codex","content":"readonly regression"}"#,
+            ),
+            ("session.start", r#"{"title":"readonly regression"}"#),
+            ("transaction.begin", "{}"),
+        ] {
+            let req = format!(
+                r#"{{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{{"name":"wm","arguments":{{"route":"{route}","args":{args}}}}}}}"#
+            );
+            let resp = server.handle_request(&req).await;
+            let parsed: Value = serde_json::from_str(&resp).unwrap();
+            let content = parsed["result"]["content"]
+                .as_array()
+                .expect("tools/call should return content");
+            let result: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+            assert_eq!(
+                result["status"], "error",
+                "read-only mode must reject {route}, got: {result}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn unknown_compartment_fails_closed() {
+        let mut server = test_server();
+
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Regression: unknown compartment values used to fail open (full access).
+        let resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"compartment regression"}},"_meta":{"compartment":"bogus"}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        let content = parsed["result"]["content"]
+            .as_array()
+            .expect("tools/call should return content");
+        let result: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(
+            result["status"], "error",
+            "unknown compartment must fail closed, got: {result}"
+        );
+    }
+
+    #[tokio::test]
+    async fn tools_list_reflects_active_profile() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut server = McpServer::with_defaults_mode_profile(
+            &test_store_path(&tmp),
+            false,
+            &wm_tools::profiles::PROFILE_CURATED,
+        )
+        .unwrap();
+
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // Regression: tools/list hardcoded the full-surface description
+        // ("229 tools") regardless of the active profile.
+        let list_resp = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}"#)
+            .await;
+        let parsed: Value = serde_json::from_str(&list_resp).unwrap();
+        let description = parsed["result"]["tools"][0]["description"]
+            .as_str()
+            .unwrap();
+        assert!(
+            !description.contains("229 tools"),
+            "curated tools/list description must not advertise the full surface, got: {description}"
+        );
+
+        // The inner tools.list must agree with the curated registry size.
+        let resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wm","arguments":{"route":"tools.list"}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        let content = parsed["result"]["content"].as_array().unwrap();
+        let listed: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+        // tools.list snapshots the pre-meta-tool registry (gnosis excluded),
+        // so the expected count is the registry minus the four meta-tools.
+        let expected = server
+            .registry()
+            .all()
+            .iter()
+            .filter(|t| !["wm", "tools.list", "gnosis", "nlu.shadow_report"].contains(&t.name()))
+            .count() as u64;
+        assert_eq!(
+            listed["total"],
+            json!(expected),
+            "inner tools.list must report the active profile registry size"
         );
     }
 
