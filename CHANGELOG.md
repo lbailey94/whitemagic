@@ -5,6 +5,35 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Release hardening (boundary, storage, evidence)
+
+- **Unknown compartments fail closed** — unrecognized compartment values no
+  longer grant full access; read and write access is denied.
+- **Store-wide read-only** — `--readonly` now refuses every tool that declares
+  writes via the dispatch pipeline, and suppresses karma recording, friction
+  auto-logging, and mutable-state persistence. Previously it protected only the
+  Tantivy writer while LMDB mutations still succeeded.
+- **Tool profile precedence** — `WM_TOOL_ALLOWLIST` > `--profile` >
+  `WM_TOOL_PROFILE` > `full`. The CLI no longer overwrites the documented
+  environment default with `full`.
+- **Profile-aware discovery** — `tools/list` describes the active profile with
+  a registry-derived tool count instead of the hardcoded 229-tool archive text.
+- **Exact transaction rollback** — `transaction.begin` snapshots complete
+  `Memory` records with no 10,000-record truncation; rollback restores
+  byte-equivalent records (original UUIDs, timestamps, hashes, coordinates,
+  privacy flags, provenance) and keeps the transaction retryable when a restore
+  fails; commit removes the rollback snapshot.
+- **Storage consistency** — `MemoryStore::put` removes stale secondary-index
+  entries on overwrite; `memory.update` recomputes content hashes; filtered
+  reindex (`wm reindex --galaxy`) deletes and re-indexes only the selected
+  galaxies instead of wiping the whole index.
+- **Curated smoke test** — `scripts/curated_smoke_test.py` asserts the full
+  curated workflow (memory, sessions, transactions, claims calibration,
+  restart persistence, read-only enforcement) against the release binary and is
+  wired into CI and the release workflow.
+
 ## [5.7.7] — 2026-08-11
 
 ### Tantivy recall quality (parallel session)

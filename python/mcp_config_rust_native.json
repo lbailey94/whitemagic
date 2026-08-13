@@ -4,6 +4,8 @@
       "command": "/home/lucas/Desktop/WMv5/target/release/wm",
       "args": [
         "serve",
+        "--profile",
+        "curated",
         "--store",
         "/home/lucas/Desktop/WMdata/live"
       ],

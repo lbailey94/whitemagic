@@ -1,9 +1,11 @@
 {
   "mcpServers": {
     "whitemagic-v5": {
-      "command": "python",
+      "command": "/home/lucas/Desktop/WMv5/target/release/wm",
       "args": [
-        "/home/lucas/Desktop/WMv5/python/whitemagic_v5_server.py",
+        "serve",
+        "--profile",
+        "curated",
         "--store",
         "/home/lucas/Desktop/WMv5/.whitemagic/lmdb"
       ],
