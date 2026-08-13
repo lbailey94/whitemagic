@@ -505,6 +505,8 @@ impl McpServer {
         });
 
         let karma_ledger = std::sync::Arc::new(KarmaLedger::new(store.clone())?);
+        let write_audit =
+            std::sync::Arc::new(wm_governance::WriteAuditJournal::new(store.clone())?);
         let dharma_gate = std::sync::Arc::new(DharmaGate::default());
         let substrate = std::sync::Arc::new(SubstrateMonitor::default());
         let resource_rules = std::sync::Arc::new(ResourceRules::default());
@@ -756,6 +758,9 @@ impl McpServer {
                 },
             )
             .with_gana_registry(gana_registry.clone())
+            .with_resource_rules(resource_rules.clone())
+            // Read-only mode must not append journal entries either.
+            .with_write_audit_option(if readonly { None } else { Some(write_audit) })
             .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env()),
         );
 
@@ -1304,6 +1309,18 @@ impl McpServer {
             self.save_mutable_state();
         }
 
+        // Flush the write-audit journal so every dispatch's declared-vs-
+        // actual record survives a graceful shutdown (the journal batches
+        // up to 64 entries in memory). Skipped in read-only mode — no
+        // journal is attached there, and flushing would be an LMDB write.
+        if !self.readonly {
+            if let Some(journal) = self.pipeline.write_audit() {
+                if let Err(e) = journal.flush() {
+                    tracing::warn!(error = %e, "Write-audit journal flush failed on shutdown");
+                }
+            }
+        }
+
         // LMDB is automatically flushed by Drop when Arc<MemoryStore> is dropped.
         // The store uses memory-mapped files, so data is persistent by default.
     }
@@ -1416,6 +1433,12 @@ impl McpServer {
     #[must_use]
     pub const fn registry(&self) -> &ToolRegistry {
         &self.registry
+    }
+
+    /// Get a reference to the dispatch pipeline.
+    #[must_use]
+    pub fn pipeline(&self) -> &DispatchPipeline {
+        &self.pipeline
     }
 
     /// Get a reference to the substrate monitor.
@@ -2780,12 +2803,17 @@ mod tests {
 
         // Build the pipeline BEFORE the meta-tools so the wm meta-tool's inner
         // dispatch is governance-gated (destructive confirm, dharma, rate limit).
-        let pipeline = Arc::new(DispatchPipeline::new(
-            Arc::new(wm_dispatch::RateLimiter::default()),
-            Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
-            dharma_gate.clone(),
-            Some(karma_ledger.clone()),
-        ));
+        let write_audit = Arc::new(wm_governance::WriteAuditJournal::new(store.clone()).unwrap());
+        let pipeline = Arc::new(
+            DispatchPipeline::new(
+                Arc::new(wm_dispatch::RateLimiter::default()),
+                Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
+                dharma_gate.clone(),
+                Some(karma_ledger.clone()),
+            )
+            .with_resource_rules(resource_rules.clone())
+            .with_write_audit(write_audit),
+        );
         let (registry, _router) = wm_tools::register_meta_tools_with_router(
             &registry,
             &store,

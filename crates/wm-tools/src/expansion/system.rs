@@ -6,7 +6,7 @@ use async_trait::async_trait;
 
 use serde_json::{Value, json};
 use std::sync::Arc;
-use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
+use wm_core::{Context, EffectRow, Galaxy, Gana, Tool, ToolStats};
 use wm_memory::{MemoryStore, SearchEngine};
 
 pub struct SystemHealthTool {
@@ -140,7 +140,9 @@ impl SystemFlushTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("universal".into())],
+                // Flush deletes low-importance memories across all galaxies.
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 destructive: true,
                 cost: wm_core::CostEstimate {
                     expensive: true,

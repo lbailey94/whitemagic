@@ -2,8 +2,44 @@
 
 #![forbid(unsafe_code)]
 
-use wm_core::{CoreError, Galaxy};
+use wm_core::{CoreError, Galaxy, Resource};
 use wm_memory::{Memory, SearchEngine};
+
+/// Effect-row writes covering every memory galaxy — for tools whose
+/// mutation target is chosen at runtime (`galaxy` argument), so the
+/// declaration honestly covers whatever galaxy the caller selects.
+#[must_use]
+pub fn memory_galaxy_writes() -> Vec<Resource> {
+    Galaxy::memory_galaxies()
+        .iter()
+        .map(|g| Resource::Galaxy(g.db_name().to_string()))
+        .collect()
+}
+
+/// Effect-row reads covering every memory galaxy — the paired declaration
+/// for read-modify-write tools (scan → mutate → write) so the Satya
+/// fabrication rule sees the evidence read before a citta write.
+#[must_use]
+pub fn memory_galaxy_reads() -> Vec<Resource> {
+    Galaxy::memory_galaxies()
+        .iter()
+        .map(|g| Resource::Galaxy(g.db_name().to_string()))
+        .collect()
+}
+
+/// Effect-row writes for pure-writer tools (e.g. `memory.create`) that
+/// target a runtime galaxy but never read it.
+///
+/// Citta is excluded: a fresh write into the consciousness stream without
+/// evidence is fabrication, refused by the pipeline's runtime Satya check.
+#[must_use]
+pub fn fresh_write_galaxies() -> Vec<Resource> {
+    Galaxy::memory_galaxies()
+        .iter()
+        .filter(|g| **g != Galaxy::Citta)
+        .map(|g| Resource::Galaxy(g.db_name().to_string()))
+        .collect()
+}
 
 /// MCP visibility: memories flagged `is_private` never appear in MCP read,
 /// search, list, query, or recall responses. Local maintenance paths

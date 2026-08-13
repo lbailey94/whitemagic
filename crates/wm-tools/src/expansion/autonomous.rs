@@ -6,7 +6,7 @@ use async_trait::async_trait;
 
 use serde_json::{Value, json};
 use std::sync::Arc;
-use wm_core::{Context, EffectRow, Gana, Tool, ToolStats};
+use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
 use wm_memory::{AssociationStore, MemoryStore};
 
 pub struct SpiralReportTool {
@@ -79,7 +79,13 @@ impl ConsolidationConnectTool {
             associations,
             spiral_tracker,
             stats: ToolStats::default(),
-            effects: EffectRow::pure(),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }
@@ -157,7 +163,13 @@ impl ConsolidationCompressTool {
             associations,
             spiral_tracker,
             stats: ToolStats::default(),
-            effects: EffectRow::pure(),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }
@@ -235,7 +247,13 @@ impl EmergenceScanTool {
             associations,
             spiral_tracker,
             stats: ToolStats::default(),
-            effects: EffectRow::pure(),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }
@@ -313,7 +331,13 @@ impl RetentionPruneTool {
             associations,
             spiral_tracker,
             stats: ToolStats::default(),
-            effects: EffectRow::pure(),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }
@@ -398,7 +422,13 @@ impl SensorimotorScanTool {
             sensorimotor_bus,
             reflex_loop,
             stats: ToolStats::default(),
-            effects: EffectRow::read_only(Vec::new()),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }

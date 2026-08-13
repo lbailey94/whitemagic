@@ -830,7 +830,13 @@ impl ImproveProposalsTool {
             store,
             associations,
             stats: ToolStats::default(),
-            effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }
@@ -909,7 +915,13 @@ impl RedteamProposalsTool {
             store,
             associations,
             stats: ToolStats::default(),
-            effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }
@@ -1383,7 +1395,13 @@ impl RedteamCoverageReportTool {
             store,
             associations,
             stats: ToolStats::default(),
-            effects: EffectRow::default(),
+            effects: EffectRow {
+                // Runs an autonomous cycle: scans memory galaxies and
+                // logs the cycle record to the Substrate galaxy.
+                reads: super::common::memory_galaxy_reads(),
+                writes: vec![Resource::Galaxy("substrate".into())],
+                ..Default::default()
+            },
         }
     }
 }
