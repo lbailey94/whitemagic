@@ -30,7 +30,10 @@ use wm_substrate::anomaly::AnomalyDetector;
 use wm_substrate::homeostatic::HomeostaticLoop;
 use wm_substrate::sensorimotor::{ReflexLoop, SensorimotorBus};
 
-use crate::expansion::common::{bool_prop, int_prop, num_prop, schema, str_array_prop, str_prop};
+use crate::expansion::common::{
+    bool_prop, fresh_write_galaxies, int_prop, memory_galaxy_reads, memory_galaxy_writes, num_prop,
+    schema, str_array_prop, str_prop,
+};
 
 // ── Tool: memory.create ──────────────────────────────────────────────
 
@@ -52,7 +55,10 @@ impl MemoryCreateTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                // Writes whichever galaxy the caller selects at runtime.
+                // Citta is excluded: a fresh write into the consciousness
+                // stream is refused by the pipeline's runtime Satya check.
+                writes: fresh_write_galaxies(),
                 invokes: vec![Capability::MemoryWrite],
                 ..Default::default()
             },
@@ -464,7 +470,10 @@ impl MemoryDeleteTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                // Delete reads the record it removes (index cleanup), so the
+                // read-modify-write declaration covers the runtime galaxy.
+                writes: memory_galaxy_writes(),
+                reads: memory_galaxy_reads(),
                 invokes: vec![Capability::MemoryWrite],
                 destructive: true,
                 ..Default::default()

@@ -1,7 +1,8 @@
 # PET Hardening Strategy
 
 **Prepared:** 2026-08-13
-**Status:** strategy for the next sessions — no code yet
+**Status:** Phase A complete (A1–A3 shipped 2026-08-13); Phase B (v5.9) and
+Phase C still planned
 
 This plan addresses the three remaining gaps between WhiteMagic and the
 "full PET functionality" ideal, on the lore test's own terms:
@@ -33,37 +34,56 @@ This plan addresses the three remaining gaps between WhiteMagic and the
 Closes the last open release blocker (effect inventory audit) and makes the
 existing gates trustworthy.
 
-### A1. Wire `ResourceRules` into the dispatch pipeline
+### A1. Wire `ResourceRules` into the dispatch pipeline ✅
 
 `wm-governance::ResourceRules` (budgets, novelty detection, purpose
 requirements, human-review decisions) exists but is not evaluated on the
 dispatch path.
 
-- Add `ResourceRules` to `DispatchPipeline` and evaluate per dispatch.
-- Enforce write budgets and surface human-review flags.
+- Add `ResourceRules` to `DispatchPipeline` and evaluate per dispatch. ✅
+- Enforce write budgets and surface human-review flags. ✅
 - Acceptance: a test proves a budget-exceeding write is refused and a
-  novelty/review flag reaches the response.
+  novelty/review flag reaches the response. ✅
+  (`pipeline_resource_rules_*` tests in `wm-dispatch/src/pipeline.rs`;
+  budget violations, autonomous human-review/purpose violations block;
+  novelty flags attach to the response as `resource_flags`.)
 
-### A2. Effect inventory audit
+### A2. Effect inventory audit ✅
 
 Verify every registered tool's `EffectRow` against actual behavior
 (store writes, network, process, filesystem, actuator).
 
 - Build the audit as tests, not prose: for each mutating tool, assert the
-  store/index actually changed and the declaration covers it.
+  store/index actually changed and the declaration covers it. ✅
 - Acceptance: no tool mutates without declaring it; false declarations fail
-  CI.
+  CI. ✅
+  (`crates/wm-mcp/src/effect_audit.rs` — 16 tests: static registry checks,
+  behavioral sweep over all store-local tools, mutator spot-checks through
+  the real pipeline, and a harness meta-test. The audit found and fixed 13
+  false declarations: `transaction.commit` (pure→journals write),
+  `transaction.rollback`, `galaxy.purge/transfer/restore`,
+  `memory.consolidate/deduplicate/decay/update/tag/delete` (runtime-galaxy
+  understatements), `memory.create`, `system.flush`, and 8 autonomous-cycle
+  tools writing Substrate. A runtime Satya check in the pipeline now refuses
+  `galaxy=citta` writes without evidence.)
 
-### A3. Write-audit trail
+### A3. Write-audit trail ✅
 
 The karma ledger already compares declared vs actual writes per dispatch;
 extend it into an append-only store mutation journal.
 
 - Journal entries: tool name, memory id, content hash, timestamp, declared
-  vs actual writes.
-- Surface in `wm doctor` / diagnostics: misdeclarations become visible.
+  vs actual writes. ✅
+  (`wm-governance::WriteAuditJournal` — append-only LMDB journal in the
+  Karma galaxy under a `waj:` key prefix; actual writes measured with a new
+  `MemoryStore::mutation_count()` counter.)
+- Surface in `wm doctor` / diagnostics: misdeclarations become visible. ✅
+  (`wm doctor` reports entry count + undeclared-mutation entries with tool,
+  entry id, store writes, and timestamp.)
 - Acceptance: a deliberately misdeclaring test tool is detected by the
-  journal check.
+  journal check. ✅
+  (`pipeline_write_audit_detects_misdeclaring_tool` in wm-dispatch +
+  `audit_harness_detects_deliberately_misdeclaring_tool` in wm-mcp.)
 
 ## Phase B — PET Hardening (v5.9 theme)
 
@@ -113,7 +133,8 @@ as the anti-tamper story.
 
 ## Execution Order
 
-1. Next session: A1–A3 (release-adjacent; A2 closes a release gate).
+1. ~~Next session: A1–A3 (release-adjacent; A2 closes a release gate).~~
+   ✅ Done 2026-08-13 — all three shipped with tests and CI coverage.
 2. After release: B4–B7 as the v5.9 "PET hardening" theme.
 3. On demand: B8–B9.
 

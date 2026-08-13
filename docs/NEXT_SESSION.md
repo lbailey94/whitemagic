@@ -47,8 +47,9 @@ verified.
 
 ## Hard Blockers
 
-- Some effect declarations still understate real side effects (effect inventory
-  audit remains open).
+- ~~Some effect declarations still understate real side effects (effect inventory
+  audit remains open).~~ ✅ Closed 2026-08-13 — the audit is 16 CI tests; 13
+  false declarations fixed.
 - The curated contract still needs native argument schemas, a documented
   hybrid-recall semantic decision, and export/backup/index-health workflow
   docs.
@@ -87,10 +88,23 @@ restart the binary, and assert JSON results rather than only process exit code.
 
 ## Next Session Start
 
-Begin with Phase A of `docs/PET_HARDENING.md`:
+~~Begin with Phase A of `docs/PET_HARDENING.md`.~~ ✅ Phase A (A1–A3)
+complete 2026-08-13:
 
-1. Wire `ResourceRules` into the dispatch pipeline.
-2. Build the effect inventory audit as tests.
-3. Add the write-audit trail to the store mutation paths.
+- A1: `ResourceRules` evaluated on the dispatch path (budgets block, novelty
+  flags reach responses, autonomous review/purpose gates block).
+- A2: effect inventory audit as 16 CI tests (`crates/wm-mcp/src/effect_audit.rs`);
+  13 false declarations fixed, plus a runtime Satya check for `galaxy=citta`.
+- A3: `WriteAuditJournal` (append-only LMDB journal, `wm doctor` surfacing,
+  shutdown flush).
+
+Remaining release work before Phase B (v5.9 PET hardening):
+
+1. Verify the curated smoke test and the NLU shadow report still pass on a
+   live store; retest the embedding router abstention question.
+2. Remaining P0 acceptance items: the LMDB/Tantivy consistency contract
+   (index health reporting) and search-health honesty.
+3. Phase B items B4–B7 (sandbox mode, store seal/verify, untrusted `_meta`,
+   store permissions) are the v5.9 theme.
 
 Also use `whitemagic-dev` session.continuity at session start (see AGENTS.md).

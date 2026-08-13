@@ -12,6 +12,7 @@ pub mod escalation;
 pub mod karma_ledger;
 pub mod policy;
 pub mod resource_rules;
+pub mod write_audit;
 
 pub use acs::{AcsAction, AcsCheckpoint, AcsComplianceReport, AcsExport, AcsRule};
 pub use dharma_gate::{ActionVerdict, DharmaGate, Homeostasis};
@@ -22,3 +23,4 @@ pub use policy::{
     PolicyUpdateError,
 };
 pub use resource_rules::{BudgetUsage, ResourceRules, ResourceRulesConfig, ResourceVerdict};
+pub use write_audit::{WriteAuditEntry, WriteAuditJournal};

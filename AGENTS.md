@@ -21,18 +21,18 @@ Record meaningful turns as you go: `wm(route="session.record", args={"content": 
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all tests (3,447 tests)
+cargo test                     # Run all tests (3,504 tests)
 cargo test -p wm-core          # Test a single crate
 cargo bench                    # Run benchmarks (criterion)
 cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (15 crates, 229 tools, ~131,000 LOC, 3,447 tests)
+## Architecture (15 crates, 229 tools, ~131,000 LOC, 3,504 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
-- **wm-dispatch**: Async tool dispatch pipeline (effect check → destructive confirm → dharma → rate limit → tool → stats)
+- **wm-dispatch**: Async tool dispatch pipeline (effect check → destructive confirm → dharma → resource rules (Yama) → rate limit → tool → karma + write-audit journal → stats)
 - **wm-cognitive**: Citta cycle, dream cycle, brain-wave eco mode, 7 autonomous cycles, spiral tracker, reflex, timescale, drive, resonance, autonomic (merged from 6 crates in v5 Phase 1)
 - **wm-governance**: Dharma rules, karma ledger (SHA-256 chain), resource rules, mandala compartments, policy engine
 - **wm-polyglot**: Julia (jlrs), Haskell (FFI), Zig (C ABI), Koka (C ABI)

@@ -28,7 +28,8 @@ impl MemoryConsolidateTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 destructive: true,
                 ..Default::default()
             },
@@ -97,7 +98,8 @@ impl MemoryDecayTool {
             store,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 ..Default::default()
             },
         }
@@ -257,7 +259,8 @@ impl MemoryUpdateTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 ..Default::default()
             },
         }
@@ -364,7 +367,8 @@ impl MemoryTagTool {
             store,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 ..Default::default()
             },
         }
@@ -888,7 +892,8 @@ impl MemoryDeduplicateTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 destructive: true,
                 ..Default::default()
             },

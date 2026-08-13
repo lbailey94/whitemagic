@@ -5,6 +5,7 @@
 
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction, WriteFlags};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use wm_core::{CoreError, Galaxy, Result};
 
 use crate::indexes::IndexDbs;
@@ -124,6 +125,10 @@ pub struct MemoryStore {
     semantic_encoder: SemanticEncoder,
     /// Optional per-galaxy entry limit (DoS prevention)
     max_entries_per_galaxy: Option<usize>,
+    /// Monotonic counter of successful mutations since this handle was
+    /// opened. Lets the dispatch pipeline cheaply detect actual store
+    /// writes (write-audit journal) without scanning galaxies.
+    mutation_count: AtomicU64,
 }
 
 impl MemoryStore {
@@ -164,6 +169,7 @@ impl MemoryStore {
             index_dbs,
             semantic_encoder: SemanticEncoder::new(),
             max_entries_per_galaxy: None,
+            mutation_count: AtomicU64::new(0),
         })
     }
 
@@ -190,6 +196,13 @@ impl MemoryStore {
     /// Get the LMDB environment handle.
     pub const fn env(&self) -> &Environment {
         &self.env
+    }
+
+    /// Monotonic counter of successful mutations since this handle was
+    /// opened (puts, deletes, clears, raw writes). Used by the dispatch
+    /// pipeline's write-audit journal to detect actual store writes.
+    pub fn mutation_count(&self) -> u64 {
+        self.mutation_count.load(Ordering::Relaxed)
     }
 
     /// Get the cached index database handles.
@@ -267,6 +280,7 @@ impl MemoryStore {
         self.index_dbs.add(&mut tx, galaxy, memory)?;
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 
@@ -323,6 +337,9 @@ impl MemoryStore {
         }
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        if exists {
+            self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        }
         Ok(exists)
     }
 
@@ -449,6 +466,8 @@ impl MemoryStore {
 
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count
+            .fetch_add(count as u64, Ordering::Relaxed);
         Ok(count)
     }
 
@@ -491,6 +510,8 @@ impl MemoryStore {
 
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count
+            .fetch_add(count as u64, Ordering::Relaxed);
         Ok(count)
     }
 
@@ -528,6 +549,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB put_raw failed: {e}")))?;
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 
@@ -542,6 +564,9 @@ impl MemoryStore {
         let deleted = tx.del(db, &key, None).is_ok();
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        if deleted {
+            self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        }
         Ok(deleted)
     }
 
@@ -559,6 +584,8 @@ impl MemoryStore {
         }
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count
+            .fetch_add(entries.len() as u64, Ordering::Relaxed);
         Ok(())
     }
 
@@ -629,6 +656,8 @@ impl MemoryStore {
 
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count
+            .fetch_add(memories.len() as u64, Ordering::Relaxed);
         Ok(())
     }
 
@@ -828,6 +857,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB put_embedding failed: {e}")))?;
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 
@@ -872,6 +902,9 @@ impl MemoryStore {
         }
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        if exists {
+            self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        }
         Ok(exists)
     }
 }

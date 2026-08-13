@@ -219,11 +219,10 @@ impl GalaxyTransferTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![
-                    Resource::Galaxy("codex".into()),
-                    Resource::Galaxy("research".into()),
-                ],
-                reads: vec![Resource::Galaxy("codex".into())],
+                // Transfer moves memories between any two galaxies chosen
+                // at runtime.
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 destructive: true,
                 ..Default::default()
             },
@@ -514,8 +513,9 @@ impl GalaxyRestoreTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
-                reads: vec![Resource::Galaxy("journals".into())],
+                // Restore writes to whichever galaxy the caller selects.
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 destructive: true,
                 ..Default::default()
             },
@@ -873,7 +873,10 @@ impl GalaxyPurgeTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                // Purge deletes every memory in whichever galaxy the
+                // caller selects.
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
                 destructive: true,
                 ..Default::default()
             },

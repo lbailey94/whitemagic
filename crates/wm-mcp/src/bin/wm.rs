@@ -972,6 +972,59 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         );
     }
 
+    // 12. Write-audit journal — misdeclarations become visible here.
+    //     The journal is append-only and lives in the Karma LMDB galaxy;
+    //     the doctor opens it directly (read-only) from the store.
+    println!();
+    let journal = match wm_governance::WriteAuditJournal::new(server.store_arc()) {
+        Ok(j) => j,
+        Err(e) => {
+            println!("[WARN] Write-audit journal unavailable: {e}");
+            issues += 1;
+            println!();
+            println!("=== Doctor Summary ===");
+            if issues == 0 {
+                println!("All systems healthy.");
+            } else {
+                println!("{issues} issue(s) found — exit code 1.");
+            }
+            return Ok(issues);
+        }
+    };
+    let journal_entries = journal.scan_entries().map(|e| e.len()).unwrap_or(0);
+    match journal.misdeclarations() {
+        Ok(mis) => {
+            println!(
+                "[{}] Write-audit journal: {journal_entries} entries, {} undeclared-mutation entries",
+                if mis.is_empty() { "OK" } else { "WARN" },
+                mis.len()
+            );
+            if !mis.is_empty() {
+                issues += 1;
+                for entry in mis.iter().take(5) {
+                    let when = i64::try_from(entry.timestamp)
+                        .ok()
+                        .and_then(|t| chrono::DateTime::<chrono::Utc>::from_timestamp(t, 0))
+                        .map_or_else(|| entry.timestamp.to_string(), |d| d.to_rfc3339());
+                    println!(
+                        "       [WARN] '{}' mutated the store without declaring writes (entry {}, {} store writes, {when})",
+                        entry.tool, entry.id, entry.store_write_delta
+                    );
+                }
+                if mis.len() > 5 {
+                    println!(
+                        "       ... and {} more — inspect with diagnostics",
+                        mis.len() - 5
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            println!("[WARN] Write-audit journal unreadable: {e}");
+            issues += 1;
+        }
+    }
+
     println!();
     println!("=== Doctor Summary ===");
     if issues == 0 {

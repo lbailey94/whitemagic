@@ -91,9 +91,21 @@ Open work:
   `model_exclude` memories are filtered from reasoning, think, explain,
   bicameral hemisphere evidence, imagination scenario context, and self-play
   task context.
-- Audit every `EffectRow` against actual writes, network calls, process calls,
+- ~~Audit every `EffectRow` against actual writes, network calls, process calls,
   actuator calls, and broad scans. Put resource rules and transaction firewall
-  decisions on the central dispatch path or explicitly remove their claims.
+  decisions on the central dispatch path or explicitly remove their claims.~~
+  ✅ Fixed 2026-08-13 — the effect inventory audit is now 16 CI tests
+  (`crates/wm-mcp/src/effect_audit.rs`): static declaration checks over the
+  full registry (destructive ⇒ writes, spawns ⇒ Process), a behavioral sweep
+  proving no store-local tool mutates LMDB without declaring writes, and
+  mutator spot-checks dispatched through the real pipeline. The audit found
+  and fixed 13 false declarations (transaction.commit/rollback,
+  galaxy.purge/transfer/restore, memory.consolidate/deduplicate/decay/
+  update/tag/create/delete, system.flush, 8 autonomous-cycle tools).
+  `ResourceRules` (Yama) is now evaluated on the dispatch path: write/spawn/
+  network budgets block, novelty flags surface on responses, autonomous
+  human-review/purpose violations block. A runtime Satya check closes the
+  `galaxy=citta` write bypass.
 
 Acceptance criteria:
 
@@ -101,7 +113,10 @@ Acceptance criteria:
 - ✅ Unknown compartment values fail closed.
 - ✅ Private memories never appear in MCP read/search/list/query results.
 - ✅ Excluded memories never enter model context or reasoning evidence.
-- A generated or tested effect inventory matches the registered tool behavior.
+- ✅ A tested effect inventory matches the registered tool behavior — the
+  effect audit suite (16 tests in `crates/wm-mcp/src/effect_audit.rs`) proves
+  no tool mutates the store without declaring it, and that the
+  release-surface mutators actually mutate and cover the change.
 - Natural-language calls cannot reach destructive tools, including rollback.
 
 ### P0: Store and Transaction Correctness

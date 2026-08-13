@@ -17,6 +17,9 @@ pub mod input_validation;
 pub mod migrate;
 mod server;
 
+#[cfg(test)]
+mod effect_audit;
+
 pub use input_validation::{
     DEFAULT_MAX_REQUESTS_PER_SESSION, DEFAULT_RATE_LIMIT_RPM, MAX_PARAMS_SIZE, MAX_REQUEST_SIZE,
     MAX_STRING_LEN, RateWindow, RequestBudget, ValidationResult, validate_request,

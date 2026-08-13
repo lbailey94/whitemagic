@@ -196,7 +196,12 @@ impl TransactionCommitTool {
             state,
             search,
             stats: ToolStats::default(),
-            effects: EffectRow::pure(),
+            effects: EffectRow {
+                // Commit deletes the rollback snapshot from Journals.
+                writes: vec![Resource::Galaxy("journals".into())],
+                reads: vec![Resource::Galaxy("journals".into())],
+                ..Default::default()
+            },
         }
     }
 }
@@ -275,8 +280,16 @@ impl TransactionRollbackTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("universal".into())],
-                reads: vec![Resource::Galaxy("journals".into())],
+                // Rollback clears and rewrites every memory galaxy from the
+                // Journals snapshot. The snapshot holds the exact prior
+                // records of every galaxy; restoring is a read of that
+                // evidence before the write.
+                writes: super::common::memory_galaxy_writes(),
+                reads: {
+                    let mut r = vec![Resource::Galaxy("journals".into())];
+                    r.extend(super::common::memory_galaxy_reads());
+                    r
+                },
                 destructive: true,
                 ..Default::default()
             },
