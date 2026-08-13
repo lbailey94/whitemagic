@@ -6,15 +6,15 @@
 
 ## Current State
 
-- v5.8.0, 15 crates, 229 registered tool implementations, 3,447+ tests.
-- `cargo test --workspace --quiet`, format check, clippy, and release binary
-  build passed on 2026-08-12.
-- Explicit curated-profile rehearsal passed create, search, FTS-based hybrid
-  recall, session start, transaction rollback, and claims calibration.
-- Restart persistence passed for a memory created by one process and searched by
-  the next process.
-- The rehearsal is not yet a committed process-level smoke test and used
-  explicit routes rather than semantic NLU.
+- v5.8.0, 15 crates, 229 registered tool implementations, 3,504 tests.
+- `cargo test --workspace`, format check, clippy (`-D warnings`), and release
+  binary build all passed on 2026-08-13.
+- Phase A of PET hardening (A1–A3) is complete and committed (`1dc29b6`):
+  ResourceRules on the dispatch path, the effect inventory audit as CI tests,
+  and the append-only write-audit journal.
+- The curated process smoke test (`scripts/curated_smoke_test.py`) is wired
+  into `ci.yml` and `release.yml`; the rehearsal is a committed, repeatable
+  CI gate.
 - The worktree contains one pre-existing untracked analysis note:
   `docs/notes/cpu-gpu-agentic-memory-2026-08-12.md`. Do not overwrite it.
 
@@ -50,9 +50,9 @@ verified.
 - ~~Some effect declarations still understate real side effects (effect inventory
   audit remains open).~~ ✅ Closed 2026-08-13 — the audit is 16 CI tests; 13
   false declarations fixed.
-- The curated contract still needs native argument schemas, a documented
-  hybrid-recall semantic decision, and export/backup/index-health workflow
-  docs.
+- The curated contract still needs export/backup/index-health workflow docs
+  (native argument schemas and the hybrid-recall semantic decision are
+  settled).
 
 ## Verification Commands
 
@@ -89,7 +89,7 @@ restart the binary, and assert JSON results rather than only process exit code.
 ## Next Session Start
 
 ~~Begin with Phase A of `docs/PET_HARDENING.md`.~~ ✅ Phase A (A1–A3)
-complete 2026-08-13:
+complete 2026-08-13, committed as `1dc29b6`:
 
 - A1: `ResourceRules` evaluated on the dispatch path (budgets block, novelty
   flags reach responses, autonomous review/purpose gates block).
@@ -98,13 +98,24 @@ complete 2026-08-13:
 - A3: `WriteAuditJournal` (append-only LMDB journal, `wm doctor` surfacing,
   shutdown flush).
 
-Remaining release work before Phase B (v5.9 PET hardening):
+Remaining release gates, in order, before Phase B (v5.9 PET hardening):
 
-1. Verify the curated smoke test and the NLU shadow report still pass on a
-   live store; retest the embedding router abstention question.
-2. Remaining P0 acceptance items: the LMDB/Tantivy consistency contract
-   (index health reporting) and search-health honesty.
-3. Phase B items B4–B7 (sandbox mode, store seal/verify, untrusted `_meta`,
-   store permissions) are the v5.9 theme.
+1. **P0**: prove natural-language calls cannot reach destructive tools (the
+   acceptance line is still open — the structural gate exists, the test does
+   not).
+2. **P0**: define the LMDB/Tantivy consistency contract — expose degraded
+   index state and a safe rebuild path.
+3. **P0**: search health must report stale or unavailable indexes instead of
+   silently saying healthy.
+4. **P1**: export, backup, index-health, and recovery workflow docs.
+5. **P1**: release checksums and a short install path for published binaries;
+   client config examples that launch the same versioned binary.
+6. **P1**: optional features (Julia/Python/LanceDB/ONNX) tested or explicitly
+   marked unsupported for the release.
+7. **P2** (post-release): NLU abstention, router labeling, self-play/imagination
+   labeling.
+
+Phase B (v5.9 theme): B4 sandbox mode, B5 store seal/verify, B6 untrusted
+`_meta` by default, B7 store permission hygiene (`0700`).
 
 Also use `whitemagic-dev` session.continuity at session start (see AGENTS.md).

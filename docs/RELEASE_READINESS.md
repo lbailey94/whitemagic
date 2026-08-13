@@ -27,6 +27,25 @@ release scope until the memory boundary is dependable.
 
 ## Evidence So Far
 
+Verified on 2026-08-13 (Phase A of PET hardening, committed as `1dc29b6`):
+
+- `cargo test --workspace`: 3,504 tests passed.
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy --all-targets -- -D warnings`: passed.
+- `cargo build --release --bin wm`: passed.
+- Effect inventory audit (`crates/wm-mcp/src/effect_audit.rs`, 16 CI tests):
+  static declaration checks, a behavioral sweep proving no store-local tool
+  mutates LMDB without declaring writes, and mutator spot-checks through the
+  real pipeline; 13 false declarations found and fixed.
+- ResourceRules (Yama) evaluated on every dispatch: write/spawn/network
+  budgets block, novelty flags reach responses, autonomous human-review and
+  purpose violations block; a runtime Satya check refuses `galaxy=citta`
+  writes without evidence.
+- Write-audit journal (`wm-governance::WriteAuditJournal`): append-only LMDB
+  record per dispatch (tool, memory id, content hash, timestamp, declared vs
+  actual writes) surfaced in `wm doctor`, flushed on shutdown; a deliberately
+  misdeclaring tool is detected.
+
 Verified on 2026-08-12:
 
 - `cargo test --workspace --quiet`: 3,447 tests passed.
