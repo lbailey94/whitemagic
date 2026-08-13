@@ -29,7 +29,7 @@ fn load_turns(
     session_id: Option<&str>,
     limit: usize,
 ) -> wm_core::Result<Vec<(Memory, Value)>> {
-    let memories = store.scan(Galaxy::Sessions, 10_000)?;
+    let memories = store.scan_all(Galaxy::Sessions)?;
     let mut turns: Vec<(Memory, Value)> = memories
         .iter()
         .filter_map(|m| turn_json(m).map(|v| (m.clone(), v)))
@@ -142,7 +142,7 @@ impl Tool for SessionRecordTool {
         let session_id: String = if let Some(sid) = session_id {
             sid.to_string()
         } else {
-            let memories = self.store.scan(Galaxy::Sessions, 10_000)?;
+            let memories = self.store.scan_all(Galaxy::Sessions)?;
             memories
                 .iter()
                 .filter(|m| m.metadata.tags.contains(&"start".to_string()))
@@ -362,7 +362,7 @@ impl Tool for SessionContinuityTool {
         let n = args.get("n").and_then(Value::as_u64).unwrap_or(10) as usize;
 
         // Find the most recent session_start that is not the current session.
-        let memories = self.store.scan(Galaxy::Sessions, 10_000)?;
+        let memories = self.store.scan_all(Galaxy::Sessions)?;
         let previous = memories.iter().rfind(|m| {
             m.metadata.tags.contains(&"start".to_string())
                 && current.is_none_or(|c| m.metadata.id.to_string() != c)
@@ -502,7 +502,7 @@ impl Tool for SessionHandoffTool {
                         .ok_or_else(|| {
                             wm_core::CoreError::InvalidArgs("handoff_id required for accept".into())
                         })?;
-                let memories = self.store.scan(Galaxy::Sessions, 10_000)?;
+                let memories = self.store.scan_all(Galaxy::Sessions)?;
                 let found = memories.iter().find(|m| {
                     m.metadata.tags.contains(&"handoff".to_string())
                         && m.content.contains(handoff_id)
@@ -525,7 +525,7 @@ impl Tool for SessionHandoffTool {
                 }))
             }
             "list" => {
-                let memories = self.store.scan(Galaxy::Sessions, 10_000)?;
+                let memories = self.store.scan_all(Galaxy::Sessions)?;
                 let handoffs: Vec<Value> = memories
                     .iter()
                     .filter(|m| m.metadata.tags.contains(&"handoff".to_string()))

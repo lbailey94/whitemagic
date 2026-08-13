@@ -134,7 +134,7 @@ impl Tool for SessionListTool {
         "List all sessions in the Sessions galaxy"
     }
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
-        let memories = self.store.scan(Galaxy::Sessions, 500)?;
+        let memories = self.store.scan_all(Galaxy::Sessions)?;
         let sessions: Vec<Value> = memories
             .iter()
             .filter(|m| m.metadata.tags.contains(&"session".to_string()))

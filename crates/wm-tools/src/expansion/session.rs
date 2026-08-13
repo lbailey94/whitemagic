@@ -197,7 +197,7 @@ impl Tool for SessionRecallTool {
             .get("limit")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(50) as usize;
-        let memories = self.store.scan(Galaxy::Sessions, 500)?;
+        let memories = self.store.scan_all(Galaxy::Sessions)?;
         let filtered: Vec<Value> = memories
             .iter()
             .filter(|m| m.content.contains(session_id))

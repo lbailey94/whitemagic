@@ -125,7 +125,7 @@ impl Tool for PipelineListTool {
         "List all stored pipelines"
     }
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
-        let mems = self.store.scan(Galaxy::Sessions, 500)?;
+        let mems = self.store.scan_all(Galaxy::Sessions)?;
         let pipelines: Vec<Value> = mems
             .iter()
             .filter(|m| m.metadata.tags.iter().any(|t| t == "pipeline"))
@@ -198,7 +198,7 @@ impl Tool for PipelineStatusTool {
             ));
         }
 
-        let mems = self.store.scan(Galaxy::Sessions, 500)?;
+        let mems = self.store.scan_all(Galaxy::Sessions)?;
         let pipeline = mems.iter().find(|m| {
             m.metadata.tags.iter().any(|t| t == "pipeline")
                 && (name.is_some_and(|n| m.metadata.tags.contains(&n.to_string()))
