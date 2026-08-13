@@ -147,12 +147,17 @@ Acceptance criteria:
 
 Open work:
 
-- Generate profile manifests and counts from the final registry. Remove the
-  dead `galaxy.list` entry or implement the route.
-- Make `tools/list`, `tools.list`, descriptions, and examples reflect the
-  active profile rather than hardcoded full-surface counts.
-- Decide whether `claims` remains an action-based tool or add explicit aliases
-  such as `claims.calibration`. Document the chosen route exactly.
+- ~~Generate profile manifests and counts from the final registry. Remove the
+  dead `galaxy.list` entry or implement the route.~~ ✅ Done 2026-08-13 — the
+  dead `galaxy.list` prefix is removed from the curated profile; regression
+  tests assert curated discovery excludes galaxy tools.
+- ~~Make `tools/list`, `tools.list`, descriptions, and examples reflect the
+  active profile rather than hardcoded full-surface counts.~~ ✅ Done
+  2026-08-13.
+- ~~Decide whether `claims` remains an action-based tool or add explicit aliases
+  such as `claims.calibration`. Document the chosen route exactly.~~ ✅ Done
+  2026-08-13 — explicit alias routes `claims.add/resolve/status/list/calibration`
+  are registered alongside the action-based `claims` tool, with tests.
 - Decide whether `memory.hybrid_recall` means FTS plus metadata or true vector
   plus FTS fusion. Align the name, description, implementation, and tests.
 - Add generated or native argument schemas for the curated tools. The generic

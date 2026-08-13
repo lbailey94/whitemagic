@@ -49,10 +49,9 @@ verified.
 
 - Privacy and model-exclusion flags are not consistently enforced on read
   paths, and some effect declarations still understate real side effects.
-- Tool discovery contains a dead curated route (`galaxy.list`), and the
-  curated contract still needs native argument schemas and a documented
-  `claims.calibration` route.
-- LMDB secondary indexes and Tantivy can diverge after updates or maintenance.
+- The curated contract still needs native argument schemas, a documented
+  hybrid-recall semantic decision, and export/backup/index-health workflow
+  docs.
 
 ## Verification Commands
 

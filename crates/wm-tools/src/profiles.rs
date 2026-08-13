@@ -43,7 +43,6 @@ pub static PROFILE_CURATED: ToolProfile = ToolProfile {
         "session",
         "claims",
         "transaction",
-        "galaxy.list",
         "gnosis",
         "tools.list",
         "nlu.shadow_report",
@@ -167,6 +166,19 @@ mod tests {
             Some("minimal")
         );
         assert!(profile_from_name("bogus").is_none());
+    }
+
+    #[test]
+    fn curated_has_no_dead_routes() {
+        // Regression: the curated profile once contained a `galaxy.list`
+        // prefix that matched no registered tool.
+        assert!(
+            !PROFILE_CURATED
+                .prefixes
+                .iter()
+                .any(|p| p.starts_with("galaxy")),
+            "curated profile must not include galaxy prefixes"
+        );
     }
 
     #[test]

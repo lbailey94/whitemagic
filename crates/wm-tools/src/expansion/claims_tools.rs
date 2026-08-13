@@ -247,17 +247,85 @@ impl Tool for ClaimsTool {
     }
 }
 
-/// Register the claims tool against the ledger.
+/// Register the claims tool and its explicit single-action alias routes.
+///
+/// Aliases: `claims.add`, `claims.resolve`, `claims.status`, `claims.list`,
+/// `claims.calibration` — dotted routes instead of the action-argument form.
 #[must_use]
 pub fn register_claims(
     registry: &wm_dispatch::ToolRegistry,
     ledger: Option<Arc<Mutex<ClaimsLedger>>>,
 ) -> wm_dispatch::ToolRegistry {
-    let tool = match ledger {
-        Some(ledger) => ClaimsTool::new(ledger),
-        None => ClaimsTool::default(),
-    };
-    registry.register(Arc::new(tool))
+    let ledger = ledger.unwrap_or_else(|| Arc::new(Mutex::new(ClaimsLedger::new())));
+    let mut reg = registry.register(Arc::new(ClaimsTool::new(Arc::clone(&ledger))));
+    for (name, action) in CLAIMS_ALIASES {
+        reg = reg.register(Arc::new(ClaimsAliasTool::new(
+            name,
+            action,
+            Arc::clone(&ledger),
+        )));
+    }
+    reg
+}
+
+/// Explicit single-action claims routes: `(tool_name, action)`.
+const CLAIMS_ALIASES: &[(&str, &str)] = &[
+    ("claims.add", "add"),
+    ("claims.resolve", "resolve"),
+    ("claims.status", "status"),
+    ("claims.list", "list"),
+    ("claims.calibration", "calibration"),
+];
+
+/// A dotted alias for one `claims` action, sharing the same ledger.
+pub struct ClaimsAliasTool {
+    name: &'static str,
+    action: &'static str,
+    inner: ClaimsTool,
+}
+
+impl ClaimsAliasTool {
+    pub fn new(name: &'static str, action: &'static str, ledger: Arc<Mutex<ClaimsLedger>>) -> Self {
+        Self {
+            name,
+            action,
+            inner: ClaimsTool::new(ledger),
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for ClaimsAliasTool {
+    fn name(&self) -> &str {
+        self.name
+    }
+    fn gana(&self) -> Gana {
+        self.inner.gana()
+    }
+    fn effects(&self) -> &EffectRow {
+        self.inner.effects()
+    }
+    fn description(&self) -> &str {
+        match self.action {
+            "add" => {
+                "Record a new prescience claim (statement, domain, source_date, predicted_outcome, confidence, falsification_criteria required)"
+            }
+            "resolve" => "Resolve a claim (claim_id, validated, event, event_date required)",
+            "status" => "Prescience claims ledger summary — counts by status and points earned",
+            "list" => "List claims, optionally filtered by domain or status",
+            "calibration" => {
+                "Claims calibration scorecard — Brier, signed calibration gap, Wilson 95% hit-rate interval, and recalibrated pending confidences"
+            }
+            _ => "Prescience claims ledger action",
+        }
+    }
+    async fn call(&self, ctx: &mut Context, mut args: Value) -> wm_core::Result<Value> {
+        args["action"] = Value::String(self.action.to_string());
+        self.inner.call(ctx, args).await
+    }
+    fn stats(&self) -> &ToolStats {
+        self.inner.stats()
+    }
 }
 
 #[cfg(test)]
@@ -516,5 +584,66 @@ mod tests {
             recal < 0.9 && recal > 0.8,
             "pending 0.9 must shrink toward 0.5 hit rate, got {recal}"
         );
+    }
+
+    #[tokio::test]
+    async fn claims_alias_routes_delegate_to_actions() {
+        let ledger = Arc::new(Mutex::new(ClaimsLedger::new()));
+        let aliases: Vec<ClaimsAliasTool> = CLAIMS_ALIASES
+            .iter()
+            .map(|(name, action)| ClaimsAliasTool::new(name, action, Arc::clone(&ledger)))
+            .collect();
+        let names: Vec<&str> = aliases.iter().map(wm_core::Tool::name).collect();
+        assert_eq!(
+            names,
+            vec![
+                "claims.add",
+                "claims.resolve",
+                "claims.status",
+                "claims.list",
+                "claims.calibration"
+            ]
+        );
+
+        // claims.calibration works without an action argument.
+        let calibration = aliases
+            .iter()
+            .find(|t| t.name() == "claims.calibration")
+            .unwrap();
+        let result = calibration
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
+        assert!(result.get("brier").is_some());
+
+        // claims.add without an action argument records a claim.
+        let add = aliases.iter().find(|t| t.name() == "claims.add").unwrap();
+        let recorded = add
+            .call(
+                &mut Context::default(),
+                json!({
+                    "statement": "Alias route test claim",
+                    "domain": "test",
+                    "source_date": "2026-01-01",
+                    "predicted_outcome": "Y",
+                    "confidence": 0.7,
+                    "falsification_criteria": "not Y"
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(recorded["status"], "success");
+        assert!(recorded.get("claim_id").is_some());
+
+        let status = aliases
+            .iter()
+            .find(|t| t.name() == "claims.status")
+            .unwrap();
+        let summary = status
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
+        assert_eq!(summary["pending"], 1);
     }
 }

@@ -145,7 +145,7 @@ release surface:
 229 tools is an archive, not a v1 product. Profiles curate which tools the `wm` meta-tool can route to (filtering happens before the meta-tools are layered on, so both NLU routing and direct dispatch respect the profile):
 
 - `full` (default) — every tool
-- `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims`, `transaction.*`, diagnostics, `tools.list`, `nlu.shadow_report`
+- `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims` + `claims.*` aliases, `transaction.*`, diagnostics, `tools.list`, `nlu.shadow_report`
 - `minimal` — `memory.create/read/list/query/search/chat/associate/associations`, `tools.list`, `gnosis`
 
 Select via `wm serve --profile curated` or `WM_TOOL_ALLOWLIST=memory,session,claims` (comma-separated prefixes). Use the explicit CLI flag in v5.7.7; CLI/environment profile precedence is a release blocker tracked in `docs/RELEASE_READINESS.md`. Full-surface internals (karma, friction, governance) keep working regardless — only the boundary shrinks.
