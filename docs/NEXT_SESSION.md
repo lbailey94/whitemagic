@@ -28,9 +28,9 @@ verified.
 
 ## Tomorrow's Order
 
-1. Add regression tests for profile precedence, read-only writes, unknown
-   compartments, and profile-aware discovery.
-2. Fix the profile and read-only boundaries.
+1. ~~Add regression tests for profile precedence, read-only writes, unknown
+   compartments, and profile-aware discovery.~~ ✅ done 2026-08-13
+2. ~~Fix the profile and read-only boundaries.~~ ✅ done 2026-08-13
 3. Make transaction rollback exact and failure-safe, preserving IDs and all
    metadata.
 4. Fix secondary-index overwrite behavior and filtered reindexing.
@@ -42,13 +42,12 @@ verified.
 
 ## Hard Blockers
 
-- `--readonly` currently protects the Tantivy writer but does not prevent every
-  LMDB mutation.
 - Transaction rollback snapshots are bounded and do not preserve exact records.
-- Unknown compartments fail open, and privacy/model-exclusion flags are not
-  consistently enforced on read paths.
-- `WM_TOOL_PROFILE=curated` is overwritten by the CLI's default `full` value.
-- Tool discovery contains hardcoded full-surface counts and a dead curated route.
+- Privacy and model-exclusion flags are not consistently enforced on read
+  paths, and some effect declarations still understate real side effects.
+- Tool discovery contains a dead curated route (`galaxy.list`), and the
+  curated contract still needs native argument schemas and a documented
+  `claims.calibration` route.
 - LMDB secondary indexes and Tantivy can diverge after updates or maintenance.
 
 ## Verification Commands

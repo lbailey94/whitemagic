@@ -55,6 +55,34 @@ separate acceptance criteria. See [`docs/RELEASE_READINESS.md`](RELEASE_READINES
 
 ---
 
+## Session 2026-08-13 (morning): boundary safety batch 1
+
+Verified: full workspace suite green, clippy `-D warnings` clean, fmt clean,
+process-level checks passed.
+
+- **Profile precedence fixed** (`resolve_tool_profile` in
+  `wm-tools/src/profiles.rs`): `WM_TOOL_ALLOWLIST` > `--profile` flag >
+  `WM_TOOL_PROFILE` > `full`. The CLI no longer overwrites the environment
+  default. Unit tests + process verification (`WM_TOOL_PROFILE=curated` now
+  curates without the flag).
+- **Store-wide read-only** (`ctx.readonly` + dispatch gate in
+  `wm-dispatch/src/pipeline.rs`): every tool declaring writes is refused in
+  `--readonly`; karma recording, friction auto-log, and mutable-state
+  persistence are suppressed. Regression test covers memory/session/transaction
+  mutators; reads still succeed.
+- **Unknown compartments fail closed** (`wm-core/src/context.rs`): read and
+  write access denied for unrecognized compartment values. Unit + MCP-level
+  regression tests.
+- **Profile-aware discovery** (`McpServer::handle_tools_list`): `tools/list`
+  describes the active profile and registry-derived tool count instead of the
+  hardcoded 229-tool archive surface.
+
+Remaining release blockers: exact transaction rollback, secondary-index and
+filtered-reindex correctness, privacy/model-exclusion enforcement, curated
+contract schemas, and the committed process smoke test.
+
+---
+
 ## Phase 0: Foundation — COMPLETE
 
 All deliverables verified, 101 tests passing, zero compiler warnings.

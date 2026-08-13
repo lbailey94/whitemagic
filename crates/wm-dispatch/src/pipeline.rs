@@ -134,6 +134,16 @@ impl DispatchPipeline {
             )));
         }
 
+        // 1c. Read-only gate — server-level `--readonly` refuses every tool
+        // that declares writes, whether dispatched directly or through the
+        // `wm` meta-tool.
+        if ctx.readonly && !tool.effects().writes.is_empty() {
+            return Err(CoreError::Governance(format!(
+                "server is read-only: tool '{}' requires write access",
+                tool.name()
+            )));
+        }
+
         // 1c. Self-model confidence — conservative dispatch when confidence is low
         const CONFIDENCE_THRESHOLD: f32 = 0.5;
         if ctx.self_model_confidence < CONFIDENCE_THRESHOLD {

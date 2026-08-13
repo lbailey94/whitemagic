@@ -75,14 +75,15 @@ actual store and dispatch boundary.
 
 Open work:
 
-- Fix CLI profile precedence. `wm serve` currently writes its default `full`
-  profile over `WM_TOOL_PROFILE` (`crates/wm-mcp/src/bin/wm.rs`).
-- Make `--readonly` store-wide, or rename it to `--readonly-index` until every
-  LMDB-writing path is blocked. This includes sessions, claims, karma,
-  transactions, mutable state, and internal telemetry.
-- Reject unknown compartments instead of granting full access. Decide whether
-  `_meta.user_id` is trusted local metadata or an authenticated identity; do
-  not treat it as authorization by itself.
+- ~~Fix CLI profile precedence.~~ ✅ Fixed 2026-08-13 — `resolve_tool_profile`
+  applies `WM_TOOL_ALLOWLIST` > `--profile` > `WM_TOOL_PROFILE` > `full`, with
+  unit tests and a process-level verification.
+- ~~Make `--readonly` store-wide.~~ ✅ Fixed 2026-08-13 — the dispatch pipeline
+  refuses every tool that declares writes; karma, friction auto-log, and
+  mutable-state persistence are suppressed in read-only mode.
+- ~~Reject unknown compartments instead of granting full access.~~ ✅ Fixed
+  2026-08-13 — unknown compartment values now fail closed for both reads and
+  writes.
 - Enforce `is_private` on MCP responses and `model_exclude` on model evidence
   and reasoning paths.
 - Audit every `EffectRow` against actual writes, network calls, process calls,
@@ -91,8 +92,8 @@ Open work:
 
 Acceptance criteria:
 
-- A negative test proves every mutating registered tool fails in read-only mode.
-- Unknown compartment values fail closed.
+- ✅ A negative test proves every mutating registered tool fails in read-only mode.
+- ✅ Unknown compartment values fail closed.
 - Private memories never appear in MCP read/search/list/query results.
 - Excluded memories never enter model context or reasoning evidence.
 - A generated or tested effect inventory matches the registered tool behavior.

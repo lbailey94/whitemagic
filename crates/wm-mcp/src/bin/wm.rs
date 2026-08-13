@@ -35,9 +35,11 @@ enum Commands {
         readonly: bool,
         /// Tool surface profile: full | curated | minimal. Curated exposes
         /// the memory-hierarchy surface (memory, session, claims,
-        /// transactions); full exposes all tools. Overrides WM_TOOL_PROFILE.
-        #[arg(long, default_value = "full")]
-        profile: String,
+        /// transactions); full exposes all tools. When omitted, the
+        /// WM_TOOL_PROFILE / WM_TOOL_ALLOWLIST environment variables are
+        /// used instead.
+        #[arg(long)]
+        profile: Option<String>,
     },
     /// Generate or show configuration
     Config {
@@ -202,12 +204,22 @@ fn main() -> anyhow::Result<()> {
             readonly,
             profile,
         } => {
-            // CLI flag wins over config/env for the tool surface profile.
+            // Resolve the tool surface profile with explicit precedence:
+            // WM_TOOL_ALLOWLIST > --profile flag > WM_TOOL_PROFILE > full.
+            // The resolved name is exported so the server's
+            // `tool_profile_from_env()` sees the winning value. Previously
+            // the CLI unconditionally overwrote WM_TOOL_PROFILE with its
+            // default, breaking the documented environment path.
+            let resolved = wm_tools::profiles::resolve_tool_profile(
+                profile.as_deref(),
+                std::env::var("WM_TOOL_PROFILE").ok().as_deref(),
+                std::env::var("WM_TOOL_ALLOWLIST").ok().as_deref(),
+            );
             // `std::env::set_var` is unsafe in Rust 2024 (not thread-safe);
             // main() is single-threaded here, before any runtime is spawned.
             #[allow(unsafe_code)]
             unsafe {
-                std::env::set_var("WM_TOOL_PROFILE", &profile);
+                std::env::set_var("WM_TOOL_PROFILE", resolved.name);
             }
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
