@@ -1,4 +1,4 @@
-# WhiteMagic v4 — Python MCP Shell
+# WhiteMagic v5 - Python MCP Shell
 
 ## Overview
 
@@ -9,6 +9,8 @@ The Python MCP shell is a thin wrapper around the Rust core. It provides:
 - Environment variable configuration
 
 All business logic stays in Rust. Python is only for I/O and ecosystem access.
+The native `wm` binary is the primary release path; use this shell only when a
+Python extension is required.
 
 ## Build
 
@@ -18,11 +20,11 @@ All business logic stays in Rust. Python is only for I/O and ecosystem access.
 cargo build --release --features python -p wm-mcp
 ```
 
-This produces a shared library (`libwhitemagic_v4.so` on Linux) in
+This produces a shared library (`libwhitemagic_v5.so` on Linux) in
 `target/release/`. Copy or symlink it to your Python path:
 
 ```bash
-cp target/release/libwhitemagic_v4.so target/release/whitemagic_v4.so
+cp target/release/libwhitemagic_v5.so target/release/whitemagic_v5.so
 export PYTHONPATH="$PWD/target/release:$PYTHONPATH"
 ```
 
@@ -35,7 +37,7 @@ pip install -r python/requirements.txt
 ### 3. Run the server
 
 ```bash
-python python/whitemagic_v4_server.py --store ~/.local/share/whitemagic/lmdb
+python python/whitemagic_v5_server.py --store ~/.local/share/whitemagic/lmdb
 ```
 
 ## MCP Client Configuration
@@ -48,12 +50,12 @@ or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 ```json
 {
   "mcpServers": {
-    "whitemagic-v4": {
+    "whitemagic-v5": {
       "command": "python",
       "args": [
-        "/path/to/whitemagic-v4/python/whitemagic_v4_server.py",
+        "/path/to/whitemagic-v5/python/whitemagic_v5_server.py",
         "--store",
-        "/path/to/whitemagic-v4/.whitemagic/lmdb"
+        "/path/to/whitemagic-v5/.whitemagic/lmdb"
       ]
     }
   }
@@ -70,9 +72,9 @@ for templates.
 ```json
 {
   "mcpServers": {
-    "whitemagic-v4": {
-      "command": "/path/to/whitemagic-v4/target/release/wm",
-      "args": ["serve", "--store", "/path/to/whitemagic-v4/.whitemagic/lmdb"]
+    "whitemagic-v5": {
+      "command": "/path/to/whitemagic-v5/target/release/wm",
+      "args": ["serve", "--profile", "curated", "--store", "/path/to/whitemagic-v5/.whitemagic/lmdb"]
     }
   }
 }
@@ -88,10 +90,10 @@ for templates.
 ## Python API
 
 ```python
-import whitemagic_v4
+import whitemagic_v5
 
 # Create server
-server = whitemagic_v4.Server("/path/to/lmdb")
+server = whitemagic_v5.Server("/path/to/lmdb")
 
 # Handle JSON-RPC request
 response = server.handle_request('{"jsonrpc":"2.0","id":1,"method":"tools/list"}')

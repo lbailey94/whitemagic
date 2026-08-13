@@ -1,7 +1,11 @@
 # WhiteMagic v4 — Imagination Engine Design & Implementation Plan
 
+> Historical design document. The v5 implementation exists, but this document
+> is not a release-readiness claim; see [`RELEASE_READINESS.md`](RELEASE_READINESS.md)
+> for current maturity and scope.
+
 **Created**: August 7, 2026
-**Status**: Design document, pending implementation
+**Status**: Historical design document; implementation status is tracked in v5
 
 ---
 
