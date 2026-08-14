@@ -1,9 +1,9 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Last updated:** 2026-08-13 (evening, RC1 tagged)
+**Last updated:** 2026-08-13 (late evening, post-RC1 hardening batch)
 **Version under review:** v5.8.0
-**Status:** All P0 and P1 release gates complete. P2 items are post-release. Ready for release candidate tag.
+**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Ready for v5.8.0 final.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
@@ -30,7 +30,7 @@ release scope until the memory boundary is dependable.
 Verified on 2026-08-13 (Phase A of PET hardening, committed as `1dc29b6`;
 P0/P1 gates completed evening 2026-08-13):
 
-- `cargo test --workspace`: 3,511 tests passed.
+- `cargo test --workspace`: 3,515 tests passed.
 - Consistency check fix: `check_consistency()` now iterates `memory_galaxies()`
   (10) instead of `all()` (14), preventing false-positive drift from non-memory
   galaxies (Karma, Dharma, Associations, Embeddings) that are intentionally not
@@ -38,6 +38,20 @@ P0/P1 gates completed evening 2026-08-13):
 - `cargo fmt --all -- --check`: passed.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - `cargo build --release --bin wm`: passed.
+- **B7: Store permissions (0700)**: `MemoryStore::open()` creates the store
+  directory with mode `0o700` on Unix. Regression test verifies permissions.
+- **P2-1: NLU abstention**: when NLU routing returns `gnosis` with confidence
+  < 0.15, the meta-tool abstains and returns an error suggesting explicit
+  routing instead of dispatching to the wrong tool. 2 tests.
+- **P2-2: Experimental labeling**: `imagine.*` and `selfplay.*` tool
+  descriptions prefixed with `[Experimental]`. AGENTS.md updated.
+- **B6: Untrusted `_meta` stripping**: `_meta` is stripped from tool arguments
+  before dispatch in both `McpServer::handle_tools_call` and `WmMetaTool::call`,
+  preventing untrusted callers from injecting compartment/identity overrides via
+  nested args. 1 test.
+- **Misc: Release workflow artifact naming**: release assets now use
+  per-platform names (`wm-linux-x86_64`, `wm-macos-x86_64`, etc.) matching
+  `install.sh` expectations.
 - Effect inventory audit (`crates/wm-mcp/src/effect_audit.rs`, 16 CI tests):
   static declaration checks, a behavioral sweep proving no store-local tool
   mutates LMDB without declaring writes, and mutator spot-checks through the
@@ -388,7 +402,7 @@ README, website, registry listing, or launch content must cite a fresh run
 against the release commit, stamped with configuration and date. Stale counts
 or unreproduced claims are release blockers, not documentation bugs.
 
-- Counts (`3,511 tests`, `229 tools`) must come from a run of the release
+- Counts (`3,515 tests`, `229 tools`) must come from a run of the release
   commit.
 - Benchmarks must come from the release binary on a named machine
   configuration.

@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 13, 2026 (evening, RC1 tagged) (v5.8.0 - 15 crates, 229 tools, 3,511 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. All P0 and P1 release gates complete. Feature phases complete; P2 items are post-release. Phase B (v5.9 PET hardening) is the next major theme.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+**Last updated**: August 13, 2026 (late evening, post-RC1 hardening batch) (v5.8.0 - 15 crates, 229 tools, 3,515 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Ready for v5.8.0 final.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
 
 ---
 
@@ -237,6 +237,57 @@ Verified: 3,511 tests, 0 clippy warnings, fmt clean. Release gate run passed fro
 - 6 new tests: consistency no-drift, drift detection, index health tracking,
   system.health with search, drift detection via tool, unavailable-index
   honesty.
+
+---
+
+## Session 2026-08-13 (late evening): post-RC1 hardening batch
+
+Verified: 3,515 tests, 0 clippy warnings, fmt clean. Pushed to GitHub
+(`lbailey94/WMv5`). All P2 items and Phase B items B6/B7 complete.
+
+### B7: Store permissions (0700) (`5df2440`)
+
+- `MemoryStore::open()` in `wm-memory/src/store.rs` creates the store
+  directory with mode `0o700` on Unix before opening the LMDB environment.
+  All callers (serve, daemon, doctor, quickstart, migrate) benefit since
+  they delegate to `open()`.
+- Regression test: `store_dir_has_restrictive_permissions`.
+
+### P2-1: NLU abstention (`5df2440`)
+
+- When NLU routing (`thought=`) returns `gnosis` with confidence < 0.15
+  (`NLU_ABSTENTION_THRESHOLD`), the `wm` meta-tool abstains and returns an
+  error suggesting explicit routing instead of dispatching to the wrong
+  tool. Explicit `route=` is unaffected.
+- 2 tests: `nlu_abstention_returns_error_for_unmatched_query`,
+  `nlu_abstention_does_not_fire_for_explicit_route`.
+
+### P2-2: Experimental labeling (`c916975`)
+
+- `imagine.scenario`, `imagine.predict`, `imagine.reflect` — descriptions
+  prefixed with `[Experimental]`.
+- `selfplay.run`, `selfplay.status`, `selfplay.export` — descriptions
+  prefixed with `[Experimental]`.
+- AGENTS.md sections for Imagination Engine and Self-Play Training Loop
+  labeled Experimental with notes that live model-update paths are not
+  production-verified.
+
+### B6: Untrusted `_meta` stripping (`0ab8b88`)
+
+- `McpServer::handle_tools_call`: strips `_meta` from tool `arguments`
+  before dispatch. `_meta` is a top-level MCP request field, not a tool
+  argument.
+- `WmMetaTool::call`: strips `_meta` from `passthrough_args` before
+  forwarding to inner tools. Prevents untrusted callers from injecting
+  compartment/identity overrides via nested args.
+- Test: `meta_in_tool_arguments_is_stripped`.
+
+### Misc: Release workflow artifact naming (`3884563`)
+
+- Release assets now use per-platform names (`wm-linux-x86_64`,
+  `wm-macos-x86_64`, `wm-macos-aarch64`, `wm-windows-x86_64.exe`)
+  matching `install.sh` expectations. Previously all platforms uploaded as
+  `wm`, causing name collisions in the GitHub Release.
 
 ---
 

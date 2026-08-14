@@ -1,19 +1,20 @@
 # Next Session Handoff - 2026-08-13
 
-> Prepared 2026-08-12 after the release-readiness audit. The canonical plan is
+> Prepared 2026-08-13 after the post-RC1 hardening batch. The canonical plan is
 > [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md). This file contains only
 > the next execution slice.
 
 ## Current State
 
-- v5.8.0, 15 crates, 229 registered tool implementations, 3,511 tests.
+- v5.8.0, 15 crates, 229 registered tool implementations, 3,515 tests.
 - `cargo test --workspace`, format check, clippy (`-D warnings`), and release
   binary build all passed on 2026-08-13 from `cargo clean`.
 - **Release gate run complete. Tagged v5.8.0-rc1.** Fresh-install rehearsal
   passed (quickstart + doctor + curated smoke test, all healthy).
-- **All P0 and P1 release gates are now complete.** P2 (NLU abstention,
-  router labeling) is post-release. Phase B (v5.9 PET hardening) is the next
-  major theme.
+- **All P0, P1, and P2 items are now complete.** Phase B items B6 and B7 are
+  complete. B5 (store seal/verify) and B4 (sandbox mode) remain.
+- Codebase pushed to GitHub (`lbailey94/WMv5`, private). RC1 tag pushed;
+  release workflow triggered.
 - Phase A of PET hardening (A1–A3) is complete and committed (`1dc29b6`):
   ResourceRules on the dispatch path, the effect inventory audit as CI tests,
   and the append-only write-audit journal.
@@ -33,24 +34,26 @@ verified.
 
 ## Next Steps
 
-Release gate run complete. Tag `v5.8.0-rc1` created locally (no remote
-configured — push when ready). Remaining work:
+All P0/P1/P2 items and Phase B items B6/B7 are complete. Remaining work:
 
-1. **Push the tag** to trigger `release.yml` (per-platform binaries + checksums).
-2. **Fresh-install rehearsal on a clean machine**: download via `install.sh`,
-   run `wm doctor`, run `scripts/curated_smoke_test.py`.
-3. **P2 items** (post-release): NLU abstention, router labeling, self-play/imagination labeling.
-4. **Phase B** (v5.9): B7 store permissions, B6 untrusted `_meta`, B5 store seal/verify, B4 sandbox.
+1. **B5: Store seal/verify** (low priority): HMAC over store directory to
+   detect tampering. Needs key management design — derive from a per-install
+   secret or use a platform keystore. Consider a `wm seal` / `wm verify` CLI
+   pair.
+2. **B4: Sandbox mode** (low priority): restrict tool execution capabilities
+   via seccomp (Linux) or sandbox-exec (macOS). Platform-specific; needs
+   careful allowlisting of syscalls for LMDB, Tantivy, and HTTP embedder.
+3. **v5.8.0 final release**: re-run the full gate from `cargo clean`, tag
+   `v5.8.0`, push to trigger the release workflow with the fixed artifact
+   naming.
+4. **Optional**: re-run the fresh-install rehearsal with the fixed
+   `install.sh` (per-platform artifact names) to verify end-to-end download
+   works against a real GitHub Release.
 
 ## Hard Blockers
 
-- ~~Some effect declarations still understate real side effects (effect inventory
-  audit remains open).~~ ✅ Closed 2026-08-13 — the audit is 16 CI tests; 13
-  false declarations fixed.
-- ~~The curated contract still needs export/backup/index-health workflow docs.~~
-  ✅ Closed 2026-08-13 — `docs/OPERATIONS.md` covers the full workflow.
-
-**No hard blockers remain.** All P0 and P1 release gates are complete.
+**No hard blockers remain.** All P0 and P1 release gates are complete. P2
+items are complete. Phase B items B6 and B7 are complete.
 
 ## Verification Commands
 
@@ -80,55 +83,42 @@ and asserts JSON results rather than only process exit code.
 - `docs/notes/shadow-mode-analysis-2026-08-10.md`: embedding-router quality data.
 - `docs/PROGRESS.md`: implementation history and verified phase work.
 - `docs/RELEASE_READINESS.md`: blockers, acceptance criteria, and no-go gates.
-- `docs/PET_HARDENING.md`: next-session hardening plan (Phase A: ResourceRules
-  wiring, effect inventory audit, write-audit trail).
+- `docs/PET_HARDENING.md`: hardening plan (Phase A complete; Phase B in progress).
 - `scripts/collect_shadow_data.py`: router data collection, requiring a live
   embedder endpoint.
 
-## Next Session Start
+## Session History
 
-~~Begin with Phase A of `docs/PET_HARDENING.md`.~~ ✅ Phase A (A1–A3)
-complete 2026-08-13, committed as `1dc29b6`:
+### Session 2026-08-13 (late evening): post-RC1 hardening batch
 
-- A1: `ResourceRules` evaluated on the dispatch path (budgets block, novelty
-  flags reach responses, autonomous review/purpose gates block).
-- A2: effect inventory audit as 16 CI tests (`crates/wm-mcp/src/effect_audit.rs`);
-  13 false declarations fixed, plus a runtime Satya check for `galaxy=citta`.
-- A3: `WriteAuditJournal` (append-only LMDB journal, `wm doctor` surfacing,
-  shutdown flush).
+Completed 5 items in one session (3,515 tests, 0 clippy warnings, fmt clean):
 
-Remaining release gates, in order, before Phase B (v5.9 PET hardening):
+- **B7: Store permissions (0700)** — `MemoryStore::open()` creates the store
+  directory with mode `0o700` on Unix. Regression test added.
+- **P2-1: NLU abstention** — when NLU routing returns `gnosis` with confidence
+  < 0.15, the meta-tool abstains and returns an error suggesting explicit
+  routing. 2 tests.
+- **P2-2: Experimental labeling** — `imagine.*` and `selfplay.*` tool
+  descriptions prefixed with `[Experimental]`. AGENTS.md updated.
+- **B6: Untrusted `_meta` stripping** — `_meta` stripped from tool arguments
+  in both `McpServer` and `WmMetaTool` before dispatch. 1 test.
+- **Misc: Release workflow artifact naming** — release assets now use
+  per-platform names matching `install.sh` expectations.
 
-1. ~~**P0**: prove natural-language calls cannot reach destructive tools (the
-   acceptance line is still open — the structural gate exists, the test does
-   not).~~ ✅ Done 2026-08-13 — destructive gate moved before required-arg
-   check; comprehensive sweep test covers all destructive tools.
-2. ~~**P0**: define the LMDB/Tantivy consistency contract — expose degraded
-   index state and a safe rebuild path.~~ ✅ Done 2026-08-13 — `IndexHealth`
-   tracks successes/failures; `check_consistency()` detects LMDB/Tantivy drift;
-   `system.health` and `wm doctor` report degraded state.
-3. ~~**P0**: search health must report stale or unavailable indexes instead of
-   silently saying healthy.~~ ✅ Done 2026-08-13 — `system.health` reports
-   `index_health` and `index_consistency`; `wm doctor` prints `[WARN]` with
-   remediation guidance.
-4. ~~**P1**: export, backup, index-health, and recovery workflow docs.~~
-   ✅ Done 2026-08-13 — `docs/OPERATIONS.md` covers export (galaxy.export,
-   galaxy.backup, training data), backup (cold + hot), index health (wm doctor,
-   system.health, consistency model), and recovery (corruption, map full,
-   Tantivy rebuild, restore from backup).
-5. ~~**P1**: release checksums and a short install path for published binaries;
-   client config examples that launch the same versioned binary.~~ ✅ Done
-   2026-08-13 — `scripts/install.sh` downloads, verifies SHA-256, and installs
-   to `~/.local/bin/wm`. Release workflow already generates per-platform
-   checksums.
-6. ~~**P1**: optional features (Julia/Python/LanceDB/ONNX) tested or explicitly
-   marked unsupported for the release.~~ ✅ Done 2026-08-13 — feature support
-   matrix in `RELEASE_READINESS.md` documents CI status and release status for
-   all optional features.
-7. **P2** (post-release): NLU abstention, router labeling, self-play/imagination
-   labeling.
+### Session 2026-08-13 (evening): P0/P1 release gates complete
 
-Phase B (v5.9 theme): B4 sandbox mode, B5 store seal/verify, B6 untrusted
-`_meta` by default, B7 store permission hygiene (`0700`).
+- P0-1: Destructive-via-NLU sweep test
+- P0-2: LMDB/Tantivy consistency contract
+- P0-3: Search-health honesty
+- P1-4: Operations docs
+- P1-5: Install script
+- P1-6: Optional features matrix
+- Tagged v5.8.0-rc1, fresh-install rehearsal passed
+
+### Session 2026-08-13 (afternoon): Phase A PET hardening
+
+- A1: ResourceRules on the dispatch path
+- A2: Effect inventory audit as 16 CI tests; 13 false declarations fixed
+- A3: WriteAuditJournal (append-only LMDB journal, `wm doctor` surfacing)
 
 Also use `whitemagic-dev` session.continuity at session start (see AGENTS.md).
