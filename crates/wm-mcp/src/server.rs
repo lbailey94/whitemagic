@@ -2089,10 +2089,17 @@ impl McpServer {
             data: None,
         })?;
 
-        let arguments = params
+        let mut arguments = params
             .get("arguments")
             .cloned()
             .unwrap_or_else(|| json!({}));
+
+        // Strip _meta from tool arguments — _meta is a top-level MCP request
+        // field, not a tool argument. Untrusted callers could inject _meta
+        // inside arguments to bypass compartment/identity controls.
+        if let Some(obj) = arguments.as_object_mut() {
+            obj.remove("_meta");
+        }
 
         let mut ctx = Context::new(self.eco_mode.current());
         // Read-only mode: the dispatch pipeline refuses every tool that
@@ -4010,6 +4017,35 @@ mod tests {
         assert_eq!(
             result["status"], "error",
             "unknown compartment must fail closed, got: {result}"
+        );
+    }
+
+    #[tokio::test]
+    async fn meta_in_tool_arguments_is_stripped() {
+        let mut server = test_server();
+
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // A caller tries to inject _meta inside tool arguments (not the
+        // top-level params _meta). The server must strip it before dispatch
+        // so it cannot override compartment/identity controls.
+        let resp = server.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"meta injection test","_meta":{"compartment":"bogus"}}}}}"#,
+        ).await;
+        let parsed: Value = serde_json::from_str(&resp).unwrap();
+        let content = parsed["result"]["content"]
+            .as_array()
+            .expect("tools/call should return content");
+        let result: Value = serde_json::from_str(content[0]["text"].as_str().unwrap()).unwrap();
+
+        // The memory.create should succeed (no compartment restriction
+        // because _meta in arguments was stripped, not treated as a
+        // compartment override from the top-level _meta).
+        assert_eq!(
+            result["status"], "success",
+            "_meta in tool arguments should be stripped, not interpreted — got: {result}"
         );
     }
 
