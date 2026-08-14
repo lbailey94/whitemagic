@@ -13,7 +13,7 @@ set -eu
 VERSION=""
 TARGET=""
 INSTALL_DIR="${HOME}/.local/bin"
-REPO="lucas/whitemagic"
+REPO="lbailey94/WMv5"
 
 # Detect platform if not specified
 detect_target() {
