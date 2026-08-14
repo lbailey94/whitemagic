@@ -80,9 +80,9 @@ convenience system:
 - Cold-start fallback to `ComplexityClassifier` (regex) when history < 10 records
 - `EdgeRuleGenerator`: auto-promotes high-frequency simple responses to edge rules (frequency ≥ 5, confidence > 0.9, response < 200 chars)
 
-## Imagination Engine (v5 Phase 4)
+## Imagination Engine (v5 Phase 4) — Experimental
 
-The imagination engine implements the "imagine → simulate → evaluate → decide" loop (Sutton's search method):
+The imagination engine implements the "imagine → simulate → evaluate → decide" loop (Sutton's search method). MCP tools (`imagine.*`) are labeled `[Experimental]` in their descriptions — live model-update paths are not yet production-verified.
 
 ### Components
 - `WorldModel` in `wm-bicameral/src/world_model.rs` — bicameral LLM state prediction with `predict()`, `rollout()`, `generate_actions()`
@@ -98,9 +98,9 @@ The imagination engine implements the "imagine → simulate → evaluate → dec
 - **Daemon**: `--research-interval` flag (0 = run with regular cycle sweep, >0 = dedicated Research cycle)
 - **McpServer**: `init_imagination()` builds `ScenarioEngine` at startup, wired into dream + cycle contexts
 
-## Self-Play Training Loop (v5 Phase 5)
+## Self-Play Training Loop (v5 Phase 5) — Experimental
 
-The self-play training loop implements the "propose → solve → verify → collect" cycle for autonomous model improvement:
+The self-play training loop implements the "propose → solve → verify → collect" cycle for autonomous model improvement. MCP tools (`selfplay.*`) are labeled `[Experimental]` in their descriptions — live LoRA training/hot-swap remains experimental.
 
 ### Components
 - `SelfPlayLoop` in `wm-bicameral/src/self_play.rs` — orchestrates the full cycle with `run()`, `run_cycle()`, `stats()`, `export_training_data()`

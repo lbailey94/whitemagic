@@ -123,7 +123,7 @@ impl Tool for SelfPlayRunTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Run self-play training cycles (propose → solve → verify → collect training data)"
+        "[Experimental] Run self-play training cycles (propose → solve → verify → collect training data)"
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -254,7 +254,7 @@ impl Tool for SelfPlayStatusTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Get self-play training loop statistics and status"
+        "[Experimental] Get self-play training loop statistics and status"
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -322,7 +322,7 @@ impl Tool for SelfPlayExportTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Export collected self-play training data (JSONL or llama.cpp format)"
+        "[Experimental] Export collected self-play training data (JSONL or llama.cpp format)"
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
