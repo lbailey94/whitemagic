@@ -8,6 +8,9 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use wm_core::{CoreError, Galaxy, Result};
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use crate::indexes::IndexDbs;
 use crate::memory::{Memory, decode_embedding, encode_embedding};
 use crate::semantic::SemanticEncoder;
@@ -133,8 +136,22 @@ pub struct MemoryStore {
 
 impl MemoryStore {
     /// Open or create an LMDB store at the given path.
+    ///
+    /// On Unix, the store directory is created with mode 0o700 (owner-only
+    /// access) if it does not already exist. Existing directories are
+    /// left untouched.
     pub fn open(path: impl AsRef<Path>, map_size: usize) -> Result<Self> {
         let path = path.as_ref().to_path_buf();
+
+        // Ensure the directory exists with restrictive permissions.
+        std::fs::create_dir_all(&path)
+            .map_err(|e| CoreError::Memory(format!("Cannot create store dir: {e}")))?;
+        #[cfg(unix)]
+        {
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700))
+                .map_err(|e| CoreError::Memory(format!("Cannot set store dir permissions: {e}")))?;
+        }
+
         let env = Environment::new()
             .set_map_size(map_size)
             .set_max_dbs(32)
@@ -921,6 +938,21 @@ mod tests {
         for galaxy in Galaxy::all() {
             let _db = store.galaxy_db(galaxy).unwrap();
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn store_dir_has_restrictive_permissions() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store_path = tmp.path().join("lmdb");
+        let _store = MemoryStore::open_default(&store_path).unwrap();
+        let perms = std::fs::metadata(&store_path).unwrap().permissions().mode();
+        assert_eq!(
+            perms & 0o777,
+            0o700,
+            "store directory should have 0700 permissions, got {:o}",
+            perms & 0o777
+        );
     }
 
     #[test]
