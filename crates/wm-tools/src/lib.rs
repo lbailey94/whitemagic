@@ -35,6 +35,12 @@ use crate::expansion::common::{
     schema, str_array_prop, str_prop,
 };
 
+/// Minimum confidence for NLU routing to dispatch. Below this, the router
+/// abstains and returns an error suggesting explicit routing instead of
+/// dispatching to the wrong tool. Only applies to `thought=` (NLU) routing,
+/// not explicit `route=`.
+const NLU_ABSTENTION_THRESHOLD: f64 = 0.15;
+
 // ── Tool: memory.create ──────────────────────────────────────────────
 
 /// Create a memory in a galaxy.
@@ -2301,6 +2307,20 @@ impl Tool for WmMetaTool {
             self.classify_async(thought).await
         };
 
+        // NLU abstention: when the router returns gnosis (the fallback) with
+        // low confidence, the query didn't match any tool description well
+        // enough. Rather than dispatch to the wrong tool, return an error
+        // suggesting the user try explicit routing.
+        if route.is_none() && tool_name == "gnosis" && confidence < NLU_ABSTENTION_THRESHOLD {
+            return Ok(json!({
+                "status": "error",
+                "message": "Could not confidently match your request to a tool.",
+                "confidence": confidence,
+                "hint": "Use explicit routing: wm(route='tool.name', args={...}). Use wm(route='tools.list') to see available tools.",
+                "_wm_route": { "tool": tool_name, "confidence": confidence, "abstained": true }
+            }));
+        }
+
         // Build args for the target tool
         let mut tool_args = if passthrough_args.is_object() {
             passthrough_args
@@ -3348,6 +3368,60 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[tokio::test]
+    async fn nlu_abstention_returns_error_for_unmatched_query() {
+        let store = test_store();
+        let (registry, _pipeline) = test_registry_with_pipeline(&store);
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // A nonsense query that won't match any tool profile — should
+        // abstain and return an error with the abstention flag set.
+        let result = wm
+            .call(&mut ctx, json!({"thought": "xyzzy quux blargh frobnicate"}))
+            .await
+            .unwrap();
+
+        assert_eq!(result["status"], "error");
+        assert!(
+            result
+                .get("_wm_route")
+                .and_then(|r| r.get("abstained"))
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false),
+            "expected abstained=true, got: {result}"
+        );
+        assert!(
+            result["message"]
+                .as_str()
+                .unwrap()
+                .contains("Could not confidently match"),
+            "expected abstention message, got: {result}"
+        );
+    }
+
+    #[tokio::test]
+    async fn nlu_abstention_does_not_fire_for_explicit_route() {
+        let store = test_store();
+        let (registry, _pipeline) = test_registry_with_pipeline(&store);
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // Explicit route to gnosis should work even though gnosis is the
+        // fallback tool — abstention only applies to NLU routing.
+        let result = wm.call(&mut ctx, json!({"route": "gnosis"})).await.unwrap();
+
+        assert_eq!(result["status"], "success");
+        assert!(
+            !result
+                .get("_wm_route")
+                .and_then(|r| r.get("abstained"))
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false),
+            "explicit route should not abstain, got: {result}"
+        );
     }
 
     /// Deterministic fake embedder — exercises the embedding router path
