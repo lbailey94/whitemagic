@@ -61,18 +61,33 @@ jobs:
           cd target/${{ matrix.target }}/release
           (Get-FileHash wm.exe -Algorithm SHA256).Hash.ToLower() + "  wm.exe" | Out-File -Encoding ascii wm.sha256
 
+      - name: Rename binary for release
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          cp wm ${{ matrix.artifact }}
+          cp wm.sha256 ${{ matrix.artifact }}.sha256
+
+      - name: Rename binary for release (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.target }}/release
+          Copy-Item wm.exe ${{ matrix.artifact }}
+          Copy-Item wm.sha256 ${{ matrix.artifact }}.sha256
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: target/${{ matrix.target }}/release/wm${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
 
       - name: Upload checksum artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}.sha256
-          path: target/${{ matrix.target }}/release/wm.sha256
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact }}.sha256
           if-no-files-found: error
 
   publish:
