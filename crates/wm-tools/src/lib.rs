@@ -2323,7 +2323,14 @@ impl Tool for WmMetaTool {
 
         // Build args for the target tool
         let mut tool_args = if passthrough_args.is_object() {
-            passthrough_args
+            // Strip _meta from passthrough args — _meta is a top-level MCP
+            // request field, not a tool argument. Prevents untrusted callers
+            // from injecting compartment/identity overrides via nested args.
+            let mut args = passthrough_args;
+            if let Some(obj) = args.as_object_mut() {
+                obj.remove("_meta");
+            }
+            args
         } else {
             Value::Null
         };
