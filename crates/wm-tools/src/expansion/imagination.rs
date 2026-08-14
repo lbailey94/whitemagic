@@ -94,7 +94,7 @@ impl Tool for ImagineScenarioTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Generate and evaluate scenarios for a given state and goal using the bicameral imagination engine"
+        "[Experimental] Generate and evaluate scenarios for a given state and goal using the bicameral imagination engine"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let state = args
@@ -230,7 +230,7 @@ impl Tool for ImaginePredictTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Predict the outcome of a specific action from a given state using the bicameral world model"
+        "[Experimental] Predict the outcome of a specific action from a given state using the bicameral world model"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let state = args
@@ -333,7 +333,7 @@ impl Tool for ImagineReflectTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Counterfactual reflection: compare actual action outcome vs alternative action using the bicameral world model"
+        "[Experimental] Counterfactual reflection: compare actual action outcome vs alternative action using the bicameral world model"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let past_state = args
