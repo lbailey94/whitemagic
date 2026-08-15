@@ -624,17 +624,25 @@ impl McpServer {
         let gan_ying_bus = Arc::new(std::sync::Mutex::new(gy_bus));
 
         let registry = ToolRegistry::new();
-        let conversational = {
+        let recall_engine = {
             let embedder: Arc<dyn Embedder> = create_embedder().into();
             let recall = RecallEngine::new(
                 store.clone(),
                 search.clone(),
                 VectorStore::new(),
                 embedder,
-                RecallConfig::default(),
+                RecallConfig::from_env(),
             )?;
-            Some(ConversationalSearch::with_defaults(recall))
+            Arc::new(recall)
         };
+        // If the embedder is a stub, hybrid search would produce garbage
+        // vectors — so only wire it in when a real embedder is available.
+        let recall_for_tools = if recall_engine.embedder_is_real() {
+            Some(recall_engine.clone())
+        } else {
+            None
+        };
+        let conversational = Some(ConversationalSearch::with_defaults(recall_engine));
         let friction_search = search.clone();
         let transaction_state: wm_tools::expansion::TransactionState =
             Arc::new(std::sync::Mutex::new(None));
@@ -656,6 +664,7 @@ impl McpServer {
             spiral_tracker,
             vector_store,
             conversational,
+            recall_for_tools,
             Some(Arc::clone(&homeostatic_loop)),
             Some(Arc::clone(&anomaly_detector)),
             Some(Arc::clone(&sensorimotor_bus)),
@@ -2700,7 +2709,7 @@ mod tests {
         let drive_core = Arc::new(std::sync::Mutex::new(DriveCore::new()));
 
         let registry = ToolRegistry::new();
-        let conversational = {
+        let recall_engine = {
             let embedder: Arc<dyn Embedder> = create_embedder().into();
             let recall = RecallEngine::new(
                 store.clone(),
@@ -2710,8 +2719,14 @@ mod tests {
                 RecallConfig::default(),
             )
             .unwrap();
-            Some(ConversationalSearch::with_defaults(recall))
+            Arc::new(recall)
         };
+        let recall_for_tools = if recall_engine.embedder_is_real() {
+            Some(recall_engine.clone())
+        } else {
+            None
+        };
+        let conversational = Some(ConversationalSearch::with_defaults(recall_engine));
         // N19-N20: Homeostatic Loop + Anomaly Detector — created early so they
         // can be shared between register_all (homeostasis tools) and the server state.
         let homeostatic_loop = Arc::new(std::sync::Mutex::new(HomeostaticLoop::default()));
@@ -2732,6 +2747,7 @@ mod tests {
             spiral_tracker,
             vector_store,
             conversational,
+            recall_for_tools,
             Some(Arc::clone(&homeostatic_loop)),
             Some(Arc::clone(&anomaly_detector)),
             None,

@@ -162,7 +162,14 @@ impl SlidingWindow {
     }
 
     /// Try to acquire a permit. Returns `true` if allowed, `false` if rate-limited.
+    ///
+    /// A `max_requests` of 0 means **unlimited** (no rate limiting).
     pub fn try_acquire(&self) -> bool {
+        // 0 = unlimited per documentation and RateLimiterConfig convention
+        if self.max_requests == 0 {
+            return true;
+        }
+
         let now = current_time_ms();
         self.maybe_rotate(now);
         self.maybe_refill_burst(now);
@@ -521,9 +528,12 @@ mod tests {
     }
 
     #[test]
-    fn zero_max_blocks() {
+    fn zero_max_means_unlimited() {
         let w = SlidingWindow::new(0, 60_000, 0);
-        assert!(!w.try_acquire());
+        // 0 = unlimited: should always allow
+        for _ in 0..1000 {
+            assert!(w.try_acquire());
+        }
     }
 
     proptest! {

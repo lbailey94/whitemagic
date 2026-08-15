@@ -23,7 +23,7 @@ use wm_dispatch::{DispatchPipeline, ToolRegistry, ToolRegistryBuilder};
 use wm_governance::{DharmaGate, KarmaLedger, ResourceRules};
 use wm_memory::{
     Association, AssociationStore, ConversationalSearch, Memory, MemoryQuery, MemoryStore,
-    SearchEngine, VectorStore,
+    RecallEngine, SearchEngine, VectorStore,
 };
 use wm_substrate::SubstrateMonitor;
 use wm_substrate::anomaly::AnomalyDetector;
@@ -50,15 +50,21 @@ const NLU_ABSTENTION_THRESHOLD: f64 = 0.15;
 pub struct MemoryCreateTool {
     store: Arc<MemoryStore>,
     search: Option<Arc<SearchEngine>>,
+    recall: Option<Arc<RecallEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl MemoryCreateTool {
-    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
+    pub fn new(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+        recall: Option<Arc<RecallEngine>>,
+    ) -> Self {
         Self {
             store,
             search,
+            recall,
             stats: ToolStats::default(),
             effects: EffectRow {
                 // Writes whichever galaxy the caller selects at runtime.
@@ -125,24 +131,51 @@ impl Tool for MemoryCreateTool {
         let mut memory = Memory::new(galaxy, content.to_string());
         memory.metadata.tags = tags;
         let id = memory.metadata.id;
-        self.store.put(galaxy, &memory)?;
 
-        // Index into Tantivy if search engine is available (non-fatal)
-        if let Some(search) = &self.search {
-            if let Err(e) = (|| {
-                let mut writer = search.writer()?;
-                search.add_document(
-                    &mut writer,
-                    &id.to_string(),
-                    galaxy.db_name(),
-                    content,
-                    &memory.metadata.tags,
-                    memory.metadata.created_at.timestamp(),
-                )?;
-                search.commit(&mut writer)?;
-                Ok::<(), wm_core::CoreError>(())
-            })() {
-                tracing::warn!("Tantivy indexing failed for memory {id}: {e}");
+        // If RecallEngine with a real embedder is available, use it for
+        // auto-embedding + Tantivy indexing in one shot.
+        if let Some(recall) = &self.recall {
+            if let Err(e) = recall.store_with_embedding(galaxy, &memory) {
+                tracing::warn!("RecallEngine store_with_embedding failed for memory {id}: {e}");
+                // Fall back to plain store + Tantivy
+                self.store.put(galaxy, &memory)?;
+                if let Some(search) = &self.search {
+                    if let Err(e) = (|| {
+                        let mut writer = search.writer()?;
+                        search.add_document(
+                            &mut writer,
+                            &id.to_string(),
+                            galaxy.db_name(),
+                            content,
+                            &memory.metadata.tags,
+                            memory.metadata.created_at.timestamp(),
+                        )?;
+                        search.commit(&mut writer)?;
+                        Ok::<(), wm_core::CoreError>(())
+                    })() {
+                        tracing::warn!("Tantivy indexing failed for memory {id}: {e}");
+                    }
+                }
+            }
+        } else {
+            self.store.put(galaxy, &memory)?;
+            // Index into Tantivy if search engine is available (non-fatal)
+            if let Some(search) = &self.search {
+                if let Err(e) = (|| {
+                    let mut writer = search.writer()?;
+                    search.add_document(
+                        &mut writer,
+                        &id.to_string(),
+                        galaxy.db_name(),
+                        content,
+                        &memory.metadata.tags,
+                        memory.metadata.created_at.timestamp(),
+                    )?;
+                    search.commit(&mut writer)?;
+                    Ok::<(), wm_core::CoreError>(())
+                })() {
+                    tracing::warn!("Tantivy indexing failed for memory {id}: {e}");
+                }
             }
         }
 
@@ -151,6 +184,204 @@ impl Tool for MemoryCreateTool {
             "id": id.to_string(),
             "galaxy": galaxy.db_name(),
             "content_hash": memory.metadata.content_hash,
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+// ── Tool: memory.batch_create ───────────────────────────────────────
+
+/// Batch-create multiple memories with a single Tantivy commit.
+///
+/// Accepts an `items` array of `{content, galaxy?, tags?}` objects.
+/// All documents are added to the Tantivy index in one commit, making
+/// bulk ingestion ~10-50x faster than individual `memory.create` calls.
+pub struct MemoryBatchCreateTool {
+    store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
+    recall: Option<Arc<RecallEngine>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl MemoryBatchCreateTool {
+    pub fn new(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+        recall: Option<Arc<RecallEngine>>,
+    ) -> Self {
+        Self {
+            store,
+            search,
+            recall,
+            stats: ToolStats::default(),
+            effects: EffectRow {
+                writes: fresh_write_galaxies(),
+                invokes: vec![Capability::MemoryWrite],
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for MemoryBatchCreateTool {
+    fn name(&self) -> &str {
+        "memory.batch_create"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Encampment
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "items": {
+                    "type": "array",
+                    "description": "Array of {content, galaxy?, tags?} objects",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "content": str_prop("Memory content (text)"),
+                            "galaxy": str_prop("Target galaxy (default codex)"),
+                            "tags": str_array_prop("Optional tags"),
+                        },
+                        "required": ["content"],
+                    },
+                },
+            }),
+            &["items"],
+        )
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let items = args
+            .get("items")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("items (array) required".into()))?;
+
+        if let Some(search) = &self.search {
+            if search.is_readonly() {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "read-only mode: memory.batch_create disabled (another process owns the index)"
+                        .into(),
+                ));
+            }
+        }
+
+        let mut ids: Vec<String> = Vec::new();
+        let mut writer_guard = if let Some(search) = &self.search {
+            Some(search.writer()?)
+        } else {
+            None
+        };
+
+        // Collect memories for batch processing
+        let mut memories: Vec<(Galaxy, Memory)> = Vec::new();
+
+        for item in items {
+            let content = item
+                .get("content")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs("each item needs content (string)".into())
+                })?;
+            let galaxy_str = item
+                .get("galaxy")
+                .and_then(|v| v.as_str())
+                .unwrap_or("codex");
+            let galaxy = parse_galaxy(galaxy_str)?;
+            let tags: Vec<String> = item
+                .get("tags")
+                .and_then(|v| v.as_array())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let mut memory = Memory::new(galaxy, content.to_string());
+            memory.metadata.tags = tags;
+            let id = memory.metadata.id;
+            ids.push(id.to_string());
+            memories.push((galaxy, memory));
+        }
+
+        // If RecallEngine with a real embedder is available, batch-embed + single commit.
+        if let Some(recall) = &self.recall {
+            let entries: Vec<(Galaxy, &Memory)> = memories.iter().map(|(g, m)| (*g, m)).collect();
+            match recall.store_batch_with_embedding(&entries) {
+                Ok(n) => {
+                    tracing::info!("batch_create: embedded {n} memories in single batch");
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "batch_create: store_batch_with_embedding failed ({e}), falling back to per-item"
+                    );
+                    // Fall back to per-item store + Tantivy batch index
+                    for (galaxy, memory) in &memories {
+                        self.store.put(*galaxy, memory)?;
+                        if let Some(ref mut guard) = writer_guard {
+                            if let Some(search) = &self.search {
+                                if let Err(e) = search.add_document(
+                                    &mut *guard,
+                                    &memory.metadata.id.to_string(),
+                                    galaxy.db_name(),
+                                    &memory.content,
+                                    &memory.metadata.tags,
+                                    memory.metadata.created_at.timestamp(),
+                                ) {
+                                    tracing::warn!(
+                                        "Tantivy indexing failed for memory {}: {e}",
+                                        memory.metadata.id
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // No embedder: store to LMDB + batch-index in Tantivy
+            for (galaxy, memory) in &memories {
+                self.store.put(*galaxy, memory)?;
+                if let Some(ref mut guard) = writer_guard {
+                    if let Some(search) = &self.search {
+                        if let Err(e) = search.add_document(
+                            &mut *guard,
+                            &memory.metadata.id.to_string(),
+                            galaxy.db_name(),
+                            &memory.content,
+                            &memory.metadata.tags,
+                            memory.metadata.created_at.timestamp(),
+                        ) {
+                            tracing::warn!(
+                                "Tantivy indexing failed for memory {}: {e}",
+                                memory.metadata.id
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Single commit for all documents
+        if let Some(ref mut guard) = writer_guard {
+            if let Some(search) = &self.search {
+                if let Err(e) = search.commit(&mut *guard) {
+                    tracing::warn!("Tantivy batch commit failed: {e}");
+                }
+            }
+        }
+
+        Ok(json!({
+            "status": "success",
+            "count": ids.len(),
+            "ids": ids,
         }))
     }
     fn stats(&self) -> &ToolStats {
@@ -1925,6 +2156,7 @@ impl WmMetaTool {
     fn required_arg(tool_name: &str) -> Option<&'static str> {
         match tool_name {
             "memory.create" => Some("content"),
+            "memory.batch_create" => Some("items"),
             "memory.read" => Some("id"),
             "memory.delete" => Some("id"),
             "memory.search" => Some("query"),
@@ -2467,6 +2699,7 @@ pub fn register_all(
     spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     vector_store: Arc<std::sync::Mutex<VectorStore>>,
     conversational: Option<ConversationalSearch>,
+    recall: Option<Arc<RecallEngine>>,
     homeostatic_loop: Option<Arc<std::sync::Mutex<HomeostaticLoop>>>,
     anomaly_detector: Option<Arc<std::sync::Mutex<AnomalyDetector>>>,
     sensorimotor_bus: Option<Arc<std::sync::Mutex<SensorimotorBus>>>,
@@ -2481,6 +2714,12 @@ pub fn register_all(
         .register(Arc::new(MemoryCreateTool::new(
             store.clone(),
             search.clone(),
+            recall.clone(),
+        )))
+        .register(Arc::new(MemoryBatchCreateTool::new(
+            store.clone(),
+            search.clone(),
+            recall.clone(),
         )))
         .register(Arc::new(MemoryReadTool::new(store.clone())))
         .register(Arc::new(MemoryListTool::new(store.clone())))
@@ -2508,6 +2747,7 @@ pub fn register_all(
             &reg,
             store,
             Some(s),
+            recall,
             associations,
             spiral_tracker,
             karma.clone(),
@@ -2529,6 +2769,7 @@ pub fn register_all(
             &reg,
             store,
             None,
+            recall,
             associations,
             spiral_tracker,
             karma.clone(),
@@ -2689,6 +2930,7 @@ mod tests {
             None,
             None,
             None,
+            None,
             std::sync::Arc::new(std::sync::Mutex::new(None)),
             None,
             None,
@@ -2699,7 +2941,7 @@ mod tests {
     #[tokio::test]
     async fn memory_create_and_read() {
         let store = test_store();
-        let tool = MemoryCreateTool::new(store.clone(), None);
+        let tool = MemoryCreateTool::new(store.clone(), None, None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         let args = json!({"content": "test memory content", "galaxy": "codex"});
@@ -2716,7 +2958,7 @@ mod tests {
     #[tokio::test]
     async fn memory_list_returns_entries() {
         let store = test_store();
-        let create = MemoryCreateTool::new(store.clone(), None);
+        let create = MemoryCreateTool::new(store.clone(), None, None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         for i in 0..3 {
@@ -2746,7 +2988,7 @@ mod tests {
     #[tokio::test]
     async fn memory_delete_removes_entry() {
         let store = test_store();
-        let create = MemoryCreateTool::new(store.clone(), None);
+        let create = MemoryCreateTool::new(store.clone(), None, None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         let result = create
@@ -2767,7 +3009,7 @@ mod tests {
     #[tokio::test]
     async fn memory_query_filters_by_tags() {
         let store = test_store();
-        let create = MemoryCreateTool::new(store.clone(), None);
+        let create = MemoryCreateTool::new(store.clone(), None, None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         create
@@ -2883,7 +3125,7 @@ mod tests {
     #[tokio::test]
     async fn memory_associate_and_find() {
         let store = test_store();
-        let create = MemoryCreateTool::new(store.clone(), None);
+        let create = MemoryCreateTool::new(store.clone(), None, None);
         let mut ctx = Context::new(BrainWave::Gamma);
 
         let r1 = create
@@ -3121,6 +3363,7 @@ mod tests {
             associations,
             spiral_tracker,
             vector_store,
+            None,
             None,
             None,
             None,
