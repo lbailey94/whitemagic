@@ -21,7 +21,7 @@ ahash = { workspace = true }
 tracing = { workspace = true }
 lmdb = "0.8"
 lmdb-sys = "0.8"
-tantivy = "0.26"
+tantivy = { version = "0.26", features = ["stemmer"] }
 rayon = { workspace = true }
 sha2 = "0.10"
 hmac = "0.12"

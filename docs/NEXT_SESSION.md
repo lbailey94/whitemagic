@@ -1,18 +1,25 @@
-# Next Session Handoff - 2026-08-13
+# Next Session Handoff - 2026-08-14
 
-> Prepared 2026-08-13 after the post-RC1 hardening batch. The canonical plan is
+> Prepared 2026-08-14 after vector search wiring. The canonical plan is
 > [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md). This file contains only
 > the next execution slice.
 
 ## Current State
 
-- v5.8.0, 15 crates, 229 registered tool implementations, 3,515 tests.
+- v5.8.0, 15 crates, 229 registered tool implementations, 3,515+ tests.
 - `cargo test --workspace`, format check, clippy (`-D warnings`), and release
   binary build all passed on 2026-08-13 from `cargo clean`.
 - **Release gate run complete. Tagged v5.8.0-rc1.** Fresh-install rehearsal
   passed (quickstart + doctor + curated smoke test, all healthy).
 - **All P0, P1, and P2 items are now complete.** Phase B items B6 and B7 are
   complete. B5 (store seal/verify) and B4 (sandbox mode) remain.
+- **Vector search wiring complete (2026-08-14):** `RecallEngine` is shared via
+  `Arc<RecallEngine>` with `MemoryCreateTool`, `MemoryBatchCreateTool`, and
+  `MemoryHybridRecallTool`. When `WM_EMBEDDER_ENDPOINT` is set, memory creation
+  auto-embeds and `memory.hybrid_recall` fuses BM25 + vector cosine similarity.
+  Without an embedder, all tools fall back to pure BM25. 626 tests pass for
+  affected crates, 0 clippy warnings. See
+  [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md).
 - Codebase pushed to GitHub (`lbailey94/WMv5`, private). RC1 tag pushed;
   release workflow triggered.
 - Phase A of PET hardening (A1–A3) is complete and committed (`1dc29b6`):
@@ -34,19 +41,28 @@ verified.
 
 ## Next Steps
 
-All P0/P1/P2 items and Phase B items B6/B7 are complete. Remaining work:
+All P0/P1/P2 items and Phase B items B6/B7 are complete. Vector search wiring
+is complete. Remaining work:
 
-1. **B5: Store seal/verify** (low priority): HMAC over store directory to
+1. **Vector search quick wins** (see
+   [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md)):
+   - **QW1: Batch embedding** in `memory.batch_create` (~30 min) — use
+     `embed_batch()` instead of per-item `embed()` for ~10x faster ingest
+   - **QW2: Benchmark script** switch to `memory.hybrid_recall` (~15 min) —
+     activates hybrid path in LongMemEval benchmark
+   - **QW3: Fusion weight grid search** (~1 hour) — optimize
+     `WM_RECALL_BM25_WEIGHT` / `WM_RECALL_VECTOR_WEIGHT` against LongMemEval
+2. **B5: Store seal/verify** (low priority): HMAC over store directory to
    detect tampering. Needs key management design — derive from a per-install
    secret or use a platform keystore. Consider a `wm seal` / `wm verify` CLI
    pair.
-2. **B4: Sandbox mode** (low priority): restrict tool execution capabilities
+3. **B4: Sandbox mode** (low priority): restrict tool execution capabilities
    via seccomp (Linux) or sandbox-exec (macOS). Platform-specific; needs
    careful allowlisting of syscalls for LMDB, Tantivy, and HTTP embedder.
-3. **v5.8.0 final release**: re-run the full gate from `cargo clean`, tag
+4. **v5.8.0 final release**: re-run the full gate from `cargo clean`, tag
    `v5.8.0`, push to trigger the release workflow with the fixed artifact
    naming.
-4. **Optional**: re-run the fresh-install rehearsal with the fixed
+5. **Optional**: re-run the fresh-install rehearsal with the fixed
    `install.sh` (per-platform artifact names) to verify end-to-end download
    works against a real GitHub Release.
 
@@ -88,6 +104,23 @@ and asserts JSON results rather than only process exit code.
   embedder endpoint.
 
 ## Session History
+
+### Session 2026-08-14 (afternoon): vector search wiring
+
+Completed vector search integration into MCP server tool path (626 tests, 0 clippy warnings):
+
+- **`ConversationalSearch`** changed to hold `Arc<RecallEngine>` for shared ownership
+- **`RecallEngine::embedder_is_real()`** added to detect stub vs real embedder
+- **`McpServer::with_defaults()`** constructs `Arc<RecallEngine>` with `RecallConfig::from_env()`,
+  shares with `ConversationalSearch` and memory tools via `recall_for_tools: Option<Arc<RecallEngine>>`
+- **`MemoryCreateTool`** uses `recall.store_with_embedding()` when available, falls back to
+  plain LMDB + Tantivy when no embedder
+- **`MemoryBatchCreateTool`** same pattern, per-item embedding with fallback
+- **`MemoryHybridRecallTool`** runs `recall.hybrid_search()` as Phase 0 (BM25 + vector fusion)
+  when embedder available, falls back to existing BM25-only phases
+- **`register_all` / `register_expansion`** updated to thread `recall` parameter
+- All test call sites updated for new signatures
+- Docs updated: `RELEASE_READINESS.md`, `NEXT_SESSION.md`, new `VECTOR_SEARCH_ROADMAP.md`
 
 ### Session 2026-08-13 (late evening): post-RC1 hardening batch
 

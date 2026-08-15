@@ -182,7 +182,7 @@ pub use web::{WebDeepFetchTool, WebFetchTool, WebSearchAndReadTool, WebSearchToo
 use std::sync::Arc;
 use wm_cognitive::GanYingBus;
 use wm_governance::KarmaLedger;
-use wm_memory::{AssociationStore, MemoryStore, SearchEngine};
+use wm_memory::{AssociationStore, MemoryStore, RecallEngine, SearchEngine};
 use wm_substrate::SubstrateMonitor;
 use wm_substrate::anomaly::AnomalyDetector;
 use wm_substrate::homeostatic::HomeostaticLoop;
@@ -194,6 +194,7 @@ pub fn register_expansion(
     registry: &wm_dispatch::ToolRegistry,
     store: &Arc<MemoryStore>,
     search: Option<Arc<SearchEngine>>,
+    recall: Option<Arc<RecallEngine>>,
     associations: Arc<AssociationStore>,
     spiral_tracker: Arc<std::sync::Mutex<wm_cognitive::SpiralTracker>>,
     karma: Option<Arc<KarmaLedger>>,
@@ -221,7 +222,7 @@ pub fn register_expansion(
         .register(Arc::new(MemoryUpdateTool::new(store.clone(), search.clone())))
         .register(Arc::new(MemoryTagTool::new(store.clone())))
         .register(Arc::new(MemoryStatsTool::new(store.clone())))
-        .register(Arc::new(MemoryHybridRecallTool::new(store.clone(), search.clone())))
+        .register(Arc::new(MemoryHybridRecallTool::new(store.clone(), search.clone(), recall)))
         // Memory ops Tier 7 (4) — WinnowingBasket
         .register(Arc::new(MemorySortTool::new(store.clone())))
         .register(Arc::new(MemoryFilterTool::new(store.clone())))

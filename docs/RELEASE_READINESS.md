@@ -1,9 +1,9 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Last updated:** 2026-08-13 (late evening, post-RC1 hardening batch)
+**Last updated:** 2026-08-14 (afternoon, post vector-search wiring)
 **Version under review:** v5.8.0
-**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Ready for v5.8.0 final.
+**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Vector search wiring complete (hybrid BM25 + vector recall active when embedder configured). Ready for v5.8.0 final.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
@@ -93,8 +93,11 @@ phase:
    routing is a convenience layer that may abstain and must never reach
    destructive tools.
 3. **Search semantics:** BM25/Tantivy is the honest default. Vector recall is
-   optional until the write, persistence, restart, and query paths are wired
-   end to end.
+   now wired end to end — when `WM_EMBEDDER_ENDPOINT` is configured, memory
+   creation auto-embeds and `memory.hybrid_recall` fuses BM25 + vector cosine
+   similarity. Without an embedder, all tools fall back to pure BM25. See
+   [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md) for the
+   improvement catalog and roadmap.
 4. **Deployment model:** v5.7.x is a trusted local single-user process. It must
    not imply authenticated multi-tenant authorization through MCP `_meta`.
 5. **Surface policy:** curated is the product surface; full is an opt-in
@@ -247,7 +250,11 @@ Open work:
   Decided 2026-08-13 — `memory.hybrid_recall` is Tantivy BM25 + importance/
   metadata filtering; the tool description states this explicitly. Vector
   fusion remains a separate capability until the embedding write path is wired
-  end to end.
+  end to end. **Update 2026-08-14:** Vector fusion is now wired. When a real
+  embedder is available (`WM_EMBEDDER_ENDPOINT`), `memory.hybrid_recall` runs
+  `RecallEngine::hybrid_search()` as Phase 0 (BM25 + vector cosine fusion),
+  falling back to BM25-only phases when no embedder is configured. The tool
+  description has been updated to reflect this.
 - ~~Add generated or native argument schemas for the curated tools. The generic
   `args` object is acceptable internally but weak for client onboarding.~~ ✅
   Done 2026-08-13 — `Tool::input_schema()` (default empty) implemented for the
@@ -346,20 +353,26 @@ Open work after P0/P1:
 
 ## Next Execution Order
 
-All P0 and P1 items are complete. The next steps are:
+All P0 and P1 items are complete. Vector search wiring is complete. The next
+steps are:
 
 1. **Release gate run**: execute every item in the Release Gate section
    against the current commit on a clean machine (`cargo clean` first).
-2. **Tag the release candidate**: `git tag v5.8.0-rc1` and push to trigger
+2. **Tag the release candidate**: `git tag v5.8.0-rc2` and push to trigger
    the release workflow (per-platform binaries + checksums).
 3. **Fresh-install rehearsal**: run `scripts/install.sh` against the RC,
    then `wm doctor`, then `scripts/curated_smoke_test.py`.
-4. **P2 items** (post-release, not blockers):
+4. **Vector search quick wins** (see
+   [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md)):
+   - Batch embedding in `memory.batch_create` (single HTTP call vs N)
+   - Benchmark script switch to `memory.hybrid_recall`
+   - Fusion weight grid search against LongMemEval
+5. **P2 items** (post-release, not blockers):
    - NLU abstention with confidence/margin thresholds
    - Router quality evaluation against a labeled corpus
    - Learned inference router promotion or library-only labeling
    - Self-play/imagination experimental labeling
-5. **Phase B** (v5.9 PET hardening theme):
+6. **Phase B** (v5.9 PET hardening theme):
    - B4: sandbox mode for tool execution
    - B5: store seal/verify (tamper detection)
    - B6: untrusted `_meta` handling by default
@@ -434,6 +447,8 @@ full port inventory and execution order.
 - `docs/PET_HARDENING.md`: post-release hardening strategy — trustworthy
   declarations, sandbox/seal/identity hardening, and insider-accident
   resistance.
+- `docs/VECTOR_SEARCH_ROADMAP.md`: vector search wiring status, quick wins,
+  and improvement catalog for hybrid BM25 + vector recall.
 - `docs/ARCHIVE_CAPABILITY_MAP.md`: vetted ideas from the retired projects and
   the v6+ research direction.
 - `docs/NEXT_SESSION.md`: the current execution slice only.

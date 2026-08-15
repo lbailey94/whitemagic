@@ -24,7 +24,9 @@ use tantivy::{
     collector::TopDocs,
     doc,
     query::QueryParser,
-    schema::{Field, STORED, STRING, Schema, TEXT, TantivyDocument, Value},
+    schema::{
+        Field, STORED, STRING, Schema, TantivyDocument, TextFieldIndexing, TextOptions, Value,
+    },
 };
 
 /// Maximum content length (in chars) indexed into Tantivy.
@@ -274,8 +276,17 @@ impl SearchEngine {
         let mut schema_builder = Schema::builder();
         let field_id = schema_builder.add_text_field("memory_id", STRING | STORED);
         let field_galaxy = schema_builder.add_text_field("galaxy", STRING | STORED);
-        let field_content = schema_builder.add_text_field("content", TEXT | STORED);
-        let field_tags = schema_builder.add_text_field("tags", TEXT);
+        // Use en_stem tokenizer for content and tags so that morphological
+        // variants match (e.g. "graduate" ↔ "graduated", "degree" ↔ "degrees").
+        let stem_indexing = TextFieldIndexing::default()
+            .set_tokenizer("en_stem")
+            .set_index_option(tantivy::schema::IndexRecordOption::WithFreqsAndPositions);
+        let stem_text = TextOptions::default()
+            .set_indexing_options(stem_indexing.clone())
+            .set_stored();
+        let stem_tags = TextOptions::default().set_indexing_options(stem_indexing);
+        let field_content = schema_builder.add_text_field("content", stem_text);
+        let field_tags = schema_builder.add_text_field("tags", stem_tags);
         let field_timestamp = schema_builder.add_i64_field("timestamp", STORED);
         let schema = schema_builder.build();
         (
@@ -1193,6 +1204,35 @@ mod tests {
             assert!(r.normalized_score <= 1.0);
             assert!(r.normalized_score > 0.0);
         }
+    }
+
+    #[test]
+    fn search_stemming_matches_morphological_variants() {
+        // The en_stem tokenizer should match morphological variants:
+        // "graduate" (query) ↔ "graduated" (indexed content).
+        let (_tmp, engine) = open_engine();
+        let mut writer = engine.writer().unwrap();
+
+        engine
+            .add_document(
+                &mut writer,
+                "11111111-1111-1111-1111-111111111111",
+                "codex",
+                "I graduated with a degree in Business Administration",
+                &[],
+                1700000000,
+            )
+            .unwrap();
+        engine.commit(&mut writer).unwrap();
+
+        // Query with present tense "graduate" should match past tense "graduated"
+        let results = engine.search("graduate", 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].memory_id, "11111111-1111-1111-1111-111111111111");
+
+        // Query with "degrees" should match "degree"
+        let results = engine.search("degrees", 10).unwrap();
+        assert_eq!(results.len(), 1);
     }
 
     #[test]

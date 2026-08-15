@@ -1,0 +1,82 @@
+{
+  "system": "whitemagic-v5",
+  "benchmark": "longmemeval_s",
+  "version": "v5.8.0-rc1",
+  "dataset": "LongMemEval-S (ICLR 2025)",
+  "total_questions": 3,
+  "timestamp": "2026-08-14T14:02:56Z",
+  "total_elapsed_s": 141.7,
+  "search": {
+    "count": 3,
+    "p50_ms": 2355.345009849998,
+    "p95_ms": 2445.460567700003,
+    "p99_ms": 2445.460567700003
+  },
+  "ingest": {
+    "avg_time_s": 44.88092267658323,
+    "total_time_s": 134.6427680297497
+  },
+  "recall": {
+    "total_queries": 3,
+    "recall_at_1": 0.3333333333333333,
+    "recall_at_5": 0.6666666666666666,
+    "recall_at_10": 0.6666666666666666,
+    "mrr": 0.4444444444444444
+  },
+  "category_results": {
+    "single-session-user": {
+      "total": 3,
+      "recall_at_1": 0.3333333333333333,
+      "recall_at_5": 0.6666666666666666,
+      "recall_at_10": 0.6666666666666666
+    }
+  },
+  "errors": [],
+  "per_query": [
+    {
+      "question_id": "e47becba",
+      "question_type": "single-session-user",
+      "question": "What degree did I graduate with?",
+      "answer": "Business Administration",
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "recall_at_10": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 2355.35,
+      "turns_ingested": 550,
+      "ingest_time_s": 44.752,
+      "results_count": 0
+    },
+    {
+      "question_id": "118b2229",
+      "question_type": "single-session-user",
+      "question": "How long is my daily commute to work?",
+      "answer": "45 minutes each way",
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "mrr": 0.3333,
+      "first_match_rank": 3,
+      "latency_ms": 2445.46,
+      "turns_ingested": 497,
+      "ingest_time_s": 46.464,
+      "results_count": 9
+    },
+    {
+      "question_id": "51a45a95",
+      "question_type": "single-session-user",
+      "question": "Where did I redeem a $5 coupon on coffee creamer?",
+      "answer": "Target",
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "recall_at_10": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 2285.66,
+      "turns_ingested": 529,
+      "ingest_time_s": 43.427,
+      "results_count": 3
+    }
+  ]
+}

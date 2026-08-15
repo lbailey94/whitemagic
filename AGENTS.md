@@ -50,7 +50,7 @@ cargo fmt --all -- --check     # Format check
 - **Phase 4** ✅: Imagination engine (world model, scenario planning, dream cycle integration, MCP tools, daemon `--research-interval`)
 - **Phase 5** ✅: Self-play training loop (proposer/solver/verifier, training-data export, 3 MCP tools, daemon `--selfplay-interval`, 27 tests; live LoRA training/hot-swap remains experimental)
 - **Phase 6** ✅: Mutable structures (GanaRegistry drift, DynamicGalaxyRegistry, LearnedDreamCycle, LearnedCycleStrategy, 31 tests + 4 E2E wiring tests)
-- **Phase 7** 🔄: Release stabilization (feature wiring complete; boundary, storage, smoke-test, packaging, and documentation gates remain)
+- **Phase 7** 🔄: Release stabilization (feature wiring complete including vector search; boundary, storage, smoke-test, packaging, and documentation gates remain)
 
 ## RSI Pipeline (Phases 1–3 Complete)
 
@@ -137,6 +137,30 @@ Makes previously fixed structures learnable:
 - **Emergence cycle**: `DynamicGalaxyRegistry` wired via `CycleContext::with_dynamic_galaxies()`, auto-creates dynamic galaxies from detected tag clusters
 - **Persistence**: All mutable structures save/load JSON state on daemon startup/shutdown (`save_mutable_state()` / `load_mutable_state()`). Files: `mutable_gana_registry.json`, `mutable_dynamic_galaxies.json`, `mutable_learned_dream.json`, `mutable_learned_cycles.json`, `mutable_shadow_stats.json` in the store directory
 - **E2E tests**: 5 integration tests in `server.rs` verify GanaRegistry recording, DynamicGalaxyRegistry access, LearnedDreamCycle attachment, full pipeline mutable structures integration, and persistence roundtrip
+
+## Vector Search (Phase 7 — Complete)
+
+`RecallEngine` is shared via `Arc<RecallEngine>` across `ConversationalSearch`,
+`MemoryCreateTool`, `MemoryBatchCreateTool`, and `MemoryHybridRecallTool`.
+
+### Activation
+- Set `WM_EMBEDDER_ENDPOINT` to a llama-server with `--embeddings`
+- Without it, `StubEmbedder` is used and all tools fall back to pure BM25
+- `RecallEngine::embedder_is_real()` gates hybrid wiring (checks `backend_name() != "stub"`)
+
+### Config (`RecallConfig::from_env()`)
+- `WM_RECALL_BM25_WEIGHT` (default 0.5) — BM25 text score weight
+- `WM_RECALL_VECTOR_WEIGHT` (default 0.3) — vector cosine similarity weight
+- `WM_RECALL_IMPORTANCE_WEIGHT` (default 0.2) — memory importance weight
+- Weights clamped to [0, 1] and normalized to sum to 1.0
+
+### Tool Behavior
+- `memory.create`: calls `recall.store_with_embedding()` (auto-embeds + stores + indexes) when embedder is real; falls back to plain LMDB + Tantivy
+- `memory.batch_create`: same per-item pattern with fallback
+- `memory.hybrid_recall`: runs `recall.hybrid_search()` as Phase 0 (BM25 + vector fusion) when embedder is real; falls back to existing BM25-only phases
+
+### Roadmap
+See [`docs/VECTOR_SEARCH_ROADMAP.md`](docs/VECTOR_SEARCH_ROADMAP.md) for quick wins (batch embedding, benchmark integration, weight tuning) and longer-term improvements.
 
 ## MCP Server
 

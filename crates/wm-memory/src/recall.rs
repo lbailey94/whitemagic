@@ -188,6 +188,15 @@ impl RecallEngine {
         &self.config
     }
 
+    /// Whether the embedder is a real backend (not a stub).
+    ///
+    /// When false, hybrid search would produce garbage vectors and
+    /// `store_with_embedding` should be avoided in favor of plain BM25.
+    #[must_use]
+    pub fn embedder_is_real(&self) -> bool {
+        self.embedder.backend_name() != "stub"
+    }
+
     // ── Write path: auto-embed ─────────────────────────────────────────
 
     /// Embed content and cache the result.
@@ -273,6 +282,94 @@ impl RecallEngine {
         }
 
         Ok(())
+    }
+
+    /// Batch-store memories with auto-embedding in a single HTTP call + single Tantivy commit.
+    ///
+    /// Like `store_with_embedding` but for multiple memories at once:
+    /// 1. Embeds all content via `embed_batch()` (single HTTP call).
+    /// 2. Stores all memories to LMDB.
+    /// 3. Stores all embeddings.
+    /// 4. Adds all to the vector store.
+    /// 5. Indexes all in Tantivy with a single writer + commit.
+    ///
+    /// Returns the number of memories successfully stored.
+    pub fn store_batch_with_embedding(
+        &self,
+        entries: &[(Galaxy, &crate::Memory)],
+    ) -> Result<usize> {
+        if entries.is_empty() {
+            return Ok(0);
+        }
+
+        // 1. Batch embed all content
+        let contents: Vec<&str> = entries.iter().map(|(_, m)| m.content.as_str()).collect();
+        let embeddings = self.embedder.embed_batch(&contents)?;
+
+        if embeddings.len() != entries.len() {
+            return Err(CoreError::Memory(format!(
+                "embed_batch returned {} vectors for {} inputs",
+                embeddings.len(),
+                entries.len()
+            )));
+        }
+
+        // 2. Store all memories to LMDB + embeddings
+        for (i, (galaxy, memory)) in entries.iter().enumerate() {
+            self.store.put(*galaxy, memory)?;
+            self.store
+                .put_embedding(memory.metadata.id, &embeddings[i])?;
+        }
+
+        // 3. Add all to vector store
+        {
+            let mut vs = self
+                .vector_store
+                .lock()
+                .map_err(|e| CoreError::Memory(format!("vector store lock: {e}")))?;
+            for (i, (galaxy, memory)) in entries.iter().enumerate() {
+                vs.add(memory.metadata.id, *galaxy, embeddings[i].clone());
+            }
+        }
+
+        // 4. Index all in Tantivy with a single commit
+        {
+            let mut writer = self.search_engine.writer()?;
+            for (galaxy, memory) in entries {
+                let timestamp = memory.metadata.created_at.timestamp();
+                let tags: Vec<String> = memory.metadata.tags.clone();
+                self.search_engine.add_document(
+                    &mut writer,
+                    &memory.metadata.id.to_string(),
+                    galaxy.db_name(),
+                    &memory.content,
+                    &tags,
+                    timestamp,
+                )?;
+            }
+            self.search_engine.commit(&mut writer)?;
+        }
+
+        // 5. Cache embeddings
+        if self.config.cache_embeddings {
+            let mut cache = self
+                .embedding_cache
+                .lock()
+                .map_err(|e| CoreError::Memory(format!("embedding cache lock: {e}")))?;
+            for (i, (_, memory)) in entries.iter().enumerate() {
+                let hash = content_hash(&memory.content);
+                if cache.len() >= self.config.max_cache_entries {
+                    let to_remove: Vec<String> =
+                        cache.keys().take(cache.len() / 10).cloned().collect();
+                    for key in to_remove {
+                        cache.remove(&key);
+                    }
+                }
+                cache.insert(hash, embeddings[i].clone());
+            }
+        }
+
+        Ok(entries.len())
     }
 
     // ── Read path: hybrid search ───────────────────────────────────────
@@ -949,6 +1046,48 @@ mod tests {
         let results = engine.text_search("rust", 10);
         assert!(!results.is_empty(), "text search should find results");
         assert!(results.iter().any(|r| r.bm25_score > 0.0));
+    }
+
+    #[test]
+    fn integration_batch_store_with_embedding() {
+        let (_tmp, engine) = setup_engine();
+
+        let mem1 = Memory::new(Galaxy::Codex, "alpha beta gamma".into());
+        let mem2 = Memory::new(Galaxy::Codex, "delta epsilon zeta".into());
+        let mem3 = Memory::new(Galaxy::Codex, "eta theta iota".into());
+
+        let entries = vec![
+            (Galaxy::Codex, &mem1),
+            (Galaxy::Codex, &mem2),
+            (Galaxy::Codex, &mem3),
+        ];
+
+        let count = engine.store_batch_with_embedding(&entries).unwrap();
+        assert_eq!(count, 3);
+
+        // All three should be searchable via BM25
+        let results = engine.text_search("alpha", 10);
+        assert!(
+            !results.is_empty(),
+            "batch-stored memory should be searchable"
+        );
+
+        // All three should be in the vector store
+        let vresults = engine.vector_search("alpha beta gamma", 10, None);
+        assert_eq!(
+            vresults.len(),
+            1,
+            "vector search should find the exact match"
+        );
+        assert_eq!(vresults[0].memory_id, mem1.metadata.id);
+    }
+
+    #[test]
+    fn integration_batch_store_empty() {
+        let (_tmp, engine) = setup_engine();
+        let entries: Vec<(Galaxy, &Memory)> = vec![];
+        let count = engine.store_batch_with_embedding(&entries).unwrap();
+        assert_eq!(count, 0);
     }
 
     #[test]

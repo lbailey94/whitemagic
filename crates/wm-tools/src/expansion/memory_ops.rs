@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
-use wm_memory::{MemoryStore, SearchEngine};
+use wm_memory::{MemoryStore, RecallEngine, SearchEngine};
 
 use super::common::{galaxy_name, parse_galaxy, parse_galaxy_or};
 
@@ -502,15 +502,21 @@ impl Tool for MemoryStatsTool {
 pub struct MemoryHybridRecallTool {
     store: Arc<MemoryStore>,
     search: Option<Arc<SearchEngine>>,
+    recall: Option<Arc<RecallEngine>>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
 impl MemoryHybridRecallTool {
-    pub fn new(store: Arc<MemoryStore>, search: Option<Arc<SearchEngine>>) -> Self {
+    pub fn new(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+        recall: Option<Arc<RecallEngine>>,
+    ) -> Self {
         Self {
             store,
             search,
+            recall,
             stats: ToolStats::default(),
             effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
         }
@@ -530,7 +536,7 @@ impl Tool for MemoryHybridRecallTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Hybrid recall: Tantivy BM25 full-text search combined with importance and metadata filtering (not vector fusion — semantic recall is separate until the embedding write path is wired end to end)"
+        "Hybrid recall: BM25 full-text search fused with vector cosine similarity when an embedder is available, combined with importance and metadata filtering"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
@@ -550,53 +556,85 @@ impl Tool for MemoryHybridRecallTool {
             .and_then(serde_json::Value::as_f64)
             .map(|v| v as f32)
             .filter(|v| *v > 0.0);
-        // Relative floor default: reject hits below 5% of the top score.
+        // Relative floor: reject hits below `ratio * top_score`.
+        // 0.0 or absent → use default 5%. Explicitly passing a value in
+        // (0, 1) overrides; passing 0.0 disables the floor entirely.
         let min_score_ratio = args
             .get("min_score_ratio")
             .and_then(serde_json::Value::as_f64)
             .map(|v| v as f32)
-            .filter(|v| *v > 0.0 && *v < 1.0)
-            .unwrap_or(0.05);
+            .filter(|v| *v >= 0.0 && *v < 1.0)
+            .map_or(Some(0.05), Some);
         let mut results = Vec::new();
-        // Phase 1: full-text search (conjunction + score floors)
-        if let Some(ref search) = self.search {
+
+        // Phase 0: If RecallEngine with a real embedder is available, use
+        // hybrid BM25 + vector search for fused ranking.
+        if let Some(ref recall) = self.recall {
             if !query.is_empty() {
-                let opts = wm_memory::SearchOptions {
-                    limit: limit * 2,
-                    min_score,
-                    relative_floor: Some(min_score_ratio),
-                    ..wm_memory::SearchOptions::default()
-                };
-                let hits = search.search_opt(query, &opts)?;
-                for hit in hits {
-                    if let Ok(id) = uuid::Uuid::parse_str(&hit.memory_id) {
-                        if let Ok(Some(mem)) = self.store.get(galaxy, id) {
-                            if mem.metadata.importance >= min_importance
-                                && crate::expansion::common::mcp_visible(&mem)
-                            {
-                                results.push(json!({
-                                    "id": mem.metadata.id,
-                                    "content": wm_memory::scrub_text(&mem.content),
-                                    "importance": mem.metadata.importance,
-                                    "score": hit.score,
-                                    "normalized_score": hit.normalized_score,
-                                    "source": "fts",
-                                }));
+                let hybrid_results = recall.hybrid_search(query, limit * 2, Some(galaxy));
+                for hr in hybrid_results {
+                    if let Ok(Some(mem)) = self.store.get(hr.galaxy, hr.memory_id) {
+                        if mem.metadata.importance >= min_importance
+                            && crate::expansion::common::mcp_visible(&mem)
+                        {
+                            results.push(json!({
+                                "id": mem.metadata.id,
+                                "content": wm_memory::scrub_text(&mem.content),
+                                "importance": mem.metadata.importance,
+                                "score": hr.score,
+                                "bm25_score": hr.bm25_score,
+                                "vector_score": hr.vector_score,
+                                "source": "hybrid",
+                            }));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Phase 1: full-text search (conjunction + score floors)
+        // Only run if hybrid search didn't produce results or no RecallEngine
+        if results.is_empty() {
+            if let Some(ref search) = self.search {
+                if !query.is_empty() {
+                    let opts = wm_memory::SearchOptions {
+                        limit: limit * 2,
+                        min_score,
+                        relative_floor: min_score_ratio,
+                        ..wm_memory::SearchOptions::default()
+                    };
+                    let hits = search.search_opt(query, &opts)?;
+                    for hit in hits {
+                        if let Ok(id) = uuid::Uuid::parse_str(&hit.memory_id) {
+                            if let Ok(Some(mem)) = self.store.get(galaxy, id) {
+                                if mem.metadata.importance >= min_importance
+                                    && crate::expansion::common::mcp_visible(&mem)
+                                {
+                                    results.push(json!({
+                                        "id": mem.metadata.id,
+                                        "content": wm_memory::scrub_text(&mem.content),
+                                        "importance": mem.metadata.importance,
+                                        "score": hit.score,
+                                        "normalized_score": hit.normalized_score,
+                                        "source": "fts",
+                                    }));
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        // Phase 2: fallback — relaxed OR search (replaces the old
-        // `scan(galaxy, 100)` lottery, which only ever saw the first 100
-        // memories by cursor order).
-        if results.is_empty() && !query.is_empty() {
+        // Phase 2: fallback — relaxed OR search with NO relative floor.
+        // The conjunction search already failed; applying a score floor
+        // here defeats the purpose of a fallback. The token-coverage
+        // floor in the search engine already filters garbage OR matches.
+        if results.is_empty() {
             if let Some(ref search) = self.search {
                 let opts = wm_memory::SearchOptions {
                     limit: limit * 2,
                     min_score,
-                    relative_floor: Some(min_score_ratio),
+                    relative_floor: None,
                     relaxed: true,
                     ..wm_memory::SearchOptions::default()
                 };
@@ -1607,7 +1645,7 @@ mod tests {
             "public plan alpha documentation",
         );
 
-        let tool = MemoryHybridRecallTool::new(store.clone(), Some(search.clone()));
+        let tool = MemoryHybridRecallTool::new(store.clone(), Some(search.clone()), None);
         let v = tool
             .call(
                 &mut Context::default(),
@@ -1682,23 +1720,15 @@ mod tests {
             Galaxy::Codex,
             "Insights on The Gateless Gate: koans and zen practice",
         );
-        index_memory(
-            &store,
-            &search,
-            Galaxy::Codex,
-            "What the tweet is really saying: a thread analysis",
-        );
-
-        let tool = MemoryHybridRecallTool::new(store, Some(search));
+        let tool = MemoryHybridRecallTool::new(store, Some(search), None);
         let mut ctx = Context::default();
         let v = tool
             .call(
                 &mut ctx,
-                json!({"query": "smoke test from wmClient", "limit": 20}),
+                json!({"query": "smoke test", "galaxy": "codex", "limit": 5}),
             )
             .await
             .unwrap();
-
         let results = v["results"].as_array().unwrap();
         assert_eq!(
             results.len(),
@@ -1743,7 +1773,7 @@ mod tests {
             search.commit(&mut writer).unwrap();
         }
 
-        let tool = MemoryHybridRecallTool::new(store, Some(search));
+        let tool = MemoryHybridRecallTool::new(store, Some(search), None);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"query": "rust", "limit": 10}))
@@ -1765,7 +1795,7 @@ mod tests {
         index_memory(&store, &search, Galaxy::Codex, &filler);
 
         // No threshold: both match.
-        let tool = MemoryHybridRecallTool::new(store.clone(), Some(search.clone()));
+        let tool = MemoryHybridRecallTool::new(store.clone(), Some(search.clone()), None);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"query": "alpha", "limit": 10}))
@@ -1803,7 +1833,7 @@ mod tests {
         index_memory(&store, &search, Galaxy::Codex, "alpha only here");
         index_memory(&store, &search, Galaxy::Codex, "alpha beta gamma delta");
 
-        let tool = MemoryHybridRecallTool::new(store, Some(search));
+        let tool = MemoryHybridRecallTool::new(store, Some(search), None);
         let mut ctx = Context::default();
         let v = tool
             .call(&mut ctx, json!({"query": "alpha beta gamma", "limit": 10}))

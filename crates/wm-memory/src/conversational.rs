@@ -49,7 +49,7 @@
 #![allow(clippy::significant_drop_tightening)]
 
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use uuid::Uuid;
 use wm_core::{Galaxy, Result};
@@ -310,7 +310,7 @@ impl SearchMetrics {
 /// Wraps [`RecallEngine`] with query classification, LRU caching,
 /// and performance metrics for sub-50ms search.
 pub struct ConversationalSearch {
-    recall: RecallEngine,
+    recall: Arc<RecallEngine>,
     config: ConversationalConfig,
     cache: Mutex<HashMap<String, CacheEntry>>,
     cache_order: Mutex<Vec<String>>,
@@ -320,7 +320,7 @@ pub struct ConversationalSearch {
 impl ConversationalSearch {
     /// Create a new conversational search engine.
     #[must_use]
-    pub fn new(recall: RecallEngine, config: ConversationalConfig) -> Self {
+    pub fn new(recall: Arc<RecallEngine>, config: ConversationalConfig) -> Self {
         Self {
             recall,
             config,
@@ -332,7 +332,7 @@ impl ConversationalSearch {
 
     /// Create with default configuration.
     #[must_use]
-    pub fn with_defaults(recall: RecallEngine) -> Self {
+    pub fn with_defaults(recall: Arc<RecallEngine>) -> Self {
         Self::new(recall, ConversationalConfig::default())
     }
 
@@ -506,7 +506,7 @@ impl ConversationalSearch {
 
     /// Get the underlying recall engine.
     #[must_use]
-    pub const fn recall(&self) -> &RecallEngine {
+    pub fn recall(&self) -> &RecallEngine {
         &self.recall
     }
 
@@ -552,7 +552,7 @@ mod tests {
             RecallConfig::default(),
         )
         .unwrap();
-        let conv = ConversationalSearch::with_defaults(recall);
+        let conv = ConversationalSearch::with_defaults(Arc::new(recall));
         (tmp, conv)
     }
 
@@ -765,14 +765,18 @@ mod tests {
             ..Default::default()
         };
         let conv_small = ConversationalSearch::new(
-            RecallEngine::new(
-                Arc::new(MemoryStore::open_default(tempfile::tempdir().unwrap().path()).unwrap()),
-                Arc::new(SearchEngine::open(tempfile::tempdir().unwrap().path()).unwrap()),
-                VectorStore::new(),
-                Arc::new(StubEmbedder::new(384)),
-                RecallConfig::default(),
-            )
-            .unwrap(),
+            Arc::new(
+                RecallEngine::new(
+                    Arc::new(
+                        MemoryStore::open_default(tempfile::tempdir().unwrap().path()).unwrap(),
+                    ),
+                    Arc::new(SearchEngine::open(tempfile::tempdir().unwrap().path()).unwrap()),
+                    VectorStore::new(),
+                    Arc::new(StubEmbedder::new(384)),
+                    RecallConfig::default(),
+                )
+                .unwrap(),
+            ),
             small_config,
         );
 
@@ -834,7 +838,7 @@ mod tests {
             enable_cache: false,
             ..Default::default()
         };
-        let conv = ConversationalSearch::new(recall, config);
+        let conv = ConversationalSearch::new(Arc::new(recall), config);
 
         let mem = Memory::new(Galaxy::Codex, "rust memory".into());
         conv.store(Galaxy::Codex, &mem).unwrap();
