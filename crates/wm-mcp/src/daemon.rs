@@ -26,6 +26,25 @@ fn now_secs() -> u64 {
         .map_or(0, |d| d.as_secs())
 }
 
+/// Persist the daemon-owned `LearnedCycleStrategy` next to the other
+/// mutable-state JSON files. Shared by the periodic checkpoint and
+/// graceful shutdown so both paths write the same file.
+fn save_learned_cycles(runner: &AutonomousCycleRunner, store_dir: &std::path::Path) {
+    if let Some(learned) = runner.learned() {
+        let path = store_dir.join("mutable_learned_cycles.json");
+        match serde_json::to_string_pretty(learned) {
+            Ok(json) => {
+                if let Err(e) = std::fs::write(&path, json) {
+                    tracing::warn!(error = %e, "Failed to save LearnedCycleStrategy");
+                } else {
+                    tracing::info!("Saved LearnedCycleStrategy to disk");
+                }
+            }
+            Err(e) => tracing::warn!(error = %e, "Failed to serialize LearnedCycleStrategy"),
+        }
+    }
+}
+
 /// Run a fallible closure that may panic, recovering with a logged error.
 ///
 /// Hardening: a panic inside one autonomous component must not take down
@@ -68,6 +87,10 @@ pub struct DaemonConfig {
     /// Maximum time the main loop may go without a tick before the watchdog
     /// declares it stalled and forces a restart (0 = watchdog disabled).
     pub watchdog_timeout: Duration,
+    /// Interval between mutable-state checkpoints (0 = disabled; graceful
+    /// shutdown still saves). A SIGKILL loses learning since the last
+    /// checkpoint rather than since process start.
+    pub checkpoint_interval: Duration,
 }
 
 impl Default for DaemonConfig {
@@ -83,6 +106,7 @@ impl Default for DaemonConfig {
             research_interval: Duration::from_secs(0), // 0 = run with regular cycle sweep
             selfplay_interval: Duration::from_secs(0), // 0 = disabled
             watchdog_timeout: Duration::from_secs(60), // 1 minute without a tick = stalled
+            checkpoint_interval: Duration::from_secs(300), // 5 minutes
         }
     }
 }
@@ -158,6 +182,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     let mut last_codegen = std::time::Instant::now();
     let mut last_research = std::time::Instant::now();
     let mut last_selfplay = std::time::Instant::now();
+    let mut last_checkpoint = std::time::Instant::now();
 
     // Build imagination engine for Research cycle and dream cycle integration
     let world_model = world_model_from_env();
@@ -221,6 +246,9 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             "  Watchdog:        {:?} (force-restart on stall)",
             config.watchdog_timeout
         );
+    }
+    if config.checkpoint_interval > Duration::from_secs(0) {
+        println!("  Checkpoint:      {:?}", config.checkpoint_interval);
     }
     println!();
     println!("Press Ctrl+C to stop.");
@@ -530,6 +558,17 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             last_selfplay = now;
         }
 
+        // Periodic mutable-state checkpoint — closes the SIGKILL-loses-
+        // learning window to `checkpoint_interval` instead of process lifetime.
+        if config.checkpoint_interval > Duration::from_secs(0)
+            && now.duration_since(last_checkpoint) >= config.checkpoint_interval
+        {
+            save_learned_cycles(&runner, store_dir);
+            server.save_mutable_state();
+            tracing::info!("Mutable-state checkpoint written");
+            last_checkpoint = now;
+        }
+
         // Sleep until next tick (check every 1 second for signals)
         std::thread::sleep(Duration::from_secs(1));
     }
@@ -551,20 +590,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         "Daemon shutting down"
     );
 
-    // Save LearnedCycleStrategy (daemon-owned)
-    if let Some(learned) = runner.learned() {
-        let path = store_dir.join("mutable_learned_cycles.json");
-        match serde_json::to_string_pretty(learned) {
-            Ok(json) => {
-                if let Err(e) = std::fs::write(&path, json) {
-                    tracing::warn!(error = %e, "Failed to save LearnedCycleStrategy");
-                } else {
-                    tracing::info!("Saved LearnedCycleStrategy to disk");
-                }
-            }
-            Err(e) => tracing::warn!(error = %e, "Failed to serialize LearnedCycleStrategy"),
-        }
-    }
+    save_learned_cycles(&runner, store_dir);
 
     // Flush karma ledger to persist any pending batched entries
     if let Some(karma) = server.karma_ledger() {
@@ -631,6 +657,7 @@ mod tests {
             research_interval: Duration::from_secs(600),
             selfplay_interval: Duration::from_secs(900),
             watchdog_timeout: Duration::from_secs(120),
+            checkpoint_interval: Duration::from_secs(180),
         };
         assert_eq!(config.cycle_interval, Duration::from_secs(60));
         assert_eq!(config.dream_interval, Duration::from_secs(120));
@@ -639,6 +666,13 @@ mod tests {
         assert_eq!(config.research_interval, Duration::from_secs(600));
         assert_eq!(config.selfplay_interval, Duration::from_secs(900));
         assert_eq!(config.watchdog_timeout, Duration::from_secs(120));
+        assert_eq!(config.checkpoint_interval, Duration::from_secs(180));
+    }
+
+    #[test]
+    fn daemon_config_default_checkpoint_is_five_minutes() {
+        let config = DaemonConfig::default();
+        assert_eq!(config.checkpoint_interval, Duration::from_secs(300));
     }
 
     #[test]

@@ -1585,6 +1585,34 @@ impl McpServer {
             }
         }
 
+        // Save per-tool usage stats so `tools.usage_report` ranks on
+        // cumulative cross-restart history. Only tools that were actually
+        // called are persisted — the file stays small and restore is cheap.
+        {
+            let snapshots: std::collections::BTreeMap<String, wm_core::ToolStatsSnapshot> = self
+                .registry
+                .all_ref()
+                .iter()
+                .filter_map(|t| {
+                    let snap = t.stats().snapshot();
+                    (snap.call_count > 0).then(|| (t.name().to_string(), snap))
+                })
+                .collect();
+            if !snapshots.is_empty() {
+                let path = store_dir.join("mutable_tool_stats.json");
+                match serde_json::to_string_pretty(&snapshots) {
+                    Ok(json) => {
+                        if let Err(e) = std::fs::write(&path, json) {
+                            tracing::warn!(path = %path.display(), error = %e, "Failed to save tool usage stats");
+                        } else {
+                            tracing::info!(path = %path.display(), tools = snapshots.len(), "Saved tool usage stats");
+                        }
+                    }
+                    Err(e) => tracing::warn!(error = %e, "Failed to serialize tool usage stats"),
+                }
+            }
+        }
+
         // Save OATS outcome stats (the NLU router's learned refinement).
         // Without this the router's success/failure centroids are lost on
         // every restart and OATS never accumulates cross-session learning.
@@ -1805,6 +1833,36 @@ impl McpServer {
                     }
                 }
                 Err(e) => tracing::warn!(error = %e, "Failed to read OATS file"),
+            }
+        }
+
+        // Restore per-tool usage stats. Tool Arcs are shared across all
+        // registries (tools.list, wm routing, dispatch), so restoring here
+        // rehydrates the same atomics the pipeline updates.
+        let tool_stats_path = store_dir.join("mutable_tool_stats.json");
+        if tool_stats_path.exists() {
+            match std::fs::read_to_string(&tool_stats_path) {
+                Ok(json) => {
+                    match serde_json::from_str::<
+                        std::collections::BTreeMap<String, wm_core::ToolStatsSnapshot>,
+                    >(&json)
+                    {
+                        Ok(snapshots) => {
+                            let mut restored = 0usize;
+                            for tool in self.registry.all_ref() {
+                                if let Some(snap) = snapshots.get(tool.name()) {
+                                    tool.stats().restore(snap);
+                                    restored += 1;
+                                }
+                            }
+                            tracing::info!(restored, "Loaded tool usage stats from disk");
+                        }
+                        Err(e) => {
+                            tracing::warn!(error = %e, "Failed to parse tool usage stats file");
+                        }
+                    }
+                }
+                Err(e) => tracing::warn!(error = %e, "Failed to read tool usage stats file"),
             }
         }
     }
@@ -4106,7 +4164,16 @@ mod tests {
             .registry()
             .all()
             .iter()
-            .filter(|t| !["wm", "tools.list", "gnosis", "nlu.shadow_report"].contains(&t.name()))
+            .filter(|t| {
+                ![
+                    "wm",
+                    "tools.list",
+                    "tools.usage_report",
+                    "gnosis",
+                    "nlu.shadow_report",
+                ]
+                .contains(&t.name())
+            })
             .count() as u64;
         assert_eq!(
             listed["total"],

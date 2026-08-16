@@ -143,6 +143,29 @@ impl ToolStats {
         self.call_count.load(Ordering::Relaxed) > threshold
     }
 
+    /// Restore stats from a persisted snapshot.
+    ///
+    /// Used on startup to rehydrate cross-restart usage data so tools
+    /// like `tools.usage_report` can rank on cumulative history instead
+    /// of only the current process lifetime. Counters are overwritten,
+    /// not merged — call this before any dispatches are recorded.
+    pub fn restore(&self, snap: &ToolStatsSnapshot) {
+        self.call_count.store(snap.call_count, Ordering::Relaxed);
+        self.success_count
+            .store(snap.success_count, Ordering::Relaxed);
+        self.p50_latency_ns
+            .store(snap.p50_latency_ns, Ordering::Relaxed);
+        self.peak_latency_ns
+            .store(snap.peak_latency_ns, Ordering::Relaxed);
+        self.cpu_time_ns.store(snap.cpu_time_ns, Ordering::Relaxed);
+        self.lmdb_pages_touched
+            .store(snap.lmdb_pages_touched, Ordering::Relaxed);
+        self.last_used_unix
+            .store(snap.last_used_unix, Ordering::Relaxed);
+        self.effectiveness
+            .store(snap.effectiveness.to_bits(), Ordering::Relaxed);
+    }
+
     /// Get a snapshot of all stats as a serializable struct.
     pub fn snapshot(&self) -> ToolStatsSnapshot {
         ToolStatsSnapshot {
@@ -258,6 +281,24 @@ mod tests {
             stats.record_success(Duration::from_millis(1), Duration::from_millis(1));
         }
         assert!(stats.is_hot(1000));
+    }
+
+    #[test]
+    fn stats_snapshot_restore_roundtrip() {
+        let stats = ToolStats::default();
+        stats.record_success(Duration::from_millis(5), Duration::from_millis(3));
+        stats.record_failure(Duration::from_millis(2));
+        let snap = stats.snapshot();
+
+        let restored = ToolStats::default();
+        restored.restore(&snap);
+        assert_eq!(restored.call_count.load(Ordering::Relaxed), 2);
+        assert_eq!(restored.success_count.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            restored.peak_latency_ns.load(Ordering::Relaxed),
+            snap.peak_latency_ns
+        );
+        assert!((restored.effectiveness_f32() - 0.5).abs() < f32::EPSILON);
     }
 
     #[test]

@@ -4,7 +4,7 @@
 //! - `memory_ops`: consolidate, decay, batch_read, update, tag, stats, hybrid_recall, sort, filter, deduplicate, export
 //! - `session`: start, checkpoint, recall, end
 //! - `consciousness`: citta.status, citta.reflect, dream.status, dream.trigger
-//! - `tools_mgmt`: effectiveness_report, retire
+//! - `tools_mgmt`: usage_report, effectiveness_report, retire
 //! - `patterns`: pattern.search, salience.spotlight, serendipity.surface
 //! - `constellation`: detect, list
 //! - `galaxy`: stats, export, import, transfer, merge, snapshot, restore, dashboard, backup, taxonomy, purge, health
@@ -169,7 +169,7 @@ pub use session_ops::{
 pub use simulation_tools::{SimCounterfactualTool, SimForecastTool, SimMcTool};
 pub use system::{SystemConfigTool, SystemFlushTool, SystemHealthTool};
 pub use tasks::{TaskDistributeTool, TaskStatusTool};
-pub use tools_mgmt::{ToolsEffectivenessReportTool, ToolsRetireTool};
+pub use tools_mgmt::{ToolsEffectivenessReportTool, ToolsRetireTool, ToolsUsageReportTool};
 pub use transaction::{
     TransactionBeginTool, TransactionCommitTool, TransactionRollbackTool, TransactionState,
 };

@@ -135,7 +135,7 @@ Makes previously fixed structures learnable:
 - **McpServer**: `GanaRegistry` and `DynamicGalaxyRegistry` shared via `Arc<Mutex<>>`, initialized in `with_defaults()`
 - **Daemon**: `LearnedCycleStrategy` wired into `AutonomousCycleRunner`, `LearnedDreamCycle` wired into `DreamCycle`
 - **Emergence cycle**: `DynamicGalaxyRegistry` wired via `CycleContext::with_dynamic_galaxies()`, auto-creates dynamic galaxies from detected tag clusters
-- **Persistence**: All mutable structures save/load JSON state on daemon startup/shutdown (`save_mutable_state()` / `load_mutable_state()`). Files: `mutable_gana_registry.json`, `mutable_dynamic_galaxies.json`, `mutable_learned_dream.json`, `mutable_learned_cycles.json`, `mutable_shadow_stats.json` in the store directory
+- **Persistence**: All mutable structures save/load JSON state on graceful startup/shutdown (`save_mutable_state()` / `load_mutable_state()`). The daemon also checkpoints periodically (default every 5 min, configurable via `checkpoint_interval_secs` / `--checkpoint-interval`), so a SIGKILL loses at most one checkpoint interval of learning. Files in the store directory: `mutable_gana_registry.json`, `mutable_dynamic_galaxies.json`, `mutable_learned_dream.json`, `mutable_learned_cycles.json` (daemon-owned), `mutable_shadow_stats.json`, `mutable_oats.json`, `mutable_tool_stats.json`. Files at the store root (read by `wm doctor`): `conformal_store.json`, `calibration_store.json`, `claims_ledger.json`, `self_model.json`, `escalation_queue.json`, `tx_firewall_policy.json`
 - **E2E tests**: 5 integration tests in `server.rs` verify GanaRegistry recording, DynamicGalaxyRegistry access, LearnedDreamCycle attachment, full pipeline mutable structures integration, and persistence roundtrip
 
 ## Vector Search (Phase 7 — Complete)
@@ -181,7 +181,7 @@ release surface:
 229 tools is an archive, not a v1 product. Profiles curate which tools the `wm` meta-tool can route to (filtering happens before the meta-tools are layered on, so both NLU routing and direct dispatch respect the profile):
 
 - `full` (default) — every tool
-- `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims` + `claims.*` aliases, `transaction.*`, diagnostics, `tools.list`, `nlu.shadow_report`
+- `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims` + `claims.*` aliases, `transaction.*`, diagnostics, `tools.list`, `tools.usage_report`, `nlu.shadow_report`
 - `minimal` — `memory.create/read/list/query/search/chat/associate/associations`, `tools.list`, `gnosis`
 
 Select via `wm serve --profile curated` or `WM_TOOL_ALLOWLIST=memory,session,claims` (comma-separated prefixes). Use the explicit CLI flag in v5.7.7; CLI/environment profile precedence is a release blocker tracked in `docs/RELEASE_READINESS.md`. Full-surface internals (karma, friction, governance) keep working regardless — only the boundary shrinks.

@@ -45,6 +45,7 @@ pub static PROFILE_CURATED: ToolProfile = ToolProfile {
         "transaction",
         "gnosis",
         "tools.list",
+        "tools.usage_report",
         "nlu.shadow_report",
     ],
 };

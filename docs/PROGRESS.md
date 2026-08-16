@@ -1,6 +1,6 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 13, 2026 (late evening, post-RC1 hardening batch) (v5.8.0 - 15 crates, 229 tools, 3,515 tests, ~131,000 LOC, 0 clippy warnings, 0 dependency vulnerabilities. All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Ready for v5.8.0 final.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+**Last updated**: August 16, 2026 (gate re-run with uncommitted work: 3,513 tests, 0 clippy warnings, fmt clean, release build clean. All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Ready for v5.8.0 final.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
 
 ---
 

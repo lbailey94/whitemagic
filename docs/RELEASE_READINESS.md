@@ -1,9 +1,9 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Last updated:** 2026-08-14 (afternoon, post vector-search wiring)
+**Last updated:** 2026-08-15 (early morning, post batch-embedding fix)
 **Version under review:** v5.8.0
-**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Vector search wiring complete (hybrid BM25 + vector recall active when embedder configured). Ready for v5.8.0 final.
+**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Vector search wiring complete with batch embedding and adaptive chunking. Grid search ran with live embedder across 7 weight combinations (n=10); hybrid search lifted R@5 from 0.70 to 0.90 but weight variations did not differentiate recall on this sample size. Ready for v5.8.0 final after release gate re-run.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
@@ -93,11 +93,13 @@ phase:
    routing is a convenience layer that may abstain and must never reach
    destructive tools.
 3. **Search semantics:** BM25/Tantivy is the honest default. Vector recall is
-   now wired end to end — when `WM_EMBEDDER_ENDPOINT` is configured, memory
-   creation auto-embeds and `memory.hybrid_recall` fuses BM25 + vector cosine
-   similarity. Without an embedder, all tools fall back to pure BM25. See
-   [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md) for the
-   improvement catalog and roadmap.
+  now wired end to end — when `WM_EMBEDDER_ENDPOINT` is configured, memory
+  creation auto-embeds (with adaptive chunking for embedder token limits) and
+  `memory.hybrid_recall` fuses BM25 + vector cosine similarity. Without an
+  embedder, all tools fall back to pure BM25. Batch embedding in
+  `memory.batch_create` uses chunked `embed_batch()` calls with a single
+  Tantivy commit. See [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md)
+  for the improvement catalog and roadmap.
 4. **Deployment model:** v5.7.x is a trusted local single-user process. It must
    not imply authenticated multi-tenant authorization through MCP `_meta`.
 5. **Surface policy:** curated is the product surface; full is an opt-in

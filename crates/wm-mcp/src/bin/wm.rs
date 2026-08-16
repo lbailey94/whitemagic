@@ -119,6 +119,9 @@ enum Commands {
         /// Watchdog stall timeout in seconds (0 = disabled; force-restart on daemon hang)
         #[arg(long)]
         watchdog_timeout: Option<u64>,
+        /// Mutable-state checkpoint interval in seconds (0 = disabled; default 300)
+        #[arg(long)]
+        checkpoint_interval: Option<u64>,
     },
     /// Show current brain-wave state (shorthand for stats)
     BrainWave {
@@ -447,6 +450,7 @@ fn main() -> anyhow::Result<()> {
             research_interval,
             selfplay_interval,
             watchdog_timeout,
+            checkpoint_interval,
         } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
@@ -494,6 +498,9 @@ fn main() -> anyhow::Result<()> {
             }
             if let Some(secs) = watchdog_timeout {
                 daemon_cfg.watchdog_timeout = std::time::Duration::from_secs(secs);
+            }
+            if let Some(secs) = checkpoint_interval {
+                daemon_cfg.checkpoint_interval = std::time::Duration::from_secs(secs);
             }
 
             wm_mcp::daemon::run_daemon(&mut server, &daemon_cfg)?;
