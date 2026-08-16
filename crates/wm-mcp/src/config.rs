@@ -213,6 +213,14 @@ pub struct DaemonConfig {
     /// forces a restart so a supervisor (Docker/systemd) brings it back.
     #[serde(default = "default_watchdog_timeout")]
     pub watchdog_timeout_secs: u64,
+
+    /// Mutable-state checkpoint interval (seconds, 0 = disabled).
+    ///
+    /// When enabled, the daemon periodically saves all learned structures
+    /// so a SIGKILL loses at most `checkpoint_interval` of learning rather
+    /// than the entire process lifetime.
+    #[serde(default = "default_checkpoint_interval")]
+    pub checkpoint_interval_secs: u64,
 }
 
 impl Default for DaemonConfig {
@@ -228,6 +236,7 @@ impl Default for DaemonConfig {
             research_interval_secs: 0,
             selfplay_interval_secs: 0,
             watchdog_timeout_secs: 60,
+            checkpoint_interval_secs: 300,
         }
     }
 }
@@ -249,6 +258,9 @@ const fn default_min_health() -> f32 {
 }
 const fn default_watchdog_timeout() -> u64 {
     60
+}
+const fn default_checkpoint_interval() -> u64 {
+    300
 }
 
 impl WmConfig {
@@ -412,6 +424,7 @@ impl WmConfig {
             research_interval: Duration::from_secs(self.daemon.research_interval_secs),
             selfplay_interval: Duration::from_secs(self.daemon.selfplay_interval_secs),
             watchdog_timeout: Duration::from_secs(self.daemon.watchdog_timeout_secs),
+            checkpoint_interval: Duration::from_secs(self.daemon.checkpoint_interval_secs),
         }
     }
 
@@ -581,6 +594,8 @@ research_interval_secs = 0
 selfplay_interval_secs = 0
 # Watchdog stall timeout (seconds, 0 = disabled) — force-restart on daemon hang
 watchdog_timeout_secs = 60
+# Mutable-state checkpoint interval (seconds, 0 = disabled)
+checkpoint_interval_secs = 300
 "#
         .to_string()
     }
@@ -670,6 +685,7 @@ llama_endpoint = "http://localhost:8080"
                 research_interval_secs: 300,
                 selfplay_interval_secs: 900,
                 watchdog_timeout_secs: 120,
+                checkpoint_interval_secs: 180,
             },
             ..Default::default()
         };
@@ -684,6 +700,7 @@ llama_endpoint = "http://localhost:8080"
         assert_eq!(d.research_interval, Duration::from_secs(300));
         assert_eq!(d.selfplay_interval, Duration::from_secs(900));
         assert_eq!(d.watchdog_timeout, Duration::from_secs(120));
+        assert_eq!(d.checkpoint_interval, Duration::from_secs(180));
     }
 
     #[test]

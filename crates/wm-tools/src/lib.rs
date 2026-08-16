@@ -273,8 +273,15 @@ impl Tool for MemoryBatchCreateTool {
         }
 
         let mut ids: Vec<String> = Vec::new();
-        let mut writer_guard = if let Some(search) = &self.search {
-            Some(search.writer()?)
+        // Only acquire a Tantivy writer when we don't have a RecallEngine.
+        // RecallEngine::store_batch_with_embedding manages its own writer,
+        // and Tantivy only allows one writer at a time.
+        let mut writer_guard = if self.recall.is_none() {
+            if let Some(search) = &self.search {
+                Some(search.writer()?)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -322,13 +329,25 @@ impl Tool for MemoryBatchCreateTool {
                     tracing::warn!(
                         "batch_create: store_batch_with_embedding failed ({e}), falling back to per-item"
                     );
-                    // Fall back to per-item store + Tantivy batch index
+                    // Fall back to per-item store + Tantivy batch index.
+                    // Acquire writer lazily since writer_guard is None when
+                    // recall is Some (to avoid Tantivy lock conflict).
+                    let mut fallback_writer = if writer_guard.is_none() {
+                        if let Some(search) = &self.search {
+                            search.writer().ok()
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
                     for (galaxy, memory) in &memories {
                         self.store.put(*galaxy, memory)?;
-                        if let Some(ref mut guard) = writer_guard {
+                        let writer_slot = writer_guard.as_mut().or(fallback_writer.as_mut());
+                        if let Some(guard) = writer_slot {
                             if let Some(search) = &self.search {
                                 if let Err(e) = search.add_document(
-                                    &mut *guard,
+                                    guard,
                                     &memory.metadata.id.to_string(),
                                     galaxy.db_name(),
                                     &memory.content,
@@ -340,6 +359,14 @@ impl Tool for MemoryBatchCreateTool {
                                         memory.metadata.id
                                     );
                                 }
+                            }
+                        }
+                    }
+                    // Commit the fallback writer if we created one
+                    if let Some(mut guard) = fallback_writer {
+                        if let Some(search) = &self.search {
+                            if let Err(e) = search.commit(&mut guard) {
+                                tracing::warn!("Tantivy fallback commit failed: {e}");
                             }
                         }
                     }
@@ -2858,7 +2885,13 @@ pub fn register_meta_tools_with_router(
     for tool in &non_gnosis {
         list_builder.register(tool.clone());
     }
-    let tools_list = Arc::new(ToolsListTool::new(Arc::new(list_builder.build())));
+    let list_registry = Arc::new(list_builder.build());
+    let tools_list = Arc::new(ToolsListTool::new(Arc::clone(&list_registry)));
+
+    // tools.usage_report shares the same registry snapshot — the tool Arcs
+    // (and their ToolStats atomics) are shared across registries, so the
+    // report reads the same counters the dispatch pipeline updates.
+    let usage_report = Arc::new(expansion::ToolsUsageReportTool::new(list_registry));
 
     // Build wm with all base tools (non-gnosis) + tools.list + new gnosis
     let gnosis = Arc::new(GnosisTool::with_tool_count(Arc::clone(store), tool_count));
@@ -2867,6 +2900,7 @@ pub fn register_meta_tools_with_router(
         wm_builder.register(tool.clone());
     }
     wm_builder.register(tools_list.clone());
+    wm_builder.register(usage_report.clone());
     wm_builder.register(gnosis.clone());
 
     // Create NLU shadow report tool sharing the same shadow stats.
@@ -2885,12 +2919,13 @@ pub fn register_meta_tools_with_router(
     ));
     let router = wm.embedding_router().cloned();
 
-    // Build the final registry: non-gnosis + tools.list + wm + gnosis + shadow report
+    // Build the final registry: non-gnosis + tools.list + usage report + wm + gnosis + shadow report
     let mut final_builder = ToolRegistryBuilder::new();
     for tool in non_gnosis {
         final_builder.register(tool);
     }
     final_builder.register(tools_list);
+    final_builder.register(usage_report);
     final_builder.register(wm);
     final_builder.register(gnosis);
     final_builder.register(shadow_report);

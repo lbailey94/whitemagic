@@ -302,16 +302,56 @@ impl RecallEngine {
             return Ok(0);
         }
 
-        // 1. Batch embed all content
-        let contents: Vec<&str> = entries.iter().map(|(_, m)| m.content.as_str()).collect();
-        let embeddings = self.embedder.embed_batch(&contents)?;
-
-        if embeddings.len() != entries.len() {
-            return Err(CoreError::Memory(format!(
-                "embed_batch returned {} vectors for {} inputs",
-                embeddings.len(),
-                entries.len()
-            )));
+        // 1. Batch embed all content, chunked to stay under the embedder's
+        //    token batch limit (e.g. llama-server with bge-small defaults to
+        //    512 tokens). We estimate ~4 chars/token and target ~480 tokens
+        //    per chunk to stay safely under the limit. Individual items that
+        //    exceed the limit are truncated — the embedding still captures
+        //    semantic signal from the beginning of the content.
+        const MAX_CHARS_PER_CHUNK: usize = 1500; // ~465 tokens worst case (3.21 chars/token)
+        const MAX_CHARS_PER_ITEM: usize = 1500; // same limit for individual items
+        let contents: Vec<String> = entries
+            .iter()
+            .map(|(_, m)| {
+                if m.content.len() > MAX_CHARS_PER_ITEM {
+                    m.content.chars().take(MAX_CHARS_PER_ITEM).collect()
+                } else {
+                    m.content.clone()
+                }
+            })
+            .collect();
+        let content_refs: Vec<&str> = contents.iter().map(String::as_str).collect();
+        let mut embeddings: Vec<Vec<f32>> = Vec::with_capacity(entries.len());
+        let mut chunk: Vec<&str> = Vec::new();
+        let mut chunk_chars: usize = 0;
+        for &content in &content_refs {
+            let content_chars = content.len();
+            if chunk_chars + content_chars > MAX_CHARS_PER_CHUNK && !chunk.is_empty() {
+                let chunk_vecs = self.embedder.embed_batch(&chunk)?;
+                if chunk_vecs.len() != chunk.len() {
+                    return Err(CoreError::Memory(format!(
+                        "embed_batch returned {} vectors for {} inputs (chunk)",
+                        chunk_vecs.len(),
+                        chunk.len()
+                    )));
+                }
+                embeddings.extend(chunk_vecs);
+                chunk.clear();
+                chunk_chars = 0;
+            }
+            chunk.push(content);
+            chunk_chars += content_chars;
+        }
+        if !chunk.is_empty() {
+            let chunk_vecs = self.embedder.embed_batch(&chunk)?;
+            if chunk_vecs.len() != chunk.len() {
+                return Err(CoreError::Memory(format!(
+                    "embed_batch returned {} vectors for {} inputs (final chunk)",
+                    chunk_vecs.len(),
+                    chunk.len()
+                )));
+            }
+            embeddings.extend(chunk_vecs);
         }
 
         // 2. Store all memories to LMDB + embeddings
