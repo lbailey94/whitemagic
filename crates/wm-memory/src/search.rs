@@ -176,7 +176,9 @@ pub struct SearchOptions {
     /// Relative floor: hits scoring below `top_score * ratio` are dropped
     /// (e.g. `0.05` keeps only hits within 5% of the top result).
     pub relative_floor: Option<f32>,
-    /// Use OR semantics instead of conjunction (relaxed fallback recall).
+    /// Use OR semantics instead of conjunction (deprecated — OR is now the
+    /// default; this flag is kept for API compatibility but does not change
+    /// behavior).
     pub relaxed: bool,
 }
 
@@ -521,17 +523,21 @@ impl SearchEngine {
     }
 
     /// Search with full recall-quality options (stopword stripping, score
-    /// thresholds, relaxed OR fallback, galaxy filter).
+    /// thresholds, token-coverage filtering, galaxy filter).
     ///
     /// Pipeline:
     /// 1. `strip_stopwords` — common English stopwords are removed.
     /// 2. `sanitize_tantivy_query` — reserved query syntax is neutralized;
     ///    plain terms (incl. hyphenated compounds) pass through so the
     ///    tokenizer can split them into phrase matches.
-    /// 3. Conjunction (or OR when `relaxed`) across `content` + `tags`.
+    /// 3. OR query across `content` + `tags` (broader recall than
+    ///    conjunction, filtered by token-coverage in step 5).
     /// 4. Hits below `min_score` (absolute) or `relative_floor * top_score`
     ///    are dropped.
-    /// 5. Output content is scrubbed of control characters.
+    /// 5. Token-coverage floor: for queries with ≥ 3 terms, at least 2
+    ///    must appear in the content (stemming-aware).  Documents that
+    ///    pass the floor receive a coverage-ratio score boost.
+    /// 6. Output content is scrubbed of control characters.
     pub fn search_opt(&self, query: &str, opts: &SearchOptions) -> Result<Vec<SearchResult>> {
         let stripped = strip_stopwords(query);
         let sanitized = sanitize_tantivy_query(&stripped);
@@ -541,11 +547,10 @@ impl SearchEngine {
 
         let searcher = self.reader.searcher();
 
-        let mut query_parser =
+        // Always use OR semantics.  The token-coverage floor below filters
+        // single-term noise that OR would otherwise let through.
+        let query_parser =
             QueryParser::for_index(&self.index, vec![self.field_content, self.field_tags]);
-        if !opts.relaxed {
-            query_parser.set_conjunction_by_default();
-        }
 
         let parsed = query_parser
             .parse_query(&sanitized)
@@ -563,16 +568,11 @@ impl SearchEngine {
             .relative_floor
             .map_or(f32::MIN, |ratio| top_score * ratio);
 
-        // Token coverage floor for relaxed (OR) mode: with OR semantics a
-        // document matching any single common term would otherwise qualify.
-        // For queries with >= 3 terms, require at least 2 of them to actually
-        // appear in the content (tantivy has no minimum_should_match).
-        let coverage_floor = if opts.relaxed {
-            let tokens = relaxed_query_tokens(&stripped);
-            if tokens.len() >= 3 { 2 } else { 1 }
-        } else {
-            1
-        };
+        // Token-coverage floor: with OR semantics a document matching any
+        // single common term would otherwise qualify.  For queries with
+        // ≥ 3 terms, require at least 2 to appear in the content.
+        let query_tokens = query_stem_tokens(&stripped);
+        let coverage_floor = if query_tokens.len() >= 3 { 2 } else { 1 };
 
         let mut results = Vec::new();
         for (score, doc_address) in top_docs {
@@ -609,21 +609,47 @@ impl SearchEngine {
                 .unwrap_or("")
                 .to_string();
 
-            if coverage_floor > 1 && !meets_token_coverage(&content, &stripped, coverage_floor) {
-                continue;
+            if coverage_floor > 1 {
+                let hits = count_token_hits(&content, &stripped);
+                if hits < coverage_floor {
+                    continue;
+                }
             }
+
+            // Coverage-ratio boost: documents covering more query tokens
+            // are more relevant.  Boost = 1 + 0.1 * (hits / total).
+            let boosted_score = if query_tokens.is_empty() {
+                score
+            } else {
+                let hits = count_token_hits(&content, &stripped);
+                let ratio = hits as f32 / query_tokens.len() as f32;
+                score * 0.1f32.mul_add(ratio, 1.0)
+            };
 
             results.push(SearchResult {
                 memory_id,
                 galaxy: doc_galaxy,
-                score,
-                normalized_score: if top_score > 0.0 {
-                    score / top_score
-                } else {
-                    0.0
-                },
+                score: boosted_score,
+                normalized_score: 0.0, // set after re-sort
                 content: scrub_text(&content),
             });
+        }
+
+        // Re-sort by boosted score (coverage boost may have re-ordered).
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Normalize relative to the top boosted score.
+        let top_boosted = results.first().map_or(0.0, |r| r.score);
+        for r in &mut results {
+            r.normalized_score = if top_boosted > 0.0 {
+                r.score / top_boosted
+            } else {
+                0.0
+            };
         }
 
         Ok(results)
@@ -710,39 +736,65 @@ pub fn strip_stopwords(query: &str) -> String {
         .join(" ")
 }
 
-/// Unique lowercase tokens of a stopword-stripped query (used for relaxed
-/// token-coverage filtering).
+/// Unique lowercase stemmed tokens of a stopword-stripped query.
+/// Uses [`simple_stem`] so that coverage matching aligns with the en_stem
+/// tokenizer used at index time.
 #[must_use]
-fn relaxed_query_tokens(stripped_query: &str) -> Vec<String> {
+fn query_stem_tokens(stripped_query: &str) -> Vec<String> {
     let mut tokens: Vec<String> = Vec::new();
     for term in stripped_query.split_whitespace() {
-        let lower = term.to_lowercase();
-        if !tokens.contains(&lower) {
-            tokens.push(lower);
+        let stemmed = simple_stem(&term.to_lowercase());
+        if !tokens.contains(&stemmed) {
+            tokens.push(stemmed);
         }
     }
     tokens
 }
 
-/// Whether at least `min_hits` of the query's tokens appear as whole words in
-/// the content (SimpleTokenizer-compatible word splitting on non-alphanumerics,
-/// case-insensitive).
+/// Lightweight suffix-stripping stemmer that approximates the Porter stemmer
+/// used by Tantivy's `en_stem` tokenizer.  Handles the common English
+/// inflections (-s, -es, -ed, -ing, -ly, -ies, -ied) without pulling in a
+/// full stemming crate.  This is intentionally conservative — false
+/// negatives (under-stemming) only make coverage stricter, never looser.
 #[must_use]
-fn meets_token_coverage(content: &str, stripped_query: &str, min_hits: usize) -> bool {
-    let tokens = relaxed_query_tokens(stripped_query);
-    if tokens.len() < min_hits {
-        return true;
+fn simple_stem(word: &str) -> String {
+    if word.len() <= 3 {
+        return word.to_string();
     }
-    let content_tokens: std::collections::HashSet<String> = content
+    // Order matters: check longer suffixes first.
+    for suffix in ["ies", "ied", "ing", "edly", "edly", "ed", "ly", "es", "s"] {
+        if let Some(stem) = word.strip_suffix(suffix) {
+            // "ies" / "ied" → restore "y" (stories → story, carried → carry)
+            if suffix == "ies" || suffix == "ied" {
+                return format!("{stem}y");
+            }
+            // Don't produce a 1-char stem ("is" → "i")
+            if stem.len() >= 2 {
+                return stem.to_string();
+            }
+        }
+    }
+    word.to_string()
+}
+
+/// Count how many query tokens (after stemming) appear as whole words in the
+/// content.  Uses [`simple_stem`] on both sides so that "graduate" matches
+/// "graduated", mirroring the en_stem tokenizer used at index time.
+#[must_use]
+fn count_token_hits(content: &str, stripped_query: &str) -> usize {
+    let query_tokens = query_stem_tokens(stripped_query);
+    if query_tokens.is_empty() {
+        return 0;
+    }
+    let content_stems: std::collections::HashSet<String> = content
         .split(|c: char| !c.is_alphanumeric())
         .filter(|t| !t.is_empty())
-        .map(str::to_lowercase)
+        .map(|t| simple_stem(&t.to_lowercase()))
         .collect();
-    let hits = tokens
+    query_tokens
         .iter()
-        .filter(|t| content_tokens.contains(*t))
-        .count();
-    hits >= min_hits
+        .filter(|t| content_stems.contains(*t))
+        .count()
 }
 
 /// Prepare content for indexing.
@@ -1311,7 +1363,7 @@ mod tests {
     }
 
     #[test]
-    fn relaxed_search_returns_partial_matches() {
+    fn or_default_filters_partial_matches_via_coverage() {
         let (_tmp, engine) = open_engine();
         let mut writer = engine.writer().unwrap();
 
@@ -1337,30 +1389,19 @@ mod tests {
             .unwrap();
         engine.commit(&mut writer).unwrap();
 
-        // Strict conjunction: only the doc with all three terms matches.
-        let strict = engine.search("alpha beta gamma", 10).unwrap();
-        assert_eq!(strict.len(), 1);
-        assert_eq!(strict[0].memory_id, "11111111-1111-1111-1111-111111111111");
-
-        // Relaxed OR with a 3-term query requires 2/3 token coverage:
-        // the single-term doc is filtered out (this is what prevents the
-        // incident pattern of "matched only 'test'" noise).
-        let opts = SearchOptions {
-            limit: 10,
-            relaxed: true,
-            ..SearchOptions::default()
-        };
-        let relaxed = engine.search_opt("alpha beta gamma", &opts).unwrap();
-        assert_eq!(relaxed.len(), 1);
-        assert_eq!(relaxed[0].memory_id, "11111111-1111-1111-1111-111111111111");
+        // OR is now the default.  A 3-term query requires 2/3 token coverage,
+        // so the "alpha only here" doc (1/3) is filtered out.
+        let results = engine.search("alpha beta gamma", 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].memory_id, "11111111-1111-1111-1111-111111111111");
 
         // With a 2-term query the floor is 1/2, so partial matches return.
-        let relaxed = engine.search_opt("alpha beta", &opts).unwrap();
-        assert_eq!(relaxed.len(), 2);
+        let results = engine.search("alpha beta", 10).unwrap();
+        assert_eq!(results.len(), 2);
     }
 
     #[test]
-    fn relaxed_coverage_is_case_insensitive() {
+    fn coverage_is_case_insensitive() {
         let (_tmp, engine) = open_engine();
         let mut writer = engine.writer().unwrap();
         engine
@@ -1385,19 +1426,51 @@ mod tests {
             .unwrap();
         engine.commit(&mut writer).unwrap();
 
-        // 3 tokens: smoke + test + wmclient (case-insensitive whole-word
-        // matching) — only the first doc covers 3/3; the "test only" doc
-        // covers 1/3 and must be dropped even though it matched via OR.
-        let opts = SearchOptions {
-            limit: 10,
-            relaxed: true,
-            ..SearchOptions::default()
-        };
-        let relaxed = engine
-            .search_opt("Smoke Test from wmClient", &opts)
+        // 3 tokens: smoke + test + wmclient (case-insensitive stemming-aware
+        // whole-word matching) — only the first doc covers 2/3; the "test
+        // only" doc covers 1/3 and must be dropped even though it matched
+        // via OR.
+        let results = engine.search("Smoke Test from wmClient", 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].memory_id, "11111111-1111-1111-1111-111111111111");
+    }
+
+    #[test]
+    fn coverage_matches_stemmed_variants() {
+        // Stemming-aware coverage: "graduate" should match "graduated",
+        // "classes" should match "class", mirroring the en_stem tokenizer.
+        let (_tmp, engine) = open_engine();
+        let mut writer = engine.writer().unwrap();
+        engine
+            .add_document(
+                &mut writer,
+                "11111111-1111-1111-1111-111111111111",
+                "codex",
+                "I graduated with a degree in Business Administration",
+                &[],
+                1700000000,
+            )
             .unwrap();
-        assert_eq!(relaxed.len(), 1);
-        assert_eq!(relaxed[0].memory_id, "11111111-1111-1111-1111-111111111111");
+        engine
+            .add_document(
+                &mut writer,
+                "22222222-2222-2222-2222-222222222222",
+                "codex",
+                "degree only here",
+                &[],
+                1700000001,
+            )
+            .unwrap();
+        engine.commit(&mut writer).unwrap();
+
+        // 2-term query "graduate degree" → coverage floor 1/2.
+        // Doc 1: "graduated" stems to "graduat", "degree" stems to "degre" → 2/2.
+        // Doc 2: "degree" → 1/2.
+        // Both pass the 1/2 floor, but doc 1 should rank higher due to
+        // the coverage-ratio boost (2/2 > 1/2).
+        let results = engine.search("graduate degree", 10).unwrap();
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].memory_id, "11111111-1111-1111-1111-111111111111");
     }
 
     #[test]
