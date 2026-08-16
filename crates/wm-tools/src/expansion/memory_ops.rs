@@ -592,7 +592,7 @@ impl Tool for MemoryHybridRecallTool {
             }
         }
 
-        // Phase 1: full-text search (conjunction + score floors)
+        // Phase 1: full-text search (OR + token-coverage + score floors)
         // Only run if hybrid search didn't produce results or no RecallEngine
         if results.is_empty() {
             if let Some(ref search) = self.search {
@@ -625,41 +625,7 @@ impl Tool for MemoryHybridRecallTool {
                 }
             }
         }
-        // Phase 2: fallback — relaxed OR search with NO relative floor.
-        // The conjunction search already failed; applying a score floor
-        // here defeats the purpose of a fallback. The token-coverage
-        // floor in the search engine already filters garbage OR matches.
-        if results.is_empty() {
-            if let Some(ref search) = self.search {
-                let opts = wm_memory::SearchOptions {
-                    limit: limit * 2,
-                    min_score,
-                    relative_floor: None,
-                    relaxed: true,
-                    ..wm_memory::SearchOptions::default()
-                };
-                let hits = search.search_opt(query, &opts)?;
-                for hit in hits {
-                    if let Ok(id) = uuid::Uuid::parse_str(&hit.memory_id) {
-                        if let Ok(Some(mem)) = self.store.get(galaxy, id) {
-                            if mem.metadata.importance >= min_importance
-                                && crate::expansion::common::mcp_visible(&mem)
-                            {
-                                results.push(json!({
-                                    "id": mem.metadata.id,
-                                    "content": wm_memory::scrub_text(&mem.content),
-                                    "importance": mem.metadata.importance,
-                                    "score": hit.score,
-                                    "normalized_score": hit.normalized_score,
-                                    "source": "fts_relaxed",
-                                }));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // Phase 3: only when NO query was given, return by importance.
+        // Phase 2: only when NO query was given, return by importance.
         // (With a query, empty results are final — a score threshold must
         // not be bypassed by a scan-based fallback.)
         if results.is_empty() && query.is_empty() {
@@ -1575,9 +1541,9 @@ mod tests {
     //
     // Mirrors the 2026-08-11 incident: `memory.hybrid_recall` with query
     // "smoke test from wmClient" and limit 20 returned 20 unrelated memories
-    // at BM25 scores 0.5–1.0 with zero query-token overlap. The fix adds
-    // stopword stripping, conjunction, score floors and a relaxed OR fallback
-    // that replaces the `scan(galaxy, 100)` lottery.
+    // at BM25 scores 0.5–1.0 with zero query-token overlap. The fix uses
+    // OR semantics with a token-coverage floor and score floors, replacing
+    // the old `scan(galaxy, 100)` lottery.
 
     /// Build a store + tantivy index pair where the memory and its index
     /// document are kept in sync (as the write path does).
@@ -1826,9 +1792,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn hybrid_recall_relaxed_fallback_finds_partial_matches() {
-        // Phase 1 (strict conjunction) finds nothing; the relaxed OR fallback
-        // must find partial matches instead of the old scan(galaxy, 100) lottery.
+    async fn hybrid_recall_or_coverage_finds_partial_matches() {
+        // OR + token-coverage finds partial matches without a separate
+        // fallback phase.  The doc covering 3/4 query terms survives the
+        // 2/4 coverage floor; the 1/4 doc is filtered out.
         let (_dir, store, search) = hybrid_fixture();
         index_memory(&store, &search, Galaxy::Codex, "alpha only here");
         index_memory(&store, &search, Galaxy::Codex, "alpha beta gamma delta");
@@ -1840,8 +1807,8 @@ mod tests {
             .await
             .unwrap();
         let results = v["results"].as_array().unwrap();
-        // Strict conjunction matches the full doc; the fallback only runs when
-        // phase 1 is empty, so here we expect the strict hit.
+        // 3-term query: 2/3 coverage floor.  "alpha beta gamma delta" covers
+        // 3/3, "alpha only here" covers 1/3 → filtered.
         assert_eq!(results.len(), 1);
         assert!(
             results[0]["content"]
@@ -1850,8 +1817,8 @@ mod tests {
                 .contains("alpha beta gamma")
         );
 
-        // When nothing matches all terms, the relaxed fallback kicks in —
-        // with 2/4 token coverage required, only the near-full doc survives.
+        // 4-term query: 2/4 coverage floor.  "alpha beta gamma delta" covers
+        // 3/4, "alpha only here" covers 1/4 → filtered.
         let v = tool
             .call(
                 &mut ctx,
@@ -1863,7 +1830,7 @@ mod tests {
         assert_eq!(
             results.len(),
             1,
-            "relaxed fallback must require 2/4 token coverage: {results:?}"
+            "OR + coverage must require 2/4 token coverage: {results:?}"
         );
         assert!(
             results[0]["content"]
@@ -1873,8 +1840,8 @@ mod tests {
         );
         for r in results {
             assert!(
-                matches!(r["source"].as_str(), Some("fts_relaxed")),
-                "fallback results should be tagged fts_relaxed"
+                matches!(r["source"].as_str(), Some("fts")),
+                "results should be tagged fts"
             );
         }
     }

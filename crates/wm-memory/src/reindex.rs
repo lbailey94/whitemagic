@@ -311,9 +311,15 @@ mod tests {
 
         // Regression: the filtered rebuild used to delete ALL documents first,
         // so documents from unselected galaxies vanished from the index.
-        let codex = search.search("codex memory", 10).unwrap();
+        // Use galaxy-scoped search since OR semantics returns partial matches
+        // for 2-term queries (both docs contain "memory").
+        let codex = search
+            .search_in_galaxy("codex memory", Some(Galaxy::Codex), 10)
+            .unwrap();
         assert_eq!(codex.len(), 1);
-        let research = search.search("research memory", 10).unwrap();
+        let research = search
+            .search_in_galaxy("research memory", Some(Galaxy::Research), 10)
+            .unwrap();
         assert_eq!(
             research.len(),
             1,
