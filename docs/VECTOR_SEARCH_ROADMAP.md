@@ -107,10 +107,10 @@ compare R@1, R@5, MRR. Candidate grid:
 
 ## Ranking Improvements (R@1 → R@5 Gap)
 
-1. **OR with token-coverage as primary strategy** — Currently conjunction is
-   Phase 1, OR is fallback. With `en_stem` tokenizer, OR results are higher
-   quality. Consider making OR + token-coverage the default, ranked by
-   BM25 × coverage ratio.
+1. ~~**OR with token-coverage as primary strategy**~~ ✅ Done (v5.8.0-rc2):
+   OR is now the default with stemming-aware token-coverage floor (≥2/3 for
+   3+ term queries) and coverage-ratio score boost. The two-phase
+   conjunction→relaxed-OR fallback is eliminated.
 
 2. **BM25 field weight tuning** — Content field vs tags field weighting. Tags
    contain role/session metadata that may over-inflate or under-weight certain
@@ -132,8 +132,9 @@ compare R@1, R@5, MRR. Candidate grid:
    (single-session-user, multi-session-user, etc.). Different categories may
    benefit from different search strategies or fusion weights.
 
-7. **Relaxed conjunction** — Instead of strict AND or full OR, try "at least
-   N-1 terms must match" (proximity-based conjunction).
+7. ~~**Relaxed conjunction**~~ ✅ Subsumed by item 1: OR + token-coverage
+   floor (≥2/3 for 3+ term queries) provides the "at least N terms must
+   match" behavior without a separate conjunction mode.
 
 ## Embedding Infrastructure
 
