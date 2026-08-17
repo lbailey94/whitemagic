@@ -114,3 +114,17 @@ scorer ranks them less effectively. Paired per-question changes were R@1
 The next experiment is selective scoring over the broad episodic candidate set:
 coverage, exact phrase, role/session, temporal proximity, and source validity
 must be combined without weakening the high candidate recall.
+
+### Scorer follow-up
+
+Aligning episodic tokenization with the v5 path by stripping stopwords and
+applying conservative stemming improved the same v6 route to R@1/R@5/R@10
+`0.66/0.86/0.94`, MRR `0.7403`, candidate presence `0.96`, and expected-session
+presence `0.98`. Against the v5 compatibility control, paired wins/losses were
+R@1 `5/4`, R@5 `4/2`, and R@10 `6/0`.
+
+This is the first accepted v6 accuracy improvement. It is not yet a complete
+acceptance because raw LMDB scanning and deterministic scoring increased query
+p50 to `122.3 ms` and p95 to `226.6 ms`. The next phase should add an indexed
+candidate path or bounded cache to recover the local latency target without
+giving back the recall gain.
