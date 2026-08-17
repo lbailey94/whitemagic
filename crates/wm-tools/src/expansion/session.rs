@@ -6,7 +6,9 @@ use async_trait::async_trait;
 
 use serde_json::{Value, json};
 use std::sync::Arc;
-use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
+use wm_core::{
+    Context, EffectRow, EpisodicKind, Galaxy, Gana, ProvenanceSource, Resource, Tool, ToolStats,
+};
 use wm_memory::{Memory, MemoryStore};
 
 /// `session.start` — create a new session memory.
@@ -74,6 +76,14 @@ impl Tool for SessionStartTool {
         mem.metadata.tags = vec!["session".into(), "start".into()];
         mem.metadata.importance = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
+        crate::capture_explicit_memory(
+            &self.store,
+            &mem,
+            EpisodicKind::SystemEvent,
+            ProvenanceSource::System,
+            Some(mem.metadata.id),
+            0,
+        );
         Ok(json!({
             "status": "success",
             "session_id": mem.metadata.id,
@@ -144,6 +154,14 @@ impl Tool for SessionCheckpointTool {
         mem.metadata.tags = vec!["session".into(), "checkpoint".into()];
         mem.metadata.importance = 0.5;
         self.store.put(Galaxy::Sessions, &mem)?;
+        crate::capture_explicit_memory(
+            &self.store,
+            &mem,
+            EpisodicKind::SystemEvent,
+            ProvenanceSource::System,
+            uuid::Uuid::parse_str(session_id).ok(),
+            0,
+        );
         Ok(json!({
             "status": "success",
             "checkpoint_id": mem.metadata.id,
@@ -276,6 +294,14 @@ impl Tool for SessionEndTool {
         mem.metadata.tags = vec!["session".into(), "end".into()];
         mem.metadata.importance = 0.6;
         self.store.put(Galaxy::Sessions, &mem)?;
+        crate::capture_explicit_memory(
+            &self.store,
+            &mem,
+            EpisodicKind::SystemEvent,
+            ProvenanceSource::System,
+            uuid::Uuid::parse_str(session_id).ok(),
+            0,
+        );
         Ok(json!({
             "status": "success",
             "session_id": session_id,
