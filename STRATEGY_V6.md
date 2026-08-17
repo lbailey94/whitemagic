@@ -4,6 +4,9 @@
 **Branch:** `v6-dev`
 **Reference baseline:** commit `b3cec87` (WMv5 release foundation)
 **Research:** [`docs/V6_MEMORY_RESEARCH.md`](docs/V6_MEMORY_RESEARCH.md)
+**Accuracy roadmap:** [`docs/V6_ACCURACY_PERFORMANCE_ROADMAP.md`](docs/V6_ACCURACY_PERFORMANCE_ROADMAP.md)
+**Performance plan:** [`docs/V6_EPISODIC_PERFORMANCE_PLAN.md`](docs/V6_EPISODIC_PERFORMANCE_PLAN.md)
+**Holographic position:** [`docs/V6_HOLOGRAPHIC_MEMORY.md`](docs/V6_HOLOGRAPHIC_MEMORY.md)
 
 ## Product Objective
 
