@@ -702,6 +702,92 @@ impl Tool for MemoryHybridRecallTool {
     }
 }
 
+/// `memory.episodic_search` — v6 raw episodic search for controlled evaluation.
+///
+/// This route is explicit-only and is not part of the curated v5 surface.
+pub struct MemoryEpisodicSearchTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl MemoryEpisodicSearchTool {
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("episodic_records".into())]),
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for MemoryEpisodicSearchTool {
+    fn name(&self) -> &str {
+        "memory.episodic_search"
+    }
+    fn gana(&self) -> Gana {
+        Gana::WinnowingBasket
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "[V6 Experimental] Search explicit episodic records with provenance and lifecycle filtering"
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "query": str_prop("Full-text query"),
+                "limit": int_prop("Maximum results (default 10)"),
+                "include_historical": {
+                    "type": "boolean",
+                    "description": "Include superseded, revoked, and archived records",
+                },
+            }),
+            &["query"],
+        )
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let query = args.get("query").and_then(Value::as_str).unwrap_or("");
+        let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(10) as usize;
+        let include_historical = args
+            .get("include_historical")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let results = self
+            .store
+            .episodic()
+            .search(query, limit.saturating_mul(2), include_historical)?
+            .into_iter()
+            .filter(|hit| !hit.record.is_private && !hit.record.model_exclude)
+            .take(limit)
+            .map(|hit| {
+                json!({
+                    "id": hit.record.id,
+                    "content": wm_memory::scrub_text(&hit.record.content),
+                    "score": hit.score,
+                    "matched_terms": hit.matched_terms,
+                    "session_id": hit.record.session_id,
+                    "sequence": hit.record.sequence,
+                    "created_at": hit.record.created_at,
+                    "validity": hit.record.validity,
+                    "provenance": hit.record.provenance,
+                    "source": "episodic",
+                })
+            })
+            .collect::<Vec<_>>();
+        Ok(json!({
+            "status": "success",
+            "count": results.len(),
+            "results": results,
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
 /// `memory.sort` — sort memories by importance, recency, or access count.
 pub struct MemorySortTool {
     store: Arc<MemoryStore>,
@@ -1177,7 +1263,7 @@ impl Tool for MemoryExportTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wm_core::Galaxy;
+    use wm_core::{EpisodicKind, EpisodicRecord, Galaxy, Provenance, ProvenanceSource};
     use wm_memory::{Memory, MemoryStore};
 
     fn test_store() -> Arc<MemoryStore> {
@@ -1200,6 +1286,40 @@ mod tests {
         m3.metadata.importance = 0.3;
         m3.metadata.tags = vec!["rust".into(), "tutorial".into()];
         let _ = store.put(galaxy, &m3);
+    }
+
+    #[tokio::test]
+    async fn episodic_search_filters_private_records() {
+        let store = test_store();
+        let public = EpisodicRecord::new(
+            None,
+            1,
+            EpisodicKind::Observation,
+            "public retrieval evidence",
+            Provenance::new(ProvenanceSource::User),
+        );
+        let private = EpisodicRecord::new(
+            None,
+            2,
+            EpisodicKind::Observation,
+            "private retrieval evidence",
+            Provenance::new(ProvenanceSource::User),
+        )
+        .with_visibility(true, false);
+        store.episodic().append(&public).unwrap();
+        store.episodic().append(&private).unwrap();
+
+        let tool = MemoryEpisodicSearchTool::new(store);
+        let mut ctx = Context::default();
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"query": "retrieval evidence", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["count"], 1);
+        assert_eq!(result["results"][0]["id"], json!(public.id));
     }
 
     #[tokio::test]

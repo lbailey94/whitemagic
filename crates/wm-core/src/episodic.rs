@@ -303,6 +303,10 @@ pub struct EpisodicRecord {
     pub content_hash: String,
     pub provenance: Provenance,
     pub validity: ValidityState,
+    #[serde(default)]
+    pub is_private: bool,
+    #[serde(default)]
+    pub model_exclude: bool,
     pub evidence: Vec<EvidenceRef>,
     pub created_at: DateTime<Utc>,
 }
@@ -328,6 +332,8 @@ impl EpisodicRecord {
             content,
             provenance,
             validity: ValidityState::Active,
+            is_private: false,
+            model_exclude: false,
             evidence: Vec::new(),
             created_at: Utc::now(),
         }
@@ -352,6 +358,14 @@ impl EpisodicRecord {
     pub fn with_content(mut self, content: impl Into<String>) -> Self {
         self.content = content.into();
         self.content_hash = hash_content(&self.content);
+        self
+    }
+
+    /// Apply the source memory visibility policy to the episodic copy.
+    #[must_use]
+    pub const fn with_visibility(mut self, is_private: bool, model_exclude: bool) -> Self {
+        self.is_private = is_private;
+        self.model_exclude = model_exclude;
         self
     }
 
