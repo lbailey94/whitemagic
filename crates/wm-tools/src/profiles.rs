@@ -23,7 +23,7 @@ pub struct ToolProfile {
     pub prefixes: &'static [&'static str],
 }
 
-/// The full surface — every tool registered. The default.
+/// The full surface — every tool registered. Library/daemon default.
 pub static PROFILE_FULL: ToolProfile = ToolProfile {
     name: "full",
     prefixes: &["*"],
@@ -45,8 +45,6 @@ pub static PROFILE_CURATED: ToolProfile = ToolProfile {
         "transaction",
         "gnosis",
         "tools.list",
-        "tools.usage_report",
-        "nlu.shadow_report",
     ],
 };
 
@@ -83,7 +81,8 @@ pub fn profile_from_name(name: &str) -> Option<&'static ToolProfile> {
 /// 1. `WM_TOOL_ALLOWLIST` — an explicit prefix allowlist always wins.
 /// 2. CLI `--profile` flag.
 /// 3. `WM_TOOL_PROFILE` environment variable.
-/// 4. Default: `full`.
+/// 4. Default: `full` (library / `wm daemon`). `wm serve` overlays
+///    curated when flag and env are both absent.
 ///
 /// Unknown profile names log a warning and fall back to the full surface.
 #[must_use]
@@ -179,6 +178,28 @@ mod tests {
                 .iter()
                 .any(|p| p.starts_with("galaxy")),
             "curated profile must not include galaxy prefixes"
+        );
+    }
+
+    #[test]
+    fn curated_is_the_product_surface() {
+        assert_eq!(
+            PROFILE_CURATED.prefixes,
+            &[
+                "memory",
+                "session",
+                "claims",
+                "transaction",
+                "gnosis",
+                "tools.list",
+            ]
+        );
+        assert!(
+            !PROFILE_CURATED
+                .prefixes
+                .iter()
+                .any(|p| *p == "nlu.shadow_report" || *p == "tools.usage_report"),
+            "observability tools belong on the full surface"
         );
     }
 

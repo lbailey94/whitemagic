@@ -61,11 +61,11 @@ pick up where you left off.
 
 | Group | Tools |
 |---|---|
-| Memory | create, read, list, delete, query, search, hybrid_recall, chat, update, tag, batch_read, stats, count, tags, export, sort, filter, nearby, associate |
+| Memory | create, read, list, delete, query, **search**, chat, update, tag, batch_read, stats, count, tags, export, sort, filter, nearby, associate. `hybrid_recall` is a search alias. |
 | Sessions | start, checkpoint, recall, end, list, record, replay, continuity, handoff |
 | Transactions | begin, commit, rollback |
 | Claims | claims + claims.add/resolve/status/list/calibration |
-| Diagnostics | tools.list, gnosis.*, nlu.shadow_report |
+| Diagnostics | tools.list, gnosis.* |
 
 Destructive tools (`memory.delete`, `transaction.rollback`, ...) require an
 explicit route plus `"confirm": true`.
@@ -77,5 +77,5 @@ explicit route plus `"confirm": true`.
   daemon.
 - **Tools fail to load in the client**: the server answers MCP `ping`
   (fixed in 5.8.0); update the binary and restart the client.
-- **Want everything**: `wm serve --profile full` exposes the 229-tool archive
-  surface (research/extension use).
+- **Want everything**: `wm serve` is curated by default; `--profile full`
+  exposes the 229-tool archive surface (research/extension use).

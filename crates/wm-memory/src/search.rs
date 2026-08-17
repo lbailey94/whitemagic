@@ -741,8 +741,19 @@ pub fn strip_stopwords(query: &str) -> String {
 /// tokenizer used at index time.
 #[must_use]
 fn query_stem_tokens(stripped_query: &str) -> Vec<String> {
+    stem_tokens(stripped_query)
+}
+
+/// Normalize text into the same punctuation-delimited tokens on both sides
+/// of the coverage comparison. This keeps possessives and hyphenated terms
+/// from becoming query-only tokens or standalone one-character fragments.
+#[must_use]
+fn stem_tokens(text: &str) -> Vec<String> {
     let mut tokens: Vec<String> = Vec::new();
-    for term in stripped_query.split_whitespace() {
+    for term in text
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|term| term.len() > 1)
+    {
         let stemmed = simple_stem(&term.to_lowercase());
         if !tokens.contains(&stemmed) {
             tokens.push(stemmed);
@@ -786,11 +797,8 @@ fn count_token_hits(content: &str, stripped_query: &str) -> usize {
     if query_tokens.is_empty() {
         return 0;
     }
-    let content_stems: std::collections::HashSet<String> = content
-        .split(|c: char| !c.is_alphanumeric())
-        .filter(|t| !t.is_empty())
-        .map(|t| simple_stem(&t.to_lowercase()))
-        .collect();
+    let content_stems: std::collections::HashSet<String> =
+        stem_tokens(content).into_iter().collect();
     query_tokens
         .iter()
         .filter(|t| content_stems.contains(*t))
@@ -1471,6 +1479,19 @@ mod tests {
         let results = engine.search("graduate degree", 10).unwrap();
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].memory_id, "11111111-1111-1111-1111-111111111111");
+    }
+
+    #[test]
+    fn coverage_normalizes_possessives_and_punctuation() {
+        let query = "buy sister's birthday gift";
+        assert_eq!(
+            query_stem_tokens(query),
+            ["buy", "sister", "birthday", "gift"]
+        );
+        assert_eq!(
+            count_token_hits("I bought a dress for my sister birthday", query),
+            2
+        );
     }
 
     #[test]

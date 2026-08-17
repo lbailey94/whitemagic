@@ -96,14 +96,18 @@ Block `Resource::Process`, `Resource::Network`, `Resource::Filesystem`, and
 - Acceptance: sandbox mode refuses web/process/filesystem tools and allows
   memory/session tools; a negative test covers each blocked capability.
 
-### B5. Store seal and verify (`wm seal` / `wm verify`)
+### B5. Store seal and verify (`wm seal` / `wm verify`) ✅ (HMAC, not a root of trust)
 
-Content-addressed store manifest: per-galaxy counts + head hashes, optionally
-Ed25519-signed (reuse the Sangha keying from `WM_MESH_KEY`).
+HMAC-SHA256 per-file manifest (`seal.json`) plus a per-install secret at
+`<store>/.seal_key` (mode 0600). Detects accidental corruption and casual
+tampering. An adversary with filesystem access can replace both key and
+manifest.
 
-- `wm doctor` checks the seal; CI verifies it on release candidates.
-- Acceptance: tampering with a sealed store is detected; a re-signed seal
-  verifies clean.
+- `wm seal` / `wm verify` CLI pair; verify exits 1 on mismatch/missing/extra.
+- Unit tests cover pass, modification, missing, extra, key/manifest exclusion.
+- Not Ed25519-signed; `wm doctor` does not yet surface the seal.
+- Acceptance for this slice: tampering with a sealed store is detected.
+  Full root-of-trust / doctor integration remains later.
 
 ### B6. Untrusted `_meta` by default
 

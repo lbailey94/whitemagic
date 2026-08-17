@@ -11,7 +11,9 @@ use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
 use wm_memory::{MemoryStore, RecallEngine, SearchEngine};
 
-use super::common::{galaxy_name, parse_galaxy, parse_galaxy_or};
+use super::common::{
+    galaxy_name, int_prop, num_prop, parse_galaxy, parse_galaxy_or, schema, str_prop,
+};
 
 /// `memory.consolidate` — deduplicate memories by content_hash within a galaxy.
 pub struct MemoryConsolidateTool {
@@ -498,17 +500,37 @@ impl Tool for MemoryStatsTool {
     }
 }
 
-/// `memory.hybrid_recall` — combine keyword search + metadata query.
+/// Shared retrieval implementation used by `memory.search` (public verb)
+/// and `memory.hybrid_recall` (compatibility alias).
 pub struct MemoryHybridRecallTool {
     store: Arc<MemoryStore>,
     search: Option<Arc<SearchEngine>>,
     recall: Option<Arc<RecallEngine>>,
     stats: ToolStats,
     effects: EffectRow,
+    route_name: &'static str,
 }
 
 impl MemoryHybridRecallTool {
     pub fn new(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+        recall: Option<Arc<RecallEngine>>,
+    ) -> Self {
+        Self::named("memory.hybrid_recall", store, search, recall)
+    }
+
+    /// Public retrieval verb. Same implementation as `memory.hybrid_recall`.
+    pub fn as_search(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+        recall: Option<Arc<RecallEngine>>,
+    ) -> Self {
+        Self::named("memory.search", store, search, recall)
+    }
+
+    fn named(
+        route_name: &'static str,
         store: Arc<MemoryStore>,
         search: Option<Arc<SearchEngine>>,
         recall: Option<Arc<RecallEngine>>,
@@ -519,6 +541,7 @@ impl MemoryHybridRecallTool {
             recall,
             stats: ToolStats::default(),
             effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
+            route_name,
         }
     }
 }
@@ -527,7 +550,7 @@ impl MemoryHybridRecallTool {
 #[async_trait]
 impl Tool for MemoryHybridRecallTool {
     fn name(&self) -> &str {
-        "memory.hybrid_recall"
+        self.route_name
     }
     fn gana(&self) -> Gana {
         Gana::WinnowingBasket
@@ -536,7 +559,20 @@ impl Tool for MemoryHybridRecallTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Hybrid recall: BM25 full-text search fused with vector cosine similarity when an embedder is available, combined with importance and metadata filtering"
+        "Search memories (BM25 by default; BM25 + vector fusion when WM_EMBEDDER_ENDPOINT is set). memory.hybrid_recall is a compatibility alias."
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "query": str_prop("Full-text query"),
+                "galaxy": str_prop("Galaxy filter (default: codex)"),
+                "limit": int_prop("Maximum results (default 10)"),
+                "min_importance": num_prop("Minimum memory importance (0-1)"),
+                "min_score": num_prop("Absolute BM25 score floor"),
+                "min_score_ratio": num_prop("Relative floor: reject hits below this fraction of the top score"),
+            }),
+            &["query"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
@@ -1544,6 +1580,21 @@ mod tests {
     // at BM25 scores 0.5–1.0 with zero query-token overlap. The fix uses
     // OR semantics with a token-coverage floor and score floors, replacing
     // the old `scan(galaxy, 100)` lottery.
+
+    #[test]
+    fn hybrid_recall_routes_expose_query_schema() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(dir.path()).unwrap());
+        for tool in [
+            MemoryHybridRecallTool::new(store.clone(), None, None),
+            MemoryHybridRecallTool::as_search(store, None, None),
+        ] {
+            let schema = tool.input_schema();
+            assert_eq!(schema["type"], "object");
+            assert!(schema["properties"].get("query").is_some());
+            assert_eq!(schema["required"], json!(["query"]));
+        }
+    }
 
     /// Build a store + tantivy index pair where the memory and its index
     /// document are kept in sync (as the write path does).

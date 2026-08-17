@@ -924,7 +924,9 @@ impl Tool for MemoryQueryTool {
 
 // ── Tool: memory.search ──────────────────────────────────────────────
 
-/// Full-text search via Tantivy (BM25 scoring).
+/// BM25-only search. Not registered: `memory.search` is
+/// `MemoryHybridRecallTool::as_search` (BM25, hybrid when an embedder exists).
+#[allow(dead_code)]
 pub struct MemorySearchTool {
     search: Arc<SearchEngine>,
     store: Arc<MemoryStore>,
@@ -2768,7 +2770,14 @@ pub fn register_all(
     }
 
     if let Some(s) = search {
-        reg = reg.register(Arc::new(MemorySearchTool::new(s.clone(), store.clone())));
+        // Public retrieval verb shares the hybrid implementation.
+        // memory.hybrid_recall is registered as a compatibility alias
+        // inside register_expansion.
+        reg = reg.register(Arc::new(expansion::MemoryHybridRecallTool::as_search(
+            store.clone(),
+            Some(s.clone()),
+            recall.clone(),
+        )));
         // Pass search to expansion tools
         reg = expansion::register_expansion(
             &reg,
