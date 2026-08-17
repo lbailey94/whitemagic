@@ -63,7 +63,8 @@ fn capture_explicit_memory(
         memory.content.clone(),
         Provenance::new(source),
     )
-    .with_id(memory.metadata.id);
+    .with_id(memory.metadata.id)
+    .with_visibility(memory.metadata.is_private, memory.metadata.model_exclude);
     if let Err(error) = store
         .episodic()
         .append_explicit(&record, EpisodicCapturePolicy::explicit_only())
@@ -2243,6 +2244,7 @@ impl WmMetaTool {
             "memory.read" => Some("id"),
             "memory.delete" => Some("id"),
             "memory.search" => Some("query"),
+            "memory.episodic_search" => Some("query"),
             "memory.query" => Some("query"),
             "memory.associate" => Some("source"),
             "memory.associations" => Some("id"),

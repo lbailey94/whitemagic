@@ -251,6 +251,7 @@ def run_benchmark(
     use_composites: bool = False,
     use_contextual: bool = False,
     candidate_limit: int = 100,
+    search_route: str = "memory.search",
     output_path: str | None = None,
     per_case: bool = False,
 ) -> dict[str, Any]:
@@ -262,13 +263,15 @@ def run_benchmark(
     """
 
     print("\n" + "=" * 70)
-    print("WhiteMagic v5 — LongMemEval-S Benchmark")
+    benchmark_system = "WhiteMagic v6" if search_route == "memory.episodic_search" else "WhiteMagic v5 compatibility"
+    print(f"{benchmark_system} — LongMemEval-S Benchmark")
     print("=" * 70)
     print(f"Binary: {binary}")
     print(f"Dataset: {dataset_path}")
     print(f"Keywords: {'on' if use_keywords else 'off'}")
     print(f"Composite windows: {'on' if use_composites else 'off'}")
     print(f"Contextual indexing: {'on' if use_contextual else 'off'}")
+    print(f"Search route: {search_route}")
     print(f"Limit: {limit}")
     print(f"Candidate limit: {candidate_limit}")
     sys.stdout.flush()
@@ -448,6 +451,20 @@ def run_benchmark(
         # Retrieve a broad candidate set, then evaluate only the requested top-k.
         # (with 500+ docs, BM25 score distribution shifts and 5% floor over-filters)
         search_id = req_id
+        search_args = {
+            "query": question,
+            "limit": max(limit, candidate_limit),
+        }
+        if search_route == "memory.search":
+            search_args.update({
+                "galaxy": "codex",
+                "min_score_ratio": 0.0,
+            })
+        elif search_route == "memory.episodic_search":
+            search_args["include_historical"] = False
+        else:
+            raise ValueError(f"unsupported search route: {search_route}")
+
         search_req = {
             "jsonrpc": "2.0",
             "id": search_id,
@@ -455,13 +472,8 @@ def run_benchmark(
             "params": {
                 "name": "wm",
                 "arguments": {
-                    "route": "memory.search",
-                    "args": {
-                        "query": question,
-                        "galaxy": "codex",
-                        "limit": max(limit, candidate_limit),
-                        "min_score_ratio": 0.0,
-                    },
+                    "route": search_route,
+                    "args": search_args,
                 },
             },
         }
@@ -609,12 +621,12 @@ def run_benchmark(
         }
 
     results = {
-        "system": "whitemagic-v5",
+        "system": "whitemagic-v6" if search_route == "memory.episodic_search" else "whitemagic-v5-compat",
         "benchmark": "longmemeval_s",
-        "version": "v5.8.0-rc1",
+        "version": "v6-dev" if search_route == "memory.episodic_search" else "v5.8.0-compat-on-v6",
         "dataset": "LongMemEval-S (ICLR 2025)",
         "protocol": "turn-level retrieval R@k, substring-or-id. Not official LongMemEval QA.",
-        "search_route": "memory.search",
+        "search_route": search_route,
         "keyword_extraction": use_keywords,
         "composite_windows": use_composites,
         "contextual_indexing": use_contextual,
@@ -685,6 +697,12 @@ def main() -> None:
     parser.add_argument("--dataset", default=DEFAULT_DATASET, help="Path to LongMemEval-S dataset")
     parser.add_argument("--max-questions", type=int, default=None, help="Limit number of questions")
     parser.add_argument("--limit", type=int, default=10, help="Results per query")
+    parser.add_argument(
+        "--route",
+        choices=("memory.search", "memory.episodic_search"),
+        default="memory.search",
+        help="Search route under evaluation (default: memory.search)",
+    )
     parser.add_argument("--keywords", action="store_true", help="Enable keyword extraction at index time")
     parser.add_argument(
         "--composites",
@@ -720,6 +738,8 @@ def main() -> None:
             suffix += "_contextual"
         if args.candidate_limit != 100:
             suffix += f"_cand{args.candidate_limit}"
+        if args.route != "memory.search":
+            suffix += "_episodic"
         output_path = os.path.join(DEFAULT_OUTPUT, f"longmemeval_s_v5{suffix}.json")
 
     run_benchmark(
@@ -731,6 +751,7 @@ def main() -> None:
         use_composites=args.composites,
         use_contextual=args.contextual,
         candidate_limit=args.candidate_limit,
+        search_route=args.route,
         output_path=output_path,
         per_case=args.per_case,
     )
