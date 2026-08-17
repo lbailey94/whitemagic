@@ -740,6 +740,7 @@ impl Tool for MemoryEpisodicSearchTool {
             &json!({
                 "query": str_prop("Full-text query"),
                 "limit": int_prop("Maximum results (default 10)"),
+                "candidate_limit": int_prop("Maximum candidates to score (default 2x limit)"),
                 "include_historical": {
                     "type": "boolean",
                     "description": "Include superseded, revoked, and archived records",
@@ -751,6 +752,10 @@ impl Tool for MemoryEpisodicSearchTool {
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args.get("query").and_then(Value::as_str).unwrap_or("");
         let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(10) as usize;
+        let candidate_limit =
+            args.get("candidate_limit")
+                .and_then(Value::as_u64)
+                .unwrap_or_else(|| limit.saturating_mul(2) as u64) as usize;
         let include_historical = args
             .get("include_historical")
             .and_then(Value::as_bool)
@@ -758,7 +763,7 @@ impl Tool for MemoryEpisodicSearchTool {
         let results = self
             .store
             .episodic()
-            .search(query, limit.saturating_mul(2), include_historical)?
+            .search_with_limits(query, limit, candidate_limit, include_historical)?
             .into_iter()
             .filter(|hit| !hit.record.is_private && !hit.record.model_exclude)
             .take(limit)

@@ -134,6 +134,26 @@ Query p50 improved from `122.3 ms` to `79.3 ms`; p95 remains noisy at
 sidecar is accepted for the experimental v6 route. Tail latency and ingest
 batching remain open optimization work.
 
+### Bounded reranking and warm reads
+
+The bounded candidate path now counts posting-list matches, limits selective
+scoring to the configured candidate budget, loads candidates in one LMDB read
+transaction, and caches term postings for warm queries. The in-process warm
+benchmark now measures approximately `0.070 ms` at 100 records, `0.091 ms` at
+1,000, and `0.353 ms` at 10,000. These are repeated warm-query measurements;
+the end-to-end benchmark remains the product latency reference.
+
+The 50-question result retains R@1/R@5/R@10 `0.66/0.86/0.94`, MRR `0.7403`,
+candidate presence `0.96`, and expected-session presence `0.98`. Query p50 is
+`78.0 ms` and p95 is `168.2 ms`. P50 is within target; p95 is improved but
+still above the `150 ms` target, so process-tail measurement and ingestion
+batching remain open.
+
+The bounded candidate budget and warm term-posting cache are accepted as
+performance improvements. The remaining tail is likely dominated by the
+benchmark's fresh-process boundary and intermittent ingest/process startup
+outliers rather than the in-process candidate scorer.
+
 ## Deferred Ideas
 
 - Dense vector fusion until lexical sidecar performance is understood.

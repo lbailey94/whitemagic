@@ -4,7 +4,9 @@
 //! Reads are zero-copy (mmap'd). Writes are batched.
 
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction, WriteFlags};
+use std::collections::HashMap;
 use std::path::Path;
+use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use wm_core::{CoreError, Galaxy, Result};
 
@@ -137,6 +139,8 @@ pub struct MemoryStore {
     episodic_db: Database,
     /// Term to canonical-ID projection for bounded episodic search.
     episodic_terms_db: Database,
+    /// Warm term-posting cache shared by episodic search views.
+    episodic_term_cache: std::sync::Arc<RwLock<HashMap<String, Vec<uuid::Uuid>>>>,
 }
 
 impl MemoryStore {
@@ -204,6 +208,7 @@ impl MemoryStore {
             mutation_count: AtomicU64::new(0),
             episodic_db,
             episodic_terms_db,
+            episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -251,11 +256,12 @@ impl MemoryStore {
 
     /// Open the v6 lossless episodic record view.
     #[must_use]
-    pub const fn episodic(&self) -> EpisodicStore<'_> {
+    pub fn episodic(&self) -> EpisodicStore<'_> {
         EpisodicStore::new(
             &self.env,
             self.episodic_db,
             self.episodic_terms_db,
+            self.episodic_term_cache.clone(),
             &self.mutation_count,
         )
     }
