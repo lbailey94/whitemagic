@@ -1,6 +1,7 @@
 //! LMDB persistence for the v6 lossless episodic memory lane.
 
 use lmdb::{Cursor, Database, Environment, Transaction, WriteFlags};
+use std::collections::HashSet;
 use wm_core::{
     CoreError, EpisodicCapturePolicy, EpisodicId, EpisodicRecord, MemoryTransition, Result,
     ValidityState,
@@ -20,6 +21,7 @@ pub struct EpisodicSearchResult {
 pub struct EpisodicStore<'a> {
     env: &'a Environment,
     db: Database,
+    term_db: Database,
     mutation_count: &'a std::sync::atomic::AtomicU64,
 }
 
@@ -27,11 +29,13 @@ impl<'a> EpisodicStore<'a> {
     pub(crate) const fn new(
         env: &'a Environment,
         db: Database,
+        term_db: Database,
         mutation_count: &'a std::sync::atomic::AtomicU64,
     ) -> Self {
         Self {
             env,
             db,
+            term_db,
             mutation_count,
         }
     }
@@ -67,6 +71,45 @@ impl<'a> EpisodicStore<'a> {
             .map_err(|e| CoreError::Memory(format!("episodic commit failed: {e}")))?;
         self.mutation_count
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // The raw record is authoritative. A projection failure is returned
+        // after the raw commit so callers can rebuild the sidecar without
+        // losing the source record.
+        self.index_record(record)?;
+        Ok(())
+    }
+
+    fn index_record(&self, record: &EpisodicRecord) -> Result<()> {
+        if record.is_private || record.model_exclude {
+            return Ok(());
+        }
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("episodic index rw_txn failed: {e}")))?;
+        for term in tokenize(&record.content) {
+            let mut ids: Vec<EpisodicId> = match tx.get(self.term_db, &term) {
+                Ok(bytes) => rmp_serde::from_slice(bytes).map_err(|e| {
+                    CoreError::Memory(format!("episodic term index deserialize failed: {e}"))
+                })?,
+                Err(lmdb::Error::NotFound) => Vec::new(),
+                Err(e) => {
+                    tx.abort();
+                    return Err(CoreError::Memory(format!(
+                        "episodic term index read failed: {e}"
+                    )));
+                }
+            };
+            if !ids.contains(&record.id) {
+                ids.push(record.id);
+            }
+            let value = rmp_serde::to_vec(&ids).map_err(|e| {
+                CoreError::Memory(format!("episodic term index serialize failed: {e}"))
+            })?;
+            tx.put(self.term_db, &term, &value, WriteFlags::default())
+                .map_err(|e| CoreError::Memory(format!("episodic term index write failed: {e}")))?;
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("episodic term index commit failed: {e}")))?;
         Ok(())
     }
 
@@ -189,7 +232,39 @@ impl<'a> EpisodicStore<'a> {
         if query_terms.is_empty() || limit == 0 {
             return Ok(Vec::new());
         }
-        let records = self.scan(None, usize::MAX)?;
+        let mut candidate_ids = HashSet::new();
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("episodic index ro_txn failed: {e}")))?;
+        for term in &query_terms {
+            match tx.get(self.term_db, term) {
+                Ok(bytes) => {
+                    let ids: Vec<EpisodicId> = rmp_serde::from_slice(bytes).map_err(|e| {
+                        CoreError::Memory(format!("episodic term index deserialize failed: {e}"))
+                    })?;
+                    candidate_ids.extend(ids);
+                }
+                Err(lmdb::Error::NotFound) => {}
+                Err(e) => {
+                    return Err(CoreError::Memory(format!(
+                        "episodic term index read failed: {e}"
+                    )));
+                }
+            }
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("episodic index commit failed: {e}")))?;
+
+        let records = if candidate_ids.is_empty() {
+            // Existing stores or a degraded projection can still be searched.
+            self.scan(None, usize::MAX)?
+        } else {
+            candidate_ids
+                .into_iter()
+                .filter_map(|id| self.get(id).transpose())
+                .collect::<Result<Vec<_>>>()?
+        };
         let mut results = Vec::new();
         for record in records {
             if !include_historical && !matches!(record.validity, ValidityState::Active) {
