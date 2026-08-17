@@ -6,6 +6,8 @@ use wm_core::{
     ValidityState,
 };
 
+use crate::search::strip_stopwords;
+
 /// Deterministic raw episodic search result.
 #[derive(Debug, Clone)]
 pub struct EpisodicSearchResult {
@@ -222,10 +224,33 @@ impl<'a> EpisodicStore<'a> {
 }
 
 fn tokenize(text: &str) -> Vec<String> {
-    text.split(|c: char| !c.is_alphanumeric())
+    strip_stopwords(text)
+        .split(|c: char| !c.is_alphanumeric())
         .filter(|term| term.len() > 1)
-        .map(str::to_ascii_lowercase)
-        .collect()
+        .map(|term| simple_stem(&term.to_ascii_lowercase()))
+        .fold(Vec::new(), |mut terms, term| {
+            if !terms.contains(&term) {
+                terms.push(term);
+            }
+            terms
+        })
+}
+
+fn simple_stem(word: &str) -> String {
+    if word.len() <= 3 {
+        return word.to_string();
+    }
+    for suffix in ["ies", "ied", "ing", "edly", "ed", "ly", "es", "s"] {
+        if let Some(stem) = word.strip_suffix(suffix) {
+            if suffix == "ies" || suffix == "ied" {
+                return format!("{stem}y");
+            }
+            if stem.len() >= 2 {
+                return stem.to_string();
+            }
+        }
+    }
+    word.to_string()
 }
 
 #[cfg(test)]
