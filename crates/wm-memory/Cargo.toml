@@ -54,3 +54,7 @@ harness = false
 [[bench]]
 name = "embedder_bench"
 harness = false
+
+[[bench]]
+name = "episodic_bench"
+harness = false

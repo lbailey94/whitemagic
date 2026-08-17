@@ -135,6 +135,8 @@ pub struct MemoryStore {
     mutation_count: AtomicU64,
     /// Dedicated database for lossless v6 episodic records.
     episodic_db: Database,
+    /// Term to canonical-ID projection for bounded episodic search.
+    episodic_terms_db: Database,
 }
 
 impl MemoryStore {
@@ -188,6 +190,11 @@ impl MemoryStore {
             .map_err(|e| {
                 CoreError::Memory(format!("LMDB create_db failed for episodic_records: {e}"))
             })?;
+        let episodic_terms_db = env
+            .create_db(Some("episodic_terms"), DatabaseFlags::default())
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB create_db failed for episodic_terms: {e}"))
+            })?;
         Ok(Self {
             path,
             env,
@@ -196,6 +203,7 @@ impl MemoryStore {
             max_entries_per_galaxy: None,
             mutation_count: AtomicU64::new(0),
             episodic_db,
+            episodic_terms_db,
         })
     }
 
@@ -244,7 +252,12 @@ impl MemoryStore {
     /// Open the v6 lossless episodic record view.
     #[must_use]
     pub const fn episodic(&self) -> EpisodicStore<'_> {
-        EpisodicStore::new(&self.env, self.episodic_db, &self.mutation_count)
+        EpisodicStore::new(
+            &self.env,
+            self.episodic_db,
+            self.episodic_terms_db,
+            &self.mutation_count,
+        )
     }
 
     /// Get a named database handle for a galaxy.
