@@ -10,6 +10,7 @@
 pub mod associations;
 pub mod conversational;
 pub mod embedder;
+pub mod episodic;
 pub mod galaxy_registry;
 pub mod indexes;
 pub mod lifecycle;
@@ -33,6 +34,7 @@ pub use conversational::{
 #[cfg(feature = "onnx")]
 pub use embedder::OrtEmbedder;
 pub use embedder::{Embedder, EmbedderConfig, HttpEmbedder, StubEmbedder, create_embedder};
+pub use episodic::EpisodicStore;
 pub use galaxy_registry::{GalaxyMetadata, GalaxyRegistry};
 pub use lifecycle::{ConsolidationResult, ForgettingResult, Lifecycle, LifecycleConfig};
 pub use mandala::{Compartment, CompartmentConfig, MandalaLevel, MandalaManager};

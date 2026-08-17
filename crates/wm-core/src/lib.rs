@@ -11,6 +11,7 @@ pub mod brain_wave;
 pub mod context;
 pub mod coords;
 pub mod effects;
+pub mod episodic;
 pub mod error;
 pub mod galaxy;
 pub mod gana;
@@ -23,6 +24,11 @@ pub use brain_wave::BrainWave;
 pub use context::Context;
 pub use coords::{Coordinate5D, HolographicCoords, Zone, find_nearby};
 pub use effects::{Capability, CostEstimate, EffectRow, Resource};
+pub use episodic::{
+    EPISODIC_SCHEMA_VERSION, EpisodicId, EpisodicKind, EpisodicRecord, EvidenceRef,
+    EvidenceRelation, MemoryTransition, Provenance, ProvenanceSource, ValidityState,
+    ValidityTransitionError,
+};
 pub use error::{CoreError, Result};
 pub use galaxy::Galaxy;
 pub use gana::Gana;

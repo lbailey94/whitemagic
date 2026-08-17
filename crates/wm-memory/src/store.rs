@@ -11,6 +11,7 @@ use wm_core::{CoreError, Galaxy, Result};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
+use crate::episodic::EpisodicStore;
 use crate::indexes::IndexDbs;
 use crate::memory::{Memory, decode_embedding, encode_embedding};
 use crate::semantic::SemanticEncoder;
@@ -132,6 +133,8 @@ pub struct MemoryStore {
     /// opened. Lets the dispatch pipeline cheaply detect actual store
     /// writes (write-audit journal) without scanning galaxies.
     mutation_count: AtomicU64,
+    /// Dedicated database for lossless v6 episodic records.
+    episodic_db: Database,
 }
 
 impl MemoryStore {
@@ -180,6 +183,11 @@ impl MemoryStore {
         }
 
         let index_dbs = IndexDbs::open(&env)?;
+        let episodic_db = env
+            .create_db(Some("episodic_records"), DatabaseFlags::default())
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB create_db failed for episodic_records: {e}"))
+            })?;
         Ok(Self {
             path,
             env,
@@ -187,6 +195,7 @@ impl MemoryStore {
             semantic_encoder: SemanticEncoder::new(),
             max_entries_per_galaxy: None,
             mutation_count: AtomicU64::new(0),
+            episodic_db,
         })
     }
 
@@ -230,6 +239,12 @@ impl MemoryStore {
     /// Get the semantic encoder.
     pub const fn semantic_encoder(&self) -> &SemanticEncoder {
         &self.semantic_encoder
+    }
+
+    /// Open the v6 lossless episodic record view.
+    #[must_use]
+    pub const fn episodic(&self) -> EpisodicStore<'_> {
+        EpisodicStore::new(&self.env, self.episodic_db, &self.mutation_count)
     }
 
     /// Get a named database handle for a galaxy.
