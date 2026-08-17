@@ -87,3 +87,30 @@ observation capture remains opt-in, and the episodic copy applies conservative
 token-level redaction for obvious key/value secrets. The next slice will add a
 raw-log retrieval experiment and compare it against the v5 reference using the
 existing evaluator.
+
+## Initial Retrieval A/B
+
+The first direct comparison used the same `target/release/wm` build, fresh
+stores, 50 LongMemEval-S single-session questions, candidate limit 100, and
+the existing non-official turn-level evaluator.
+
+| Metric | V5 compatibility route | V6 episodic route |
+|---|---:|---:|
+| R@1 | 0.64 | 0.62 |
+| R@5 | 0.82 | 0.80 |
+| R@10 | 0.82 | 0.88 |
+| MRR | 0.7150 | 0.6929 |
+| Candidate presence | 0.78 | 0.94 |
+| Expected-session presence | 0.84 | 0.96 |
+| Query p50 | 74.0 ms | 80.2 ms |
+| Query p95 | 103.0 ms | 105.1 ms |
+| Ingest average | 2.730 s | 2.734 s |
+
+This is an exploratory result, not an accepted quality improvement. V6 finds
+the answer-bearing records much more often, but the initial token-overlap
+scorer ranks them less effectively. Paired per-question changes were R@1
+6 wins / 7 losses, R@5 4 wins / 5 losses, and R@10 6 wins / 3 losses.
+
+The next experiment is selective scoring over the broad episodic candidate set:
+coverage, exact phrase, role/session, temporal proximity, and source validity
+must be combined without weakening the high candidate recall.
