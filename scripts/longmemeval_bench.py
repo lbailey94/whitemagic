@@ -462,6 +462,7 @@ def run_benchmark(
             })
         elif search_route == "memory.episodic_search":
             search_args["include_historical"] = False
+            search_args["candidate_limit"] = candidate_limit
         else:
             raise ValueError(f"unsupported search route: {search_route}")
 
