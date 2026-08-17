@@ -18,7 +18,10 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 use wm_cognitive::GanYingBus;
-use wm_core::{Capability, Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
+use wm_core::{
+    Capability, Context, EffectRow, EpisodicCapturePolicy, EpisodicKind, EpisodicRecord, Galaxy,
+    Gana, Provenance, ProvenanceSource, Resource, Tool, ToolStats,
+};
 use wm_dispatch::{DispatchPipeline, ToolRegistry, ToolRegistryBuilder};
 use wm_governance::{DharmaGate, KarmaLedger, ResourceRules};
 use wm_memory::{
@@ -40,6 +43,37 @@ use crate::expansion::common::{
 /// dispatching to the wrong tool. Only applies to `thought=` (NLU) routing,
 /// not explicit `route=`.
 const NLU_ABSTENTION_THRESHOLD: f64 = 0.15;
+
+/// Mirror an explicit v5 memory write into the v6 episodic lane.
+///
+/// The mirror is additive and non-fatal: a legacy memory write must not fail
+/// because the new cognitive scaffold is unavailable.
+fn capture_explicit_memory(
+    store: &MemoryStore,
+    memory: &Memory,
+    kind: EpisodicKind,
+    source: ProvenanceSource,
+    session_id: Option<uuid::Uuid>,
+    sequence: u64,
+) {
+    let record = EpisodicRecord::new(
+        session_id,
+        sequence,
+        kind,
+        memory.content.clone(),
+        Provenance::new(source),
+    )
+    .with_id(memory.metadata.id);
+    if let Err(error) = store
+        .episodic()
+        .append_explicit(&record, EpisodicCapturePolicy::explicit_only())
+    {
+        tracing::warn!(
+            memory_id = %memory.metadata.id,
+            "episodic capture failed after legacy write: {error}"
+        );
+    }
+}
 
 // ── Tool: memory.create ──────────────────────────────────────────────
 
@@ -100,7 +134,7 @@ impl Tool for MemoryCreateTool {
             &["content"],
         )
     }
-    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let content = args
             .get("content")
             .and_then(|v| v.as_str())
@@ -178,6 +212,15 @@ impl Tool for MemoryCreateTool {
                 }
             }
         }
+
+        capture_explicit_memory(
+            &self.store,
+            &memory,
+            EpisodicKind::Observation,
+            ProvenanceSource::User,
+            ctx.session_id,
+            0,
+        );
 
         Ok(json!({
             "status": "success",
@@ -257,7 +300,7 @@ impl Tool for MemoryBatchCreateTool {
             &["items"],
         )
     }
-    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let items = args
             .get("items")
             .and_then(|v| v.as_array())
@@ -403,6 +446,17 @@ impl Tool for MemoryBatchCreateTool {
                     tracing::warn!("Tantivy batch commit failed: {e}");
                 }
             }
+        }
+
+        for (sequence, (_, memory)) in memories.iter().enumerate() {
+            capture_explicit_memory(
+                &self.store,
+                memory,
+                EpisodicKind::Observation,
+                ProvenanceSource::User,
+                ctx.session_id,
+                sequence as u64,
+            );
         }
 
         Ok(json!({
@@ -2993,10 +3047,17 @@ mod tests {
         assert_eq!(result["status"], "success");
         let id = result["id"].as_str().unwrap();
 
-        let read_tool = MemoryReadTool::new(store);
+        let read_tool = MemoryReadTool::new(store.clone());
         let result = read_tool.call(&mut ctx, json!({"id": id})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["content"], "test memory content");
+
+        let episodic = store
+            .episodic()
+            .get(uuid::Uuid::parse_str(id).unwrap())
+            .unwrap()
+            .expect("explicit memory writes mirror into episodic storage");
+        assert_eq!(episodic.content, "test memory content");
     }
 
     #[tokio::test]

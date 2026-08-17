@@ -16,6 +16,45 @@ pub type EpisodicId = Uuid;
 /// Wire/schema version for persisted episodic records.
 pub const EPISODIC_SCHEMA_VERSION: u16 = 1;
 
+/// Capture policy for the episodic lane.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EpisodicCapturePolicy {
+    /// Automatic observation capture is opt-in.
+    pub capture_observations: bool,
+    /// Redact obvious key/value secret tokens in the episodic copy.
+    pub redact_sensitive: bool,
+}
+
+impl Default for EpisodicCapturePolicy {
+    fn default() -> Self {
+        Self {
+            capture_observations: false,
+            redact_sensitive: true,
+        }
+    }
+}
+
+impl EpisodicCapturePolicy {
+    /// The conservative default: explicit writes only, with redaction enabled.
+    #[must_use]
+    pub const fn explicit_only() -> Self {
+        Self {
+            capture_observations: false,
+            redact_sensitive: true,
+        }
+    }
+
+    /// Prepare content for the episodic copy without changing the v5 memory.
+    #[must_use]
+    pub fn prepare_content(self, content: &str) -> String {
+        if self.redact_sensitive {
+            redact_sensitive_tokens(content)
+        } else {
+            content.to_string()
+        }
+    }
+}
+
 /// Broad class of an event in the agent experience stream.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -301,6 +340,21 @@ impl EpisodicRecord {
         self
     }
 
+    /// Set the canonical source ID while preserving the content hash.
+    #[must_use]
+    pub const fn with_id(mut self, id: EpisodicId) -> Self {
+        self.id = id;
+        self
+    }
+
+    /// Replace content and recompute its source hash.
+    #[must_use]
+    pub fn with_content(mut self, content: impl Into<String>) -> Self {
+        self.content = content.into();
+        self.content_hash = hash_content(&self.content);
+        self
+    }
+
     /// Apply an explicit lifecycle transition.
     pub fn transition(
         &mut self,
@@ -318,6 +372,40 @@ fn hash_content(content: &str) -> String {
         write!(&mut result, "{byte:02x}").expect("writing to a String cannot fail");
     }
     result
+}
+
+fn redact_sensitive_tokens(content: &str) -> String {
+    const SENSITIVE_KEYS: &[&str] = &[
+        "password",
+        "passwd",
+        "api_key",
+        "apikey",
+        "secret",
+        "token",
+        "authorization",
+        "credential",
+    ];
+
+    content
+        .split_whitespace()
+        .map(|token| {
+            for delimiter in ['=', ':'] {
+                let Some(index) = token.find(delimiter) else {
+                    continue;
+                };
+                let prefix =
+                    token[..index].trim_matches(|c: char| matches!(c, '"' | '\'' | '{' | '['));
+                if SENSITIVE_KEYS
+                    .iter()
+                    .any(|key| prefix.eq_ignore_ascii_case(key))
+                {
+                    return format!("{}<REDACTED>", &token[..=index]);
+                }
+            }
+            token.to_string()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 #[cfg(test)]
@@ -382,5 +470,17 @@ mod tests {
             state.transition(id, MemoryTransition::Supersede { replacement: id }),
             Err(ValidityTransitionError::SelfSupersession)
         );
+    }
+
+    #[test]
+    fn explicit_capture_redacts_obvious_secret_tokens() {
+        let policy = EpisodicCapturePolicy::explicit_only();
+        let content = policy.prepare_content("api_key=abc123 note password:secret");
+        assert_eq!(content, "api_key=<REDACTED> note password:<REDACTED>");
+    }
+
+    #[test]
+    fn observation_capture_is_opt_in() {
+        assert!(!EpisodicCapturePolicy::default().capture_observations);
     }
 }

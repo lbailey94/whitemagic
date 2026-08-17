@@ -34,7 +34,7 @@ pub use conversational::{
 #[cfg(feature = "onnx")]
 pub use embedder::OrtEmbedder;
 pub use embedder::{Embedder, EmbedderConfig, HttpEmbedder, StubEmbedder, create_embedder};
-pub use episodic::EpisodicStore;
+pub use episodic::{EpisodicSearchResult, EpisodicStore};
 pub use galaxy_registry::{GalaxyMetadata, GalaxyRegistry};
 pub use lifecycle::{ConsolidationResult, ForgettingResult, Lifecycle, LifecycleConfig};
 pub use mandala::{Compartment, CompartmentConfig, MandalaLevel, MandalaManager};

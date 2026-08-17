@@ -81,5 +81,9 @@ recall on declared finite evaluations.
 The first V6 code slice adds the typed episodic contract and a dedicated LMDB
 `episodic_records` database behind `MemoryStore::episodic()`. It is additive:
 the existing v5 `Memory` model, MCP routes, and retrieval behavior remain
-unchanged. The next slice will add a raw-log retrieval experiment and compare
-it against the v5 reference using the existing evaluator.
+unchanged. Explicit `memory.create`, `memory.batch_create`, and session marker
+writes are mirrored into the episodic lane using the v5 memory ID. Automatic
+observation capture remains opt-in, and the episodic copy applies conservative
+token-level redaction for obvious key/value secrets. The next slice will add a
+raw-log retrieval experiment and compare it against the v5 reference using the
+existing evaluator.

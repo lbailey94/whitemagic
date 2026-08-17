@@ -1,7 +1,18 @@
 //! LMDB persistence for the v6 lossless episodic memory lane.
 
 use lmdb::{Cursor, Database, Environment, Transaction, WriteFlags};
-use wm_core::{CoreError, EpisodicId, EpisodicRecord, MemoryTransition, Result};
+use wm_core::{
+    CoreError, EpisodicCapturePolicy, EpisodicId, EpisodicRecord, MemoryTransition, Result,
+    ValidityState,
+};
+
+/// Deterministic raw episodic search result.
+#[derive(Debug, Clone)]
+pub struct EpisodicSearchResult {
+    pub record: EpisodicRecord,
+    pub score: f32,
+    pub matched_terms: usize,
+}
 
 /// Dedicated persistence view over the episodic-record LMDB database.
 pub struct EpisodicStore<'a> {
@@ -55,6 +66,19 @@ impl<'a> EpisodicStore<'a> {
         self.mutation_count
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         Ok(())
+    }
+
+    /// Append an explicit record according to the capture policy.
+    pub fn append_explicit(
+        &self,
+        record: &EpisodicRecord,
+        policy: EpisodicCapturePolicy,
+    ) -> Result<bool> {
+        let prepared = record
+            .clone()
+            .with_content(policy.prepare_content(&record.content));
+        self.append(&prepared)?;
+        Ok(true)
     }
 
     /// Read an episodic record by its canonical ID.
@@ -148,6 +172,60 @@ impl<'a> EpisodicStore<'a> {
         records.truncate(limit);
         Ok(records)
     }
+
+    /// Search current episodic records using deterministic token overlap.
+    ///
+    /// This is a v6 library path only. It does not alter the v5 MCP search
+    /// route and keeps source records attached to every hit.
+    pub fn search(
+        &self,
+        query: &str,
+        limit: usize,
+        include_historical: bool,
+    ) -> Result<Vec<EpisodicSearchResult>> {
+        let query_terms = tokenize(query);
+        if query_terms.is_empty() || limit == 0 {
+            return Ok(Vec::new());
+        }
+        let records = self.scan(None, usize::MAX)?;
+        let mut results = Vec::new();
+        for record in records {
+            if !include_historical && !matches!(record.validity, ValidityState::Active) {
+                continue;
+            }
+            let content_terms = tokenize(&record.content);
+            let matched_terms = query_terms
+                .iter()
+                .filter(|term| content_terms.iter().any(|candidate| candidate == *term))
+                .count();
+            if matched_terms == 0 {
+                continue;
+            }
+            let coverage = matched_terms as f32 / query_terms.len() as f32;
+            let density = matched_terms as f32 / content_terms.len().max(1) as f32;
+            results.push(EpisodicSearchResult {
+                record,
+                score: coverage + density * 0.01,
+                matched_terms,
+            });
+        }
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| b.record.sequence.cmp(&a.record.sequence))
+                .then_with(|| a.record.id.cmp(&b.record.id))
+        });
+        results.truncate(limit);
+        Ok(results)
+    }
+}
+
+fn tokenize(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|term| term.len() > 1)
+        .map(str::to_ascii_lowercase)
+        .collect()
 }
 
 #[cfg(test)]
@@ -207,5 +285,50 @@ mod tests {
         store.episodic().append(&record).unwrap();
         let error = store.episodic().append(&record).unwrap_err();
         assert!(error.to_string().contains("already exists"));
+    }
+
+    #[test]
+    fn raw_search_returns_canonical_records_and_skips_revoked_by_default() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let active = EpisodicRecord::new(
+            None,
+            1,
+            EpisodicKind::Observation,
+            "Rust memory retrieval",
+            Provenance::new(ProvenanceSource::User),
+        );
+        let revoked = EpisodicRecord::new(
+            None,
+            2,
+            EpisodicKind::Observation,
+            "Rust memory retrieval old",
+            Provenance::new(ProvenanceSource::User),
+        );
+        let revoked_id = revoked.id;
+        store.episodic().append(&active).unwrap();
+        store.episodic().append(&revoked).unwrap();
+        store
+            .episodic()
+            .transition(
+                revoked_id,
+                MemoryTransition::Revoke {
+                    reason: "stale".into(),
+                },
+            )
+            .unwrap();
+
+        let current = store
+            .episodic()
+            .search("memory retrieval", 10, false)
+            .unwrap();
+        assert_eq!(current.len(), 1);
+        assert_eq!(current[0].record.id, active.id);
+
+        let all = store
+            .episodic()
+            .search("memory retrieval", 10, true)
+            .unwrap();
+        assert_eq!(all.len(), 2);
     }
 }

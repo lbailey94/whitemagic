@@ -25,8 +25,8 @@ pub use context::Context;
 pub use coords::{Coordinate5D, HolographicCoords, Zone, find_nearby};
 pub use effects::{Capability, CostEstimate, EffectRow, Resource};
 pub use episodic::{
-    EPISODIC_SCHEMA_VERSION, EpisodicId, EpisodicKind, EpisodicRecord, EvidenceRef,
-    EvidenceRelation, MemoryTransition, Provenance, ProvenanceSource, ValidityState,
+    EPISODIC_SCHEMA_VERSION, EpisodicCapturePolicy, EpisodicId, EpisodicKind, EpisodicRecord,
+    EvidenceRef, EvidenceRelation, MemoryTransition, Provenance, ProvenanceSource, ValidityState,
     ValidityTransitionError,
 };
 pub use error::{CoreError, Result};
