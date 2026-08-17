@@ -1,7 +1,9 @@
 # Vector Search Roadmap
 
 **Created:** 2026-08-14
-**Status:** Core wiring complete. Quick wins and tuning opportunities below.
+**Status:** Core wiring complete. Token-coverage alignment is validated;
+contextualized indexing and selective reranking are the next measured quality
+work.
 
 ## What's Wired (Completed 2026-08-14)
 
@@ -70,32 +72,24 @@ search, fuses them by memory ID, and returns the top `limit` by fused score.
 
 ### QW1: Batch Embedding in `memory.batch_create`
 
-**Effort:** ~30 min
-**Impact:** ~10x faster batch ingest with embedder
-
-Currently `batch_create` calls `store_with_embedding()` per item, which calls
-`embed()` one at a time. The `Embedder` trait already has `embed_batch()`.
-Wire `batch_create` to collect all content, call `embed_batch()` once, then
-store + index each memory with its pre-computed embedding.
+~~Open~~ ✅ Done 2026-08-15 (chunked `embed_batch()`, single Tantivy commit,
+writer-lock and token-limit fixes).
 
 ### QW2: Benchmark Script Switch to `memory.hybrid_recall`
 
-**Effort:** ~15 min
-**Impact:** Activates hybrid path in LongMemEval benchmark
-
-The benchmark script (`scripts/longmemeval_benchmark.py` or similar) currently
-uses `memory.search` (pure BM25). Switching to `memory.hybrid_recall` would
-activate the hybrid BM25 + vector path when an embedder is available, giving
-immediate recall quality data.
+~~Open~~ ✅ The harness already calls `memory.hybrid_recall`. That route is
+BM25-only without `WM_EMBEDDER_ENDPOINT` and hybrid fusion when an embedder
+is up. Conjunction→OR fallback in the tool was removed 2026-08-16.
 
 ### QW3: Fusion Weight Grid Search
 
-**Effort:** ~1 hour (requires running benchmark)
-**Impact:** Optimize fusion weights for LongMemEval
+~~Open~~ ✅ Ran 2026-08-15/16, n=10, turn-level retrieval (not official
+LongMemEval QA). Four successful weight sets all scored R@1=0.40 / R@5=0.90
+vs BM25+stem 0.50 / 0.70. Weights did not differentiate. Three leftover
+`grid_*` files are the failed first pass. Combined summary reconstructed
+in `benchmarks/results/grid_search_weights.json`.
 
-Run the benchmark with different `WM_RECALL_BM25_WEIGHT` /
-`WM_RECALL_VECTOR_WEIGHT` / `WM_RECALL_IMPORTANCE_WEIGHT` combinations and
-compare R@1, R@5, MRR. Candidate grid:
+Candidate grid (kept for a 50q rerun later):
 
 | bm25 | vector | importance | Hypothesis |
 |------|--------|------------|------------|
@@ -110,11 +104,12 @@ compare R@1, R@5, MRR. Candidate grid:
 1. ~~**OR with token-coverage as primary strategy**~~ ✅ Done (v5.8.0-rc2):
    OR is now the default with stemming-aware token-coverage floor (≥2/3 for
    3+ term queries) and coverage-ratio score boost. The two-phase
-   conjunction→relaxed-OR fallback is eliminated.
+   conjunction→relaxed-OR fallback is eliminated. Query/content tokenization
+   was aligned on 2026-08-17; the 50q result improved to R@1=0.64 / R@5=0.82.
 
-2. **BM25 field weight tuning** — Content field vs tags field weighting. Tags
-   contain role/session metadata that may over-inflate or under-weight certain
-   matches.
+2. **BM25 field weight tuning** — Blanket content/tag weighting was tested on
+   2026-08-17 and rejected: no accuracy gain and higher latency. Selective
+   candidate scoring remains open.
 
 3. **Query expansion** — Add synonyms or related terms to queries before search
    (e.g., via word embeddings or a synonym dictionary).
@@ -125,8 +120,10 @@ compare R@1, R@5, MRR. Candidate grid:
 
 ## Search Strategy
 
-5. **Multi-turn answer detection** — Some answers span multiple turns. Index
-   sliding windows of 2-3 consecutive turns as additional "composite" documents.
+5. **Contextualized multi-turn indexing** — Some answers span multiple turns.
+   Naive auxiliary composite documents were tested and rejected because they
+   hurt R@1/R@5. Prefer an auxiliary search representation that preserves the
+   canonical turn ID and returned content while adding neighboring context.
 
 6. **Per-category strategy tuning** — LongMemEval has 6 categories
    (single-session-user, multi-session-user, etc.). Different categories may
@@ -169,10 +166,9 @@ compare R@1, R@5, MRR. Candidate grid:
 
 ## Benchmark Integration
 
-15. **Use `memory.hybrid_recall` instead of `memory.search`** — The benchmark
-    script currently uses `memory.search` (pure BM25). Switching to
-    `memory.hybrid_recall` would activate the hybrid path when an embedder is
-    available. (See QW2 above.)
+15. ~~**Use `memory.hybrid_recall` instead of `memory.search`**~~ — the harness
+     now uses the public `memory.search` route. OR + token-coverage has been
+     measured on 10q/50q; optional hybrid 50q remains separate.
 
 16. **Session-level vs turn-level indexing** — Currently each turn is a
     separate memory. Consider session-level aggregation or composite documents.

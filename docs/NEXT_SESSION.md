@@ -1,11 +1,18 @@
-# Next Session Handoff - 2026-08-16
+# Next Session Handoff - 2026-08-17
 
-> Prepared 2026-08-16 after gate re-run with uncommitted work.
+> Prepared 2026-08-17 after research closeout and retrieval development planning.
 > The canonical plan is
 > [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md). This file contains only
 > the next execution slice.
 
 ## Current State
+
+- Research phase closed. Development plan: [`docs/RETRIEVAL_DEVELOPMENT_PLAN.md`](RETRIEVAL_DEVELOPMENT_PLAN.md).
+- Archive findings: [`docs/ARCHIVE_FINDINGS.md`](ARCHIVE_FINDINGS.md).
+- Current accepted retrieval baseline after token-coverage alignment: 50q
+  turn-level R@1=0.64, R@5=0.82, R@10=0.82, MRR=0.7150, query p50 about 56ms.
+- Naive two-turn composites and blanket field weighting were measured and
+  rejected. Do not port either into the production index.
 
 - v5.8.0, 15 crates, 229 registered tool implementations, 3,513 tests.
 - **Release gates passed 2026-08-16**: fmt clean, clippy clean (`-D warnings`),
@@ -14,8 +21,9 @@
   grid-search results.
 - **Release gate run complete. Tagged v5.8.0-rc1.** Fresh-install rehearsal
   passed (quickstart + doctor + curated smoke test, all healthy).
-- **All P0, P1, and P2 items are now complete.** Phase B items B6 and B7 are
-  complete. B5 (store seal/verify) and B4 (sandbox mode) remain.
+- **All P0, P1, and P2 items are now complete.** Phase B items B5–B7 are
+  implemented (B5 is HMAC seal/verify, not a root of trust). B4 remains.
+  `wm serve` defaults to curated.
 - **Vector search wiring complete (2026-08-14):** `RecallEngine` is shared via
   `Arc<RecallEngine>` with `MemoryCreateTool`, `MemoryBatchCreateTool`, and
   `MemoryHybridRecallTool`. When `WM_EMBEDDER_ENDPOINT` is set, memory creation
@@ -24,11 +32,24 @@
   [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md).
 - **Batch embedding fix (2026-08-15):** Three bugs fixed in batch embedding
   (Tantivy writer lock conflict, embedder token limit, fallback writer).
-- **Grid search completed (2026-08-15/16):** 7 weight combinations ran with
-  live embedder (n=10). Hybrid search lifted R@5 from 0.70 → 0.90 vs
-  BM25-only stem baseline, but weight variations did not differentiate
-  recall on this sample. R@1 dropped from 0.50 → 0.40 with hybrid.
-  BM25-only stem 50q baseline: R@1=0.62, R@5=0.72, MRR=0.667.
+- **Grid search completed (2026-08-15/16):** 4 successful weight
+  combinations with live embedder (n=10, turn-level retrieval, not official
+  LongMemEval QA). Hybrid lifted R@5 from 0.70 → 0.90 vs BM25+stem and
+  dropped R@1 from 0.50 → 0.40. Weights did not differentiate. Three
+  leftover `grid_*_10q.json` files plus the original combined summary were
+  all-zero from the broken first pass; `grid_search_weights.json` was
+  reconstructed 2026-08-16 from the four good runs. The current OR +
+  token-coverage 50q baseline is R@1=0.64, R@5=0.82, R@10=0.82,
+   MRR=0.7150, query p50 about 56ms. See `docs/ARCHIVE_FINDINGS.md` for
+   rejected composite and field-weight experiments.
+- **Evaluator/context A-B completed 2026-08-17:** the hardened evaluator
+  retrieves 100 candidates and separately reports candidate presence and
+  expected-session evidence. The no-context result reproduced
+  R@1/R@5/R@10=0.64/0.82/0.82, MRR=0.7150, candidate presence=0.78, and
+  session presence=0.84. Adjacent-turn terms raised candidate presence to 0.80
+  but reduced R@1/R@5/MRR to 0.54/0.80/0.6523 and increased ingest/query
+  latency. The contextual tag prototype is rejected; see
+  `docs/ARCHIVE_FINDINGS.md`.
 - Codebase pushed to GitHub (`lbailey94/WMv5`, private). RC1 tag pushed;
   release workflow triggered. HEAD is 1 commit ahead of origin (not pushed).
 - Phase A of PET hardening (A1–A3) is complete and committed (`1dc29b6`).
@@ -46,31 +67,22 @@ verified.
 
 ## Next Steps
 
-All P0/P1/P2 items and Phase B items B6/B7 are complete. Release gates passed
-2026-08-16 (3,513 tests, fmt/clippy/release build clean). Remaining work:
+Release stabilization remains separate from the retrieval development slice.
+The next development session should:
 
-1. **Commit uncommitted work** — 13 files changed: `tools.usage_report` tool,
-   daemon checkpoint interval, batch embedding fixes, public-claims drift
-   fixes (README, PROGRESS, RELEASE_READINESS, NEXT_SESSION), grid-search
-   results.
-2. **Push and tag v5.8.0-rc2** — push HEAD + new commit to origin, tag rc2.
-3. **Recall quality** (product promise): R@1 gap analysis — OR + token-coverage
-   as primary strategy, inspect persistent miss queries (Glass Menagerie,
-   Serenity Yoga, February 14th), field-weight tuning. See
-   [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md).
-4. **B5: Store seal/verify** (low priority): HMAC over store directory to
-   detect tampering. Needs key management design — derive from a per-install
-   secret or use a platform keystore. Consider a `wm seal` / `wm verify` CLI
-   pair.
-5. **B4: Sandbox mode** (low priority): restrict tool execution capabilities
-   via seccomp (Linux) or sandbox-exec (macOS). Platform-specific; needs
-   careful allowlisting of syscalls for LMDB, Tantivy, and HTTP embedder.
-6. **v5.8.0 final release**: re-run the full gate from `cargo clean`, tag
-   `v5.8.0`, push to trigger the release workflow with the fixed artifact
-   naming.
-7. **Optional**: re-run the fresh-install rehearsal with the fixed
-   `install.sh` (per-platform artifact names) to verify end-to-end download
-   works against a real GitHub Release.
+1. Start with the continuity protocol in `docs/RETRIEVAL_DEVELOPMENT_PLAN.md`.
+2. Evaluate selective deterministic scoring over the existing broad candidate
+   set; do not promote the rejected contextual tag prototype.
+3. Compare optional hybrid and selective reranking only after candidate recall
+   is understood.
+4. Keep the fixed 50q evaluator as the regression protocol and report candidate
+   presence, text evidence, and session evidence with every ranking experiment.
+
+Release work remains:
+
+5. Commit the existing release-candidate work as a separate slice.
+6. Re-run the full v5.8.0 release gate from `cargo clean`.
+7. Tag and publish v5.8.0 after the release checklist is clean.
 
 ## Hard Blockers
 

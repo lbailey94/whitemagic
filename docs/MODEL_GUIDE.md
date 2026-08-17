@@ -23,9 +23,11 @@ agent; the server exposes a single `wm` tool. Use explicit `route=` calls.
 
 - Store durable facts, decisions, and project context:
   `wm(route="memory.create", args={"content": "...", "galaxy": "codex", "tags": ["project", "topic"]})`.
-- Find things: `memory.search` (BM25), `memory.hybrid_recall` (search +
-  metadata), `memory.chat` (conversational), `memory.query` (tag/importance
-  filters).
+- Find things: `memory.search` (BM25; BM25+vector when an embedder is
+  configured). `memory.hybrid_recall` is the same implementation under an
+  old name. `memory.chat` is cached conversational search. `memory.query`
+  is tag/importance filters, not full-text. `memory.nearby` is 5D spatial,
+  not general search.
 - Prefer explicit routes over `thought=` for anything important. Natural
   language routing is a convenience layer and can never reach destructive
   tools.

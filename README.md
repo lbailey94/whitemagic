@@ -64,10 +64,12 @@ sessions without sending the memory store to a hosted service.
 ### CLI Commands
 
 ```bash
-wm serve       # Start MCP server (async, tokio, brain-wave eco mode)
-wm serve --profile curated   # Memory-hierarchy surface only (memory/session/claims/transactions)
+wm serve       # Start MCP server (curated product surface by default)
+wm serve --profile full      # Archive/research surface (all 229 tools)
 wm daemon      # Persistent daemon — autonomous cycles, dream, self-play (--cycle-interval, --dream-interval, --research-interval, --selfplay-interval)
 wm doctor      # Health check — LMDB, Tantivy, citta, dream, tools (--store flag)
+wm seal        # HMAC integrity manifest for the store
+wm verify      # Check the store against a previous seal
 wm quickstart  # 6-step guided setup
 wm stats       # Consciousness dashboard (--store flag)
 wm brain-wave  # Brain-wave state shorthand (--store flag)

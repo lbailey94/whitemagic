@@ -461,7 +461,8 @@ impl McpServer {
     /// Resolve the tool surface profile from the environment.
     ///
     /// `WM_TOOL_ALLOWLIST` (comma-separated tool-name prefixes) wins; then
-    /// `WM_TOOL_PROFILE` (`full` | `curated` | `minimal`, default `full`).
+    /// `WM_TOOL_PROFILE` (`full` | `curated` | `minimal`, default `full`
+    /// here; `wm serve` writes `curated` into the env when the flag is omitted).
     /// Invalid names log a warning and fall back to the full surface.
     fn tool_profile_from_env() -> &'static wm_tools::profiles::ToolProfile {
         wm_tools::profiles::resolve_tool_profile(

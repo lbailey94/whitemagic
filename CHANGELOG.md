@@ -16,8 +16,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   auto-logging, and mutable-state persistence. Previously it protected only the
   Tantivy writer while LMDB mutations still succeeded.
 - **Tool profile precedence** — `WM_TOOL_ALLOWLIST` > `--profile` >
-  `WM_TOOL_PROFILE` > `full`. The CLI no longer overwrites the documented
-  environment default with `full`.
+  `WM_TOOL_PROFILE` > `curated` for `wm serve`. `wm daemon` and library
+  constructors still default to `full`. The CLI no longer overwrites the
+  documented environment path.
+- **Store seal/verify** — `wm seal` writes an HMAC-SHA256 per-file
+  manifest; `wm verify` reports mismatched, missing, or extra files.
+  Detects accidental corruption, not an adversary who can replace
+  `.seal_key`.
+- **Search default** — OR + stemming-aware token-coverage replaces
+  conjunction-by-default. `memory.search` is the public retrieval verb
+  (BM25; hybrid fusion when an embedder is set). `memory.hybrid_recall`
+  is a compatibility alias. Hybrid n=10 retrieval (not official
+  LongMemEval QA) scored R@5=0.90 / R@1=0.40 vs BM25+stem 0.70 / 0.50.
+- **Curated surface** — `nlu.shadow_report` and `tools.usage_report` are
+  full-profile only. Stranger-install prefixes: memory, session, claims,
+  transaction, gnosis, tools.list.
 - **Profile-aware discovery** — `tools/list` describes the active profile with
   a registry-derived tool count instead of the hardcoded 229-tool archive text.
 - **Exact transaction rollback** — `transaction.begin` snapshots complete

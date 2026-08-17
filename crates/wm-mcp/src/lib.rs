@@ -15,6 +15,7 @@ pub mod cyberbrain;
 pub mod daemon;
 pub mod input_validation;
 pub mod migrate;
+pub mod seal;
 mod server;
 
 #[cfg(test)]

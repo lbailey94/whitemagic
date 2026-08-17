@@ -1,9 +1,9 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Last updated:** 2026-08-15 (early morning, post batch-embedding fix)
+**Last updated:** 2026-08-16 (evening)
 **Version under review:** v5.8.0
-**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Vector search wiring complete with batch embedding and adaptive chunking. Grid search ran with live embedder across 7 weight combinations (n=10); hybrid search lifted R@5 from 0.70 to 0.90 but weight variations did not differentiate recall on this sample size. Ready for v5.8.0 final after release gate re-run.
+**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5 (`wm seal`/`wm verify`) is implemented and awaiting a targeted test pass; B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. Hybrid grid (n=10, turn-level retrieval, not official LongMemEval QA) lifted R@5 from 0.70 to 0.90 vs BM25+stem and dropped R@1 from 0.50 to 0.40; weight variations did not differentiate. OR + token-coverage is the new BM25 default and has not been re-scored on 10q/50q. `wm serve` with no flag now defaults to curated. Ready for v5.8.0 final after release gate re-run.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
@@ -103,9 +103,10 @@ phase:
 4. **Deployment model:** v5.7.x is a trusted local single-user process. It must
    not imply authenticated multi-tenant authorization through MCP `_meta`.
 5. **Surface policy:** curated is the product surface; full is an opt-in
-   archive/research surface. If changing the historical default is deferred
-   for compatibility, all release configurations must still select curated
-   explicitly.
+   archive/research surface. `wm serve` with no `--profile` and no
+   `WM_TOOL_*` env now defaults to curated. `wm daemon` and library
+   constructors still default to full because cycle tools live outside
+   curated. Client configs may keep an explicit `--profile curated`.
 6. **Maturity language:** research features are labeled experimental unless a
    live production path and acceptance test exist.
 
@@ -364,11 +365,11 @@ steps are:
    the release workflow (per-platform binaries + checksums).
 3. **Fresh-install rehearsal**: run `scripts/install.sh` against the RC,
    then `wm doctor`, then `scripts/curated_smoke_test.py`.
-4. **Vector search quick wins** (see
+4. **Recall measurement** (see
    [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md)):
-   - Batch embedding in `memory.batch_create` (single HTTP call vs N)
-   - Benchmark script switch to `memory.hybrid_recall`
-   - Fusion weight grid search against LongMemEval
+   - Score OR + token-coverage on the same 10q (then 50q) BM25+stem set
+   - Do not cite n=10 hybrid R@5=0.90 as official LongMemEval QA
+   - Hybrid 50q only after OR is scored; weights already failed to differentiate
 5. **P2 items** (post-release, not blockers):
    - NLU abstention with confidence/margin thresholds
    - Router quality evaluation against a labeled corpus
@@ -376,9 +377,11 @@ steps are:
    - Self-play/imagination experimental labeling
 6. **Phase B** (v5.9 PET hardening theme):
    - B4: sandbox mode for tool execution
-   - B5: store seal/verify (tamper detection)
-   - B6: untrusted `_meta` handling by default
-   - B7: store permission hygiene (`0700`)
+   - ~~B5: store seal/verify (tamper detection)~~ implemented as HMAC
+     manifest + `wm seal`/`wm verify`; not a cryptographic root of trust
+     against an adversary who can replace `.seal_key`
+   - ~~B6: untrusted `_meta` handling by default~~
+   - ~~B7: store permission hygiene (`0700`)~~
 
 ## Release Gate
 

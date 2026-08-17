@@ -33,11 +33,10 @@ enum Commands {
         /// with a clear error. Lets multiple processes share the store.
         #[arg(long)]
         readonly: bool,
-        /// Tool surface profile: full | curated | minimal. Curated exposes
-        /// the memory-hierarchy surface (memory, session, claims,
-        /// transactions); full exposes all tools. When omitted, the
-        /// WM_TOOL_PROFILE / WM_TOOL_ALLOWLIST environment variables are
-        /// used instead.
+        /// Tool surface profile: full | curated | minimal. When omitted,
+        /// `wm serve` uses curated (the product surface) unless
+        /// WM_TOOL_PROFILE / WM_TOOL_ALLOWLIST is set. Full is the
+        /// archive/research surface.
         #[arg(long)]
         profile: Option<String>,
     },
@@ -147,6 +146,28 @@ enum Commands {
         #[arg(long)]
         galaxy: Option<String>,
     },
+    /// Seal the store directory with an HMAC-SHA256 integrity manifest
+    ///
+    /// Computes a digest for every file in the store and writes `seal.json`.
+    /// A per-install secret key is generated at `.seal_key` on first use.
+    /// Run `wm verify` afterwards to detect tampering or corruption.
+    ///
+    /// This is corruption / casual-tamper detection, not a root of trust.
+    /// An adversary who can replace both `.seal_key` and `seal.json` wins.
+    Seal {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Verify the store directory against a previously written seal manifest
+    ///
+    /// Recomputes HMAC digests and reports any mismatched, missing, or extra
+    /// files. Exits with code 1 if verification fails.
+    Verify {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
     /// Rebuild the Tantivy full-text index from LMDB
     ///
     /// Purges stale index entries and skips binary/garbage content via the
@@ -208,16 +229,23 @@ fn main() -> anyhow::Result<()> {
             profile,
         } => {
             // Resolve the tool surface profile with explicit precedence:
-            // WM_TOOL_ALLOWLIST > --profile flag > WM_TOOL_PROFILE > full.
-            // The resolved name is exported so the server's
-            // `tool_profile_from_env()` sees the winning value. Previously
-            // the CLI unconditionally overwrote WM_TOOL_PROFILE with its
-            // default, breaking the documented environment path.
-            let resolved = wm_tools::profiles::resolve_tool_profile(
-                profile.as_deref(),
-                std::env::var("WM_TOOL_PROFILE").ok().as_deref(),
-                std::env::var("WM_TOOL_ALLOWLIST").ok().as_deref(),
-            );
+            // WM_TOOL_ALLOWLIST > --profile flag > WM_TOOL_PROFILE > curated.
+            // `wm serve` with no flag and no env is the product surface.
+            // `wm daemon` and library constructors still default to full
+            // (cycle tools live outside curated). The resolved name is
+            // exported so `tool_profile_from_env()` sees the winning value.
+            let env_profile = std::env::var("WM_TOOL_PROFILE").ok();
+            let env_allowlist = std::env::var("WM_TOOL_ALLOWLIST").ok();
+            let resolved = if profile.is_none() && env_profile.is_none() && env_allowlist.is_none()
+            {
+                &wm_tools::profiles::PROFILE_CURATED
+            } else {
+                wm_tools::profiles::resolve_tool_profile(
+                    profile.as_deref(),
+                    env_profile.as_deref(),
+                    env_allowlist.as_deref(),
+                )
+            };
             // `std::env::set_var` is unsafe in Rust 2024 (not thread-safe);
             // main() is single-threaded here, before any runtime is spawned.
             #[allow(unsafe_code)]
@@ -533,12 +561,78 @@ fn main() -> anyhow::Result<()> {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_reindex(&store_path, !no_backup, &galaxy, dry_run)?;
         }
+        Commands::Seal { store } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            run_seal(&store_path)?;
+        }
+        Commands::Verify { store } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            run_verify(&store_path)?;
+        }
     }
 
     Ok(())
 }
 
 /// Rebuild the Tantivy index from LMDB (`wm reindex`).
+/// Seal the store directory (`wm seal`).
+fn run_seal(store_path: &std::path::Path) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.exists() {
+        anyhow::bail!(
+            "No store found at {}. Run 'wm serve' first.",
+            lmdb_path.display()
+        );
+    }
+    let manifest = wm_mcp::seal::seal_store(&lmdb_path)?;
+    println!(
+        "Sealed {} files at {}",
+        manifest.files.len(),
+        manifest.sealed_at
+    );
+    println!("Manifest: {}", lmdb_path.join("seal.json").display());
+    println!("Run 'wm verify' to check integrity.");
+    Ok(())
+}
+
+/// Verify the store directory (`wm verify`).
+fn run_verify(store_path: &std::path::Path) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.exists() {
+        anyhow::bail!(
+            "No store found at {}. Run 'wm serve' first.",
+            lmdb_path.display()
+        );
+    }
+    let report = wm_mcp::seal::verify_store(&lmdb_path)?;
+    if report.is_ok() {
+        println!("OK — {} files verified, no discrepancies.", report.matched);
+    } else {
+        println!("VERIFY FAILED:");
+        println!("  matched:    {}", report.matched);
+        if !report.mismatched.is_empty() {
+            println!("  mismatched: {}", report.mismatched.len());
+            for f in &report.mismatched {
+                println!("    - {f}");
+            }
+        }
+        if !report.missing.is_empty() {
+            println!("  missing:    {}", report.missing.len());
+            for f in &report.missing {
+                println!("    - {f}");
+            }
+        }
+        if !report.extra.is_empty() {
+            println!("  extra:      {}", report.extra.len());
+            for f in &report.extra {
+                println!("    + {f}");
+            }
+        }
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
 fn run_reindex(
     store_path: &std::path::Path,
     backup: bool,
@@ -1034,6 +1128,43 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         println!(
             "       Feed conformal.monitor / simulation.calibrate, then let the server save on shutdown"
         );
+    }
+
+    // 11b. Store seal — corruption / casual-tamper detection only.
+    let seal_manifest = lmdb_path.join("seal.json");
+    if seal_manifest.exists() {
+        match std::fs::read_to_string(&seal_manifest) {
+            Ok(contents) => match serde_json::from_str::<serde_json::Value>(&contents) {
+                Ok(json) => {
+                    let sealed_at = json
+                        .get("sealed_at")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("unknown");
+                    let file_count = json
+                        .get("files")
+                        .and_then(serde_json::Value::as_object)
+                        .map_or(0, serde_json::Map::len);
+                    println!("[OK]   Store seal: {file_count} files, sealed at {sealed_at}");
+                    println!(
+                        "       Run 'wm verify --store {}' to check integrity.",
+                        store_path.display()
+                    );
+                    println!(
+                        "       HMAC only — an adversary who can replace .seal_key and seal.json wins."
+                    );
+                }
+                Err(e) => {
+                    println!("[WARN] Store seal present but unparseable: {e}");
+                    issues += 1;
+                }
+            },
+            Err(e) => {
+                println!("[WARN] Cannot read store seal: {e}");
+                issues += 1;
+            }
+        }
+    } else {
+        println!("[INFO] No store seal (run 'wm seal' to write an HMAC integrity manifest)");
     }
 
     // 12. Write-audit journal — misdeclarations become visible here.

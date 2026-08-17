@@ -157,6 +157,28 @@ def run_workflow(server):
     else:
         ok("tools/list description reflects the curated profile")
 
+    discovered = server.wm_payload("tools.list", {}, 100)
+    profile_tools = discovered.get("tools", [])
+    for route in ("memory.search", "memory.hybrid_recall"):
+        route_schema = next(
+            (
+                tool.get("input_schema")
+                for tool in profile_tools
+                if tool.get("name") == route
+            ),
+            None,
+        )
+        required = route_schema.get("required", []) if route_schema else []
+        if (
+            not route_schema
+            or route_schema.get("type") != "object"
+            or "query" not in route_schema.get("properties", {})
+            or "query" not in required
+        ):
+            fail("tools/list", f"{route} schema must require query", route_schema)
+        else:
+            ok(f"tools/list exposes {route} query schema")
+
     created = server.wm_payload(
         "memory.create",
         {
@@ -182,7 +204,7 @@ def run_workflow(server):
     )
     results = searched.get("results", [])
     if searched.get("status") != "success" or not any(
-        r.get("memory_id") == memory_id for r in results
+        r.get("id") == memory_id for r in results
     ):
         fail("memory.search", "created memory not found", searched)
     else:
@@ -293,7 +315,7 @@ def main():
                 {"query": "curated smoke marker", "galaxy": "codex", "limit": 5},
                 21,
             )
-            if any(r.get("memory_id") == memory_id for r in searched.get("results", [])):
+            if any(r.get("id") == memory_id for r in searched.get("results", [])):
                 ok("restart persistence: memory survives restart")
             else:
                 fail("restart persistence", "memory not found after restart", searched)
@@ -317,7 +339,7 @@ def main():
                 {"query": "curated smoke marker", "galaxy": "codex", "limit": 5},
                 31,
             )
-            if any(r.get("memory_id") == memory_id for r in searched.get("results", [])):
+            if any(r.get("id") == memory_id for r in searched.get("results", [])):
                 ok("read-only mode: reads succeed")
             else:
                 fail("read-only mode", "search failed", searched)
