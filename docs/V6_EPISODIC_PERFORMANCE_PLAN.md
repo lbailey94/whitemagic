@@ -227,6 +227,39 @@ improved not-in-top-10→4 (R@5+R@10 gained). 7 of 16 remaining R@1 misses
 are at rank 2–4, close to R@1. UCLA is the only question still not in top 10
 (candidate rank 28).
 
+### Role-aware records, coverage grace, and number-proximity bonus
+
+Three changes were layered on top of the scoring+tuned baseline:
+
+1. **Role-aware episodic records**: `capture_explicit_memories` now sets
+   `EpisodicKind::UserStatement` or `AssistantResponse` from memory tags
+   instead of always `Observation`. This lets the scorer distinguish user
+   turns (which contain answers) from assistant responses.
+2. **Coverage grace for UserStatement**: when scoring, user turns get +1
+   matched term (capped at `query_terms.len()`) for coverage calculation.
+   This bridges the gap when the query uses a verb (e.g. 'take') that
+   appears in assistant responses but not in the user's answer turn.
+   Also adds a flat 0.05 `role_boost`.
+3. **Number-proximity bonus**: for 'how many/much/long' queries
+   (`plan.number_query`), content with numeric tokens or number words
+   gets +0.03 bonus.
+
+50q A/B results (2026-08-18, commit `e4efa2f`):
+
+| Metric | Scoring + tuned | Role + grace | Delta |
+|---|---|---|---|
+| R@1 | 0.68 | 0.74 | +0.06 |
+| R@5 | 0.90 | 0.98 | +0.08 |
+| R@10 | 0.98 | 0.98 | — |
+| MRR | 0.7654 | 0.8400 | +0.0746 |
+| Query p50 | 118.3 ms | 214.0 ms | +95.7 ms |
+| Total wall clock | 103.5 s | 126.5 s | +23.0 s |
+
+4 new R@1 wins (bikes 9→1, RAM 3→1, bass 2→1, Spotify 4→1), 1 regression
+(IKEA bookshelf assembly, rank 1→2). Net +3 R@1. 8 of 13 remaining R@1
+misses are at rank 2–3. Latency increased due to `contains_number_word`
+scanning every candidate; this can be optimized.
+
 ## Deferred Ideas
 
 - Dense vector fusion until lexical sidecar performance is understood.
