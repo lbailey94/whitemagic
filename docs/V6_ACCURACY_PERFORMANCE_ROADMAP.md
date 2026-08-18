@@ -1,9 +1,9 @@
 # V6 Accuracy and Performance Roadmap
 
-**Date:** 2026-08-17
+**Date:** 2026-08-18
 **Status:** Candidate backlog with proposed gates
-**Accuracy reference:** R@1 `0.74`, R@5 `0.98`, R@10 `0.98`, MRR `0.8400`
-**Latency reference:** episodic p50 `214.0 ms`, p95 `430.3 ms` (coverage grace + number scan overhead)
+**Accuracy reference:** R@1 `0.80`, R@5 `0.98`, R@10 `0.98`, MRR `0.8800`
+**Latency reference:** episodic p50 `96.9 ms`, p95 `217.2 ms`
 
 ## Current Diagnosis
 

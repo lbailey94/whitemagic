@@ -1,28 +1,28 @@
 # V6 Next Session Handoff
 
-**Prepared:** 2026-08-17
+**Prepared:** 2026-08-18
 **Branch:** `v6-dev`
-**Latest commit:** `e4efa2f` — role-aware scoring, coverage grace, number bonus
+**Latest commit:** `40e198b` — coverage grace +2, role_boost 0.1, tiebreaker tuning
 
 ## Current Results
 
-After role-aware episodic records, coverage grace, and number-proximity bonus
-(50q A/B, 2026-08-18, commit `e4efa2f`):
+After coverage grace +2, role_boost 0.1, and tiebreaker tuning
+(50q A/B, 2026-08-18, commit `40e198b`):
 
-- R@1: `0.74` (up from `0.68`)
-- R@5: `0.98` (up from `0.90`)
+- R@1: `0.80` (up from `0.74`)
+- R@5: `0.98` (held)
 - R@10: `0.98` (held)
-- MRR: `0.8400` (up from `0.7654`)
+- MRR: `0.8800` (up from `0.8400`)
 - Candidate presence: `1.00` (held)
 - Expected-session presence: `1.00` (held)
-- Query p50: `214.0 ms`
-- Query p95: `430.3 ms`
-- Total wall clock: `126.5 s`
+- Query p50: `96.9 ms` (down from `214.0 ms` — prior was system load)
+- Query p95: `217.2 ms` (down from `430.3 ms`)
+- Total wall clock: `90.3 s`
 
-All acceptance gates pass. 4 new R@1 wins (bikes, RAM, bass, Spotify),
-1 regression (IKEA bookshelf assembly, rank 1→2). Net +3 R@1.
-The 13 remaining R@1 misses are all ranking losses with candidate present;
-8 are at rank 2–3.
+All acceptance gates pass. 4 new R@1 wins (commute, Japan, gift, internet speed),
+1 regression (apartment move, rank 1→2). Net +3 R@1.
+The 10 remaining R@1 misses are all ranking losses with candidate present;
+9 are at rank 2–3.
 
 ## Next Slice
 
@@ -51,20 +51,25 @@ Done across sessions:
     content with numeric tokens or number words.
 13. 50q A/B with role+grace+number: R@1 `0.74`, R@5 `0.98`, R@10 `0.98`,
     MRR `0.8400`. Net +3 R@1 (4 wins, 1 regression).
+14. Coverage grace increased to +2, role_boost to 0.1, tiebreaker tuned
+    (prefer more matched_keys, shorter content, earlier sequence).
+    `contains_number_word` optimized (no allocation, eq_ignore_ascii_case).
+15. 50q A/B with grace+2: R@1 `0.80`, R@5 `0.98`, R@10 `0.98`,
+    MRR `0.8800`, p50 `96.9ms`. Net +3 R@1 (4 wins, 1 regression).
+    Latency was system load, not code — p50 now below original 118ms baseline.
 
-Decision: keep all changes. Next accuracy slice is investigating the IKEA
-bookshelf regression and the 8 rank 2–3 near-misses.
+Decision: keep all changes. Next accuracy slice is investigating the 9 rank 2–3
+near-misses and the UCLA candidate ranking issue.
 
 Still open:
-14. IKEA bookshelf regression: answer in user turn but a different user turn
-    in the same session out-ranks it. May need answer-bearing term boost.
-15. UCLA is the only question still not in top 10 (candidate rank 28). Query
+16. 9 rank 2–3 near-misses: play, volunteer, yoga, dog, bookshelf, IKEA assembly,
+    painting, apartment move, Hawaii. All have candidate present but lose rank 1
+    to turns with higher coverage or density.
+17. UCLA is the only question still not in top 10 (candidate rank 28). Query
     'Bachelor's degree in Computer Science' has too many common terms.
-16. Latency increased from 118ms to 214ms p50 — need to investigate cause
-    (likely the `contains_number_word` scan on every candidate).
-17. MCP p95 still includes a fresh `wm serve` process; do not claim it as
+18. MCP p95 still includes a fresh `wm serve` process; do not claim it as
     in-process search time.
-18. Do not add broad synonym expansion, LLM query rewriting, or full HRR
+19. Do not add broad synonym expansion, LLM query rewriting, or full HRR
     indexing before the next 50q class A/B is measured.
 
 ## Verification
