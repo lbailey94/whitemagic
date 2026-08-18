@@ -2,27 +2,27 @@
 
 **Prepared:** 2026-08-18
 **Branch:** `v6-dev`
-**Latest commit:** `40e198b` — coverage grace +2, role_boost 0.1, tiebreaker tuning
+**Latest commit:** `f7e7286` — undergrad/CS vocabulary aliases for education queries
 
 ## Current Results
 
-After coverage grace +2, role_boost 0.1, and tiebreaker tuning
-(50q A/B, 2026-08-18, commit `40e198b`):
+After coverage grace +2, role_boost 0.1, tiebreaker tuning, and education vocabulary aliases
+(50q A/B, 2026-08-18, commit `f7e7286`):
 
 - R@1: `0.80` (up from `0.74`)
-- R@5: `0.98` (held)
-- R@10: `0.98` (held)
-- MRR: `0.8800` (up from `0.8400`)
+- R@5: `1.00` (up from `0.98`)
+- R@10: `1.00` (up from `0.98`)
+- MRR: `0.8900` (up from `0.8400`)
 - Candidate presence: `1.00` (held)
 - Expected-session presence: `1.00` (held)
-- Query p50: `96.9 ms` (down from `214.0 ms` — prior was system load)
-- Query p95: `217.2 ms` (down from `430.3 ms`)
-- Total wall clock: `90.3 s`
+- Query p50: `107.5 ms`
+- Query p95: `222.5 ms`
+- Total wall clock: `92.6 s`
 
-All acceptance gates pass. 4 new R@1 wins (commute, Japan, gift, internet speed),
-1 regression (apartment move, rank 1→2). Net +3 R@1.
-The 10 remaining R@1 misses are all ranking losses with candidate present;
-9 are at rank 2–3.
+All acceptance gates pass. R@5 and R@10 now at 100%.
+4 new R@1 wins (commute, Japan, gift, internet speed),
+1 regression (apartment move, rank 1→2). UCLA now at rank 2 (was not in top 10).
+The 10 remaining R@1 misses are all at rank 2–3.
 
 ## Next Slice
 
@@ -57,19 +57,22 @@ Done across sessions:
 15. 50q A/B with grace+2: R@1 `0.80`, R@5 `0.98`, R@10 `0.98`,
     MRR `0.8800`, p50 `96.9ms`. Net +3 R@1 (4 wins, 1 regression).
     Latency was system load, not code — p50 now below original 118ms baseline.
+16. Education vocabulary aliases: 'undergrad'/'undergraduate'/'cs' map to
+    'degree' entity key. 'undergrad' added to education domain cues.
+    Fixes UCLA question (rank None -> rank 2).
+17. 50q A/B with UCLA fix: R@1 `0.80`, R@5 `1.00`, R@10 `1.00`,
+    MRR `0.8900`, p50 `107.5ms`. R@5 and R@10 now perfect.
 
 Decision: keep all changes. Next accuracy slice is investigating the 9 rank 2–3
-near-misses and the UCLA candidate ranking issue.
+near-misses to push R@1 beyond 0.80.
 
 Still open:
-16. 9 rank 2–3 near-misses: play, volunteer, yoga, dog, bookshelf, IKEA assembly,
-    painting, apartment move, Hawaii. All have candidate present but lose rank 1
-    to turns with higher coverage or density.
-17. UCLA is the only question still not in top 10 (candidate rank 28). Query
-    'Bachelor's degree in Computer Science' has too many common terms.
-18. MCP p95 still includes a fresh `wm serve` process; do not claim it as
+18. 9 rank 2–3 near-misses: UCLA, play, volunteer, yoga, dog, bookshelf, IKEA
+    assembly, painting, apartment move, Hawaii. All have candidate present but
+    lose rank 1 to turns with higher coverage or density.
+19. MCP p95 still includes a fresh `wm serve` process; do not claim it as
     in-process search time.
-19. Do not add broad synonym expansion, LLM query rewriting, or full HRR
+20. Do not add broad synonym expansion, LLM query rewriting, or full HRR
     indexing before the next 50q class A/B is measured.
 
 ## Verification
