@@ -84,6 +84,23 @@ Done across sessions:
 Decision: keep all changes. Next accuracy slice is investigating the 9 rank 2–3
 near-misses to push R@1 beyond 0.80.
 
+## V6 Full Activation
+
+The next major milestone is wiring all v6 subsystems together before the full
+500q LongMemEval-S run. See [`V6_WIRING_STRATEGY.md`](./V6_WIRING_STRATEGY.md)
+for the complete plan. Summary of phases:
+
+1. **Enable ONNX embedder** (BGE-small, 130MB, CPU) — local embeddings
+2. **Vector reranking** — semantic rerank of top-20 deterministic candidates
+3. **Adaptive entity aliases** — dream cycle proposes aliases from co-occurrence
+4. **Bicameral reranking** — left hemisphere judges rank 2-3 near-misses
+5. **100q/500q benchmark harness** — validate beyond 50q
+6. **Unified retrieval path** — connect episodic + RecallEngine
+7. **Self-play retrieval testing** (experimental) — autonomous improvement
+
+Benchmark progression: 50q → 100q → 500q with incremental validation at each
+phase. No phase is validated only at 500q.
+
 Still open:
 18. 9 rank 2–3 near-misses: UCLA, play, volunteer, yoga, dog, bookshelf, IKEA
     assembly, painting, apartment move, Hawaii. All have candidate present but
