@@ -56,15 +56,7 @@ fn capture_explicit_memory(
     session_id: Option<uuid::Uuid>,
     sequence: u64,
 ) {
-    let record = EpisodicRecord::new(
-        session_id,
-        sequence,
-        kind,
-        memory.content.clone(),
-        Provenance::new(source),
-    )
-    .with_id(memory.metadata.id)
-    .with_visibility(memory.metadata.is_private, memory.metadata.model_exclude);
+    let record = explicit_memory_record(memory, kind, source, session_id, sequence);
     if let Err(error) = store
         .episodic()
         .append_explicit(&record, EpisodicCapturePolicy::explicit_only())
@@ -73,6 +65,49 @@ fn capture_explicit_memory(
             memory_id = %memory.metadata.id,
             "episodic capture failed after legacy write: {error}"
         );
+    }
+}
+
+fn explicit_memory_record(
+    memory: &Memory,
+    kind: EpisodicKind,
+    source: ProvenanceSource,
+    session_id: Option<uuid::Uuid>,
+    sequence: u64,
+) -> EpisodicRecord {
+    EpisodicRecord::new(
+        session_id,
+        sequence,
+        kind,
+        memory.content.clone(),
+        Provenance::new(source),
+    )
+    .with_id(memory.metadata.id)
+    .with_visibility(memory.metadata.is_private, memory.metadata.model_exclude)
+}
+
+fn capture_explicit_memories(
+    store: &MemoryStore,
+    memories: &[(Galaxy, Memory)],
+    kind: EpisodicKind,
+    source: ProvenanceSource,
+    session_id: Option<uuid::Uuid>,
+) {
+    if memories.is_empty() {
+        return;
+    }
+    let records: Vec<EpisodicRecord> = memories
+        .iter()
+        .enumerate()
+        .map(|(sequence, (_, memory))| {
+            explicit_memory_record(memory, kind, source, session_id, sequence as u64)
+        })
+        .collect();
+    if let Err(error) = store
+        .episodic()
+        .append_explicit_batch(&records, EpisodicCapturePolicy::explicit_only())
+    {
+        tracing::warn!("episodic batch capture failed after legacy write: {error}");
     }
 }
 
@@ -449,16 +484,13 @@ impl Tool for MemoryBatchCreateTool {
             }
         }
 
-        for (sequence, (_, memory)) in memories.iter().enumerate() {
-            capture_explicit_memory(
-                &self.store,
-                memory,
-                EpisodicKind::Observation,
-                ProvenanceSource::User,
-                ctx.session_id,
-                sequence as u64,
-            );
-        }
+        capture_explicit_memories(
+            &self.store,
+            &memories,
+            EpisodicKind::Observation,
+            ProvenanceSource::User,
+            ctx.session_id,
+        );
 
         Ok(json!({
             "status": "success",
@@ -3060,6 +3092,34 @@ mod tests {
             .unwrap()
             .expect("explicit memory writes mirror into episodic storage");
         assert_eq!(episodic.content, "test memory content");
+    }
+
+    #[tokio::test]
+    async fn memory_batch_create_mirrors_into_episodic_lane() {
+        let store = test_store();
+        let tool = MemoryBatchCreateTool::new(store.clone(), None, None);
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "items": [
+                        {"content": "batch rust retrieval"},
+                        {"content": "batch grocery list"}
+                    ]
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
+        let ids = result["ids"].as_array().unwrap();
+        let first = uuid::Uuid::parse_str(ids[0].as_str().unwrap()).unwrap();
+        let hits = store
+            .episodic()
+            .search("rust retrieval", 10, false)
+            .unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].record.id, first);
     }
 
     #[tokio::test]

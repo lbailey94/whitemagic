@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-17
 **Status:** Candidate backlog with proposed gates
-**Accuracy reference:** R@1 `0.66`, R@5 `0.86`, R@10 `0.94`, MRR `0.7403`
-**Latency reference:** episodic p50 `78.0 ms`, p95 `168.2 ms`
+**Accuracy reference:** R@1 `0.68`, R@5 `0.86`, R@10 `0.96`, MRR `0.7559`
+**Latency reference:** episodic p50 `115.6 ms`, p95 `281.3 ms` (planner raises candidate budgets)
 
 ## Current Diagnosis
 
@@ -22,36 +22,19 @@ larger generic reranker.
 
 ## High-Priority Accuracy Work
 
-### 1. Specific Index-Time Keys
+### 1. Specific Index-Time Keys ✅
 
-Earlier WhiteMagic experiments found that specific keyword extraction improved
-results while broad expansion added noise. Port the idea into the episodic
-sidecar as typed, deterministic keys:
+Implemented in `wm-memory/src/episodic_keys.rs`. Typed deterministic keys:
+person, date, location, org, domain, preference, entity. Each key has a
+category, source span, and confidence. Wired into episodic sidecar ingest and
+search as a bounded key bonus. 50q A/B: candidate presence 0.96 → 1.00.
 
-- Person names.
-- Dates and normalized date ranges.
-- Locations and organizations.
-- Domains such as medicine, education, travel, pets, finance, and food.
-- Preference markers and answer-bearing entities.
+### 2. Query-Class Planner ✅
 
-Do not add broad synonyms to every record. Each key must have a category,
-source span, confidence, and regression case.
-
-### 2. Query-Class Planner
-
-Route queries into explicit retrieval modes:
-
-- Exact fact.
-- Temporal.
-- Knowledge update.
-- Multi-hop or counting.
-- Preference.
-- Procedure or failure recovery.
-- Global corpus summary.
-
-Each mode selects a bounded combination of indexes and scoring signals. This
-implements the unported v2 `search_planner` concept without making every query
-expensive.
+Implemented in `wm-memory/src/query_planner.rs`. Seven classes: ExactFact,
+Temporal, KnowledgeUpdate, MultiHop, Preference, Procedure, Summary. Each
+class selects bounded candidate limits and key weights. 50q A/B: R@1 0.66 →
+0.68, MRR 0.7403 → 0.7559.
 
 ### 3. Dual Granularity Retrieval
 

@@ -6,32 +6,46 @@
 
 ## Current Results
 
-The v6 episodic path currently records:
+After typed keys + query-class planner (50q A/B, 2026-08-18):
 
-- R@1: `0.66`
-- R@5: `0.86`
-- R@10: `0.94`
-- MRR: `0.7403`
-- Candidate presence: `0.96`
-- Expected-session presence: `0.98`
-- Query p50: `78.0 ms`
-- Query p95: `168.2 ms`
+- R@1: `0.68` (up from `0.66`)
+- R@5: `0.86` (held)
+- R@10: `0.96` (up from `0.94`)
+- MRR: `0.7559` (up from `0.7403`)
+- Candidate presence: `1.00` (up from `0.96`)
+- Expected-session presence: `0.98` (held)
+- Query p50: `115.6 ms` (up from `78.0 ms`; planner raises candidate budgets)
+- Query p95: `281.3 ms` (up from `168.2 ms`; same cause)
+- Total wall clock: `104.6 s` (down from `172.4 s`; batch ingest)
 
-The accepted v6 term sidecar and bounded candidate path preserve accuracy and
-bring p50 below the `100 ms` target. P95 remains above the `150 ms` target and
-needs process-boundary and tail profiling.
+All acceptance gates pass. Two questions improved (tennis racket R@1, Japan
+trip R@5), one regressed (Feb 14th R@5). The 16 remaining R@1 misses are all
+ranking losses with candidate present — not candidate retrieval failures.
 
 ## Next Slice
 
-1. Run cold versus warm in-process and MCP latency measurements.
-2. Measure batch episodic indexing separately from single-record capture.
-3. Add specific index-time entity/date/domain keys from the earlier WhiteMagic
-   keyword V2 strategy.
-4. Add a query-class planner for exact, temporal, update, multi-hop, preference,
-   and procedural queries.
-5. Re-run the fixed 50-question A/B by query class.
-6. Do not add broad synonym expansion, LLM query rewriting, or full HRR
-   indexing before these deterministic experiments are measured.
+Done this session:
+1. Cold/warm in-process search measured (10k: cold `0.520 ms`, warm `0.355 ms`).
+2. Batch sidecar ingest accepted (`append_batch` + `memory.batch_create`; 1k
+   records `66.4 ms` vs `708.9 ms` single).
+3. Typed index-time keys in `wm-memory/src/episodic_keys.rs`.
+4. Query-class planner in `wm-memory/src/query_planner.rs`.
+5. 50q A/B completed: R@1 `0.68`, R@5 `0.86`, R@10 `0.96`, MRR `0.7559`,
+   candidate presence `1.00`. All gates pass.
+
+Decision (per prior session's branch logic): R@5 held at 0.86, R@1/MRR moved
+up. Keep keys+planner. Next accuracy slice is dual-granularity session/segment
+records for counts and multi-hop.
+
+Still open:
+6. Dual-granularity session/segment records for count and multi-hop questions
+   (How many bikes, Japan trip duration).
+7. Query-class scoring on the existing candidate set for the 16 R@1 ranking
+   misses (temporal recency, validity, preference lane).
+8. MCP p95 still includes a fresh `wm serve` process; do not claim it as
+   in-process search time.
+9. Do not add broad synonym expansion, LLM query rewriting, or full HRR
+   indexing before the next 50q class A/B is measured.
 
 ## Verification
 

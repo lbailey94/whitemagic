@@ -1,6 +1,6 @@
 # V6 Episodic Performance Plan
 
-**Status:** Phase 0 measurement starting
+**Status:** Phase 0 measured; batch sidecar ingest accepted in-process
 **Branch:** `v6-dev`
 **Accuracy reference:** `a2bac29`
 **Latency reference:** v6 episodic p50 `122.3 ms`, p95 `226.6 ms`, p99
@@ -153,6 +153,47 @@ The bounded candidate budget and warm term-posting cache are accepted as
 performance improvements. The remaining tail is likely dominated by the
 benchmark's fresh-process boundary and intermittent ingest/process startup
 outliers rather than the in-process candidate scorer.
+
+### Batch sidecar ingest
+
+`memory.batch_create` now projects the whole batch through one LMDB record
+transaction and one term-index transaction. Release in-process timings on
+this machine:
+
+| Path | Scale | Time |
+|---|---|---:|
+| Single-record append + index | 1,000 records | 708.9 ms |
+| Batch append + index | 1,000 records | 66.4 ms |
+| Cold search after reopen | 10,000 records | 0.520 ms |
+| Warm search | 10,000 records | 0.355 ms |
+
+Batch ingest is about 10.7× faster than per-record sidecar writes. Warm
+search remains under the 20 ms in-process SLO. MCP p95 still includes a
+fresh `wm serve` process per query and is not claimed here.
+
+### Typed keys and query-class planner
+
+Deterministic typed index-time keys (person, date, location, org, domain,
+preference, entity) and a 7-class query planner were added to the episodic
+sidecar. The planner raises candidate budgets and key weight per query class.
+
+50q A/B results (2026-08-18):
+
+| Metric | Bounded baseline | Keys + planner | Delta |
+|---|---|---|---|
+| R@1 | 0.66 | 0.68 | +0.02 |
+| R@5 | 0.86 | 0.86 | — |
+| R@10 | 0.94 | 0.96 | +0.02 |
+| MRR | 0.7403 | 0.7559 | +0.0156 |
+| Candidate presence | 0.96 | 1.00 | +0.04 |
+| Query p50 | 78.0 ms | 115.6 ms | +37.6 ms |
+| Query p95 | 168.2 ms | 281.3 ms | +113.3 ms |
+| Total wall clock | 172.4 s | 104.6 s | -67.8 s |
+
+All acceptance gates pass. The latency increase is from the planner raising
+candidate budgets (up to 5x the requested limit for summary class). The total
+wall clock dropped 40% due to batch ingest. The 16 remaining R@1 misses are
+all ranking losses with candidate present.
 
 ## Deferred Ideas
 
