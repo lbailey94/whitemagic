@@ -4,8 +4,8 @@ use lmdb::{Cursor, Database, Environment, Transaction, WriteFlags};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use wm_core::{
-    CoreError, EpisodicCapturePolicy, EpisodicId, EpisodicRecord, MemoryTransition, Result,
-    ValidityState,
+    CoreError, EpisodicCapturePolicy, EpisodicId, EpisodicKind, EpisodicRecord, MemoryTransition,
+    Result, ValidityState,
 };
 
 use crate::episodic_keys::key_index_terms;
@@ -397,20 +397,38 @@ impl<'a> EpisodicStore<'a> {
             if matched_terms == 0 && matched_keys == 0 {
                 continue;
             }
-            let coverage = if query_terms.is_empty() {
-                0.0
-            } else {
-                matched_terms as f32 / query_terms.len() as f32
-            };
             let density = matched_terms as f32 / content_terms.len().max(1) as f32;
             let key_bonus = if query_keys.is_empty() {
                 0.0
             } else {
                 matched_keys as f32 / query_keys.len() as f32 * plan.key_weight
             };
+            let role_boost = match record.kind {
+                EpisodicKind::UserStatement => 0.05,
+                _ => 0.0,
+            };
+            let effective_matched = if matches!(record.kind, EpisodicKind::UserStatement) {
+                (matched_terms + 1).min(query_terms.len())
+            } else {
+                matched_terms
+            };
+            let coverage = if query_terms.is_empty() {
+                0.0
+            } else {
+                effective_matched as f32 / query_terms.len() as f32
+            };
+            let number_bonus = if plan.number_query {
+                let has_number = content_terms
+                    .iter()
+                    .any(|term| term.chars().any(|c| c.is_ascii_digit()))
+                    || contains_number_word(&record.content);
+                if has_number { 0.03 } else { 0.0 }
+            } else {
+                0.0
+            };
             results.push(EpisodicSearchResult {
                 record,
-                score: coverage + density * 0.01 + key_bonus,
+                score: coverage + density * 0.01 + key_bonus + role_boost + number_bonus,
                 matched_terms: matched_terms.max(matched_keys),
             });
         }
@@ -488,6 +506,20 @@ fn simple_stem(word: &str) -> String {
         }
     }
     word.to_string()
+}
+
+fn contains_number_word(text: &str) -> bool {
+    const NUMBER_WORDS: &[&str] = &[
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+        "eighteen", "nineteen", "twenty", "thirty", "forty", "fifty", "sixty", "seventy",
+        "eighty", "ninety", "hundred", "thousand", "million", "billion",
+        "dozen", "couple", "half", "quarter", "double", "triple", "twice",
+    ];
+    let lower = text.to_ascii_lowercase();
+    NUMBER_WORDS
+        .iter()
+        .any(|word| lower.split(|c: char| !c.is_alphanumeric()).any(|t| t == *word))
 }
 
 #[cfg(test)]

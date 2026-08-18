@@ -20,6 +20,7 @@ pub struct QueryPlan {
     pub class: QueryClass,
     pub candidate_limit: usize,
     pub key_weight: f32,
+    pub number_query: bool,
 }
 
 impl QueryPlan {
@@ -28,36 +29,44 @@ impl QueryPlan {
     pub fn plan(query: &str, requested_limit: usize) -> Self {
         let class = classify_query(query);
         let requested = requested_limit.max(1);
+        let lower = query.to_ascii_lowercase();
+        let number_query = contains_any(&lower, &["how many", "how much", "how long"]);
         match class {
             QueryClass::ExactFact => Self {
                 class,
                 candidate_limit: requested.saturating_mul(2).max(20),
                 key_weight: 0.18,
+                number_query,
             },
             QueryClass::Temporal | QueryClass::KnowledgeUpdate => Self {
                 class,
                 candidate_limit: requested.saturating_mul(3).max(30),
                 key_weight: 0.15,
+                number_query,
             },
             QueryClass::MultiHop => Self {
                 class,
                 candidate_limit: requested.saturating_mul(4).max(40),
                 key_weight: 0.12,
+                number_query,
             },
             QueryClass::Preference => Self {
                 class,
                 candidate_limit: requested.saturating_mul(3).max(30),
                 key_weight: 0.25,
+                number_query,
             },
             QueryClass::Procedure => Self {
                 class,
                 candidate_limit: requested.saturating_mul(3).max(24),
                 key_weight: 0.1,
+                number_query,
             },
             QueryClass::Summary => Self {
                 class,
                 candidate_limit: requested.saturating_mul(5).max(50),
                 key_weight: 0.05,
+                number_query,
             },
         }
     }

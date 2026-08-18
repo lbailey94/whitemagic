@@ -75,15 +75,29 @@ fn explicit_memory_record(
     session_id: Option<uuid::Uuid>,
     sequence: u64,
 ) -> EpisodicRecord {
+    let resolved_kind = resolve_episodic_kind(memory, kind);
     EpisodicRecord::new(
         session_id,
         sequence,
-        kind,
+        resolved_kind,
         memory.content.clone(),
         Provenance::new(source),
     )
     .with_id(memory.metadata.id)
     .with_visibility(memory.metadata.is_private, memory.metadata.model_exclude)
+}
+
+/// Override the default `EpisodicKind` when the memory tags carry role
+/// information (e.g. `"user"` or `"assistant"` from the benchmark adapter).
+fn resolve_episodic_kind(memory: &Memory, default: EpisodicKind) -> EpisodicKind {
+    let tags = &memory.metadata.tags;
+    if tags.iter().any(|t| t == "user") {
+        EpisodicKind::UserStatement
+    } else if tags.iter().any(|t| t == "assistant") {
+        EpisodicKind::AssistantResponse
+    } else {
+        default
+    }
 }
 
 fn capture_explicit_memories(
