@@ -404,11 +404,11 @@ impl<'a> EpisodicStore<'a> {
                 matched_keys as f32 / query_keys.len() as f32 * plan.key_weight
             };
             let role_boost = match record.kind {
-                EpisodicKind::UserStatement => 0.05,
+                EpisodicKind::UserStatement => 0.1,
                 _ => 0.0,
             };
             let effective_matched = if matches!(record.kind, EpisodicKind::UserStatement) {
-                (matched_terms + 1).min(query_terms.len())
+                (matched_terms + 2).min(query_terms.len())
             } else {
                 matched_terms
             };
@@ -418,11 +418,14 @@ impl<'a> EpisodicStore<'a> {
                 effective_matched as f32 / query_terms.len() as f32
             };
             let number_bonus = if plan.number_query {
-                let has_number = content_terms
+                let has_digit = content_terms
                     .iter()
-                    .any(|term| term.chars().any(|c| c.is_ascii_digit()))
-                    || contains_number_word(&record.content);
-                if has_number { 0.03 } else { 0.0 }
+                    .any(|term| term.chars().any(|c| c.is_ascii_digit()));
+                if has_digit || contains_number_word(&record.content) {
+                    0.03
+                } else {
+                    0.0
+                }
             } else {
                 0.0
             };
@@ -436,7 +439,9 @@ impl<'a> EpisodicStore<'a> {
             b.score
                 .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
-                .then_with(|| b.record.sequence.cmp(&a.record.sequence))
+                .then_with(|| b.matched_terms.cmp(&a.matched_terms))
+                .then_with(|| a.record.content.len().cmp(&b.record.content.len()))
+                .then_with(|| a.record.sequence.cmp(&b.record.sequence))
                 .then_with(|| a.record.id.cmp(&b.record.id))
         });
         results.truncate(limit);
@@ -516,10 +521,12 @@ fn contains_number_word(text: &str) -> bool {
         "eighty", "ninety", "hundred", "thousand", "million", "billion",
         "dozen", "couple", "half", "quarter", "double", "triple", "twice",
     ];
-    let lower = text.to_ascii_lowercase();
-    NUMBER_WORDS
-        .iter()
-        .any(|word| lower.split(|c: char| !c.is_alphanumeric()).any(|t| t == *word))
+    for word in text.split(|c: char| !c.is_alphanumeric()) {
+        if word.len() >= 3 && NUMBER_WORDS.iter().any(|nw| word.eq_ignore_ascii_case(nw)) {
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]
