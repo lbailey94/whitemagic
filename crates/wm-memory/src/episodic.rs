@@ -382,7 +382,10 @@ impl<'a> EpisodicStore<'a> {
             let content_keys = key_index_terms(&record.content);
             let matched_terms = query_terms
                 .iter()
-                .filter(|term| content_terms.iter().any(|candidate| candidate == *term))
+                .filter(|term| {
+                    content_terms.iter().any(|candidate| candidate == *term)
+                        || content_keys.iter().any(|candidate| candidate == *term)
+                })
                 .count();
             let matched_keys = query_keys
                 .iter()
