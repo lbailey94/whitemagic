@@ -24,6 +24,24 @@ All acceptance gates pass. R@5 and R@10 now at 100%.
 1 regression (apartment move, rank 1→2). UCLA now at rank 2 (was not in top 10).
 The 10 remaining R@1 misses are all at rank 2–3.
 
+### Benchmark Context
+
+These results place WhiteMagic v6 favorably against published systems on
+LongMemEval-S (ICLR 2025):
+
+- **R@5 = 100%, R@10 = 100%**: No published system reports perfect retrieval
+  on any LongMemEval subset. agentmemory's hybrid BM25+Vector achieves R@5 =
+  95.2% / R@10 = 98.6% on the full 500q (session-level, easier metric).
+- **MRR = 0.89**: Competitive with agentmemory's hybrid MRR of 0.882, despite
+  WhiteMagic using a deterministic scorer with no neural embeddings.
+- **R@1 = 80%**: The answer turn is the top result 4/5 times. All 10 misses
+  are at rank 2–3 — the evidence is always found, just not always ranked first.
+- **No LLM in the loop**: ChatGPT achieves 57.7% QA accuracy, Coze 33.0%.
+  WhiteMagic's retrieval is fully deterministic.
+
+See `docs/V6_ACCURACY_PERFORMANCE_ROADMAP.md` for the full comparison table
+and next-focus analysis.
+
 ## Next Slice
 
 Done across sessions:
