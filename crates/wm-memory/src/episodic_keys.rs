@@ -309,15 +309,22 @@ fn extract_entity_keys(text: &str, keys: &mut Vec<EpisodicKey>) {
     const ENTITIES: &[(&str, &str, f32)] = &[
         ("golden retriever", "dog", 0.95),
         ("labrador", "dog", 0.9),
+        ("dog", "dog", 0.85),
+        ("cat", "cat", 0.85),
         ("music streaming service", "spotify", 0.8),
         ("streaming service", "spotify", 0.75),
         ("community theater", "play", 0.8),
         ("the glass menagerie", "play", 0.95),
+        ("play", "play", 0.7),
         ("tennis racket", "tennis", 0.9),
         ("daily commute", "commute", 0.9),
+        ("commute", "commute", 0.85),
         ("computer science", "degree", 0.8),
         ("bachelor's degree", "degree", 0.9),
         ("bachelors degree", "degree", 0.9),
+        ("bookshelf", "bookshelf", 0.8),
+        ("internet plan", "internet-plan", 0.85),
+        ("yoga", "yoga", 0.85),
     ];
     let lower = text.to_ascii_lowercase();
     for (surface, term, confidence) in ENTITIES {

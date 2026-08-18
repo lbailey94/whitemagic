@@ -32,22 +32,22 @@ impl QueryPlan {
             QueryClass::ExactFact => Self {
                 class,
                 candidate_limit: requested.saturating_mul(2).max(20),
-                key_weight: 0.12,
+                key_weight: 0.18,
             },
             QueryClass::Temporal | QueryClass::KnowledgeUpdate => Self {
                 class,
                 candidate_limit: requested.saturating_mul(3).max(30),
-                key_weight: 0.2,
+                key_weight: 0.15,
             },
             QueryClass::MultiHop => Self {
                 class,
                 candidate_limit: requested.saturating_mul(4).max(40),
-                key_weight: 0.1,
+                key_weight: 0.12,
             },
             QueryClass::Preference => Self {
                 class,
                 candidate_limit: requested.saturating_mul(3).max(30),
-                key_weight: 0.18,
+                key_weight: 0.25,
             },
             QueryClass::Procedure => Self {
                 class,
