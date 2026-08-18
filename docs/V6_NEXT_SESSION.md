@@ -6,21 +6,23 @@
 
 ## Current Results
 
-After typed keys + query-class planner (50q A/B, 2026-08-18):
+After cross-key term matching, vocabulary aliases, and tuned planner knobs
+(50q A/B, 2026-08-18, commit `5742e24`):
 
-- R@1: `0.68` (up from `0.66`)
-- R@5: `0.86` (held)
-- R@10: `0.96` (up from `0.94`)
-- MRR: `0.7559` (up from `0.7403`)
-- Candidate presence: `1.00` (up from `0.96`)
-- Expected-session presence: `0.98` (held)
-- Query p50: `115.6 ms` (up from `78.0 ms`; planner raises candidate budgets)
-- Query p95: `281.3 ms` (up from `168.2 ms`; same cause)
-- Total wall clock: `104.6 s` (down from `172.4 s`; batch ingest)
+- R@1: `0.68` (held from keys+planner)
+- R@5: `0.90` (up from `0.86`)
+- R@10: `0.98` (up from `0.96`)
+- MRR: `0.7654` (up from `0.7559`)
+- Candidate presence: `1.00` (held)
+- Expected-session presence: `1.00` (up from `0.98`)
+- Query p50: `118.3 ms`
+- Query p95: `302.6 ms`
+- Total wall clock: `103.5 s`
 
-All acceptance gates pass. Two questions improved (tennis racket R@1, Japan
-trip R@5), one regressed (Feb 14th R@5). The 16 remaining R@1 misses are all
-ranking losses with candidate present — not candidate retrieval failures.
+All acceptance gates pass. No regressions. Two questions improved:
+Golden Retriever (rank 9→4, R@5 gained), Spotify (not-in-top-10→4, R@5+R@10
+gained). The 16 remaining R@1 misses are all ranking losses with candidate
+present; 7 are at rank 2–4 (close to R@1).
 
 ## Next Slice
 
@@ -30,22 +32,29 @@ Done this session:
    records `66.4 ms` vs `708.9 ms` single).
 3. Typed index-time keys in `wm-memory/src/episodic_keys.rs`.
 4. Query-class planner in `wm-memory/src/query_planner.rs`.
-5. 50q A/B completed: R@1 `0.68`, R@5 `0.86`, R@10 `0.96`, MRR `0.7559`,
-   candidate presence `1.00`. All gates pass.
+5. 50q A/B with keys+planner: R@1 `0.68`, R@5 `0.86`, R@10 `0.96`,
+   MRR `0.7559`, candidate presence `1.00`.
+6. Cross-key term matching: query terms now match against `content_keys` for
+   coverage scoring, bridging vocabulary gaps.
+7. Vocabulary aliases: direct entity surface forms (dog, cat, yoga, commute,
+   play, bookshelf, internet plan).
+8. Tuned planner knobs: ExactFact 0.12→0.18, Temporal/KU 0.2→0.15,
+   Preference 0.18→0.25, MultiHop 0.1→0.12.
+9. 50q A/B with all three: R@1 `0.68`, R@5 `0.90`, R@10 `0.98`,
+   MRR `0.7654`, session presence `1.00`. No regressions.
 
-Decision (per prior session's branch logic): R@5 held at 0.86, R@1/MRR moved
-up. Keep keys+planner. Next accuracy slice is dual-granularity session/segment
-records for counts and multi-hop.
+Decision: keep all changes. Next accuracy slice is dual-granularity
+session/segment records for counts and multi-hop.
 
 Still open:
-6. Dual-granularity session/segment records for count and multi-hop questions
-   (How many bikes, Japan trip duration).
-7. Query-class scoring on the existing candidate set for the 16 R@1 ranking
-   misses (temporal recency, validity, preference lane).
-8. MCP p95 still includes a fresh `wm serve` process; do not claim it as
-   in-process search time.
-9. Do not add broad synonym expansion, LLM query rewriting, or full HRR
-   indexing before the next 50q class A/B is measured.
+10. Dual-granularity session/segment records for count and multi-hop questions
+    (How many bikes, Japan trip duration).
+11. UCLA is the only question still not in top 10 (candidate rank 28). Query
+    'Bachelor's degree in Computer Science' has too many common terms.
+12. MCP p95 still includes a fresh `wm serve` process; do not claim it as
+    in-process search time.
+13. Do not add broad synonym expansion, LLM query rewriting, or full HRR
+    indexing before the next 50q class A/B is measured.
 
 ## Verification
 

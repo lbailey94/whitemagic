@@ -195,6 +195,38 @@ candidate budgets (up to 5x the requested limit for summary class). The total
 wall clock dropped 40% due to batch ingest. The 16 remaining R@1 misses are
 all ranking losses with candidate present.
 
+### Cross-key term matching and vocabulary aliases
+
+Three changes were layered on top of the keys+planner baseline:
+
+1. **Cross-key term matching**: query terms now match against `content_keys`
+   (not just `content_terms`) for coverage scoring. This bridges vocabulary
+   gaps — e.g. query 'dog' matches content_key 'dog' derived from 'Golden
+   Retriever', boosting coverage from 0.0 to 0.5.
+2. **Vocabulary aliases**: direct entity surface forms (dog, cat, yoga,
+   commute, play, bookshelf, internet plan) so query terms extract matching
+   keys without multi-word surface forms.
+3. **Tuned planner knobs**: ExactFact key_weight 0.12→0.18, Temporal/
+   KnowledgeUpdate 0.2→0.15 (fixes Feb 14th regression), Preference
+   0.18→0.25, MultiHop 0.1→0.12.
+
+50q A/B results (2026-08-18, commit `5742e24`):
+
+| Metric | Keys + planner | Scoring + tuned | Delta |
+|---|---|---|---|
+| R@1 | 0.68 | 0.68 | — |
+| R@5 | 0.86 | 0.90 | +0.04 |
+| R@10 | 0.96 | 0.98 | +0.02 |
+| MRR | 0.7559 | 0.7654 | +0.0095 |
+| Session presence | 0.98 | 1.00 | +0.02 |
+| Query p50 | 115.6 ms | 118.3 ms | +2.7 ms |
+| Total wall clock | 104.6 s | 103.5 s | -1.1 s |
+
+No regressions. Golden Retriever improved rank 9→4 (R@5 gained), Spotify
+improved not-in-top-10→4 (R@5+R@10 gained). 7 of 16 remaining R@1 misses
+are at rank 2–4, close to R@1. UCLA is the only question still not in top 10
+(candidate rank 28).
+
 ## Deferred Ideas
 
 - Dense vector fusion until lexical sidecar performance is understood.

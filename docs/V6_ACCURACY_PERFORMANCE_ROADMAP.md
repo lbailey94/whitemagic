@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-17
 **Status:** Candidate backlog with proposed gates
-**Accuracy reference:** R@1 `0.68`, R@5 `0.86`, R@10 `0.96`, MRR `0.7559`
-**Latency reference:** episodic p50 `115.6 ms`, p95 `281.3 ms` (planner raises candidate budgets)
+**Accuracy reference:** R@1 `0.68`, R@5 `0.90`, R@10 `0.98`, MRR `0.7654`
+**Latency reference:** episodic p50 `118.3 ms`, p95 `302.6 ms` (planner raises candidate budgets)
 
 ## Current Diagnosis
 
