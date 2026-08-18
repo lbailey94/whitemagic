@@ -11,12 +11,14 @@ pub mod associations;
 pub mod conversational;
 pub mod embedder;
 pub mod episodic;
+pub mod episodic_keys;
 pub mod galaxy_registry;
 pub mod indexes;
 pub mod lifecycle;
 pub mod mandala;
 pub mod memory;
 pub mod predictive_cache;
+pub mod query_planner;
 pub mod recall;
 pub mod recovery;
 pub mod reindex;
@@ -35,6 +37,7 @@ pub use conversational::{
 pub use embedder::OrtEmbedder;
 pub use embedder::{Embedder, EmbedderConfig, HttpEmbedder, StubEmbedder, create_embedder};
 pub use episodic::{EpisodicSearchResult, EpisodicStore};
+pub use episodic_keys::{EpisodicKey, KeyCategory, extract_episodic_keys, key_index_terms};
 pub use galaxy_registry::{GalaxyMetadata, GalaxyRegistry};
 pub use lifecycle::{ConsolidationResult, ForgettingResult, Lifecycle, LifecycleConfig};
 pub use mandala::{Compartment, CompartmentConfig, MandalaLevel, MandalaManager};
@@ -42,6 +45,7 @@ pub use memory::{
     Memory, MemoryId, MemoryMetadata, MemoryType, content_hash, decode_embedding, encode_embedding,
 };
 pub use predictive_cache::{CacheStats, PredictiveCache};
+pub use query_planner::{QueryClass, QueryPlan};
 pub use recall::{RecallConfig, RecallEngine, RecallResult};
 pub use recovery::{
     GalaxyIntegrity, IntegrityReport, QuarantineEntry, RecoveryStrategy, RepairReport,
