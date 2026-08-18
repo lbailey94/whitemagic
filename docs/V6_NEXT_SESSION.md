@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-08-17
 **Branch:** `v6-dev`
-**Latest commit:** `9992487` plus the current roadmap documentation
+**Latest commit:** `93afbad` — scoring+tuned 50q docs updated
 
 ## Current Results
 
