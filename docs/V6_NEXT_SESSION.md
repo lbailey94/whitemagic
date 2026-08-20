@@ -274,26 +274,48 @@ distinguish "what's my current X" (prefer recent) from "what did I say
 about X" (return best match regardless of recency). This is deferred to
 a future session as a medium-effort post-retrieval layer.
 
-### Medium/High-Effort Roadmap (Future Sessions)
+### Medium/High-Effort Roadmap (updated 2026-08-20 after research pass)
 
-#### T1/T6 Temporal Supersession (15%) — Medium Effort
+> See [`docs/notes/research-2026-08-20-agent-memory.md`](notes/research-2026-08-20-agent-memory.md)
+> for the full research note behind these revisions. Headline: the
+> post-retrieval design is validated; LongMemEval neutrality for temporal
+> work is *expected* (Post-Retrieval Assembly replication, McNemar p=0.45);
+> reranking should use the protected-top-K pattern (ConvMemory v2).
+
+#### T1/T6 Temporal Supersession (15%) — Medium Effort — NEXT
 **Approach**: Post-retrieval resolution layer, not scoring change.
 - Detect "current"/"now"/"latest" queries at the tool layer
 - Group results by topic (using key terms)
-- Within each group, prefer the result with the highest sequence/timestamp
-- Research: ScrubJay-MEM (type-conditioned perishability), "Don't Ask the
-  LLM to Track Freshness" (deterministic max(serial) aggregation)
+- Within each group, prefer the result with the highest sequence/timestamp,
+  by **deterministic chronology only** — not semantic similarity
+  (StateAuditor/STALE: verified transitions are provenance + chronology,
+  never semantic supersession)
+- Longer-term: derived lifecycle state per fact group (GPM's bitemporal
+  model) so "current" resolution becomes a lookup
+- Research: ScrubJay-MEM (type-conditioned perishability — decay *reverses*
+  on fact-consolidation tasks, confirming our reversion results),
+  Post-Retrieval Assembly (separating evidence extraction from policy
+  execution is where the gains are, +10.8pp on MAB FactConsolidation),
+  GPM (bitemporal lifecycle states, fail-closed release)
 **Risk**: Must not regress LongMemEval — only applies to explicit "current"
-queries, not all queries.
+queries. Post-Retrieval Assembly found no LongMemEval advantage for
+temporal machinery (p=0.45), so neutrality there is expected; MemoraStrict
+T1/T6 is the acceptance gate.
 
 #### T8 Contradiction Detection (0%) — Medium Effort
-**Approach**: Post-retrieval conflict flagging.
-- When `memory.episodic_search` returns multiple results for the same topic
-  with different values, flag them as conflicting
+**Approach**: Post-retrieval conflict flagging with TANGLE semantics —
+surface the conflict (both values + provenance + timestamps), never
+silently resolve it. Many conflicts are genuinely irreducible
+(context-partitioned, behavior-oscillation); the correct behavior is
+preserving alternatives, not picking a winner.
 - Group results by topic (using existing key terms)
 - Check for value divergence within groups
-- Research: TOKI (bitemporal operators), MOSAIC (active conflict detection
-  at save time), STALE (implicit conflict benchmark)
+- Report `conflicting: true` with both candidates so the agent/user decides
+- Research: TANGLE (irreducible-conflict benchmark, 541 instances),
+  TOKI (bitemporal operator algebra — write-time resolution is concurrency
+  control; losing facts preserved in audit rows, matching our write-audit
+  journal), MELD (five-outcome claim admission: insert/merge/relate/
+  conflict/reject under freshness gates)
 **Risk**: Low — read-time detection only, non-destructive.
 
 #### T10 Cross-Session Synthesis (0% verif, 100% R@1) — Medium Effort
@@ -307,14 +329,33 @@ queries, not all queries.
   xMemory (decoupling to aggregation)
 
 #### T2 Abstention for 2-Term Queries (36%) — High Effort
-**Approach**: Corpus-frequency-based generic term detection.
+**Approach**: Corpus-frequency-based generic term detection, with a
+**calibrated** silence threshold rather than guessed constants
+(CommitDistill calibrates θ=2.5 on TF-IDF scores for its deterministic
+memory layer — same philosophy as our `min_score`/`min_coverage`).
 - Terms that appear in >50% of records are generic ("favorite", "food")
 - For 2-term queries where 1 term is generic, abstain if the specific term
   never matches across ALL candidates
-- Research: RE-call (calibrated per-corpus threshold), retrieval emptiness
-  problem (query-type-aware thresholds)
-**Risk**: RE-call found 48.1% false-abstain on LongMemEval near-misses —
-this is an open problem across the field.
+- Research: RE-call (calibrated per-corpus threshold — 48.1% false-abstain
+  on LongMemEval near-misses; open problem), RSCB-MC (abstention as a
+  first-class *safety* action for coding agents — validates the product
+  framing), Kumiho (97.5% adversarial refusal)
+**Risk**: RE-call's false-abstain rate is why abstention stays opt-in.
+
+#### Phase 4B: Protected Top-K Reranking (LongMemEval R@1) — Medium Effort
+**Approach**: Rerank *only* the deterministic top-10 (ConvMemory v2
+pattern). Recall@5/@10 are already 1.00, so a protected-top-K rerank is
+**structurally regression-free on recall** — it can only improve R@1/MRR.
+- Reranker options: conversational-trained cross-encoder (MemReranker
+  family: temporal/causal/coreference-aware, 0.6B matches much larger
+  models), or the bicameral LLM judge (LlamaLeftHemisphere) over
+  (query, content) pairs
+- **Never** an off-the-shelf web-search reranker: opsem measured −6.9 pp
+  on conversational queries (ms-marco-MiniLM)
+- Cascade is cost-effective: ConvMemory v2 sits 0.013 MRR below a
+  full-pool reranker at a fraction of the cost
+**Acceptance**: LongMemEval 50q R@1 ≥ 0.86 held with MRR improvement;
+MemoraStrict no-regression.
 
 ### Benchmark Strategy Pivot (2026-08-20)
 
@@ -368,6 +409,7 @@ python3 scripts/memorastrict_bench.py --seeds 1 2 3 4 5 --min-coverage 0.5 --per
 
 ## References
 
+- [`docs/notes/research-2026-08-20-agent-memory.md`](notes/research-2026-08-20-agent-memory.md) — **2026-08-20 research pass (new)**: ScrubJay-MEM, TOKI, TANGLE, MELD, GPM, STALE/StateAuditor, Post-Retrieval Assembly, ConvMemory v1/v2, MemReranker, CommitDistill, RSCB-MC, GroupMemBench, ChronoMem, Auto-Dreamer, MemForest
 - [`docs/V6_BENCHMARK_DESIGN.md`](V6_BENCHMARK_DESIGN.md) — **MemoraStrict benchmark design (new)**
 - [`docs/RETRIEVAL_RESEARCH_ROADMAP.md`](RETRIEVAL_RESEARCH_ROADMAP.md) — Original multi-phase plan
 - [`docs/V6_PHASE4_RESEARCH.md`](V6_PHASE4_RESEARCH.md) — **Phase 4 research findings (new)**
