@@ -496,13 +496,30 @@ impl McpServer {
     ) -> anyhow::Result<Self> {
         let store = std::sync::Arc::new(MemoryStore::open_default(store_path)?);
 
-        // Open Tantivy search index alongside LMDB
+        // Open Tantivy search index alongside LMDB. If the on-disk index was
+        // written with an incompatible schema by an older version, a writable
+        // open moves it aside and creates a fresh index — rebuild it from the
+        // canonical LMDB store so the upgrade is seamless.
         let search_path = store_path.join("tantivy");
         std::fs::create_dir_all(&search_path)?;
         let search = std::sync::Arc::new(if readonly {
             SearchEngine::open_readonly(&search_path)?
         } else {
-            SearchEngine::open(&search_path)?
+            let engine = SearchEngine::open(&search_path)?;
+            if engine.schema_migrated() {
+                tracing::warn!(
+                    "Tantivy index schema was incompatible with this version — rebuilding \
+                     the search index from the canonical LMDB store"
+                );
+                let report = wm_memory::reindex::rebuild_index(&store, &engine, &[])?;
+                tracing::warn!(
+                    "Search index rebuilt: {} indexed, {} skipped, {} scanned",
+                    report.indexed,
+                    report.skipped,
+                    report.scanned
+                );
+            }
+            engine
         });
 
         let karma_ledger = std::sync::Arc::new(KarmaLedger::new(store.clone())?);

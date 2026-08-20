@@ -4,7 +4,7 @@ A cognitive operating system for agentic AI — rebuilt from the ground up in Ru
 
 ## Current Status
 
-**v5.8.0 — Feature phases complete; release candidate. 15 crates, 229 registered tool implementations, 3,513 tests, ~131,000 LOC, 0 clippy warnings, and 0 dependency vulnerabilities. The release target is the curated local memory/session MCP workflow; explicit routing is the reliable contract, while semantic NLU and the broader cognitive surface remain optional or experimental.**
+**v5.8.0 — Feature phases complete; release candidate. 15 crates, 237 registered tool implementations (232 available in the default brain wave; 48 in the curated profile), 3,570 tests, ~131,000 LOC, 0 clippy warnings, and 0 dependency vulnerabilities. Counts verified against the v5.8.0 release gate run of 2026-08-20. The release target is the curated local memory/session MCP workflow; explicit routing is the reliable contract, while semantic NLU and the broader cognitive surface remain optional or experimental.**
 
 The product promise is local-first memory and session continuity for coding
 agents: remember project context, find it after restart, and carry work across
@@ -65,7 +65,7 @@ sessions without sending the memory store to a hosted service.
 
 ```bash
 wm serve       # Start MCP server (curated product surface by default)
-wm serve --profile full      # Archive/research surface (all 229 tools)
+wm serve --profile full      # Archive/research surface (all 237 tools)
 wm daemon      # Persistent daemon — autonomous cycles, dream, self-play (--cycle-interval, --dream-interval, --research-interval, --selfplay-interval)
 wm doctor      # Health check — LMDB, Tantivy, citta, dream, tools (--store flag)
 wm seal        # HMAC integrity manifest for the store
@@ -79,7 +79,7 @@ wm migrate     # Migrate legacy v26 SQLite memories into the v5 store
 
 ### Tool Surface Profiles
 
-`wm serve` exposes a curated subset of the 229-tool surface via profiles (see AGENTS.md):
+`wm serve` exposes a curated subset of the 237-tool surface via profiles (see AGENTS.md):
 
 - `--profile full` (default) — everything
 - `--profile curated` — the memory-hierarchy product surface: memory, session, claims, transactions, diagnostics, and tools.list
@@ -128,7 +128,7 @@ See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) for the release plan 
 - **NLU router**: Optional two-layer system — embedding router (cosine similarity, OATS refinement) and TF-IDF fallback. Explicit routing remains the reliable path until the labeled shadow set supports promotion.
 - **Mutable structures**: Gana taxonomy drift tracking, dynamic galaxy creation from memory clustering, learned dream cycle phase selection, learned autonomous cycle strategy. All persist to disk.
 - **Polyglot without subprocesses**: Julia embedded via jlrs, Haskell/Koka/Zig compiled to native libraries.
-- **Fractal meta-tool**: 229 registered tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm`; the curated profile is the intended product boundary and the full surface is an archive/research mode.
+- **Fractal meta-tool**: 237 registered tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm`; the curated profile is the intended product boundary and the full surface is an archive/research mode.
 - **Mandala compartments**: 4 security tiers (Research/Sandbox/Production/Secure) with isolated LMDB+Tantivy+associations per compartment.
 - **RSI pipeline**: 3-phase recursive self-improvement — friction logging, deduplication, karma-friction bridge, proactive improvement, resolution verification with regression detection, adversarial test synthesis from friction history, coverage reporting. 12 RSI tools, 8 autonomous cycle types.
 - **Fuzz testing**: 8 cargo-fuzz targets + 22 proptest tests across 4 crates.
@@ -162,7 +162,7 @@ See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) for the release plan 
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all 3,513 tests
+cargo test                     # Run all 3,570 tests
 cargo clippy --all-targets     # Lint (0 warnings)
 cargo build --release --features python -p wm-mcp  # Build with PyO3 bindings
 cargo build --features wm-memory/lancedb  # Build with LanceDB vector search

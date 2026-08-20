@@ -270,6 +270,12 @@ pub struct SearchEngine {
     /// Tracked index health — failures are recorded so callers can detect
     /// degraded state instead of silently reporting healthy.
     health: IndexHealth,
+    /// True when the on-disk index had an incompatible schema and was
+    /// replaced with a fresh empty index at open time. The old index was
+    /// moved aside (`.schema-mismatch.<timestamp>` sibling); callers that
+    /// own the canonical LMDB store should rebuild via
+    /// [`crate::reindex::rebuild_index`].
+    schema_migrated: bool,
 }
 
 impl SearchEngine {
@@ -301,16 +307,70 @@ impl SearchEngine {
         )
     }
 
+    /// Open (or create) the Tantivy index at `path`, migrating an
+    /// incompatible schema when `writable`.
+    ///
+    /// The Tantivy index is a derived index over the canonical LMDB store.
+    /// When the on-disk index was written by an older version with an
+    /// incompatible schema, a writable open moves the old directory aside
+    /// (`<name>.schema-mismatch.<millis>` sibling) and creates a fresh empty
+    /// index — the caller should rebuild it from LMDB via
+    /// [`crate::reindex::rebuild_index`]. A read-only open refuses to migrate
+    /// and returns an error directing the user to `wm reindex`.
+    fn open_index(path: &Path, schema: &Schema, writable: bool) -> Result<(Index, bool)> {
+        let directory = tantivy::directory::MmapDirectory::open(path)
+            .map_err(|e| CoreError::Memory(format!("Tantivy open directory: {e}")))?;
+        match Index::open_or_create(directory, schema.clone()) {
+            Ok(index) => Ok((index, false)),
+            Err(tantivy::error::TantivyError::SchemaError(_)) => {
+                if !writable {
+                    return Err(CoreError::Memory(format!(
+                        "Tantivy index at {} was created with an incompatible schema by an \
+                         older version. Run 'wm reindex' (or start 'wm serve' without \
+                         --readonly) to migrate and rebuild it from the canonical store.",
+                        path.display()
+                    )));
+                }
+                let ts = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis())
+                    .unwrap_or(0);
+                let file_name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("tantivy");
+                let backup = path.with_file_name(format!("{file_name}.schema-mismatch.{ts}"));
+                std::fs::rename(path, &backup).map_err(|e| {
+                    CoreError::Memory(format!(
+                        "Tantivy schema migration — rename old index to {}: {e}",
+                        backup.display()
+                    ))
+                })?;
+                std::fs::create_dir_all(path).map_err(|e| {
+                    CoreError::Memory(format!("Tantivy schema migration — create index dir: {e}"))
+                })?;
+                tracing::warn!(
+                    "Tantivy index schema mismatch — old index moved to {}; creating a fresh \
+                     index (rebuild from LMDB will follow)",
+                    backup.display()
+                );
+                let directory = tantivy::directory::MmapDirectory::open(path)
+                    .map_err(|e| CoreError::Memory(format!("Tantivy open directory: {e}")))?;
+                let index = Index::open_or_create(directory, schema.clone())
+                    .map_err(|e| CoreError::Memory(format!("Tantivy open_or_create: {e}")))?;
+                Ok((index, true))
+            }
+            Err(e) => Err(CoreError::Memory(format!("Tantivy open_or_create: {e}"))),
+        }
+    }
+
     /// Create or open a search engine index at the given path.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let (schema, field_id, field_galaxy, field_content, field_tags, field_timestamp) =
             Self::build_schema();
 
-        let directory = tantivy::directory::MmapDirectory::open(path)
-            .map_err(|e| CoreError::Memory(format!("Tantivy open directory: {e}")))?;
-        let index = Index::open_or_create(directory, schema)
-            .map_err(|e| CoreError::Memory(format!("Tantivy open_or_create: {e}")))?;
+        let (index, schema_migrated) = Self::open_index(path, &schema, true)?;
 
         let reader = index
             .reader_builder()
@@ -332,6 +392,7 @@ impl SearchEngine {
             field_tags,
             field_timestamp,
             health: IndexHealth::default(),
+            schema_migrated,
         })
     }
 
@@ -343,10 +404,7 @@ impl SearchEngine {
         let path = path.as_ref();
         let (schema, field_id, field_galaxy, field_content, field_tags, field_timestamp) =
             Self::build_schema();
-        let directory = tantivy::directory::MmapDirectory::open(path)
-            .map_err(|e| CoreError::Memory(format!("Tantivy open directory: {e}")))?;
-        let index = Index::open_or_create(directory, schema)
-            .map_err(|e| CoreError::Memory(format!("Tantivy open_or_create: {e}")))?;
+        let (index, schema_migrated) = Self::open_index(path, &schema, false)?;
         let reader = index
             .reader_builder()
             .reload_policy(ReloadPolicy::OnCommitWithDelay)
@@ -362,7 +420,18 @@ impl SearchEngine {
             field_tags,
             field_timestamp,
             health: IndexHealth::default(),
+            schema_migrated,
         })
+    }
+
+    /// True when the on-disk index had an incompatible schema and was
+    /// replaced with a fresh empty index at open time. The old index was
+    /// preserved as a `.schema-mismatch.<timestamp>` sibling directory.
+    /// Callers that own the canonical LMDB store should rebuild via
+    /// `reindex::rebuild_index` when this returns true.
+    #[must_use]
+    pub const fn schema_migrated(&self) -> bool {
+        self.schema_migrated
     }
 
     /// Returns a snapshot of index health (success/failure counts, degraded
@@ -866,6 +935,99 @@ mod tests {
         let tmp = tempdir().unwrap();
         let engine = SearchEngine::open(tmp.path()).unwrap();
         (tmp, engine)
+    }
+
+    /// Write a legacy one-field index into `dir`, simulating a store created
+    /// by an older WhiteMagic version with a different Tantivy schema.
+    fn write_incompatible_index(dir: &Path) {
+        std::fs::create_dir_all(dir).unwrap();
+        let mut builder = Schema::builder();
+        builder.add_text_field("legacy", STRING | STORED);
+        let schema = builder.build();
+        let directory = tantivy::directory::MmapDirectory::open(dir).unwrap();
+        Index::open_or_create(directory, schema).unwrap();
+    }
+
+    #[test]
+    fn open_migrates_incompatible_schema() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("tantivy");
+        write_incompatible_index(&dir);
+
+        let engine = SearchEngine::open(&dir).unwrap();
+        assert!(
+            engine.schema_migrated(),
+            "incompatible schema must trigger migration"
+        );
+
+        // The old index must be preserved as a .schema-mismatch sibling.
+        let backups: Vec<_> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(std::result::Result::ok)
+            .filter(|e| e.file_name().to_string_lossy().contains("schema-mismatch"))
+            .collect();
+        assert_eq!(backups.len(), 1, "old index must be backed up exactly once");
+
+        // The fresh index must be writable and searchable.
+        let mut writer = engine.writer().unwrap();
+        engine
+            .add_document(
+                &mut writer,
+                "33333333-3333-3333-3333-333333333333",
+                "codex",
+                "fresh index after migration",
+                &[],
+                1700000000,
+            )
+            .unwrap();
+        engine.commit(&mut writer).unwrap();
+        let results = engine.search("fresh index", 10).unwrap();
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn open_readonly_rejects_incompatible_schema() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("tantivy");
+        write_incompatible_index(&dir);
+
+        let err = match SearchEngine::open_readonly(&dir) {
+            Ok(_) => panic!("read-only open must reject an incompatible schema"),
+            Err(e) => e,
+        };
+        assert!(
+            format!("{err}").contains("wm reindex"),
+            "read-only mismatch must point at wm reindex, got: {err}"
+        );
+
+        // Nothing was moved: the incompatible index is still in place.
+        let siblings: Vec<_> = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .filter_map(std::result::Result::ok)
+            .filter(|e| e.file_name().to_string_lossy().contains("schema-mismatch"))
+            .collect();
+        assert!(siblings.is_empty(), "read-only open must not migrate");
+    }
+
+    #[test]
+    fn reopen_matching_schema_not_migrated() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("tantivy");
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let first = SearchEngine::open(&dir).unwrap();
+        assert!(!first.schema_migrated());
+        drop(first); // release the tantivy writer lock before reopening
+
+        let second = SearchEngine::open(&dir).unwrap();
+        assert!(
+            !second.schema_migrated(),
+            "matching schema must not migrate"
+        );
+        drop(second);
+
+        let third = SearchEngine::open_readonly(&dir).unwrap();
+        assert!(!third.schema_migrated());
     }
 
     #[test]
