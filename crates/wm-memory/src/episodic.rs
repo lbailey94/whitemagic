@@ -367,6 +367,11 @@ impl<'a> EpisodicStore<'a> {
     ///
     /// This is a v6 library path only. It does not alter the v5 MCP search
     /// route and keeps source records attached to every hit.
+    ///
+    /// When the query asks for the current/latest value of something
+    /// (see [`is_current_query`]), the topic cluster is reordered by
+    /// deterministic chronology so the most recent statement outranks older
+    /// ones — post-retrieval temporal resolution, not a scoring change.
     pub fn search(
         &self,
         query: &str,
@@ -384,6 +389,28 @@ impl<'a> EpisodicStore<'a> {
     /// answer turns that match few original query terms but match the key
     /// entity strongly enter the candidate pool.
     pub fn search_with_limits(
+        &self,
+        query: &str,
+        limit: usize,
+        candidate_limit: usize,
+        include_historical: bool,
+    ) -> Result<Vec<EpisodicSearchResult>> {
+        if limit == 0 {
+            return Ok(Vec::new());
+        }
+        let mut results = self.search_scored(query, limit, candidate_limit, include_historical)?;
+        if is_current_query(query) {
+            self.resolve_current(&mut results);
+        }
+        results.truncate(limit);
+        Ok(results)
+    }
+
+    /// Deterministic scoring pipeline without temporal resolution or
+    /// truncation: candidates → scoring → boosts → score sort. `limit` is
+    /// used only for query-class planning (candidate budgets); the caller
+    /// truncates.
+    fn search_scored(
         &self,
         query: &str,
         limit: usize,
@@ -580,7 +607,6 @@ impl<'a> EpisodicStore<'a> {
                 .then_with(|| a.record.sequence.cmp(&b.record.sequence))
                 .then_with(|| a.record.id.cmp(&b.record.id))
         });
-        results.truncate(limit);
         Ok(results)
     }
 
@@ -614,7 +640,7 @@ impl<'a> EpisodicStore<'a> {
         // Over-fetch deterministic candidates for reranking.
         let rerank_pool = limit.max(candidate_limit).min(50);
         let deterministic =
-            self.search_with_limits(query, rerank_pool, rerank_pool, include_historical)?;
+            self.search_scored(query, rerank_pool, rerank_pool, include_historical)?;
         if deterministic.is_empty() {
             return Ok(Vec::new());
         }
@@ -657,6 +683,9 @@ impl<'a> EpisodicStore<'a> {
                     break;
                 }
             }
+            if is_current_query(query) {
+                self.resolve_current(&mut reranked);
+            }
             reranked.truncate(limit);
             Ok(reranked)
         } else {
@@ -687,9 +716,69 @@ impl<'a> EpisodicStore<'a> {
                     .then_with(|| a.record.sequence.cmp(&b.record.sequence))
                     .then_with(|| a.record.id.cmp(&b.record.id))
             });
+            if is_current_query(query) {
+                self.resolve_current(&mut reranked);
+            }
             reranked.truncate(limit);
             Ok(reranked)
         }
+    }
+
+    /// Post-retrieval temporal resolution for "current value" queries.
+    ///
+    /// When the user asks "What's my current favorite X?", the current-value
+    /// statement often matches *fewer* query terms than an older statement
+    /// ("my favorite coffee is dark roast" matches favorite+coffee, while
+    /// "I switched to cold brew for coffee" matches only coffee), so pure
+    /// score order prefers the stale fact. This layer instead promotes the
+    /// currency signal directly:
+    ///
+    /// 1. Anchor set: `UserStatement` records containing a change marker
+    ///    ("switched to", "changed my", "now prefer", "used to", ...) — the
+    ///    user's own words that a value moved. Only user statements anchor:
+    ///    the user's own statement is the authority for their current state,
+    ///    and assistant echoes must not hijack chronology.
+    /// 2. Anchors are ordered by deterministic chronology — `(created_at,
+    ///    sequence)` descending — so the most recent change outranks earlier
+    ///    ones (v1→v2→v3 chains resolve to v3).
+    /// 3. Remaining results keep their deterministic score order behind the
+    ///    anchors.
+    ///
+    /// Scoring is untouched and non-current queries take the identical path,
+    /// so behavior for historical questions is unchanged by construction
+    /// (see `docs/notes/research-2026-08-20-agent-memory.md`: the
+    /// Post-Retrieval Assembly paper found the LongMemEval effect of
+    /// temporal machinery insignificant, p=0.45 — the gain is on
+    /// current-value questions, which is exactly what this targets).
+    fn resolve_current(&self, results: &mut Vec<EpisodicSearchResult>) {
+        if results.len() < 2 {
+            return;
+        }
+        let mut anchors: Vec<EpisodicSearchResult> = Vec::new();
+        let mut rest: Vec<EpisodicSearchResult> = Vec::new();
+        for result in results.drain(..) {
+            let is_anchor = matches!(result.record.kind, EpisodicKind::UserStatement)
+                && contains_change_marker(&result.record.content);
+            if is_anchor {
+                anchors.push(result);
+            } else {
+                rest.push(result);
+            }
+        }
+        if anchors.is_empty() {
+            // No currency signal — keep the deterministic score order.
+            *results = rest;
+            return;
+        }
+        anchors.sort_by(|a, b| {
+            b.record
+                .created_at
+                .cmp(&a.record.created_at)
+                .then_with(|| b.record.sequence.cmp(&a.record.sequence))
+                .then_with(|| a.record.id.cmp(&b.record.id))
+        });
+        anchors.extend(rest);
+        *results = anchors;
     }
 
     fn load_records(&self, ids: &[EpisodicId]) -> Result<Vec<EpisodicRecord>> {
@@ -738,6 +827,60 @@ fn tokenize(text: &str) -> Vec<String> {
             }
             terms
         })
+}
+
+/// Single-word cues that ask for the current value of something.
+const CURRENT_QUERY_WORD_CUES: &[&str] = &["current", "currently", "latest", "nowadays"];
+
+/// Multi-word cues that ask for the current value of something.
+const CURRENT_QUERY_PHRASE_CUES: &[&str] = &["these days", "right now", "at the moment"];
+
+/// True when the query asks for the current/latest value of something,
+/// e.g. "What's my current favorite coffee?".
+///
+/// Only such queries trigger post-retrieval temporal resolution
+/// ([`EpisodicStore::resolve_current`]); all other queries take the
+/// deterministic score order unchanged.
+#[must_use]
+pub fn is_current_query(query: &str) -> bool {
+    let lowered = query.to_ascii_lowercase();
+    let has_word = lowered
+        .split(|c: char| !c.is_alphanumeric())
+        .any(|token| CURRENT_QUERY_WORD_CUES.contains(&token));
+    has_word
+        || CURRENT_QUERY_PHRASE_CUES
+            .iter()
+            .any(|cue| lowered.contains(cue))
+}
+
+/// Phrase markers that a stated value has changed — the currency signal
+/// used by [`EpisodicStore::resolve_current`]. Kept deliberately specific:
+/// these phrases indicate a *transition*, not merely a preference
+/// statement, so plain "my favorite X is Y" statements never anchor.
+const CHANGE_MARKERS: &[&str] = &[
+    "switched to",
+    "switch to",
+    "switching to",
+    "changed my",
+    "change my",
+    "changed from",
+    "now prefer",
+    "now i prefer",
+    "now i'm",
+    "now im",
+    "no longer",
+    "used to",
+    "moved to",
+    "not anymore",
+    "instead of",
+    "replaced",
+    "gave up",
+];
+
+/// True when the content contains a phrase marking a value transition.
+fn contains_change_marker(content: &str) -> bool {
+    let lowered = content.to_ascii_lowercase();
+    CHANGE_MARKERS.iter().any(|marker| lowered.contains(marker))
 }
 
 fn simple_stem(word: &str) -> String {
@@ -832,6 +975,157 @@ mod tests {
             content,
             Provenance::new(ProvenanceSource::User),
         )
+    }
+
+    fn user_statement(sequence: u64, content: &str) -> EpisodicRecord {
+        EpisodicRecord::new(
+            None,
+            sequence,
+            EpisodicKind::UserStatement,
+            content,
+            Provenance::new(ProvenanceSource::User),
+        )
+    }
+
+    fn assistant_response(sequence: u64, content: &str) -> EpisodicRecord {
+        EpisodicRecord::new(
+            None,
+            sequence,
+            EpisodicKind::AssistantResponse,
+            content,
+            Provenance::new(ProvenanceSource::Agent),
+        )
+    }
+
+    #[test]
+    fn current_query_detection() {
+        assert!(is_current_query("What's my current favorite coffee?"));
+        assert!(is_current_query("What am I currently reading these days?"));
+        assert!(is_current_query("What's the latest book I mentioned?"));
+        assert!(is_current_query("What's my job right now?"));
+        assert!(is_current_query("What am I eating at the moment?"));
+        assert!(!is_current_query("What's my favorite coffee?"));
+        assert!(!is_current_query("Where did I volunteer in February?"));
+        assert!(!is_current_query("What did I say about the trip?"));
+        // Word-boundary match: "current" inside another word must not fire.
+        assert!(!is_current_query("What currency did I use in Japan?"));
+    }
+
+    #[test]
+    fn current_query_resolution_prefers_latest_statement() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        // Old-value statements match MORE query terms (favorite + coffee)
+        // than the change statement (coffee only), so pure score order
+        // prefers the stale fact — the exact T1 failure mode.
+        episodic
+            .append(&user_statement(1, "My favorite coffee is dark roast."))
+            .unwrap();
+        episodic
+            .append(&user_statement(
+                2,
+                "I really love dark roast when it comes to coffee.",
+            ))
+            .unwrap();
+        episodic
+            .append(&user_statement(3, "I've been jogging lately."))
+            .unwrap();
+        episodic
+            .append(&user_statement(4, "I've switched to cold brew for coffee."))
+            .unwrap();
+
+        let results = episodic
+            .search("What's my current favorite coffee?", 5, false)
+            .unwrap();
+        assert!(!results.is_empty());
+        assert!(
+            results[0].record.content.contains("cold brew"),
+            "current query must rank the latest statement first, got: {}",
+            results[0].record.content
+        );
+    }
+
+    #[test]
+    fn non_current_query_keeps_score_order() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        episodic
+            .append(&user_statement(1, "My favorite coffee is dark roast."))
+            .unwrap();
+        episodic
+            .append(&user_statement(2, "I've switched to cold brew for coffee."))
+            .unwrap();
+
+        // Without a current-value cue the deterministic score order holds:
+        // the statement matching more query terms (favorite + coffee) wins.
+        let results = episodic
+            .search("What's my favorite coffee?", 5, false)
+            .unwrap();
+        assert!(!results.is_empty());
+        assert!(
+            results[0].record.content.contains("dark roast"),
+            "non-current query must keep score order, got: {}",
+            results[0].record.content
+        );
+    }
+
+    #[test]
+    fn current_resolution_anchors_on_user_statements_only() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        episodic
+            .append(&user_statement(1, "My favorite coffee is dark roast."))
+            .unwrap();
+        // An assistant echo created LATER must not hijack the anchor set.
+        episodic
+            .append(&assistant_response(
+                2,
+                "Got it, dark roast is your favorite coffee!",
+            ))
+            .unwrap();
+        episodic
+            .append(&user_statement(3, "I've switched to cold brew for coffee."))
+            .unwrap();
+
+        let results = episodic
+            .search("What's my current favorite coffee?", 5, false)
+            .unwrap();
+        assert!(
+            results[0].record.content.contains("cold brew"),
+            "user statements anchor chronology, got: {}",
+            results[0].record.content
+        );
+        assert_eq!(results[0].record.kind, EpisodicKind::UserStatement);
+    }
+
+    #[test]
+    fn current_query_without_change_markers_keeps_score_order() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        // No change markers anywhere: resolution must not reorder anything.
+        episodic
+            .append(&user_statement(
+                1,
+                "My favorite hiking trail is Eagle Ridge.",
+            ))
+            .unwrap();
+        episodic
+            .append(&user_statement(2, "I go hiking every weekend."))
+            .unwrap();
+
+        let results = episodic
+            .search("What's my current favorite hiking trail?", 5, false)
+            .unwrap();
+        assert!(!results.is_empty());
+        assert!(
+            results[0].record.content.contains("Eagle Ridge"),
+            "no change markers → deterministic score order, got: {}",
+            results[0].record.content
+        );
     }
 
     #[test]
