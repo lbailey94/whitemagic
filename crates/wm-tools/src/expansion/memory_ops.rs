@@ -864,6 +864,10 @@ impl Tool for MemoryEpisodicSearchTool {
         Ok(json!({
             "status": "success",
             "count": results.len(),
+            // Temporal resolution: true when the query asked for the
+            // current/latest value and the topic cluster was reordered by
+            // deterministic chronology (see episodic::resolve_current).
+            "current_resolution": wm_memory::episodic::is_current_query(query),
             "results": results,
         }))
     }
