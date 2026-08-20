@@ -273,6 +273,8 @@ def run_scenario(
     candidate_limit: int = 100,
     bm25_only: bool = False,
     categories: list[str] | None = None,
+    min_score: float = 0.0,
+    min_coverage: float = 0.0,
 ) -> dict[str, Any]:
     """Run a single MemoraStrict scenario through the WM MCP server."""
 
@@ -435,6 +437,10 @@ def run_scenario(
         search_route = "memory.episodic_search"
         search_args["include_historical"] = False
         search_args["candidate_limit"] = candidate_limit
+        if min_score > 0.0:
+            search_args["min_score"] = min_score
+        if min_coverage > 0.0:
+            search_args["min_coverage"] = min_coverage
 
         search_req = {
             "jsonrpc": "2.0",
@@ -655,6 +661,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=10, help="Results per query")
     parser.add_argument("--candidate-limit", type=int, default=100, help="Candidate set size")
     parser.add_argument("--bm25-only", action="store_true", help="Run BM25-only baseline (no enrichment)")
+    parser.add_argument("--min-score", type=float, default=0.0, help="Minimum score threshold for abstention (default 0.0 = no threshold)")
+    parser.add_argument("--min-coverage", type=float, default=0.0, help="Minimum coverage ratio for abstention (default 0.0 = no threshold)")
     parser.add_argument("--output", default=None, help="Output JSON path")
     parser.add_argument("--per-case", action="store_true", help="Include per-query results in output")
     args = parser.parse_args()
@@ -676,6 +684,8 @@ def main() -> None:
             candidate_limit=args.candidate_limit,
             bm25_only=args.bm25_only,
             categories=args.categories,
+            min_score=args.min_score,
+            min_coverage=args.min_coverage,
         )
 
         if args.categories:
