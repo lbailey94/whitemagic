@@ -205,11 +205,33 @@ breakdowns, cost metrics (latency, throughput, footprint).
 5. **Cross-session synthesis (T10=0%)**: Retrieves facts but can't compute over them
 
 **Roadmap items from baseline**:
-- Abstention threshold: return "I don't know" when top score < threshold
+- ~~Abstention threshold: return "I don't know" when top score < threshold~~ ✅ Fixed
 - Temporal recency weighting: gradient time decay (Phase 4D)
 - Consolidation: access-count importance boost needs validation
 - Contradiction detection: post-retrieval conflict identification
 - Synthesis: post-retrieval computation over multiple results
+
+### Abstention Fix (2026-08-20)
+
+**Implementation**: Added `min_score` and `min_coverage` parameters to
+`memory.episodic_search` tool. The abstention mechanism checks if ALL results
+match only 1 query term when the query has 3+ content terms — indicating the
+match is on a generic term (e.g. "favorite") rather than the actual topic.
+Count-style queries ("how many") are exempted to preserve count verification.
+
+**5-seed aggregated results (215 questions)**:
+
+> Category | Baseline | With Abstention | Change
+>----------|----------|----------------|--------
+> T2 (Abstention) | 4.0% | 36.0% | +32%
+> T9 (Preference Drift) | 41.7% | 41.7% | —
+> Overall | 24.65% | 28.37% | +3.72%
+
+No regressions on any category. LongMemEval: 86% R@1 unchanged (opt-in).
+
+**Files modified**:
+- `crates/wm-tools/src/expansion/memory_ops.rs` — `min_score`, `min_coverage` params
+- `scripts/memorastrict_bench.py` — `--min-score`, `--min-coverage` CLI flags
 
 ### Benchmark Strategy Pivot (2026-08-20)
 
@@ -257,6 +279,8 @@ python3 scripts/longmemeval_bench.py --route memory.episodic_search --max-questi
 # MemoraStrict
 python3 scripts/memorastrict_gen.py --seeds 5
 python3 scripts/memorastrict_bench.py --seed 1 --per-case
+# With abstention threshold
+python3 scripts/memorastrict_bench.py --seeds 1 2 3 4 5 --min-coverage 0.5 --per-case --output benchmarks/results/memorastrict_abstention.json
 ```
 
 ## References
