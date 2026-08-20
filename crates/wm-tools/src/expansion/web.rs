@@ -210,7 +210,7 @@ pub fn strip_html(html: &str) -> String {
                     out.push('\n');
                 }
             }
-            c if in_script => {} // inside <script>/<style>: drop content
+            _ if in_script => {} // inside <script>/<style>: drop content
             '&' => {
                 // decode entity — but only when properly terminated with
                 // ';' before any '<' (a tag must never be swallowed by the
