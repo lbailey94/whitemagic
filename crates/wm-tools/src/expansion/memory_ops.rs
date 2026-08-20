@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
-use wm_memory::{MemoryStore, RecallEngine, SearchEngine};
+use wm_memory::{MemoryStore, RecallEngine, SearchEngine, episodic::detect_conflicts};
 
 use super::common::{
     galaxy_name, int_prop, num_prop, parse_galaxy, parse_galaxy_or, schema, str_prop,
@@ -840,12 +840,19 @@ impl Tool for MemoryEpisodicSearchTool {
             && !is_count_query
             && query_term_count >= 3
             && !raw_results.iter().any(|hit| hit.matched_terms >= 2);
-        let results = raw_results
+        let visible: Vec<_> = raw_results
             .into_iter()
             .filter(|hit| !hit.record.is_private && !hit.record.model_exclude)
             .filter(|hit| min_score.is_none_or(|ms| hit.score >= ms))
             .filter(|_| !abstain)
             .take(limit)
+            .collect();
+        // Read-time contradiction detection over the visible results only
+        // (TANGLE semantics: surface both sides with provenance, never
+        // silently resolve).
+        let conflicts = detect_conflicts(&visible);
+        let results = visible
+            .into_iter()
             .map(|hit| {
                 json!({
                     "id": hit.record.id,
@@ -868,6 +875,9 @@ impl Tool for MemoryEpisodicSearchTool {
             // current/latest value and the topic cluster was reordered by
             // deterministic chronology (see episodic::resolve_current).
             "current_resolution": wm_memory::episodic::is_current_query(query),
+            // Detected contradictions among the results, when any: both
+            // statements with provenance; the caller decides (TANGLE).
+            "conflicts": conflicts,
             "results": results,
         }))
     }

@@ -135,6 +135,36 @@ impl VocabularyEnrichment {
             ),
             ("mutt", &["dog", "animal", "pet"]),
             ("strut", &["dog", "animal", "event", "walk"]),
+            // Dietary / alcohol vocabulary: generic question terms bridge to
+            // the specific lifestyles and drinks people actually name.
+            (
+                "vegetarian",
+                &[
+                    "dietary",
+                    "vegetable",
+                    "meat",
+                    "food",
+                    "restriction",
+                    "diet",
+                ],
+            ),
+            (
+                "vegan",
+                &[
+                    "dietary",
+                    "vegetarian",
+                    "plant",
+                    "food",
+                    "restriction",
+                    "diet",
+                ],
+            ),
+            ("steak", &["meat", "beef", "food", "dietary", "diet"]),
+            ("wine", &["alcohol", "drink", "beverage", "bar"]),
+            ("beer", &["alcohol", "drink", "beverage", "brew"]),
+            ("cocktail", &["alcohol", "drink", "beverage", "bar"]),
+            ("teetotaler", &["alcohol", "abstain", "drink", "sober"]),
+            ("sober", &["alcohol", "abstain", "drink", "teetotaler"]),
         ];
         for (specific, broader) in hypernyms {
             enrichment.hypernyms.insert(

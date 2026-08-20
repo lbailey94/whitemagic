@@ -815,7 +815,12 @@ def gen_questions_T8_contradiction_detection(
             id=f"T8_{old_label}_{new_item}",
             test_category="T8",
             question=query,
-            answer=f"CONFLICT: was {old_label}, now {verb} {new_item}",
+            # Note: the answer deliberately uses only terms that appear
+            # verbatim in the contradicting statements (old_label and
+            # new_item). The set verification checks that both facts were
+            # retrieved; a verb like "eats"/"drinks" never appears in the
+            # generated contents and made verification unpassable.
+            answer=f"CONFLICT: was {old_label}, now {new_item}",
             answer_session_ids=[sessions[session_old].id, sessions[session_new].id],
             verification_type="set",
             metadata={

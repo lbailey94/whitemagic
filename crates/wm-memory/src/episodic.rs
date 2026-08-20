@@ -1,6 +1,7 @@
 //! LMDB persistence for the v6 lossless episodic memory lane.
 
 use lmdb::{Cursor, Database, Environment, Transaction, WriteFlags};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use wm_core::{
@@ -883,6 +884,119 @@ fn contains_change_marker(content: &str) -> bool {
     CHANGE_MARKERS.iter().any(|marker| lowered.contains(marker))
 }
 
+/// Markers that explicitly contradict a previously stated value — signals
+/// that two retrieved statements may conflict and should be surfaced
+/// together (TANGLE semantics: preserve both, never silently resolve).
+const CONTRADICTION_MARKERS: &[&str] = &[
+    "no longer",
+    "anymore",
+    "changed my mind",
+    "changed my",
+    "used to",
+    "gave up",
+    "just a phase",
+    "not really",
+    "but i",
+];
+
+/// A read-time contradiction between two retrieved user statements.
+///
+/// Detection is deliberately conservative: one statement must carry an
+/// explicit contradiction marker, and the pair must share at least two
+/// content terms (the topic cluster). The report preserves both sides with
+/// full provenance — it never adjudicates.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EpisodicConflict {
+    /// The chronologically later statement (carries the contradiction
+    /// marker in the common case).
+    pub later_record: EpisodicId,
+    /// The statement it appears to contradict.
+    pub earlier_record: EpisodicId,
+    /// The contradiction phrase that triggered the detection.
+    pub marker: String,
+    /// Content terms shared by the pair (the topic cluster).
+    pub shared_terms: Vec<String>,
+    /// Full content of the later statement (provenance).
+    pub later_content: String,
+    /// Full content of the earlier statement (provenance).
+    pub earlier_content: String,
+}
+
+/// Detect contradictions among retrieved results.
+///
+/// For every `UserStatement` carrying an explicit contradiction marker,
+/// pair it with other `UserStatement` results sharing at least two content
+/// terms. Statements with identical content hashes (the same fact seen
+/// twice) are not conflicts. Results are capped to keep tool output
+/// bounded.
+#[must_use]
+pub fn detect_conflicts(results: &[EpisodicSearchResult]) -> Vec<EpisodicConflict> {
+    const MAX_CONFLICTS: usize = 10;
+    let mut conflicts: Vec<EpisodicConflict> = Vec::new();
+    let mut seen_pairs: Vec<(EpisodicId, EpisodicId)> = Vec::new();
+    for (i, marked) in results.iter().enumerate() {
+        if !matches!(marked.record.kind, EpisodicKind::UserStatement) {
+            continue;
+        }
+        let lowered = marked.record.content.to_ascii_lowercase();
+        let Some(marker) = CONTRADICTION_MARKERS
+            .iter()
+            .find(|m| lowered.contains(*m))
+            .copied()
+        else {
+            continue;
+        };
+        let marked_terms = tokenize(&marked.record.content);
+        for (j, other) in results.iter().enumerate() {
+            if i == j || !matches!(other.record.kind, EpisodicKind::UserStatement) {
+                continue;
+            }
+            if other.record.content_hash == marked.record.content_hash {
+                continue;
+            }
+            let other_terms = tokenize(&other.record.content);
+            let shared: Vec<String> = marked_terms
+                .iter()
+                .filter(|t| other_terms.contains(t))
+                .cloned()
+                .collect();
+            if shared.len() < 2 {
+                continue;
+            }
+            // Label by deterministic chronology: the later statement is the
+            // one the user said most recently.
+            let (later, earlier) = if (marked.record.created_at, marked.record.sequence)
+                > (other.record.created_at, other.record.sequence)
+            {
+                (&marked.record, &other.record)
+            } else {
+                (&other.record, &marked.record)
+            };
+            let pair_key = if later.id < earlier.id {
+                (later.id, earlier.id)
+            } else {
+                (earlier.id, later.id)
+            };
+            if seen_pairs.contains(&pair_key) {
+                continue;
+            }
+            seen_pairs.push(pair_key);
+            conflicts.push(EpisodicConflict {
+                later_record: later.id,
+                earlier_record: earlier.id,
+                marker: marker.to_string(),
+                shared_terms: shared,
+                later_content: later.content.clone(),
+                earlier_content: earlier.content.clone(),
+            });
+            if conflicts.len() >= MAX_CONFLICTS {
+                return conflicts;
+            }
+        }
+    }
+    conflicts
+}
+
 fn simple_stem(word: &str) -> String {
     if word.len() <= 3 {
         return word.to_string();
@@ -1126,6 +1240,85 @@ mod tests {
             "no change markers → deterministic score order, got: {}",
             results[0].record.content
         );
+    }
+
+    #[test]
+    fn detect_conflicts_flags_contradiction_with_shared_topic() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        episodic
+            .append(&user_statement(
+                1,
+                "I'm vegetarian now. I decided to stop eating animal products.",
+            ))
+            .unwrap();
+        episodic
+            .append(&user_statement(
+                2,
+                "I'm not really vegetarian anymore, I eat steak now.",
+            ))
+            .unwrap();
+        episodic
+            .append(&user_statement(3, "I went hiking yesterday."))
+            .unwrap();
+
+        let results = episodic
+            .search("vegetarian steak eating", 10, false)
+            .unwrap();
+        let conflicts = detect_conflicts(&results);
+        assert_eq!(
+            conflicts.len(),
+            1,
+            "the vegetarian/steak pair must be flagged, got {conflicts:?}"
+        );
+        let conflict = &conflicts[0];
+        assert!(conflict.later_content.contains("steak"));
+        assert!(conflict.earlier_content.contains("animal products"));
+        assert!(
+            conflict.shared_terms.iter().any(|t| t == "vegetarian"),
+            "shared terms must include the topic: {:?}",
+            conflict.shared_terms
+        );
+    }
+
+    #[test]
+    fn detect_conflicts_ignores_plain_statements_and_assistant_turns() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        // Two statements about the same topic, but neither contradicts.
+        episodic
+            .append(&user_statement(1, "My favorite coffee is dark roast."))
+            .unwrap();
+        episodic
+            .append(&user_statement(2, "I love coffee with breakfast."))
+            .unwrap();
+        // An assistant echo with a contradiction marker must not initiate.
+        episodic
+            .append(&assistant_response(
+                3,
+                "You mentioned you no longer like tea!",
+            ))
+            .unwrap();
+
+        let results = episodic.search("coffee tea breakfast", 10, false).unwrap();
+        assert!(detect_conflicts(&results).is_empty());
+    }
+
+    #[test]
+    fn detect_conflicts_skips_identical_content() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        let record = user_statement(1, "I'm vegetarian now, but I changed my mind.");
+        let duplicate = user_statement(2, "I'm vegetarian now, but I changed my mind.");
+        episodic.append(&record).unwrap();
+        episodic.append(&duplicate).unwrap();
+
+        let results = episodic.search("vegetarian", 10, false).unwrap();
+        // Same fact seen twice is a duplicate, not a conflict.
+        assert!(detect_conflicts(&results).is_empty());
     }
 
     #[test]

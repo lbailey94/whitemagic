@@ -1,0 +1,101 @@
+{
+  "benchmark": "memorastrict",
+  "system": "wm-full-stack",
+  "scenarios": 5,
+  "total_questions": 215,
+  "overall": {
+    "verification_rate": 0.44651162790697674
+  },
+  "category_summary": {
+    "T1": {
+      "total_questions": 20,
+      "verification_rate": 0.5,
+      "recall_at_1": 0.5,
+      "recall_at_5": 0.55,
+      "mrr": 0.52986,
+      "p50_latency_ms": 51.791137011605315,
+      "scenarios": 5
+    },
+    "T10": {
+      "total_questions": 15,
+      "verification_rate": 0.0,
+      "recall_at_1": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "p50_latency_ms": 72.86004100751597,
+      "scenarios": 5
+    },
+    "T2": {
+      "total_questions": 25,
+      "verification_rate": 0.24,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.08,
+      "mrr": 0.024668000000000002,
+      "p50_latency_ms": 55.382515987730585,
+      "scenarios": 5
+    },
+    "T3": {
+      "total_questions": 15,
+      "verification_rate": 0.6666666666666666,
+      "recall_at_1": 0.6666666666666666,
+      "recall_at_5": 0.7333333333333333,
+      "mrr": 0.7277866666666667,
+      "p50_latency_ms": 59.63216500822455,
+      "scenarios": 5
+    },
+    "T4": {
+      "total_questions": 15,
+      "verification_rate": 0.5333333333333333,
+      "recall_at_1": 0.5333333333333333,
+      "recall_at_5": 0.9333333333333333,
+      "mrr": 0.6483333333333333,
+      "p50_latency_ms": 62.25264898966998,
+      "scenarios": 5
+    },
+    "T5": {
+      "total_questions": 10,
+      "verification_rate": 0.3,
+      "recall_at_1": 0.3,
+      "recall_at_5": 0.8,
+      "mrr": 0.44611,
+      "p50_latency_ms": 66.27156600006856,
+      "scenarios": 5
+    },
+    "T6": {
+      "total_questions": 20,
+      "verification_rate": 0.5,
+      "recall_at_1": 0.5,
+      "recall_at_5": 0.55,
+      "mrr": 0.52986,
+      "p50_latency_ms": 65.63897500745952,
+      "scenarios": 5
+    },
+    "T7": {
+      "total_questions": 20,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.4,
+      "mrr": 0.12334,
+      "p50_latency_ms": 65.78753299254458,
+      "scenarios": 5
+    },
+    "T8": {
+      "total_questions": 15,
+      "verification_rate": 1.0,
+      "recall_at_1": 0.7333333333333333,
+      "recall_at_5": 1.0,
+      "mrr": 0.8666666666666667,
+      "p50_latency_ms": 68.71102399600204,
+      "scenarios": 5
+    },
+    "T9": {
+      "total_questions": 60,
+      "verification_rate": 0.5666666666666667,
+      "recall_at_1": 0.23333333333333334,
+      "recall_at_5": 0.36666666666666664,
+      "mrr": 0.29011166666666666,
+      "p50_latency_ms": 69.13629699556623,
+      "scenarios": 5
+    }
+  }
+}
