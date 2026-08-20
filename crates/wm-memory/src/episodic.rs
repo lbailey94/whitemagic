@@ -540,6 +540,37 @@ impl<'a> EpisodicStore<'a> {
                 r.score += 0.02 * (count - 1).min(3) as f32;
             }
         }
+        // Content-frequency boost (consolidation): if the same content hash
+        // appears multiple times in the result set, boost all instances. This
+        // simulates consolidation — facts mentioned repeatedly are more
+        // important. The boost is small (0.03 per duplicate, max 0.09) to
+        // avoid distorting the score scale.
+        let mut hash_counts: HashMap<&str, usize> = HashMap::new();
+        for r in &results {
+            *hash_counts
+                .entry(r.record.content_hash.as_str())
+                .or_default() += 1;
+        }
+        let hash_boosts: HashMap<String, f32> = results
+            .iter()
+            .map(|r| {
+                let count = hash_counts
+                    .get(r.record.content_hash.as_str())
+                    .copied()
+                    .unwrap_or(1);
+                let boost = if count > 1 {
+                    0.03 * (count - 1).min(3) as f32
+                } else {
+                    0.0
+                };
+                (r.record.id.to_string(), boost)
+            })
+            .collect();
+        for r in &mut results {
+            if let Some(boost) = hash_boosts.get(&r.record.id.to_string()) {
+                r.score += boost;
+            }
+        }
         results.sort_by(|a, b| {
             b.score
                 .partial_cmp(&a.score)
