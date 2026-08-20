@@ -16,6 +16,10 @@ ignore = [
     # RUSTSEC-2024-0436: paste unmaintained — accepted (transitive via
     # optional lance-bitpacking, not in the default build).
     "RUSTSEC-2024-0436",
+    # RUSTSEC-2026-0253: lru LruCache::pop() not panic-safe — accepted
+    # (transitive via tantivy query cache; keys are plain strings whose
+    # Drop cannot panic, and no patched lru release exists yet).
+    "RUSTSEC-2026-0253",
 ]
 
 [bans]
