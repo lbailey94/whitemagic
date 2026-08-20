@@ -736,7 +736,17 @@ def gen_questions_T6_memory_budget(
 def gen_questions_T7_scale_stress(
     rng: random.Random, persona: Persona, sessions: list[Session], facts: list[Fact]
 ) -> list[Question]:
-    """T7: Scale Stress — recall at 1K/10K/50K/100K turns."""
+    """T7: Scale Stress — recall at different haystack sizes.
+
+    Generates questions with metadata indicating the target scale. The
+    evaluation harness can use this metadata to generate appropriately-sized
+    haystacks at query time. Since all questions share one haystack in the
+    current format, T7 questions test retrieval at the base haystack size
+    (~766 turns) and the metadata records what scale was intended.
+
+    For true scale testing, generate separate scenarios with larger
+    num_sessions parameter.
+    """
     questions: list[Question] = []
 
     if not persona.preferences:
@@ -753,6 +763,8 @@ def gen_questions_T7_scale_stress(
                 answer_sids.append(session.id)
                 break
 
+    current_turn_count = sum(len(s.turns) for s in sessions)
+
     for scale in [1000, 10000, 50000, 100000]:
         q = Question(
             id=f"T7_scale_{scale}",
@@ -763,7 +775,9 @@ def gen_questions_T7_scale_stress(
             verification_type="exact",
             metadata={
                 "target_turns": scale,
+                "actual_turns": current_turn_count,
                 "topic": pref.topic,
+                "note": "Scale testing requires separate scenario generation with larger num_sessions",
             },
         )
         questions.append(q)

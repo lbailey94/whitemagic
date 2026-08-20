@@ -794,18 +794,15 @@ impl Tool for MemoryEpisodicSearchTool {
         // stopwords, matching the episodic search tokenization.
         let query_term_count: usize = {
             const STOPWORDS: &[&str] = &[
-                "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-                "have", "has", "had", "do", "does", "did", "will", "would", "could",
-                "should", "may", "might", "must", "can", "shall", "to", "of", "in",
-                "on", "at", "by", "for", "with", "about", "as", "into", "like",
-                "through", "after", "over", "between", "out", "against", "during",
-                "without", "before", "under", "around", "among",
-                "i", "me", "my", "we", "us", "our", "you", "your", "he", "him",
-                "his", "she", "her", "it", "its", "they", "them", "their",
-                "what", "whats", "who", "when", "where", "why", "how",
-                "and", "or", "but", "not", "no", "nor", "so", "yet", "both",
-                "either", "neither", "this", "that", "these", "those",
-                "there", "here", "now", "then", "than",
+                "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "have", "has",
+                "had", "do", "does", "did", "will", "would", "could", "should", "may", "might",
+                "must", "can", "shall", "to", "of", "in", "on", "at", "by", "for", "with", "about",
+                "as", "into", "like", "through", "after", "over", "between", "out", "against",
+                "during", "without", "before", "under", "around", "among", "i", "me", "my", "we",
+                "us", "our", "you", "your", "he", "him", "his", "she", "her", "it", "its", "they",
+                "them", "their", "what", "whats", "who", "when", "where", "why", "how", "and",
+                "or", "but", "not", "no", "nor", "so", "yet", "both", "either", "neither", "this",
+                "that", "these", "those", "there", "here", "now", "then", "than",
             ];
             query
                 .split(|c: char| !c.is_alphanumeric())
@@ -836,11 +833,13 @@ impl Tool for MemoryEpisodicSearchTool {
         // generic term (e.g. "favorite") rather than the actual topic.
         // In that case, abstain entirely. If even one result matches 2+
         // terms, keep all results (the query has real matches in the haystack).
+        // Skip abstention for count-style queries ("how many") since they
+        // need all candidates for count verification.
+        let is_count_query = query.to_ascii_lowercase().contains("how many");
         let abstain = min_coverage.is_some()
+            && !is_count_query
             && query_term_count >= 3
-            && !raw_results
-                .iter()
-                .any(|hit| hit.matched_terms >= 2);
+            && !raw_results.iter().any(|hit| hit.matched_terms >= 2);
         let results = raw_results
             .into_iter()
             .filter(|hit| !hit.record.is_private && !hit.record.model_exclude)
