@@ -70,12 +70,15 @@ verified.
 Release stabilization remains separate from the retrieval development slice.
 The next development session should:
 
-1. Start with the continuity protocol in `docs/RETRIEVAL_DEVELOPMENT_PLAN.md`.
-2. Evaluate selective deterministic scoring over the existing broad candidate
-   set; do not promote the rejected contextual tag prototype.
-3. Compare optional hybrid and selective reranking only after candidate recall
-   is understood.
-4. Keep the fixed 50q evaluator as the regression protocol and report candidate
+1. **Read `docs/RETRIEVAL_RESEARCH_ROADMAP.md`** — the full multi-phase plan
+   based on August 2026 research findings. This is the primary document for
+   R@1 improvement work.
+2. **Implement Phase 1**: Storage-time vocabulary enrichment + session-aware
+   RRF reranking in `crates/wm-memory/src/episodic.rs`. Target: R@1 70% →
+   80-85% on 10q subset.
+3. Benchmark with `python scripts/longmemeval_bench.py --questions 10`.
+4. If Phase 1 succeeds, proceed to Phase 2 (drop embeddings, SIMD acceleration).
+5. Keep the fixed 50q evaluator as the regression protocol and report candidate
    presence, text evidence, and session evidence with every ranking experiment.
 
 Release work remains:

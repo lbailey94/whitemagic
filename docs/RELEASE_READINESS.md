@@ -1,9 +1,9 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Last updated:** 2026-08-16 (evening)
+**Last updated:** 2026-08-19 (evening)
 **Version under review:** v5.8.0
-**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5 (`wm seal`/`wm verify`) is implemented and awaiting a targeted test pass; B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. Hybrid grid (n=10, turn-level retrieval, not official LongMemEval QA) lifted R@5 from 0.70 to 0.90 vs BM25+stem and dropped R@1 from 0.50 to 0.40; weight variations did not differentiate. OR + token-coverage is the new BM25 default and has not been re-scored on 10q/50q. `wm serve` with no flag now defaults to curated. Ready for v5.8.0 final after release gate re-run.
+**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5 (`wm seal`/`wm verify`) is implemented and awaiting a targeted test pass; B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. v6-dev Phase 1-2 vocabulary enrichment and tiebreaker tuning complete: 50q R@1 86%, R@5=100%, R@10=100%, MRR=0.9233. Phase 3 window indexing explored and fully reverted — symmetric scoring changes are neutral or negative. Phase 4 research complete: key expansion (LongMemEval Finding 2), embedding reranking (Relay approach), and topic-shift chunking (Redis Remis) identified as top approaches. See `docs/V6_PHASE4_RESEARCH.md` and `docs/V6_NEXT_SESSION.md`. Ready for v5.8.0 final after release gate re-run.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and

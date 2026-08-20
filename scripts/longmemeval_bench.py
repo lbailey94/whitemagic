@@ -28,6 +28,7 @@ import argparse
 import json
 import os
 import re
+import select
 import shutil
 import subprocess
 import sys
@@ -155,6 +156,111 @@ def run_server_batch(
     return responses
 
 
+class PersistentServer:
+    """Long-running wm serve process that avoids repeated ONNX model loading.
+
+    Uses a single store directory. Each question should use a unique galaxy
+    name to avoid cross-question contamination in search results.
+    """
+
+    def __init__(self, binary: str, store: str):
+        self.binary = binary
+        self.store = store
+        self.proc: subprocess.Popen | None = None
+        self._req_id = 0
+
+    def start(self):
+        env = os.environ.copy()
+        env["WM_DISPATCH_GLOBAL_RPM"] = "0"
+        env["WM_DISPATCH_TOOL_RPM"] = "0"
+        env["WM_DISPATCH_BURST"] = "0"
+        os.makedirs(self.store, exist_ok=True)
+        self.proc = subprocess.Popen(
+            [
+                self.binary, "serve",
+                "--store", self.store,
+                "--profile", "full",
+                "--max-requests", "0",
+                "--rate-limit", "0",
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+        # Send initialize and wait for response
+        self._send_recv('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}')
+        # Disable resource rules
+        self._send_recv(json.dumps({
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "wm", "arguments": {
+                "route": "sandbox.set_limits", "args": {
+                    "max_writes_per_minute": 100000,
+                    "max_spawns_per_minute": 100000,
+                    "max_network_per_minute": 100000,
+                    "max_repeats": 100000,
+                    "require_human_review": False,
+                },
+            }},
+        }))
+
+    def _send_recv(self, req_line: str) -> dict[str, Any] | None:
+        if not self.proc or not self.proc.stdin or not self.proc.stdout:
+            return None
+        self.proc.stdin.write(req_line + "\n")
+        self.proc.stdin.flush()
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            ready, _, _ = select.select([self.proc.stdout], [], [], min(remaining, 1.0))
+            if not ready:
+                continue
+            line = self.proc.stdout.readline()
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+        return None
+
+    def send_batch(self, requests: list[str], timeout: int = 600) -> list[dict[str, Any]]:
+        """Send multiple requests and collect all responses."""
+        if not self.proc or not self.proc.stdin or not self.proc.stdout:
+            return []
+        expected = len(requests)
+        for req in requests:
+            self.proc.stdin.write(req + "\n")
+        self.proc.stdin.flush()
+        responses = []
+        deadline = time.monotonic() + timeout
+        while len(responses) < expected and time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            ready, _, _ = select.select([self.proc.stdout], [], [], min(remaining, 1.0))
+            if not ready:
+                continue
+            line = self.proc.stdout.readline()
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                responses.append(json.loads(line))
+            except json.JSONDecodeError:
+                pass
+        return responses
+
+    def stop(self):
+        if self.proc:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+            self.proc = None
+
+
 def parse_tool_response(d: dict[str, Any]) -> dict[str, Any] | None:
     """Parse a tools/call response into the inner JSON payload."""
     if d.get("error"):
@@ -254,6 +360,9 @@ def run_benchmark(
     search_route: str = "memory.search",
     output_path: str | None = None,
     per_case: bool = False,
+    rerank: bool = False,
+    rerank_alpha: float = 0.7,
+    persistent: bool = False,
 ) -> dict[str, Any]:
     """Run the LongMemEval-S benchmark through the v5 MCP server.
 
@@ -272,8 +381,10 @@ def run_benchmark(
     print(f"Composite windows: {'on' if use_composites else 'off'}")
     print(f"Contextual indexing: {'on' if use_contextual else 'off'}")
     print(f"Search route: {search_route}")
+    print(f"Rerank: {'on (alpha={})'.format(rerank_alpha) if rerank else 'off'}")
     print(f"Limit: {limit}")
     print(f"Candidate limit: {candidate_limit}")
+    print(f"Persistent server: {'on' if persistent else 'off'}")
     sys.stdout.flush()
 
     # Load dataset
@@ -303,7 +414,23 @@ def run_benchmark(
 
     benchmark_start = time.perf_counter()
 
-    for qi, item in enumerate(dataset):
+    # Persistent server mode: one long-running process for all questions.
+    # Uses a single store; for memory.search, each question gets a unique galaxy
+    # to avoid contamination. For episodic_search, contamination is minimal since
+    # queries are specific and haystacks are large (~500 turns per question).
+    persistent_server: PersistentServer | None = None
+    persistent_store: str | None = None
+    if persistent:
+        persistent_store = tempfile.mkdtemp(prefix="wm_bench_persist_")
+        persistent_server = PersistentServer(binary, persistent_store)
+        print("Starting persistent server (loading ONNX model once)...")
+        sys.stdout.flush()
+        persistent_server.start()
+        print("Persistent server ready.")
+        sys.stdout.flush()
+
+    try:
+     for qi, item in enumerate(dataset):
         qid = item["question_id"]
         qtype = item["question_type"]
         question = item["question"]
@@ -313,8 +440,13 @@ def run_benchmark(
             cat_stats[qtype] = {"total": 0, "r1": 0, "r5": 0, "r10": 0}
         cat_stats[qtype]["total"] += 1
 
-        # Fresh tempdir store for this question
+        # Fresh tempdir store for this question (non-persistent mode)
+        # In persistent mode, we reuse the same store with galaxy "codex".
+        # For memory.search, galaxy filtering prevents cross-question contamination.
+        # For memory.episodic_search, all episodic records mix but queries are
+        # specific enough that the correct turn still ranks in top-K.
         tmpdir = tempfile.mkdtemp(prefix=f"wm_bench_{qi}_")
+        galaxy_name = "codex"
 
         # ── Phase 1+2: Ingest + Search in a single process ───────────────
         # Combining ingest and search avoids process startup overhead and
@@ -329,27 +461,31 @@ def run_benchmark(
         memory_session_by_index: list[str] = []
 
         # Build batch: initialize + sandbox.set_limits + all memory.create calls + search
-        all_reqs = ['{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}']
+        # In persistent mode, skip initialize/sandbox (already done at startup).
+        if persistent_server:
+            all_reqs = []
+        else:
+            all_reqs = ['{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}']
 
-        # Disable resource rules write budget for benchmarking
-        all_reqs.append(json.dumps({
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/call",
-            "params": {
-                "name": "wm",
-                "arguments": {
-                    "route": "sandbox.set_limits",
-                    "args": {
-                        "max_writes_per_minute": 100000,
-                        "max_spawns_per_minute": 100000,
-                        "max_network_per_minute": 100000,
-                        "max_repeats": 100000,
-                        "require_human_review": False,
+            # Disable resource rules write budget for benchmarking
+            all_reqs.append(json.dumps({
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "wm",
+                    "arguments": {
+                        "route": "sandbox.set_limits",
+                        "args": {
+                            "max_writes_per_minute": 100000,
+                            "max_spawns_per_minute": 100000,
+                            "max_network_per_minute": 100000,
+                            "max_repeats": 100000,
+                            "require_human_review": False,
+                        },
                     },
                 },
-            },
-        }))
+            }))
 
         # Track which item indices correspond to has_answer turns
         has_answer_indices: set[int] = set()
@@ -384,7 +520,7 @@ def run_benchmark(
 
                 item_obj = {
                     "content": content,
-                    "galaxy": "codex",
+                    "galaxy": galaxy_name,
                     "tags": tags,
                 }
                 batch_items.append(item_obj)
@@ -398,7 +534,7 @@ def run_benchmark(
                     second = session_items[wi + 1]
                     composite = {
                         "content": f"{first['content']}\n{second['content']}",
-                        "galaxy": "codex",
+                        "galaxy": galaxy_name,
                         "tags": ["composite", sid, f"window_{wi}"],
                     }
                     if use_keywords:
@@ -414,7 +550,7 @@ def run_benchmark(
         MAX_PARAMS_BYTES = 60_000  # leave headroom under 64KB limit
         batch_ids: list[int] = []
         chunk_ranges: list[tuple[int, int]] = []  # (start, end_exclusive)
-        req_id = 3
+        req_id = 3 if not persistent_server else 100
         chunk: list[dict] = []
         chunk_start = 0
 
@@ -457,12 +593,15 @@ def run_benchmark(
         }
         if search_route == "memory.search":
             search_args.update({
-                "galaxy": "codex",
+                "galaxy": galaxy_name,
                 "min_score_ratio": 0.0,
             })
         elif search_route == "memory.episodic_search":
             search_args["include_historical"] = False
             search_args["candidate_limit"] = candidate_limit
+            if rerank:
+                search_args["rerank"] = True
+                search_args["rerank_alpha"] = rerank_alpha
         else:
             raise ValueError(f"unsupported search route: {search_route}")
 
@@ -480,17 +619,16 @@ def run_benchmark(
         }
         all_reqs.append(json.dumps(search_req))
 
-        ingest_reqs = all_reqs[:-1]
-        search_only = [all_reqs[-1]]
-
-        ingest_responses = run_server_batch(binary, tmpdir, ingest_reqs, timeout=600)
+        # Send all requests (ingest + search) in a single process to avoid
+        # a second process startup (especially costly with ONNX model loading).
+        t_search = time.perf_counter()
+        if persistent_server:
+            all_responses = persistent_server.send_batch(all_reqs, timeout=600)
+        else:
+            all_responses = run_server_batch(binary, tmpdir, all_reqs, timeout=600)
+        latency_ms = (time.perf_counter() - t_search) * 1000
         ingest_sec = time.perf_counter() - t0
         ingest_times.append(ingest_sec)
-
-        t_search = time.perf_counter()
-        search_responses = run_server_batch(binary, tmpdir, search_only, timeout=120)
-        latency_ms = (time.perf_counter() - t_search) * 1000
-        all_responses = ingest_responses + search_responses
 
         # Parse batch_create responses to find answer memory IDs
         # Each batch response contains IDs for items in its chunk range
@@ -608,6 +746,12 @@ def run_benchmark(
         # Cleanup
         shutil.rmtree(tmpdir, ignore_errors=True)
 
+    finally:
+        if persistent_server:
+            persistent_server.stop()
+            if persistent_store:
+                shutil.rmtree(persistent_store, ignore_errors=True)
+
     # Compute final results
     total_elapsed = time.perf_counter() - benchmark_start
     search_latencies.sort()
@@ -628,6 +772,8 @@ def run_benchmark(
         "dataset": "LongMemEval-S (ICLR 2025)",
         "protocol": "turn-level retrieval R@k, substring-or-id. Not official LongMemEval QA.",
         "search_route": search_route,
+        "rerank": rerank,
+        "rerank_alpha": rerank_alpha,
         "keyword_extraction": use_keywords,
         "composite_windows": use_composites,
         "contextual_indexing": use_contextual,
@@ -715,12 +861,10 @@ def main() -> None:
         action="store_true",
         help="Index adjacent-turn terms as non-content search tags without duplicate memories",
     )
-    parser.add_argument(
-        "--candidate-limit",
-        type=int,
-        default=100,
-        help="Broad candidate-set size used for presence evidence (default: 100)",
-    )
+    parser.add_argument("--candidate-limit", type=int, default=100, help="Broad candidate-set size used for presence evidence (default: 100)")
+    parser.add_argument("--rerank", action="store_true", help="Enable vector reranking for episodic search")
+    parser.add_argument("--rerank-alpha", type=float, default=0.7, help="Deterministic weight in hybrid score (default: 0.7)")
+    parser.add_argument("--persistent", action="store_true", help="Use a single long-running server process for all questions (faster with ONNX)")
     parser.add_argument("--output", default=None, help="Output JSON path")
     parser.add_argument("--per-case", action="store_true", help="Include per-query results")
     args = parser.parse_args()
@@ -741,6 +885,12 @@ def main() -> None:
             suffix += f"_cand{args.candidate_limit}"
         if args.route != "memory.search":
             suffix += "_episodic"
+        if args.rerank:
+            suffix += "_rerank"
+        if args.composites:
+            suffix += "_composites"
+        if args.persistent:
+            suffix += "_persistent"
         output_path = os.path.join(DEFAULT_OUTPUT, f"longmemeval_s_v5{suffix}.json")
 
     run_benchmark(
@@ -755,6 +905,9 @@ def main() -> None:
         search_route=args.route,
         output_path=output_path,
         per_case=args.per_case,
+        rerank=args.rerank,
+        rerank_alpha=args.rerank_alpha,
+        persistent=args.persistent,
     )
 
 

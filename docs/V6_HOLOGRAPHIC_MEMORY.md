@@ -121,6 +121,28 @@ associative benchmark before it is allowed into the default retrieval path.
 5. Bind synthetic question-answer and entity-event pairs with HRR and test
    associative completion against lexical and dense baselines.
 
+## Research-Backed Implementation Plan (2026-08-19)
+
+The `docs/RETRIEVAL_RESEARCH_ROADMAP.md` Phase 3 operationalizes several
+experiments from this document:
+
+- **TF-IDF projection for 5D coordinates** (Experiment 1): Compute
+  `Coordinate5D::from_semantic()` with TF-IDF projections at episodic
+  ingestion time, enabling O(log N) spatial pre-filtering via LMDB range
+  scans.
+- **Temporal partitioning** (Experiment 2): Partition the episodic inverted
+  index by time windows, search recent-first with early stopping
+  (AgentIR-inspired, sub-100μs p50 on 5M records).
+- **Importance scoring in episodic search** (Experiment 2): Bridge galaxy
+  metadata (importance, neuro_score, tags, memory_type) into episodic
+  scoring as type-aware boosts.
+- **Holographic pre-filtering** (Experiment 3): Use 5D coordinate range
+  scans to narrow the candidate pool before deterministic scoring.
+
+These are Phase 3 improvements, preceded by Phase 1 (vocabulary enrichment +
+session-aware RRF) and Phase 2 (drop embeddings, SIMD acceleration). See the
+full roadmap for implementation details.
+
 ## Port Decision
 
 Port the algorithms and semantics, not the old tool surface or taxonomy

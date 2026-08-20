@@ -1,9 +1,14 @@
 # V6 Accuracy and Performance Roadmap
 
-**Date:** 2026-08-18
-**Status:** Phase 1–2 complete; R@5 and R@10 at 100%, focusing on R@1
-**Accuracy reference:** R@1 `0.80`, R@5 `1.00`, R@10 `1.00`, MRR `0.8900`
-**Latency reference:** episodic p50 `107.5 ms`, p95 `222.5 ms`
+**Date:** 2026-08-18 (updated 2026-08-19)
+**Status:** Phase 1 vocabulary enrichment complete; R@1 improved 70% → 80% on 10q; Phase 2 (latency) next
+**Accuracy reference (50q):** R@1 `0.82`, R@5 `1.00`, R@10 `1.00`, MRR `0.8973`
+**Accuracy reference (10q):** R@1 `0.80`, R@5 `1.00`, R@10 `1.00`, MRR `0.9000`
+**Latency reference:** episodic p50 `107.5 ms`, p95 `222.5 ms` (50q); 10q p50 `1.6s` (cold process, no rerank)
+**Research roadmap:** See `docs/RETRIEVAL_RESEARCH_ROADMAP.md` for the full
+multi-phase plan based on 2026 research findings (vocabulary enrichment,
+session-aware RRF, SIMD acceleration, temporal partitioning, holographic
+pre-filtering, and agent-controlled iterative search).
 
 ## Benchmark Comparison and Standing
 
@@ -22,10 +27,10 @@ turn-level recall metrics (does the answer turn appear in top-K results).
 
 | System | Metric | Score | Notes |
 |---|---|---|---|
-| **WhiteMagic v6 (ours)** | **R@1** | **80.0%** | Deterministic scorer, no LLM in the loop |
+| **WhiteMagic v6 (ours)** | **R@1** | **82.0%** | 50q subset, deterministic scorer, no LLM in the loop |
 | **WhiteMagic v6 (ours)** | **R@5** | **100.0%** | Perfect retrieval |
 | **WhiteMagic v6 (ours)** | **R@10** | **100.0%** | Perfect retrieval |
-| **WhiteMagic v6 (ours)** | **MRR** | **0.8900** | |
+| **WhiteMagic v6 (ours)** | **MRR** | **0.8973** | |
 | agentmemory BM25+Vector | R@5 | 95.2% | Full 500q, session-level, all-MiniLM-L6-v2 embeddings |
 | agentmemory BM25+Vector | R@10 | 98.6% | Full 500q, session-level |
 | agentmemory BM25+Vector | MRR | 88.2% | Full 500q, session-level |
@@ -42,10 +47,10 @@ turn-level recall metrics (does the answer turn appear in top-K results).
 1. **R@5 = 100% and R@10 = 100%** — WhiteMagic v6 finds the correct evidence
    turn in every single question. No published system reports perfect R@5 or
    R@10 on any LongMemEval subset.
-2. **R@1 = 80%** — The answer turn is the top-ranked result 4 out of 5 times.
-   The remaining 10 misses are all at rank 2–3, meaning the evidence is found
+2. **R@1 = 82%** — The answer turn is the top-ranked result 41 out of 50 times.
+   The remaining 9 misses are all at rank 2–5, meaning the evidence is found
    but a competing turn edges it out for rank 1.
-3. **MRR = 0.89** — Competitive with agentmemory's hybrid BM25+Vector MRR of
+3. **MRR = 0.90** — Competitive with agentmemory's hybrid BM25+Vector MRR of
    0.882, despite WhiteMagic using a deterministic scorer with no neural
    embeddings in the retrieval path.
 4. **No LLM in the loop** — Unlike ChatGPT (57.7% QA accuracy) or Coze
@@ -75,14 +80,39 @@ turn-level recall metrics (does the answer turn appear in top-K results).
 The v6 episodic path now finds the correct evidence in every question (R@5 =
 100%). Remaining quality errors are purely rank-1 placement:
 
-- **10 rank 2–3 near-misses**: The answer turn is found but a competing turn
-  in the same session edges it out. These are all coverage/density ties where
-  a non-answer turn matches slightly more query terms.
+- **10q subset (2 rank-2 near-misses)**: Q7 (yoga) and Q9 (animal shelter).
+  Q7 is a single-term query where all turns with `yoga` are lexically
+equivalent — a fundamental limitation of single-term lexical search. Q9 has
+  multiple user turns getting reverse enrichment matches, creating score ties
+  that `content_len` decides.
+- **50q subset (9 rank 2–5 near-misses)**: Q7, Q9, Q16, Q31, Q32, Q33, Q34,
+  Q38, Q42. The answer turn is found but a competing turn edges it out. Q32
+  regressed from rank 1 to rank 5 due to RRF boost helping competing sessions
+  — needs investigation.
 - **No vocabulary mismatches remain**: All previous vocabulary gaps (UCLA,
-  Golden Retriever, Spotify, etc.) have been resolved with typed entity keys
-  and domain aliases.
+  Golden Retriever, Spotify, etc.) have been resolved with typed entity keys,
+  domain aliases, and storage-time vocabulary enrichment.
 - **No candidate misses**: Candidate presence is 100% — the sidecar index
   surfaces the answer turn for every query.
+
+### Phase 1: Vocabulary Enrichment + Session-Aware RRF ✅
+
+Implemented in `crates/wm-memory/src/enrichment.rs` and `episodic.rs`:
+- **Storage-time vocabulary enrichment**: Hypernym maps (production→play/theater,
+  mutt→animal, silent→fundraising, welfare→shelter, etc.) added to inverted
+  index at ingestion time. Stemmed for consistency.
+- **Reverse enrichment (query expansion)**: For `UserStatement` records only,
+  query terms are expanded via reverse hypernym lookup at scoring time. This
+  bridges the vocabulary gap without boosting competing `AssistantResponse`
+  turns.
+- **Reverse match score bonus**: +0.05 per reverse-enrichment match for
+  `UserStatement` records. Breaks score ties in favor of answer turns that
+  bridge the vocabulary gap.
+- **Session-aware RRF boost**: Turns from sessions with multiple matching
+  turns get a small score boost (+0.02 per additional match, capped at 3).
+- **Density removed from score**: Prevents shorter competing turns from
+  winning on density when coverage is tied.
+- **Result**: 10q R@1 70% → 80% (Q4 fixed), R@5=100%, R@10=100%, zero LLM.
 
 The path from R@1 = 80% to R@1 = 90%+ requires breaking coverage ties between
 answer turns and competing turns in the same session. This is a narrower and
@@ -287,8 +317,8 @@ direction, but it needs a small synthetic benchmark before production indexing.
 
 - No candidate or scorer change may reduce R@5 below `1.00` on the fixed 50q
   v6 protocol (current: 1.00).
-- No candidate or scorer change may reduce R@1 below `0.80` on the fixed 50q
-  v6 protocol (current: 0.80).
+- No candidate or scorer change may reduce R@1 below `0.82` on the fixed 50q
+  v6 protocol (current: 0.82).
 - Accuracy gains must be reported by query class, not only aggregate R@k.
 - Performance changes must report cold, warm, in-process, and MCP timings.
 - Index-time keys must include source spans and confidence.

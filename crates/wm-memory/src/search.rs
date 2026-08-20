@@ -773,7 +773,7 @@ fn simple_stem(word: &str) -> String {
         return word.to_string();
     }
     // Order matters: check longer suffixes first.
-    for suffix in ["ies", "ied", "ing", "edly", "edly", "ed", "ly", "es", "s"] {
+    for suffix in ["ies", "ied", "ing", "edly", "ed", "ly", "es", "s"] {
         if let Some(stem) = word.strip_suffix(suffix) {
             // "ies" / "ied" → restore "y" (stories → story, carried → carry)
             if suffix == "ies" || suffix == "ied" {

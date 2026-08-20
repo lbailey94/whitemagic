@@ -745,6 +745,14 @@ impl Tool for MemoryEpisodicSearchTool {
                     "type": "boolean",
                     "description": "Include superseded, revoked, and archived records",
                 },
+                "rerank": {
+                    "type": "boolean",
+                    "description": "Enable vector reranking (requires embedder, default false)",
+                },
+                "rerank_alpha": {
+                    "type": "number",
+                    "description": "Deterministic weight in hybrid score (0.0-1.0, default 0.7)",
+                },
             }),
             &["query"],
         )
@@ -760,10 +768,28 @@ impl Tool for MemoryEpisodicSearchTool {
             .get("include_historical")
             .and_then(Value::as_bool)
             .unwrap_or(false);
-        let results = self
-            .store
-            .episodic()
-            .search_with_limits(query, limit, candidate_limit, include_historical)?
+        let rerank = args.get("rerank").and_then(Value::as_bool).unwrap_or(false);
+        let rerank_alpha = args
+            .get("rerank_alpha")
+            .and_then(Value::as_f64)
+            .unwrap_or(0.7) as f32;
+        let raw_results = if rerank {
+            self.store.episodic().search_with_rerank(
+                query,
+                limit,
+                candidate_limit,
+                include_historical,
+                rerank_alpha,
+            )?
+        } else {
+            self.store.episodic().search_with_limits(
+                query,
+                limit,
+                candidate_limit,
+                include_historical,
+            )?
+        };
+        let results = raw_results
             .into_iter()
             .filter(|hit| !hit.record.is_private && !hit.record.model_exclude)
             .take(limit)

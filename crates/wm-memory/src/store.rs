@@ -6,8 +6,8 @@
 use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction, WriteFlags};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, RwLock};
 use wm_core::{CoreError, Galaxy, Result};
 
 #[cfg(unix)]
@@ -141,6 +141,13 @@ pub struct MemoryStore {
     episodic_terms_db: Database,
     /// Warm term-posting cache shared by episodic search views.
     episodic_term_cache: std::sync::Arc<RwLock<HashMap<String, Vec<uuid::Uuid>>>>,
+    /// Optional embedder for episodic vector reranking.
+    episodic_embedder:
+        std::sync::OnceLock<Option<Arc<dyn crate::embedder::Embedder + Send + Sync>>>,
+    /// Optional adaptive aliases for episodic key expansion.
+    episodic_aliases: std::sync::OnceLock<Option<crate::episodic_keys::AdaptiveAliases>>,
+    /// Optional vocabulary enrichment for episodic index-time term expansion.
+    episodic_enrichment: std::sync::OnceLock<Option<crate::enrichment::VocabularyEnrichment>>,
 }
 
 impl MemoryStore {
@@ -209,6 +216,9 @@ impl MemoryStore {
             episodic_db,
             episodic_terms_db,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
+            episodic_embedder: std::sync::OnceLock::new(),
+            episodic_aliases: std::sync::OnceLock::new(),
+            episodic_enrichment: std::sync::OnceLock::new(),
         })
     }
 
@@ -257,13 +267,41 @@ impl MemoryStore {
     /// Open the v6 lossless episodic record view.
     #[must_use]
     pub fn episodic(&self) -> EpisodicStore<'_> {
-        EpisodicStore::new(
+        let mut store = EpisodicStore::new(
             &self.env,
             self.episodic_db,
             self.episodic_terms_db,
             self.episodic_term_cache.clone(),
             &self.mutation_count,
-        )
+        );
+        if let Some(Some(embedder)) = self.episodic_embedder.get() {
+            store = store.with_embedder(embedder.clone());
+        }
+        if let Some(Some(aliases)) = self.episodic_aliases.get() {
+            store = store.with_adaptive_aliases(aliases.clone());
+        }
+        if let Some(Some(enrichment)) = self.episodic_enrichment.get() {
+            store = store.with_enrichment(enrichment.clone());
+        }
+        store
+    }
+
+    /// Attach an embedder for episodic vector reranking.
+    pub fn set_episodic_embedder(
+        &self,
+        embedder: Arc<dyn crate::embedder::Embedder + Send + Sync>,
+    ) {
+        let _ = self.episodic_embedder.set(Some(embedder));
+    }
+
+    /// Attach adaptive aliases for episodic key expansion.
+    pub fn set_episodic_aliases(&self, aliases: crate::episodic_keys::AdaptiveAliases) {
+        let _ = self.episodic_aliases.set(Some(aliases));
+    }
+
+    /// Attach vocabulary enrichment for episodic index-time term expansion.
+    pub fn set_episodic_enrichment(&self, enrichment: crate::enrichment::VocabularyEnrichment) {
+        let _ = self.episodic_enrichment.set(Some(enrichment));
     }
 
     /// Get a named database handle for a galaxy.

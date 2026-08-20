@@ -74,6 +74,12 @@ context should not be added without selective scoring or reranking.
 
 ## Phase 2: Candidate and Reranking Paths
 
+**Research update (2026-08-19):** See `docs/RETRIEVAL_RESEARCH_ROADMAP.md`
+for research findings that reshape this phase. Key finding: on LongMemEval-S
+(a lexical regime), cosine reranking and cross-encoder reranking do not
+improve R@1. The path forward is storage-time vocabulary enrichment and
+session-aware RRF, not neural reranking.
+
 Only after Phase 1 has candidate evidence:
 
 - Keep BM25 candidate generation fast and broad enough for recall.

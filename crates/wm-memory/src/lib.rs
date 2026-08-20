@@ -10,6 +10,7 @@
 pub mod associations;
 pub mod conversational;
 pub mod embedder;
+pub mod enrichment;
 pub mod episodic;
 pub mod episodic_keys;
 pub mod galaxy_registry;
@@ -36,8 +37,12 @@ pub use conversational::{
 #[cfg(feature = "onnx")]
 pub use embedder::OrtEmbedder;
 pub use embedder::{Embedder, EmbedderConfig, HttpEmbedder, StubEmbedder, create_embedder};
+pub use enrichment::VocabularyEnrichment;
 pub use episodic::{EpisodicSearchResult, EpisodicStore};
-pub use episodic_keys::{EpisodicKey, KeyCategory, extract_episodic_keys, key_index_terms};
+pub use episodic_keys::{
+    AdaptiveAliases, EpisodicKey, KeyCategory, entity_key_terms, extract_episodic_keys,
+    key_index_terms, key_index_terms_with_aliases,
+};
 pub use galaxy_registry::{GalaxyMetadata, GalaxyRegistry};
 pub use lifecycle::{ConsolidationResult, ForgettingResult, Lifecycle, LifecycleConfig};
 pub use mandala::{Compartment, CompartmentConfig, MandalaLevel, MandalaManager};

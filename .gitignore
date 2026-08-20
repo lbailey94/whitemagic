@@ -21,6 +21,9 @@ __pycache__/
 # Vercel placeholder (deployed separately)
 /vercel-placeholder/
 
+# Embedding model cache
+.fastembed_cache/
+
 # IDE config
 .windsurf/
 
