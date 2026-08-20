@@ -26,7 +26,7 @@ use wm_dispatch::{DispatchPipeline, ToolRegistry};
 use wm_governance::{DharmaGate, KarmaLedger, ResourceRules};
 use wm_memory::{
     AssociationStore, ConversationalSearch, Embedder, MemoryStore, RecallConfig, RecallEngine,
-    SearchEngine, VectorStore, create_embedder,
+    SearchEngine, StubEmbedder, VectorStore, create_embedder,
 };
 use wm_sangha::{PeerDiscovery, ResourceLockManager, SanghaChat, SignalBroadcast};
 use wm_selfmodel::SelfModel;
@@ -624,17 +624,69 @@ impl McpServer {
         gy_bus.enable_persistence(store_path.join("resonance_events.jsonl"));
         let gan_ying_bus = Arc::new(std::sync::Mutex::new(gy_bus));
 
+        // Load adaptive aliases from episodic_aliases.json if it exists.
+        let aliases_path = store_path.join("episodic_aliases.json");
+        if aliases_path.exists() {
+            match wm_memory::AdaptiveAliases::from_file(&aliases_path) {
+                Ok(aliases) if !aliases.is_empty() => {
+                    tracing::info!(
+                        "loaded {} adaptive aliases from {:?}",
+                        aliases.len(),
+                        aliases_path
+                    );
+                    store.set_episodic_aliases(aliases);
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::warn!(
+                        "failed to load adaptive aliases from {:?}: {e}",
+                        aliases_path
+                    );
+                }
+            }
+        }
+
+        // Enable vocabulary enrichment by default for episodic search.
+        store.set_episodic_enrichment(wm_memory::enrichment::VocabularyEnrichment::with_defaults());
+
         let registry = ToolRegistry::new();
         let recall_engine = {
             let embedder: Arc<dyn Embedder> = create_embedder().into();
-            let recall = RecallEngine::new(
-                store.clone(),
-                search.clone(),
-                VectorStore::new(),
-                embedder,
-                RecallConfig::from_env(),
-            )?;
-            Arc::new(recall)
+            // When WM_EPISODIC_RERANK_ONLY is set, use a stub embedder for
+            // RecallEngine (fast ingest) but set the real embedder only for
+            // episodic reranking. This avoids embedding ~500 turns per question
+            // during ingest while still enabling vector reranking at search time.
+            let episodic_rerank_only = std::env::var("WM_EPISODIC_RERANK_ONLY")
+                .map(|v| v == "1" || v == "true")
+                .unwrap_or(false);
+
+            if episodic_rerank_only && embedder.is_available() && embedder.backend_name() != "stub"
+            {
+                store.set_episodic_embedder(embedder.clone());
+                // Use stub for RecallEngine to skip ingest-time embedding
+                let stub: Arc<dyn Embedder> = Arc::new(StubEmbedder::default());
+                let recall = RecallEngine::new(
+                    store.clone(),
+                    search.clone(),
+                    VectorStore::new(),
+                    stub,
+                    RecallConfig::from_env(),
+                )?;
+                Arc::new(recall)
+            } else {
+                // Normal mode: share the embedder between RecallEngine and episodic
+                if embedder.is_available() && embedder.backend_name() != "stub" {
+                    store.set_episodic_embedder(embedder.clone());
+                }
+                let recall = RecallEngine::new(
+                    store.clone(),
+                    search.clone(),
+                    VectorStore::new(),
+                    embedder,
+                    RecallConfig::from_env(),
+                )?;
+                Arc::new(recall)
+            }
         };
         // If the embedder is a stub, hybrid search would produce garbage
         // vectors — so only wire it in when a real embedder is available.
@@ -2770,15 +2822,42 @@ mod tests {
         let registry = ToolRegistry::new();
         let recall_engine = {
             let embedder: Arc<dyn Embedder> = create_embedder().into();
-            let recall = RecallEngine::new(
-                store.clone(),
-                search.clone(),
-                VectorStore::new(),
-                embedder,
-                RecallConfig::default(),
-            )
-            .unwrap();
-            Arc::new(recall)
+            let episodic_rerank_only = std::env::var("WM_EPISODIC_RERANK_ONLY")
+                .map(|v| v == "1" || v == "true")
+                .unwrap_or(false);
+
+            // Enable vocabulary enrichment by default for episodic search.
+            store.set_episodic_enrichment(
+                wm_memory::enrichment::VocabularyEnrichment::with_defaults(),
+            );
+
+            if episodic_rerank_only && embedder.is_available() && embedder.backend_name() != "stub"
+            {
+                store.set_episodic_embedder(embedder.clone());
+                let stub: Arc<dyn Embedder> = Arc::new(StubEmbedder::default());
+                let recall = RecallEngine::new(
+                    store.clone(),
+                    search.clone(),
+                    VectorStore::new(),
+                    stub,
+                    RecallConfig::default(),
+                )
+                .unwrap();
+                Arc::new(recall)
+            } else {
+                if embedder.is_available() && embedder.backend_name() != "stub" {
+                    store.set_episodic_embedder(embedder.clone());
+                }
+                let recall = RecallEngine::new(
+                    store.clone(),
+                    search.clone(),
+                    VectorStore::new(),
+                    embedder,
+                    RecallConfig::default(),
+                )
+                .unwrap();
+                Arc::new(recall)
+            }
         };
         let recall_for_tools = if recall_engine.embedder_is_real() {
             Some(recall_engine.clone())

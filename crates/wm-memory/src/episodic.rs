@@ -8,7 +8,9 @@ use wm_core::{
     Result, ValidityState,
 };
 
-use crate::episodic_keys::key_index_terms;
+use crate::embedder::Embedder;
+use crate::enrichment::VocabularyEnrichment;
+use crate::episodic_keys::{AdaptiveAliases, key_index_terms_with_aliases};
 use crate::query_planner::QueryPlan;
 use crate::search::strip_stopwords;
 
@@ -27,10 +29,13 @@ pub struct EpisodicStore<'a> {
     term_db: Database,
     term_cache: Arc<RwLock<HashMap<String, Vec<EpisodicId>>>>,
     mutation_count: &'a std::sync::atomic::AtomicU64,
+    embedder: Option<Arc<dyn Embedder + Send + Sync>>,
+    aliases: Option<AdaptiveAliases>,
+    enrichment: Option<VocabularyEnrichment>,
 }
 
 impl<'a> EpisodicStore<'a> {
-    pub(crate) const fn new(
+    pub(crate) fn new(
         env: &'a Environment,
         db: Database,
         term_db: Database,
@@ -43,7 +48,35 @@ impl<'a> EpisodicStore<'a> {
             term_db,
             term_cache,
             mutation_count,
+            embedder: None,
+            aliases: None,
+            enrichment: None,
         }
+    }
+
+    /// Attach adaptive aliases for query and ingest-time key expansion.
+    #[must_use]
+    pub fn with_adaptive_aliases(mut self, aliases: AdaptiveAliases) -> Self {
+        if !aliases.is_empty() {
+            self.aliases = Some(aliases);
+        }
+        self
+    }
+
+    /// Attach vocabulary enrichment for index-time term expansion.
+    #[must_use]
+    pub fn with_enrichment(mut self, enrichment: VocabularyEnrichment) -> Self {
+        if !enrichment.is_empty() {
+            self.enrichment = Some(enrichment);
+        }
+        self
+    }
+
+    /// Attach an embedder for vector reranking.
+    #[must_use]
+    pub fn with_embedder(mut self, embedder: Arc<dyn Embedder + Send + Sync>) -> Self {
+        self.embedder = Some(embedder);
+        self
     }
 
     /// Append a source record without allowing an existing raw ID to be overwritten.
@@ -149,7 +182,18 @@ impl<'a> EpisodicStore<'a> {
         }
         let mut pending: HashMap<String, Vec<EpisodicId>> = HashMap::new();
         for record in public {
-            for term in index_terms(&record.content) {
+            let base_terms = index_terms_with_aliases(&record.content, self.aliases.as_ref());
+            let enriched: Vec<String> = if let Some(ref enrichment) = self.enrichment {
+                let mut all = base_terms.clone();
+                let extra = enrichment.enrich(&base_terms);
+                all.extend(extra);
+                all.sort();
+                all.dedup();
+                all
+            } else {
+                base_terms
+            };
+            for term in enriched {
                 let ids = pending.entry(term).or_default();
                 if !ids.contains(&record.id) {
                     ids.push(record.id);
@@ -333,6 +377,12 @@ impl<'a> EpisodicStore<'a> {
     }
 
     /// Search with an explicit candidate budget before selective reranking.
+    ///
+    /// Uses multi-query pool widening: the original query plus sub-queries
+    /// focused on key content words generate candidate IDs. All candidates are
+    /// then scored with the primary query's deterministic scoring. This helps
+    /// answer turns that match few original query terms but match the key
+    /// entity strongly enter the candidate pool.
     pub fn search_with_limits(
         &self,
         query: &str,
@@ -343,7 +393,7 @@ impl<'a> EpisodicStore<'a> {
         let plan = QueryPlan::plan(query, limit);
         let candidate_limit = candidate_limit.max(plan.candidate_limit);
         let query_terms = tokenize(query);
-        let query_keys = key_index_terms(query);
+        let query_keys = key_index_terms_with_aliases(query, self.aliases.as_ref());
         if query_terms.is_empty() && query_keys.is_empty() || limit == 0 {
             return Ok(Vec::new());
         }
@@ -365,7 +415,7 @@ impl<'a> EpisodicStore<'a> {
                     .cmp(left_count)
                     .then_with(|| left_id.cmp(right_id))
             });
-            ranked_candidates.truncate(candidate_limit.max(limit));
+            ranked_candidates.truncate(candidate_limit);
             self.load_records(
                 &ranked_candidates
                     .into_iter()
@@ -373,18 +423,53 @@ impl<'a> EpisodicStore<'a> {
                     .collect::<Vec<_>>(),
             )?
         };
+
         let mut results = Vec::new();
         for record in records {
             if !include_historical && !matches!(record.validity, ValidityState::Active) {
                 continue;
             }
             let content_terms = tokenize(&record.content);
-            let content_keys = key_index_terms(&record.content);
+            let content_keys = key_index_terms_with_aliases(&record.content, self.aliases.as_ref());
+            // For UserStatement records, also count reverse-enrichment matches:
+            // if the query has "play" and the content has "production", count
+            // it as a match. This bridges the vocabulary gap for answer turns
+            // without boosting competing Assistant turns.
+            let reverse_map: HashMap<&String, Vec<String>> =
+                if let Some(ref enrichment) = self.enrichment {
+                    if matches!(record.kind, EpisodicKind::UserStatement) {
+                        query_terms
+                            .iter()
+                            .map(|qt| (qt, enrichment.reverse_enrich(qt)))
+                            .collect()
+                    } else {
+                        HashMap::new()
+                    }
+                } else {
+                    HashMap::new()
+                };
+            let mut reverse_match_count = 0usize;
             let matched_terms = query_terms
                 .iter()
                 .filter(|term| {
-                    content_terms.iter().any(|candidate| candidate == *term)
+                    if content_terms.iter().any(|candidate| candidate == *term)
                         || content_keys.iter().any(|candidate| candidate == *term)
+                    {
+                        return true;
+                    }
+                    // Check reverse enrichment: does the content have any term
+                    // that maps to this query term?
+                    if let Some(reverse_terms) = reverse_map.get(term) {
+                        let found = reverse_terms.iter().any(|rt| {
+                            content_terms.iter().any(|candidate| candidate == rt)
+                                || content_keys.iter().any(|candidate| candidate == rt)
+                        });
+                        if found {
+                            reverse_match_count += 1;
+                        }
+                        return found;
+                    }
+                    false
                 })
                 .count();
             let matched_keys = query_keys
@@ -397,14 +482,13 @@ impl<'a> EpisodicStore<'a> {
             if matched_terms == 0 && matched_keys == 0 {
                 continue;
             }
-            let density = matched_terms as f32 / content_terms.len().max(1) as f32;
             let key_bonus = if query_keys.is_empty() {
                 0.0
             } else {
                 matched_keys as f32 / query_keys.len() as f32 * plan.key_weight
             };
             let role_boost = match record.kind {
-                EpisodicKind::UserStatement => 0.1,
+                EpisodicKind::UserStatement => 0.12,
                 _ => 0.0,
             };
             let effective_matched = if matches!(record.kind, EpisodicKind::UserStatement) {
@@ -429,11 +513,32 @@ impl<'a> EpisodicStore<'a> {
             } else {
                 0.0
             };
+            let density = matched_terms as f32 / content_terms.len().max(1) as f32;
             results.push(EpisodicSearchResult {
                 record,
-                score: coverage + density * 0.01 + key_bonus + role_boost + number_bonus,
+                score: coverage
+                    + key_bonus
+                    + role_boost
+                    + number_bonus
+                    + (reverse_match_count as f32).mul_add(0.05, density * 0.03),
                 matched_terms: matched_terms.max(matched_keys),
             });
+        }
+        // Session-aware RRF boost: turns from sessions with multiple matching
+        // turns get a small score boost. This is a simplified RRF that preserves
+        // the deterministic score scale for the reranking pipeline.
+        let mut session_counts: HashMap<Option<uuid::Uuid>, usize> = HashMap::new();
+        for r in &results {
+            *session_counts.entry(r.record.session_id).or_default() += 1;
+        }
+        for r in &mut results {
+            let count = session_counts
+                .get(&r.record.session_id)
+                .copied()
+                .unwrap_or(1);
+            if count > 1 {
+                r.score += 0.02 * (count - 1).min(3) as f32;
+            }
         }
         results.sort_by(|a, b| {
             b.score
@@ -446,6 +551,114 @@ impl<'a> EpisodicStore<'a> {
         });
         results.truncate(limit);
         Ok(results)
+    }
+
+    /// Search with vector reranking on top of deterministic scoring.
+    ///
+    /// Pipeline: deterministic scoring → top-N candidates → embed query +
+    /// candidates → tiebreaker reranking → top-K.
+    ///
+    /// When `alpha < 1.0`, uses hybrid blending: score = α·det_norm + (1-α)·cosine.
+    /// When `alpha >= 1.0`, uses tiebreaker mode: only reorders adjacent
+    /// candidates whose deterministic scores are within δ=0.05, using cosine
+    /// as the tiebreaker. This preserves correct rankings and only uses
+    /// semantic similarity to break near-ties.
+    ///
+    /// Falls back to `search_with_limits()` when no embedder is attached.
+    pub fn search_with_rerank(
+        &self,
+        query: &str,
+        limit: usize,
+        candidate_limit: usize,
+        include_historical: bool,
+        alpha: f32,
+    ) -> Result<Vec<EpisodicSearchResult>> {
+        let Some(ref embedder) = self.embedder else {
+            return self.search_with_limits(query, limit, candidate_limit, include_historical);
+        };
+        if !embedder.is_available() || limit == 0 {
+            return self.search_with_limits(query, limit, candidate_limit, include_historical);
+        }
+
+        // Over-fetch deterministic candidates for reranking.
+        let rerank_pool = limit.max(candidate_limit).min(50);
+        let deterministic =
+            self.search_with_limits(query, rerank_pool, rerank_pool, include_historical)?;
+        if deterministic.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Batch-embed query + all candidate contents in one call.
+        let contents: Vec<&str> = std::iter::once(query)
+            .chain(deterministic.iter().map(|r| r.record.content.as_str()))
+            .collect();
+        let embeddings = embedder.embed_batch(&contents)?;
+        if embeddings.len() != deterministic.len() + 1 {
+            return Err(CoreError::Memory(format!(
+                "embedder returned {} vectors, expected {}",
+                embeddings.len(),
+                deterministic.len() + 1
+            )));
+        }
+        let query_vec = &embeddings[0];
+        let candidate_vecs = &embeddings[1..];
+
+        if alpha >= 1.0 {
+            // Tiebreaker mode: only reorder adjacent candidates with close det scores.
+            let delta = 0.05;
+            let mut reranked = deterministic;
+            let cosines: Vec<f32> = candidate_vecs
+                .iter()
+                .map(|v| cosine_sim(query_vec, v))
+                .collect();
+            // Bubble-sort adjacent swaps only when det scores are within delta.
+            let n = reranked.len();
+            for _ in 0..n {
+                let mut swapped = false;
+                for i in 0..n.saturating_sub(1) {
+                    let det_gap = (reranked[i].score - reranked[i + 1].score).abs();
+                    if det_gap < delta && cosines[i + 1] > cosines[i] {
+                        reranked.swap(i, i + 1);
+                        swapped = true;
+                    }
+                }
+                if !swapped {
+                    break;
+                }
+            }
+            reranked.truncate(limit);
+            Ok(reranked)
+        } else {
+            // Hybrid blending mode.
+            let max_det = deterministic
+                .iter()
+                .map(|r| r.score)
+                .fold(0.0f32, f32::max)
+                .max(1e-9);
+
+            let mut reranked: Vec<EpisodicSearchResult> = deterministic
+                .into_iter()
+                .enumerate()
+                .map(|(i, mut r)| {
+                    let cosine = cosine_sim(query_vec, &candidate_vecs[i]);
+                    let det_norm = r.score / max_det;
+                    r.score = alpha.mul_add(det_norm, (1.0 - alpha) * cosine);
+                    r
+                })
+                .collect();
+
+            reranked.sort_by(|a, b| {
+                b.score
+                    .partial_cmp(&a.score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| b.matched_terms.cmp(&a.matched_terms))
+                    .then_with(|| a.record.content.len().cmp(&b.record.content.len()))
+                    .then_with(|| a.record.sequence.cmp(&b.record.sequence))
+                    .then_with(|| a.record.id.cmp(&b.record.id))
+            });
+            reranked.truncate(limit);
+            Ok(reranked)
+        }
     }
 
     fn load_records(&self, ids: &[EpisodicId]) -> Result<Vec<EpisodicRecord>> {
@@ -471,10 +684,10 @@ impl<'a> EpisodicStore<'a> {
     }
 }
 
-fn index_terms(text: &str) -> Vec<String> {
+fn index_terms_with_aliases(text: &str, aliases: Option<&AdaptiveAliases>) -> Vec<String> {
     tokenize(text)
         .into_iter()
-        .chain(key_index_terms(text))
+        .chain(key_index_terms_with_aliases(text, aliases))
         .fold(Vec::new(), |mut terms, term| {
             if !terms.contains(&term) {
                 terms.push(term);
@@ -513,13 +726,57 @@ fn simple_stem(word: &str) -> String {
     word.to_string()
 }
 
+fn cosine_sim(a: &[f32], b: &[f32]) -> f32 {
+    let dot = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum::<f32>();
+    let norm_a = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let norm_b = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if norm_a < 1e-9 || norm_b < 1e-9 {
+        0.0
+    } else {
+        dot / (norm_a * norm_b)
+    }
+}
+
 fn contains_number_word(text: &str) -> bool {
     const NUMBER_WORDS: &[&str] = &[
-        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
-        "eighteen", "nineteen", "twenty", "thirty", "forty", "fifty", "sixty", "seventy",
-        "eighty", "ninety", "hundred", "thousand", "million", "billion",
-        "dozen", "couple", "half", "quarter", "double", "triple", "twice",
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+        "ten",
+        "eleven",
+        "twelve",
+        "thirteen",
+        "fourteen",
+        "fifteen",
+        "sixteen",
+        "seventeen",
+        "eighteen",
+        "nineteen",
+        "twenty",
+        "thirty",
+        "forty",
+        "fifty",
+        "sixty",
+        "seventy",
+        "eighty",
+        "ninety",
+        "hundred",
+        "thousand",
+        "million",
+        "billion",
+        "dozen",
+        "couple",
+        "half",
+        "quarter",
+        "double",
+        "triple",
+        "twice",
     ];
     for word in text.split(|c: char| !c.is_alphanumeric()) {
         if word.len() >= 3 && NUMBER_WORDS.iter().any(|nw| word.eq_ignore_ascii_case(nw)) {
@@ -755,5 +1012,94 @@ mod tests {
                 .unwrap();
             assert!(!hits.is_empty());
         });
+    }
+
+    #[test]
+    fn enrichment_bridges_vocabulary_gap_for_theater() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        store.set_episodic_enrichment(crate::enrichment::VocabularyEnrichment::with_defaults());
+        // Answer turn says "production" not "play" — enrichment bridges this
+        let answer = sample_record(1, "The production I attended was The Glass Menagerie");
+        let competing = sample_record(2, "I went to a play at the local community theater");
+        let answer_id = answer.id;
+        store.episodic().append_batch(&[answer, competing]).unwrap();
+        let hits = store
+            .episodic()
+            .search(
+                "What play did I attend at the local community theater?",
+                5,
+                false,
+            )
+            .unwrap();
+        // With enrichment, "production" in the answer turn gets postings for
+        // "play", "theater", "performance" — so it should now match more terms
+        assert!(hits.iter().any(|h| h.record.id == answer_id));
+    }
+
+    #[test]
+    fn enrichment_bridges_vocabulary_gap_for_shelter() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        store.set_episodic_enrichment(crate::enrichment::VocabularyEnrichment::with_defaults());
+        let answer = sample_record(1, "I rescued a dog from the humane society last week");
+        let other = sample_record(2, "I bought groceries at the store");
+        let answer_id = answer.id;
+        store.episodic().append_batch(&[answer, other]).unwrap();
+        let hits = store
+            .episodic()
+            .search("When did I volunteer at the animal shelter?", 5, false)
+            .unwrap();
+        assert!(hits.iter().any(|h| h.record.id == answer_id));
+    }
+
+    #[test]
+    fn session_boost_favors_sessions_with_multiple_matches() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let session_a = uuid::Uuid::new_v4();
+        let session_b = uuid::Uuid::new_v4();
+        // Session A has two matching turns (same kind to isolate session boost)
+        let a1 = EpisodicRecord::new(
+            Some(session_a),
+            1,
+            EpisodicKind::Observation,
+            "I love hiking in the mountains",
+            Provenance::new(ProvenanceSource::User),
+        );
+        let a2 = EpisodicRecord::new(
+            Some(session_a),
+            2,
+            EpisodicKind::Observation,
+            "Hiking in the mountains is great exercise",
+            Provenance::new(ProvenanceSource::User),
+        );
+        // Session B has one matching turn with same kind
+        let b1 = EpisodicRecord::new(
+            Some(session_b),
+            1,
+            EpisodicKind::Observation,
+            "Hiking is fun",
+            Provenance::new(ProvenanceSource::User),
+        );
+        store.episodic().append_batch(&[a1, a2, b1]).unwrap();
+        let hits = store
+            .episodic()
+            .search("hiking mountains", 10, false)
+            .unwrap();
+        // Session A turns should be boosted over session B turn because
+        // session A has 2 matching turns vs 1 for session B
+        let a_ranks: Vec<usize> = hits
+            .iter()
+            .enumerate()
+            .filter(|(_, h)| h.record.session_id == Some(session_a))
+            .map(|(i, _)| i)
+            .collect();
+        let b_rank = hits
+            .iter()
+            .position(|h| h.record.session_id == Some(session_b));
+        if let Some(br) = b_rank {
+            assert!(a_ranks.iter().all(|&ar| ar < br));
+        }
     }
 }
