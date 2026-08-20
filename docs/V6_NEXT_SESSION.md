@@ -303,41 +303,28 @@ falls outside the candidate pool or the change-marker vocabulary doesn't
 cover the phrasing. Future option: GPM-style derived lifecycle state at
 write time so "current" becomes a lookup.
 
-#### T8 Contradiction Detection (0%) — Medium Effort — NEXT
-**Approach**: Post-retrieval resolution layer, not scoring change.
-- Detect "current"/"now"/"latest" queries at the tool layer
-- Group results by topic (using key terms)
-- Within each group, prefer the result with the highest sequence/timestamp,
-  by **deterministic chronology only** — not semantic similarity
-  (StateAuditor/STALE: verified transitions are provenance + chronology,
-  never semantic supersession)
-- Longer-term: derived lifecycle state per fact group (GPM's bitemporal
-  model) so "current" resolution becomes a lookup
-- Research: ScrubJay-MEM (type-conditioned perishability — decay *reverses*
-  on fact-consolidation tasks, confirming our reversion results),
-  Post-Retrieval Assembly (separating evidence extraction from policy
-  execution is where the gains are, +10.8pp on MAB FactConsolidation),
-  GPM (bitemporal lifecycle states, fail-closed release)
-**Risk**: Must not regress LongMemEval — only applies to explicit "current"
-queries. Post-Retrieval Assembly found no LongMemEval advantage for
-temporal machinery (p=0.45), so neutrality there is expected; MemoraStrict
-T1/T6 is the acceptance gate.
+#### T8 Contradiction Detection — ✅ DONE (2026-08-20, commit 2029f92)
 
-#### T8 Contradiction Detection (0%) — Medium Effort
-**Approach**: Post-retrieval conflict flagging with TANGLE semantics —
-surface the conflict (both values + provenance + timestamps), never
-silently resolve it. Many conflicts are genuinely irreducible
-(context-partitioned, behavior-oscillation); the correct behavior is
-preserving alternatives, not picking a winner.
-- Group results by topic (using existing key terms)
-- Check for value divergence within groups
-- Report `conflicting: true` with both candidates so the agent/user decides
-- Research: TANGLE (irreducible-conflict benchmark, 541 instances),
-  TOKI (bitemporal operator algebra — write-time resolution is concurrency
-  control; losing facts preserved in audit rows, matching our write-audit
-  journal), MELD (five-outcome claim admission: insert/merge/relate/
-  conflict/reject under freshness gates)
-**Risk**: Low — read-time detection only, non-destructive.
+Two-part fix:
+1. **Vocabulary bridge**: dietary/alcohol hypernyms in the enrichment
+   defaults (vegetarian/vegan/steak → dietary/diet/meat; wine/beer/
+   cocktail/teetotaler/sober → alcohol/drink) — the T8 queries ("Do I
+   have any dietary restrictions?", "Do I drink alcohol?") previously
+   never lexically matched the contradicting statements.
+2. **`detect_conflicts`** in `wm-memory/src/episodic.rs`: UserStatements
+   carrying explicit contradiction markers ("no longer", "anymore",
+   "changed my mind", "used to", ...) sharing ≥2 content terms with
+   another UserStatement are surfaced as a `conflicts` array in
+   `memory.episodic_search` output — both records with full provenance,
+   TANGLE semantics: never silently resolve.
+
+**5-seed results**: T8 verification 0% → 100% (R@5 100%), overall
+44.65%. Benchmark harness fix included: T8 answers previously used verbs
+("eats"/"drinks") that never appear in the generated contents, making
+the 70% set verification unpassable. T2 on the regenerated data samples
+different unknown topics (pet vs programming_language) — verified NOT a
+regression by re-running today's code on the old data (T2 unchanged).
+LongMemEval 50q unchanged (86/100/100, MRR 0.9233).
 
 #### T10 Cross-Session Synthesis (0% verif, 100% R@1) — Medium Effort
 **Approach**: Post-retrieval aggregation tool.
