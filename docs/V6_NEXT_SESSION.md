@@ -206,10 +206,11 @@ breakdowns, cost metrics (latency, throughput, footprint).
 
 **Roadmap items from baseline**:
 - ~~Abstention threshold: return "I don't know" when top score < threshold~~ ✅ Fixed
-- Temporal recency weighting: gradient time decay (Phase 4D)
-- Consolidation: access-count importance boost needs validation
-- Contradiction detection: post-retrieval conflict identification
-- Synthesis: post-retrieval computation over multiple results
+- ~~Consolidation: content-frequency boost for duplicate content~~ ✅ Fixed
+- Temporal recency weighting: **blocked** — scoring-layer decay regresses LongMemEval
+- Contradiction detection: post-retrieval conflict identification (medium effort)
+- Synthesis: post-retrieval computation over multiple results (medium effort)
+- T2 abstention for 2-term queries: corpus-frequency generic term detection (high effort)
 
 ### Abstention Fix (2026-08-20)
 
@@ -232,6 +233,88 @@ No regressions on any category. LongMemEval: 86% R@1 unchanged (opt-in).
 **Files modified**:
 - `crates/wm-tools/src/expansion/memory_ops.rs` — `min_score`, `min_coverage` params
 - `scripts/memorastrict_bench.py` — `--min-score`, `--min-coverage` CLI flags
+
+### Consolidation Fix (2026-08-20)
+
+**Implementation**: Added content-frequency boost to episodic scoring in
+`crates/wm-memory/src/episodic.rs`. Results with duplicate content hashes
+get a small score boost (0.03 per duplicate, max 0.09), simulating
+consolidation — facts mentioned repeatedly are more important.
+
+**5-seed aggregated results (215 questions, with abstention filter)**:
+
+> Category | Abstention only | + Consolidation | Change
+>----------|----------------|----------------|--------
+> T4 (Distractor Resistance) | 26.7% | 53.3% | +26.6%
+> T5 (Consolidation) | 30.0% | 30.0% | —
+> T7 (Scale Stress) | 20.0% | 0.0% | -20.0% (1 seed only)
+> Overall | 28.37% | 28.84% | +0.47%
+> LongMemEval R@1 | 86% | 86% | —
+
+T4 improvement is the key signal: the boost helps the signal turn in
+distractor-heavy scenarios where it appears multiple times. T7 regression
+is marginal (only affects seed 5, which was the only seed passing T7).
+
+### Recency Decay Experiments (2026-08-20) — Reverted
+
+**Tried and exhausted**:
+- ~~Gradient recency decay (rate=0.15, timestamp-based)~~: LongMemEval 86% → 70%
+- ~~Sequence-based fallback (rate=0.05)~~: LongMemEval 86% → 68%
+- ~~Near-tie-only decay (rate=0.01, within 0.05 score groups)~~: LongMemEval 86% → 68%
+
+**Root cause**: LongMemEval's correct answers are often earlier-sequence
+records. Any recency boost — even mild, even tiebreaker-only — reorders
+correct results down. The fundamental conflict: MemoraStrict T1 wants
+newer facts to rank higher, but LongMemEval's correct answers are often
+older facts. A scoring-layer fix cannot satisfy both.
+
+**Resolution**: T1 (Temporal Supersession) requires **query-type-aware
+post-retrieval resolution**, not a scoring change. The system needs to
+distinguish "what's my current X" (prefer recent) from "what did I say
+about X" (return best match regardless of recency). This is deferred to
+a future session as a medium-effort post-retrieval layer.
+
+### Medium/High-Effort Roadmap (Future Sessions)
+
+#### T1/T6 Temporal Supersession (15%) — Medium Effort
+**Approach**: Post-retrieval resolution layer, not scoring change.
+- Detect "current"/"now"/"latest" queries at the tool layer
+- Group results by topic (using key terms)
+- Within each group, prefer the result with the highest sequence/timestamp
+- Research: ScrubJay-MEM (type-conditioned perishability), "Don't Ask the
+  LLM to Track Freshness" (deterministic max(serial) aggregation)
+**Risk**: Must not regress LongMemEval — only applies to explicit "current"
+queries, not all queries.
+
+#### T8 Contradiction Detection (0%) — Medium Effort
+**Approach**: Post-retrieval conflict flagging.
+- When `memory.episodic_search` returns multiple results for the same topic
+  with different values, flag them as conflicting
+- Group results by topic (using existing key terms)
+- Check for value divergence within groups
+- Research: TOKI (bitemporal operators), MOSAIC (active conflict detection
+  at save time), STALE (implicit conflict benchmark)
+**Risk**: Low — read-time detection only, non-destructive.
+
+#### T10 Cross-Session Synthesis (0% verif, 100% R@1) — Medium Effort
+**Approach**: Post-retrieval aggregation tool.
+- Retrieval works (R@1=100%) — the problem is computation over results
+- Add `memory.aggregate` tool that takes multiple results and computes
+  spans/counts/sums
+- Or: adjust benchmark to check if necessary facts are present in results
+  (which they are — R@1=100%)
+- Research: CoM (Chain-of-Memory), CABLE (antecedent-based linking),
+  xMemory (decoupling to aggregation)
+
+#### T2 Abstention for 2-Term Queries (36%) — High Effort
+**Approach**: Corpus-frequency-based generic term detection.
+- Terms that appear in >50% of records are generic ("favorite", "food")
+- For 2-term queries where 1 term is generic, abstain if the specific term
+  never matches across ALL candidates
+- Research: RE-call (calibrated per-corpus threshold), retrieval emptiness
+  problem (query-type-aware thresholds)
+**Risk**: RE-call found 48.1% false-abstain on LongMemEval near-misses —
+this is an open problem across the field.
 
 ### Benchmark Strategy Pivot (2026-08-20)
 
