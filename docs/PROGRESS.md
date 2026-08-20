@@ -1,6 +1,30 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 16, 2026 (gate re-run with uncommitted work: 3,513 tests, 0 clippy warnings, fmt clean, release build clean. All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5, B4 remain. Ready for v5.8.0 final.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+**Last updated**: August 20, 2026 (final v5.8.0 gate re-run from `cargo clean` at HEAD: 3,570 tests, 0 clippy warnings, fmt clean, release build clean, curated smoke test + fresh-install rehearsal passed on the installed binary. Tantivy schema-mismatch auto-migration added — legacy stores now upgrade seamlessly. Tool-count claims corrected to 237 registered / 232 brain-wave available / 48 curated. Ready to tag v5.8.0 final.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+
+---
+
+## Session 2026-08-20 (afternoon): v5.8.0 final gate + schema-migration fix
+
+- Full release gate re-run from `cargo clean`: fmt clean, 3,570 tests
+  passed, clippy `-D warnings` clean, release build clean.
+- Curated smoke test passed against the release binary and the installed
+  `~/.local/bin/wm` (fresh store, clean-machine handshake, restart
+  persistence, read-only enforcement).
+- **Found and fixed an upgrade blocker during the fresh-install rehearsal**:
+  the developer's own Aug-7 default store failed to open with a Tantivy
+  schema error — the `en_stem` tokenizer change (commit `3be3e02`,
+  2026-08-17) made every pre-existing index unreadable. Fix in
+  `crates/wm-memory/src/search.rs` (`SearchEngine::open_index`): writable
+  opens detect `TantivyError::SchemaError`, move the old index aside as
+  `tantivy.schema-mismatch.<millis>`, and create a fresh index;
+  `McpServer::with_defaults_mode_profile` rebuilds it from canonical LMDB
+  at startup. `wm reindex` recovers directly. Read-only opens refuse to
+  migrate with actionable guidance. 3 regression tests + end-to-end
+  verification on a real legacy store (serve → migrate → rebuild →
+  create/search round-trip; `wm reindex` → 301/301 re-indexed).
+- Tool-count verification: registry 237, full-profile `tools.list` 232
+  (brain-wave gated), curated 48. README/AGENTS corrected from stale 229.
 
 ---
 

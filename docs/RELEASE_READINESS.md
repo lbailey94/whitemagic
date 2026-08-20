@@ -1,9 +1,9 @@
 # WhiteMagic v5 Release Readiness
 
 **Prepared:** 2026-08-12
-**Last updated:** 2026-08-20 (release gate re-run, v5.8.0-rc2 tagged at 967583c)
+**Last updated:** 2026-08-20 (final release gate re-run from `cargo clean` at HEAD; Tantivy schema-mismatch auto-migration added; ready to tag v5.8.0 final)
 **Version under review:** v5.8.0
-**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5 (`wm seal`/`wm verify`) is implemented and awaiting a targeted test pass; B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. v6-dev Phase 1-2 vocabulary enrichment and tiebreaker tuning complete: 50q R@1 86%, R@5=100%, R@10=100%, MRR=0.9233. Phase 3 window indexing explored and fully reverted — symmetric scoring changes are neutral or negative. Phase 4 research complete: key expansion (LongMemEval Finding 2), embedding reranking (Relay approach), and topic-shift chunking (Redis Remis) identified as top approaches. See `docs/V6_PHASE4_RESEARCH.md` and `docs/V6_NEXT_SESSION.md`. Ready for v5.8.0 final after release gate re-run.
+**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5 (`wm seal`/`wm verify`) is implemented and awaiting a targeted test pass; B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. v6-dev episodic retrieval work (typed keys, query-class planner, vocabulary enrichment, abstention, consolidation boost) rides along behind opt-in tool parameters; LongMemEval 50q R@1 86% is unchanged by the release-stabilization fixes. Ready for v5.8.0 final: tag and push.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
@@ -20,12 +20,41 @@ The release promise is:
 > Your agent can remember project context, find it after restart, and carry
 > work across sessions without sending its memory store to a hosted service.
 
-The 229-tool surface, cognitive cycles, Sangha mesh, self-play, imagination,
+The 237-tool surface, cognitive cycles, Sangha mesh, self-play, imagination,
 polyglot integrations, and learned routing remain valuable research and
 extension surfaces. They are not the v1 product promise and must not expand the
 release scope until the memory boundary is dependable.
 
 ## Evidence So Far
+
+Verified on 2026-08-20 (final release gate re-run from `cargo clean` at HEAD
+`59a7a54` + schema-migration fix; v5.8.0-rc2 was tagged at `967583c` earlier
+the same day):
+
+- `cargo test --workspace --all-targets`: 3,570 tests passed.
+- `cargo fmt --all -- --check`: passed.
+- `cargo clippy --all-targets -- -D warnings`: passed.
+- `cargo build --release --bin wm`: passed.
+- **Tantivy schema-mismatch auto-migration**: stores created before the
+  `en_stem` tokenizer change (commit `3be3e02`, 2026-08-17) previously failed
+  to open with a hard schema error — a real upgrade blocker found during the
+  fresh-install rehearsal against the developer's own Aug-7 default store.
+  Fix: `SearchEngine::open` detects `TantivyError::SchemaError`, moves the
+  old index aside (`tantivy.schema-mismatch.<millis>`), creates a fresh
+  index, and `McpServer::with_defaults_mode_profile` rebuilds it from the
+  canonical LMDB store at startup. `wm reindex` recovers such stores directly.
+  Read-only opens refuse to migrate and direct the user to `wm reindex`.
+  3 regression tests; verified end-to-end on a real legacy store
+  (create + search round-trip post-migration; `wm reindex` re-indexed
+  301/301 memories).
+- Fresh-install rehearsal on the installed binary (`~/.local/bin/wm`):
+  `wm quickstart` on a clean default store, `wm doctor` all healthy,
+  curated smoke test passed (initialize → tools/list → curated dispatch →
+  restart persistence → read-only enforcement).
+- Tool-count verification (public-claims discipline): registry registers
+  237 tools; `tools.list` full profile reports 232 (brain-wave gated);
+  curated profile exposes 48. README/AGENTS counts corrected from the
+  stale 229.
 
 Verified on 2026-08-13 (Phase A of PET hardening, committed as `1dc29b6`;
 P0/P1 gates completed evening 2026-08-13):
@@ -356,26 +385,28 @@ Open work after P0/P1:
 
 ## Next Execution Order
 
-All P0 and P1 items are complete. Vector search wiring is complete. The next
-steps are:
+All P0 and P1 items are complete. The final release gate was re-run from
+`cargo clean` on 2026-08-20 at HEAD (including the Tantivy schema-mismatch
+auto-migration fix). The next steps are:
 
-1. **Release gate run**: execute every item in the Release Gate section
-   against the current commit on a clean machine (`cargo clean` first).
-2. **Tag the release candidate**: `git tag v5.8.0-rc2` and push to trigger
-   the release workflow (per-platform binaries + checksums).
-3. **Fresh-install rehearsal**: run `scripts/install.sh` against the RC,
-   then `wm doctor`, then `scripts/curated_smoke_test.py`.
-4. **Recall measurement** (see
-   [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md)):
-   - Score OR + token-coverage on the same 10q (then 50q) BM25+stem set
-   - Do not cite n=10 hybrid R@5=0.90 as official LongMemEval QA
-   - Hybrid 50q only after OR is scored; weights already failed to differentiate
-5. **P2 items** (post-release, not blockers):
-   - NLU abstention with confidence/margin thresholds
-   - Router quality evaluation against a labeled corpus
-   - Learned inference router promotion or library-only labeling
-   - Self-play/imagination experimental labeling
-6. **Phase B** (v5.9 PET hardening theme):
+1. **Tag the release**: `git tag v5.8.0` at the gate-verified commit and push
+   to trigger the release workflow (per-platform binaries + checksums).
+2. **Fresh-install rehearsal**: run `scripts/install.sh` against the
+   published v5.8.0 artifacts, then `wm doctor`, then
+   `scripts/curated_smoke_test.py`. (Rehearsed locally on 2026-08-20 with
+   the built binary; the `install.sh`-from-artifacts pass is the remaining
+   step after publish.)
+ 3. **Recall measurement** (see
+    [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md)):
+    - Score OR + token-coverage on the same 10q (then 50q) BM25+stem set
+    - Do not cite n=10 hybrid R@5=0.90 as official LongMemEval QA
+    - Hybrid 50q only after OR is scored; weights already failed to differentiate
+ 4. **P2 items** (post-release, not blockers):
+    - NLU abstention with confidence/margin thresholds
+    - Router quality evaluation against a labeled corpus
+    - Learned inference router promotion or library-only labeling
+    - Self-play/imagination experimental labeling
+ 5. **Phase B** (v5.9 PET hardening theme):
    - B4: sandbox mode for tool execution
    - ~~B5: store seal/verify (tamper detection)~~ implemented as HMAC
      manifest + `wm seal`/`wm verify`; not a cryptographic root of trust
@@ -420,8 +451,8 @@ README, website, registry listing, or launch content must cite a fresh run
 against the release commit, stamped with configuration and date. Stale counts
 or unreproduced claims are release blockers, not documentation bugs.
 
-- Counts (`3,515 tests`, `229 tools`) must come from a run of the release
-  commit.
+- Counts (`3,570 tests`, `237 tools` — 232 brain-wave available, 48 curated)
+  must come from a run of the release commit (last verified 2026-08-20).
 - Benchmarks must come from the release binary on a named machine
   configuration.
 - Claims written without a cited run are removed or marked `[Speculative]`

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v6-dev
 
+### v5.8.0 release stabilization (2026-08-20)
+
+- **Tantivy schema-mismatch auto-migration** — stores created before the
+  en_stem tokenizer change (commit `3be3e02`) previously failed to open with
+  a hard `Schema error`. Now: a writable `SearchEngine::open` moves the old
+  index aside (`tantivy.schema-mismatch.<millis>` sibling), creates a fresh
+  index, and server startup rebuilds it from the canonical LMDB store, so
+  upgrades are seamless. `wm reindex` also recovers such stores directly.
+  A read-only open (e.g. `wm doctor --readonly` sharing) refuses to migrate
+  and returns an error pointing at `wm reindex`. 3 regression tests cover
+  writable migration + backup, read-only refusal without mutation, and
+  no-migration on schema match. Verified end-to-end against a real Aug-7
+  store: serve → migrate → rebuild → create + search round-trip, and
+  `wm reindex` → 301/301 memories re-indexed.
+- **Release gate re-run (2026-08-20, from `cargo clean`)**: fmt clean,
+  3,570 tests passed, clippy `-D warnings` clean, release build clean,
+  curated smoke test + clean-machine handshake + restart persistence +
+  read-only enforcement passed on a fresh store and against the installed
+  binary at `~/.local/bin/wm`.
+- **Public-claims count correction**: the registry registers 237 tools
+  (232 available in the default brain wave, 48 in the curated profile) —
+  README/AGENTS previously claimed 229. Test count is 3,570 (was 3,513).
+
 ### Episodic retrieval — vocabulary enrichment (Phase 1)
 
 - **Storage-time vocabulary enrichment** — hypernym maps (production→play/theater,

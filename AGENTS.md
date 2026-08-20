@@ -21,14 +21,14 @@ Record meaningful turns as you go: `wm(route="session.record", args={"content": 
 ```bash
 cargo build                    # Debug build
 cargo build --release          # Release build
-cargo test                     # Run all tests (3,504 tests)
+cargo test                     # Run all tests (3,570 tests)
 cargo test -p wm-core          # Test a single crate
 cargo bench                    # Run benchmarks (criterion)
 cargo clippy --all-targets     # Lint (0 warnings)
 cargo fmt --all -- --check     # Format check
 ```
 
-## Architecture (15 crates, 229 tools, ~131,000 LOC, 3,504 tests)
+## Architecture (15 crates, 237 tools, ~131,000 LOC, 3,570 tests)
 
 - **wm-core**: Core types (Gana, EffectRow, Tool trait, BrainWave, Galaxy, HolographicCoords, attestation, security, mutable structures)
 - **wm-memory**: LMDB store + Tantivy FTS + LanceDB vectors + Mandala compartments + local embedder (HTTP/llama-server + stub)
@@ -36,7 +36,7 @@ cargo fmt --all -- --check     # Format check
 - **wm-cognitive**: Citta cycle, dream cycle, brain-wave eco mode, 7 autonomous cycles, spiral tracker, reflex, timescale, drive, resonance, autonomic (merged from 6 crates in v5 Phase 1)
 - **wm-governance**: Dharma rules, karma ledger (SHA-256 chain), resource rules, mandala compartments, policy engine
 - **wm-polyglot**: Julia (jlrs), Haskell (FFI), Zig (C ABI), Koka (C ABI)
-- **wm-tools**: 229 tool implementations organized by Gana + `wm` meta-tool with explicit routing and optional NLU (embedding router + TF-IDF fallback + 12 prefix routes)
+- **wm-tools**: 237 tool implementations organized by Gana + `wm` meta-tool with explicit routing and optional NLU (embedding router + TF-IDF fallback + 12 prefix routes)
 - **wm-mcp**: Async MCP server (JSON-RPC over stdio, exposes only `wm` meta-tool) + `wm` CLI + PyO3 bridge (feature-gated)
 - **wm-substrate**: Hardware metrics, Harmony Vector (Lakshmi), /proc + /sys reading, sensorimotor bus
 - **wm-bicameral**: Dual-hemisphere reasoning (left: LlamaLeftHemisphere/heuristic, right: BitNet/LLM/stub) + inference router (5-tier complexity-aware routing) + learned router (embedding k-NN + conformal calibration) + edge rule generator + imagination engine + self-play training loop
@@ -178,7 +178,7 @@ release surface:
 
 ### Tool Surface Profiles
 
-229 tools is an archive, not a v1 product. Profiles curate which tools the `wm` meta-tool can route to (filtering happens before the meta-tools are layered on, so both NLU routing and direct dispatch respect the profile):
+237 tools is an archive, not a v1 product. Profiles curate which tools the `wm` meta-tool can route to (filtering happens before the meta-tools are layered on, so both NLU routing and direct dispatch respect the profile):
 
 - `full` (default) — every tool
 - `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims` + `claims.*` aliases, `transaction.*`, diagnostics, `tools.list`, `tools.usage_report`, `nlu.shadow_report`
