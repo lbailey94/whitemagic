@@ -753,6 +753,14 @@ impl Tool for MemoryEpisodicSearchTool {
                     "type": "number",
                     "description": "Deterministic weight in hybrid score (0.0-1.0, default 0.7)",
                 },
+                "min_score": {
+                    "type": "number",
+                    "description": "Minimum score threshold; results below this are dropped (abstention). Default 0.0 (no threshold)",
+                },
+                "min_coverage": {
+                    "type": "number",
+                    "description": "Minimum query-term coverage ratio (0.0-1.0); results with lower coverage are dropped. E.g. 0.5 requires at least half the query terms to match. Default 0.0 (no threshold)",
+                },
             }),
             &["query"],
         )
@@ -773,6 +781,40 @@ impl Tool for MemoryEpisodicSearchTool {
             .get("rerank_alpha")
             .and_then(Value::as_f64)
             .unwrap_or(0.7) as f32;
+        let min_score = args
+            .get("min_score")
+            .and_then(Value::as_f64)
+            .map(|v| v as f32);
+        let min_coverage = args
+            .get("min_coverage")
+            .and_then(Value::as_f64)
+            .map(|v| v as f32);
+        // Compute query content-term count for coverage ratio.
+        // We use a simple split on non-alphanumeric after removing common
+        // stopwords, matching the episodic search tokenization.
+        let query_term_count: usize = {
+            const STOPWORDS: &[&str] = &[
+                "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+                "have", "has", "had", "do", "does", "did", "will", "would", "could",
+                "should", "may", "might", "must", "can", "shall", "to", "of", "in",
+                "on", "at", "by", "for", "with", "about", "as", "into", "like",
+                "through", "after", "over", "between", "out", "against", "during",
+                "without", "before", "under", "around", "among",
+                "i", "me", "my", "we", "us", "our", "you", "your", "he", "him",
+                "his", "she", "her", "it", "its", "they", "them", "their",
+                "what", "whats", "who", "when", "where", "why", "how",
+                "and", "or", "but", "not", "no", "nor", "so", "yet", "both",
+                "either", "neither", "this", "that", "these", "those",
+                "there", "here", "now", "then", "than",
+            ];
+            query
+                .split(|c: char| !c.is_alphanumeric())
+                .filter(|t| t.len() > 1)
+                .map(str::to_ascii_lowercase)
+                .filter(|t| !STOPWORDS.contains(&t.as_str()))
+                .collect::<std::collections::HashSet<_>>()
+                .len()
+        };
         let raw_results = if rerank {
             self.store.episodic().search_with_rerank(
                 query,
@@ -789,9 +831,21 @@ impl Tool for MemoryEpisodicSearchTool {
                 include_historical,
             )?
         };
+        // Coverage-based abstention: if the query has 3+ content terms and
+        // NO result matches 2+ terms, all matches are likely on a single
+        // generic term (e.g. "favorite") rather than the actual topic.
+        // In that case, abstain entirely. If even one result matches 2+
+        // terms, keep all results (the query has real matches in the haystack).
+        let abstain = min_coverage.is_some()
+            && query_term_count >= 3
+            && !raw_results
+                .iter()
+                .any(|hit| hit.matched_terms >= 2);
         let results = raw_results
             .into_iter()
             .filter(|hit| !hit.record.is_private && !hit.record.model_exclude)
+            .filter(|hit| min_score.is_none_or(|ms| hit.score >= ms))
+            .filter(|_| !abstain)
             .take(limit)
             .map(|hit| {
                 json!({
