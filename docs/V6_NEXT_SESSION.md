@@ -282,7 +282,28 @@ a future session as a medium-effort post-retrieval layer.
 > work is *expected* (Post-Retrieval Assembly replication, McNemar p=0.45);
 > reranking should use the protected-top-K pattern (ConvMemory v2).
 
-#### T1/T6 Temporal Supersession (15%) — Medium Effort — NEXT
+#### T1/T6 Temporal Supersession — ✅ DONE (2026-08-20, commit cbbc201)
+
+Implemented as a read-time resolution layer in
+`crates/wm-memory/src/episodic.rs` (`is_current_query` +
+`resolve_current`): queries asking for the current/latest value promote
+`UserStatement` records containing change markers ("switched to",
+"changed my", "now prefer", "used to", ...) ordered by deterministic
+chronology (`created_at`, `sequence`). Assistant echoes never anchor;
+scoring is untouched; non-current queries take the identical path.
+
+**5-seed A/B (215 questions)**: T1 15%→50% (+35pp), T6 15%→50% (+35pp),
+T9 45%→56.7% (+11.7pp), every other category byte-identical, overall
+28.8%→38.6%. LongMemEval 50q unchanged (86/100/100, MRR 0.9233) —
+neutrality confirmed empirically, matching the Post-Retrieval Assembly
+p=0.45 replication.
+
+Remaining gap: T1/T6 at 50% — misses are cases where the change statement
+falls outside the candidate pool or the change-marker vocabulary doesn't
+cover the phrasing. Future option: GPM-style derived lifecycle state at
+write time so "current" becomes a lookup.
+
+#### T8 Contradiction Detection (0%) — Medium Effort — NEXT
 **Approach**: Post-retrieval resolution layer, not scoring change.
 - Detect "current"/"now"/"latest" queries at the tool layer
 - Group results by topic (using key terms)
