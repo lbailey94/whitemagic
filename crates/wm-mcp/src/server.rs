@@ -2121,6 +2121,16 @@ impl McpServer {
             "capabilities": {
                 "tools": {},
             },
+            "instructions": concat!(
+                "WhiteMagic gives you durable local project memory. Session rhythm:\n",
+                "1. Before starting work, call wm(route=\"session.continuity\") to recall where the previous session left off.\n",
+                "2. Start each working session with wm(route=\"session.start\", args={\"title\": \"...\"}).\n",
+                "3. Record selectively as you go — decisions, breakthroughs, errors worth remembering, and summaries — via wm(route=\"session.record\", args={\"content\": \"...\", \"role\": \"ai\", \"turn_type\": \"decision\"|\"breakthrough\"|\"error\"|\"summary\", \"importance\": 0.0-1.0}). Do not record everything; record what a future session needs.\n",
+                "4. Use explicit route= dispatch for important operations so behavior is dependable.\n",
+                "5. At the end of a session, record a short summary turn, then wm(route=\"session.checkpoint\").\n",
+                "6. Discover the available surface with wm(route=\"tools.list\").\n",
+                "Privacy and backup: memory is stored locally under your store directory and is not encrypted — never record credentials or secrets. Back up the whole store directory regularly; privacy flags exclude memories from responses but do not encrypt them."
+            ),
         }))
     }
 
@@ -3049,6 +3059,25 @@ mod tests {
         let result = resp.result.unwrap();
         assert_eq!(result["serverInfo"]["name"], "whitemagic");
         assert!(result["capabilities"]["tools"].is_object());
+        // G1.6: the session rhythm must be delivered via server instructions.
+        let instructions = result["instructions"]
+            .as_str()
+            .expect("instructions present");
+        for expected in [
+            "session.continuity",
+            "session.start",
+            "session.record",
+            "turn_type",
+            "session.checkpoint",
+            "tools.list",
+            "not encrypted",
+            "Back up",
+        ] {
+            assert!(
+                instructions.contains(expected),
+                "instructions must mention {expected}"
+            );
+        }
     }
 
     #[tokio::test]

@@ -242,6 +242,14 @@ impl Tool for SessionReplayTool {
         let n = args.get("n").and_then(Value::as_u64).unwrap_or(50) as usize;
         let turns = load_turns(&self.store, session_id, 10_000)?;
 
+        // An explicitly requested session that has no turns is an error, not
+        // an empty success — silent emptiness hides typos and stale IDs.
+        if session_id.is_some_and(|sid| !sid.is_empty()) && turns.is_empty() {
+            return Err(wm_core::CoreError::InvalidArgs(format!(
+                "no session found with id {session_id:?}"
+            )));
+        }
+
         let selected: Vec<(Memory, Value)> = match mode {
             "selective" => {
                 let min_importance = args
