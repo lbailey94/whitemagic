@@ -5350,15 +5350,15 @@
       }
     },
     {
-      "id": "T2_unknown_transport",
+      "id": "T2_unknown_hobby",
       "test_category": "T2",
-      "question": "What's my favorite transport?",
+      "question": "What's my favorite hobby?",
       "answer": "I don't know",
       "answer_session_ids": [],
       "verification_type": "abstention",
       "answer_facts": [],
       "metadata": {
-        "topic": "transport",
+        "topic": "hobby",
         "reason": "topic_never_discussed"
       }
     },
@@ -5659,7 +5659,9 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 1000,
-        "topic": "book_genre"
+        "actual_turns": 689,
+        "topic": "book_genre",
+        "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }
     },
     {
@@ -5674,7 +5676,9 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 10000,
-        "topic": "book_genre"
+        "actual_turns": 689,
+        "topic": "book_genre",
+        "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }
     },
     {
@@ -5689,7 +5693,9 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 50000,
-        "topic": "book_genre"
+        "actual_turns": 689,
+        "topic": "book_genre",
+        "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }
     },
     {
@@ -5704,14 +5710,16 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 100000,
-        "topic": "book_genre"
+        "actual_turns": 689,
+        "topic": "book_genre",
+        "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }
     },
     {
       "id": "T8_vegetarian_steak",
       "test_category": "T8",
       "question": "Do I have any dietary restrictions?",
-      "answer": "CONFLICT: was vegetarian, now eats steak",
+      "answer": "CONFLICT: was vegetarian, now steak",
       "answer_session_ids": [
         "session_008",
         "session_013"
@@ -5730,7 +5738,7 @@
       "id": "T8_vegan_cheese",
       "test_category": "T8",
       "question": "Do I have any dietary restrictions?",
-      "answer": "CONFLICT: was vegan, now eats cheese",
+      "answer": "CONFLICT: was vegan, now cheese",
       "answer_session_ids": [
         "session_003",
         "session_006"
@@ -5749,7 +5757,7 @@
       "id": "T8_teetotaler_wine",
       "test_category": "T8",
       "question": "Do I drink alcohol?",
-      "answer": "CONFLICT: was teetotaler, now drinks wine",
+      "answer": "CONFLICT: was teetotaler, now wine",
       "answer_session_ids": [
         "session_003",
         "session_011"

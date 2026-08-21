@@ -886,6 +886,256 @@ impl Tool for MemoryEpisodicSearchTool {
     }
 }
 
+/// `memory.aggregate` — post-retrieval aggregation over matching memories.
+///
+/// Retrieves memories with a full-text query (same BM25 path as
+/// `memory.search`) and computes an aggregate over the results. Session
+/// metrics derive from `session_<n>` tags (a common client convention),
+/// letting callers answer cross-session synthesis questions like "how long
+/// from X to Y" without scanning raw results themselves.
+///
+/// For span metrics, the anchor set is narrowed to results matching the
+/// rarest query term (fewest matches, ties broken by query order) so that
+/// unrelated-but-similar turns (e.g. the same question about a different
+/// skill) do not distort the span.
+pub struct MemoryAggregateTool {
+    search: Option<Arc<SearchEngine>>,
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl MemoryAggregateTool {
+    pub fn new(search: Option<Arc<SearchEngine>>, store: Arc<MemoryStore>) -> Self {
+        Self {
+            search,
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
+        }
+    }
+}
+
+/// Extract a session ordinal from `session_<n>` tags.
+fn session_ordinal(tags: &[String]) -> Option<u64> {
+    tags.iter().find_map(|tag| {
+        let rest = tag.strip_prefix("session_")?;
+        rest.parse::<u64>().ok()
+    })
+}
+
+/// Word-boundary match of a lowercase query term against content (with a
+/// light suffix-stripped variant for morphological tolerance).
+fn contains_term(content: &str, term: &str) -> bool {
+    let lowered = content.to_ascii_lowercase();
+    let variants = [term.to_string(), strip_suffix(term)];
+    for variant in &variants {
+        if variant.len() < 2 {
+            continue;
+        }
+        let mut start = 0;
+        while let Some(pos) = lowered[start..].find(variant.as_str()) {
+            let before_ok = pos == 0
+                || !lowered[start + pos - 1..start + pos]
+                    .chars()
+                    .next()
+                    .is_some_and(char::is_alphanumeric);
+            let end = start + pos + variant.len();
+            let after_ok = end >= lowered.len()
+                || !lowered[end..]
+                    .chars()
+                    .next()
+                    .is_some_and(char::is_alphanumeric);
+            if before_ok && after_ok {
+                return true;
+            }
+            start += pos + variant.len();
+        }
+    }
+    false
+}
+
+/// Strip a common English suffix for tolerant matching (mirrors the
+/// simple stemmer used by the search tokenizer).
+fn strip_suffix(term: &str) -> String {
+    for suffix in ["ing", "ed", "es", "s"] {
+        if let Some(stem) = term.strip_suffix(suffix) {
+            if stem.len() >= 2 {
+                return stem.to_string();
+            }
+        }
+    }
+    term.to_string()
+}
+
+#[async_trait]
+impl Tool for MemoryAggregateTool {
+    fn name(&self) -> &str {
+        "memory.aggregate"
+    }
+    fn gana(&self) -> Gana {
+        Gana::WinnowingBasket
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Aggregate over memories matching a query: count, distinct session count, or session span (cross-session synthesis)"
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "query": str_prop("Full-text query selecting the memories to aggregate over"),
+                "metric": str_prop("Aggregate metric: count | session_count | session_span"),
+                "limit": int_prop("Maximum candidates considered (default 50)"),
+            }),
+            &["query", "metric"],
+        )
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let query = args
+            .get("query")
+            .and_then(Value::as_str)
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("query (string) required".into()))?;
+        let metric = args
+            .get("metric")
+            .and_then(Value::as_str)
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("metric (string) required".into()))?;
+        let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(50) as usize;
+        let Some(search) = self.search.as_ref() else {
+            return Err(wm_core::CoreError::Memory(
+                "search engine unavailable for aggregation".into(),
+            ));
+        };
+
+        let results = search.search(query, limit)?;
+        // Load full memories (for tags) and drop non-visible ones.
+        let mut memories = Vec::new();
+        for r in &results {
+            let Some(galaxy) = wm_core::Galaxy::from_db_name(&r.galaxy) else {
+                continue;
+            };
+            let Ok(id) = uuid::Uuid::parse_str(&r.memory_id) else {
+                continue;
+            };
+            let Ok(Some(mem)) = self.store.get(galaxy, id) else {
+                continue;
+            };
+            if super::common::mcp_visible(&mem) {
+                memories.push((r.score, mem));
+            }
+        }
+
+        let evidence: Vec<Value> = memories
+            .iter()
+            .map(|(score, mem)| {
+                json!({
+                    "memory_id": mem.metadata.id.to_string(),
+                    "score": score,
+                    "content": wm_memory::scrub_text(&mem.content),
+                    "tags": mem.metadata.tags,
+                })
+            })
+            .collect();
+
+        // Anchor narrowing for session metrics: keep only results matching
+        // the rarest query term (fewest matches; ties by query order).
+        let session_tagged: Vec<_> = memories
+            .iter()
+            .filter(|(_, mem)| session_ordinal(&mem.metadata.tags).is_some())
+            .collect();
+        let anchored: Vec<_> = if metric == "count" || session_tagged.len() < 2 {
+            Vec::new()
+        } else {
+            let terms: Vec<String> = wm_memory::strip_stopwords(query)
+                .split(|c: char| !c.is_alphanumeric())
+                .filter(|t| t.len() > 1)
+                .map(str::to_ascii_lowercase)
+                .collect();
+            let mut best: Option<(String, usize)> = None;
+            for term in &terms {
+                let count = session_tagged
+                    .iter()
+                    .filter(|(_, mem)| contains_term(&mem.content, term))
+                    .count();
+                if count == 0 {
+                    continue;
+                }
+                let better = best
+                    .as_ref()
+                    .is_none_or(|(_, best_count)| count < *best_count);
+                if better {
+                    best = Some((term.clone(), count));
+                }
+            }
+            match best {
+                Some((term, _)) => session_tagged
+                    .iter()
+                    .filter(|(_, mem)| contains_term(&mem.content, &term))
+                    .copied()
+                    .collect(),
+                None => Vec::new(),
+            }
+        };
+
+        let aggregate = match metric {
+            "count" => json!({
+                "metric": "count",
+                "value": memories.len(),
+                "content": format!("{} memories", memories.len()),
+            }),
+            "session_count" => {
+                let sessions: std::collections::HashSet<u64> = anchored
+                    .iter()
+                    .filter_map(|(_, mem)| session_ordinal(&mem.metadata.tags))
+                    .collect();
+                json!({
+                    "metric": "session_count",
+                    "value": sessions.len(),
+                    "content": format!("{} distinct sessions", sessions.len()),
+                })
+            }
+            "session_span" => {
+                let ordinals: Vec<u64> = anchored
+                    .iter()
+                    .filter_map(|(_, mem)| session_ordinal(&mem.metadata.tags))
+                    .collect();
+                if ordinals.is_empty() {
+                    json!({
+                        "metric": "session_span",
+                        "value": null,
+                        "content": "no session-tagged evidence found",
+                    })
+                } else {
+                    let span = ordinals.iter().max().unwrap() - ordinals.iter().min().unwrap();
+                    json!({
+                        "metric": "session_span",
+                        "value": span,
+                        "unit": "sessions",
+                        "content": format!("{span} sessions"),
+                    })
+                }
+            }
+            other => {
+                return Err(wm_core::CoreError::InvalidArgs(format!(
+                    "unknown metric '{other}' (count | session_count | session_span)"
+                )));
+            }
+        };
+
+        Ok(json!({
+            "status": "success",
+            "query": query,
+            "total": memories.len(),
+            "aggregate": aggregate,
+            "results": evidence,
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
 /// `memory.sort` — sort memories by importance, recency, or access count.
 pub struct MemorySortTool {
     store: Arc<MemoryStore>,
@@ -2113,5 +2363,144 @@ mod tests {
                 "results should be tagged fts"
             );
         }
+    }
+
+    fn index_tagged_memory(
+        store: &Arc<MemoryStore>,
+        search: &Arc<SearchEngine>,
+        galaxy: Galaxy,
+        content: &str,
+        tags: &[&str],
+    ) {
+        let mut mem = Memory::new(galaxy, content.to_string());
+        mem.metadata.tags = tags.iter().map(ToString::to_string).collect();
+        let id = mem.metadata.id;
+        store.put(galaxy, &mem).unwrap();
+        let mut writer = search.writer().unwrap();
+        search
+            .add_document(
+                &mut writer,
+                &id.to_string(),
+                galaxy.db_name(),
+                content,
+                &mem.metadata.tags,
+                mem.metadata.created_at.timestamp(),
+            )
+            .unwrap();
+        search.commit(&mut writer).unwrap();
+    }
+
+    fn aggregate_fixture() -> (tempfile::TempDir, Arc<MemoryStore>, Arc<SearchEngine>) {
+        let (dir, store, search) = hybrid_fixture();
+        // A Rust learning journey across sessions 2, 7, 12 …
+        index_tagged_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "I started learning Rust.",
+            &["user", "session_002"],
+        );
+        index_tagged_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "I finished my first Rust project, a CLI tool.",
+            &["user", "session_007"],
+        );
+        index_tagged_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "I got a job as a systems engineer using Rust.",
+            &["user", "session_012"],
+        );
+        // …and a Go journey that must not distort the Rust span (all its
+        // turns also match the generic terms "started"/"job").
+        index_tagged_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "I started learning Go.",
+            &["user", "session_003"],
+        );
+        index_tagged_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "I got a job as a backend engineer using Go.",
+            &["user", "session_015"],
+        );
+        (dir, store, search)
+    }
+
+    #[tokio::test]
+    async fn aggregate_session_span_isolated_by_rarest_term() {
+        let (_dir, store, search) = aggregate_fixture();
+        let tool = MemoryAggregateTool::new(Some(search), store);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "query": "How long did it take from starting Rust to getting a job using it?",
+                    "metric": "session_span",
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["aggregate"]["value"], 10, "session_012 - session_002");
+        assert_eq!(v["aggregate"]["unit"], "sessions");
+        assert_eq!(v["aggregate"]["content"], "10 sessions");
+    }
+
+    #[tokio::test]
+    async fn aggregate_session_count() {
+        let (_dir, store, search) = aggregate_fixture();
+        let tool = MemoryAggregateTool::new(Some(search), store);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "query": "How long did it take from starting Rust to getting a job using it?",
+                    "metric": "session_count",
+                }),
+            )
+            .await
+            .unwrap();
+        // The anchor cluster is the Rust turns; the middle turn ("finished
+        // my first Rust project") matches only one query term and is held
+        // back by the search engine's token-coverage floor, so the distinct
+        // session count is 2 (start and end sessions) — span is unaffected
+        // because min/max need only the endpoints.
+        assert_eq!(v["aggregate"]["value"], 2);
+    }
+
+    #[tokio::test]
+    async fn aggregate_count_needs_no_session_tags() {
+        let (_dir, store, search) = aggregate_fixture();
+        let tool = MemoryAggregateTool::new(Some(search), store);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "Rust project", "metric": "count"}),
+            )
+            .await
+            .unwrap();
+        // OR semantics: all three Rust turns match "rust".
+        assert_eq!(v["aggregate"]["value"], 3);
+    }
+
+    #[tokio::test]
+    async fn aggregate_rejects_unknown_metric() {
+        let (_dir, store, search) = aggregate_fixture();
+        let tool = MemoryAggregateTool::new(Some(search), store);
+        let mut ctx = Context::default();
+        let err = tool
+            .call(&mut ctx, json!({"query": "x", "metric": "median"}))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("unknown metric"));
     }
 }

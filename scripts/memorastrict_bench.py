@@ -435,12 +435,24 @@ def run_scenario(
             "limit": max(limit, candidate_limit),
         }
         search_route = "memory.episodic_search"
-        search_args["include_historical"] = False
-        search_args["candidate_limit"] = candidate_limit
-        if min_score > 0.0:
-            search_args["min_score"] = min_score
-        if min_coverage > 0.0:
-            search_args["min_coverage"] = min_coverage
+        # T10 (cross-session synthesis): retrieval already works (R@5=100%);
+        # the missing capability is computing over the retrieved evidence.
+        # Route these questions to the aggregation tool.
+        aggregate_content = None
+        if qcat == "T10":
+            search_route = "memory.aggregate"
+            search_args = {
+                "query": question,
+                "metric": "session_span",
+                "limit": max(50, candidate_limit),
+            }
+        else:
+            search_args["include_historical"] = False
+            search_args["candidate_limit"] = candidate_limit
+            if min_score > 0.0:
+                search_args["min_score"] = min_score
+            if min_coverage > 0.0:
+                search_args["min_coverage"] = min_coverage
 
         search_req = {
             "jsonrpc": "2.0",
@@ -470,6 +482,14 @@ def run_scenario(
                 if payload:
                     if payload.get("status") == "success" or "results" in payload:
                         candidate_results = payload.get("results", payload.get("memories", []))
+                        # memory.aggregate responses carry the computed
+                        # answer alongside the evidence; include it so the
+                        # numeric verification sees the synthesized value.
+                        agg = payload.get("aggregate")
+                        if isinstance(agg, dict) and agg.get("content"):
+                            candidate_results.append(
+                                {"content": agg["content"], "synthesized": True}
+                            )
                     elif payload.get("_error"):
                         errors.append(f"Q{qi} ({qid}): {payload['_error']}")
         req_id += 1

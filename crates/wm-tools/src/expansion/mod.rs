@@ -126,9 +126,9 @@ pub use imagination::{
 pub use karma::{KarmaAnchorTool, KarmaClearTool, KarmaHistoryTool, KarmaVerifyChainTool};
 pub use knowledge_graph::{KgExtractTool, KgQueryTool, KgTopTool};
 pub use memory_ops::{
-    MemoryBatchReadTool, MemoryConsolidateTool, MemoryDecayTool, MemoryDeduplicateTool,
-    MemoryEpisodicSearchTool, MemoryExportTool, MemoryFilterTool, MemoryHybridRecallTool,
-    MemorySortTool, MemoryStatsTool, MemoryTagTool, MemoryUpdateTool,
+    MemoryAggregateTool, MemoryBatchReadTool, MemoryConsolidateTool, MemoryDecayTool,
+    MemoryDeduplicateTool, MemoryEpisodicSearchTool, MemoryExportTool, MemoryFilterTool,
+    MemoryHybridRecallTool, MemorySortTool, MemoryStatsTool, MemoryTagTool, MemoryUpdateTool,
 };
 pub use network::{
     AssociationMineTool, EmergenceReportTool, NetworkCentralityTool, NetworkClustersTool,
@@ -224,7 +224,10 @@ pub fn register_expansion(
         .register(Arc::new(MemoryStatsTool::new(store.clone())))
         .register(Arc::new(MemoryHybridRecallTool::new(store.clone(), search.clone(), recall)))
         .register(Arc::new(MemoryEpisodicSearchTool::new(store.clone())))
-        // Memory ops Tier 7 (4) — WinnowingBasket
+        .register(Arc::new(MemoryAggregateTool::new(
+            search.clone(),
+            store.clone(),
+        )))        // Memory ops Tier 7 (4) — WinnowingBasket
         .register(Arc::new(MemorySortTool::new(store.clone())))
         .register(Arc::new(MemoryFilterTool::new(store.clone())))
         .register(Arc::new(MemoryDeduplicateTool::new(store.clone(), search.clone())))
