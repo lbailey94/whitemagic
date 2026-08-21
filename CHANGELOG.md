@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v6-dev
 
+### Episodic memory capabilities (2026-08-20/21)
+
+- **Temporal supersession (T1/T6)** — current-value queries ("What's my
+  current favorite X?") now resolve at read time: UserStatements carrying
+  change markers ("switched to", "switched from", "used to", ...) are
+  promoted in deterministic chronology order. Scoring untouched;
+  non-current queries take the identical path. MemoraStrict T1/T6
+  15%→50%, T9 +11.7pp; LongMemEval unchanged.
+- **Contradiction detection (T8)** — `memory.episodic_search` reports a
+  `conflicts` array when retrieved user statements carry explicit
+  contradiction markers over a shared topic: both records with full
+  provenance, never silently resolved. Dietary/alcohol vocabulary added
+  to enrichment defaults. T8 0%→100%.
+- **Cross-session synthesis (T10)** — new `memory.aggregate` tool:
+  count, session_count, and session_span metrics over a full-text query,
+  with rarest-term anchor narrowing so similar-but-unrelated turns don't
+  distort spans. T10 0%→86.7%.
+- **Protected top-K rerank mode** — `memory.episodic_search` with
+  `rerank_alpha >= 2.0` fully reorders only the deterministic top-limit
+  set by cosine similarity; set membership is fixed so recall@limit is
+  preserved by construction (ConvMemory v2 pattern).
+- **`current_resolution` flag** in episodic search output.
+
+### Embedder resource safety (2026-08-21)
+
+- **INT8-quantized embedder variants** — `WM_EMBEDDER_ORT_MODEL` names
+  ending in `-q` (e.g. `bge-small-q`) select quantized ONNX models:
+  ~75% smaller weights, INT8 SIMD execution. Chosen after FP32 inference
+  at full logical-thread count OOM-crashed a 16GB machine during
+  benchmark runs.
+- **ORT thread cap** — default intra-op threads clamped to
+  min(logical cores, 4); explicit `WM_EMBEDDER_ORT_THREADS` still wins.
+
+### Benchmark tooling
+
+- **MemoraStrict generator**: guaranteed change statements (previously
+  questions could reference values never spoken — unanswerable),
+  deterministic T2 topic sampling (PYTHONHASHSEED set-iteration),
+  `--scale-turns N` scale-stress generation, current-value T7 phrasing.
+- **`scripts/memorastrict_miss_analysis.py`** — zero-CPU static miss
+  analysis joining scenario data against the resolution-layer logic;
+  found and drove the "switched from" marker fix.
+- **Curated smoke test** now covers `wm seal`/`wm verify` end to end
+  (B5 complete): seal, clean verify, idempotence, tamper detection.
+
 ### v5.8.0 release stabilization (2026-08-20)
 
 - **Tantivy schema-mismatch auto-migration** — stores created before the
