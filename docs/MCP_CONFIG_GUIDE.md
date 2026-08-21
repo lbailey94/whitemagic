@@ -1,16 +1,17 @@
 # MCP Client Configuration Guide
 
-**Version**: 5.8.0
+**Version**: 7.0.0-alpha.1
 
-The release binary is a single static executable: `wm`. The MCP server is the
-`serve` subcommand. The curated profile is the supported surface.
+The release binary is a single executable: `wm` (dynamically linked; requires
+glibc 2.39+). The MCP server is the `serve` subcommand. The curated profile
+is the supported surface.
 
 ## Native (recommended)
 
 Install the release binary:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lucas/whitemagic/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
 ```
 
 This installs `wm` to `~/.local/bin/wm` with SHA-256 checksum verification.

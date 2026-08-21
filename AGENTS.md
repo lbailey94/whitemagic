@@ -183,11 +183,11 @@ release surface:
 
 237 tools is an archive, not a v1 product. Profiles curate which tools the `wm` meta-tool can route to (filtering happens before the meta-tools are layered on, so both NLU routing and direct dispatch respect the profile):
 
-- `full` (default) — every tool
+- `full` — every tool
 - `curated` — the memory-hierarchy surface: `memory.*`, `session.*`, `claims` + `claims.*` aliases, `transaction.*`, diagnostics, `tools.list`, `tools.usage_report`, `nlu.shadow_report`
 - `minimal` — `memory.create/read/list/query/search/chat/associate/associations`, `tools.list`, `gnosis`
 
-Select via `wm serve --profile curated` or `WM_TOOL_ALLOWLIST=memory,session,claims` (comma-separated prefixes). Use the explicit CLI flag in v5.7.7; CLI/environment profile precedence is a release blocker tracked in `docs/RELEASE_READINESS.md`. Full-surface internals (karma, friction, governance) keep working regardless — only the boundary shrinks.
+Select via `wm serve --profile curated` or `WM_TOOL_ALLOWLIST=memory,session,claims` (comma-separated prefixes). **Omitted `--profile` defaults to curated** (verified 2026-08-21); environment variables override the default. Full-surface internals (karma, friction, governance) keep working regardless — only the boundary shrinks.
 
 ### Runtime Env Knobs
 
@@ -204,12 +204,12 @@ Select via `wm serve --profile curated` or `WM_TOOL_ALLOWLIST=memory,session,cla
 | `WM_EMBEDDER_ORT_THREADS` | min(logical, 4) | ONNX intra-op threads — capped default prevents small-machine OOM |
 | `WM_EMBEDDER_CACHE_DIR` | unset | Model cache directory for the ONNX embedder |
 | `WM_EPISODIC_RERANK_ONLY` | unset | `1` — stub embedder for ingest, real embedder only for episodic rerank (fast benchmark ingest) |
-| `WM_TOOL_PROFILE` | `full` | Tool surface: `full` \| `curated` \| `minimal` |
+| `WM_TOOL_PROFILE` | `curated` | Tool surface: `full` \| `curated` \| `minimal` |
 | `WM_TOOL_ALLOWLIST` | unset | Comma-separated tool-name prefixes (wins over profile) |
 
-`WM_TOOL_PROFILE` is the server-level configuration path. The CLI currently
-overwrites it with its default unless `--profile` is supplied; this precedence
-is intentionally tracked as a release blocker rather than hidden from users.
+`WM_TOOL_PROFILE` is the server-level configuration path. An explicit
+`--profile` flag wins over the environment variable; when the flag is
+omitted, curated is the default (verified 2026-08-21).
 
 ## Claims Ledger Calibration
 

@@ -1,81 +1,102 @@
 # WhiteMagic Quickstart
 
-**Version**: 5.8.0
+**Version**: 7.0.0-alpha.1
+**Supported platform**: Linux x86-64
 
-Get from zero to a working agent memory server in under five minutes.
+Get from zero to working agent memory in under five minutes.
 
 ## 30-second path
 
 ```bash
-cargo build --release            # or download a release binary
-./target/release/wm quickstart   # runs the built-in demo (create → search)
-wm doctor                        # verify the store and index
+wm quickstart   # two-process continuity demo on an isolated store
 ```
 
-## 1. Install
+You will see a project decision recorded in one session survive a full
+process stop/start and be recovered by the next session. That is the product.
+
+## 1. Install (no admin rights needed)
 
 ### From a release
 
-Download `wm-<platform>` and its `.sha256` from the latest release, verify,
-and make it executable:
+```bash
+curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+```
+
+This downloads the latest release, verifies its SHA256 checksum, and installs
+`wm` to `~/.local/bin`. If that directory is not on your `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Manual equivalent: download `wm-linux-x86_64` and `wm-linux-x86_64.sha256`
+from the [releases page](https://github.com/lbailey94/whitemagic/releases),
+then:
 
 ```bash
 sha256sum -c wm-linux-x86_64.sha256
-chmod +x wm
-sudo mv wm /usr/local/bin/
+chmod +x wm-linux-x86_64
+mkdir -p ~/.local/bin && mv wm-linux-x86_64 ~/.local/bin/wm
 ```
+
+The binary requires glibc 2.39+ (built on Ubuntu 24.04).
 
 ### From source
 
+Requires Rust 1.85+. No admin rights required:
+
 ```bash
 cargo build --release
-sudo cp target/release/wm /usr/local/bin/
+mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ```
 
 ## 2. Verify
 
 ```bash
-wm doctor                  # healthy LMDB store + Tantivy index + tool registry
-wm quickstart              # demo: create memories, search, galaxy stats
-wm stats                   # brain-wave/consciousness dashboard
+wm --version   # wm 7.0.0-alpha.1
+wm doctor      # store, index, registry health check
 ```
 
-## 3. Connect your agent
+## 3. Run the demo
 
-Add the native block from [`docs/MCP_CONFIG_GUIDE.md`](MCP_CONFIG_GUIDE.md) to
-your MCP client (Claude Desktop, Cursor, Windsurf, or any MCP client), then
-restart the client. You should see one tool: `wm`.
+```bash
+wm quickstart
+```
 
-## 4. First session
+The demo uses an isolated store at `~/.local/share/whitemagic-quickstart`
+(your real data is never touched). It shows: session start → record a
+decision → process stop → new process → continuity recovers the decision →
+budgeted replay. Remove it any time with
+`rm -rf ~/.local/share/whitemagic-quickstart`.
 
-Ask your agent to:
+## 4. Connect your MCP client
 
-1. `wm(route="session.start", args={"title": "project-name"})`
-2. `wm(route="memory.create", args={"content": "a decision worth remembering", "tags": ["project"]})`
-3. `wm(route="session.record", args={"content": "what we just decided", "role": "ai", "turn_type": "decision"})`
+```json
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "wm",
+      "args": ["serve", "--profile", "curated"]
+    }
+  }
+}
+```
 
-Next session, start with `wm(route="session.continuity", args={"n": 5})` to
-pick up where you left off.
+The server speaks JSON-RPC over stdio and exposes one `wm` meta-tool.
+Explicit routing is the dependable contract:
 
-## The curated surface at a glance
+- `wm(route="session.continuity")` — recall the previous session before starting work
+- `wm(route="session.start", args={"title": "..."})`
+- `wm(route="session.record", args={"content": "...", "turn_type": "decision"})`
+- `wm(route="tools.list")` — discover everything else
 
-| Group | Tools |
-|---|---|
-| Memory | create, read, list, delete, query, **search**, chat, update, tag, batch_read, stats, count, tags, export, sort, filter, nearby, associate. `hybrid_recall` is a search alias. |
-| Sessions | start, checkpoint, recall, end, list, record, replay, continuity, handoff |
-| Transactions | begin, commit, rollback |
-| Claims | claims + claims.add/resolve/status/list/calibration |
-| Diagnostics | tools.list, gnosis.* |
+See [`MCP_CONFIG_GUIDE.md`](MCP_CONFIG_GUIDE.md) for client-specific setup.
 
-Destructive tools (`memory.delete`, `transaction.rollback`, ...) require an
-explicit route plus `"confirm": true`.
+## 5. Back up
 
-## Troubleshooting
+```bash
+wm backup          # full store -> ~/whitemagic-backups/<timestamp>
+wm restore --backup <dir> [--force]
+```
 
-- **Search returns nothing on a fresh store**: reindex with `wm reindex`.
-- **LockBusy**: another process owns the store — use `--readonly` or stop the
-  daemon.
-- **Tools fail to load in the client**: the server answers MCP `ping`
-  (fixed in 5.8.0); update the binary and restart the client.
-- **Want everything**: `wm serve` is curated by default; `--profile full`
-  exposes the 229-tool archive surface (research/extension use).
+Keep backups off the live machine. See the README for details.

@@ -88,8 +88,9 @@ Explicit routing is the dependable contract:
 - `wm(route="session.start", args={...})`
 - `wm(route="tools.list", args={})`
 
-`--profile curated` selects the supported memory/session surface. Without it,
-the server starts with the full research tool archive (see below).
+`--profile curated` selects the supported memory/session surface and is the
+default when no profile is specified. Pass `--profile full` for the research
+archive surface (see below).
 
 ## Privacy and data
 
