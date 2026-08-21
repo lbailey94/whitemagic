@@ -230,7 +230,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         });
     });
 
-    println!("=== WhiteMagic v5 Daemon ===");
+    println!("=== WhiteMagic Daemon ===");
     println!("  Cycle interval:  {:?}", config.cycle_interval);
     println!("  Dream interval:  {:?}", config.dream_interval);
     println!("  Brain-wave tick: {:?}", config.brain_wave_interval);

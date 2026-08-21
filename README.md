@@ -25,6 +25,9 @@ work-in-progress state; there is no public launch date.
 
 - **Supported platform: Linux x86-64 only.** Other platforms have not passed
   an install gate and are not advertised.
+- The binary is dynamically linked and was built on Ubuntu 24.04
+  (glibc 2.39). Distributions with older glibc are not verified; a static
+  build is planned.
 - The release is marked *pre-release* on GitHub accordingly.
 
 ## What it does

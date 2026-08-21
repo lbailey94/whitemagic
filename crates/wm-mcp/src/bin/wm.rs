@@ -737,7 +737,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     let lmdb_path = store_path.join("lmdb");
     let mut issues = 0u32;
 
-    println!("=== WhiteMagic v5 Doctor ===");
+    println!("=== WhiteMagic Doctor ===");
     println!();
 
     // 1. LMDB store check
@@ -1236,7 +1236,7 @@ async fn run_quickstart() -> anyhow::Result<()> {
     let lmdb_path = store_path.join("lmdb");
     std::fs::create_dir_all(&lmdb_path)?;
 
-    println!("=== WhiteMagic v5 Quickstart ===");
+    println!("=== WhiteMagic Quickstart ===");
     println!();
     println!("Initializing store at {}...", lmdb_path.display());
 
@@ -1414,7 +1414,7 @@ async fn run_quickstart() -> anyhow::Result<()> {
 }
 
 fn run_polyglot() {
-    println!("=== WhiteMagic v5 Polyglot Status ===");
+    println!("=== WhiteMagic Polyglot Status ===");
     println!();
 
     let runtimes: &[(&str, &str, &str)] = &[
