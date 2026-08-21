@@ -614,13 +614,17 @@ impl<'a> EpisodicStore<'a> {
     /// Search with vector reranking on top of deterministic scoring.
     ///
     /// Pipeline: deterministic scoring → top-N candidates → embed query +
-    /// candidates → tiebreaker reranking → top-K.
+    /// candidates → reranking → top-K.
     ///
-    /// When `alpha < 1.0`, uses hybrid blending: score = α·det_norm + (1-α)·cosine.
-    /// When `alpha >= 1.0`, uses tiebreaker mode: only reorders adjacent
-    /// candidates whose deterministic scores are within δ=0.05, using cosine
-    /// as the tiebreaker. This preserves correct rankings and only uses
-    /// semantic similarity to break near-ties.
+    /// Modes by `alpha`:
+    /// - `alpha >= 2.0` — **protected top-K** (ConvMemory v2 pattern):
+    ///   fully reorder only the deterministic top-`limit` set by cosine
+    ///   similarity. Membership is fixed, so recall@limit is preserved by
+    ///   construction; only ordering (R@1/MRR) can change.
+    /// - `1.0 <= alpha < 2.0` — **tiebreaker mode**: only reorder adjacent
+    ///   candidates whose deterministic scores are within δ=0.05, using
+    ///   cosine as the tiebreaker.
+    /// - `alpha < 1.0` — **hybrid blending**: score = α·det_norm + (1-α)·cosine.
     ///
     /// Falls back to `search_with_limits()` when no embedder is attached.
     pub fn search_with_rerank(
@@ -661,7 +665,34 @@ impl<'a> EpisodicStore<'a> {
         let query_vec = &embeddings[0];
         let candidate_vecs = &embeddings[1..];
 
-        if alpha >= 1.0 {
+        if alpha >= 2.0 {
+            // Protected top-K rerank (ConvMemory v2 pattern): fully reorder
+            // ONLY the deterministic top-`limit` set by cosine similarity.
+            // Set membership is fixed, so recall@limit is preserved by
+            // construction — only the ordering (R@1/MRR) can change.
+            let protected: Vec<EpisodicSearchResult> =
+                deterministic.into_iter().take(limit).collect();
+            let cosines: Vec<f32> = protected
+                .iter()
+                .enumerate()
+                .map(|(i, _)| cosine_sim(query_vec, &candidate_vecs[i]))
+                .collect();
+            let mut order: Vec<usize> = (0..protected.len()).collect();
+            order.sort_by(|&a, &b| {
+                cosines[b]
+                    .partial_cmp(&cosines[a])
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    // Stable within equal cosine: keep deterministic order.
+                    .then_with(|| a.cmp(&b))
+            });
+            let mut slots: Vec<Option<EpisodicSearchResult>> =
+                protected.into_iter().map(Some).collect();
+            let reranked: Vec<EpisodicSearchResult> = order
+                .into_iter()
+                .filter_map(|i| slots[i].take())
+                .collect();
+            Ok(reranked)
+        } else if alpha >= 1.0 {
             // Tiebreaker mode: only reorder adjacent candidates with close det scores.
             let delta = 0.05;
             let mut reranked = deterministic;
