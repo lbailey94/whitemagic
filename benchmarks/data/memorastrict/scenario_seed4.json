@@ -89,7 +89,7 @@
       "content": "Sam's pet preference: hamster",
       "category": "pet",
       "session_idx": 13,
-      "turn_idx": 8,
+      "turn_idx": 27,
       "valid_from": 13,
       "valid_until": 16,
       "superseded_by": "fact_3",
@@ -122,7 +122,7 @@
       "content": "Sam's book_genre preference: sci-fi",
       "category": "book_genre",
       "session_idx": 12,
-      "turn_idx": 14,
+      "turn_idx": 15,
       "valid_from": 12,
       "valid_until": 16,
       "superseded_by": "fact_6",
@@ -132,8 +132,8 @@
       "id": "fact_5",
       "content": "Sam's book_genre preference: biography",
       "category": "book_genre",
-      "session_idx": 17,
-      "turn_idx": 6,
+      "session_idx": 16,
+      "turn_idx": 31,
       "valid_from": 16,
       "valid_until": null,
       "superseded_by": null,
@@ -155,7 +155,7 @@
       "content": "Sam's programming_language preference: Python",
       "category": "programming_language",
       "session_idx": 10,
-      "turn_idx": 0,
+      "turn_idx": 9,
       "valid_from": 10,
       "valid_until": 18,
       "superseded_by": "fact_9",
@@ -187,8 +187,8 @@
       "id": "fact_10",
       "content": "Sam's coffee preference: cold brew",
       "category": "coffee",
-      "session_idx": 7,
-      "turn_idx": 33,
+      "session_idx": 6,
+      "turn_idx": 22,
       "valid_from": 6,
       "valid_until": 10,
       "superseded_by": "fact_12",
@@ -198,8 +198,8 @@
       "id": "fact_11",
       "content": "Sam's coffee preference: latte",
       "category": "coffee",
-      "session_idx": 11,
-      "turn_idx": 12,
+      "session_idx": 10,
+      "turn_idx": 28,
       "valid_from": 10,
       "valid_until": null,
       "superseded_by": null,
@@ -1432,6 +1432,13 @@
         },
         {
           "role": "user",
+          "content": "Recently I switched to cold brew for coffee. I used to be into light roast.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
           "content": "I bought a bookshelf from IKEA.",
           "has_answer": true,
           "is_signal": true,
@@ -2034,77 +2041,63 @@
       "turns": [
         {
           "role": "user",
-          "content": "I repotted my plants and then thought about lunch ideas.",
+          "content": "For pet, I always go with cat.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about weekend plans?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about dentist appointments?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "That sounds great!",
+          "content": "Thanks for sharing.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "The package delivery has been pretty crazy lately.",
+          "content": "I watered the garden and then thought about weekend plans.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I replied to emails and then thought about gardening.",
+          "content": "I really love mystery when it comes to book_genre.",
           "has_answer": false,
-          "is_signal": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "Good to know!",
+          "content": "Interesting, tell me more.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I called my mom yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I organized my closet and then thought about birthdays.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "That's really interesting.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I visited a friend yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "My friend was telling me about weekend plans.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "I can help with that.",
+          "content": "Can you help me with something about movies?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -2117,22 +2110,15 @@
           "fact_id": null
         },
         {
-          "role": "user",
-          "content": "I cooked breakfast and then thought about holidays.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
           "role": "assistant",
-          "content": "Good to know!",
+          "content": "I understand. What else?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I played video games yesterday.",
+          "content": "Can you help me with something about weather?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -2153,9 +2139,9 @@
         },
         {
           "role": "user",
-          "content": "I've been really into cat lately for pet.",
+          "content": "I went grocery shopping yesterday.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -2181,9 +2167,9 @@
         },
         {
           "role": "user",
-          "content": "Can you help me with something about lunch ideas?",
+          "content": "I prefer Rust for my programming_language.",
           "has_answer": false,
-          "is_signal": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
@@ -2216,9 +2202,9 @@
         },
         {
           "role": "user",
-          "content": "I prefer cat for my pet.",
+          "content": "I went to the library yesterday.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -2237,51 +2223,37 @@
         },
         {
           "role": "user",
-          "content": "I've been really into mystery lately for book_genre.",
+          "content": "I can't stop thinking about local events.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I played video games and then thought about weekend plans.",
+          "content": "I repotted my plants yesterday.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "I understand. What else?",
+          "content": "I can help with that.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "My friend was telling me about news.",
+          "content": "I can't stop thinking about coffee shop reviews.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I prefer cold brew for my coffee.",
+          "content": "For programming_language, I always go with Rust.",
           "has_answer": false,
           "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Good to know!",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I went grocery shopping and then thought about news.",
-          "has_answer": false,
-          "is_signal": false,
           "fact_id": null
         },
         {
@@ -2307,7 +2279,7 @@
       "turns": [
         {
           "role": "user",
-          "content": "My favorite programming_language is Rust.",
+          "content": "My favorite coffee is cold brew.",
           "has_answer": false,
           "is_signal": true,
           "fact_id": null
@@ -2321,189 +2293,21 @@
         },
         {
           "role": "user",
+          "content": "I did some laundry yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
           "content": "I was thinking about weekend plans the other day.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
-          "role": "user",
-          "content": "I watered the garden yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
           "role": "assistant",
-          "content": "That sounds great!",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "The dreams has been pretty crazy lately.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I went to the library and then thought about news.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "That's really interesting.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I went grocery shopping and then thought about news.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "My favorite book_genre is mystery.",
-          "has_answer": false,
-          "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "That's really interesting.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "Can you help me with something about local events?",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I watered the garden and then thought about emails.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "That sounds great!",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "My friend was telling me about coffee shop reviews.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I replied to emails and then thought about home repairs.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I've been really into Japanese lately for food.",
-          "has_answer": true,
-          "is_signal": true,
-          "fact_id": null
-        }
-      ]
-    },
-    {
-      "id": "session_010",
-      "index": 9,
-      "timestamp": "2026-001-10",
-      "turns": [
-        {
-          "role": "user",
-          "content": "I watered the garden yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Sounds like a productive day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I fixed a leaky faucet and then thought about weekend plans.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "The gifts has been pretty crazy lately.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "That's really interesting.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "My favorite book_genre is mystery.",
-          "has_answer": false,
-          "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "The holidays has been pretty crazy lately.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Sounds like a productive day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "My friend was telling me about gifts.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I played video games yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "That sounds great!",
+          "content": "Interesting, tell me more.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -2517,28 +2321,28 @@
         },
         {
           "role": "user",
-          "content": "Can you help me with something about lunch ideas?",
+          "content": "The neighbors has been pretty crazy lately.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "That sounds great!",
+          "content": "That's really interesting.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I went for a walk in the park yesterday.",
+          "content": "I can't stop thinking about haircuts.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I really love cold brew when it comes to coffee.",
+          "content": "I really love Rust when it comes to programming_language.",
           "has_answer": false,
           "is_signal": true,
           "fact_id": null
@@ -2552,7 +2356,7 @@
         },
         {
           "role": "user",
-          "content": "Can you help me with something about dreams?",
+          "content": "I browsed the internet yesterday.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -2573,7 +2377,175 @@
         },
         {
           "role": "user",
-          "content": "I tried a new recipe for dinner and then thought about news.",
+          "content": "I replied to emails yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about coffee shop reviews.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about weekend plans?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The home repairs has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about package delivery?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I fixed a leaky faucet and then thought about weekend plans.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into Japanese lately for food.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_010",
+      "index": 9,
+      "timestamp": "2026-001-10",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I was thinking about traffic the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about lunch ideas?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about gifts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about lunch ideas.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I visited a friend and then thought about sleep.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into mystery lately for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For programming_language, I always go with Rust.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym yesterday.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -2583,27 +2555,6 @@
           "content": "I browsed the internet and then thought about weekend plans.",
           "has_answer": false,
           "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Good to know!",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "Can you help me with something about sleep?",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I've been really into cold brew lately for coffee.",
-          "has_answer": false,
-          "is_signal": true,
           "fact_id": null
         },
         {
@@ -3196,9 +3147,30 @@
       "turns": [
         {
           "role": "user",
-          "content": "I've changed my mind about programming_language — I now prefer Python over Rust.",
+          "content": "I went grocery shopping and then thought about news.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I browsed the internet yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I called my mom and then thought about home repairs.",
+          "has_answer": false,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -3238,72 +3210,9 @@
         },
         {
           "role": "user",
-          "content": "Can you help me with something about lunch ideas?",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Good to know!",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "My friend was telling me about lunch ideas.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I really love cat when it comes to pet.",
+          "content": "I've changed my mind about programming_language — I now prefer Python over Rust.",
           "has_answer": false,
           "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Interesting, tell me more.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I've been really into mystery lately for book_genre.",
-          "has_answer": false,
-          "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I can't stop thinking about birthdays.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Interesting, tell me more.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "Can you help me with something about weather?",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I cooked breakfast and then thought about sleep.",
-          "has_answer": false,
-          "is_signal": false,
           "fact_id": null
         },
         {
@@ -3315,14 +3224,35 @@
         },
         {
           "role": "user",
-          "content": "I organized my closet yesterday.",
+          "content": "Can you help me with something about weekend plans?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I cleaned the apartment yesterday.",
+          "content": "The lunch ideas has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I used to prefer Rust but now I'm all about Python for programming_language.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about birthdays.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -3336,14 +3266,35 @@
         },
         {
           "role": "user",
-          "content": "Can you help me with something about commute?",
+          "content": "I listened to a podcast yesterday.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "The emails has been pretty crazy lately.",
+          "content": "The news has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about local events?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -3357,9 +3308,44 @@
         },
         {
           "role": "user",
-          "content": "I went to the gym yesterday.",
+          "content": "I did some stretching yesterday.",
           "has_answer": false,
           "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The gifts has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into mystery lately for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked breakfast yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've changed my mind about coffee — I now prefer latte over cold brew.",
+          "has_answer": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
@@ -3385,42 +3371,21 @@
       "turns": [
         {
           "role": "user",
-          "content": "I've been really into Python lately for programming_language.",
-          "has_answer": false,
-          "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Sounds like a productive day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I was thinking about news the other day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I tried a new recipe for dinner yesterday.",
+          "content": "The sleep has been pretty crazy lately.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "I can help with that.",
+          "content": "That sounds great!",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I did some stretching yesterday.",
+          "content": "The holidays has been pretty crazy lately.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -3462,16 +3427,16 @@
         },
         {
           "role": "user",
-          "content": "Can you help me with something about gardening?",
+          "content": "I've been really into Python lately for programming_language.",
           "has_answer": false,
-          "is_signal": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "For coffee, I always go with latte.",
+          "content": "I repotted my plants and then thought about traffic.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -3483,35 +3448,14 @@
         },
         {
           "role": "user",
-          "content": "I really love cat when it comes to pet.",
-          "has_answer": false,
-          "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I was thinking about gardening the other day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Good to know!",
+          "content": "My friend was telling me about movies.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I was thinking about gardening the other day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "Can you help me with something about laundry?",
+          "content": "I was thinking about local events the other day.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -3525,14 +3469,35 @@
         },
         {
           "role": "user",
-          "content": "I organized my closet yesterday.",
+          "content": "My friend was telling me about lunch ideas.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I was thinking about gardening the other day.",
+          "content": "I fixed a leaky faucet and then thought about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love mystery when it comes to book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about news?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -3549,6 +3514,69 @@
           "content": "I went for a walk in the park yesterday.",
           "has_answer": false,
           "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read a few chapters of a book yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about neighbors?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new recipe for dinner and then thought about local events.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about movies.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I fixed a leaky faucet and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love latte when it comes to coffee.",
+          "has_answer": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
@@ -3588,84 +3616,14 @@
       "turns": [
         {
           "role": "user",
-          "content": "Can you help me with something about neighbors?",
+          "content": "My friend was telling me about tv shows.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "That's really interesting.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I did some laundry yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I went to the gym and then thought about movies.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "I understand. What else?",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I fixed a leaky faucet and then thought about gardening.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I listened to a podcast yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "I can help with that.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I went for a walk in the park and then thought about emails.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I read a few chapters of a book and then thought about tv shows.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Sounds like a productive day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "Can you help me with something about lunch ideas?",
+          "content": "Good to know!",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -3678,17 +3636,17 @@
           "fact_id": null
         },
         {
-          "role": "assistant",
-          "content": "That's really interesting.",
+          "role": "user",
+          "content": "I went to the gym and then thought about holidays.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
-          "role": "user",
-          "content": "I've actually switched from mystery to sci-fi for book_genre.",
+          "role": "assistant",
+          "content": "That sounds great!",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -3699,24 +3657,31 @@
           "fact_id": null
         },
         {
+          "role": "user",
+          "content": "Can you help me with something about lunch ideas?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
           "role": "assistant",
-          "content": "Sounds like a productive day.",
+          "content": "That sounds great!",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "My favorite pet is cat.",
+          "content": "I repotted my plants yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love latte when it comes to coffee.",
           "has_answer": false,
           "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I took a nap and then thought about dreams.",
-          "has_answer": false,
-          "is_signal": false,
           "fact_id": null
         },
         {
@@ -3728,9 +3693,9 @@
         },
         {
           "role": "user",
-          "content": "I really love cat when it comes to pet.",
+          "content": "I visited a friend yesterday.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -3752,6 +3717,13 @@
           "content": "I went grocery shopping and then thought about neighbors.",
           "has_answer": false,
           "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've changed my mind about book_genre — I now prefer sci-fi over mystery.",
+          "has_answer": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
@@ -4337,112 +4309,7 @@
       "turns": [
         {
           "role": "user",
-          "content": "Can you help me with something about lunch ideas?",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Sounds like a productive day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I went to the library yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I was thinking about gardening the other day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "That's really interesting.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I cleaned the apartment and then thought about weekend plans.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I was thinking about news the other day.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "I can help with that.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I've changed my mind about pet — I now prefer hamster over cat.",
-          "has_answer": false,
-          "is_signal": true,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I tried a new recipe for dinner yesterday.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "I can help with that.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "The coffee shop reviews has been pretty crazy lately.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "Can you help me with something about dentist appointments?",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "assistant",
-          "content": "Good to know!",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "I can't stop thinking about birthdays.",
-          "has_answer": false,
-          "is_signal": false,
-          "fact_id": null
-        },
-        {
-          "role": "user",
-          "content": "Can you help me with something about package delivery?",
+          "content": "Can you help me with something about neighbors?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -4456,14 +4323,35 @@
         },
         {
           "role": "user",
-          "content": "I've been really into sci-fi lately for book_genre.",
+          "content": "I was thinking about gardening the other day.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I tried a new recipe for dinner and then thought about weather.",
+          "content": "I browsed the internet and then thought about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about news the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The lunch ideas has been pretty crazy lately.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -4477,14 +4365,98 @@
         },
         {
           "role": "user",
-          "content": "Can you help me with something about weekend plans?",
+          "content": "I tried a new recipe for dinner yesterday.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "The shopping has been pretty crazy lately.",
+          "content": "I was thinking about neighbors the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into latte lately for coffee.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about package delivery.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I visited a friend yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite coffee is latte.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I fixed a leaky faucet yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read a few chapters of a book yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some stretching and then thought about weekend plans.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -4526,9 +4498,9 @@
         },
         {
           "role": "user",
-          "content": "I went for a walk in the park yesterday.",
+          "content": "I've actually switched from cat to hamster for pet.",
           "has_answer": false,
-          "is_signal": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
@@ -4540,9 +4512,9 @@
         },
         {
           "role": "user",
-          "content": "I prefer Python for my programming_language.",
+          "content": "Can you help me with something about package delivery?",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -5142,6 +5114,13 @@
         },
         {
           "role": "user",
+          "content": "I used to prefer sci-fi but now I'm all about biography for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
           "content": "I got a job as a backend engineer using Go.",
           "has_answer": true,
           "is_signal": true,
@@ -5156,7 +5135,7 @@
       "turns": [
         {
           "role": "user",
-          "content": "I watered the garden and then thought about movies.",
+          "content": "I can't stop thinking about dentist appointments.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -5170,7 +5149,7 @@
         },
         {
           "role": "user",
-          "content": "I browsed the internet and then thought about gardening.",
+          "content": "Can you help me with something about lunch ideas?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -5275,9 +5254,9 @@
         },
         {
           "role": "user",
-          "content": "For pet, I always go with parrot.",
+          "content": "I listened to a podcast yesterday.",
           "has_answer": false,
-          "is_signal": true,
+          "is_signal": false,
           "fact_id": null
         },
         {
@@ -5317,42 +5296,49 @@
         },
         {
           "role": "user",
-          "content": "I was thinking about package delivery the other day.",
+          "content": "I prefer biography for my book_genre.",
           "has_answer": false,
-          "is_signal": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I can't stop thinking about weather.",
+          "content": "The dreams has been pretty crazy lately.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "Sounds like a productive day.",
+          "content": "That's really interesting.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "Can you help me with something about coffee shop reviews?",
+          "content": "I've been really into Python lately for programming_language.",
           "has_answer": false,
-          "is_signal": false,
+          "is_signal": true,
           "fact_id": null
         },
         {
           "role": "user",
-          "content": "I cooked breakfast and then thought about movies.",
+          "content": "Can you help me with something about commute?",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
         },
         {
           "role": "assistant",
-          "content": "Sounds like a productive day.",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about gifts.",
           "has_answer": false,
           "is_signal": false,
           "fact_id": null
@@ -6079,7 +6065,7 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 1000,
-        "actual_turns": 749,
+        "actual_turns": 747,
         "topic": "pet",
         "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }
@@ -6096,7 +6082,7 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 10000,
-        "actual_turns": 749,
+        "actual_turns": 747,
         "topic": "pet",
         "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }
@@ -6113,7 +6099,7 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 50000,
-        "actual_turns": 749,
+        "actual_turns": 747,
         "topic": "pet",
         "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }
@@ -6130,7 +6116,7 @@
       "answer_facts": [],
       "metadata": {
         "target_turns": 100000,
-        "actual_turns": 749,
+        "actual_turns": 747,
         "topic": "pet",
         "note": "Scale testing requires separate scenario generation with larger num_sessions"
       }

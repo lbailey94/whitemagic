@@ -891,6 +891,7 @@ const CHANGE_MARKERS: &[&str] = &[
     "switched to",
     "switch to",
     "switching to",
+    "switched from",
     "changed my",
     "change my",
     "changed from",
@@ -1185,6 +1186,40 @@ mod tests {
         assert!(
             results[0].record.content.contains("cold brew"),
             "current query must rank the latest statement first, got: {}",
+            results[0].record.content
+        );
+    }
+
+    #[test]
+    fn current_query_anchors_switched_from_template() {
+        // Regression: "I've actually switched from X to Y" (MemoraStrict
+        // change-template 1) contains "switched from", which was missing
+        // from CHANGE_MARKERS — the anchor set stayed empty and the stale
+        // value won on score order. Found by static miss analysis
+        // 2026-08-20: 12/40 T1+T6 questions failed on exactly this phrase.
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = store.episodic();
+        episodic
+            .append(&user_statement(1, "My favorite coffee is espresso."))
+            .unwrap();
+        episodic
+            .append(&user_statement(
+                2,
+                "I've actually switched from espresso to latte for coffee.",
+            ))
+            .unwrap();
+        episodic
+            .append(&user_statement(3, "My favorite coffee is latte."))
+            .unwrap();
+
+        let results = episodic
+            .search("What's my current favorite coffee?", 5, false)
+            .unwrap();
+        assert!(!results.is_empty());
+        assert!(
+            results[0].record.content.contains("latte"),
+            "'switched from' must anchor the current value, got: {}",
             results[0].record.content
         );
     }
