@@ -82,21 +82,21 @@ TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
 echo "Downloading binary..."
-curl -fsSL "$BINARY_URL" -o "${TMPDIR}/wm"
-curl -fsSL "$CHECKSUM_URL" -o "${TMPDIR}/wm.sha256"
+curl -fsSL "$BINARY_URL" -o "${TMPDIR}/${ARTIFACT}"
+curl -fsSL "$CHECKSUM_URL" -o "${TMPDIR}/checksum.sha256"
 
 echo "Verifying checksum..."
 # sha256sum on Linux, shasum on macOS
 if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$TMPDIR" && sha256sum -c wm.sha256)
+    (cd "$TMPDIR" && sha256sum -c checksum.sha256)
 else
-    (cd "$TMPDIR" && shasum -a 256 -c wm.sha256)
+    (cd "$TMPDIR" && shasum -a 256 -c checksum.sha256)
 fi
 
 echo "Installing to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
-chmod +x "${TMPDIR}/wm"
-mv "${TMPDIR}/wm" "${INSTALL_DIR}/wm"
+mv "${TMPDIR}/${ARTIFACT}" "${INSTALL_DIR}/wm"
+chmod +x "${INSTALL_DIR}/wm"
 
 echo ""
 echo "WhiteMagic ${VERSION} installed to ${INSTALL_DIR}/wm"
