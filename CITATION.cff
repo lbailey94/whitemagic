@@ -3,9 +3,9 @@ title: WhiteMagic
 message: "If you use this software, please cite it as below."
 type: software
 authors:
-  - name: WhiteMagic Contributors
-repository-code: "https://github.com/lbailey94/whitemagic-site-private"
-url: "https://github.com/lbailey94/whitemagic-site-private"
+  - name: Lucas Bailey and WhiteMagic Contributors
+repository-code: "https://github.com/lbailey94/whitemagic"
+url: "https://whitemagic.dev"
 license: MIT
-version: 5.8.0
-date-released: "2026-08-13"
+version: 7.0.0-alpha.1
+date-released: "2026-08-21"

@@ -20,12 +20,12 @@ members = [
 ]
 
 [workspace.package]
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 authors = ["WhiteMagic Project"]
-repository = "https://github.com/lbailey94/whitemagic-site-private"
+repository = "https://github.com/lbailey94/whitemagic"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
