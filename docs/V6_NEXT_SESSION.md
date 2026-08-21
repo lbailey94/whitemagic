@@ -408,6 +408,32 @@ LongMemEval-S has fundamental limitations as an evaluation tool:
 Benchmark progression: MemoraStrict (10 categories × 5 seeds) → interactive
 evaluation → 500q LongMemEval-M as a legacy comparison point.
 
+## Late Evening Update: Embedding Resource Profiling & Polyglot Strategy (2026-08-20)
+
+### 1. ONNX Embedding Crash Root Cause Analysis
+During 50q LongMemEval-S testing with `--rerank --rerank-alpha 2.0 --persistent` on the ThinkPad T480s (4C/8T, 16GB RAM):
+- **Observation**: 8 CPU threads pegged >90-97%, RAM reached 14.0 GiB (90.3%), Swap reached 11.9 GiB, causing intensive 80MB/s disk paging and process freeze/OOM crash.
+- **Root Causes**:
+  1. `OrtEmbedder` defaulted to all 8 logical threads (`WM_EMBEDDER_ORT_THREADS`), causing hyperthread port contention and glibc arena fragmentation.
+  2. FP32 model weights (`BAAI/bge-small-en-v1.5`) consumed large tensor buffers per batch.
+  3. `--persistent` server monotonically accumulated 25,000+ turns and FTS indices without intermediate SQLite VACUUM or store eviction.
+
+### 2. Immediate Fixes & v6 SIMD Roadmap
+- **INT8 Quantization**: Add `BGESmallENV15Q` and `AllMiniLML6V2Q` to `OrtEmbedder` (75% RAM reduction, CPU INT8 SIMD instructions).
+- **Thread Capping**: Clamp default ORT threads to `min(physical_cores, 4)` (e.g., `WM_EMBEDDER_ORT_THREADS=2` or `4`).
+- **In-Tree AVX2 Kernels**: Port back the AVX2 8-lane F32 dot product kernels from `WHITEMAGIC/core/whitemagic/core/acceleration/embedding_simd.rs` for sub-microsecond candidate reranking.
+- **Benchmark Store Isolation**: Ensure per-batch database stores are scoped and cleaned between questions.
+
+### 3. The v6 → v7 Synthesis ("Restoring the Soul of Whitemagic")
+- **v6**: Hardened testbed and empirical baseline (deterministic Tantivy + LMDB + INT8/AVX2 SIMD vector reranking).
+- **v7**: Architectural renaissance re-integrating:
+  1. **Elixir Supervision Sidecar**: Actor isolation, stream backpressure, and fault-tolerant process trees (`actor_supervisor.ex`).
+  2. **Julia Numerical Sidecar**: FFT-accelerated Holographic Reduced Representations (HRR), high-dimensional manifold geometry (`HolographicMemory.jl`, `QuantumGeometry.jl`), and statistical time-series forecasting.
+  3. **True Semantic Holographic Projections**: Upgrading 5D coordinates from SHA-hash placement to continuous semantic embeddings and associative constellations.
+  4. **Autonomous Dream-Cycle Consolidation**: Idle-time background memory clustering, Hebbian reinforcement, and automatic forgetting.
+
+Documented in detail in [`docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md`](POLYGLOT_SIMD_MEMORY_STRATEGY.md).
+
 ## Verification
 
 ```bash
@@ -427,10 +453,12 @@ python3 scripts/memorastrict_bench.py --seeds 1 2 3 4 5 --min-coverage 0.5 --per
 
 ## References
 
-- [`docs/notes/research-2026-08-20-agent-memory.md`](notes/research-2026-08-20-agent-memory.md) — **2026-08-20 research pass (new)**: ScrubJay-MEM, TOKI, TANGLE, MELD, GPM, STALE/StateAuditor, Post-Retrieval Assembly, ConvMemory v1/v2, MemReranker, CommitDistill, RSCB-MC, GroupMemBench, ChronoMem, Auto-Dreamer, MemForest
-- [`docs/V6_BENCHMARK_DESIGN.md`](V6_BENCHMARK_DESIGN.md) — **MemoraStrict benchmark design (new)**
+- [`docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md`](POLYGLOT_SIMD_MEMORY_STRATEGY.md) — **Polyglot & SIMD Acceleration Strategy (new)**
+- [`docs/notes/research-2026-08-20-agent-memory.md`](notes/research-2026-08-20-agent-memory.md) — **2026-08-20 research pass**: ScrubJay-MEM, TOKI, TANGLE, MELD, GPM, STALE/StateAuditor, Post-Retrieval Assembly, ConvMemory v1/v2, MemReranker, CommitDistill, RSCB-MC, GroupMemBench, ChronoMem, Auto-Dreamer, MemForest
+- [`docs/V6_BENCHMARK_DESIGN.md`](V6_BENCHMARK_DESIGN.md) — **MemoraStrict benchmark design**
 - [`docs/RETRIEVAL_RESEARCH_ROADMAP.md`](RETRIEVAL_RESEARCH_ROADMAP.md) — Original multi-phase plan
-- [`docs/V6_PHASE4_RESEARCH.md`](V6_PHASE4_RESEARCH.md) — **Phase 4 research findings (new)**
+- [`docs/V6_PHASE4_RESEARCH.md`](V6_PHASE4_RESEARCH.md) — Phase 4 research findings
+- [`docs/V6_HOLOGRAPHIC_MEMORY.md`](V6_HOLOGRAPHIC_MEMORY.md) — Holographic memory architectural position
 - [`STRATEGY_V6.md`](../STRATEGY_V6.md)
 - [`docs/V6_MEMORY_RESEARCH.md`](V6_MEMORY_RESEARCH.md)
 - [`docs/V6_ACCURACY_PERFORMANCE_ROADMAP.md`](V6_ACCURACY_PERFORMANCE_ROADMAP.md)
@@ -443,3 +471,4 @@ python3 scripts/memorastrict_bench.py --seeds 1 2 3 4 5 --min-coverage 0.5 --per
 - AMemGym (interactive eval): https://openreview.net/forum?id=sfrVLzsmlf
 - Benchmark transparency audit: https://agentos.sh/blog/memory-benchmark-transparency-audit/
 - Benchmark Theatre critique: https://essays.bloo-mind.ai/posts/2026-05-20-mem-eval/
+
