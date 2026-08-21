@@ -485,7 +485,7 @@ def run_backup_gate(binary):
     shutil.copytree(backup_dir, tamper_dir)
     sums_path = os.path.join(tamper_dir, "SHA256SUMS")
     with open(sums_path, "ab") as fh:
-        fh.write(b"deadbeef00  lmdb/data.mdb\n")
+        fh.write(b"deadbeef00  data/lmdb/data.mdb\n")
     tampered = subprocess.run(
         [binary, "restore", "--backup", tamper_dir,
          "--store", os.path.join(out, "must-not-exist")],

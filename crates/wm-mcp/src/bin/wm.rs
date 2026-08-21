@@ -670,7 +670,7 @@ fn run_backup(
             hasher.update(&bytes);
             hex(&hasher.finalize())
         };
-        let _ = writeln!(sums, "{digest}  {rel}");
+        let _ = writeln!(sums, "{digest}  data/{rel}");
     }
     std::fs::write(dest.join("SHA256SUMS"), sums)?;
 
@@ -713,9 +713,14 @@ fn run_restore(
         if line.is_empty() {
             continue;
         }
-        let (expected, rel) = line
+        let (expected, manifest_path) = line
             .split_once("  ")
             .ok_or_else(|| anyhow::anyhow!("bad SHA256SUMS line: {line}"))?;
+        // Manifest paths are relative to the backup root with a data/ prefix,
+        // so `sha256sum -c` works from the backup directory itself.
+        let rel = manifest_path
+            .strip_prefix("data/")
+            .ok_or_else(|| anyhow::anyhow!("bad SHA256SUMS path (missing data/ prefix): {manifest_path}"))?;
         let abs = data_src.join(rel);
         let actual = {
             let mut hasher = sha2::Sha256::new();
@@ -724,7 +729,7 @@ fn run_restore(
         };
         if actual != expected {
             anyhow::bail!(
-                "Backup verification FAILED for {rel}: expected {expected}, got {actual}. Aborting restore."
+                "Backup verification FAILED for {manifest_path}: expected {expected}, got {actual}. Aborting restore."
             );
         }
     }
