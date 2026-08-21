@@ -15612,9 +15612,9 @@
     }
   },
   {
-    "question_id": "T2_unknown_transport",
+    "question_id": "T2_unknown_food",
     "question_type": "T2",
-    "question": "What's my favorite transport?",
+    "question": "What's my favorite food?",
     "answer": "I don't know",
     "haystack_sessions": [
       [
@@ -19505,14 +19505,14 @@
     "answer_session_ids": [],
     "answer_facts": [],
     "metadata": {
-      "topic": "transport",
+      "topic": "food",
       "reason": "topic_never_discussed"
     }
   },
   {
-    "question_id": "T2_unknown_music",
+    "question_id": "T2_unknown_hobby",
     "question_type": "T2",
-    "question": "What's my favorite music?",
+    "question": "What's my favorite hobby?",
     "answer": "I don't know",
     "haystack_sessions": [
       [
@@ -23403,7 +23403,7 @@
     "answer_session_ids": [],
     "answer_facts": [],
     "metadata": {
-      "topic": "music",
+      "topic": "hobby",
       "reason": "topic_never_discussed"
     }
   },
@@ -85851,7 +85851,9 @@
     "answer_facts": [],
     "metadata": {
       "target_turns": 1000,
-      "topic": "pet"
+      "actual_turns": 749,
+      "topic": "pet",
+      "note": "Scale testing requires separate scenario generation with larger num_sessions"
     }
   },
   {
@@ -89751,7 +89753,9 @@
     "answer_facts": [],
     "metadata": {
       "target_turns": 10000,
-      "topic": "pet"
+      "actual_turns": 749,
+      "topic": "pet",
+      "note": "Scale testing requires separate scenario generation with larger num_sessions"
     }
   },
   {
@@ -93651,7 +93655,9 @@
     "answer_facts": [],
     "metadata": {
       "target_turns": 50000,
-      "topic": "pet"
+      "actual_turns": 749,
+      "topic": "pet",
+      "note": "Scale testing requires separate scenario generation with larger num_sessions"
     }
   },
   {
@@ -97551,14 +97557,16 @@
     "answer_facts": [],
     "metadata": {
       "target_turns": 100000,
-      "topic": "pet"
+      "actual_turns": 749,
+      "topic": "pet",
+      "note": "Scale testing requires separate scenario generation with larger num_sessions"
     }
   },
   {
     "question_id": "T8_vegetarian_steak",
     "question_type": "T8",
     "question": "Do I have any dietary restrictions?",
-    "answer": "CONFLICT: was vegetarian, now eats steak",
+    "answer": "CONFLICT: was vegetarian, now steak",
     "haystack_sessions": [
       [
         {
@@ -101462,7 +101470,7 @@
     "question_id": "T8_vegan_cheese",
     "question_type": "T8",
     "question": "Do I have any dietary restrictions?",
-    "answer": "CONFLICT: was vegan, now eats cheese",
+    "answer": "CONFLICT: was vegan, now cheese",
     "haystack_sessions": [
       [
         {
@@ -105366,7 +105374,7 @@
     "question_id": "T8_teetotaler_wine",
     "question_type": "T8",
     "question": "Do I drink alcohol?",
-    "answer": "CONFLICT: was teetotaler, now drinks wine",
+    "answer": "CONFLICT: was teetotaler, now wine",
     "haystack_sessions": [
       [
         {

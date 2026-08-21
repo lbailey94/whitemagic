@@ -487,7 +487,10 @@ def gen_questions_T2_abstention(
     fully_unknown = ["podcast", "video_game", "car_model", "phone_brand", "shoe_brand",
                      "wine", "tea", "energy_drink", "snack", "dessert"]
 
-    for topic in list(undiscussed_topics)[:2]:
+    # sorted() for deterministic output: plain set iteration order varies
+    # per process (PYTHONHASHSEED), which previously made T2 topic
+    # sampling non-deterministic across runs with the same seed.
+    for topic in sorted(undiscussed_topics)[:2]:
         q = Question(
             id=f"T2_unknown_{topic}",
             test_category="T2",
