@@ -2115,7 +2115,7 @@ impl McpServer {
         Ok(json!({
             "protocolVersion": "2024-11-05",
             "serverInfo": {
-                "name": "whitemagic-v5",
+                "name": "whitemagic",
                 "version": env!("CARGO_PKG_VERSION"),
             },
             "capabilities": {
@@ -3047,7 +3047,7 @@ mod tests {
         let resp = server.handle(&req).await;
         assert!(resp.error.is_none());
         let result = resp.result.unwrap();
-        assert_eq!(result["serverInfo"]["name"], "whitemagic-v5");
+        assert_eq!(result["serverInfo"]["name"], "whitemagic");
         assert!(result["capabilities"]["tools"].is_object());
     }
 
@@ -3196,7 +3196,7 @@ mod tests {
         let parsed: Value = serde_json::from_str(&response).unwrap();
         assert_eq!(parsed["jsonrpc"], "2.0");
         assert_eq!(parsed["id"], 1);
-        assert_eq!(parsed["result"]["serverInfo"]["name"], "whitemagic-v5");
+        assert_eq!(parsed["result"]["serverInfo"]["name"], "whitemagic");
     }
 
     #[tokio::test]
@@ -3367,7 +3367,7 @@ mod tests {
             .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#)
             .await;
         let init: Value = serde_json::from_str(&init_resp).unwrap();
-        assert_eq!(init["result"]["serverInfo"]["name"], "whitemagic-v5");
+        assert_eq!(init["result"]["serverInfo"]["name"], "whitemagic");
 
         // 2. tools/list (should now be Beta since handle() records an event)
         let list_resp = server
@@ -3509,7 +3509,7 @@ mod tests {
             .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#)
             .await;
         let good: Value = serde_json::from_str(&good_resp).unwrap();
-        assert_eq!(good["result"]["serverInfo"]["name"], "whitemagic-v5");
+        assert_eq!(good["result"]["serverInfo"]["name"], "whitemagic");
 
         // 3. tools/call should work after error recovery
         let call_resp = server.handle_request(
