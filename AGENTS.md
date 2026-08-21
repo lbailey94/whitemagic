@@ -1,8 +1,11 @@
 # AGENTS.md — WhiteMagic v5 Developer Guide
 
-The feature phases are complete, but release stabilization is still in
-progress. Use [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) as the
-source of truth for blockers, acceptance tests, and the next execution order.
+WhiteMagic v5.8.0 is the historical release baseline, while v7 product
+readiness is now the active release track. Use
+[`docs/V7_PRODUCT_READINESS.md`](docs/V7_PRODUCT_READINESS.md) as the source of
+truth for website containment, private-alpha gates, and stranger testing. Use
+[`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) for v5 evidence and
+[`docs/NEXT_SESSION.md`](docs/NEXT_SESSION.md) for the current execution slice.
 
 ## Session Continuity
 

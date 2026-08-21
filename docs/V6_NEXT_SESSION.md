@@ -1,8 +1,20 @@
 # V6 Next Session Handoff
 
-**Prepared:** 2026-08-18 (updated 2026-08-21 early morning)
+**Prepared:** 2026-08-18 (updated 2026-08-21 early morning; Stage 0 note added
+2026-08-21)
 **Branch:** `v6-dev`
 **Latest commit:** `89c16ba` — B5 seal/verify E2E gate
+
+## Stage 0 Website Containment — Complete (2026-08-21)
+
+The public website at `whitemagic.dev` and `www.whitemagic.dev` is now in
+Stage 0 WIP containment. Deployed commit `91ebb353` on `master` in
+`lbailey94/whitemagic-site-private`. All historical routes redirect to `/`;
+all retired API endpoints return 503; crawlers disallowed. Full evidence in
+[`V7_PRODUCT_READINESS.md`](V7_PRODUCT_READINESS.md). The next product work is
+Gate 1 (coherent private alpha) — see
+[`NEXT_SESSION.md`](NEXT_SESSION.md). v6 research and benchmark work continues
+independently of the product gates.
 
 ## Current Results
 
@@ -461,6 +473,12 @@ During 50q LongMemEval-S testing with `--rerank --rerank-alpha 2.0 --persistent`
 - **Benchmark Store Isolation**: Ensure per-batch database stores are scoped and cleaned between questions.
 
 ### 3. The v6 → v7 Synthesis ("Restoring the Soul of Whitemagic")
+
+Product readiness is a separate boundary: architectural synthesis does not
+expand the alpha promise or authorize a public launch. Website containment,
+Gate 1, and Gate 2 are defined in
+[`V7_PRODUCT_READINESS.md`](V7_PRODUCT_READINESS.md).
+
 - **v6**: Hardened testbed and empirical baseline (deterministic Tantivy + LMDB + INT8/AVX2 SIMD vector reranking).
 - **v7**: Architectural renaissance re-integrating:
   1. **Elixir Supervision Sidecar**: Actor isolation, stream backpressure, and fault-tolerant process trees (`actor_supervisor.ex`).

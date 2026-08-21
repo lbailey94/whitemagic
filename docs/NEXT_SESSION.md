@@ -1,205 +1,128 @@
-# Next Session Handoff - 2026-08-17
+# Next Session — v7 Product Readiness
 
-> Prepared 2026-08-17 after research closeout and retrieval development planning.
-> The canonical plan is
-> [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md). This file contains only
-> the next execution slice.
+**Prepared:** 2026-08-20
+**Last updated:** 2026-08-21 (Stage 0 website containment deployed and verified)
+**Status:** Stage 0 complete; Gate 1 implementation not yet started
+
+The canonical product-gate plan is
+[`V7_PRODUCT_READINESS.md`](V7_PRODUCT_READINESS.md). The historical v5.8.0
+release record remains in [`RELEASE_READINESS.md`](RELEASE_READINESS.md).
+Technical v6/v7 architecture and benchmark plans do not override the product
+gates.
+
+## Current Decision
+
+The public website is now in a truthful work-in-progress state. It will remain
+there while WhiteMagic completes:
+
+1. Gate 1 — coherent private alpha;
+2. Gate 2 — stranger-tested alpha.
+
+The website must not advertise retired Python/Core installs, dead repositories,
+stale benchmark claims, or an available v7 release.
 
 ## Current State
 
-- Research phase closed. Development plan: [`docs/RETRIEVAL_DEVELOPMENT_PLAN.md`](RETRIEVAL_DEVELOPMENT_PLAN.md).
-- Archive findings: [`docs/ARCHIVE_FINDINGS.md`](ARCHIVE_FINDINGS.md).
-- Current accepted retrieval baseline after token-coverage alignment: 50q
-  turn-level R@1=0.64, R@5=0.82, R@10=0.82, MRR=0.7150, query p50 about 56ms.
-- Naive two-turn composites and blanket field weighting were measured and
-  rejected. Do not port either into the production index.
+- **Stage 0 is complete.** The live website at `whitemagic.dev` and
+  `www.whitemagic.dev` serves a minimal WIP notice. All historical routes
+  redirect to `/`; all retired API endpoints return 503; `robots.txt`
+  disallows all crawlers; `sitemap.xml` contains only the root URL.
+- Deployed commit: `91ebb353` on `master` (Vercel production branch), promoted
+  from `wip/v7-gates` on 2026-08-21.
+- The deployment repository is `lbailey94/whitemagic-site-private`, checked out
+  at `~/Desktop/whitemagic-site`.
+- Vercel project settings corrected: `outputDirectory` set to default `.next`,
+  `framework` set to `nextjs`.
+- WIP mode is controlled by `NEXT_PUBLIC_WIP_MODE=1` in `.env.production` and
+  the middleware WIP block in `middleware.ts`. Setting the flag to `0` and
+  redeploying restores the full site.
+- WMv5 contains the strongest tested substrate, while v6/v7 development remains
+  active and must be separated from the narrow alpha promise.
+- `V7_PRODUCT_READINESS.md` defines the required evidence for every gate and
+  contains the full Stage 0 deployment evidence record.
 
-- v5.8.0, 15 crates, 229 registered tool implementations, 3,513 tests.
-- **Release gates passed 2026-08-16**: fmt clean, clippy clean (`-D warnings`),
-  3,513 tests pass, release build clean. Includes uncommitted work:
-  `tools.usage_report`, daemon checkpoint interval, batch embedding fixes,
-  grid-search results.
-- **Release gate run complete. Tagged v5.8.0-rc1.** Fresh-install rehearsal
-  passed (quickstart + doctor + curated smoke test, all healthy).
-- **All P0, P1, and P2 items are now complete.** Phase B items B5–B7 are
-  implemented (B5 is HMAC seal/verify, not a root of trust). B4 remains.
-  `wm serve` defaults to curated.
-- **Vector search wiring complete (2026-08-14):** `RecallEngine` is shared via
-  `Arc<RecallEngine>` with `MemoryCreateTool`, `MemoryBatchCreateTool`, and
-  `MemoryHybridRecallTool`. When `WM_EMBEDDER_ENDPOINT` is set, memory creation
-  auto-embeds and `memory.hybrid_recall` fuses BM25 + vector cosine similarity.
-  Without an embedder, all tools fall back to pure BM25. See
-  [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md).
-- **Batch embedding fix (2026-08-15):** Three bugs fixed in batch embedding
-  (Tantivy writer lock conflict, embedder token limit, fallback writer).
-- **Grid search completed (2026-08-15/16):** 4 successful weight
-  combinations with live embedder (n=10, turn-level retrieval, not official
-  LongMemEval QA). Hybrid lifted R@5 from 0.70 → 0.90 vs BM25+stem and
-  dropped R@1 from 0.50 → 0.40. Weights did not differentiate. Three
-  leftover `grid_*_10q.json` files plus the original combined summary were
-  all-zero from the broken first pass; `grid_search_weights.json` was
-  reconstructed 2026-08-16 from the four good runs. The current OR +
-  token-coverage 50q baseline is R@1=0.64, R@5=0.82, R@10=0.82,
-   MRR=0.7150, query p50 about 56ms. See `docs/ARCHIVE_FINDINGS.md` for
-   rejected composite and field-weight experiments.
-- **Evaluator/context A-B completed 2026-08-17:** the hardened evaluator
-  retrieves 100 candidates and separately reports candidate presence and
-  expected-session evidence. The no-context result reproduced
-  R@1/R@5/R@10=0.64/0.82/0.82, MRR=0.7150, candidate presence=0.78, and
-  session presence=0.84. Adjacent-turn terms raised candidate presence to 0.80
-  but reduced R@1/R@5/MRR to 0.54/0.80/0.6523 and increased ingest/query
-  latency. The contextual tag prototype is rejected; see
-  `docs/ARCHIVE_FINDINGS.md`.
-- Codebase pushed to GitHub (`lbailey94/WMv5`, private). RC1 tag pushed;
-  release workflow triggered. HEAD is 1 commit ahead of origin (not pushed).
-- Phase A of PET hardening (A1–A3) is complete and committed (`1dc29b6`).
-- The curated process smoke test (`scripts/curated_smoke_test.py`) is wired
-  into `ci.yml` and `release.yml`; the rehearsal is a committed, repeatable
-  CI gate.
+## Completed Work — Stage 0 Website Containment
 
-## Release Position
+1. ~~Check out `lbailey94/whitemagic-site-private` into a clean local project
+   directory.~~ Done — `~/Desktop/whitemagic-site`.
+2. ~~Read its project rules, deployment configuration, current branch state, and
+   Vercel linkage before changing files.~~ Done.
+3. ~~Preserve a recoverable snapshot through Git history.~~ Done — `wip/v7-gates`
+   branch preserved; `master` force-promoted.
+4. ~~Replace the active site with a minimal WIP surface.~~ Done — root page,
+   `robots.txt`, `sitemap.xml`, middleware redirects, API 503s, SW cleanup.
+5. ~~Verify local production build and every public route.~~ Done — 34
+   historical routes verified, all POST APIs return 503, metadata routes serve
+   correctly.
+6. ~~Review the exact deployment diff and confirm no secrets.~~ Done.
+7. ~~Deploy only after explicit review.~~ Done — Vercel preview verified, then
+   force-promoted to `master`.
+8. ~~Verify `whitemagic.dev` in a clean browser and record the deployed commit
+   and date.~~ Done — both `whitemagic.dev` and `www.whitemagic.dev` verified;
+   evidence recorded in `V7_PRODUCT_READINESS.md`.
 
-The release target is a local-first memory and session-continuity MCP server for
-coding agents. The curated surface is the product boundary. The full surface,
-daemon, NLU promotion, learned routing, imagination, self-play, Sangha, and
-polyglot features remain optional or experimental until their live behavior is
-verified.
+## Next Execution Slice — Gate 1 Foundation
 
-## Next Steps
+Stage 0 is complete. The next work is Gate 1, in the order defined by
+`V7_PRODUCT_READINESS.md`:
 
-Release stabilization remains separate from the retrieval development slice.
-The next development session should:
+1. **G1.1 Canonical identity:** choose and apply one canonical product name,
+   repository name/URL, binary/package name, version line, support/security
+   contact, and website relationship. All Cargo metadata, citation metadata,
+   documentation, release assets, MCP server names, and website references must
+   agree.
+2. **G1.2 License and public metadata:** include the complete chosen license
+   text in the repository and release; correct repository URLs in Cargo
+   metadata and `CITATION.cff`; add an accurate repository description and
+   homepage; state support expectations.
+3. **G1.3 Retired public surfaces:** inventory and resolve every public surface
+   (GitHub repositories/releases, PyPI package pages, MCP registry listings,
+   social/profile links). Each must be current, clearly historical, redirected,
+   or removed.
+4. **G1.4 One supported install path:** make the Linux x86-64 non-admin install
+   path pass from a clean account — download, verify integrity, install, version
+   check, `doctor`, MCP handshake.
+5. **G1.5 Product quickstart:** replace the storage-engine demo with an
+   isolated two-session continuity demo (initialize → start → record →
+   checkpoint → stop → restart → retrieve → show store location).
+6. **G1.6 Agent instruction delivery:** deliver the supported session rhythm
+   automatically to connected agents via MCP server instructions or a generated
+   client rule.
+7. **G1.7 Process-level continuity gate:** add a release-gating test that
+   exercises record → restart → continuity/replay through the real binary and
+   MCP boundary.
+8. **G1.8 Documentation truth:** correct all supported documentation so it
+   agrees with behavior — curated/full defaults, tool counts, repository URLs,
+   store paths, platforms, benchmark versions, privacy flags, credential
+   storage, conversation capture.
+9. **G1.9 Backup/restore:** provide one supported full-store workflow with
+   backup, verify, and restore — including all user state, not just LMDB.
+10. **G1.10 Technical baseline:** format, lint, tests, release build, dependency
+    audit, and supported smoke tests pass from a clean checkout; artifact tied
+    to commit and checksum; no secrets; public claims removed or tied to
+    reproducible runs.
 
-1. **Read `docs/RETRIEVAL_RESEARCH_ROADMAP.md`** — the full multi-phase plan
-   based on August 2026 research findings. This is the primary document for
-   R@1 improvement work.
-2. **Implement Phase 1**: Storage-time vocabulary enrichment + session-aware
-   RRF reranking in `crates/wm-memory/src/episodic.rs`. Target: R@1 70% →
-   80-85% on 10q subset.
-3. Benchmark with `python scripts/longmemeval_bench.py --questions 10`.
-4. If Phase 1 succeeds, proceed to Phase 2 (drop embeddings, SIMD acceleration).
-5. Keep the fixed 50q evaluator as the regression protocol and report candidate
-   presence, text evidence, and session evidence with every ranking experiment.
+**Gate 1 exit:** the private-alpha artifact and instructions can be handed to a
+stranger without exposing the stale public launch surface.
 
-Release work remains:
+## Guardrails
 
-5. Commit the existing release-candidate work as a separate slice.
-6. Re-run the full v5.8.0 release gate from `cargo clean`.
-7. Tag and publish v5.8.0 after the release checklist is clean.
+- Do not publish a v7 launch date.
+- Do not treat architecture completion as product readiness.
+- Do not expand the alpha surface with research tools.
+- Do not recommend storing credentials; privacy flags are not encryption.
+- Do not advertise a platform until its install and first-run path passes.
+- Do not preserve public claims merely because they appeared in an older site.
+- Do not use developer assistance to convert a failed stranger test into a pass;
+  record the friction and return it to Gate 1.
+- Do not disable WIP mode on the website until Gate 2 passes.
 
-## Hard Blockers
+## Verification for This Documentation Slice
 
-**No hard blockers remain.** All P0 and P1 release gates are complete. P2
-items are complete. Phase B items B6 and B7 are complete.
-
-## Verification Commands
-
-```bash
-cargo fmt --all -- --check
-cargo test --workspace --all-targets
-cargo clippy --all-targets -- -D warnings
-cargo build --release --bin wm
-wm doctor --store ~/Desktop/WMdata/live
-python3 scripts/curated_smoke_test.py --binary target/release/wm
-```
-
-The smoke test is a committed repository script (`scripts/curated_smoke_test.py`).
-It uses a fresh temporary store, explicit curated routing, restarts the binary,
-and asserts JSON results rather than only process exit code.
-
-## Defer
-
-- Do not add more v26 tools.
-- Do not expand Sangha, self-play, imagination, or autonomous learning.
-- Do not prioritize the `McpServer` split, routing-table consolidation, or a
-  scaffolding macro over the release gates.
-- Do not promote embedding NLU based on disagreement metrics alone.
-
-## Useful Existing Evidence
-
-- `docs/notes/shadow-mode-analysis-2026-08-10.md`: embedding-router quality data.
-- `docs/PROGRESS.md`: implementation history and verified phase work.
-- `docs/RELEASE_READINESS.md`: blockers, acceptance criteria, and no-go gates.
-- `docs/PET_HARDENING.md`: hardening plan (Phase A complete; Phase B in progress).
-- `scripts/collect_shadow_data.py`: router data collection, requiring a live
-  embedder endpoint.
-
-## Session History
-
-### Session 2026-08-15 (early morning): batch embedding bug fixes
-
-Fixed three bugs preventing vector search from activating during grid search:
-
-1. **Tantivy writer lock conflict** in `MemoryBatchCreateTool::call`
-   (`crates/wm-tools/src/lib.rs`): The tool acquired a Tantivy writer at line
-   277, then `RecallEngine::store_batch_with_embedding` tried to acquire
-   another writer at line 337. Tantivy only allows one writer at a time, so
-   the embedding path always failed and fell back to BM25-only storage
-   (without embeddings). Fix: only acquire `writer_guard` when
-   `self.recall.is_none()`.
-2. **Embedder token limit exceeded** in `RecallEngine::store_batch_with_embedding`
-   (`crates/wm-memory/src/recall.rs`): The method sent all items in a single
-   `embed_batch()` call. With 50+ real conversation turns (~883 chars avg),
-   this exceeded the embedder's 512-token context limit (llama-server with
-   bge-small-en-v1.5). Fix: adaptive chunking with
-   `MAX_CHARS_PER_CHUNK = 1500` and `MAX_CHARS_PER_ITEM = 1500` (truncation
-   for items exceeding the limit).
-3. **Fallback path missing writer** in `MemoryBatchCreateTool::call`: When
-   `store_batch_with_embedding` failed, the fallback path tried to use
-   `writer_guard` which was now `None` (due to fix #1). Fix: lazily acquire a
-   fallback writer in the error path.
-
-Validation: 9/9 batch_create calls succeed with embeddings (0 warnings),
-hybrid_recall returns 10 fused BM25 + vector results. Grid search was started
-but interrupted for the night.
-
-### Session 2026-08-14 (afternoon): vector search wiring
-
-Completed vector search integration into MCP server tool path (626 tests, 0 clippy warnings):
-
-- **`ConversationalSearch`** changed to hold `Arc<RecallEngine>` for shared ownership
-- **`RecallEngine::embedder_is_real()`** added to detect stub vs real embedder
-- **`McpServer::with_defaults()`** constructs `Arc<RecallEngine>` with `RecallConfig::from_env()`,
-  shares with `ConversationalSearch` and memory tools via `recall_for_tools: Option<Arc<RecallEngine>>`
-- **`MemoryCreateTool`** uses `recall.store_with_embedding()` when available, falls back to
-  plain LMDB + Tantivy when no embedder
-- **`MemoryBatchCreateTool`** same pattern, per-item embedding with fallback
-- **`MemoryHybridRecallTool`** runs `recall.hybrid_search()` as Phase 0 (BM25 + vector fusion)
-  when embedder available, falls back to existing BM25-only phases
-- **`register_all` / `register_expansion`** updated to thread `recall` parameter
-- All test call sites updated for new signatures
-- Docs updated: `RELEASE_READINESS.md`, `NEXT_SESSION.md`, new `VECTOR_SEARCH_ROADMAP.md`
-
-### Session 2026-08-13 (late evening): post-RC1 hardening batch
-
-Completed 5 items in one session (3,515 tests, 0 clippy warnings, fmt clean):
-
-- **B7: Store permissions (0700)** — `MemoryStore::open()` creates the store
-  directory with mode `0o700` on Unix. Regression test added.
-- **P2-1: NLU abstention** — when NLU routing returns `gnosis` with confidence
-  < 0.15, the meta-tool abstains and returns an error suggesting explicit
-  routing. 2 tests.
-- **P2-2: Experimental labeling** — `imagine.*` and `selfplay.*` tool
-  descriptions prefixed with `[Experimental]`. AGENTS.md updated.
-- **B6: Untrusted `_meta` stripping** — `_meta` stripped from tool arguments
-  in both `McpServer` and `WmMetaTool` before dispatch. 1 test.
-- **Misc: Release workflow artifact naming** — release assets now use
-  per-platform names matching `install.sh` expectations.
-
-### Session 2026-08-13 (evening): P0/P1 release gates complete
-
-- P0-1: Destructive-via-NLU sweep test
-- P0-2: LMDB/Tantivy consistency contract
-- P0-3: Search-health honesty
-- P1-4: Operations docs
-- P1-5: Install script
-- P1-6: Optional features matrix
-- Tagged v5.8.0-rc1, fresh-install rehearsal passed
-
-### Session 2026-08-13 (afternoon): Phase A PET hardening
-
-- A1: ResourceRules on the dispatch path
-- A2: Effect inventory audit as 16 CI tests; 13 false declarations fixed
-- A3: WriteAuditJournal (append-only LMDB journal, `wm doctor` surfacing)
-
-Also use `whitemagic-dev` session.continuity at session start (see AGENTS.md).
+- `V7_PRODUCT_READINESS.md` exists, is linked from active planning docs, and
+  contains the full Stage 0 deployment evidence.
+- `RELEASE_READINESS.md` is clearly labeled as the v5 historical record.
+- v6/v7 architecture notes point to the independent product gate.
+- The independent-builder strategy places readiness before launch and income
+  forecasts, and marks Stage 0 complete.
+- Stage 0 website containment is deployed, verified, and recorded.

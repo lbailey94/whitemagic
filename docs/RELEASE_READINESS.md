@@ -5,7 +5,11 @@
 **Version under review:** v5.8.0
 **Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B5, B6, B7 complete (B5 seal/verify is now an end-to-end gate in the curated smoke test: seal → clean verify → idempotence → tamper detection with exit 1); B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. v6-dev episodic retrieval work (typed keys, query-class planner, vocabulary enrichment, abstention, consolidation boost) rides along behind opt-in tool parameters; LongMemEval 50q R@1 86% is unchanged by the release-stabilization fixes. v5.8.0 published 2026-08-20 with all 8 per-platform assets; fresh-install rehearsal passed against the release artifacts.
 
-This document is the release-readiness source of truth. `README.md` should
+> **Successor planning:** This document remains the historical v5.8.0 release
+> record. Active website containment and v7 private-alpha gates are tracked in
+> [`V7_PRODUCT_READINESS.md`](V7_PRODUCT_READINESS.md).
+
+This document is the v5 release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
 `NEXT_SESSION.md` should contain the next execution slice. Release decisions,
 acceptance criteria, and deferred work belong here.
