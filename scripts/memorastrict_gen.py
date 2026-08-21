@@ -355,6 +355,15 @@ def gen_sessions(
         # Generate turns
         signal_turns_needed = max(1, int(num_turns * (1 - noise_ratio)))
         signal_positions = rng.sample(range(num_turns), min(signal_turns_needed, num_turns))
+        # Track which preferences state their change in this session; every
+        # preference whose change session is `si` must actually state the
+        # new value, or downstream questions ask about values never spoken
+        # (found by static miss analysis 2026-08-20: 'bus'/'ruby'/'light
+        # roast' were never mentioned in seeds 1/3 — unanswerable).
+        changed_topics_stated: set[str] = set()
+        changing_prefs = [
+            p for p in persona.preferences if si in p.change_sessions
+        ]
 
         for ti in range(num_turns):
             if ti in signal_positions and active_prefs:
@@ -367,6 +376,7 @@ def gen_sessions(
                 if is_change and vidx > 0:
                     old_value = pref.values[vidx - 1]
                     content = gen_preference_change_statement(rng, topic, old_value, value)
+                    changed_topics_stated.add(topic)
                 else:
                     content = gen_preference_statement(rng, topic, value, persona)
 
@@ -380,6 +390,25 @@ def gen_sessions(
             if ti % 2 == 0 and ti < num_turns - 1:
                 asst = gen_assistant_turn(rng, session.turns[-1])
                 session.turns.append(asst)
+
+        # Guarantee change statements: any preference whose change session
+        # is this session but was not sampled at a signal position gets its
+        # change statement appended. Without this, questions reference
+        # values that were never spoken (unanswerable-by-construction).
+        for pref in changing_prefs:
+            if pref.topic in changed_topics_stated:
+                continue
+            value_idx = 0
+            for cs in pref.change_sessions:
+                if si >= cs:
+                    value_idx += 1
+            if value_idx == 0:
+                continue
+            new_value = pref.values[value_idx]
+            old_value = pref.values[value_idx - 1]
+            content = gen_preference_change_statement(rng, pref.topic, old_value, new_value)
+            session.turns.append(Turn(role="user", content=content, is_signal=True))
+            changed_topics_stated.add(pref.topic)
 
         sessions.append(session)
         base_day += rng.randint(3, 14)  # days between sessions
