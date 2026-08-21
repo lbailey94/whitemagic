@@ -1,8 +1,8 @@
 # Next Session — v7 Product Readiness
 
 **Prepared:** 2026-08-20
-**Last updated:** 2026-08-21 (Stage 0 website containment deployed and verified)
-**Status:** Stage 0 complete; Gate 1 implementation not yet started
+**Last updated:** 2026-08-21 (G1.1–G1.3 complete; G1.4 install path next)
+**Status:** Stage 0, G1.1, G1.2, G1.3 complete; Gate 1 continues at G1.4
 
 The canonical product-gate plan is
 [`V7_PRODUCT_READINESS.md`](V7_PRODUCT_READINESS.md). The historical v5.8.0
@@ -61,7 +61,40 @@ stale benchmark claims, or an available v7 release.
    and date.~~ Done — both `whitemagic.dev` and `www.whitemagic.dev` verified;
    evidence recorded in `V7_PRODUCT_READINESS.md`.
 
-## Next Execution Slice — Gate 1 Foundation
+## Completed Work — Gate 1 Foundation (2026-08-21)
+
+1. **G1.1 Canonical identity — done.** Product `WhiteMagic`; repository
+   renamed `lbailey94/WMv5` → `lbailey94/whitemagic` (old URLs redirect);
+   binary `wm`; version line `7.0.0-alpha.1`; support/security contact
+   `lbailey94@protonmail.com`; website relationship: `whitemagic.dev` in WIP
+   mode until Gate 2 passes. Applied to workspace Cargo metadata, CITATION.cff,
+   MCP `serverInfo.name`, CLI about/version (now derived from
+   `CARGO_PKG_VERSION`), and deny.toml. Commit `a90b21e`.
+2. **G1.2 License and public metadata — done.** MIT LICENSE added
+   (© Lucas Bailey and WhiteMagic Contributors); Cargo/CITATION URLs corrected
+   (previously pointed at the site repo); GitHub description and homepage set.
+3. **G1.3 Retired public surfaces — done.** Inventory found no public code
+   surfaces: GitHub holds exactly two private repos; PyPI/npm/crates.io never
+   published; the MCP registry kit was never submitted. The only public
+   surface is the contained website.
+
+## Next Execution Slice — G1.4 One Supported Install Path
+
+The next work is the Linux x86-64 install path, per `V7_PRODUCT_READINESS.md`:
+
+1. Cut a real `v7.0.0-alpha.1` release artifact (release build tied to commit
+   + SHA256 checksums) so install.sh has something truthful to point at;
+2. Update `scripts/install.sh` to resolve the latest alpha release instead of
+   hardcoding v5.8.0;
+3. Verify from an isolated non-development account: download, verify integrity,
+   install, version check, `doctor`, MCP handshake;
+4. Record the transcript and machine configuration as evidence.
+
+Then continue with G1.5 (product quickstart), G1.6 (agent instructions),
+G1.7 (continuity process gate), G1.8 (documentation truth), G1.9
+(backup/restore), and G1.10 (technical baseline).
+
+## Prior Execution Slice — Gate 1 Foundation (superseded list)
 
 Stage 0 is complete. The next work is Gate 1, in the order defined by
 `V7_PRODUCT_READINESS.md`:
