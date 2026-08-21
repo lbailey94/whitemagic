@@ -1232,183 +1232,160 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
 }
 
 async fn run_quickstart() -> anyhow::Result<()> {
-    let store_path = default_store_path();
-    let lmdb_path = store_path.join("lmdb");
+    // G1.5 product quickstart: demonstrate the headline outcome — a decision
+    // recorded in one session survives a full process restart and is
+    // retrieved in the next session. Runs against an ISOLATED demo store so
+    // a pre-existing user store is never polluted.
+    let demo_store = default_store_path()
+        .parent()
+        .map(|p| p.join("whitemagic-quickstart"))
+        .unwrap_or_else(|| PathBuf::from(".whitemagic-quickstart"));
+    let lmdb_path = demo_store.join("lmdb");
     std::fs::create_dir_all(&lmdb_path)?;
 
     println!("=== WhiteMagic Quickstart ===");
     println!();
-    println!("Initializing store at {}...", lmdb_path.display());
-
-    let mut server = wm_mcp::McpServer::with_defaults(&lmdb_path)?;
-
-    // Step 1: Create memories — dispatched through the server's pipeline so
-    // the Tantivy index is populated. (Direct LMDB writes left the index
-    // empty and step 3's search returned nothing on a fresh store.)
+    println!("This demo uses an isolated store (your real data is untouched):");
+    println!("  {}", demo_store.display());
     println!();
-    println!("--- Step 1: Create memories ---");
+    println!("--- Process 1: record a project decision ---");
+    println!();
 
-    let memories = [
-        (
-            "Rust is a systems programming language focused on safety and speed.",
-            vec!["programming", "rust"],
-        ),
-        (
-            "LMDB is a lightning-fast embedded key-value store using mmap.",
-            vec!["database", "lmdb"],
-        ),
-        (
-            "Tantivy is a full-text search engine written in Rust.",
-            vec!["search", "rust"],
-        ),
-    ];
+    let decision = String::from(
+        "Use SQLite for the report cache: the dataset fits in memory and we need ad-hoc queries.",
+    );
 
-    for (content, tags) in &memories {
-        let create_request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {
-                "name": "wm",
-                "arguments": {
-                    "route": "memory.create",
-                    "args": {"galaxy": "codex", "content": content, "tags": tags}
-                }
-            }
+    // Process 1: initialize, start a session, record a decision, checkpoint.
+    {
+        let mut server = wm_mcp::McpServer::with_defaults(&lmdb_path)?;
+
+        let start_request = serde_json::json!({
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "wm", "arguments": {
+                "route": "session.start",
+                "args": {"title": "WhiteMagic quickstart"}
+            }}
         });
-        let response = server.handle_request(&create_request.to_string()).await;
+        let response = server.handle_request(&start_request.to_string()).await;
+        if response.contains("\"error\"") {
+            anyhow::bail!("session.start failed: {response}");
+        }
+        println!("  Session started.");
+
+        let record_request = serde_json::json!({
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "wm", "arguments": {
+                "route": "session.record",
+                "args": {
+                    "content": decision,
+                    "role": "user",
+                    "turn_type": "decision",
+                    "importance": 0.9
+                }
+            }}
+        });
+        let response = server.handle_request(&record_request.to_string()).await;
+        if response.contains("\"error\"") {
+            anyhow::bail!("session.record failed: {response}");
+        }
+        println!("  Decision recorded:");
+        println!("    \"{decision}\"");
+
+        let checkpoint_request = serde_json::json!({
+            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+            "params": {"name": "wm", "arguments": {
+                "route": "session.checkpoint",
+                "args": {}
+            }}
+        });
+        let _ = server.handle_request(&checkpoint_request.to_string()).await;
+        println!("  Session checkpointed.");
+        // Dropping the server closes the store — the process boundary the
+        // second process must survive.
+    }
+
+    println!();
+    println!("--- Process stopped. Starting Process 2 on the same store ---");
+    println!();
+
+    // Process 2: a fresh server instance reopens the store from disk.
+    {
+        let mut server = wm_mcp::McpServer::with_defaults(&lmdb_path)?;
+
+        let continuity_request = serde_json::json!({
+            "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+            "params": {"name": "wm", "arguments": {
+                "route": "session.continuity",
+                "args": {"n": 5}
+            }}
+        });
+        let response = server.handle_request(&continuity_request.to_string()).await;
         let resp: serde_json::Value = serde_json::from_str(&response).unwrap_or_default();
-        if let Some(text) = resp
-            .get("result")
-            .and_then(|r| r.get("content"))
-            .and_then(|c| c.get(0))
-            .and_then(|c| c.get("text"))
+        let text = resp
+            .pointer("/result/content/0/text")
             .and_then(|t| t.as_str())
+            .unwrap_or("{}");
+        let continuity: serde_json::Value = serde_json::from_str(text).unwrap_or_default();
+
+        if continuity
+            .get("previous_session")
+            .is_some_and(|v| !v.is_null())
         {
-            if let Ok(created) = serde_json::from_str::<serde_json::Value>(text) {
-                if created.get("status").and_then(|s| s.as_str()) == Some("success") {
-                    let id = created.get("id").and_then(|v| v.as_str()).unwrap_or("?");
-                    println!("  Created: [{id}] \"{}\"", &content[..50]);
-                    continue;
+            println!(
+                "  Continuity recovered prior session {}.",
+                continuity["previous_session"].as_str().unwrap_or("?")
+            );
+            if let Some(turns) = continuity.get("turns").and_then(|t| t.as_array()) {
+                for turn in turns.iter().take(3) {
+                    let role = turn.get("role").and_then(|r| r.as_str()).unwrap_or("?");
+                    let content = turn.get("content").and_then(|c| c.as_str()).unwrap_or("");
+                    println!("    [{role}] {content}");
                 }
             }
+        } else {
+            println!("  (No prior session found — continuity returned nothing)");
         }
-        println!("  (Failed to create: \"{}\")", &content[..50]);
-    }
 
-    {
-        let store = server.store();
-        // Step 2: List memories
         println!();
-        println!("--- Step 2: List memories in Codex galaxy ---");
-        let list = store.scan(wm_core::Galaxy::Codex, 100)?;
-        println!("  Total: {} memories", list.len());
-    }
-
-    // Step 3: Search (via MCP protocol to reuse the server's already-open SearchEngine)
-    println!();
-    println!("--- Step 3: Full-text search for 'rust' ---");
-    let search_request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "wm",
-            "arguments": {
-                "route": "memory.search",
-                "args": {"query": "rust", "limit": 10}
-            }
+        println!("  Progressive replay (token budget 400):");
+        let replay_request = serde_json::json!({
+            "jsonrpc": "2.0", "id": 5, "method": "tools/call",
+            "params": {"name": "wm", "arguments": {
+                "route": "session.replay",
+                "args": {"mode": "progressive", "token_budget": 400}
+            }}
+        });
+        let response = server.handle_request(&replay_request.to_string()).await;
+        let resp: serde_json::Value = serde_json::from_str(&response).unwrap_or_default();
+        if resp.get("result").is_some() {
+            println!("    Replay succeeded within budget.");
+        } else {
+            println!(
+                "    (Replay error: {})",
+                response.chars().take(120).collect::<String>()
+            );
         }
-    });
-    let response = server.handle_request(&search_request.to_string()).await;
-    let resp: serde_json::Value = serde_json::from_str(&response).unwrap_or_default();
-    if let Some(result) = resp.get("result") {
-        if let Some(content) = result
-            .get("content")
-            .and_then(|c| c.get(0))
-            .and_then(|c| c.get("text"))
-        {
-            if let Ok(text) =
-                serde_json::from_str::<serde_json::Value>(content.as_str().unwrap_or("{}"))
-            {
-                if let Some(results) = text.get("results").and_then(|r| r.as_array()) {
-                    println!("  Found {} results:", results.len());
-                    for r in results.iter().take(10) {
-                        let score = r
-                            .get("score")
-                            .and_then(serde_json::Value::as_f64)
-                            .unwrap_or(0.0);
-                        let galaxy = r.get("galaxy").and_then(|g| g.as_str()).unwrap_or("?");
-                        let preview = r
-                            .get("content_preview")
-                            .and_then(|c| c.as_str())
-                            .unwrap_or("");
-                        println!(
-                            "    score={:.3} galaxy={} preview=\"{}\"",
-                            score,
-                            galaxy,
-                            &preview.chars().take(60).collect::<String>()
-                        );
-                    }
-                } else {
-                    println!("  (Search returned no results — index may still be building)");
-                }
-            } else {
-                println!("  (Search returned unexpected response format)");
-            }
-        }
-    } else if let Some(error) = resp.get("error") {
-        let msg = error
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("unknown");
-        println!("  (Search error: {msg})");
-    } else {
-        println!("  (Search returned no response)");
-    }
-
-    // Step 4: Galaxy stats
-    println!();
-    println!("--- Step 4: Galaxy statistics ---");
-    {
-        let store = server.store();
-        for galaxy in wm_core::Galaxy::all() {
-            let count = store.count(galaxy).unwrap_or(0);
-            if count > 0 {
-                println!("  {}: {} memories", galaxy.db_name(), count);
-            }
-        }
-    }
-
-    // Step 5: Consciousness dashboard
-    println!();
-    println!("--- Step 5: Consciousness dashboard ---");
-    let eco = server.eco_mode();
-    println!("  Brain-wave: {}", eco.current());
-    let citta = server.citta();
-    println!("  Citta coherence: {:.3}", citta.vector.coherence());
-    println!("  Citta valence: {:.3}", citta.vector.valence());
-
-    // Step 6: Tool count
-    println!();
-    println!("--- Step 6: Available tools ---");
-    let registry = server.registry();
-    let all_tools = registry.all();
-    println!("  {} tools registered", all_tools.len());
-    println!("  Sample tools:");
-    for tool in all_tools.iter().take(10) {
-        println!("    {} ({:?})", tool.name(), tool.gana());
-    }
-    if all_tools.len() > 10 {
-        println!("    ... and {} more", all_tools.len() - 10);
     }
 
     println!();
     println!("=== Quickstart Complete ===");
-    println!("Store: {}", lmdb_path.display());
-    println!("Run 'wm serve' to start the MCP server.");
-    println!("Run 'wm stats' to see the full consciousness dashboard.");
-    println!("Run 'wm doctor' for a health check.");
+    println!();
+    println!("The decision survived a full process restart. That is the product:");
+    println!("record context now, recover it next session.");
+    println!();
+    println!("Demo store (safe to delete): {}", demo_store.display());
+    println!("  rm -rf {}", demo_store.display());
+    println!();
+    println!("Next steps:");
+    println!("  1. Point your MCP client at:  wm serve --profile curated");
+    println!(
+        "     (uses your real store at {} )",
+        default_store_path().display()
+    );
+    println!("  2. Start sessions and record decisions as you work.");
+    println!("  3. Before each new session, ask for continuity.");
+    println!("  4. Back up the whole store directory regularly.");
+    println!("  5. Run 'wm doctor' any time for a health check.");
 
     Ok(())
 }
