@@ -7894,7 +7894,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wm-bicameral"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "ahash",
  "chrono",
@@ -7913,7 +7913,7 @@ dependencies = [
 
 [[package]]
 name = "wm-cognitive"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "ahash",
  "chrono",
@@ -7939,7 +7939,7 @@ dependencies = [
 
 [[package]]
 name = "wm-conformal"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "proptest",
  "serde",
@@ -7949,7 +7949,7 @@ dependencies = [
 
 [[package]]
 name = "wm-core"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "ahash",
  "async-trait",
@@ -7968,7 +7968,7 @@ dependencies = [
 
 [[package]]
 name = "wm-dispatch"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "ahash",
  "async-trait",
@@ -7989,7 +7989,7 @@ dependencies = [
 
 [[package]]
 name = "wm-governance"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "ahash",
  "chrono",
@@ -8010,7 +8010,7 @@ dependencies = [
 
 [[package]]
 name = "wm-mcp"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8048,7 +8048,7 @@ dependencies = [
 
 [[package]]
 name = "wm-memory"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "ahash",
  "arrow",
@@ -8080,7 +8080,7 @@ dependencies = [
 
 [[package]]
 name = "wm-polyglot"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "async-trait",
  "jlrs",
@@ -8096,7 +8096,7 @@ dependencies = [
 
 [[package]]
 name = "wm-sangha"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "chrono",
  "ed25519-dalek",
@@ -8110,7 +8110,7 @@ dependencies = [
 
 [[package]]
 name = "wm-selfmodel"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "chrono",
  "serde",
@@ -8120,7 +8120,7 @@ dependencies = [
 
 [[package]]
 name = "wm-simulation"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "chrono",
  "serde",
@@ -8131,7 +8131,7 @@ dependencies = [
 
 [[package]]
 name = "wm-substrate"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "chrono",
  "serde",
@@ -8142,7 +8142,7 @@ dependencies = [
 
 [[package]]
 name = "wm-tools"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "ahash",
  "async-trait",
@@ -8174,7 +8174,7 @@ dependencies = [
 
 [[package]]
 name = "wm-workspace"
-version = "5.8.0"
+version = "7.0.0-alpha.1"
 dependencies = [
  "serde",
  "serde_json",
