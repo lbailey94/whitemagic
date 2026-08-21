@@ -87102,7 +87102,7 @@
   {
     "question_id": "T7_scale_1000",
     "question_type": "T7",
-    "question": "What's my favorite transport?",
+    "question": "What's my current favorite transport?",
     "answer": "scooter",
     "haystack_sessions": [
       [
@@ -91243,13 +91243,13 @@
       "target_turns": 1000,
       "actual_turns": 798,
       "topic": "transport",
-      "note": "Scale testing requires separate scenario generation with larger num_sessions"
+      "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
     }
   },
   {
     "question_id": "T7_scale_10000",
     "question_type": "T7",
-    "question": "What's my favorite transport?",
+    "question": "What's my current favorite transport?",
     "answer": "scooter",
     "haystack_sessions": [
       [
@@ -95390,13 +95390,13 @@
       "target_turns": 10000,
       "actual_turns": 798,
       "topic": "transport",
-      "note": "Scale testing requires separate scenario generation with larger num_sessions"
+      "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
     }
   },
   {
     "question_id": "T7_scale_50000",
     "question_type": "T7",
-    "question": "What's my favorite transport?",
+    "question": "What's my current favorite transport?",
     "answer": "scooter",
     "haystack_sessions": [
       [
@@ -99537,13 +99537,13 @@
       "target_turns": 50000,
       "actual_turns": 798,
       "topic": "transport",
-      "note": "Scale testing requires separate scenario generation with larger num_sessions"
+      "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
     }
   },
   {
     "question_id": "T7_scale_100000",
     "question_type": "T7",
-    "question": "What's my favorite transport?",
+    "question": "What's my current favorite transport?",
     "answer": "scooter",
     "haystack_sessions": [
       [
@@ -103684,7 +103684,7 @@
       "target_turns": 100000,
       "actual_turns": 798,
       "topic": "transport",
-      "note": "Scale testing requires separate scenario generation with larger num_sessions"
+      "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
     }
   },
   {

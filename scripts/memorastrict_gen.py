@@ -770,14 +770,16 @@ def gen_questions_T7_scale_stress(
 ) -> list[Question]:
     """T7: Scale Stress — recall at different haystack sizes.
 
-    Generates questions with metadata indicating the target scale. The
-    evaluation harness can use this metadata to generate appropriately-sized
-    haystacks at query time. Since all questions share one haystack in the
-    current format, T7 questions test retrieval at the base haystack size
-    (~766 turns) and the metadata records what scale was intended.
+    Questions use current-value phrasing so the full pipeline (retrieval +
+    temporal resolution) is measured as the haystack grows; a plain
+    "What's my favorite X?" would conflate scale stress with the
+    temporal-supersession failure mode (the old value outranks the current
+    one on term overlap).
 
-    For true scale testing, generate separate scenarios with larger
-    num_sessions parameter.
+    Run the generator with `--scale-turns N` to emit padded scenarios
+    (noise-only sessions appended after the signal structure) into a
+    `scale_<N>/` subdirectory; then run the bench with `--data .../scale_<N>
+    --categories T7`. The metadata records target vs. actual turn counts.
     """
     questions: list[Question] = []
 
@@ -801,7 +803,7 @@ def gen_questions_T7_scale_stress(
         q = Question(
             id=f"T7_scale_{scale}",
             test_category="T7",
-            question=f"What's my favorite {pref.topic.replace('_', ' ')}?",
+            question=f"What's my current favorite {pref.topic.replace('_', ' ')}?",
             answer=current_value,
             answer_session_ids=answer_sids[:1],
             verification_type="exact",
@@ -809,7 +811,7 @@ def gen_questions_T7_scale_stress(
                 "target_turns": scale,
                 "actual_turns": current_turn_count,
                 "topic": pref.topic,
-                "note": "Scale testing requires separate scenario generation with larger num_sessions",
+                "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size",
             },
         )
         questions.append(q)
@@ -993,17 +995,62 @@ QUESTION_GENERATORS = {
 
 # ─── Scenario Generator ──────────────────────────────────────────────────────
 
+def pad_sessions_to_scale(
+    rng: random.Random,
+    persona: Persona,
+    sessions: list[Session],
+    target_turns: int,
+) -> list[Session]:
+    """Append noise-only sessions until the scenario reaches `target_turns`.
+
+    The signal structure (preferences, change statements, answer turns)
+    stays intact at the head of the corpus; padding adds only noise, so
+    every question remains answerable and the scale run measures pure
+    retrieval degradation over a growing haystack. Never truncates: if the
+    scenario already exceeds the target, it is returned unchanged.
+    """
+    current = sum(len(s.turns) for s in sessions)
+    if current >= target_turns:
+        return sessions
+
+    next_index = (max(s.index for s in sessions) + 1) if sessions else 0
+    base_month = 1 + next_index // 30
+    base_day = 1 + (next_index % 30)
+
+    while current < target_turns:
+        num_turns = min(rng.randint(10, 25), target_turns - current)
+        session = Session(
+            id=f"session_{next_index + 1:03d}",
+            index=next_index,
+            timestamp=f"2026-{base_month:02d}-{base_day:02d}",
+        )
+        for _ in range(num_turns):
+            session.turns.append(gen_noise_turn(rng, persona))
+            current += 1
+        sessions.append(session)
+        next_index += 1
+        base_day += rng.randint(3, 14)
+        if base_day > 28:
+            base_day = 1 + (base_day % 28)
+            base_month = min(base_month + 1, 12)
+
+    return sessions
+
+
 def gen_scenario(
     seed: int,
     categories: list[str],
     num_sessions: int = 20,
     noise_ratio: float = 0.8,
+    scale_turns: int = 0,
 ) -> Scenario:
     """Generate a complete MemoraStrict scenario."""
     rng = random.Random(seed)
 
     persona = gen_persona(rng, num_prefs=4)
     sessions = gen_sessions(rng, persona, num_sessions=num_sessions, noise_ratio=noise_ratio)
+    if scale_turns > 0:
+        sessions = pad_sessions_to_scale(rng, persona, sessions, scale_turns)
     facts = extract_facts_from_sessions(sessions, persona)
 
     questions: list[Question] = []
@@ -1165,6 +1212,12 @@ def main():
         help="Output format: bench (compatible with longmemeval_bench.py), full (with metadata), or both",
     )
     parser.add_argument(
+        "--scale-turns", type=int, default=0,
+        help="Pad each scenario with noise-only sessions until it reaches this "
+             "total turn count (T7 scale stress). Output goes to a scale_<N>/ "
+             "subdirectory so base data is not clobbered (default: 0 = no padding)",
+    )
+    parser.add_argument(
         "--list-categories", action="store_true",
         help="List all test categories and exit",
     )
@@ -1184,6 +1237,10 @@ def main():
         sys.exit(1)
 
     output_dir = Path(args.output)
+    if args.scale_turns > 0:
+        # Scale scenarios go to a subdirectory so the base data (and every
+        # historical comparison against it) is preserved.
+        output_dir = output_dir / f"scale_{args.scale_turns}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     total_questions = 0
@@ -1193,6 +1250,7 @@ def main():
             categories=args.categories,
             num_sessions=args.num_sessions,
             noise_ratio=args.noise_ratio,
+            scale_turns=args.scale_turns,
         )
 
         if args.format in ("bench", "both"):
@@ -1215,6 +1273,7 @@ def main():
         "categories": args.categories,
         "num_sessions": args.num_sessions,
         "noise_ratio": args.noise_ratio,
+        "scale_turns": args.scale_turns,
         "total_questions": total_questions,
         "total_scenarios": args.seeds,
     }

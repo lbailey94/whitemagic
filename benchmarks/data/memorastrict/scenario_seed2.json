@@ -6252,7 +6252,7 @@
     {
       "id": "T7_scale_1000",
       "test_category": "T7",
-      "question": "What's my favorite hobby?",
+      "question": "What's my current favorite hobby?",
       "answer": "rock climbing",
       "answer_session_ids": [
         "session_011"
@@ -6263,13 +6263,13 @@
         "target_turns": 1000,
         "actual_turns": 775,
         "topic": "hobby",
-        "note": "Scale testing requires separate scenario generation with larger num_sessions"
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
       }
     },
     {
       "id": "T7_scale_10000",
       "test_category": "T7",
-      "question": "What's my favorite hobby?",
+      "question": "What's my current favorite hobby?",
       "answer": "rock climbing",
       "answer_session_ids": [
         "session_011"
@@ -6280,13 +6280,13 @@
         "target_turns": 10000,
         "actual_turns": 775,
         "topic": "hobby",
-        "note": "Scale testing requires separate scenario generation with larger num_sessions"
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
       }
     },
     {
       "id": "T7_scale_50000",
       "test_category": "T7",
-      "question": "What's my favorite hobby?",
+      "question": "What's my current favorite hobby?",
       "answer": "rock climbing",
       "answer_session_ids": [
         "session_011"
@@ -6297,13 +6297,13 @@
         "target_turns": 50000,
         "actual_turns": 775,
         "topic": "hobby",
-        "note": "Scale testing requires separate scenario generation with larger num_sessions"
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
       }
     },
     {
       "id": "T7_scale_100000",
       "test_category": "T7",
-      "question": "What's my favorite hobby?",
+      "question": "What's my current favorite hobby?",
       "answer": "rock climbing",
       "answer_session_ids": [
         "session_011"
@@ -6314,7 +6314,7 @@
         "target_turns": 100000,
         "actual_turns": 775,
         "topic": "hobby",
-        "note": "Scale testing requires separate scenario generation with larger num_sessions"
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
       }
     },
     {
