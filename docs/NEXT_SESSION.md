@@ -1,8 +1,8 @@
 # Next Session — v7 Product Readiness
 
 **Prepared:** 2026-08-20
-**Last updated:** 2026-08-21 (G1.1–G1.3 complete; G1.4 install path next)
-**Status:** Stage 0, G1.1, G1.2, G1.3 complete; Gate 1 continues at G1.4
+**Last updated:** 2026-08-21 (Gate 1 complete — artifact v7.0.0-alpha.2)
+**Status:** Stage 0 + Gate 1 (G1.1–G1.10) complete; next is Gate 2
 
 The canonical product-gate plan is
 [`V7_PRODUCT_READINESS.md`](V7_PRODUCT_READINESS.md). The historical v5.8.0
@@ -78,23 +78,47 @@ stale benchmark claims, or an available v7 release.
    published; the MCP registry kit was never submitted. The only public
    surface is the contained website.
 
-## Next Execution Slice — G1.4 One Supported Install Path
+## Completed Work — Gate 1 (2026-08-21, this session)
 
-The next work is the Linux x86-64 install path, per `V7_PRODUCT_READINESS.md`:
+All ten Gate 1 items now have recorded evidence in
+[`V7_PRODUCT_READINESS.md`](V7_PRODUCT_READINESS.md):
 
-1. Cut a real `v7.0.0-alpha.1` release artifact (release build tied to commit
-   + SHA256 checksums) so install.sh has something truthful to point at;
-2. Update `scripts/install.sh` to resolve the latest alpha release instead of
-   hardcoding v5.8.0;
-3. Verify from an isolated non-development account: download, verify integrity,
-   install, version check, `doctor`, MCP handshake;
-4. Record the transcript and machine configuration as evidence.
+1. **G1.1–G1.3:** canonical identity (`lbailey94/whitemagic`, v7 line, MIT,
+   contact), license + metadata corrections, public-surface inventory (clean).
+2. **G1.4:** repo made public after truthful README rewrite + full-history
+   secrets scan; anonymous clean-env install verified end to end; installer
+   fixed (prerelease resolution, checksum-vs-artifact-name bug, platform
+   refusal); glibc 2.39 boundary documented.
+3. **G1.5–G1.7:** `wm quickstart` is the two-process continuity demo on an
+   isolated store; MCP initialize delivers the session rhythm;
+   `run_continuity_gate()` in the smoke test exercises two real serve
+   processes end to end (found and fixed a silent-success bug in
+   `session.replay` for absent sessions).
+4. **G1.8:** supported-path docs made truthful (README/QUICKSTART/
+   MCP_CONFIG_GUIDE/AGENTS.md), profile default verified live (curated).
+5. **G1.9:** `wm backup` / `wm restore` with SHA256 manifest verification,
+   tamper refusal, lock detection; `run_backup_gate()` proves delete-store →
+   restore → continuity + memory survive.
+6. **G1.10:** fmt/clippy/tests/audit clean; artifact `v7.0.0-alpha.2` tagged,
+   built, checksummed, released, smoke-tested against the exact binary.
 
-Then continue with G1.5 (product quickstart), G1.6 (agent instructions),
-G1.7 (continuity process gate), G1.8 (documentation truth), G1.9
-(backup/restore), and G1.10 (technical baseline).
+## Next Execution Slice — Gate 2 (Stranger-Tested Alpha)
 
-## Prior Execution Slice — Gate 1 Foundation (superseded list)
+Per `V7_PRODUCT_READINESS.md`:
+
+1. Recruit ≥5 external testers (≥2 different MCP clients), none of whom built
+   the workflow; Linux x86-64 machines.
+2. Send ONLY the public README + release link (`v7.0.0-alpha.2` or newer).
+3. Observe the 9-step protocol without live assistance; log every friction
+   point as product friction, not user error.
+4. Collect consented evidence per the doc's required-evidence list.
+5. Feed all P0 failures back into Gate 1 and re-release.
+
+Supporting work that can proceed while recruiting: archive-doc banner pass
+(G1.8 remainder), static musl build consideration, benchmark-evidence JSON
+tracking.
+
+## Prior Execution Slice — G1.4 Install Path (superseded)
 
 Stage 0 is complete. The next work is Gate 1, in the order defined by
 `V7_PRODUCT_READINESS.md`:

@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-08-20
 **Stage 0 completed:** 2026-08-21
-**Status:** Stage 0 (website containment) deployed; G1.1–G1.3 complete (2026-08-21); G1.4 install path is next
+**Status:** Gate 1 complete (2026-08-21) — artifact `v7.0.0-alpha.2`; next is Gate 2 (stranger-tested alpha)
 **Scope:** Public-surface containment, coherent private alpha, and stranger-tested alpha
 
 This document is the source of truth for WhiteMagic v7 product readiness.
@@ -443,10 +443,10 @@ be planned separately.
 | G1.5 Product quickstart | **Complete** (2026-08-21) | `wm quickstart` rewritten as the two-process continuity demo on an isolated store (`~/.local/share/whitemagic-quickstart`; user store never touched): session.start → record decision → checkpoint → process stop → fresh process → session.continuity recovers the decision → progressive replay within budget → store location + safe next steps printed. Verified live against a debug build; storage-engine demo removed. |
 | G1.6 Agent instructions | **Complete** (2026-08-21) | MCP `initialize` now returns an `instructions` field delivering the session rhythm (continuity first, session start, selective recording by turn_type, explicit routing, end-of-session summary + checkpoint, tools.list discovery, privacy/backup limitations). Unit test asserts all required topics present; verified live via smoke-test handshake. |
 | G1.7 Continuity process gate | **Complete** (2026-08-21) | `run_continuity_gate()` added to `scripts/curated_smoke_test.py` (the release smoke gate): initialize/discover → session.start → record decision+summary → clean stop → new process → continuity returns marker turn → progressive replay budget comparison (tiny ≤ ample) → read-only replay succeeds while recording is refused → absent session_id fails clearly with state intact. Found and fixed two real defects: stale `whitemagic-v5` assertion in the smoke script, and `session.replay` returning silent success for nonexistent session IDs (now errors). Passes against debug and release binaries; full suite green (3,595 tests). |
-| G1.8 Documentation truth | Pending | Command/link/count/claims audit |
 | G1.9 Backup/restore | **Complete** (2026-08-21) | New `wm backup` / `wm restore` CLI commands: full store root (LMDB + Tantivy + all JSON state), live-server lock detection, SHA256SUMS manifest written on backup and verified in full before restore touches anything, refusal to overwrite without `--force`, symlinks never followed. Documented in README (seal/verify vs backup distinction; rollback vs disaster-recovery distinction). Acceptance gate `run_backup_gate()` added to the smoke test: create state → backup → delete working store → restore → continuity returns marker turn AND memory search finds content through real serve processes; tampered manifest refused. Verified against debug and release binaries. |
-| G1.10 Technical baseline | Pending | Clean release-gate record tied to commit/artifact |
-| Gate 1 | Pending | All G1 items accepted |
+| G1.8 Documentation truth | **Supported path complete** (2026-08-21) | README rewritten around the product contract; QUICKSTART.md rewritten (non-admin install, continuity demo, glibc boundary); MCP_CONFIG_GUIDE.md corrected (install URL, dynamic-linking truth); AGENTS.md profile default/precedence documented as verified live behavior (curated default; env var wins when flag omitted). Commands exercised from clean env during install gate. Remaining: banner/archive pass over historical research docs (non-blocking for alpha). |
+| G1.10 Technical baseline | **Complete for alpha.2** (2026-08-21) | fmt clean; clippy --all-targets 0 warnings; 3,593 tests / 0 failures from clean tree; `cargo audit`: no vulnerabilities (3 pre-existing accepted warnings: lmdb binding unmaintained, paste unmaintained, lru panic-safety). Artifact `v7.0.0-alpha.2` tied to tag on master, SHA256 published, smoke test passed against the exact release binary. Research features remain off the product path (curated default). Known limitations visible in README (platform, glibc, privacy-flags-not-encryption). |
+| Gate 1 | **Ready for exit** (2026-08-21) | All G1.1–G1.10 items have evidence. Exit condition met: the private-alpha artifact (`v7.0.0-alpha.2`) and instructions can be handed to a stranger without exposing a stale public launch surface. Next: recruit the Gate 2 cohort. |
 | Gate 2 cohort | Pending | At least five consented test records |
 | Gate 2 | Pending | Acceptance criteria met; unresolved limitations published |
 
@@ -464,11 +464,24 @@ be planned separately.
 4. ~~Complete the public-surface inventory and retire stale install paths.~~
    **Done** (2026-08-21) — no public code surfaces exist outside the contained
    website; see evidence ledger G1.3.
-5. Make the Linux x86-64 install path pass from a clean non-development account.
-6. Replace quickstart with the two-session product demonstration.
-7. Deliver the agent session rhythm and add the continuity process gate.
-8. Correct product/privacy/operations documentation.
-9. Implement and test full-store backup/verify/restore.
-10. Run the clean Gate 1 artifact rehearsal.
+5. ~~Make the Linux x86-64 install path pass from a clean non-development
+   account.~~ **Done** (2026-08-21) — repo made public after truthful README
+   rewrite + secrets scan; anonymous clean-env install verified end to end;
+   see evidence ledger G1.4.
+6. ~~Replace quickstart with the two-session product demonstration.~~
+   **Done** (2026-08-21) — `wm quickstart` is the isolated-store continuity
+   demo; commit `568ec88`.
+7. ~~Deliver the agent session rhythm and add the continuity process gate.~~
+   **Done** (2026-08-21) — MCP instructions + `run_continuity_gate()`;
+   commit `8c5e13b`.
+8. ~~Correct product/privacy/operations documentation.~~ **Done for the
+   supported path** (2026-08-21) — commit `1a55af6`; archive-doc banner pass
+   remains.
+9. ~~Implement and test full-store backup/verify/restore.~~ **Done**
+   (2026-08-21) — `wm backup`/`wm restore` + `run_backup_gate()`;
+   commit `83efa9d`.
+10. ~~Run the clean Gate 1 artifact rehearsal.~~ **Done** (2026-08-21) —
+    `v7.0.0-alpha.2` tagged on master, built, checksummed, released, and
+    smoke-tested against the exact artifact.
 11. Conduct Gate 2 with external testers and feed failures back into Gate 1.
 12. Only then prepare the v7 public-beta plan and replacement launch site.
