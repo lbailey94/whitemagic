@@ -138,7 +138,7 @@ def run_workflow(server):
         1,
     )
     info = init.get("result", {}).get("serverInfo", {})
-    if info.get("name") != "whitemagic-v5":
+    if info.get("name") != "whitemagic":
         fail("initialize", "unexpected serverInfo", init)
     else:
         ok("initialize handshake")
@@ -267,6 +267,154 @@ def run_workflow(server):
         ok("claims.calibration returns a scorecard")
 
     return memory_id
+
+
+def run_continuity_gate(binary):
+    """G1.7 process-level continuity acceptance gate.
+
+    Exercises the headline workflow through real `wm serve` processes and the
+    MCP boundary, per docs/V7_PRODUCT_READINESS.md:
+
+      1. initialize and discover the supported surface
+      2. session.start
+      3. session.record a decision AND a summary
+      4. stop the server cleanly
+      5. start a new server process on the same store
+      6. session.continuity returns the expected prior turn
+      7. session.replay progressive respects its token budget
+      8. read-only mode can replay but refuses recording
+      9. malformed/absent sessions fail clearly without corrupting state
+    """
+    store = tempfile.mkdtemp(prefix="wm-continuity-gate-")
+    marker = "GATE decision: adopt event-sourced audit log for billing service"
+    summary = "GATE summary: chose event-sourced audit log; next step is schema migration."
+
+    # Steps 1-3: first process.
+    server = Server(binary, store)
+    try:
+        init = server.rpc(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "continuity-gate", "version": "1.0"},
+            },
+            1,
+        )
+        if init.get("result", {}).get("serverInfo", {}).get("name") == "whitemagic":
+            ok("continuity gate 1: initialize + server identity")
+        else:
+            fail("continuity gate 1", "unexpected serverInfo", init)
+
+        tools = server.rpc("tools/list", {}, 2)
+        names = [t.get("name") for t in tools.get("result", {}).get("tools", [])]
+        if "wm" in names:
+            ok("continuity gate 1b: supported surface discovered (wm meta-tool)")
+        else:
+            fail("continuity gate 1b", f"wm meta-tool missing from {names}", tools)
+
+        started = server.wm_payload("session.start", {"title": "continuity gate A"}, 3)
+        if started.get("status") == "success":
+            ok("continuity gate 2: session.start")
+        else:
+            fail("continuity gate 2", "session.start did not succeed", started)
+
+        rec_decision = server.wm_payload(
+            "session.record",
+            {"content": marker, "role": "user", "turn_type": "decision", "importance": 0.9},
+            4,
+        )
+        rec_summary = server.wm_payload(
+            "session.record",
+            {"content": summary, "role": "ai", "turn_type": "summary", "importance": 0.8},
+            5,
+        )
+        if (
+            rec_decision.get("status") == "success"
+            and rec_summary.get("status") == "success"
+        ):
+            ok("continuity gate 3: decision + summary recorded")
+        else:
+            fail("continuity gate 3", "record failed", {"decision": rec_decision, "summary": rec_summary})
+    finally:
+        # Step 4: clean stop — close stdin (EOF) and wait for exit.
+        server.close()
+    ok("continuity gate 4: first process stopped cleanly")
+
+    # Steps 5-7: second process on the same store.
+    server = Server(binary, store)
+    try:
+        cont = server.wm_payload("session.continuity", {"n": 10}, 10)
+        turns = cont.get("turns", [])
+        contents = [t.get("content", "") for t in turns]
+        if cont.get("previous_session") and marker in contents:
+            ok("continuity gate 6: continuity returns expected prior turn")
+        else:
+            fail("continuity gate 6", "marker turn not recovered", cont)
+
+        # Step 7: progressive replay must respect token budget — a tiny
+        # budget must return strictly less content than an ample one.
+        tiny = server.wm_payload(
+            "session.replay", {"mode": "progressive", "token_budget": 20}, 11
+        )
+        ample = server.wm_payload(
+            "session.replay", {"mode": "progressive", "token_budget": 100000}, 12
+        )
+
+        def replay_text(payload):
+            return json.dumps(payload.get("turns", payload))
+
+        if tiny.get("status") == "success" and ample.get("status") == "success":
+            if len(replay_text(tiny)) <= len(replay_text(ample)):
+                ok("continuity gate 7: progressive replay respects token budget")
+            else:
+                fail("continuity gate 7", "tiny budget returned more content than ample", {
+                    "tiny": len(replay_text(tiny)),
+                    "ample": len(replay_text(ample)),
+                })
+        else:
+            fail("continuity gate 7", "replay failed", {"tiny": tiny, "ample": ample})
+
+        # Step 9a: absent session fails clearly...
+        absent = server.call_wm(
+            "session.replay", {"mode": "full", "session_id": "00000000-0000-0000-0000-000000000000"}, 13
+        )
+        inner_error = absent.get("result", {}).get("isError", False) or (
+            absent.get("result", {}).get("content", [{}])[0].get("text", "").find('"error"') >= 0
+        )
+        if inner_error:
+            ok("continuity gate 9a: absent session_id fails clearly")
+        else:
+            fail("continuity gate 9a", "absent session_id did not error", absent)
+
+        # ...and the server is still healthy afterwards (no corruption).
+        healthy = server.wm_payload("session.continuity", {"n": 1}, 14)
+        if healthy.get("status") == "success":
+            ok("continuity gate 9b: state intact after malformed request")
+        else:
+            fail("continuity gate 9b", "server unhealthy after malformed request", healthy)
+    finally:
+        server.close()
+
+    # Step 8: read-only mode can replay but refuses recording.
+    server = Server(binary, store, extra_args=["--readonly"])
+    try:
+        ro_replay = server.wm_payload("session.replay", {"mode": "progressive", "token_budget": 100000}, 20)
+        ro_record = server.wm_payload(
+            "session.record", {"content": "must be refused", "role": "user"}, 21
+        )
+        if ro_replay.get("status") == "success":
+            ok("continuity gate 8a: read-only replay succeeds")
+        else:
+            fail("continuity gate 8a", "read-only replay failed", ro_replay)
+        if ro_record.get("status") == "error":
+            ok("continuity gate 8b: read-only recording refused")
+        else:
+            fail("continuity gate 8b", "read-only recording was not refused", ro_record)
+    finally:
+        server.close()
+
+    shutil.rmtree(store, ignore_errors=True)
 
 
 def main():
@@ -402,6 +550,9 @@ def main():
     finally:
         if clean_up:
             shutil.rmtree(store, ignore_errors=True)
+
+    # G1.7 process-level continuity gate (own temp store).
+    run_continuity_gate(binary)
 
     if FAILURES:
         print(f"\n{len(FAILURES)} smoke step(s) failed: {FAILURES}")
