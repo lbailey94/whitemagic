@@ -349,9 +349,9 @@ impl Embedder for StubEmbedder {
 ///
 /// | Variable | Default | Description |
 /// |----------|---------|-------------|
-/// | `WM_EMBEDDER_ORT_MODEL` | `BAAI/bge-small-en-v1.5` | Model name |
+/// | `WM_EMBEDDER_ORT_MODEL` | `BAAI/bge-small-en-v1.5` | Model name (`-q` suffixes select INT8-quantized variants, e.g. `bge-small-q`) |
 /// | `WM_EMBEDDER_CACHE_DIR` | — | Cache directory for model files |
-/// | `WM_EMBEDDER_ORT_THREADS` | CPU count | Number of intra-op threads |
+/// | `WM_EMBEDDER_ORT_THREADS` | min(logical cores, 4) | Number of intra-op threads |
 #[cfg(feature = "onnx")]
 pub struct OrtEmbedder {
     model: std::sync::Mutex<Option<fastembed::TextEmbedding>>,
@@ -360,6 +360,22 @@ pub struct OrtEmbedder {
     threads: usize,
     dimension: usize,
     available: std::sync::atomic::AtomicBool,
+}
+
+/// Default ORT intra-op thread count.
+///
+/// Defaulting to every logical core (hyperthreads included) saturates small
+/// machines — on a 4C/8T laptop the FP32 embedder at 8 threads drove the
+/// box into swap thrash and OOM (see `docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md`).
+/// Physical-core count is not exposed by std; `min(logical, 4)` approximates
+/// it and stays conservative on both small and large machines. Explicit
+/// `WM_EMBEDDER_ORT_THREADS` always wins over this default.
+#[cfg(feature = "onnx")]
+fn default_intra_threads() -> usize {
+    std::thread::available_parallelism()
+        .map(std::num::NonZero::get)
+        .unwrap_or(4)
+        .min(4)
 }
 
 #[cfg(feature = "onnx")]
@@ -395,11 +411,7 @@ impl OrtEmbedder {
         let threads = std::env::var("WM_EMBEDDER_ORT_THREADS")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or_else(|| {
-                std::thread::available_parallelism()
-                    .map(std::num::NonZero::get)
-                    .unwrap_or(4)
-            });
+            .unwrap_or_else(default_intra_threads);
         let dimension = std::env::var("WM_EMBEDDER_DIM")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
@@ -409,19 +421,34 @@ impl OrtEmbedder {
     }
 
     /// Map model name string to fastembed EmbeddingModel enum.
+    ///
+    /// Names ending in `-q` select INT8-quantized variants: ~75% smaller
+    /// weights and lower memory bandwidth than FP32, executing via CPU INT8
+    /// SIMD. Prefer them on modest hardware (see
+    /// `docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md` — FP32 + unbounded threads
+    /// OOM-crashed a 16GB machine during benchmark runs).
     fn resolve_model(&self) -> Option<fastembed::EmbeddingModel> {
         match self.model_name.as_str() {
             "BAAI/bge-small-en-v1.5" | "bge-small-en-v1.5" | "bge-small" => {
                 Some(fastembed::EmbeddingModel::BGESmallENV15)
             }
+            "BAAI/bge-small-en-v1.5-q" | "bge-small-en-v1.5-q" | "bge-small-q" => {
+                Some(fastembed::EmbeddingModel::BGESmallENV15Q)
+            }
             "BAAI/bge-base-en-v1.5" | "bge-base-en-v1.5" | "bge-base" => {
                 Some(fastembed::EmbeddingModel::BGEBaseENV15)
+            }
+            "BAAI/bge-base-en-v1.5-q" | "bge-base-en-v1.5-q" | "bge-base-q" => {
+                Some(fastembed::EmbeddingModel::BGEBaseENV15Q)
             }
             "BAAI/bge-large-en-v1.5" | "bge-large-en-v1.5" | "bge-large" => {
                 Some(fastembed::EmbeddingModel::BGELargeENV15)
             }
             "sentence-transformers/all-MiniLM-L6-v2" | "all-MiniLM-L6-v2" | "minilm" => {
                 Some(fastembed::EmbeddingModel::AllMiniLML6V2)
+            }
+            "sentence-transformers/all-MiniLM-L6-v2-q" | "all-MiniLM-L6-v2-q" | "minilm-q" => {
+                Some(fastembed::EmbeddingModel::AllMiniLML6V2Q)
             }
             "sentence-transformers/all-MiniLM-L12-v2" | "all-MiniLM-L12-v2" => {
                 Some(fastembed::EmbeddingModel::AllMiniLML12V2)
@@ -437,6 +464,13 @@ impl OrtEmbedder {
                 Some(fastembed::EmbeddingModel::BGESmallENV15)
             }
         }
+    }
+
+    /// Number of intra-op threads configured for inference.
+    #[cfg(feature = "onnx")]
+    #[must_use]
+    pub const fn threads(&self) -> usize {
+        self.threads
     }
 
     /// Lazy-load the model on first use.
@@ -777,6 +811,47 @@ mod tests {
     fn ort_embedder_backend_name() {
         let embedder = OrtEmbedder::new("bge-small", None, 2, 384);
         assert_eq!(embedder.backend_name(), "onnx");
+    }
+
+    #[cfg(feature = "onnx")]
+    #[test]
+    fn ort_embedder_resolves_quantized_models() {
+        // INT8 variants must resolve to their Q enum counterparts, not
+        // silently fall back to FP32 bge-small.
+        let q = OrtEmbedder::new("bge-small-q", None, 2, 384);
+        assert!(matches!(
+            q.resolve_model(),
+            Some(fastembed::EmbeddingModel::BGESmallENV15Q)
+        ));
+        let q_full = OrtEmbedder::new("BAAI/bge-small-en-v1.5-q", None, 2, 384);
+        assert!(matches!(
+            q_full.resolve_model(),
+            Some(fastembed::EmbeddingModel::BGESmallENV15Q)
+        ));
+        let minilm_q = OrtEmbedder::new("minilm-q", None, 2, 384);
+        assert!(matches!(
+            minilm_q.resolve_model(),
+            Some(fastembed::EmbeddingModel::AllMiniLML6V2Q)
+        ));
+        // FP32 names keep resolving to the FP32 variants.
+        let fp32 = OrtEmbedder::new("bge-small", None, 2, 384);
+        assert!(matches!(
+            fp32.resolve_model(),
+            Some(fastembed::EmbeddingModel::BGESmallENV15)
+        ));
+    }
+
+    #[cfg(feature = "onnx")]
+    #[test]
+    fn ort_embedder_default_threads_are_capped() {
+        // The default must never exceed 4 threads regardless of logical
+        // core count — unbounded ORT threads OOM-crash small machines
+        // (docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md).
+        assert!(
+            default_intra_threads() <= 4,
+            "default threads must be capped at 4, got {}",
+            default_intra_threads()
+        );
     }
 
     #[cfg(feature = "onnx")]

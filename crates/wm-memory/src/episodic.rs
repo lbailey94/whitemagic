@@ -687,10 +687,8 @@ impl<'a> EpisodicStore<'a> {
             });
             let mut slots: Vec<Option<EpisodicSearchResult>> =
                 protected.into_iter().map(Some).collect();
-            let reranked: Vec<EpisodicSearchResult> = order
-                .into_iter()
-                .filter_map(|i| slots[i].take())
-                .collect();
+            let reranked: Vec<EpisodicSearchResult> =
+                order.into_iter().filter_map(|i| slots[i].take()).collect();
             Ok(reranked)
         } else if alpha >= 1.0 {
             // Tiebreaker mode: only reorder adjacent candidates with close det scores.
