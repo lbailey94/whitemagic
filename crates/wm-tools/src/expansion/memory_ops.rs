@@ -751,7 +751,7 @@ impl Tool for MemoryEpisodicSearchTool {
                 },
                 "rerank_alpha": {
                     "type": "number",
-                    "description": "Deterministic weight in hybrid score (0.0-1.0, default 0.7)",
+                    "description": "Rerank mode selector (default 0.7): <1.0 hybrid blend weight; >=1.0 near-tie cosine tiebreaker; >=2.0 protected top-K full cosine reorder (recall@limit preserved by construction)",
                 },
                 "min_score": {
                     "type": "number",
