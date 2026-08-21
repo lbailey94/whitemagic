@@ -99,7 +99,34 @@ the server starts with the full research tool archive (see below).
   access controls, not encryption** — anyone who can read the store files can
   read the contents. Do not store credentials in memories.
 - Conversation capture happens through explicit tool calls, not automatically.
-- Back up the whole store directory, not just the `lmdb/` subdirectory.
+
+## Backup and restore
+
+Back up the **whole store root** (LMDB database, search indexes, and all
+session/state files — not just the `lmdb/` subdirectory):
+
+```bash
+# Stop the server first, then:
+wm backup                                  # writes ~/whitemagic-backups/<timestamp>/
+wm backup --out /path/to/external/disk     # keep copies OFF the live machine
+```
+
+Each backup contains the full store plus a `SHA256SUMS` manifest. Restore
+after a failure (this replaces the target store):
+
+```bash
+wm restore --backup ~/whitemagic-backups/whitemagic-backup-<timestamp> --force
+wm doctor                                  # confirm health after restore
+```
+
+Restore verifies every file against the manifest before touching anything,
+and refuses tampered or incomplete backups. Notes:
+
+- `wm seal` / `wm verify` detect *integrity drift*; they do not recover data.
+  Only a backup recovers data.
+- Transaction rollback (`transaction.rollback`) is an in-store, short-lived
+  undo — not a substitute for backups.
+- Keep at least one backup on a different disk or machine.
 
 ## Research surface (not part of the alpha contract)
 

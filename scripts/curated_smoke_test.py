@@ -417,6 +417,122 @@ def run_continuity_gate(binary):
     shutil.rmtree(store, ignore_errors=True)
 
 
+def run_backup_gate(binary):
+    """G1.9 full-store backup/verify/restore acceptance gate.
+
+    Creates data + session state, backs up the FULL store root, deletes the
+    working copy, restores it, and proves memory plus session continuity
+    survived through real serve processes. Also proves tampered backups are
+    refused before anything is touched.
+    """
+    store = tempfile.mkdtemp(prefix="wm-backup-gate-store-")
+    out = tempfile.mkdtemp(prefix="wm-backup-gate-out-")
+    marker = "BACKUP decision: migrate cron jobs to systemd timers"
+    mem_content = "backup gate memory: the deployment window is Tuesday 0900 UTC"
+
+    # 1. Create state through a real server.
+    server = Server(binary, store)
+    try:
+        server.rpc(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "backup-gate", "version": "1.0"},
+            },
+            1,
+        )
+        started = server.wm_payload("session.start", {"title": "backup gate"}, 2)
+        if started.get("status") != "success":
+            fail("backup gate", "session.start failed", started)
+            server.close()
+            return
+        rec = server.wm_payload(
+            "session.record",
+            {"content": marker, "role": "user", "turn_type": "decision", "importance": 0.9},
+            3,
+        )
+        mem = server.wm_payload(
+            "memory.create",
+            {"galaxy": "codex", "content": mem_content, "tags": ["backup-gate"]},
+            4,
+        )
+        if rec.get("status") != "success" or mem.get("status") != "success":
+            fail("backup gate", "state creation failed", {"rec": rec, "mem": mem})
+    finally:
+        server.close()
+
+    # 2. Back up the full store root.
+    backed_up = subprocess.run(
+        [binary, "backup", "--store", store, "--out", out],
+        capture_output=True, text=True, timeout=120,
+    )
+    if backed_up.returncode != 0:
+        fail("backup gate: wm backup", f"exit {backed_up.returncode}: {backed_up.stderr}")
+        return
+    backups = sorted(
+        p for p in os.listdir(out) if p.startswith("whitemagic-backup-")
+    )
+    if not backups:
+        fail("backup gate: wm backup", "no backup directory created")
+        return
+    backup_dir = os.path.join(out, backups[-1])
+    ok(f"backup gate: wm backup ({backups[-1]})")
+
+    # 3. Tampered backup must be refused BEFORE touching the target.
+    # Tamper a COPY so the clean backup remains usable below.
+    tamper_dir = os.path.join(out, "tampered-copy")
+    shutil.copytree(backup_dir, tamper_dir)
+    sums_path = os.path.join(tamper_dir, "SHA256SUMS")
+    with open(sums_path, "ab") as fh:
+        fh.write(b"deadbeef00  lmdb/data.mdb\n")
+    tampered = subprocess.run(
+        [binary, "restore", "--backup", tamper_dir,
+         "--store", os.path.join(out, "must-not-exist")],
+        capture_output=True, text=True, timeout=120,
+    )
+    if tampered.returncode != 0 and "verification FAILED" in (tampered.stderr + tampered.stdout):
+        ok("backup gate: tampered manifest refused")
+    else:
+        fail("backup gate: tamper refusal",
+             f"exit {tampered.returncode}: {tampered.stdout} {tampered.stderr}")
+
+    # 4. Disaster: remove the working store, restore from the clean backup.
+    shutil.rmtree(store, ignore_errors=True)
+    restored = subprocess.run(
+        [binary, "restore", "--backup", backup_dir, "--store", store],
+        capture_output=True, text=True, timeout=120,
+    )
+    if restored.returncode != 0:
+        fail("backup gate: wm restore", f"exit {restored.returncode}: {restored.stderr}")
+        return
+    ok("backup gate: wm restore after store deletion")
+
+    # 5. Prove continuity + memory survived through a real server process.
+    server = Server(binary, store)
+    try:
+        cont = server.wm_payload("session.continuity", {"n": 10}, 10)
+        contents = [t.get("content", "") for t in cont.get("turns", [])]
+        if cont.get("previous_session") and marker in contents:
+            ok("backup gate: session continuity survived restore")
+        else:
+            fail("backup gate: continuity", "marker turn not recovered", cont)
+
+        found = server.wm_payload(
+            "memory.search", {"query": "deployment window", "galaxy": "codex", "limit": 5}, 11
+        )
+        if any("deployment window" in r.get("content", "")
+               for r in found.get("results", [])):
+            ok("backup gate: memories survived restore")
+        else:
+            fail("backup gate: memory search", "memory not found after restore", found)
+    finally:
+        server.close()
+
+    shutil.rmtree(store, ignore_errors=True)
+    shutil.rmtree(out, ignore_errors=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Curated profile smoke test")
     parser.add_argument("--binary", default=None, help="path to the wm binary")
@@ -553,6 +669,9 @@ def main():
 
     # G1.7 process-level continuity gate (own temp store).
     run_continuity_gate(binary)
+
+    # G1.9 full-store backup/restore gate (own temp stores).
+    run_backup_gate(binary)
 
     if FAILURES:
         print(f"\n{len(FAILURES)} smoke step(s) failed: {FAILURES}")

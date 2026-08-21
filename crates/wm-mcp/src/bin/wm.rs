@@ -168,6 +168,39 @@ enum Commands {
         #[arg(long)]
         store: Option<PathBuf>,
     },
+    /// Back up the FULL store (LMDB + indexes + all JSON state) for disaster recovery
+    ///
+    /// Copies the entire store root into a timestamped backup directory and
+    /// writes a SHA256SUMS manifest. Stop the server first: a live LMDB
+    /// environment can produce a torn copy. This is disaster-recovery
+    /// backup, not the transaction snapshot/rollback feature (which is
+    /// in-store and short-lived). Seal/verify protects integrity of files as
+    /// sealed; it does not recover data — this command does.
+    Backup {
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Destination parent directory (default: ~/whitemagic-backups)
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Restore the full store from a `wm backup` archive
+    ///
+    /// Verifies the backup's SHA256SUMS manifest, then replaces the target
+    /// store root. Refuses to overwrite an existing store unless --force is
+    /// given. The Tantivy index travels inside the backup; run 'wm reindex'
+    /// only if doctor reports index drift after restore.
+    Restore {
+        /// Path to the backup directory created by 'wm backup'
+        #[arg(long)]
+        backup: PathBuf,
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Overwrite an existing store directory
+        #[arg(long)]
+        force: bool,
+    },
     /// Rebuild the Tantivy full-text index from LMDB
     ///
     /// Purges stale index entries and skips binary/garbage content via the
@@ -569,12 +602,228 @@ fn main() -> anyhow::Result<()> {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_verify(&store_path)?;
         }
+        Commands::Backup { store, out } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            run_backup(&store_path, out.as_deref())?;
+        }
+        Commands::Restore {
+            backup,
+            store,
+            force,
+        } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            run_restore(&backup, &store_path, force)?;
+        }
     }
 
     Ok(())
 }
 
 /// Rebuild the Tantivy index from LMDB (`wm reindex`).
+/// Back up the full store root (`wm backup`).
+fn run_backup(
+    store_path: &std::path::Path,
+    out_parent: Option<&std::path::Path>,
+) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.join("data.mdb").exists() {
+        anyhow::bail!(
+            "No LMDB data found at {}. Stop the server, then retry.",
+            lmdb_path.display()
+        );
+    }
+
+    // Live-server detection: opening the environment takes the LMDB write
+    // lock. If a server is running this fails instead of producing a torn
+    // copy.
+    match wm_memory::MemoryStore::open_default(&lmdb_path) {
+        Ok(store) => drop(store),
+        Err(e) => anyhow::bail!(
+            "Could not take the LMDB lock at {} — a server may be running. \
+             Stop it before backing up. (underlying error: {e})",
+            lmdb_path.display()
+        ),
+    }
+
+    let dest_parent = out_parent.map_or_else(
+        || dirs_home().join("whitemagic-backups"),
+        std::path::PathBuf::from,
+    );
+    let ts = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+    let dest = dest_parent.join(format!("whitemagic-backup-{ts}"));
+    let data_dest = dest.join("data");
+    std::fs::create_dir_all(&data_dest)?;
+
+    let mut files = Vec::new();
+    copy_tree(store_path, &data_dest, &mut files)?;
+    files.sort();
+
+    // SHA256SUMS manifest over every copied file (paths relative to data/).
+    use sha2::Digest;
+    use std::fmt::Write as _;
+    let mut sums = String::new();
+    for rel in &files {
+        let abs = data_dest.join(rel);
+        let digest: String = {
+            let mut hasher = sha2::Sha256::new();
+            let bytes = std::fs::read(&abs)?;
+            hasher.update(&bytes);
+            hex(&hasher.finalize())
+        };
+        let _ = writeln!(sums, "{digest}  {rel}");
+    }
+    std::fs::write(dest.join("SHA256SUMS"), sums)?;
+
+    println!(
+        "Backed up {} files ({} bytes) to {}",
+        files.len(),
+        total_size(&data_dest),
+        dest.display()
+    );
+    println!("Manifest: {}", dest.join("SHA256SUMS").display());
+    println!();
+    println!("Restore with:");
+    println!(
+        "  wm restore --backup {} [--store <store-root>] [--force]",
+        dest.display()
+    );
+    println!("Keep backups on a different disk or machine than the live store.");
+    Ok(())
+}
+
+/// Restore the full store root from a backup (`wm restore`).
+fn run_restore(
+    backup: &std::path::Path,
+    store_path: &std::path::Path,
+    force: bool,
+) -> anyhow::Result<()> {
+    let sums_path = backup.join("SHA256SUMS");
+    let data_src = backup.join("data");
+    if !sums_path.exists() || !data_src.exists() {
+        anyhow::bail!(
+            "Not a whitemagic backup: {} must contain 'data/' and 'SHA256SUMS'.",
+            backup.display()
+        );
+    }
+
+    // Verify BEFORE touching the target.
+    use sha2::Digest;
+    for line in std::fs::read_to_string(&sums_path)?.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let (expected, rel) = line
+            .split_once("  ")
+            .ok_or_else(|| anyhow::anyhow!("bad SHA256SUMS line: {line}"))?;
+        let abs = data_src.join(rel);
+        let actual = {
+            let mut hasher = sha2::Sha256::new();
+            hasher.update(std::fs::read(&abs)?);
+            hex(&hasher.finalize())
+        };
+        if actual != expected {
+            anyhow::bail!(
+                "Backup verification FAILED for {rel}: expected {expected}, got {actual}. Aborting restore."
+            );
+        }
+    }
+
+    if store_path.exists() {
+        if !force {
+            anyhow::bail!(
+                "Target store {} already exists. Use --force to overwrite (the existing store will be REPLACED).",
+                store_path.display()
+            );
+        }
+        std::fs::remove_dir_all(store_path)?;
+    }
+    if let Some(parent) = store_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    copy_tree(&data_src, store_path, &mut Vec::new())?;
+
+    println!(
+        "Restored {} from {}",
+        store_path.display(),
+        backup.display()
+    );
+    println!("Run 'wm doctor' to confirm health.");
+    println!(
+        "If doctor reports index drift, run 'wm reindex --store {}'.",
+        store_path.display()
+    );
+    Ok(())
+}
+
+/// Recursively copy `src` into `dst`, collecting paths relative to `dst`.
+fn copy_tree(
+    src: &std::path::Path,
+    dst: &std::path::Path,
+    collected: &mut Vec<String>,
+) -> anyhow::Result<()> {
+    fn walk(
+        src: &std::path::Path,
+        dst: &std::path::Path,
+        rel: &str,
+        collected: &mut Vec<String>,
+    ) -> anyhow::Result<()> {
+        std::fs::create_dir_all(dst)?;
+        for entry in std::fs::read_dir(src)? {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            let child_rel = if rel.is_empty() {
+                name.clone()
+            } else {
+                format!("{rel}/{name}")
+            };
+            let src_child = entry.path();
+            let dst_child = dst.join(&name);
+            if file_type.is_dir() {
+                walk(&src_child, &dst_child, &child_rel, collected)?;
+            } else if !file_type.is_symlink() {
+                // Never follow or preserve symlinks inside a store.
+                std::fs::copy(&src_child, &dst_child)?;
+                collected.push(child_rel);
+            }
+        }
+        Ok(())
+    }
+    walk(src, dst, "", collected)
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .fold(String::with_capacity(bytes.len() * 2), |mut acc, b| {
+            use std::fmt::Write as _;
+            let _ = write!(acc, "{b:02x}");
+            acc
+        })
+}
+
+fn total_size(root: &std::path::Path) -> u64 {
+    fn walk(dir: &std::path::Path) -> u64 {
+        let mut total = 0;
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                match entry.file_type() {
+                    Ok(t) if t.is_dir() => total += walk(&entry.path()),
+                    Ok(_) => total += entry.metadata().map(|m| m.len()).unwrap_or(0),
+                    Err(_) => {}
+                }
+            }
+        }
+        total
+    }
+    walk(root)
+}
+
+fn dirs_home() -> std::path::PathBuf {
+    std::env::var("HOME").map_or_else(|_| std::path::PathBuf::from("."), std::path::PathBuf::from)
+}
+
 /// Seal the store directory (`wm seal`).
 fn run_seal(store_path: &std::path::Path) -> anyhow::Result<()> {
     let lmdb_path = store_path.join("lmdb");
@@ -1236,10 +1485,10 @@ async fn run_quickstart() -> anyhow::Result<()> {
     // recorded in one session survives a full process restart and is
     // retrieved in the next session. Runs against an ISOLATED demo store so
     // a pre-existing user store is never polluted.
-    let demo_store = default_store_path()
-        .parent()
-        .map(|p| p.join("whitemagic-quickstart"))
-        .unwrap_or_else(|| PathBuf::from(".whitemagic-quickstart"));
+    let demo_store = default_store_path().parent().map_or_else(
+        || PathBuf::from(".whitemagic-quickstart"),
+        |p| p.join("whitemagic-quickstart"),
+    );
     let lmdb_path = demo_store.join("lmdb");
     std::fs::create_dir_all(&lmdb_path)?;
 
