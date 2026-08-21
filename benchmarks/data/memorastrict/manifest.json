@@ -20,6 +20,7 @@
   ],
   "num_sessions": 20,
   "noise_ratio": 0.8,
+  "scale_turns": 0,
   "total_questions": 215,
   "total_scenarios": 5
 }
