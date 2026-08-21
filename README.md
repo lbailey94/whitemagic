@@ -1,176 +1,148 @@
-# WhiteMagic v5
+# WhiteMagic
 
-A cognitive operating system for agentic AI — rebuilt from the ground up in Rust.
+Local-first memory and session continuity for coding agents.
 
-## Current Status
+WhiteMagic gives an AI coding agent durable project memory over MCP: record
+important context, find it after restart, and carry useful decisions into the
+next session — without sending your memory store to any hosted service.
 
-**v5.8.0 — Feature phases complete; release candidate. 15 crates, 237 registered tool implementations (232 available in the default brain wave; 48 in the curated profile), 3,570 tests, ~131,000 LOC, 0 clippy warnings, and 0 dependency vulnerabilities. Counts verified against the v5.8.0 release gate run of 2026-08-20. The release target is the curated local memory/session MCP workflow; explicit routing is the reliable contract, while semantic NLU and the broader cognitive surface remain optional or experimental.**
-
-The product promise is local-first memory and session continuity for coding
-agents: remember project context, find it after restart, and carry work across
-sessions without sending the memory store to a hosted service.
-
-### v5 Subsystems
-
-- **Embedding NLU Router** (Phase 2): Cosine similarity against pre-computed tool embeddings with OATS offline refinement. Shadow mode with TF-IDF fallback. `nlu.shadow_report` tool for disagreement analytics and promotion readiness. OATS persistence across restarts.
-- **Learned Inference Router** (Phase 3, experimental): k-NN (k=5) + conformal calibration for complexity-aware inference tier selection. Edge rule generation is available for research evaluation.
-- **Imagination Engine** (Phase 4, optional): World model predictions, scenario planning (imagine → simulate → evaluate → decide), dream cycle counterfactual replay, Research autonomous cycle.
-- **Self-Play Training Loop** (Phase 5, experimental): Propose → solve → verify → collect training-data cycle. 3 MCP tools, daemon `--selfplay-interval`; live LoRA training and hot-swap are not part of the release contract.
-- **Mutable Structures** (Phase 6): GanaRegistry (taxonomy drift), DynamicGalaxyRegistry (auto-created from emergence clusters), LearnedDreamCycle (adaptive phase selection), LearnedCycleStrategy (adaptive cycle ordering). All persist to disk across restarts.
-- **Persistence** (Phase 7): All mutable structures save/load JSON state on daemon startup/shutdown. The daemon checkpoints periodically (default every 5 min). Learned state accumulates across sessions.
-- **Karma Ledger Optimization** (v5.2.1): Write-behind batching (flush_threshold=16) delivers **10.9x throughput improvement** over synchronous LMDB writes (97.7 µs vs 1.07 ms per record). Explicit flush on daemon graceful shutdown ensures no pending entries are lost. E2E integration test verifies batching, chain integrity, and persistence across ledger instances.
-
-| Category | Tools |
-|---|---|
-| Memory (CRUD + advanced) | create, read, list, delete, query, search, vector.search, associate, associations, consolidate, decay, batch_read, update, tag, stats, hybrid_recall, count, tags, associate_mine, nearby |
-| Session | start, checkpoint, recall, end, list |
-| Consciousness | citta.status, citta.reflect, citta.coherence, dream.status, dream.trigger, smarana.status, smarana.trace, apotheosis.check, citta.history, dream.analyze, consciousness.depth |
-| Governance | karma.report, karma.history, karma.clear, dharma.status, dharma.rules, dharma.audit, dharma.profiles, harmony.vector, harmony.history, gnosis.status, gnosis.history, gnosis.explain |
-| Tools management | tools.list, tools.usage_report, tools.effectiveness_report, tools.retire |
-| Patterns | pattern.search, salience.spotlight, serendipity.surface |
-| Constellation | detect, list |
-| Autonomous Cycles | consolidation.connect, consolidation.compress, emergence.scan, retention.prune |
-| Spiral | spiral.report |
-| Galaxy | stats, export, import, transfer, merge, snapshot, restore |
-| Network | association.mine, pattern.detect, emergence.report, network.stats, network.centrality, network.clusters |
-| Agents & Tasks | agent.register, agent.list, agent.heartbeat, task.distribute, task.status |
-| System | health, config, flush |
-| Knowledge Graph | kg.extract, kg.query, kg.top |
-| Graph | graph.walk, graph.community, graph.propagate |
-| Archaeology | archaeology.search, learning.pattern, learning.suggest |
-| Reasoning | reasoning.bicameral, think, explain |
-| Pipeline | pipeline.create, pipeline.list, pipeline.status, skill.invoke, skill.list |
-| Anomaly | anomaly.detect, state.snapshot, state.revert |
-| Correlation | correlation.analyze, god.nodes |
-| Boundary | anti_loop.check, boundary.enforce |
-| Meta | wm (explicit routing plus optional NLU, 12 prefix routes), gnosis, tools.list |
-| v4: Reflex | reflex.dispatch, reflex.status |
-| v4: Workspace | workspace.spotlight, workspace.events, workspace.publish, workspace.stats |
-| v4: Timescale | timescale.status, timescale.hooks |
-| v4: Self-Model | selfmodel.forecast, selfmodel.alerts, selfmodel.snapshot |
-| v4: Bicameral | bicameral.reason, bicameral.status |
-| v4: Drive | drive.snapshot, drive.event |
-| v4: Resonance | bus.stats, bus.emit, bus.recent |
-| v4: Sangha | sangha.peers, sangha.discover, sangha.signal, sangha.chat, sangha.locks, sangha.quarantine |
-| v4: Simulation | sim.mc, sim.forecast, sim.counterfactual |
-| v4: Sensorimotor | sensorimotor.scan, sensor.list, sensor.read, sensor.poll, sensor.history, actuator.list, actuator.command, actuator.estop, reflex.list, reflex.add, reflex.evaluate |
-| v4: Homeostasis | homeostasis.check, homeostasis.adjust, homeostasis.history, homeostasis.alerts |
-| RSI | friction.log, friction.review, friction.auto_log, improve.proposals, improve.active_proposals, friction.resolve, redteam.proposals, redteam.from_friction, redteam.coverage_report |
-| Transaction | transaction.begin, transaction.commit, transaction.rollback |
-| v5: Imagination | imagine.scenario, imagine.predict, imagine.reflect |
-| v5: Self-Play | selfplay.run, selfplay.status, selfplay.export |
-| v5: NLU Observability | nlu.shadow_report |
-
-### CLI Commands
-
-```bash
-wm serve       # Start MCP server (curated product surface by default)
-wm serve --profile full      # Archive/research surface (all 237 tools)
-wm daemon      # Persistent daemon — autonomous cycles, dream, self-play (--cycle-interval, --dream-interval, --research-interval, --selfplay-interval)
-wm doctor      # Health check — LMDB, Tantivy, citta, dream, tools (--store flag)
-wm seal        # HMAC integrity manifest for the store
-wm verify      # Check the store against a previous seal
-wm quickstart  # 6-step guided setup
-wm stats       # Consciousness dashboard (--store flag)
-wm brain-wave  # Brain-wave state shorthand (--store flag)
-wm polyglot    # Polyglot runtime status
-wm migrate     # Migrate legacy v26 SQLite memories into the v5 store
+```json
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "wm",
+      "args": ["serve", "--profile", "curated"]
+    }
+  }
+}
 ```
 
-### Tool Surface Profiles
+## Status
 
-`wm serve` exposes a curated subset of the 237-tool surface via profiles (see AGENTS.md):
+**v7.0.0-alpha.1 — private alpha.** Under active development and private
+testing. The website [whitemagic.dev](https://whitemagic.dev) is in a
+work-in-progress state; there is no public launch date.
 
-- `--profile full` (default) — everything
-- `--profile curated` — the memory-hierarchy product surface: memory, session, claims, transactions, diagnostics, and tools.list
-- `--profile minimal` — core memory CRUD + search/chat
-- `WM_TOOL_ALLOWLIST=memory,session` — arbitrary prefix allowlist via env
+- **Supported platform: Linux x86-64 only.** Other platforms have not passed
+  an install gate and are not advertised.
+- The release is marked *pre-release* on GitHub accordingly.
 
-Profile precedence: `WM_TOOL_ALLOWLIST` > `--profile` > `WM_TOOL_PROFILE` >
-`full` (default). See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md).
+## What it does
 
-### Migrating from v26
+The supported alpha contract:
 
-If you have a legacy v26 (Python) install with SQLite galaxy databases, migrate
-them in one command (dry-run first to preview):
+- trusted, local, single-user operation;
+- explicit MCP routes for dependable behavior;
+- durable memory creation and lexical search without an external model;
+- session record, replay, and cross-session continuity;
+- a complete backup, verification, and restore path;
+- no telemetry and no required WhiteMagic cloud service;
+- truthful degradation when optional models or embeddings are unavailable.
+
+## Install
+
+Download the binary and its checksum from the
+[latest release](https://github.com/lbailey94/whitemagic/releases), then:
+
+```bash
+sha256sum -c wm-linux-x86_64.sha256
+chmod +x wm
+mkdir -p ~/.local/bin && mv wm ~/.local/bin/
+```
+
+If `~/.local/bin` is not on your `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Or use the install script (resolves the latest release and verifies the
+checksum automatically):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+```
+
+Verify the installation:
+
+```bash
+wm --version   # wm 7.0.0-alpha.1
+wm doctor      # environment health check
+```
+
+## Connect an MCP client
+
+Point any MCP client at:
+
+```bash
+wm serve --profile curated
+```
+
+The server communicates over stdio and exposes a single `wm` meta-tool.
+Explicit routing is the dependable contract:
+
+- `wm(route="memory.create", args={...})`
+- `wm(route="session.start", args={...})`
+- `wm(route="tools.list", args={})`
+
+`--profile curated` selects the supported memory/session surface. Without it,
+the server starts with the full research tool archive (see below).
+
+## Privacy and data
+
+- Your store lives locally at `~/.local/share/whitemagic`. Nothing is sent to
+  WhiteMagic-operated services; there is no telemetry.
+- Privacy flags exclude memories from responses and reasoning. **They are
+  access controls, not encryption** — anyone who can read the store files can
+  read the contents. Do not store credentials in memories.
+- Conversation capture happens through explicit tool calls, not automatically.
+- Back up the whole store directory, not just the `lmdb/` subdirectory.
+
+## Research surface (not part of the alpha contract)
+
+The codebase contains a larger research system beyond the product boundary:
+autonomous cycles, dream consolidation, bicameral reasoning, an imagination
+engine, self-play training loops, polyglot sidecars (Julia/Haskell/Zig/Koka),
+a signed multi-agent mesh, holographic memory coordinates, and a 237-tool
+archive reachable via `wm serve` without a profile restriction. These are
+research surfaces without product acceptance evidence; they may change or be
+removed. See [`docs/V7_PRODUCT_READINESS.md`](docs/V7_PRODUCT_READINESS.md)
+for how surfaces get promoted into the product contract.
+
+## Building from source
+
+Requires Rust 1.85+:
+
+```bash
+cargo build --release
+cargo test          # full test suite
+cargo clippy --all-targets
+```
+
+## Documentation
+
+- [`docs/V7_PRODUCT_READINESS.md`](docs/V7_PRODUCT_READINESS.md) — product gates and evidence ledger (source of truth)
+- [`docs/NEXT_SESSION.md`](docs/NEXT_SESSION.md) — current execution slice
+- [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md) — client configuration
+- [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) — historical v5.8.0 release record
+- [`docs/PROGRESS.md`](docs/PROGRESS.md) — implementation history
+
+## Migrating from v26 (legacy Python)
+
+If you ran the retired Python version:
 
 ```bash
 wm migrate --v2-dir ~/.whitemagic/users/local/galaxies --dry-run   # preview
 wm migrate --v2-dir ~/.whitemagic/users/local/galaxies              # migrate
-wm migrate --v2-db path/to/codex/whitemagic.db --galaxy codex       # single galaxy
-```
-
-Galaxy mapping is automatic: `main`/`archive`→Universal, `meta`→Substrate,
-`knowledge`/`openai_archives`→Codex, bench/test/quarantine galaxies are skipped.
-All migrated memories land in the store at `--store` (default `~/.local/share/whitemagic`).
-
-### Python MCP Shell (optional)
-
-```bash
-cargo build --release --features python -p wm-mcp  # Build PyO3 extension
-python python/whitemagic_v5_server.py --store ~/.local/share/whitemagic/lmdb
-```
-
-See `python/README.md` for MCP client configuration (Claude Desktop, Cursor, Windsurf).
-
-See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) for the release plan and acceptance gates, [docs/PRE_RELEASE_LAUNCH_PLAN.md](docs/PRE_RELEASE_LAUNCH_PLAN.md) for launch actions, [docs/QUICKSTART.md](docs/QUICKSTART.md) for the five-minute install path, [docs/MCP_CONFIG_GUIDE.md](docs/MCP_CONFIG_GUIDE.md) for client configuration, [docs/MODEL_GUIDE.md](docs/MODEL_GUIDE.md) for the agent primer, [docs/ARCHIVE_CAPABILITY_MAP.md](docs/ARCHIVE_CAPABILITY_MAP.md) for vetted capabilities from previous versions and the v6+ direction, [docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) for the v26 comparison and porting roadmap, [docs/CONFORMAL_PREDICTION.md](docs/CONFORMAL_PREDICTION.md) for the conformal prediction feature, and [docs/PROGRESS.md](docs/PROGRESS.md) for phase status.
-
-## What's Different
-
-- **Rust-first**: Core runtime, memory, dispatch, and consciousness in Rust. Python is a thin MCP shell.
-- **LMDB memory**: Zero-copy mmap'd reads (100x faster than SQLite). 10x less disk write amplification.
-- **Tantivy search**: Lucene-class full-text search in pure Rust (2x faster than FTS5).
-- **Brain-wave eco mode**: Five states (Gamma→Delta). Zero CPU when idle. No polling threads.
-- **Hardware-aware governance (v4)**: `wm-substrate` reads real `/proc` + `/sys` metrics. Brain-wave transitions gated by hardware health (Tiferet). Resource budgets, novelty detection, purpose requirements, human review (Yama). Full transparency via Gnosis Portals.
-- **5D holographic coordinates**: SHA-256 content encoding → spatial memory queries with `find_nearby()`.
-- **CyberBrain architecture (v4→v5)**: Consolidated to 15 crates. wm-cognitive merges 6 former crates (citta, dream, autonomous cycles, reflex, timescale, drive). wm-bicameral adds imagination engine, self-play, learned inference router. wm-conformal adds distribution-free prediction with coverage guarantees.
-- **Bicameral reasoning**: Dual-hemisphere (left: heuristic, right: LLM/stub) with 5-tier complexity-aware routing. Imagination engine for scenario planning. Self-play training-data collection; live LoRA training and hot-swap remain experimental.
-- **NLU router**: Optional two-layer system — embedding router (cosine similarity, OATS refinement) and TF-IDF fallback. Explicit routing remains the reliable path until the labeled shadow set supports promotion.
-- **Mutable structures**: Gana taxonomy drift tracking, dynamic galaxy creation from memory clustering, learned dream cycle phase selection, learned autonomous cycle strategy. All persist to disk.
-- **Polyglot without subprocesses**: Julia embedded via jlrs, Haskell/Koka/Zig compiled to native libraries.
-- **Fractal meta-tool**: 237 registered tools with atomic self-tracked effectiveness stats. MCP server exposes only `wm`; the curated profile is the intended product boundary and the full surface is an archive/research mode.
-- **Mandala compartments**: 4 security tiers (Research/Sandbox/Production/Secure) with isolated LMDB+Tantivy+associations per compartment.
-- **RSI pipeline**: 3-phase recursive self-improvement — friction logging, deduplication, karma-friction bridge, proactive improvement, resolution verification with regression detection, adversarial test synthesis from friction history, coverage reporting. 12 RSI tools, 8 autonomous cycle types.
-- **Fuzz testing**: 8 cargo-fuzz targets + 22 proptest tests across 4 crates.
-- **Self-grading claims ledger**: 32 dated falsifiable predictions with Brier scorecard, signed calibration gap, Wilson hit-rate interval, and empirical-Bayes recalibration of pending confidences (`claims` tool `calibration` action — the record is never edited, only re-read through its own track record).
-- **Cross-platform CI**: Linux, macOS, Windows test jobs + benchmark-on-release-tag.
-
-## Quick Start
-
-```bash
-cargo build --release
-./target/release/wm serve --profile curated
-```
-
-### Install from a release
-
-Each release ships per-platform binaries plus a `.sha256` checksum file.
-Download both for your platform and verify before running:
-
-```bash
-sha256sum -c wm-linux-x86_64.sha256   # after renaming the checksum file to match
-chmod +x wm
-./wm serve --profile curated
-```
-
-## Architecture
-
-See [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md) for the release plan and [docs/STRATEGY.md](docs/STRATEGY.md) for the full architecture document.
-
-## Build
-
-```bash
-cargo build                    # Debug build
-cargo build --release          # Release build
-cargo test                     # Run all 3,570 tests
-cargo clippy --all-targets     # Lint (0 warnings)
-cargo build --release --features python -p wm-mcp  # Build with PyO3 bindings
-cargo build --features wm-memory/lancedb  # Build with LanceDB vector search
-cargo bench -p wm-tools --bench rsi_bench           # RSI pipeline benchmarks
-cargo +nightly fuzz run nlu_classify  # Run fuzz target
-PROPTEST_CASES=4096 cargo test --all-targets proptest  # Run proptest with high iterations
 ```
 
 ## License
 
-MIT
+[MIT](LICENSE) © Lucas Bailey and WhiteMagic Contributors
+
+## Support and security
+
+- Support: open an issue at
+  <https://github.com/lbailey94/whitemagic/issues>
+- Security: email <lbailey94@protonmail.com> (please do not open public
+  issues for security reports)
