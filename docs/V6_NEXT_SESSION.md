@@ -326,15 +326,25 @@ different unknown topics (pet vs programming_language) — verified NOT a
 regression by re-running today's code on the old data (T2 unchanged).
 LongMemEval 50q unchanged (86/100/100, MRR 0.9233).
 
-#### T10 Cross-Session Synthesis (0% verif, 100% R@1) — Medium Effort
-**Approach**: Post-retrieval aggregation tool.
-- Retrieval works (R@1=100%) — the problem is computation over results
-- Add `memory.aggregate` tool that takes multiple results and computes
-  spans/counts/sums
-- Or: adjust benchmark to check if necessary facts are present in results
-  (which they are — R@1=100%)
-- Research: CoM (Chain-of-Memory), CABLE (antecedent-based linking),
-  xMemory (decoupling to aggregation)
+#### T10 Cross-Session Synthesis — ✅ DONE (2026-08-20, commit 26c6d3c)
+
+New `memory.aggregate` tool (read-only): full-text query → aggregate over
+results. Metrics: `count`, `session_count`, `session_span`. Session metrics
+derive from `session_<n>` tags; the anchor set is narrowed to results
+matching the rarest query term (fewest matches, ties by query order) so
+similar-but-unrelated turns (the same question about a different skill)
+cannot distort the span. The bench routes T10 questions to it with
+`metric: session_span`.
+
+**5-seed results**: T10 verification 0% → 86.7% (R@1=100%), overall
+50.23% (morning baseline 24.65%). Also fixed: the MemoraStrict generator
+sampled T2 unknown topics via plain set iteration (PYTHONHASHSEED order
+varies per process) — same seed produced different T2 topics across runs;
+now sorted. Data regenerated deterministically (also repairs the T8 answer
+data accidentally reverted before commit 2029f92).
+
+Remaining T10 gap (2/15): span computed over the wrong anchor when the
+skill term is also a common word or the search floor drops endpoint turns.
 
 #### T2 Abstention for 2-Term Queries (36%) — High Effort
 **Approach**: Corpus-frequency-based generic term detection, with a
