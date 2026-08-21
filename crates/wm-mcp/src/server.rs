@@ -2157,7 +2157,7 @@ impl McpServer {
                 })
                 .count();
             let description = format!(
-                "WhiteMagic v5 meta-tool — {} tool surface ({} tools). Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create'), and args= for passthrough arguments. Say 'list tools' to discover available tools.",
+                "WhiteMagic meta-tool — {} tool surface ({} tools). Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create'), and args= for passthrough arguments. Say 'list tools' to discover available tools.",
                 self.profile_name, tool_count
             );
             Ok(json!({

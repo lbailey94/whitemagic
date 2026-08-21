@@ -146,7 +146,7 @@ pub fn whitemagic_v5(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add(
         "__doc__",
-        "WhiteMagic v5 — Cognitive OS MCP server (PyO3 bridge)",
+        "WhiteMagic — Cognitive OS MCP server (PyO3 bridge)",
     )?;
 
     Ok(())

@@ -477,7 +477,7 @@ pub fn run_migration(
     dry_run: bool,
     galaxy_filter: Option<&str>,
 ) -> Result<()> {
-    println!("=== WhiteMagic v5 Migration Tool ===");
+    println!("=== WhiteMagic Migration Tool ===");
     println!();
     println!("Target v5 store: {}", store_path.display());
     if dry_run {
