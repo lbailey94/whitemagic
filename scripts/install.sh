@@ -1,19 +1,21 @@
 #!/bin/sh
-# WhiteMagic v5 install script — downloads a release binary and verifies its checksum.
+# WhiteMagic install script — downloads a release binary and verifies its checksum.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/lucas/whitemagic/main/scripts/install.sh | sh
-#   curl -fsSL ... | sh -s -- --version v5.8.0 --target x86_64-unknown-linux-gnu
+#   curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+#   curl -fsSL ... | sh -s -- --version v7.0.0-alpha.1
 #
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
+#
+# Supported platform (private alpha): Linux x86-64 only.
 
 set -eu
 
 VERSION=""
 TARGET=""
 INSTALL_DIR="${HOME}/.local/bin"
-REPO="lbailey94/WMv5"
+REPO="lbailey94/whitemagic"
 
 # Detect platform if not specified
 detect_target() {
@@ -47,25 +49,29 @@ if [ -z "$TARGET" ]; then
 fi
 
 if [ -z "$VERSION" ]; then
-    # Fetch latest release tag
-    VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-        | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')"
+    # Fetch the most recent release INCLUDING prereleases.
+    # (releases/latest skips prereleases, which would silently install an
+    # older stable during the alpha phase. Revisit at public beta.)
+    VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=1" \
+        | grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
     if [ -z "$VERSION" ]; then
         echo "Could not determine latest release version." >&2
-        echo "Specify --version v5.8.0 explicitly." >&2
+        echo "Specify --version explicitly, e.g.: $0 --version v7.0.0-alpha.1" >&2
         exit 1
     fi
 fi
 
 echo "Installing WhiteMagic ${VERSION} for ${TARGET}..."
 
-# Map target to artifact name
+# Map target to artifact name. Only Linux x86-64 has passed an install gate;
+# other targets are refused rather than pointed at artifacts that do not exist.
 case "$TARGET" in
-    *linux*) ARTIFACT="wm-linux-x86_64" ;;
-    *darwin*x86_64*) ARTIFACT="wm-macos-x86_64" ;;
-    *darwin*aarch64*) ARTIFACT="wm-macos-aarch64" ;;
-    *windows*) ARTIFACT="wm-windows-x86_64.exe" ;;
-    *) echo "Unsupported target: $TARGET" >&2; exit 1 ;;
+    x86_64-unknown-linux-gnu) ARTIFACT="wm-linux-x86_64" ;;
+    *)
+        echo "Unsupported target for this release: ${TARGET}" >&2
+        echo "The private alpha supports Linux x86-64 only." >&2
+        exit 1
+        ;;
 esac
 
 BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
