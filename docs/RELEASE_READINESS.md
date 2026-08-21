@@ -391,11 +391,14 @@ auto-migration fix). The next steps are:
 
 1. **Tag the release**: `git tag v5.8.0` at the gate-verified commit and push
    to trigger the release workflow (per-platform binaries + checksums).
-2. **Fresh-install rehearsal**: run `scripts/install.sh` against the
-   published v5.8.0 artifacts, then `wm doctor`, then
-   `scripts/curated_smoke_test.py`. (Rehearsed locally on 2026-08-20 with
-   the built binary; the `install.sh`-from-artifacts pass is the remaining
-   step after publish.)
+   ✅ Done 2026-08-20 — v5.8.0 published with all 8 per-platform assets.
+2. **Fresh-install rehearsal**: ✅ Done 2026-08-20 against the published
+   v5.8.0 artifacts: authenticated download + `sha256sum -c` verified +
+   `wm --version` + `wm quickstart` on a clean HOME + `wm doctor` all
+   healthy + curated smoke test passed. Note: the repo is **private**, so
+   the anonymous one-line `install.sh` pipe (curl | sh) returns 404 until
+   the repository is made public — the script itself is correct; public
+   visibility is a launch-time decision, not a code fix.
  3. **Recall measurement** (see
     [`docs/VECTOR_SEARCH_ROADMAP.md`](VECTOR_SEARCH_ROADMAP.md)):
     - Score OR + token-coverage on the same 10q (then 50q) BM25+stem set
