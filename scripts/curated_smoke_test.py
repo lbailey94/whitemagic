@@ -353,6 +353,52 @@ def main():
                 fail("read-only mode", "mutation was not refused", mutated)
         finally:
             server.close()
+
+        # Seal/verify integrity (B5): seal a real store written by this
+        # test, verify it clean, then verify tamper detection end to end
+        # through the actual CLI commands.
+        lmdb_dir = os.path.join(store, "lmdb")
+        sealed = subprocess.run(
+            [binary, "seal", "--store", store],
+            capture_output=True, text=True, timeout=60,
+        )
+        if sealed.returncode == 0 and "Sealed" in sealed.stdout:
+            ok(f"wm seal: {sealed.stdout.strip().splitlines()[0]}")
+        else:
+            fail("wm seal", f"exit {sealed.returncode}: {sealed.stdout} {sealed.stderr}")
+
+        verified = subprocess.run(
+            [binary, "verify", "--store", store],
+            capture_output=True, text=True, timeout=60,
+        )
+        if verified.returncode == 0 and "OK" in verified.stdout:
+            ok("wm verify: clean store passes")
+        else:
+            fail("wm verify", f"exit {verified.returncode}: {verified.stdout} {verified.stderr}")
+
+        # Verify must not mutate the store: a second run still passes.
+        verified_again = subprocess.run(
+            [binary, "verify", "--store", store],
+            capture_output=True, text=True, timeout=60,
+        )
+        if verified_again.returncode == 0:
+            ok("wm verify: idempotent (no self-inflicted drift)")
+        else:
+            fail("wm verify idempotence", f"exit {verified_again.returncode}: {verified_again.stdout}")
+
+        # Tamper with a sealed file and expect a failing verification.
+        data_mdb = os.path.join(lmdb_dir, "data.mdb")
+        with open(data_mdb, "ab") as fh:
+            fh.write(b"\x00smoke-tamper")
+        tampered = subprocess.run(
+            [binary, "verify", "--store", store],
+            capture_output=True, text=True, timeout=60,
+        )
+        if tampered.returncode == 1 and "VERIFY FAILED" in tampered.stdout:
+            ok("wm verify: tampered store fails with exit 1")
+        else:
+            fail("wm verify tamper detection",
+                 f"exit {tampered.returncode}: {tampered.stdout} {tampered.stderr}")
     finally:
         if clean_up:
             shutil.rmtree(store, ignore_errors=True)

@@ -3,7 +3,7 @@
 **Prepared:** 2026-08-12
 **Last updated:** 2026-08-20 (final release gate re-run from `cargo clean` at HEAD; Tantivy schema-mismatch auto-migration added; ready to tag v5.8.0 final)
 **Version under review:** v5.8.0
-**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B6, B7 complete; B5 (`wm seal`/`wm verify`) is implemented and awaiting a targeted test pass; B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. v6-dev episodic retrieval work (typed keys, query-class planner, vocabulary enrichment, abstention, consolidation boost) rides along behind opt-in tool parameters; LongMemEval 50q R@1 86% is unchanged by the release-stabilization fixes. Ready for v5.8.0 final: tag and push.
+**Status:** All P0 and P1 release gates complete. P2 items complete. Phase B items B5, B6, B7 complete (B5 seal/verify is now an end-to-end gate in the curated smoke test: seal → clean verify → idempotence → tamper detection with exit 1); B4 remains. Vector search wiring complete with batch embedding and adaptive chunking. v6-dev episodic retrieval work (typed keys, query-class planner, vocabulary enrichment, abstention, consolidation boost) rides along behind opt-in tool parameters; LongMemEval 50q R@1 86% is unchanged by the release-stabilization fixes. v5.8.0 published 2026-08-20 with all 8 per-platform assets; fresh-install rehearsal passed against the release artifacts.
 
 This document is the release-readiness source of truth. `README.md` should
 explain the product, `PROGRESS.md` should record implementation history, and
@@ -410,10 +410,13 @@ auto-migration fix). The next steps are:
     - Learned inference router promotion or library-only labeling
     - Self-play/imagination experimental labeling
  5. **Phase B** (v5.9 PET hardening theme):
-   - B4: sandbox mode for tool execution
+    - B4: sandbox mode for tool execution
    - ~~B5: store seal/verify (tamper detection)~~ implemented as HMAC
      manifest + `wm seal`/`wm verify`; not a cryptographic root of trust
-     against an adversary who can replace `.seal_key`
+     against an adversary who can replace `.seal_key`. Targeted test pass
+     complete (2026-08-20): end-to-end CLI coverage is a committed gate in
+     `scripts/curated_smoke_test.py` (seal 67 real files → clean verify →
+     idempotence → tamper detection with exit 1) plus 7 library unit tests
    - ~~B6: untrusted `_meta` handling by default~~
    - ~~B7: store permission hygiene (`0700`)~~
 
