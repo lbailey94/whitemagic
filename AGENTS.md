@@ -196,6 +196,11 @@ Select via `wm serve --profile curated` or `WM_TOOL_ALLOWLIST=memory,session,cla
 | `WM_DISPATCH_BURST` | 10 | Burst allowance per tool |
 | `WM_MESH_KEY` | random/process | Stable Sangha node identity across restarts |
 | `WM_EMBEDDER_ENDPOINT` | unset (TF-IDF only) | Embedding router backend (`/v1/embeddings`) |
+| `WM_EMBEDDER_BACKEND` | unset | `onnx` — use the local ONNX Runtime embedder instead of HTTP |
+| `WM_EMBEDDER_ORT_MODEL` | `BAAI/bge-small-en-v1.5` | ONNX model name; `-q` suffix selects INT8-quantized variants (e.g. `bge-small-q`, ~75% smaller) |
+| `WM_EMBEDDER_ORT_THREADS` | min(logical, 4) | ONNX intra-op threads — capped default prevents small-machine OOM |
+| `WM_EMBEDDER_CACHE_DIR` | unset | Model cache directory for the ONNX embedder |
+| `WM_EPISODIC_RERANK_ONLY` | unset | `1` — stub embedder for ingest, real embedder only for episodic rerank (fast benchmark ingest) |
 | `WM_TOOL_PROFILE` | `full` | Tool surface: `full` \| `curated` \| `minimal` |
 | `WM_TOOL_ALLOWLIST` | unset | Comma-separated tool-name prefixes (wins over profile) |
 

@@ -1,22 +1,35 @@
 # V6 Next Session Handoff
 
-**Prepared:** 2026-08-18 (updated 2026-08-19 evening)
+**Prepared:** 2026-08-18 (updated 2026-08-21 early morning)
 **Branch:** `v6-dev`
-**Latest commit:** `14e89af` — v6 full activation strategy
+**Latest commit:** `89c16ba` — B5 seal/verify E2E gate
 
 ## Current Results
 
-**50q subset** (50q A/B, 2026-08-19, baseline after Phase 3 reversion):
+**MemoraStrict** (5 seeds × 43 questions, 2026-08-20/21, with abstention +
+consolidation + temporal resolution + conflict detection + aggregation):
 
-- R@1: `0.86` (up from `0.80` in prior session)
-- R@5: `1.00`
-- R@10: `1.00`
-- MRR: `0.9233`
-- Query p50: ~1.5s (dominated by ingest, in-process search ~1ms)
-- Candidate presence: `1.00`
-- Expected-session presence: `1.00`
+- Overall verification: **50.23%** (baseline this morning: 24.65%)
+- T1 temporal supersession: 50% (from 15%) — projected higher after the
+  miss-analysis fixes below (static analysis: all 60 current-value
+  questions now resolvable at the anchor layer)
+- T6 memory budget: 50% (from 15%)
+- T8 contradiction detection: 100% (from 0%)
+- T10 cross-session synthesis: 86.7% (from 0%)
+- T4 distractor resistance: 53.3%, T3 multi-hop: 66.7%, T9 preference
+  drift: 56.7%
+- T2 abstention: 32% (opt-in), T5 consolidation: 30%, T7 scale: 0% pending
+  the deferred scale runs (generation now implemented, see below)
 
-**7 remaining misses** (all rank 2-3):
+**50q LongMemEval subset** (50q A/B, 2026-08-19, held constant through all
+2026-08-20 work — neutrality by construction verified twice more):
+
+- R@1: `0.86`, R@5: `1.00`, R@10: `1.00`, MRR: `0.9233`
+- Candidate presence: `1.00`, expected-session presence: `1.00`
+
+**7 remaining LongMemEval misses** (all rank 2-3, all near-ties — the
+deterministic scoring ceiling; the protected top-K rerank mode, once
+validated, is the designated lever):
 
 | Q | Question | Answer | Rank | Delta | Category |
 |---|----------|--------|------|-------|----------|
@@ -298,10 +311,33 @@ T9 45%→56.7% (+11.7pp), every other category byte-identical, overall
 neutrality confirmed empirically, matching the Post-Retrieval Assembly
 p=0.45 replication.
 
-Remaining gap: T1/T6 at 50% — misses are cases where the change statement
-falls outside the candidate pool or the change-marker vocabulary doesn't
-cover the phrasing. Future option: GPM-style derived lifecycle state at
-write time so "current" becomes a lookup.
+**Follow-up (2026-08-21, commit 3f814ed)** — static miss analysis
+(`scripts/memorastrict_miss_analysis.py`, pure Python, zero server cost)
+of the 50% plateau found the remaining failures were **not retrieval
+losses**:
+
+1. Vocabulary gap (12/40 questions): MemoraStrict change-template 1
+   ("I've actually switched from X to Y") contains "switched from",
+   missing from `CHANGE_MARKERS` — anchor set empty, stale value won on
+   score order. Fixed + regression test.
+2. Generator flaw (12 questions unanswerable-by-construction): value
+   changes were only stated when the preference was sampled at a signal
+   position in its change session — seed 1 never spoke "bus", seed 3
+   never spoke "ruby"/"light roast". The generator now appends a
+   guaranteed change statement per changing preference. Data
+   regenerated deterministically.
+3. LATE-PLAIN (33 questions) verified correct-by-design: the change
+   statement anchors even when later sessions restate the value plainly.
+
+Projected post-fix state: all 60 current-value questions resolvable at
+the anchor layer (VOCAB 0, NO-ANSWER-TURN 0). **A full re-run of the
+5-seed benchmark is the first deferred validation item** — the measured
+T1/T6/T9 numbers above predate these fixes.
+
+Remaining structural gap: marker vocabulary is English-phrase-tuned
+(and partially benchmark-tuned). The principled endgame is GPM-style
+derived lifecycle state at write time so "current" becomes a lookup,
+not a phrase match.
 
 #### T8 Contradiction Detection — ✅ DONE (2026-08-20, commit 2029f92)
 
@@ -435,6 +471,50 @@ During 50q LongMemEval-S testing with `--rerank --rerank-alpha 2.0 --persistent`
 Documented in detail in [`docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md`](POLYGLOT_SIMD_MEMORY_STRATEGY.md).
 
 ## Verification
+
+```bash
+cargo test --workspace --all-targets --quiet
+cargo clippy --all-targets -- -D warnings
+cargo fmt --all -- --check
+cargo bench -p wm-memory --bench episodic_bench -- --quick
+cargo build --release --bin wm
+python3 scripts/curated_smoke_test.py --binary target/release/wm
+# Zero-CPU miss analysis (diagnose before any benchmark run)
+python3 scripts/memorastrict_miss_analysis.py benchmarks/data/memorastrict
+```
+
+## Deferred Validation Runs (CPU-heavy — run when the machine can grind)
+
+These are **pre-approved next experiments** with their exact commands;
+all code is committed, only measurement is pending:
+
+1. **MemoraStrict revalidation** (marker + generator fixes, commit
+   3f814ed — the published T1/T6 50% predates them):
+   `python3 scripts/memorastrict_bench.py --seeds 1 2 3 4 5 --min-coverage 0.5 --output benchmarks/results/memorastrict_postfix.json`
+   Expected: T1/T6 well above 50%, no other category moves.
+2. **Protected top-K rerank 50q** (alpha ≥ 2.0, committed eb2fb42-era;
+   recall-preserving by construction). MUST use the resource-safe config —
+   INT8 model, capped threads, persistent server:
+   ```bash
+   cargo build --release --bin wm --features wm-memory/onnx
+   WM_EMBEDDER_BACKEND=onnx WM_EMBEDDER_ORT_MODEL=bge-small-q \
+   WM_EMBEDDER_CACHE_DIR=$PWD/.fastembed_cache WM_EPISODIC_RERANK_ONLY=1 \
+   python3 scripts/longmemeval_bench.py --route memory.episodic_search \
+     --max-questions 50 --rerank --rerank-alpha 2.0 --persistent \
+     --output benchmarks/results/v6_50q_protected_rerank_int8.json
+   ```
+   Watch RSS/swap: if swap grows, abort (that was the FP32 signature).
+   Note: non-persistent mode reloads the model per question (~30s × 50)
+   — persistent is mandatory for wall-clock sanity.
+3. **T7 scale runs** (generation implemented, commit 962fa66):
+   ```bash
+   python3 scripts/memorastrict_gen.py --seeds 1 --categories T7 --scale-turns 10000
+   python3 scripts/memorastrict_bench.py --data benchmarks/data/memorastrict/scale_10000 --seeds 1 --categories T7
+   ```
+   Scale ladder: 1000 → 10K → 50K → 100K; stop at the first size where
+   R@1 degrades materially to find the operating envelope.
+
+## Verification (full suite, unchanged)
 
 ```bash
 cargo test --workspace --all-targets --quiet

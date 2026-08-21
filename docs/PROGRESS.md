@@ -1,6 +1,69 @@
 # WhiteMagic v5 — Progress & Phase Status
 
-**Last updated**: August 20, 2026 (final v5.8.0 gate re-run from `cargo clean` at HEAD: 3,570 tests, 0 clippy warnings, fmt clean, release build clean, curated smoke test + fresh-install rehearsal passed on the installed binary. Tantivy schema-mismatch auto-migration added — legacy stores now upgrade seamlessly. Tool-count claims corrected to 237 registered / 232 brain-wave available / 48 curated. Ready to tag v5.8.0 final.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+**Last updated:** August 21, 2026 (v5.8.0 published 2026-08-20 with all 8 per-platform assets; fresh-install rehearsal passed against release artifacts; B5 seal/verify complete as an E2E CI gate. v6-dev same day: T1/T6/T8/T10 MemoraStrict capabilities implemented (overall 24.65%→50.23%, LongMemEval held at 86/100/100 throughout), ONNX embedder resource fixes (INT8 + thread cap), static miss-analysis tooling. Deferred: CPU-heavy validation runs, pre-approved in `docs/V6_NEXT_SESSION.md`.) See [`docs/RELEASE_READINESS.md`](RELEASE_READINESS.md) for the canonical release plan and acceptance gates.
+
+---
+
+## Session 2026-08-20/21 (evening → early morning): v5.8.0 ship + MemoraStrict capabilities
+
+### v5.8.0 final (see RELEASE_READINESS.md for the full gate evidence)
+
+- Full release gate re-run from `cargo clean` (3,570 tests → 3,575 after
+  the schema fix), clippy/fmt clean, curated smoke test, fresh-install
+  rehearsal on the installed binary.
+- **Tantivy schema-mismatch auto-migration** (commit f779d21): stores
+  created before the `en_stem` tokenizer change hard-failed to open;
+  writable opens now move the old index aside and rebuild from canonical
+  LMDB at startup; `wm reindex` recovers directly; read-only opens refuse
+  with guidance. Found during rehearsal on the developer's own Aug-7 store.
+- CI repairs on the release path (9ac3c33): unused binding fatal under
+  CI's `-D warnings`, Windows artifact double-`.exe` upload bug, h2
+  advisory bump, lru advisory accepted with justification (tantivy-
+  transitive, string keys), libtest-only bench flag.
+- **v5.8.0 tagged, published, and rehearsed against the published
+  artifacts** (authenticated download → checksum → quickstart → doctor →
+  smoke test on a clean HOME). Private repo means the anonymous
+  `install.sh` pipe 404s until the repo goes public — script is correct.
+
+### MemoraStrict capability work (v6-dev)
+
+All commits verified with unit tests + fmt/clippy; LongMemEval 50q
+re-checked neutral (86/100/100, MRR 0.9233) after each feature.
+
+- **T1/T6 temporal supersession** (cbbc201): read-time resolution layer —
+  current-value queries promote change-marker UserStatements by
+  deterministic chronology. T1/T6 15%→50%, T9 +11.7pp, overall 28.8%→38.6%.
+- **T8 contradiction detection** (2029f92): dietary/alcohol vocabulary
+  bridge + `detect_conflicts` (TANGLE semantics: surface both sides,
+  never resolve). T8 0%→100%, overall 44.65%.
+- **T10 cross-session synthesis** (26c6d3c): `memory.aggregate` tool
+  (count/session_count/session_span, rarest-term anchor narrowing).
+  T10 0%→86.7%, overall 50.23%. Generator determinism fix (PYTHONHASHSEED
+  set-iteration in T2 topic sampling).
+- **Static miss analysis** (3f814ed): `scripts/memorastrict_miss_analysis.py`
+  — zero-CPU diagnostic joining scenario data against the resolution
+  logic. Found "switched from" missing from CHANGE_MARKERS (12/40
+  questions) and unanswerable-by-construction questions (12) — both
+  fixed; projected all 60 current-value questions resolvable.
+- **T7 scale generation** (962fa66): `--scale-turns N` pads scenarios
+  with noise-only sessions into `scale_<N>/` subdirs; current-value
+  phrasing fix (old phrasing conflated scale with temporal supersession).
+
+### Embedder resource fixes (Phase 1, POLYGLOT_SIMD_MEMORY_STRATEGY.md)
+
+- **Protected top-K rerank mode** (52e60fe): `rerank_alpha >= 2.0` fully
+  reorders only the deterministic top-limit set by cosine (ConvMemory v2
+  pattern — recall preserved by construction). Validation pending.
+- **INT8 + thread cap** (eb2fb42): `-q` model variants wired; ORT default
+  threads capped to min(logical, 4). Live: bounded CPU, no swap growth.
+- Root-cause of the benchmark OOM crash documented (parallel session):
+  FP32 weights × 8 logical threads × persistent-store accumulation.
+
+### B5 seal/verify complete (89c16ba)
+
+- End-to-end CLI coverage added to the curated smoke test (a CI gate):
+  seal a real 67-file store → clean verify → idempotence → tamper
+  detection with exit 1. Phase B now has only B4 (sandbox) remaining.
 
 ---
 

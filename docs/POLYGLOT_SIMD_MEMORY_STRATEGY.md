@@ -85,9 +85,9 @@ Update `OrtEmbedder::resolve_model` in `crates/wm-memory/src/embedder.rs`:
 
 ## 4. Implementation Roadmap
 
-| Phase | Milestone | Focus Areas |
+| Phase | Milestone | Status |
 | :--- | :--- | :--- |
-| **Phase 1** | **Rust Core SIMD & Quantization** | • Integrate AVX2 dot-product kernels into `wm-memory`<br>• Wire `BGESmallENV15Q` and `AllMiniLML6V2Q` in `OrtEmbedder`<br>• Default threads to physical core count |
-| **Phase 2** | **Benchmarking & Storage Pruning** | • Validate 50q LongMemEval-S with INT8 embeddings on ThinkPad T480s<br>• Verify 0% swap activity and sub-minute execution |
-| **Phase 3** | **Elixir Ingestion Supervisor** | • Re-establish lightweight Unix Domain Socket (UDS) / C-Node bridge to Elixir<br>• GenStage backpressure for bulk memory creation |
-| **Phase 4** | **Julia Mathematical Accelerator** | • Connect Julia daemon for FFT-based HRR convolution and geometric clustering |
+| **Phase 1** | **Rust Core SIMD & Quantization** | **Partially complete (2026-08-21, commit eb2fb42):** INT8 model variants wired (`-q` suffix → `BGESmallENV15Q`/`AllMiniLML6V2Q`, etc.) and ORT default threads capped to `min(logical, 4)`. Live verification on the T480s: high but bounded CPU, **no swap growth, no memory scaling** (vs. the FP32 OOM signature). **AVX2 kernels deferred**: the OOM root cause was ORT inference, not our scalar cosine (~50 candidates × 384 dims ≈ µs); `wm-memory` is `#![forbid(unsafe_code)]`, so AVX2 needs a deliberate convention decision (submodule or targeted `unsafe` carve-out) justified by profiling first. |
+| **Phase 2** | **Benchmarking & Storage Pruning** | **Pending (deferred validation):** the exact resource-safe 50q command is pre-approved in `docs/V6_NEXT_SESSION.md` → "Deferred Validation Runs". Validation blocker was the harness, not the model: non-persistent mode reloads the model per question (~30s × 50). Run with `--persistent` + `bge-small-q` + capped threads and watch swap. |
+| **Phase 3** | **Elixir Ingestion Supervisor** | Not started. |
+| **Phase 4** | **Julia Mathematical Accelerator** | Not started. |
