@@ -257,6 +257,23 @@ impl IndexHealth {
     }
 }
 
+/// Format the Tantivy writer-creation error with actionable lock context
+/// (backlog B1: the bare `Lockfile: LockBusy` message named neither the
+/// index path nor the likely holder, costing a debug session to isolate).
+fn format_writer_lock_error(err: &str, index_path: &Path) -> String {
+    let is_lock = err.contains("ock") && (err.contains("Busy") || err.contains("lock"));
+    if is_lock {
+        format!(
+            "Tantivy writer: {err} — the search index at {} is locked by another process. \
+             A running `wm serve` or `wm daemon` on this store holds it; find it with \
+             `pgrep -af wm` and stop it, or start this server with --readonly.",
+            index_path.display()
+        )
+    } else {
+        format!("Tantivy writer: {err}")
+    }
+}
+
 /// The full-text search engine backed by Tantivy.
 pub struct SearchEngine {
     index: Index,
@@ -380,7 +397,7 @@ impl SearchEngine {
 
         let writer = index
             .writer(50_000_000)
-            .map_err(|e| CoreError::Memory(format!("Tantivy writer: {e}")))?;
+            .map_err(|e| CoreError::Memory(format_writer_lock_error(&e.to_string(), path)))?;
 
         Ok(Self {
             index,
@@ -402,6 +419,13 @@ impl SearchEngine {
     /// writes through this engine fail with a clear error.
     pub fn open_readonly(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
+        // Backlog B2: a read-only open never observes later writes — searches
+        // miss fresh memories until restart. Say so at the moment it matters.
+        tracing::warn!(
+            "read-only search index opened at {} — it will not observe writes made \
+             after this point; restart the read-only server to pick up new memories",
+            path.display()
+        );
         let (schema, field_id, field_galaxy, field_content, field_tags, field_timestamp) =
             Self::build_schema();
         let (index, schema_migrated) = Self::open_index(path, &schema, false)?;
@@ -983,6 +1007,34 @@ mod tests {
         engine.commit(&mut writer).unwrap();
         let results = engine.search("fresh index", 10).unwrap();
         assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn writer_lock_error_names_path_and_hint() {
+        // B1: LockBusy used to surface bare ("Failed to acquire Lockfile:
+        // LockBusy") with no path and no hint — a stray `wm serve` cost a
+        // debug session to find.
+        let err = format_writer_lock_error(
+            "Failed to acquire Lockfile: LockBusy. Some(\"...\")",
+            Path::new("/store/x/tantivy"),
+        );
+        assert!(
+            err.contains("/store/x/tantivy"),
+            "must name the index path: {err}"
+        );
+        assert!(
+            err.contains("pgrep -af wm"),
+            "must include the diagnostic hint: {err}"
+        );
+        assert!(
+            err.contains("--readonly"),
+            "must offer the readonly alternative: {err}"
+        );
+
+        // Non-lock errors pass through unchanged.
+        let other = format_writer_lock_error("disk full", Path::new("/s/t"));
+        assert!(other.starts_with("Tantivy writer: disk full"));
+        assert!(!other.contains("pgrep"));
     }
 
     #[test]

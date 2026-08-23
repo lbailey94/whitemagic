@@ -165,8 +165,8 @@ pub use session::{
     SessionCheckpointTool, SessionEndTool, SessionRecallTool, SessionStartTool, SessionVerifyTool,
 };
 pub use session_ops::{
-    SessionContinuityTool, SessionDigestTool, SessionHandoffTool, SessionRecordTool,
-    SessionReplayTool, register_session_ops,
+    SessionContinuityTool, SessionDigestTool, SessionExportTool, SessionHandoffTool,
+    SessionImportTool, SessionRecordTool, SessionReplayTool, register_session_ops,
 };
 pub use simulation_tools::{SimCounterfactualTool, SimForecastTool, SimMcTool};
 pub use system::{SystemConfigTool, SystemFlushTool, SystemHealthTool};

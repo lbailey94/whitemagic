@@ -919,6 +919,217 @@ impl Tool for SessionHandoffTool {
 
 /// Register the session-ops tools (4).
 #[must_use]
+/// `session.export` — serialize a session to JSONL for store-to-store moves.
+///
+/// Exports the start marker, every turn (including superseded — history
+/// travels with the session), and checkpoints, preserving ids, timestamps,
+/// and tags so an import reconstructs the session faithfully.
+pub struct SessionExportTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SessionExportTool {
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sessions".into())]),
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for SessionExportTool {
+    fn name(&self) -> &str {
+        "session.export"
+    }
+    fn gana(&self) -> Gana {
+        Gana::StraddlingLegs
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "session_id": super::common::str_prop("Session to export (default: most recent)"),
+                "path": super::common::str_prop("Write JSONL to this file instead of returning inline"),
+            }),
+            &[],
+        )
+    }
+    fn description(&self) -> &str {
+        "Export a session as JSONL (start marker + turns + checkpoints, preserving ids/timestamps/tags). Args: session_id (optional), path (optional — writes to file; otherwise returns jsonl inline)."
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let session_id = match args.get("session_id").and_then(Value::as_str) {
+            Some(sid) if !sid.is_empty() => sid.to_string(),
+            _ => self
+                .store
+                .scan_all(Galaxy::Sessions)?
+                .iter()
+                .filter(|m| m.metadata.tags.contains(&"start".to_string()))
+                .max_by_key(|m| m.metadata.created_at)
+                .map(|m| m.metadata.id.to_string())
+                .ok_or_else(|| {
+                    wm_core::CoreError::Tool("no session found — run session.start first".into())
+                })?,
+        };
+
+        // Start marker matches by id; turns/checkpoints carry the id in
+        // content. Superseded turns are included deliberately: history is
+        // part of the story being re-homed.
+        let mut members: Vec<Memory> = self
+            .store
+            .scan_all(Galaxy::Sessions)?
+            .into_iter()
+            .filter(|m| m.metadata.id.to_string() == session_id || m.content.contains(&session_id))
+            .collect();
+        members.sort_by_key(|m| m.metadata.created_at);
+
+        let mut jsonl = String::new();
+        for m in &members {
+            let line = serde_json::to_string(m)
+                .map_err(|e| wm_core::CoreError::Tool(format!("export serialize: {e}")))?;
+            jsonl.push_str(&line);
+            jsonl.push('\n');
+        }
+
+        let path_arg = args
+            .get("path")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty());
+        if let Some(dest) = path_arg {
+            std::fs::write(dest, &jsonl)
+                .map_err(|e| wm_core::CoreError::Tool(format!("export write {dest}: {e}")))?;
+            Ok(json!({
+                "status": "success",
+                "session_id": session_id,
+                "records": members.len(),
+                "path": dest,
+            }))
+        } else {
+            Ok(json!({
+                "status": "success",
+                "session_id": session_id,
+                "records": members.len(),
+                "jsonl": jsonl,
+            }))
+        }
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+/// `session.import` — restore exported sessions into this store.
+///
+/// Counterpart to [`SessionExportTool`]: reads JSONL lines (file path or
+/// inline), deserializes each full Memory record, and puts it into the
+/// Sessions galaxy with its original id, timestamps, and tags — so
+/// continuity/replay behave identically in the new store.
+pub struct SessionImportTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SessionImportTool {
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow {
+                writes: vec![Resource::Galaxy("sessions".into())],
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for SessionImportTool {
+    fn name(&self) -> &str {
+        "session.import"
+    }
+    fn gana(&self) -> Gana {
+        Gana::StraddlingLegs
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "path": super::common::str_prop("Read JSONL from this file"),
+                "jsonl": super::common::str_prop("Or pass the export payload inline"),
+            }),
+            &[],
+        )
+    }
+    fn description(&self) -> &str {
+        "Import sessions from session.export JSONL (path or inline jsonl) — preserves ids, timestamps, and tags; overwrites on id collision."
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let payload = match args
+            .get("path")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+        {
+            Some(path) => std::fs::read_to_string(path)
+                .map_err(|e| wm_core::CoreError::Tool(format!("import read {path}: {e}")))?,
+            None => args
+                .get("jsonl")
+                .and_then(Value::as_str)
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs(
+                        "provide either 'path' or inline 'jsonl'".into(),
+                    )
+                })?
+                .to_string(),
+        };
+
+        let mut imported = 0usize;
+        let mut skipped = 0usize;
+        let mut session_ids: Vec<String> = Vec::new();
+        for (lineno, line) in payload.lines().enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let mem: Memory = match serde_json::from_str(line) {
+                Ok(m) => m,
+                Err(e) => {
+                    skipped += 1;
+                    tracing::warn!(line = lineno + 1, error = %e, "skipping unparseable export line");
+                    continue;
+                }
+            };
+            if let Ok(parsed) = serde_json::from_str::<Value>(&mem.content) {
+                if let Some(sid) = parsed.get("session_id").and_then(Value::as_str) {
+                    if !session_ids.iter().any(|s| s == sid) {
+                        session_ids.push(sid.to_string());
+                    }
+                }
+            }
+            self.store.put(Galaxy::Sessions, &mem)?;
+            imported += 1;
+        }
+
+        Ok(json!({
+            "status": "success",
+            "imported": imported,
+            "skipped": skipped,
+            "session_ids": session_ids,
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
 pub fn register_session_ops(
     registry: &wm_dispatch::ToolRegistry,
     store: &Arc<MemoryStore>,
@@ -928,6 +1139,8 @@ pub fn register_session_ops(
         .register(Arc::new(SessionReplayTool::new(store.clone())))
         .register(Arc::new(SessionContinuityTool::new(store.clone())))
         .register(Arc::new(SessionHandoffTool::new(store.clone())))
+        .register(Arc::new(SessionExportTool::new(store.clone())))
+        .register(Arc::new(SessionImportTool::new(store.clone())))
 }
 
 #[cfg(test)]
@@ -1271,6 +1484,114 @@ mod tests {
             !digest_text.contains("240ms"),
             "superseded claim must not leak: {digest_text}"
         );
+    }
+
+    #[tokio::test]
+    async fn export_import_roundtrip_preserves_history() {
+        // B3 acceptance: export → import into a FRESH store → continuity and
+        // replay return identical turns (ids, timestamps, tags intact).
+        let store_a = test_store();
+        let sid = start_session(&store_a);
+        let record = SessionRecordTool::new(store_a.clone());
+        let mut ctx = Context::default();
+        record_aged_turn(&store_a, &sid, 2, "day-one decision");
+        record_aged_turn(&store_a, &sid, 1, "day-two decision");
+        let first = record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "turn_type": "decision", "importance": 0.9,
+                        "content": "original claim", "session_id": sid}),
+            )
+            .await
+            .unwrap();
+        record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "turn_type": "decision", "importance": 0.9,
+                        "content": "corrected claim",
+                        "session_id": sid,
+                        "supersedes": first["memory_id"].as_str().unwrap()}),
+            )
+            .await
+            .unwrap();
+
+        // Export inline.
+        let export = SessionExportTool::new(store_a.clone());
+        let exported = export
+            .call(&mut ctx, json!({"session_id": sid}))
+            .await
+            .unwrap();
+        assert_eq!(exported["status"], "success");
+        let jsonl = exported["jsonl"].as_str().unwrap();
+        // start + 4 turns (incl. superseded) = 6 records minimum.
+        assert_eq!(
+            exported["records"], 5,
+            "start + 2 aged + 2 claims: {exported}"
+        );
+        assert_eq!(jsonl.lines().count(), 5);
+
+        // Import into a completely fresh store.
+        let store_b = test_store();
+        let import = SessionImportTool::new(store_b.clone());
+        let imported = import
+            .call(&mut ctx, json!({"jsonl": jsonl}))
+            .await
+            .unwrap();
+        assert_eq!(imported["imported"], 5, "got: {imported}");
+        assert_eq!(imported["skipped"], 0);
+        assert_eq!(imported["session_ids"], json!([sid]));
+
+        // Replay in store B matches the current story exactly...
+        let replay_b = SessionReplayTool::new(store_b.clone());
+        let v = replay_b
+            .call(&mut ctx, json!({"session_id": sid}))
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 3, "two aged turns + correction: {v}");
+        let contents: Vec<&str> = v["turns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|t| t["content"].as_str())
+            .collect();
+        assert!(contents.contains(&"day-one decision"));
+        assert!(contents.contains(&"corrected claim"));
+        assert!(!contents.contains(&"original claim"));
+
+        // ...and with history the superseded turn is still there.
+        let full = replay_b
+            .call(
+                &mut ctx,
+                json!({"session_id": sid, "include_superseded": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(full["count"], 4);
+
+        // Continuity in store B sees an imported prior session by recency.
+        let new_sid = start_session(&store_b);
+        let continuity = SessionContinuityTool::new(store_b);
+        let c = continuity
+            .call(
+                &mut ctx,
+                json!({"current_session_id": new_sid, "since":
+                    (Utc::now() - chrono::Duration::days(3)).format("%Y-%m-%d").to_string()}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            c["previous_session"], sid,
+            "import must preserve created_at so recency resolution works"
+        );
+        assert_eq!(c["count"], 3);
+    }
+
+    #[tokio::test]
+    async fn import_rejects_missing_payload() {
+        let store = test_store();
+        let tool = SessionImportTool::new(store);
+        let mut ctx = Context::default();
+        assert!(tool.call(&mut ctx, json!({})).await.is_err());
     }
 
     #[tokio::test]

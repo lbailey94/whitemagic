@@ -118,16 +118,17 @@ Fix: both tools now resolve by `created_at`
 
 ## Known gaps / follow-ups
 
-1. **Friction blind spot in read-only mode** — friction auto-log, karma,
-   audit journal, and stats persistence are all gated on `!readonly`, so RO
-   servers record nothing about the failures agents hit. Consider a sidecar
-   JSONL friction sink for RO mode.
-2. **No session export/import** — needed to re-home historical sessions.
-3. **Tantivy lag on RO search** — a read-only open does not observe writes
-   made after it started; restart RO servers after writing to a store.
-4. **Stray `wm serve` processes hold the Tantivy lock** — if a writable open
-   fails with `LockBusy`, check `pgrep -af "wm serve"` before assuming
-   corruption.
-5. **Soft scoping (tier 2)** — `WM_PROJECT` is currently disclosure-only;
-   stamping it onto memories/sessions and filtering continuity by it would
-   make recall project-aware inside a shared store if ever needed again.
+1. **Friction blind spot in read-only mode** — RESOLVED 2026-08-23: RO
+   servers append dispatch failures to `<store-root>/friction_ro.jsonl`
+   (append-only JSONL, no LMDB writes).
+2. **No session export/import** — RESOLVED 2026-08-23: `session.export` /
+   `session.import` move full sessions (ids/timestamps/tags preserved,
+   superseded history included) between stores. The stranded NEON session
+   was re-homed to its project store the same day.
+3. **Tantivy lag on RO search** — MITIGATED 2026-08-23: read-only opens
+   warn at startup that later writes are invisible until restart.
+4. **Stray `wm serve` processes hold the Tantivy lock** — IMPROVED
+   2026-08-23: LockBusy errors now name the index path and suggest
+   `pgrep -af wm`.
+5. **Soft scoping (tier 2)** — deliberately skipped: hard per-project
+   isolation already prevents the failure mode.
