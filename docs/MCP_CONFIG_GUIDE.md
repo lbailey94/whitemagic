@@ -45,6 +45,34 @@ different location to use a specific store:
 }
 ```
 
+## One store per project (recommended for multi-project users)
+
+If you work across several projects, give each project its own store and
+scope label instead of sharing one global store — otherwise `session.continuity`
+returns whichever project ran last and memories cross-contaminate. Per
+client, scope the config to the project directory and set `WM_PROJECT`:
+
+```json
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "~/.local/bin/wm",
+      "args": ["serve", "--profile", "curated", "--store",
+               "~/.local/share/whitemagic-<project>"],
+      "env": {
+        "RUST_LOG": "warn",
+        "WM_PROJECT": "<project>"
+      }
+    }
+  }
+}
+```
+
+The server discloses mode, project, and store path in the MCP handshake and
+`tools/list`, so agents can confirm which memory slice they are bound to
+before writing. Layout details, hygiene conventions (`project:<name>` tags),
+and a worked example: [`MULTI_PROJECT_MEMORY.md`](MULTI_PROJECT_MEMORY.md).
+
 ## Read-only access to a shared store
 
 When another process (e.g. `wm daemon`) owns the store, add `--readonly`:
@@ -61,7 +89,9 @@ When another process (e.g. `wm daemon`) owns the store, add `--readonly`:
 ```
 
 Reads, search, session replay, and claims calibration all work in read-only
-mode; mutations are refused with a clear error.
+mode; mutations are refused with an error that states the mode and how to
+fix the configuration. The server also announces read-only mode in its MCP
+handshake and `tools/list` so agents do not waste attempts on writes.
 
 ## Claude Desktop
 
@@ -95,6 +125,7 @@ explicit routes:
 | `WM_DISPATCH_TOOL_RPM` | 60 | Per-tool dispatch rate limit |
 | `WM_DISPATCH_GLOBAL_RPM` | 300 | Global dispatch limit |
 | `WM_DISPATCH_BURST` | 10 | Burst allowance per tool |
+| `WM_PROJECT` | unset | Project scope label disclosed in the MCP handshake and `tools/list` |
 | `WM_EMBEDDER_ENDPOINT` | unset | Optional embedding backend for semantic routing (e.g. llama-server `/v1/embeddings`) |
 
 ## Troubleshooting

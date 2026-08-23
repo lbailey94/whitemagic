@@ -718,9 +718,9 @@ fn run_restore(
             .ok_or_else(|| anyhow::anyhow!("bad SHA256SUMS line: {line}"))?;
         // Manifest paths are relative to the backup root with a data/ prefix,
         // so `sha256sum -c` works from the backup directory itself.
-        let rel = manifest_path
-            .strip_prefix("data/")
-            .ok_or_else(|| anyhow::anyhow!("bad SHA256SUMS path (missing data/ prefix): {manifest_path}"))?;
+        let rel = manifest_path.strip_prefix("data/").ok_or_else(|| {
+            anyhow::anyhow!("bad SHA256SUMS path (missing data/ prefix): {manifest_path}")
+        })?;
         let abs = data_src.join(rel);
         let actual = {
             let mut hasher = sha2::Sha256::new();

@@ -139,15 +139,19 @@ impl Tool for SessionRecordTool {
         let session_id = args.get("session_id").and_then(Value::as_str);
 
         // Resolve the session: explicit id, or the most recent session_start.
+        // Resolution MUST use `created_at`, not iteration position: LMDB scan
+        // order is key (UUID) order, which is random for v4 UUIDs — picking
+        // positionally (`next_back`) silently misfiles turns into an
+        // arbitrary session once more than one start exists.
         let session_id: String = if let Some(sid) = session_id {
             sid.to_string()
         } else {
-            let memories = self.store.scan_all(Galaxy::Sessions)?;
-            memories
+            self.store
+                .scan_all(Galaxy::Sessions)?
                 .iter()
                 .filter(|m| m.metadata.tags.contains(&"start".to_string()))
+                .max_by_key(|m| m.metadata.created_at)
                 .map(|m| m.metadata.id.to_string())
-                .next_back()
                 .ok_or_else(|| {
                     wm_core::CoreError::Tool("no session found — run session.start first".into())
                 })?
@@ -370,11 +374,16 @@ impl Tool for SessionContinuityTool {
         let n = args.get("n").and_then(Value::as_u64).unwrap_or(10) as usize;
 
         // Find the most recent session_start that is not the current session.
+        // `rfind` on scan order is a UUID lottery (LMDB iterates by key, and
+        // v4 keys are random) — resolve by `created_at` instead.
         let memories = self.store.scan_all(Galaxy::Sessions)?;
-        let previous = memories.iter().rfind(|m| {
-            m.metadata.tags.contains(&"start".to_string())
-                && current.is_none_or(|c| m.metadata.id.to_string() != c)
-        });
+        let previous = memories
+            .iter()
+            .filter(|m| {
+                m.metadata.tags.contains(&"start".to_string())
+                    && current.is_none_or(|c| m.metadata.id.to_string() != c)
+            })
+            .max_by_key(|m| m.metadata.created_at);
 
         let Some(prev) = previous else {
             return Ok(json!({
@@ -599,6 +608,19 @@ mod tests {
         mem.metadata.id.to_string()
     }
 
+    /// Start a session with an explicit `created_at` age so tests can pin
+    /// recency independent of UUID sort order.
+    fn start_session_aged(store: &MemoryStore, age_secs: i64) -> String {
+        let mut mem = Memory::new(
+            Galaxy::Sessions,
+            json!({"type": "session_start"}).to_string(),
+        );
+        mem.metadata.tags = vec!["session".into(), "start".into()];
+        mem.metadata.created_at = chrono::Utc::now() - chrono::Duration::seconds(age_secs);
+        store.put(Galaxy::Sessions, &mem).unwrap();
+        mem.metadata.id.to_string()
+    }
+
     #[tokio::test]
     async fn record_then_replay_full() {
         let store = test_store();
@@ -663,6 +685,54 @@ mod tests {
         assert_eq!(v["previous_session"], sid1);
         assert_eq!(v["count"], 2);
         assert_eq!(v["turns"][1]["content"], "turn 4");
+    }
+
+    #[tokio::test]
+    async fn record_defaults_to_newest_start_by_time_not_key_order() {
+        // Regression: LMDB iterates by UUID key, which is random for v4 —
+        // positional "last" silently misfiled turns into arbitrary sessions
+        // once more than one start existed (observed live 2026-08-22 when a
+        // fresh session's record landed in an older NEON session).
+        let store = test_store();
+        for age in [50_000, 40_000, 30_000, 20_000, 10_000] {
+            start_session_aged(&store, age);
+        }
+        let newest = start_session_aged(&store, 0);
+
+        let record = SessionRecordTool::new(store);
+        let mut ctx = Context::default();
+        let r = record
+            .call(&mut ctx, json!({"role": "ai", "content": "latest turn"}))
+            .await
+            .unwrap();
+        assert_eq!(
+            r["session_id"], newest,
+            "record without explicit session_id must target the newest start by created_at"
+        );
+    }
+
+    #[tokio::test]
+    async fn continuity_picks_newest_prior_by_time_not_key_order() {
+        // Regression companion: continuity must exclude the current session
+        // and pick the most recent PRIOR start by created_at, not by scan
+        // position.
+        let store = test_store();
+        for age in [40_000, 30_000, 20_000] {
+            start_session_aged(&store, age);
+        }
+        let newest_prior = start_session_aged(&store, 10);
+        let current = start_session_aged(&store, 0);
+
+        let continuity = SessionContinuityTool::new(store);
+        let mut ctx = Context::default();
+        let v = continuity
+            .call(&mut ctx, json!({"current_session_id": current, "n": 1}))
+            .await
+            .unwrap();
+        assert_eq!(
+            v["previous_session"], newest_prior,
+            "continuity must select the newest prior session by created_at"
+        );
     }
 
     #[tokio::test]

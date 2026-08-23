@@ -122,6 +122,12 @@ pub struct McpServer {
     /// Active tool surface profile name — reported in `tools/list` so
     /// discovery reflects the profile instead of the full archive.
     profile_name: &'static str,
+    /// Store directory backing this server — disclosed in `initialize` and
+    /// `tools/list` so agents can tell which memory scope they are using.
+    store_path: Option<String>,
+    /// Project scope (from `WM_PROJECT`, per-project memory isolation) —
+    /// disclosed in `initialize` and `tools/list`.
+    project: Option<String>,
 }
 
 /// JSON-RPC request envelope.
@@ -156,6 +162,10 @@ struct RpcError {
     #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<Value>,
 }
+
+/// Appended to read-only write refusals so agents know the fix instead of
+/// retrying writes against a server that will always refuse them.
+const READONLY_HINT: &str = " (hint: this MCP server was started with --readonly — point this project's config at a writable server to record memories/sessions)";
 
 /// Build a JSON-RPC error response.
 fn error_response(
@@ -382,6 +392,8 @@ impl McpServer {
             tx_firewall: None,
             readonly: false,
             profile_name: "full",
+            store_path: None,
+            project: None,
         }
     }
 
@@ -397,6 +409,17 @@ impl McpServer {
     #[must_use]
     pub const fn with_profile_name(mut self, name: &'static str) -> Self {
         self.profile_name = name;
+        self
+    }
+
+    /// Set the project scope disclosed in `initialize` and `tools/list`.
+    ///
+    /// Per-project isolation wires one store per project; the scope label
+    /// lets agents confirm which memory slice they are talking to before
+    /// their first write instead of after a cross-project mixup.
+    #[must_use]
+    pub fn with_project(mut self, project: Option<String>) -> Self {
+        self.project = project.filter(|s| !s.is_empty());
         self
     }
 
@@ -904,6 +927,12 @@ impl McpServer {
         )
         .with_readonly(readonly)
         .with_profile_name(profile.name);
+
+        // Disclose the memory scope up front (initialize + tools/list) so an
+        // agent knows which store and project it is bound to before its first
+        // write — not after a cross-project mixup or a refused write.
+        server.store_path = Some(store_path.display().to_string());
+        server.project = std::env::var("WM_PROJECT").ok().filter(|s| !s.is_empty());
 
         // Override mutable structure registries with shared instances (Phase 6)
         server.gana_registry = gana_registry;
@@ -2112,6 +2141,41 @@ impl McpServer {
 
     /// Handle `initialize` — return server capabilities.
     fn handle_initialize(&self) -> Result<Value, RpcError> {
+        use std::fmt::Write as _;
+        let mut instructions = String::from(concat!(
+            "WhiteMagic gives you durable local project memory. Session rhythm:\n",
+            "1. Before starting work, call wm(route=\"session.continuity\") to recall where the previous session left off.\n",
+            "2. Start each working session with wm(route=\"session.start\", args={\"title\": \"...\"}).\n",
+            "3. Record selectively as you go — decisions, breakthroughs, errors worth remembering, and summaries — via wm(route=\"session.record\", args={\"content\": \"...\", \"role\": \"ai\", \"turn_type\": \"decision\"|\"breakthrough\"|\"error\"|\"summary\", \"importance\": 0.0-1.0}). Do not record everything; record what a future session needs.\n",
+            "4. Use explicit route= dispatch for important operations so behavior is dependable.\n",
+            "5. At the end of a session, record a short summary turn, then wm(route=\"session.checkpoint\").\n",
+            "6. Discover the available surface with wm(route=\"tools.list\").\n",
+            "Privacy and backup: memory is stored locally under your store directory and is not encrypted — never record credentials or secrets. Back up the whole store directory regularly; privacy flags exclude memories from responses but do not encrypt them."
+        ));
+        if self.readonly {
+            instructions.push_str(
+                "\nMode: READ-ONLY — every write (session.start/record/checkpoint, memory.create, memory.update) is refused by governance. Use this server for recall only; do not retry writes against it.",
+            );
+        } else {
+            instructions
+                .push_str("\nMode: writable — session recording and memory writes are permitted.");
+        }
+        match (&self.project, &self.store_path) {
+            (Some(project), Some(store)) => write!(
+                instructions,
+                "\nScope: project '{project}', store {store}. Memories in this store belong to this project."
+            )
+            .expect("write to String cannot fail"),
+            (Some(project), None) => write!(
+                instructions,
+                "\nScope: project '{project}'. Memories in this store belong to this project."
+            )
+            .expect("write to String cannot fail"),
+            (None, Some(store)) => {
+                write!(instructions, "\nScope: store {store}.").expect("write to String cannot fail");
+            }
+            (None, None) => {}
+        }
         Ok(json!({
             "protocolVersion": "2024-11-05",
             "serverInfo": {
@@ -2121,16 +2185,7 @@ impl McpServer {
             "capabilities": {
                 "tools": {},
             },
-            "instructions": concat!(
-                "WhiteMagic gives you durable local project memory. Session rhythm:\n",
-                "1. Before starting work, call wm(route=\"session.continuity\") to recall where the previous session left off.\n",
-                "2. Start each working session with wm(route=\"session.start\", args={\"title\": \"...\"}).\n",
-                "3. Record selectively as you go — decisions, breakthroughs, errors worth remembering, and summaries — via wm(route=\"session.record\", args={\"content\": \"...\", \"role\": \"ai\", \"turn_type\": \"decision\"|\"breakthrough\"|\"error\"|\"summary\", \"importance\": 0.0-1.0}). Do not record everything; record what a future session needs.\n",
-                "4. Use explicit route= dispatch for important operations so behavior is dependable.\n",
-                "5. At the end of a session, record a short summary turn, then wm(route=\"session.checkpoint\").\n",
-                "6. Discover the available surface with wm(route=\"tools.list\").\n",
-                "Privacy and backup: memory is stored locally under your store directory and is not encrypted — never record credentials or secrets. Back up the whole store directory regularly; privacy flags exclude memories from responses but do not encrypt them."
-            ),
+            "instructions": instructions,
         }))
     }
 
@@ -2166,9 +2221,23 @@ impl McpServer {
                     !["wm", "tools.list", "gnosis", "nlu.shadow_report"].contains(&t.name())
                 })
                 .count();
+            let mode_hint = if self.readonly {
+                " Mode: READ-ONLY — writes (session.*, memory.create/update) are refused; recall only."
+                    .to_string()
+            } else {
+                " Mode: writable.".to_string()
+            };
+            let scope = match (&self.project, &self.store_path) {
+                (Some(project), Some(store)) => {
+                    format!(" Scope: project '{project}', store {store}.")
+                }
+                (Some(project), None) => format!(" Scope: project '{project}'."),
+                (None, Some(store)) => format!(" Scope: store {store}."),
+                (None, None) => String::new(),
+            };
             let description = format!(
-                "WhiteMagic meta-tool — {} tool surface ({} tools). Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create'), and args= for passthrough arguments. Say 'list tools' to discover available tools.",
-                self.profile_name, tool_count
+                "WhiteMagic meta-tool — {} tool surface ({} tools).{}{} Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create'), and args= for passthrough arguments. Say 'list tools' to discover available tools.",
+                self.profile_name, tool_count, mode_hint, scope
             );
             Ok(json!({
                 "tools": [{
@@ -2755,11 +2824,38 @@ impl McpServer {
         // request counts duplicated the scheduler and added multi-millisecond
         // (dream: multi-second) latency spikes to user requests.
 
-        let result = dispatch_result.map_err(|e| RpcError {
-            code: -32603,
-            message: e.to_string(),
-            data: None,
+        let mut result = dispatch_result.map_err(|e| {
+            // The most common boundary mistake is writing through a
+            // --readonly server (session.start, memory.create). Make the
+            // refusal actionable instead of a dead end.
+            let mut message = e.to_string();
+            if self.readonly && message.contains("read-only") {
+                message.push_str(READONLY_HINT);
+            }
+            RpcError {
+                code: -32603,
+                message,
+                data: None,
+            }
         })?;
+
+        // Inner failures routed through the `wm` meta-tool surface as
+        // {"status":"error"} payloads (Ok at the JSON-RPC level) so NLU
+        // clients can read them. Enrich read-only refusals there too so both
+        // dispatch paths carry the same actionable guidance.
+        if self.readonly {
+            if let Some(obj) = result.as_object_mut() {
+                if obj.get("status").and_then(Value::as_str) == Some("error") {
+                    for key in ["error", "message"] {
+                        if let Some(Value::String(msg)) = obj.get_mut(key) {
+                            if msg.contains("read-only") && !msg.contains("--readonly") {
+                                msg.push_str(READONLY_HINT);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Ok(json!({
             "content": [{
@@ -3118,6 +3214,130 @@ mod tests {
         let result = server.handle_tools_list().unwrap();
         let tools = result["tools"].as_array().unwrap().clone();
         assert_eq!(tools.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn tools_list_discloses_mode_store_and_project() {
+        // Per-project isolation: the agent must be able to tell which memory
+        // scope and mode it is on from discovery alone, before any dispatch.
+        let mut server = test_server();
+        server.readonly = true;
+        server.store_path = Some("/tmp/wm-test/neon".to_string());
+        server.project = Some("neon".to_string());
+        let _ = server.eco_mode.record_event();
+        let result = server.handle_tools_list().unwrap();
+        let description = result["tools"][0]["description"].as_str().unwrap();
+        assert!(
+            description.contains("READ-ONLY"),
+            "read-only server must disclose its mode in tools/list, got: {description}"
+        );
+        assert!(
+            description.contains("project 'neon'"),
+            "tools/list must disclose the project scope, got: {description}"
+        );
+        assert!(
+            description.contains("/tmp/wm-test/neon"),
+            "tools/list must disclose the store path, got: {description}"
+        );
+
+        // Writable counterpart: no read-only claim.
+        let mut writable = test_server();
+        writable.project = Some("neon".to_string());
+        let _ = writable.eco_mode.record_event();
+        let result = writable.handle_tools_list().unwrap();
+        let description = result["tools"][0]["description"].as_str().unwrap();
+        assert!(
+            description.contains("writable") && !description.contains("READ-ONLY"),
+            "writable server must not claim READ-ONLY, got: {description}"
+        );
+    }
+
+    #[tokio::test]
+    async fn readonly_write_refusal_is_actionable() {
+        // A write against a --readonly server should say how to fix it, not
+        // just refuse — agents were burning turns retrying writes today.
+
+        // Path 1: routed through the `wm` meta-tool — inner failure surfaces
+        // as an Ok payload with {"status":"error"}.
+        let mut server = test_server();
+        server.readonly = true;
+        let req = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(3)),
+            method: "tools/call".into(),
+            params: json!({
+                "name": "wm",
+                "arguments": {
+                    "route": "session.start",
+                    "args": {"title": "should fail"}
+                }
+            }),
+        };
+        let resp = server.handle(&req).await;
+        let result = resp
+            .result
+            .expect("wm-routed failure must be a readable payload");
+        let payload: Value =
+            serde_json::from_str(result["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(payload["status"], "error");
+        let message = payload["error"].as_str().unwrap();
+        assert!(
+            message.contains("--readonly"),
+            "wm-routed readonly refusal must include actionable hint, got: {message}"
+        );
+
+        // Path 2: direct dispatch of a declaring-writes tool — the pipeline
+        // gate refuses at the outer level as a JSON-RPC error.
+        let mut direct = test_server();
+        direct.readonly = true;
+        let req = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(4)),
+            method: "tools/call".into(),
+            params: json!({
+                "name": "memory.create",
+                "arguments": {"content": "should fail", "galaxy": "Tutorial"}
+            }),
+        };
+        let resp = direct.handle(&req).await;
+        let error = resp.error.expect("direct write through readonly must fail");
+        assert!(
+            error.message.contains("read-only") && error.message.contains("--readonly"),
+            "direct readonly refusal must preserve cause + hint, got: {}",
+            error.message
+        );
+    }
+
+    #[tokio::test]
+    async fn initialize_instructions_disclose_mode_and_scope() {
+        let mut server = test_server();
+        server.readonly = true;
+        server.store_path = Some("/tmp/wm-test/neon".to_string());
+        server.project = Some("neon".to_string());
+        let result = server.handle_initialize().unwrap();
+        let instructions = result["instructions"].as_str().unwrap();
+        assert!(
+            instructions.contains("READ-ONLY"),
+            "initialize instructions must disclose read-only mode, got: {instructions}"
+        );
+        assert!(
+            instructions.contains("project 'neon'") && instructions.contains("/tmp/wm-test/neon"),
+            "initialize instructions must disclose scope, got: {instructions}"
+        );
+        assert!(
+            instructions.contains("recall only"),
+            "initialize must tell agents not to write in read-only mode, got: {instructions}"
+        );
+
+        // Writable mode keeps the session rhythm usable and says so.
+        let writable = test_server();
+        let result = writable.handle_initialize().unwrap();
+        let instructions = result["instructions"].as_str().unwrap();
+        assert!(
+            instructions.contains("Mode: writable"),
+            "initialize must disclose writable mode, got: {instructions}"
+        );
+        assert!(!instructions.contains("READ-ONLY"));
     }
 
     #[tokio::test]

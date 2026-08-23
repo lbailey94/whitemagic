@@ -41,3 +41,7 @@ __pycache__/
 !/fuzz/corpus/*/
 /fuzz/corpus/*/*
 !/fuzz/corpus/*/seed_*
+
+# Per-project opencode MCP wiring — machine-specific absolute paths; the
+# committed template lives in docs/MULTI_PROJECT_MEMORY.md
+/opencode.jsonc
