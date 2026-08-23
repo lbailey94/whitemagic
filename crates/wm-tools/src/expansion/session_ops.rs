@@ -9,10 +9,66 @@
 
 use async_trait::async_trait;
 
+use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use serde_json::{Value, json};
+use std::fmt::Write as _;
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
 use wm_memory::{Memory, MemoryStore};
+
+/// Parse a time-bound argument: epoch seconds (number) or RFC 3339 /
+/// `YYYY-MM-DD` (string; date-only means start of day for `since`, end of
+/// day for `until`).
+fn parse_time_bound(v: &Value, end_of_day: bool) -> Option<DateTime<Utc>> {
+    if let Some(secs) = v
+        .as_i64()
+        .or_else(|| v.as_u64().and_then(|u| i64::try_from(u).ok()))
+    {
+        return Utc.timestamp_opt(secs, 0).single();
+    }
+    let s = v.as_str()?;
+    if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+        return Some(dt.with_timezone(&Utc));
+    }
+    let day = NaiveDate::parse_from_str(s, "%Y-%m-%d").ok()?;
+    let naive = if end_of_day {
+        day.and_hms_opt(23, 59, 59)?
+    } else {
+        day.and_hms_opt(0, 0, 0)?
+    };
+    Some(naive.and_utc())
+}
+
+/// Apply `since`/`until` time-range filters over loaded turns by their
+/// memory creation time. Invalid bounds are a caller error, not silence.
+fn filter_by_time(
+    turns: Vec<(Memory, Value)>,
+    args: &Value,
+) -> wm_core::Result<Vec<(Memory, Value)>> {
+    let since = match args.get("since") {
+        Some(v) if !v.is_null() => Some(parse_time_bound(v, false).ok_or_else(|| {
+            wm_core::CoreError::InvalidArgs(
+                "invalid 'since' — use epoch seconds, RFC 3339, or YYYY-MM-DD".into(),
+            )
+        })?),
+        _ => None,
+    };
+    let until = match args.get("until") {
+        Some(v) if !v.is_null() => Some(parse_time_bound(v, true).ok_or_else(|| {
+            wm_core::CoreError::InvalidArgs(
+                "invalid 'until' — use epoch seconds, RFC 3339, or YYYY-MM-DD".into(),
+            )
+        })?),
+        _ => None,
+    };
+    Ok(turns
+        .into_iter()
+        .filter(|(m, _)| {
+            since.is_none_or(|t| m.metadata.created_at >= t)
+                && until.is_none_or(|t| m.metadata.created_at <= t)
+        })
+        .collect())
+}
 
 fn turn_json(mem: &Memory) -> Option<Value> {
     let v: Value = serde_json::from_str(&mem.content).ok()?;
@@ -23,15 +79,28 @@ fn turn_json(mem: &Memory) -> Option<Value> {
     }
 }
 
-/// Load turns for a session (or all sessions), newest last.
+/// Load turns for a session (or all sessions).
+///
+/// Turns tagged `superseded-by:<id>` are excluded unless
+/// `include_superseded` — supersession is the amend mechanism for evolving
+/// stories, and consumers want the current story by default.
 fn load_turns(
     store: &MemoryStore,
     session_id: Option<&str>,
     limit: usize,
+    include_superseded: bool,
 ) -> wm_core::Result<Vec<(Memory, Value)>> {
     let memories = store.scan_all(Galaxy::Sessions)?;
     let mut turns: Vec<(Memory, Value)> = memories
         .iter()
+        .filter(|m| {
+            include_superseded
+                || !m
+                    .metadata
+                    .tags
+                    .iter()
+                    .any(|t| t.starts_with("superseded-by:"))
+        })
         .filter_map(|m| turn_json(m).map(|v| (m.clone(), v)))
         .filter(|(_, v)| {
             session_id.is_none_or(|sid| v.get("session_id").and_then(Value::as_str) == Some(sid))
@@ -109,12 +178,13 @@ impl Tool for SessionRecordTool {
                 "turn_type": super::common::str_prop("message, decision, breakthrough, question, answer, code_change, error, summary, context"),
                 "importance": super::common::num_prop("0-1 importance (default 0.5)"),
                 "session_id": super::common::str_prop("Target session (default: most recent session)"),
+                "supersedes": super::common::str_prop("Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)"),
             }),
             &["content"],
         )
     }
     fn description(&self) -> &str {
-        "Record a conversation turn as persistent session memory. Args: content (required), role (user|ai, default user), turn_type (default message), importance (0-1, default 0.5), session_id (optional — defaults to the most recent session)."
+        "Record a conversation turn as persistent session memory. Args: content (required), role (user|ai, default user), turn_type (default message), importance (0-1, default 0.5), session_id (optional — defaults to the most recent session), supersedes (optional turn memory-id — marks the old turn superseded so replay/continuity/digest use the new record)."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let role = args.get("role").and_then(Value::as_str).unwrap_or("user");
@@ -157,8 +227,9 @@ impl Tool for SessionRecordTool {
                 })?
         };
 
-        // Sequence = existing turns for this session + 1.
-        let sequence = load_turns(&self.store, Some(&session_id), 10_000)?.len() as u64 + 1;
+        // Sequence = existing turns for this session + 1 (superseded turns
+        // still count — the log position is history, visibility is separate).
+        let sequence = load_turns(&self.store, Some(&session_id), 10_000, true)?.len() as u64 + 1;
 
         let mut mem = Memory::new(
             Galaxy::Sessions,
@@ -181,6 +252,24 @@ impl Tool for SessionRecordTool {
             turn_type.into(),
             format!("session:{session_id}"),
         ];
+
+        // Amend-with-supersede (P2): mark the corrected turn so default
+        // retrieval uses the new record. History stays intact — the old turn
+        // remains queryable via include_superseded.
+        if let Some(old_id_str) = args.get("supersedes").and_then(Value::as_str) {
+            let old_id = uuid::Uuid::parse_str(old_id_str).map_err(|e| {
+                wm_core::CoreError::InvalidArgs(format!("invalid 'supersedes' id: {e}"))
+            })?;
+            let mut old = self.store.get(Galaxy::Sessions, old_id)?.ok_or_else(|| {
+                wm_core::CoreError::NotFound(format!("superseded turn {old_id} not found"))
+            })?;
+            old.metadata
+                .tags
+                .push(format!("superseded-by:{}", mem.metadata.id));
+            self.store.put(Galaxy::Sessions, &old)?;
+            mem.metadata.tags.push(format!("supersedes:{old_id}"));
+        }
+
         mem.metadata.importance = importance as f32;
         self.store.put(Galaxy::Sessions, &mem)?;
         Ok(json!({
@@ -230,6 +319,12 @@ impl Tool for SessionReplayTool {
                 "mode": super::common::str_prop("full | selective | progressive (default full)"),
                 "session_id": super::common::str_prop("Target session (default: most recent)"),
                 "n": super::common::int_prop("Maximum turns (default 50)"),
+                "since": super::common::str_prop("Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+                "until": super::common::str_prop("Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+                "include_superseded": {
+                    "type": "boolean",
+                    "description": "Also return turns replaced via supersedes (default false)."
+                },
                 "turn_types": super::common::str_array_prop("Selective mode: turn types to keep"),
                 "min_importance": super::common::num_prop("Selective mode floor (default 0.7)"),
                 "token_budget": super::common::int_prop("Progressive mode token budget (default 2000)"),
@@ -238,13 +333,20 @@ impl Tool for SessionReplayTool {
         )
     }
     fn description(&self) -> &str {
-        "Replay session turns. Args: mode (full|selective|progressive, default full), session_id (optional), n (default 50), turn_types (list, for selective), min_importance (0-1, default 0.7, for selective), token_budget (default 2000, for progressive)."
+        "Replay session turns. Args: mode (full|selective|progressive, default full), session_id (optional), n (default 50), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD — applies to all modes), include_superseded (default false), turn_types (list, for selective), min_importance (0-1, default 0.7, for selective), token_budget (default 2000, for progressive)."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let mode = args.get("mode").and_then(Value::as_str).unwrap_or("full");
         let session_id = args.get("session_id").and_then(Value::as_str);
         let n = args.get("n").and_then(Value::as_u64).unwrap_or(50) as usize;
-        let turns = load_turns(&self.store, session_id, 10_000)?;
+        let include_superseded = args
+            .get("include_superseded")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let turns = filter_by_time(
+            load_turns(&self.store, session_id, 10_000, include_superseded)?,
+            &args,
+        )?;
 
         // An explicitly requested session that has no turns is an error, not
         // an empty success — silent emptiness hides typos and stale IDs.
@@ -362,12 +464,14 @@ impl Tool for SessionContinuityTool {
             &json!({
                 "current_session_id": super::common::str_prop("Session to exclude (optional)"),
                 "n": super::common::int_prop("Number of prior turns (default 10)"),
+                "since": super::common::str_prop("Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+                "until": super::common::str_prop("Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"),
             }),
             &[],
         )
     }
     fn description(&self) -> &str {
-        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off'). Args: current_session_id (optional, excluded), n (default 10)."
+        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off'). Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD)."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let current = args.get("current_session_id").and_then(Value::as_str);
@@ -396,7 +500,10 @@ impl Tool for SessionContinuityTool {
         };
 
         let prev_id = prev.metadata.id.to_string();
-        let mut turns = load_turns(&self.store, Some(&prev_id), 10_000)?;
+        let mut turns = filter_by_time(
+            load_turns(&self.store, Some(&prev_id), 10_000, false)?,
+            &args,
+        )?;
         let total = turns.len();
         let tail: Vec<Value> = turns
             .split_off(total.saturating_sub(n))
@@ -412,6 +519,242 @@ impl Tool for SessionContinuityTool {
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
+    }
+}
+
+/// `session.digest` — compile a session's records into one handoff block.
+///
+/// The wrap-up writes itself: typed turns grouped by category,
+/// importance-ordered, plus the latest structured checkpoint state if one
+/// exists — so the manual wrap-up that duplicates records by hand becomes a
+/// single deterministic call (experience-report item #4).
+pub struct SessionDigestTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SessionDigestTool {
+    #[must_use]
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sessions".into())]),
+        }
+    }
+}
+
+/// Display order for turn-type sections; unknown types follow, alphabetical.
+const DIGEST_SECTION_ORDER: &[&str] = &["decision", "breakthrough", "error", "summary"];
+
+#[async_trait]
+impl Tool for SessionDigestTool {
+    fn name(&self) -> &str {
+        "session.digest"
+    }
+    fn gana(&self) -> Gana {
+        Gana::StraddlingLegs
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "session_id": super::common::str_prop("Session to digest (default: most recent)"),
+                "min_importance": super::common::num_prop("Importance floor (default 0.5)"),
+                "include_checkpoint": {
+                    "type": "boolean",
+                    "description": "Append the latest checkpoint's git/handoff state (default true)."
+                },
+                "since": super::common::str_prop("Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+                "until": super::common::str_prop("Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+            }),
+            &[],
+        )
+    }
+    fn description(&self) -> &str {
+        "Compile a session into a markdown handoff digest — turns grouped by type and importance-ordered, latest checkpoint state appended. Args: session_id (optional), min_importance (default 0.5), include_checkpoint (default true), since/until."
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let session_id = match args.get("session_id").and_then(Value::as_str) {
+            Some(sid) if !sid.is_empty() => sid.to_string(),
+            _ => self
+                .store
+                .scan_all(Galaxy::Sessions)?
+                .iter()
+                .filter(|m| m.metadata.tags.contains(&"start".to_string()))
+                .max_by_key(|m| m.metadata.created_at)
+                .map(|m| m.metadata.id.to_string())
+                .ok_or_else(|| {
+                    wm_core::CoreError::Tool("no session found — run session.start first".into())
+                })?,
+        };
+        let min_importance = args
+            .get("min_importance")
+            .and_then(Value::as_f64)
+            .unwrap_or(0.5);
+        let include_checkpoint = args
+            .get("include_checkpoint")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+
+        let mut turns: Vec<_> = filter_by_time(
+            load_turns(&self.store, Some(&session_id), 10_000, false)?,
+            &args,
+        )?
+        .into_iter()
+        .filter(|(_, v)| {
+            v.get("importance").and_then(Value::as_f64).unwrap_or(0.0) >= min_importance
+        })
+        .collect();
+        turns.sort_by(|a, b| {
+            b.1.get("importance")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0)
+                .total_cmp(&a.1.get("importance").and_then(Value::as_f64).unwrap_or(0.0))
+        });
+
+        // Group by turn_type; known sections first, others after (alphabetical).
+        let mut groups: Vec<(String, Vec<&Value>)> = Vec::new();
+        for (_, v) in &turns {
+            let t = v
+                .get("turn_type")
+                .and_then(Value::as_str)
+                .unwrap_or("message")
+                .to_string();
+            match groups.iter_mut().find(|(name, _)| *name == t) {
+                Some((_, list)) => list.push(v),
+                None => groups.push((t, vec![v])),
+            }
+        }
+        groups.sort_by_key(|(name, _)| {
+            (
+                DIGEST_SECTION_ORDER
+                    .iter()
+                    .position(|k| k == name)
+                    .unwrap_or(DIGEST_SECTION_ORDER.len()),
+                name.clone(),
+            )
+        });
+
+        let mut digest = format!("# Session handoff — {session_id}\n");
+        let mut included = 0usize;
+        for (turn_type, items) in &groups {
+            writeln!(
+                digest,
+                "\n## {} ({})",
+                capitalize(&pluralize(turn_type)),
+                items.len()
+            )
+            .expect("write to String cannot fail");
+            for v in items {
+                let importance = v.get("importance").and_then(Value::as_f64).unwrap_or(0.0);
+                let content = v.get("content").and_then(Value::as_str).unwrap_or("");
+                writeln!(digest, "- ({importance:.2}) {content}")
+                    .expect("write to String cannot fail");
+                included += 1;
+            }
+        }
+
+        // Latest verifiable checkpoint state, if any.
+        let mut checkpoint_state = Value::Null;
+        if include_checkpoint {
+            if let Some(cp) = self
+                .store
+                .scan_all(Galaxy::Sessions)?
+                .iter()
+                .filter(|m| {
+                    m.metadata.tags.contains(&"checkpoint".to_string())
+                        && m.content.contains(&session_id)
+                })
+                .filter_map(|m| {
+                    let parsed: Value = serde_json::from_str(&m.content).ok()?;
+                    parsed
+                        .get("handoff")
+                        .filter(|h| !h.is_null())
+                        .cloned()
+                        .map(|h| (m.metadata.created_at, h))
+                })
+                .max_by_key(|(created_at, _)| *created_at)
+                .map(|(_, handoff)| handoff)
+            {
+                digest.push_str("\n## Checkpoint state\n");
+                if let Some(git) = cp.get("git") {
+                    writeln!(
+                        digest,
+                        "- commit `{}` on `{}` ({} dirty files)",
+                        git.get("commit").and_then(Value::as_str).unwrap_or("?"),
+                        git.get("branch").and_then(Value::as_str).unwrap_or("?"),
+                        git.get("dirty_count").and_then(Value::as_i64).unwrap_or(0)
+                    )
+                    .expect("write to String cannot fail");
+                }
+                if let Some(q) = cp.get("next_queue").and_then(Value::as_array) {
+                    if !q.is_empty() {
+                        writeln!(
+                            digest,
+                            "- next queue: {}",
+                            q.iter()
+                                .filter_map(Value::as_str)
+                                .collect::<Vec<_>>()
+                                .join(" → ")
+                        )
+                        .expect("write to String cannot fail");
+                    }
+                }
+                if let Some(f) = cp.get("open_flags").and_then(Value::as_array) {
+                    if !f.is_empty() {
+                        writeln!(
+                            digest,
+                            "- open flags: {}",
+                            f.iter()
+                                .filter_map(Value::as_str)
+                                .collect::<Vec<_>>()
+                                .join("; ")
+                        )
+                        .expect("write to String cannot fail");
+                    }
+                }
+                if let Some(tg) = cp.get("tests_green") {
+                    writeln!(digest, "- tests green: {tg}").expect("write to String cannot fail");
+                }
+                checkpoint_state = cp;
+            }
+        }
+
+        Ok(json!({
+            "status": "success",
+            "session_id": session_id,
+            "digest": digest,
+            "turns_included": included,
+            "turns_total_scanned": turns.len(),
+            "sections": groups.iter().map(|(t, items)| json!({"type": t, "count": items.len()})).collect::<Vec<_>>(),
+            "checkpoint": checkpoint_state,
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+/// Capitalize the first letter of a label for section headings.
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
+
+/// Naive English plural for turn-type labels (decision→Decisions,
+/// summary→Summaries).
+fn pluralize(s: &str) -> String {
+    if let Some(stem) = s.strip_suffix('y') {
+        format!("{stem}ies")
+    } else {
+        format!("{s}s")
     }
 }
 
@@ -474,7 +817,7 @@ impl Tool for SessionHandoffTool {
                             )
                         })?;
                 let message = args.get("message").and_then(Value::as_str).unwrap_or("");
-                let turns = load_turns(&self.store, Some(session_id), 10_000)?;
+                let turns = load_turns(&self.store, Some(session_id), 10_000, false)?;
                 if turns.is_empty() {
                     return Err(wm_core::CoreError::Tool(format!(
                         "session {session_id} has no recorded turns"
@@ -619,6 +962,315 @@ mod tests {
         mem.metadata.created_at = chrono::Utc::now() - chrono::Duration::seconds(age_secs);
         store.put(Galaxy::Sessions, &mem).unwrap();
         mem.metadata.id.to_string()
+    }
+
+    /// Record a turn with a backdated creation time (for time-filter tests).
+    fn record_aged_turn(store: &MemoryStore, sid: &str, age_days: u32, content: &str) {
+        let mut mem = Memory::new(
+            Galaxy::Sessions,
+            json!({
+                "type": "session_turn",
+                "session_id": sid,
+                "role": "ai",
+                "turn_type": "decision",
+                "importance": 0.9,
+                "content": content,
+            })
+            .to_string(),
+        );
+        mem.metadata.tags = vec!["session".into(), "turn".into(), format!("session:{sid}")];
+        mem.metadata.created_at = Utc::now() - chrono::Duration::days(i64::from(age_days));
+        store.put(Galaxy::Sessions, &mem).unwrap();
+    }
+
+    #[tokio::test]
+    async fn replay_time_filters_since_and_until() {
+        let store = test_store();
+        let sid = start_session(&store);
+        record_aged_turn(&store, &sid, 3, "three days ago");
+        record_aged_turn(&store, &sid, 2, "two days ago");
+        record_aged_turn(&store, &sid, 1, "yesterday");
+        record_aged_turn(&store, &sid, 0, "today");
+
+        let replay = SessionReplayTool::new(store);
+        let mut ctx = Context::default();
+
+        // "What changed since Tuesday?" — date-only floor.
+        let two_days_ago = (Utc::now() - chrono::Duration::days(2)).format("%Y-%m-%d");
+        let v = replay
+            .call(
+                &mut ctx,
+                json!({"session_id": sid, "since": two_days_ago.to_string()}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 3, "since=date keeps day-of + later: {v}");
+
+        // Epoch-seconds ceiling between the yesterday-turn and today.
+        let until_epoch = (Utc::now() - chrono::Duration::hours(23)).timestamp();
+        let v = replay
+            .call(&mut ctx, json!({"session_id": sid, "until": until_epoch}))
+            .await
+            .unwrap();
+        assert_eq!(
+            v["count"], 3,
+            "until=epoch(23h ago) keeps the three older turns: {v}"
+        );
+
+        // Combined window (half-day margins absorb sub-second record skew).
+        let since = (Utc::now() - chrono::Duration::hours(60)).to_rfc3339();
+        let until = (Utc::now() - chrono::Duration::hours(12)).to_rfc3339();
+        let v = replay
+            .call(
+                &mut ctx,
+                json!({"session_id": sid, "since": since, "until": until}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 2, "window keeps two/two-days-ago turns: {v}");
+        for turn in v["turns"].as_array().unwrap() {
+            assert_ne!(
+                turn["content"], "today",
+                "time filters must exclude out-of-window turns"
+            );
+        }
+
+        // Invalid bound is an error, not silence.
+        assert!(
+            replay
+                .call(&mut ctx, json!({"session_id": sid, "since": "not-a-date"}))
+                .await
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn continuity_respects_since_filter() {
+        let store = test_store();
+        let sid1 = start_session(&store);
+        record_aged_turn(&store, &sid1, 5, "ancient decision");
+        record_aged_turn(&store, &sid1, 0, "fresh decision");
+        let sid2 = start_session(&store);
+
+        let continuity = SessionContinuityTool::new(store);
+        let mut ctx = Context::default();
+        let cutoff = (Utc::now() - chrono::Duration::days(1))
+            .format("%Y-%m-%d")
+            .to_string();
+        let v = continuity
+            .call(
+                &mut ctx,
+                json!({"current_session_id": sid2, "since": cutoff, "n": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 1, "only the fresh turn is in range: {v}");
+        assert_eq!(v["turns"][0]["content"], "fresh decision");
+
+        // Unfiltered still sees both.
+        let all = continuity
+            .call(&mut ctx, json!({"current_session_id": sid2, "n": 10}))
+            .await
+            .unwrap();
+        assert_eq!(all["count"], 2);
+    }
+
+    #[tokio::test]
+    async fn digest_groups_by_type_and_respects_importance_floor() {
+        let store = test_store();
+        let sid = start_session(&store);
+        // Mixed types/importances; the 0.3 turn must not appear.
+        for (turn_type, importance, content) in [
+            ("summary", 0.6, "wrapped up"),
+            ("decision", 0.9, "picked architecture CO over alternatives"),
+            ("error", 0.95, "startForce root cause found"),
+            ("breakthrough", 0.85, "watch resolution insight"),
+            ("message", 0.3, "low-value chatter"),
+        ] {
+            let mut mem = Memory::new(
+                Galaxy::Sessions,
+                json!({
+                    "type": "session_turn",
+                    "session_id": sid,
+                    "role": "ai",
+                    "turn_type": turn_type,
+                    "importance": importance,
+                    "content": content,
+                })
+                .to_string(),
+            );
+            mem.metadata.tags = vec!["session".into(), "turn".into()];
+            store.put(Galaxy::Sessions, &mem).unwrap();
+        }
+
+        let tool = SessionDigestTool::new(store);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"session_id": sid, "min_importance": 0.5}))
+            .await
+            .unwrap();
+
+        assert_eq!(v["status"], "success");
+        let digest = v["digest"].as_str().unwrap();
+        // Every ≥0.85 turn present verbatim.
+        for expected in [
+            "startForce root cause found",
+            "picked architecture CO over alternatives",
+            "watch resolution insight",
+        ] {
+            assert!(
+                digest.contains(expected),
+                "digest must contain '{expected}': {digest}"
+            );
+        }
+        // Nothing below the floor.
+        assert!(!digest.contains("low-value chatter"), "got: {digest}");
+        // Section order: decisions before breakthroughs before errors... per DIGEST_SECTION_ORDER decision<breakthrough<error; summary last of knowns.
+        let d = digest.find("## Decisions").unwrap();
+        let b = digest.find("## Breakthroughs").unwrap();
+        let e = digest.find("## Errors").unwrap();
+        let s = digest.find("## Summaries").unwrap();
+        assert!(
+            d < b && b < e && e < s,
+            "sections must follow canonical order: {digest}"
+        );
+        assert_eq!(v["turns_included"], 4);
+
+        // Raising the floor to 0.9 drops the breakthrough + summary.
+        let strict = tool
+            .call(&mut ctx, json!({"session_id": sid, "min_importance": 0.9}))
+            .await
+            .unwrap();
+        let strict_digest = strict["digest"].as_str().unwrap();
+        assert!(strict_digest.contains("startForce"));
+        assert!(!strict_digest.contains("watch resolution insight"));
+    }
+
+    #[tokio::test]
+    async fn digest_appends_checkpoint_state() {
+        let store = test_store();
+        let sid = start_session(&store);
+
+        // Seed a checkpoint with handoff state directly (avoids git fixture).
+        let mut cp = Memory::new(
+            Galaxy::Sessions,
+            json!({
+                "type": "checkpoint",
+                "session_id": sid,
+                "label": "wrap",
+                "data": {},
+                "handoff": {
+                    "git": {
+                        "commit": "abc1234",
+                        "branch": "main",
+                        "dirty_count": 2
+                    },
+                    "tests_green": true,
+                    "next_queue": ["first task", "second task"],
+                    "open_flags": ["flaky probe"]
+                }
+            })
+            .to_string(),
+        );
+        cp.metadata.tags = vec!["session".into(), "checkpoint".into()];
+        store.put(Galaxy::Sessions, &cp).unwrap();
+
+        let tool = SessionDigestTool::new(store);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"session_id": sid}))
+            .await
+            .unwrap();
+
+        let digest = v["digest"].as_str().unwrap();
+        assert!(digest.contains("## Checkpoint state"), "got: {digest}");
+        assert!(digest.contains("abc1234"));
+        assert!(digest.contains("first task → second task"));
+        assert!(digest.contains("flaky probe"));
+        assert_eq!(v["checkpoint"]["git"]["branch"], "main");
+    }
+
+    #[tokio::test]
+    async fn supersedes_hides_old_turn_until_requested() {
+        // P2: evolving stories amend instead of accumulating contradictory
+        // blobs. The superseded turn leaves default retrieval but stays in
+        // history behind include_superseded.
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+
+        let first = record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "turn_type": "decision", "importance": 0.9,
+                        "content": "perf: 240ms", "session_id": sid}),
+            )
+            .await
+            .unwrap();
+        let old_id = first["memory_id"].as_str().unwrap().to_string();
+
+        let second = record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "turn_type": "decision", "importance": 0.9,
+                        "content": "perf revised: 180ms after warm cache",
+                        "session_id": sid, "supersedes": old_id}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second["status"], "success");
+        let _new_id = second["memory_id"].as_str().unwrap().to_string();
+
+        // Default replay shows only the correction.
+        let replay = SessionReplayTool::new(store.clone());
+        let v = replay
+            .call(&mut ctx, json!({"session_id": sid}))
+            .await
+            .unwrap();
+        assert_eq!(
+            v["count"], 1,
+            "superseded turn must be hidden by default: {v}"
+        );
+        assert_eq!(
+            v["turns"][0]["content"],
+            "perf revised: 180ms after warm cache"
+        );
+
+        // History stays intact behind the flag.
+        let with_history = replay
+            .call(
+                &mut ctx,
+                json!({"session_id": sid, "include_superseded": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(with_history["count"], 2, "got: {with_history}");
+
+        // Continuity and digest also use the current story.
+        let sid2 = start_session(&store);
+        let continuity = SessionContinuityTool::new(store.clone());
+        let c = continuity
+            .call(&mut ctx, json!({"current_session_id": sid2}))
+            .await
+            .unwrap();
+        assert_eq!(c["count"], 1, "continuity must skip superseded turns: {c}");
+        assert_eq!(
+            c["turns"][0]["content"],
+            "perf revised: 180ms after warm cache"
+        );
+
+        let digest = SessionDigestTool::new(store);
+        let d = digest
+            .call(&mut ctx, json!({"session_id": sid, "min_importance": 0.5}))
+            .await
+            .unwrap();
+        let digest_text = d["digest"].as_str().unwrap();
+        assert!(digest_text.contains("180ms"), "got: {digest_text}");
+        assert!(
+            !digest_text.contains("240ms"),
+            "superseded claim must not leak: {digest_text}"
+        );
     }
 
     #[tokio::test]

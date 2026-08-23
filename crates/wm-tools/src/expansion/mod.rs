@@ -161,10 +161,12 @@ pub use sensorimotor_tools::{
     ActuatorCommandTool, ActuatorEStopTool, ActuatorListTool, ReflexAddTool, ReflexEvaluateTool,
     ReflexListTool, SensorHistoryTool, SensorListTool, SensorPollTool, SensorReadTool,
 };
-pub use session::{SessionCheckpointTool, SessionEndTool, SessionRecallTool, SessionStartTool};
+pub use session::{
+    SessionCheckpointTool, SessionEndTool, SessionRecallTool, SessionStartTool, SessionVerifyTool,
+};
 pub use session_ops::{
-    SessionContinuityTool, SessionHandoffTool, SessionRecordTool, SessionReplayTool,
-    register_session_ops,
+    SessionContinuityTool, SessionDigestTool, SessionHandoffTool, SessionRecordTool,
+    SessionReplayTool, register_session_ops,
 };
 pub use simulation_tools::{SimCounterfactualTool, SimForecastTool, SimMcTool};
 pub use system::{SystemConfigTool, SystemFlushTool, SystemHealthTool};
@@ -232,10 +234,12 @@ pub fn register_expansion(
         .register(Arc::new(MemoryFilterTool::new(store.clone())))
         .register(Arc::new(MemoryDeduplicateTool::new(store.clone(), search.clone())))
         .register(Arc::new(MemoryExportTool::new(store.clone())))
-        // Session (4)
+        // Session (6)
         .register(Arc::new(SessionStartTool::new(store.clone())))
         .register(Arc::new(SessionCheckpointTool::new(store.clone())))
+        .register(Arc::new(SessionVerifyTool::new(store.clone())))
         .register(Arc::new(SessionRecallTool::new(store.clone())))
+        .register(Arc::new(SessionDigestTool::new(store.clone())))
         .register(Arc::new(SessionEndTool::new(store.clone())))
         // Consciousness (4)
         .register(Arc::new(CittaStatusTool::new()))

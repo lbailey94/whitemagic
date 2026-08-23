@@ -126,6 +126,7 @@ explicit routes:
 | `WM_DISPATCH_GLOBAL_RPM` | 300 | Global dispatch limit |
 | `WM_DISPATCH_BURST` | 10 | Burst allowance per tool |
 | `WM_PROJECT` | unset | Project scope label disclosed in the MCP handshake and `tools/list` |
+| `WM_PROJECT_ROOT` | unset | Repository root — `session.checkpoint` auto-captures git state; `session.verify` reports drift against it |
 | `WM_EMBEDDER_ENDPOINT` | unset | Optional embedding backend for semantic routing (e.g. llama-server `/v1/embeddings`) |
 
 ## Troubleshooting

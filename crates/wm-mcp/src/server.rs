@@ -2189,6 +2189,58 @@ impl McpServer {
         }))
     }
 
+    /// Sidecar friction path for read-only mode: `<store-root>/friction_ro.jsonl`.
+    ///
+    /// Read-only servers suppress all LMDB-backed telemetry (friction
+    /// auto-log, karma, audit journal), which left agent failures invisible —
+    /// the 2026-08-22 forensics pass could not reconstruct a single failed
+    /// dispatch from that day. The sidecar is append-only JSONL and touches
+    /// no LMDB structures.
+    fn friction_ro_path(&self) -> Option<std::path::PathBuf> {
+        let lmdb = self.store_path.as_ref()?;
+        let root = std::path::Path::new(lmdb)
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new(lmdb));
+        Some(root.join("friction_ro.jsonl"))
+    }
+
+    /// Append one dispatch-failure record to the read-only sidecar.
+    fn append_friction_ro(&self, telemetry: &DispatchTelemetry) {
+        let Some(path) = self.friction_ro_path() else {
+            return;
+        };
+        let ts = chrono::Utc::now().timestamp_millis();
+        let entry = json!({
+            "ts": ts,
+            "mode": "read-only",
+            "tool": telemetry.tool,
+            "success": telemetry.success,
+            "error": telemetry.error,
+            "latency_ms": telemetry.latency_ms,
+            "brain_wave": telemetry.brain_wave,
+            "routed_via_wm": telemetry.routed_via_wm,
+        });
+        match std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            Ok(mut f) => {
+                use std::io::Write as _;
+                if let Err(e) = writeln!(f, "{entry}") {
+                    tracing::warn!(error = %e, "failed to append read-only friction entry");
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    path = %path.display(),
+                    "failed to open read-only friction sidecar"
+                );
+            }
+        }
+    }
+
     /// Handle `tools/list` — return only the `wm` meta-tool.
     ///
     /// The `wm` meta-tool is the single entry point for MCP clients. It routes
@@ -2507,6 +2559,10 @@ impl McpServer {
             if let Err(e) = self.friction_auto_log.log_error(&telemetry) {
                 tracing::warn!("Failed to auto-log friction entry: {e}");
             }
+        } else {
+            // Read-only mode: LMDB friction logging is suppressed; keep a
+            // sidecar trace so agent failures stay observable.
+            self.append_friction_ro(&telemetry);
         }
 
         // WS-3: Bidirectional karma-friction bridge
@@ -3203,6 +3259,52 @@ mod tests {
         assert!(
             !description.contains("229 tools"),
             "tools/list description must not advertise the full archive surface"
+        );
+    }
+
+    #[tokio::test]
+    async fn readonly_failures_leave_sidecar_friction_trace() {
+        // Gap #1 from the isolation forensics: RO servers recorded nothing,
+        // so agent failures were unrecoverable. Failures must now append a
+        // parseable JSONL entry to <store-root>/friction_ro.jsonl without
+        // touching LMDB.
+        let tmp = tempfile::tempdir().unwrap();
+        let mut server = test_server();
+        server.readonly = true;
+        let lmdb_dir = tmp.path().join("lmdb");
+        std::fs::create_dir_all(&lmdb_dir).unwrap();
+        server.store_path = Some(lmdb_dir.display().to_string());
+
+        let req = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(9)),
+            method: "tools/call".into(),
+            params: json!({
+                "name": "wm",
+                "arguments": {"route": "session.start", "args": {"title": "refused"}}
+            }),
+        };
+        let resp = server.handle(&req).await;
+        assert!(resp.error.is_none() || resp.result.is_some());
+
+        let sidecar = tmp.path().join("friction_ro.jsonl");
+        let contents = std::fs::read_to_string(&sidecar)
+            .expect("read-only failure must create friction_ro.jsonl");
+        let lines: Vec<&str> = contents.lines().collect();
+        assert!(!lines.is_empty(), "sidecar must contain at least one entry");
+        for line in &lines {
+            let entry: Value = serde_json::from_str(line).expect("each line must be valid JSON");
+            assert_eq!(entry["mode"], "read-only");
+            assert_eq!(entry["success"], false);
+        }
+        let first: Value = serde_json::from_str(lines[0]).unwrap();
+        assert!(
+            first["error"]
+                .as_str()
+                .unwrap_or_default()
+                .contains("session.start")
+                || first["tool"].as_str() == Some("wm"),
+            "entry must identify the failed dispatch, got: {first}"
         );
     }
 
