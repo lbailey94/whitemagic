@@ -2656,9 +2656,25 @@ impl Tool for WmMetaTool {
         let passthrough_args = args.get("args").cloned().unwrap_or(Value::Null);
 
         if thought.is_empty() && route.is_none() {
+            // Echo the keys we DID receive: when a client drops the routing
+            // fields in transit, this turns a blind-spot error into an
+            // immediate diagnosis (observed live 2026-08-23 — two requests
+            // arrived with content/turn_type but no route, and the bare
+            // message cost six probes to isolate).
+            let received: Vec<String> = args
+                .as_object()
+                .map(|o| o.keys().cloned().collect())
+                .unwrap_or_default();
+            let detail = if received.is_empty() {
+                String::new()
+            } else {
+                format!("; received argument keys: {received:?}")
+            };
             return Ok(json!({
                 "status": "error",
-                "message": "Either 'thought' (natural language) or 'route' (explicit) is required",
+                "message": format!(
+                    "Either 'thought' (natural language) or 'route' (explicit) is required{detail}"
+                ),
                 "hint": "wm(thought='remember that X is Y') or wm(route='memory.create', args={\"content\": \"...\"})"
             }));
         }
@@ -3440,6 +3456,56 @@ mod tests {
         let result = wm.call(&mut ctx, json!({})).await.unwrap();
 
         assert_eq!(result["status"], "error");
+    }
+
+    #[tokio::test]
+    async fn wm_missing_route_echoes_received_keys() {
+        // When a client drops the routing fields in transit, the error must
+        // show which keys DID arrive so the drop is diagnosable in one step
+        // (observed live 2026-08-23: two requests arrived with payload keys
+        // but no route; the bare message cost six probes to isolate).
+        let store = test_store();
+        let registry = test_registry_with(&store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
+
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = wm
+            .call(
+                &mut ctx,
+                json!({"content": "x", "turn_type": "summary", "importance": 0.5}),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result["status"], "error");
+        let message = result["message"].as_str().unwrap();
+        assert!(
+            message.contains("received argument keys"),
+            "error must disclose received keys, got: {message}"
+        );
+        for key in ["content", "turn_type", "importance"] {
+            assert!(
+                message.contains(key),
+                "error must list received key '{key}', got: {message}"
+            );
+        }
+        // Empty-input case stays bare (no keys to list).
+        let empty = wm.call(&mut ctx, json!({})).await.unwrap();
+        assert!(
+            !empty["message"]
+                .as_str()
+                .unwrap()
+                .contains("received argument keys: ["),
+            "empty input must not list keys, got: {}",
+            empty["message"]
+        );
     }
 
     #[tokio::test]
