@@ -1,5 +1,7 @@
 # WhiteMagic Claims Ledger — Versioned Prescience Record
 
+
+> **Point-in-time export (2026-08-11) of the v5-era claims grading.** Live ledgers are per-store (`claims_ledger.json` at a store root); this file is a snapshot.
 **Exported**: 2026-08-11 · **Source**: `WMData/live/claims_ledger.json` · **Review**: `docs/CLAIMS_LEDGER_REVIEW.json` (21 claims graded — 5 STRONG, 7 MODERATE, 4 WEAK, 1 reclassified, 1 falsified, 1 duplicate; 0020–0025 graded evening 2026-08-11)
 
 **32 claims — 19 validated, 1 falsified, 12 pending · 434.9 points**

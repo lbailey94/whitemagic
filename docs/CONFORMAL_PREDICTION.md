@@ -1,5 +1,7 @@
 # Conformal Prediction — v5 Feature
 
+
+> **Historical feature record (v5.2.2).** Describes the feature as shipped in v5.2.2; see [AGENTS.md](../AGENTS.md) for the current architecture.
 **Added**: v5.2.2 (2026-08-08)
 **Status**: Complete — new crate `wm-conformal` + 7 MCP tools, 20 tests, 0 clippy warnings.
 

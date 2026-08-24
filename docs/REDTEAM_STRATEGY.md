@@ -1,5 +1,7 @@
 # WhiteMagic v4 — Redteam Strategy & Upgrade Roadmap
 
+
+> **Historical v4 document (2026-08-05).** Attack-surface inventory retained for reference.
 **Created**: 2026-08-05
 **Status**: Active — all attack surfaces tested
 **Context**: Post-hardening, all 33 manifest attack surfaces now tested

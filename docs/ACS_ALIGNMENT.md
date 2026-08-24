@@ -1,5 +1,7 @@
 # ACS Alignment — WhiteMagic v5 ↔ Microsoft Agent Control Specification
 
+
+> **Historical mapping (v5.6.0 baseline, 2026-08-09).** Positioning analysis retained for reference — not a statement of current compliance.
 **Date**: 2026-08-09
 **Status**: Mapping document — positioning + compliance asset (from WMV5_ANALYSIS P0/P1, handoff proposal #46)
 **Baseline**: v5.6.0 (15 crates, ~131K LOC, forbid(unsafe_code), 0 clippy warnings)

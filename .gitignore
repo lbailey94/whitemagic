@@ -45,3 +45,7 @@ __pycache__/
 # Per-project opencode MCP wiring — machine-specific absolute paths; the
 # committed template lives in docs/MULTI_PROJECT_MEMORY.md
 /opencode.jsonc
+
+# Memorastrict scale-stress fixtures — derived by `memorastrict_gen.py
+# --scale-turns N`; the tracked root seeds are the source of truth.
+/benchmarks/data/memorastrict/scale_*/

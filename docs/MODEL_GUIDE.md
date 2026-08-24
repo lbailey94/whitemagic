@@ -1,5 +1,7 @@
 # Model Guide — Using WhiteMagic from an Agent
 
+
+> **v5-era document (v5.8.0).** Retained as reference while the v7 alpha is in private testing. The supported surface is the [README](../README.md) and [MCP_CONFIG_GUIDE.md](MCP_CONFIG_GUIDE.md); examples here may not match current tool behavior.
 **Version**: 5.8.0
 
 This is the one-page primer for LLMs using WhiteMagic through MCP. You are the

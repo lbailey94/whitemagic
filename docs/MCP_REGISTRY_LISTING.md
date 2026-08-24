@@ -1,5 +1,7 @@
 # MCP Registry Listing Kit
 
+
+> **Never submitted — v5-era copy (5.8.0).** The registry kit was shelved during Gate 1's public-surface inventory ([V7_PRODUCT_READINESS.md](V7_PRODUCT_READINESS.md)). Kept for reference only.
 **Version**: 5.8.0
 
 Copy for the official MCP registry and server directories.
