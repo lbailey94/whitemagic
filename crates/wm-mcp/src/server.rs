@@ -133,6 +133,9 @@ pub struct McpServer {
     /// escalating pushback instead of silent repetition.
     loop_sig: u64,
     loop_count: u32,
+    /// Shared Tantivy engine — retained for periodic index-drift healing in
+    /// the daemon (session/dream/research writers bypass per-write indexing).
+    search_engine: Option<Arc<SearchEngine>>,
 }
 
 /// JSON-RPC request envelope.
@@ -440,6 +443,7 @@ impl McpServer {
             project: None,
             loop_sig: 0,
             loop_count: 0,
+            search_engine: None,
         }
     }
 
@@ -587,6 +591,24 @@ impl McpServer {
                     report.skipped,
                     report.scanned
                 );
+            }
+            // Self-heal drift that accumulated under previous runs: session
+            // tools, dream consolidation, and research cycles write LMDB
+            // without a search engine, and best-effort index failures are
+            // swallowed at the tool layer. Sub-second at ~10k memories.
+            match wm_memory::reindex::heal_index_drift(&store, &engine) {
+                Ok(Some(report)) => tracing::warn!(
+                    galaxies = report.galaxies.len(),
+                    indexed = report.indexed,
+                    scanned = report.scanned,
+                    "Tantivy index drift detected at startup — rebuilt drifted \
+                     galaxies from the canonical LMDB store"
+                ),
+                Ok(None) => {}
+                Err(e) => tracing::warn!(
+                    error = %e,
+                    "Index-drift heal failed — run 'wm reindex --store <path>' manually"
+                ),
             }
             engine
         });
@@ -987,6 +1009,9 @@ impl McpServer {
         // Attach the NLU embedding router so OATS outcome stats auto-persist
         // on shutdown and are restored on startup (mutable_oats.json)
         server.embedding_router = embedding_router;
+
+        // Retain the shared Tantivy engine for daemon-side drift healing
+        server.search_engine = Some(Arc::clone(&search));
 
         // Attach the shared conformal store so it auto-persists on shutdown
         server.conformal_store = Some(Arc::clone(&conformal_store));
@@ -1551,6 +1576,13 @@ impl McpServer {
     #[must_use]
     pub fn store(&self) -> &MemoryStore {
         &self.store
+    }
+
+    /// The shared Tantivy search engine, when this server opened one.
+    /// `Some` for every server built through the standard constructors;
+    /// `None` only in hand-rolled test servers that never opened an index.
+    pub const fn search_engine(&self) -> Option<&Arc<SearchEngine>> {
+        self.search_engine.as_ref()
     }
 
     /// Get a clone of the Arc to the memory store.
@@ -5152,6 +5184,48 @@ mod tests {
                 "Self-model conformal coverage history should restore from disk"
             );
         }
+    }
+
+    /// Startup drift heal: memories written to LMDB by search-less writers
+    /// (session tools, dream consolidation, research cycles) must become
+    /// searchable after the first writable server start.
+    #[tokio::test]
+    async fn startup_heals_index_drift_from_lmdb_only_writers() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store_path = test_store_path(&tmp);
+
+        // Simulate the systematic drift pattern: LMDB-only write, no index.
+        {
+            let store = MemoryStore::open_default(&store_path).unwrap();
+            store
+                .put(
+                    wm_core::Galaxy::Sessions,
+                    &wm_memory::Memory::new(
+                        wm_core::Galaxy::Sessions,
+                        "quokka hibernation study".into(),
+                    ),
+                )
+                .unwrap();
+        }
+
+        // Writable server start detects and heals the drift...
+        let mut server = McpServer::with_defaults(&store_path).unwrap();
+        server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+
+        // ...so search surfaces a memory that was never explicitly indexed.
+        let resp = server
+            .handle_request(
+                r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"memory.search","arguments":{"query":"quokka hibernation","galaxy":"sessions"}}}"#,
+            )
+            .await;
+        let value: serde_json::Value = serde_json::from_str(&resp).unwrap();
+        let text = value["result"]["content"][0]["text"].as_str().unwrap_or("");
+        assert!(
+            text.contains("quokka"),
+            "healed index must surface the unindexed session memory: {text}"
+        );
     }
 
     /// Deterministic test embedder — returns fixed vectors so the embedding

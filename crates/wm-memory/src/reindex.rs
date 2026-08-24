@@ -195,6 +195,36 @@ fn index_memory(
     Ok(Some(()))
 }
 
+/// Heal index drift by rebuilding only the galaxies whose Tantivy counts
+/// disagree with LMDB.
+///
+/// Whole-galaxy drift is systematic, not exceptional: session tools, dream
+/// consolidation, and research cycles write to LMDB without a search engine,
+/// and best-effort indexing failures are swallowed at the tool layer. Call
+/// this on writable server startup (and periodically in the daemon) so search
+/// stays complete without manual `wm reindex` runs.
+///
+/// Returns `Ok(None)` when the index is already consistent. Content skipped
+/// by sanitization keeps its galaxy permanently one document short of LMDB,
+/// so those galaxies are re-healed on each call — a sub-second cost accepted
+/// in exchange for no persistent drift bookkeeping.
+pub fn heal_index_drift(
+    store: &MemoryStore,
+    search: &SearchEngine,
+) -> Result<Option<IndexRebuildReport>> {
+    let consistency = check_consistency(store, search);
+    let drifted: Vec<String> = consistency
+        .galaxies
+        .iter()
+        .filter(|g| g.drift)
+        .map(|g| g.galaxy.clone())
+        .collect();
+    if drifted.is_empty() {
+        return Ok(None);
+    }
+    rebuild_index(store, search, &drifted).map(Some)
+}
+
 /// Helper for the `wm reindex` CLI: validate that the tantivy index directory
 /// exists next to the LMDB store.
 #[must_use]
@@ -363,6 +393,67 @@ mod tests {
             .unwrap();
         assert_eq!(codex.lmdb_count, 1);
         assert_eq!(codex.tantivy_count, 0);
+    }
+
+    #[test]
+    fn heal_repairs_only_drifted_galaxies() {
+        let (_tmp, store, search) = setup();
+
+        // LMDB-only writes (the session-tool pattern) — never touch the index.
+        store
+            .put(
+                Galaxy::Sessions,
+                &Memory::new(Galaxy::Sessions, "session needle".into()),
+            )
+            .unwrap();
+        store
+            .put(
+                Galaxy::Research,
+                &Memory::new(Galaxy::Research, "research needle".into()),
+            )
+            .unwrap();
+        // A healthy galaxy that must not be rebuilt.
+        put_and_index(&store, &search, Galaxy::Codex, "healthy codex entry");
+
+        let report = heal_index_drift(&store, &search)
+            .unwrap()
+            .expect("drift expected before heal");
+        let healed: Vec<_> = report.galaxies.iter().map(|g| g.galaxy.as_str()).collect();
+        assert!(healed.contains(&"sessions"));
+        assert!(healed.contains(&"research"));
+        assert!(
+            !healed.contains(&"codex"),
+            "healthy galaxy must be untouched"
+        );
+        assert_eq!(report.indexed, 2);
+
+        assert!(
+            heal_index_drift(&store, &search).unwrap().is_none(),
+            "second heal must be a no-op once consistent"
+        );
+        assert_eq!(
+            search
+                .search_in_galaxy("session needle", Some(Galaxy::Sessions), 10)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            search
+                .search_in_galaxy("healthy codex", Some(Galaxy::Codex), 10)
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn heal_noop_when_consistent() {
+        let (_tmp, store, search) = setup();
+        put_and_index(&store, &search, Galaxy::Codex, "indexed entry");
+        put_and_index(&store, &search, Galaxy::Dreams, "dream entry");
+
+        assert!(heal_index_drift(&store, &search).unwrap().is_none());
     }
 
     #[test]

@@ -567,6 +567,25 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             server.save_mutable_state();
             tracing::info!("Mutable-state checkpoint written");
             last_checkpoint = now;
+
+            // Heal index drift accumulated since startup: session tools,
+            // dream consolidation, and research cycles write LMDB without
+            // per-write indexing, so a long-running daemon would otherwise
+            // hide new memories from search until the next restart.
+            if let Some(engine) = server.search_engine() {
+                match wm_memory::reindex::heal_index_drift(server.store(), engine) {
+                    Ok(Some(report)) => tracing::info!(
+                        galaxies = report.galaxies.len(),
+                        indexed = report.indexed,
+                        "Periodic index-drift heal rebuilt drifted galaxies"
+                    ),
+                    Ok(None) => {}
+                    Err(e) => tracing::warn!(
+                        error = %e,
+                        "Periodic index-drift heal failed — run 'wm reindex --store <path>' manually"
+                    ),
+                }
+            }
         }
 
         // Sleep until next tick (check every 1 second for signals)
