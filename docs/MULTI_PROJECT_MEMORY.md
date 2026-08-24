@@ -23,7 +23,7 @@ results, all observed in practice on 2026-08-22:
 | Project | Store | Mode | Config file |
 |---|---|---|---|
 | any unconfigured | `WMdata/projects/default` | read-only | global `~/.config/opencode/opencode.jsonc` |
-| WMv5 | `WMdata/opencode-v5` (historical) | writable | `~/Desktop/WMv5/opencode.jsonc` (server name `whitemagic-dev`, per AGENTS.md) |
+| WMv5 | `WMdata/projects/wmv5` | writable | `~/Desktop/WMv5/opencode.jsonc` (server name `whitemagic-dev`, per AGENTS.md) |
 | NEON | `WMdata/projects/neon` | writable | `~/Desktop/NEON/opencode.jsonc` |
 | whitemagic-site | `WMdata/projects/whitemagic-site` | writable | `~/Desktop/whitemagic-site/opencode.jsonc` |
 
@@ -132,3 +132,15 @@ Fix: both tools now resolve by `created_at`
    `pgrep -af wm`.
 5. **Soft scoping (tier 2)** — deliberately skipped: hard per-project
    isolation already prevents the failure mode.
+6. **No scheduled backups** — RESOLVED 2026-08-24, expensively. The legacy
+   `opencode-v5` store was lost to operator error on 2026-08-24 with no
+   backup in existence (`wm backup` shipped in Gate 1 but nothing ran it).
+   Nightly cron now backs up all four stores (`~/.local/bin/
+   wm-nightly-backup.sh`, retention 7) and the wmv5 store was rebuilt at
+   `WMdata/projects/wmv5`. Rule going forward: a store without a verified
+   backup is one mistake away from gone.
+7. **`/releases/latest` badge** — cosmetic known issue: GitHub's
+   `make_latest` API flag did not apply to the prerelease-marked
+   v7.0.0-alpha.3, so the badge still names retired v5.8.0. The supported
+   installer is prerelease-aware and resolves alpha.3 correctly; fix the
+   badge manually in the release UI if desired.

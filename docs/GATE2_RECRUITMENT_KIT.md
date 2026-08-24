@@ -7,17 +7,17 @@ README and release link — nothing internal leaves the repo.
 
 ## Pre-recruitment checklist (blockers before the first message ships)
 
-1. **Version truth.** Release `v7.0.0-alpha.2` was tagged and published while
-   `Cargo.toml` still declared `7.0.0-alpha.1`, so the released binary reports
-   the wrong version. Fix: bump `version` in `Cargo.toml` (to `alpha.2` for
-   consistency, or `alpha.3`) and cut a corrected release so
-   `wm --version` matches the page a tester downloaded from.
-2. **GitHub "Latest" release is v5.8.0** — the retired historical baseline.
-   The README points testers at the releases page; they will see v5.8.0 on
-   top. Decide deliberately: mark a v7 alpha as the pre-release tip and
-   relabel/archive the v5.8.0 release as historical, or pin instructions to
-   the exact alpha URL. Do not leave the retired release as the loudest
-   surface (same principle as website containment).
+1. **Version truth** — RESOLVED 2026-08-24: `v7.0.0-alpha.3` cut from tag
+   (CI-built, 8 assets, prerelease-marked); `wm --version` now matches the
+   release page.
+2. **GitHub "Latest" release is v5.8.0** — PARTIALLY RESOLVED 2026-08-24:
+   v5.8.0 retitled "retired historical release"; alpha.3 marked prerelease
+   with truthful notes; installer resolves newest-including-prereleases so
+   testers get alpha.3. Remaining cosmetic gap: `/releases/latest` badge
+   still names v5.8.0 (the `make_latest` API flag did not apply to a
+   prerelease) — one manual UI toggle on the alpha.3 release finishes this.
+   Also add a line in the recruitment message pinning the exact release URL,
+   which sidesteps the badge entirely.
 3. Confirm cohort shape: ≥5 external testers, ≥2 different MCP clients,
    nobody who built the workflow, Linux x86-64 with glibc ≥ 2.39.
 4. Freeze the artifact for the cohort: testers all get the same release URL;

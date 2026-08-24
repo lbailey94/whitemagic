@@ -45,6 +45,20 @@ samples.
 
 ## Backup Strategy
 
+### Automated nightly backups (installed 2026-08-24)
+
+After the legacy-store loss of 2026-08-24 (no backup existed), a cron job
+backs up every writable store nightly:
+
+```bash
+# ~/.local/bin/wm-nightly-backup.sh — crontab: 30 3 * * *
+# covers WMdata/projects/{wmv5,neon,whitemagic-site} + WMdata/live
+# output: ~/whitemagic-backups/<store>/<timestamp>/   (retention: 7)
+```
+
+Verify it ran: `tail ~/whitemagic-backups/backup.log`. A store without a
+verified backup is one mistake away from gone.
+
 ### Recommended backup routine
 
 1. **Daily**: `galaxy.backup` for each galaxy with data, or copy the LMDB
