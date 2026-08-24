@@ -19,7 +19,7 @@ next session — without sending your memory store to any hosted service.
 
 ## Status
 
-**v7.0.0-alpha.1 — private alpha.** Under active development and private
+**v7.0.0-alpha.3 — private alpha.** Under active development and private
 testing. The website [whitemagic.dev](https://whitemagic.dev) is in a
 work-in-progress state; there is no public launch date.
 
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/i
 Verify the installation:
 
 ```bash
-wm --version   # wm 7.0.0-alpha.1
+wm --version   # wm 7.0.0-alpha.3
 wm doctor      # environment health check
 ```
 

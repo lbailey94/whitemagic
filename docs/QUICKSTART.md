@@ -1,6 +1,6 @@
 # WhiteMagic Quickstart
 
-**Version**: 7.0.0-alpha.1
+**Version**: 7.0.0-alpha.3
 **Supported platform**: Linux x86-64
 
 Get from zero to working agent memory in under five minutes.
@@ -53,7 +53,7 @@ mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ## 2. Verify
 
 ```bash
-wm --version   # wm 7.0.0-alpha.1
+wm --version   # wm 7.0.0-alpha.3
 wm doctor      # store, index, registry health check
 ```
 
