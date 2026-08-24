@@ -128,6 +128,11 @@ pub struct McpServer {
     /// Project scope (from `WM_PROJECT`, per-project memory isolation) —
     /// disclosed in `initialize` and `tools/list`.
     project: Option<String>,
+    /// Retry-loop guard: hash of the last failing (tool, error) pair and the
+    /// consecutive-repeat count. Agents stuck in degenerate loops get
+    /// escalating pushback instead of silent repetition.
+    loop_sig: u64,
+    loop_count: u32,
 }
 
 /// JSON-RPC request envelope.
@@ -162,10 +167,49 @@ struct RpcError {
     #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<Value>,
 }
-
 /// Appended to read-only write refusals so agents know the fix instead of
 /// retrying writes against a server that will always refuse them.
 const READONLY_HINT: &str = " (hint: this MCP server was started with --readonly — point this project's config at a writable server to record memories/sessions)";
+
+/// Consecutive identical failures before the escalation kicks in.
+const LOOP_ESCALATION_THRESHOLD: u32 = 3;
+
+impl McpServer {
+    /// Record a failing dispatch and, when the same (tool, error) pair
+    /// repeats consecutively, escalate the message to break agent loops.
+    ///
+    /// Degenerate retry loops (`echo .` forever; identical failing dispatch
+    /// every turn) are a common LLM failure mode. The boundary is where they
+    /// become visible — after [`LOOP_ESCALATION_THRESHOLD`] identical
+    /// failures the error itself tells the agent that retrying unchanged is
+    /// futile and what to do instead. Success or a different failure resets
+    /// the counter.
+    fn note_failure_and_escalate(&mut self, tool: &str, error: &str) -> String {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        (tool, error).hash(&mut hasher);
+        let sig = hasher.finish();
+
+        if sig == self.loop_sig {
+            self.loop_count = self.loop_count.saturating_add(1);
+        } else {
+            self.loop_sig = sig;
+            self.loop_count = 1;
+        }
+
+        if self.loop_count >= LOOP_ESCALATION_THRESHOLD {
+            format!(
+                "{error} ⚠ RETRY LOOP: this exact call has failed {} times in a row — \
+                 retrying unchanged will not change the outcome. Stop; diagnose instead \
+                 (bash: `wm doctor --store <store-path>`, check whether the MCP server \
+                 process is still alive), fix the cause, or take a different approach.",
+                self.loop_count
+            )
+        } else {
+            error.to_string()
+        }
+    }
+}
 
 /// Build a JSON-RPC error response.
 fn error_response(
@@ -394,6 +438,8 @@ impl McpServer {
             profile_name: "full",
             store_path: None,
             project: None,
+            loop_sig: 0,
+            loop_count: 0,
         }
     }
 
@@ -2172,10 +2218,14 @@ impl McpServer {
             )
             .expect("write to String cannot fail"),
             (None, Some(store)) => {
-                write!(instructions, "\nScope: store {store}.").expect("write to String cannot fail");
+                write!(instructions, "\nScope: store {store}.")
+                    .expect("write to String cannot fail");
             }
             (None, None) => {}
         }
+        instructions.push_str(
+            "\nFailure ladder: if a call fails twice, do not retry unchanged — read the error and change something. If whitemagic tools vanish mid-session or every call errors, the server process has likely died: diagnose from bash (`wm doctor --store <store-path>`, `pgrep -af wm`) and restart your client session to respawn it. Never fall back to probing with shell no-ops.",
+        );
         Ok(json!({
             "protocolVersion": "2024-11-05",
             "serverInfo": {
@@ -2884,7 +2934,7 @@ impl McpServer {
             // The most common boundary mistake is writing through a
             // --readonly server (session.start, memory.create). Make the
             // refusal actionable instead of a dead end.
-            let mut message = e.to_string();
+            let mut message = self.note_failure_and_escalate(name, &e.to_string());
             if self.readonly && message.contains("read-only") {
                 message.push_str(READONLY_HINT);
             }
@@ -2899,9 +2949,21 @@ impl McpServer {
         // {"status":"error"} payloads (Ok at the JSON-RPC level) so NLU
         // clients can read them. Enrich read-only refusals there too so both
         // dispatch paths carry the same actionable guidance.
-        if self.readonly {
-            if let Some(obj) = result.as_object_mut() {
-                if obj.get("status").and_then(Value::as_str) == Some("error") {
+        if let Some(obj) = result.as_object_mut() {
+            if obj.get("status").and_then(Value::as_str) == Some("error") {
+                let inner = obj
+                    .get("error")
+                    .or_else(|| obj.get("message"))
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                let escalated = self.note_failure_and_escalate(name, &inner);
+                for key in ["error", "message"] {
+                    if let Some(Value::String(msg)) = obj.get_mut(key) {
+                        msg.clone_from(&escalated);
+                    }
+                }
+                if self.readonly {
                     for key in ["error", "message"] {
                         if let Some(Value::String(msg)) = obj.get_mut(key) {
                             if msg.contains("read-only") && !msg.contains("--readonly") {
@@ -2910,6 +2972,10 @@ impl McpServer {
                         }
                     }
                 }
+            } else {
+                // Success breaks any loop.
+                self.loop_sig = 0;
+                self.loop_count = 0;
             }
         }
 
@@ -3352,6 +3418,79 @@ mod tests {
             description.contains("writable") && !description.contains("READ-ONLY"),
             "writable server must not claim READ-ONLY, got: {description}"
         );
+    }
+
+    #[tokio::test]
+    async fn identical_failures_escalate_into_loop_warning() {
+        // Incident 2026-08-23: an agent whose MCP server died degenerated
+        // into `echo .` loops. Within-server, the boundary can see identical
+        // failing dispatches — the third consecutive one must say that
+        // retrying is futile and point at diagnostics.
+        let mut server = test_server();
+        server.readonly = true;
+        let call = |id: i32| RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(id)),
+            method: "tools/call".into(),
+            params: json!({
+                "name": "wm",
+                "arguments": {"route": "session.start", "args": {"title": "loop"}}
+            }),
+        };
+
+        for i in 1..=2 {
+            let resp = server.handle(&call(i)).await;
+            let payload: Value =
+                serde_json::from_str(resp.result.unwrap()["content"][0]["text"].as_str().unwrap())
+                    .unwrap();
+            assert_eq!(payload["status"], "error");
+            let message = payload["error"].as_str().unwrap();
+            assert!(
+                !message.contains("RETRY LOOP"),
+                "attempts {i} must not escalate yet, got: {message}"
+            );
+        }
+
+        let resp = server.handle(&call(3)).await;
+        let payload: Value =
+            serde_json::from_str(resp.result.unwrap()["content"][0]["text"].as_str().unwrap())
+                .unwrap();
+        let message = payload["error"].as_str().unwrap();
+        assert!(
+            message.contains("RETRY LOOP") && message.contains("3 times"),
+            "third identical failure must escalate, got: {message}"
+        );
+
+        // A different failure resets the counter (no escalation on next).
+        let other = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(4)),
+            method: "tools/call".into(),
+            params: json!({
+                "name": "wm",
+                "arguments": {"route": "memory.delete"}
+            }),
+        };
+        let resp = server.handle(&other).await;
+        let result = resp.result.unwrap_or_else(|| {
+            panic!(
+                "memory.delete returned RPC error: {:?}",
+                resp.error.map(|e| e.message)
+            )
+        });
+        let payload: Value =
+            serde_json::from_str(result["content"][0]["text"].as_str().unwrap()).unwrap();
+        if payload["status"] == "error" {
+            let msg = payload["error"]
+                .as_str()
+                .or_else(|| payload["message"].as_str())
+                .unwrap_or_default()
+                .to_string();
+            assert!(
+                !msg.contains("RETRY LOOP"),
+                "different failure must not inherit escalation, got: {msg}"
+            );
+        }
     }
 
     #[tokio::test]

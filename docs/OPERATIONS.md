@@ -191,6 +191,29 @@ Restores a galaxy from a `.wmbak` file. This is a **destructive**
 operation — it replaces all memories in the galaxy. Requires
 `confirm: true`.
 
+## Process Hygiene — Killing Stuck Servers
+
+**Never kill `wm serve` processes globally.** Every running `wm serve` is a
+live MCP connection for some editor/agent session; a blanket
+`pkill -f "wm serve"` severs all of them at once, opencode does not respawn
+local stdio servers, and affected agents lose their tools mid-conversation
+(observed 2026-08-23: one global pkill during lock cleanup dropped four
+sessions' servers simultaneously, stranding an agent into an `echo .`
+degenerate loop).
+
+Scope kills to the store you actually mean:
+
+```bash
+# Find holders of a SPECIFIC store's index lock:
+pgrep -af "wm serve" | grep <store-name>
+
+# Kill only those:
+pkill -f "wm serve.*<store-name>"
+```
+
+After any such kill, expect sessions using that store to need a client-side
+restart to regain whitemagic tools.
+
 ## Quick Reference
 
 | Task | Command |
