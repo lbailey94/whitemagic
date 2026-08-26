@@ -1,13 +1,13 @@
 {
   "mcpServers": {
     "whitemagic-v5": {
-      "command": "/home/lucas/Desktop/WMv5/target/release/wm",
+      "command": "/home/lucas/Desktop/WHITEMAGIC/WMv5/target/release/wm",
       "args": [
         "serve",
         "--profile",
         "curated",
         "--store",
-        "/home/lucas/Desktop/WMv5/.whitemagic/lmdb"
+        "/home/lucas/Desktop/WHITEMAGIC/WMv5/.whitemagic/lmdb"
       ],
       "env": {
         "WM_LOG_LEVEL": "info"

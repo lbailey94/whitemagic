@@ -23,9 +23,9 @@ results, all observed in practice on 2026-08-22:
 | Project | Store | Mode | Config file |
 |---|---|---|---|
 | any unconfigured | `WMdata/projects/default` | read-only | global `~/.config/opencode/opencode.jsonc` |
-| WMv5 | `WMdata/projects/wmv5` | writable | `~/Desktop/WMv5/opencode.jsonc` (server name `whitemagic-dev`, per AGENTS.md) |
-| NEON | `WMdata/projects/neon` | writable | `~/Desktop/NEON/opencode.jsonc` |
-| whitemagic-site | `WMdata/projects/whitemagic-site` | writable | `~/Desktop/whitemagic-site/opencode.jsonc` |
+| WMv5 | `data/WMdata/projects/wmv5` | writable | `~/Desktop/WHITEMAGIC/WMv5/opencode.jsonc` (server name `whitemagic-dev`, per AGENTS.md) |
+| NEON | `data/WMdata/projects/neon` | writable | `~/Desktop/NEON/opencode.jsonc` |
+| whitemagic-site | `data/WMdata/projects/whitemagic-site` | writable | `~/Desktop/WHITEMAGIC/whitemagic-site/opencode.jsonc` |
 
 Rules of the layout:
 
@@ -49,12 +49,12 @@ Create `<project>/opencode.jsonc`:
     "whitemagic": {
       "type": "local",
       "command": [
-        "/home/lucas/Desktop/WMv5/target/release/wm",
+        "/home/lucas/Desktop/WHITEMAGIC/WMv5/target/release/wm",
         "serve",
         "--profile",
         "curated",
         "--store",
-        "/home/lucas/Desktop/WMdata/projects/<name>"
+        "/home/lucas/Desktop/WHITEMAGIC/data/WMdata/projects/<name>"
       ],
       "enabled": true,
       "environment": {

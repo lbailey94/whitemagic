@@ -1,13 +1,13 @@
 {
   "mcpServers": {
     "whitemagic-v5": {
-      "command": "/home/lucas/Desktop/WMv5/target/release/wm",
+      "command": "/home/lucas/Desktop/WHITEMAGIC/WMv5/target/release/wm",
       "args": [
         "serve",
         "--profile",
         "curated",
         "--store",
-        "/home/lucas/Desktop/WMdata/live"
+        "/home/lucas/Desktop/WHITEMAGIC/data/WMdata/live"
       ],
       "env": {
         "RUST_LOG": "info",
