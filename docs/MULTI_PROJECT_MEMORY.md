@@ -26,6 +26,14 @@ results, all observed in practice on 2026-08-22:
 | WMv5 | `data/WMdata/projects/wmv5` | writable | `~/Desktop/WHITEMAGIC/WMv5/opencode.jsonc` (server name `whitemagic-dev`, per AGENTS.md) |
 | NEON | `data/WMdata/projects/neon` | writable | `~/Desktop/NEON/opencode.jsonc` |
 | whitemagic-site | `data/WMdata/projects/whitemagic-site` | writable | `~/Desktop/WHITEMAGIC/whitemagic-site/opencode.jsonc` |
+| **vault** (all projects) | `data/WMdata/projects/vault` | **read-only** | global config, server name `whitemagic-vault` |
+
+The **vault** is the shared knowledge store: CODEX_VAULT + Windsurf/opencode/
+Codex session transcripts + the WMdocs corpus, ingested by `wm ingest`
+(`planning/SESSION_Knowledge_Ingest.md`). It is read-only for every client —
+content changes only through `wm ingest`. Search it with explicit galaxies:
+transcripts live in `sessions`, documents in `research` (`memory.search`
+defaults to `codex`, which is empty in the vault — always pass `galaxy`).
 
 Rules of the layout:
 

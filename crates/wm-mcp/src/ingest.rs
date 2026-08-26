@@ -210,6 +210,16 @@ pub fn is_credential_file(name: &str) -> bool {
         .any(|hint| lower.contains(hint))
 }
 
+/// Cheap content check for private-key material. Files containing PEM
+/// blocks are skipped — the store must never hold credentials.
+#[must_use]
+pub fn contains_private_key(text: &str) -> bool {
+    text.contains("BEGIN PRIVATE KEY")
+        || text.contains("BEGIN RSA PRIVATE KEY")
+        || text.contains("BEGIN OPENSSH PRIVATE KEY")
+        || text.contains("BEGIN EC PRIVATE KEY")
+}
+
 // ── Chunking ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -691,6 +701,13 @@ pub fn run_ingest(
         let sha = sha256_hex(&bytes);
         let text = String::from_utf8_lossy(&bytes);
 
+        if contains_private_key(&text) {
+            report
+                .skipped
+                .push((rel.clone(), "credential-bearing content".into()));
+            continue;
+        }
+
         if let Some(prev) = ledger.entries.get(&rel) {
             if prev.sha256 == sha {
                 report.files_unchanged += 1;
@@ -926,6 +943,10 @@ mod tests {
         assert!(is_credential_file("id_rsa"));
         assert!(is_credential_file("credentials.json"));
         assert!(!is_credential_file("notes.md"));
+        assert!(contains_private_key(
+            "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----"
+        ));
+        assert!(!contains_private_key("ordinary session notes"));
     }
 
     #[test]
