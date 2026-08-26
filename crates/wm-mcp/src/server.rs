@@ -1488,6 +1488,28 @@ impl McpServer {
             self.save_mutable_state();
         }
 
+        // Final index-drift heal so a gracefully stopped store is left fully
+        // search-consistent. Session tools and research cycles write LMDB
+        // without per-write indexing; startup and daemon-checkpoint heals do
+        // not cover the tail of a session that ends here. A SIGKILL still
+        // leaves drift for the next writable start to repair.
+        if !self.readonly {
+            if let Some(engine) = self.search_engine() {
+                match wm_memory::reindex::heal_index_drift(&self.store, engine) {
+                    Ok(Some(report)) => tracing::warn!(
+                        galaxies = report.galaxies.len(),
+                        indexed = report.indexed,
+                        "Index-drift heal on shutdown rebuilt drifted galaxies"
+                    ),
+                    Ok(None) => {}
+                    Err(e) => tracing::warn!(
+                        error = %e,
+                        "Index-drift heal on shutdown failed — run 'wm reindex --store <path>' manually"
+                    ),
+                }
+            }
+        }
+
         // Flush the write-audit journal so every dispatch's declared-vs-
         // actual record survives a graceful shutdown (the journal batches
         // up to 64 entries in memory). Skipped in read-only mode — no
@@ -4688,6 +4710,48 @@ mod tests {
                 "read-only mode must reject {route}, got: {result}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn shutdown_heals_index_drift() {
+        // Use the real server construction path (with_defaults_mode_profile)
+        // so the search engine is attached to the server like in production.
+        let tmp = tempfile::tempdir().unwrap();
+        let store_path = test_store_path(&tmp);
+        let server = McpServer::with_defaults_mode_profile(
+            &store_path,
+            false,
+            &wm_tools::profiles::PROFILE_CURATED,
+        )
+        .unwrap();
+        let engine = server.search_engine().unwrap().clone();
+
+        // Create drift: a session write that bypasses the Tantivy index,
+        // exactly what session tools do (they hold no SearchEngine).
+        let mem =
+            wm_memory::Memory::new(wm_core::Galaxy::Sessions, "unindexed session record".into());
+        server.store().put(wm_core::Galaxy::Sessions, &mem).unwrap();
+
+        let before = wm_memory::reindex::check_consistency(server.store(), &engine);
+        assert!(
+            before
+                .galaxies
+                .iter()
+                .any(|g| g.galaxy == "sessions" && g.drift),
+            "precondition: sessions galaxy should be drifted before shutdown"
+        );
+
+        server.shutdown();
+
+        let after = wm_memory::reindex::check_consistency(server.store(), &engine);
+        assert!(
+            !after
+                .galaxies
+                .iter()
+                .any(|g| g.galaxy == "sessions" && g.drift),
+            "shutdown heal left sessions galaxy drifted: {:?}",
+            after.galaxies
+        );
     }
 
     #[tokio::test]

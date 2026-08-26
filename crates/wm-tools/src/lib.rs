@@ -817,7 +817,12 @@ impl Tool for ToolsListTool {
 
 // ── Tool: memory.delete ──────────────────────────────────────────────
 
-/// Delete a memory by ID from a galaxy.
+/// Delete a memory by ID.
+///
+/// With an explicit `galaxy` argument, only that galaxy is touched. Without
+/// one, the ID is resolved across all memory galaxies (so a memory created in
+/// e.g. `sessions` is not reported "not_found" just because the default
+/// galaxy was `codex`). Destructive; requires `confirm: true`.
 ///
 /// If a `SearchEngine` is provided, the document is also removed from the
 /// Tantivy index after the LMDB delete.
@@ -863,7 +868,7 @@ impl Tool for MemoryDeleteTool {
         schema(
             &json!({
                 "id": str_prop("Memory UUID"),
-                "galaxy": str_prop("Galaxy containing the memory (default codex)"),
+                "galaxy": str_prop("Galaxy containing the memory (optional; when omitted the id is resolved across all memory galaxies)"),
                 "confirm": bool_prop("Required — memory.delete is destructive"),
             }),
             &["id", "confirm"],
@@ -876,11 +881,6 @@ impl Tool for MemoryDeleteTool {
             .ok_or_else(|| wm_core::CoreError::InvalidArgs("id (string) required".into()))?;
         let id = uuid::Uuid::parse_str(id_str)
             .map_err(|e| wm_core::CoreError::InvalidArgs(format!("invalid UUID: {e}")))?;
-        let galaxy_str = args
-            .get("galaxy")
-            .and_then(|v| v.as_str())
-            .unwrap_or("codex");
-        let galaxy = parse_galaxy(galaxy_str)?;
 
         if let Some(search) = &self.search {
             if search.is_readonly() {
@@ -890,10 +890,21 @@ impl Tool for MemoryDeleteTool {
                 ));
             }
         }
-        let deleted = self.store.delete(galaxy, id)?;
+
+        let targets: Vec<Galaxy> = match args.get("galaxy").and_then(|v| v.as_str()) {
+            Some(g) => vec![parse_galaxy(g)?],
+            None => Galaxy::memory_galaxies().to_vec(),
+        };
+
+        let mut deleted_from: Vec<&str> = Vec::new();
+        for galaxy in targets {
+            if self.store.delete(galaxy, id)? {
+                deleted_from.push(galaxy.db_name());
+            }
+        }
 
         // Remove from Tantivy index if search engine is available (non-fatal)
-        if deleted {
+        if !deleted_from.is_empty() {
             if let Some(search) = &self.search {
                 if let Err(e) = (|| {
                     let mut writer = search.writer()?;
@@ -906,11 +917,26 @@ impl Tool for MemoryDeleteTool {
             }
         }
 
-        Ok(json!({
-            "status": if deleted { "success" } else { "not_found" },
-            "id": id_str,
-            "galaxy": galaxy.db_name(),
-        }))
+        if deleted_from.is_empty() {
+            return Ok(json!({
+                "status": "not_found",
+                "id": id_str,
+                "hint": "id not found in any memory galaxy; pass an explicit galaxy to target one"
+            }));
+        }
+
+        let mut body = serde_json::Map::new();
+        body.insert("status".into(), json!("success"));
+        body.insert("id".into(), json!(id_str));
+        if args.get("galaxy").and_then(|v| v.as_str()).is_some() {
+            body.insert("galaxy".into(), json!(deleted_from[0]));
+        }
+        body.insert(
+            "galaxies".into(),
+            json!(deleted_from.iter().map(|g| json!(g)).collect::<Vec<_>>()),
+        );
+        body.insert("deleted".into(), json!(deleted_from.len()));
+        Ok(Value::Object(body))
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -3201,6 +3227,73 @@ mod tests {
         let read = MemoryReadTool::new(store);
         let result = read.call(&mut ctx, json!({"id": id})).await.unwrap();
         assert_eq!(result["status"], "not_found");
+    }
+
+    #[tokio::test]
+    async fn memory_delete_without_galaxy_resolves_across_memory_galaxies() {
+        let store = test_store();
+        let create = MemoryCreateTool::new(store.clone(), None, None);
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // A session memory lives in the sessions galaxy, not codex.
+        let result = create
+            .call(
+                &mut ctx,
+                json!({"content": "session decision", "galaxy": "sessions"}),
+            )
+            .await
+            .unwrap();
+        let id = result["id"].as_str().unwrap();
+
+        // No explicit galaxy: the delete must still find and remove it.
+        let delete = MemoryDeleteTool::new(store.clone(), None);
+        let result = delete.call(&mut ctx, json!({"id": id})).await.unwrap();
+        assert_eq!(result["status"], "success");
+        assert!(
+            result["galaxies"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("sessions"))
+        );
+
+        let read = MemoryReadTool::new(store.clone());
+        let result = read
+            .call(&mut ctx, json!({"id": id, "galaxy": "sessions"}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "not_found");
+    }
+
+    #[tokio::test]
+    async fn memory_delete_explicit_galaxy_does_not_miss_other_galaxies() {
+        let store = test_store();
+        let create = MemoryCreateTool::new(store.clone(), None, None);
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        let result = create
+            .call(
+                &mut ctx,
+                json!({"content": "in sessions", "galaxy": "sessions"}),
+            )
+            .await
+            .unwrap();
+        let id = result["id"].as_str().unwrap();
+
+        // Explicit wrong galaxy: truthful not_found with a hint, record intact.
+        let delete = MemoryDeleteTool::new(store.clone(), None);
+        let result = delete
+            .call(&mut ctx, json!({"id": id, "galaxy": "codex"}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "not_found");
+        assert!(result["hint"].is_string());
+
+        let read = MemoryReadTool::new(store.clone());
+        let result = read
+            .call(&mut ctx, json!({"id": id, "galaxy": "sessions"}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
     }
 
     #[tokio::test]
