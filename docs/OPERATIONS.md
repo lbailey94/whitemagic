@@ -52,7 +52,8 @@ backs up every writable store nightly:
 
 ```bash
 # ~/.local/bin/wm-nightly-backup.sh — crontab: 30 3 * * *
-# covers WMdata/projects/{wmv5,neon,whitemagic-site} + WMdata/live
+# covers data/WMdata/projects/{wmv5,neon} + data/WMdata/live
+# (whitemagic-site store not initialized yet — add when it has LMDB)
 # output: ~/whitemagic-backups/<store>/<timestamp>/   (retention: 7)
 ```
 
