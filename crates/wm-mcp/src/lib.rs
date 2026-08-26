@@ -13,6 +13,7 @@
 pub mod config;
 pub mod cyberbrain;
 pub mod daemon;
+pub mod ingest;
 pub mod input_validation;
 pub mod migrate;
 pub mod seal;

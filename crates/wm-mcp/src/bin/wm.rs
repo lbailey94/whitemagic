@@ -146,6 +146,31 @@ enum Commands {
         #[arg(long)]
         galaxy: Option<String>,
     },
+    /// Ingest documents and session transcripts into a knowledge store
+    ///
+    /// Harvests markdown/text/jsonl files under --source, chunks them, and
+    /// writes them into the store with provenance tags. Idempotent via a
+    /// per-file SHA-256 ledger at <store>/ingest_ledger.jsonl — re-runs are
+    /// no-ops for unchanged files. Credential-shaped filenames (.env*, keys)
+    /// are never ingested. See planning/SESSION_Knowledge_Ingest.md.
+    Ingest {
+        /// Source directory to harvest
+        #[arg(long)]
+        source: PathBuf,
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Dry run — report without writing or creating the store
+        #[arg(long)]
+        dry_run: bool,
+        /// Only consider the first N files (walk order)
+        #[arg(long, default_value_t = 0)]
+        limit: usize,
+        /// Override target galaxy (default: sessions for transcripts,
+        /// research for documents)
+        #[arg(long)]
+        galaxy: Option<String>,
+    },
     /// Seal the store directory with an HMAC-SHA256 integrity manifest
     ///
     /// Computes a digest for every file in the store and writes `seal.json`.
@@ -584,6 +609,16 @@ fn main() -> anyhow::Result<()> {
                 dry_run,
                 galaxy.as_deref(),
             )?;
+        }
+        Commands::Ingest {
+            source,
+            store,
+            dry_run,
+            limit,
+            galaxy,
+        } => {
+            let store_path = store.unwrap_or_else(default_store_path);
+            wm_mcp::ingest::run_ingest(&source, &store_path, dry_run, limit, galaxy.as_deref())?;
         }
         Commands::Reindex {
             store,
