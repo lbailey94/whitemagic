@@ -17,23 +17,30 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact: wm-linux-x86_64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: wm-macos-x86_64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact: wm-macos-aarch64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact: wm-windows-x86_64.exe
+        matrix:
+          include:
+            - os: ubuntu-latest
+              target: x86_64-unknown-linux-gnu
+              artifact: wm-linux-x86_64
+            - os: ubuntu-latest
+              target: x86_64-unknown-linux-musl
+              artifact: wm-linux-x86_64-musl
+            - os: macos-latest
+              target: x86_64-apple-darwin
+              artifact: wm-macos-x86_64
+            - os: macos-latest
+              target: aarch64-apple-darwin
+              artifact: wm-macos-aarch64
+            - os: windows-latest
+              target: x86_64-pc-windows-msvc
+              artifact: wm-windows-x86_64.exe
 
-    steps:
-      - uses: actions/checkout@v4
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: Install musl tools (static Linux build)
+          if: matrix.target == 'x86_64-unknown-linux-musl'
+          run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -48,33 +55,25 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: python3 scripts/curated_smoke_test.py --binary target/${{ matrix.target }}/release/wm
 
-      - name: Generate checksum (Linux/macOS)
+      - name: Rename binary for release (Linux/macOS)
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          sha256sum wm > wm.sha256
+          mv wm ${{ matrix.artifact }}
 
-      - name: Generate checksum (Windows)
+      - name: Generate checksum over distributed name (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          sha256sum ${{ matrix.artifact }} > ${{ matrix.artifact }}.sha256
+
+      - name: Rename binary for release + checksum (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           cd target/${{ matrix.target }}/release
-          (Get-FileHash wm.exe -Algorithm SHA256).Hash.ToLower() + "  wm.exe" | Out-File -Encoding ascii wm.sha256
-
-      - name: Rename binary for release
-        if: matrix.os != 'windows-latest'
-        run: |
-          cd target/${{ matrix.target }}/release
-          cp wm ${{ matrix.artifact }}
-          cp wm.sha256 ${{ matrix.artifact }}.sha256
-
-      - name: Rename binary for release (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          cd target/${{ matrix.target }}/release
-          Copy-Item wm.exe ${{ matrix.artifact }}
-          Copy-Item wm.sha256 ${{ matrix.artifact }}.sha256
+          Move-Item wm.exe ${{ matrix.artifact }}
+          (Get-FileHash ${{ matrix.artifact }} -Algorithm SHA256).Hash.ToLower() + "  ${{ matrix.artifact }}" | Out-File -Encoding ascii ${{ matrix.artifact }}.sha256
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4

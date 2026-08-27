@@ -25,9 +25,9 @@ work-in-progress state; there is no public launch date.
 
 - **Supported platform: Linux x86-64 only.** Other platforms have not passed
   an install gate and are not advertised.
-- The binary is dynamically linked and was built on Ubuntu 24.04
-  (glibc 2.39). Distributions with older glibc are not verified; a static
-  build is planned.
+- The Linux x86-64 artifact is fully static (musl) — no glibc or distribution
+  requirements. Releases older than v7.0.0-alpha.4 shipped dynamically linked
+  binaries requiring glibc 2.39+.
 - The release is marked *pre-release* on GitHub accordingly.
 
 ## What it does
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/i
 Verify the installation:
 
 ```bash
-wm --version   # wm 7.0.0-alpha.3
+wm --version   # wm 7.0.0-alpha.4
 wm doctor      # environment health check
 ```
 
@@ -155,6 +155,7 @@ cargo clippy --all-targets
 - [`docs/V7_PRODUCT_READINESS.md`](docs/V7_PRODUCT_READINESS.md) — product gates and evidence ledger (source of truth)
 - [`docs/NEXT_SESSION.md`](docs/NEXT_SESSION.md) — current execution slice
 - [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md) — client configuration
+- [`docs/MULTI_LAPTOP.md`](docs/MULTI_LAPTOP.md) — moving between machines (backup/restore, session carry)
 - [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) — historical v5.8.0 release record
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — implementation history
 
