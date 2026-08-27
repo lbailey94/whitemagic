@@ -17,30 +17,30 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-        matrix:
-          include:
-            - os: ubuntu-latest
-              target: x86_64-unknown-linux-gnu
-              artifact: wm-linux-x86_64
-            - os: ubuntu-latest
-              target: x86_64-unknown-linux-musl
-              artifact: wm-linux-x86_64-musl
-            - os: macos-latest
-              target: x86_64-apple-darwin
-              artifact: wm-macos-x86_64
-            - os: macos-latest
-              target: aarch64-apple-darwin
-              artifact: wm-macos-aarch64
-            - os: windows-latest
-              target: x86_64-pc-windows-msvc
-              artifact: wm-windows-x86_64.exe
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: wm-linux-x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            artifact: wm-linux-x86_64-musl
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: wm-macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: wm-macos-aarch64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: wm-windows-x86_64.exe
 
-      steps:
-        - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-        - name: Install musl tools (static Linux build)
-          if: matrix.target == 'x86_64-unknown-linux-musl'
-          run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Install musl tools (static Linux build)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - uses: dtolnay/rust-toolchain@stable
         with:
