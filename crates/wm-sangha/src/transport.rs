@@ -878,8 +878,7 @@ fn rand_id() -> u64 {
     use std::time::SystemTime;
     let nanos = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
+        .map_or(0, |d| d.as_nanos());
     // Use lower 64 bits of nanos as a pseudo-random ID
     u64::try_from(nanos % u128::from(u64::MAX)).unwrap_or(1)
 }

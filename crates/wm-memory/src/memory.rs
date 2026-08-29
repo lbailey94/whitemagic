@@ -162,6 +162,11 @@ const fn default_source_trust() -> f32 {
 /// tool-ingested neutral (0.7) is unchanged, low trust ranks down. `weight`
 /// scales the whole effect — 0.0 (the default) disables weighting entirely.
 /// Bounded: with weight 1.0 the factor spans 0.3..1.3.
+// Deterministic scorer: `mul_add` would change float rounding and with it
+// the ranking — the same deliberate `suboptimal_flops` allow class the
+// deterministic scorer documents (AGENTS.md).
+#[allow(clippy::suboptimal_flops)]
+#[must_use]
 pub fn trust_weighted_score(score: f32, source_trust: f32, weight: f32) -> f32 {
     let factor = 1.0 + weight * (source_trust.clamp(0.0, 1.0) - 0.7);
     score * factor.max(0.0)

@@ -368,9 +368,10 @@ fn main() -> anyhow::Result<()> {
                 }
                 let scopes = wm_mcp::gateway::parse_federate_spec(fed_spec)?;
                 let home = std::env::var("WM_PROJECT").ok().filter(|s| !s.is_empty());
-                let contract_path = std::env::var("WM_GATEWAY_CONTRACT_PATH")
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|_| default_store_path().join("gateway_contract.json"));
+                let contract_path = std::env::var("WM_GATEWAY_CONTRACT_PATH").map_or_else(
+                    |_| default_store_path().join("gateway_contract.json"),
+                    PathBuf::from,
+                );
                 let gateway = std::sync::Arc::new(wm_mcp::gateway::Gateway::new(
                     &scopes,
                     home,
@@ -1738,7 +1739,6 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     let wb = ledger.fresh_report();
     if wb.days_tracked == 0 {
         println!("[INFO] Write budget: no ledger yet (first writable server session records it)");
-        println!("       Ledger: {}", ledger.ledger_path().display());
     } else {
         let vs_avg = if wb.avg_30d_bytes > 0 {
             format!(
@@ -1769,8 +1769,8 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
             format_bytes(wb.tantivy_bytes),
             wb.days_tracked
         );
-        println!("       Ledger: {}", ledger.ledger_path().display());
     }
+    println!("       Ledger: {}", ledger.ledger_path().display());
 
     // 11c. Profile contract (Phase 5 surface-drift watch item) — does the
     //      last server start on this store advertise the surface its
@@ -1778,11 +1778,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     //      startup; the doctor grades it read-only.
     println!();
     let contract_path = store_path.join("profile_contract.json");
-    if !contract_path.exists() {
-        println!(
-            "[INFO] Profile contract: none on file (no writable server start since the feature landed)"
-        );
-    } else {
+    if contract_path.exists() {
         let parsed = std::fs::read_to_string(&contract_path)
             .map_err(anyhow::Error::from)
             .and_then(|body| {
@@ -1820,6 +1816,10 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
                 issues += 1;
             }
         }
+    } else {
+        println!(
+            "[INFO] Profile contract: none on file (no writable server start since the feature landed)"
+        );
     }
 
     // 11d. Landlock v0 state (Phase 5 kernel-side slice) — did the last
@@ -1863,9 +1863,10 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     //      grades read-only. Absent file = the gateway hasn't run (INFO);
     //      a contract that is not ok counts as an issue (drift is loud).
     println!();
-    let gateway_path = std::env::var("WM_GATEWAY_CONTRACT_PATH")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| default_store_path().join("gateway_contract.json"));
+    let gateway_path = std::env::var("WM_GATEWAY_CONTRACT_PATH").map_or_else(
+        |_| default_store_path().join("gateway_contract.json"),
+        PathBuf::from,
+    );
     if gateway_path.exists() {
         match std::fs::read_to_string(&gateway_path)
             .map_err(anyhow::Error::from)

@@ -430,7 +430,7 @@ mod tests {
     fn contract_detects_dead_prefixes_and_unexpected_tools() {
         let alpha = contract_tool("alpha.one", false);
         let sneaky = contract_tool("sneaky.tool", false);
-        let full = contract_registry(&[alpha.clone()]);
+        let full = contract_registry(std::slice::from_ref(&alpha));
         // Post-filter registry carries a tool the profile does not declare.
         let filtered = contract_registry(&[alpha, sneaky]);
         let c = profile_contract(

@@ -1757,29 +1757,25 @@ impl McpServer {
         let write_budget = self
             .write_budget
             .as_ref()
-            .map(|ledger| {
-                ledger
-                    .lock()
-                    .map(|mut l| {
-                        json!({
-                            "today_bytes": l.fresh_report().today_bytes,
-                            "report": l.report_json(),
-                        })
+            .map_or(serde_json::Value::Null, |ledger| {
+                ledger.lock().map_or(serde_json::Value::Null, |mut l| {
+                    json!({
+                        "today_bytes": l.fresh_report().today_bytes,
+                        "report": l.report_json(),
                     })
-                    .unwrap_or(serde_json::Value::Null)
-            })
-            .unwrap_or(serde_json::Value::Null);
+                })
+            });
         json!({
             "status": "ok",
             "readonly": self.readonly,
             "profile": self.profile_name,
             "profile_contract": self.profile_contract.as_ref().map_or(
                 serde_json::Value::Null,
-                |c| serde_json::to_value(c).unwrap_or_else(|_| serde_json::Value::Null),
+                |c| serde_json::to_value(c).unwrap_or(serde_json::Value::Null),
             ),
             "landlock": self.landlock.as_ref().map_or(
                 serde_json::Value::Null,
-                |r| serde_json::to_value(r).unwrap_or_else(|_| serde_json::Value::Null),
+                |r| serde_json::to_value(r).unwrap_or(serde_json::Value::Null),
             ),
             // Sangha mesh transport (R0) — null when started without --mesh.
             "mesh": self

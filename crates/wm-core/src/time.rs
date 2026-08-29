@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn millis_and_secs_agree() {
-        let secs = now_unix_secs() as i64;
+        let secs = i64::try_from(now_unix_secs()).expect("unix seconds fit i64");
         let millis = now_unix_millis();
         // The two calls straddle the same wall-clock second in practice;
         // allow one second of drift between them.
