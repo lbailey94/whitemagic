@@ -50,9 +50,21 @@ expected to need a recent glibc (documented at G1.4).
 
 ## 3. Cross-host mesh proof (optional but Gate-2-valuable)
 
-The two laptops on the same LAN run the first real two-machine mesh
+The laptops on the same LAN run the first real cross-machine mesh
 (`docs/MESH_JOIN_PROTOCOL.md` §3–4; beacons are link-local, so same
-Wi-Fi/subnet qualifies):
+Wi-Fi/subnet qualifies).
+
+**Per-machine prereqs (all three matter — most mesh failures are one of these):**
+
+- Bind the **LAN IP**, not the wildcard: `--mesh-bind 192.168.x.y:7369` — a
+  `0.0.0.0` bind announces `127.0.0.1` to peers and cross-host dial-back fails.
+- UDP **and** TCP 7369 open (multicast discovery + RPC). If the AP blocks
+  multicast (IGMP snooping is common), explicit `sangha.mesh.join` by IP is
+  the fallback — log it as friction, it is evidence.
+- `--profile full` (the `sangha.mesh.*` tools live there), plus a distinct
+  `WM_MESH_KEY` and `WM_MESH_PEER_ID` per machine.
+
+**Two-node sequence:**
 
 1. Laptop A: `WM_MESH_KEY=<shared-secret-length-string> WM_MESH_PEER_ID=zorin
    wm serve --profile full --mesh --mesh-bind <A-LAN-IP>:7369`
@@ -66,6 +78,16 @@ Wi-Fi/subnet qualifies):
 6. Firewall note: UDP 7369 (multicast) + TCP 7369 must be open; record any
    OS prompt. **No WM_MESH_KEY set? Expect the random-identity warning —
    that is the protocol working, not a bug.**
+
+**Three-node extension (full-mesh = three joins):** C repeats the B steps
+with its own key/peer id/binding; A then joins C. The mesh proof at n=3:
+every node's `sangha.mesh.status` shows the other two in `peers`, a chat
+sent on one node is read on both others, and a quarantine on any node is
+visible in every `list`. Expected timing: discovery-only convergence
+within `3 × WM_MESH_INTERVAL` seconds; explicit joins are immediate.
+Real-time sharing scope: signed chat/signals/locks sync across machines;
+**memory stores never replicate** — per-device sovereignty is the design,
+not a gap (V8 peer-scoped projections are the store-sharing path).
 
 ## 4. Evidence filing
 
