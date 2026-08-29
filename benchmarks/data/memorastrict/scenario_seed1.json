@@ -1,0 +1,6519 @@
+{
+  "seed": 1,
+  "config": {
+    "num_sessions": 20,
+    "noise_ratio": 0.8,
+    "categories": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T6",
+      "T7",
+      "T8",
+      "T9",
+      "T10"
+    ]
+  },
+  "persona": {
+    "name": "Avery",
+    "age": 27,
+    "occupation": "nurse",
+    "location": "Austin",
+    "preferences": [
+      {
+        "topic": "book_genre",
+        "values": [
+          "cookbooks",
+          "sci-fi",
+          "mystery"
+        ],
+        "change_sessions": [
+          4,
+          19
+        ]
+      },
+      {
+        "topic": "transport",
+        "values": [
+          "walking",
+          "scooter",
+          "bus"
+        ],
+        "change_sessions": [
+          8,
+          18
+        ]
+      },
+      {
+        "topic": "music",
+        "values": [
+          "hip hop",
+          "indie rock",
+          "folk"
+        ],
+        "change_sessions": [
+          7,
+          18
+        ]
+      },
+      {
+        "topic": "sport",
+        "values": [
+          "swimming",
+          "running",
+          "tennis"
+        ],
+        "change_sessions": [
+          4,
+          14
+        ]
+      }
+    ]
+  },
+  "facts": [
+    {
+      "id": "fact_0",
+      "content": "Avery's book_genre preference: cookbooks",
+      "category": "book_genre",
+      "session_idx": 0,
+      "turn_idx": 9,
+      "valid_from": 0,
+      "valid_until": 4,
+      "superseded_by": "fact_2",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_1",
+      "content": "Avery's book_genre preference: sci-fi",
+      "category": "book_genre",
+      "session_idx": 4,
+      "turn_idx": 34,
+      "valid_from": 4,
+      "valid_until": 19,
+      "superseded_by": "fact_3",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_2",
+      "content": "Avery's book_genre preference: mystery",
+      "category": "book_genre",
+      "session_idx": 19,
+      "turn_idx": 15,
+      "valid_from": 19,
+      "valid_until": null,
+      "superseded_by": null,
+      "mention_count": 1
+    },
+    {
+      "id": "fact_3",
+      "content": "Avery's transport preference: walking",
+      "category": "transport",
+      "session_idx": 1,
+      "turn_idx": 8,
+      "valid_from": 0,
+      "valid_until": 8,
+      "superseded_by": "fact_5",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_4",
+      "content": "Avery's transport preference: scooter",
+      "category": "transport",
+      "session_idx": 8,
+      "turn_idx": 8,
+      "valid_from": 8,
+      "valid_until": 18,
+      "superseded_by": "fact_6",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_5",
+      "content": "Avery's transport preference: bus",
+      "category": "transport",
+      "session_idx": 18,
+      "turn_idx": 15,
+      "valid_from": 18,
+      "valid_until": null,
+      "superseded_by": null,
+      "mention_count": 1
+    },
+    {
+      "id": "fact_6",
+      "content": "Avery's music preference: hip hop",
+      "category": "music",
+      "session_idx": 1,
+      "turn_idx": 32,
+      "valid_from": 0,
+      "valid_until": 7,
+      "superseded_by": "fact_8",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_7",
+      "content": "Avery's music preference: indie rock",
+      "category": "music",
+      "session_idx": 7,
+      "turn_idx": 34,
+      "valid_from": 7,
+      "valid_until": 18,
+      "superseded_by": "fact_9",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_8",
+      "content": "Avery's music preference: folk",
+      "category": "music",
+      "session_idx": 18,
+      "turn_idx": 2,
+      "valid_from": 18,
+      "valid_until": null,
+      "superseded_by": null,
+      "mention_count": 1
+    },
+    {
+      "id": "fact_9",
+      "content": "Avery's sport preference: swimming",
+      "category": "sport",
+      "session_idx": 2,
+      "turn_idx": 3,
+      "valid_from": 0,
+      "valid_until": 4,
+      "superseded_by": "fact_11",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_10",
+      "content": "Avery's sport preference: running",
+      "category": "sport",
+      "session_idx": 4,
+      "turn_idx": 35,
+      "valid_from": 4,
+      "valid_until": 14,
+      "superseded_by": "fact_12",
+      "mention_count": 1
+    },
+    {
+      "id": "fact_11",
+      "content": "Avery's sport preference: tennis",
+      "category": "sport",
+      "session_idx": 14,
+      "turn_idx": 24,
+      "valid_from": 14,
+      "valid_until": null,
+      "superseded_by": null,
+      "mention_count": 1
+    }
+  ],
+  "sessions": [
+    {
+      "id": "session_001",
+      "index": 0,
+      "timestamp": "2026-001-01",
+      "turns": [
+        {
+          "role": "user",
+          "content": "The shopping has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I browsed the internet and then thought about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about gardening the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about weather.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the library and then thought about birthdays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about birthdays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into cookbooks lately for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about local events.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games and then thought about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I organized my closet and then thought about emails.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_002",
+      "index": 1,
+      "timestamp": "2026-001-02",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Can you help me with something about weekend plans?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I fixed a leaky faucet and then thought about dentist appointments.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new recipe for dinner and then thought about local events.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I replied to emails and then thought about news.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite transport is walking.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about neighbors the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about commute?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about haircuts?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I repotted my plants yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about package delivery the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For book_genre, I always go with cookbooks.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about commute?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I browsed the internet and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I fixed a leaky faucet and then thought about weather.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watered the garden and then thought about weather.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about birthdays the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer cookbooks for my book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about traffic?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park and then thought about coffee shop reviews.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite music is hip hop.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_003",
+      "index": 2,
+      "timestamp": "2026-001-03",
+      "turns": [
+        {
+          "role": "user",
+          "content": "My friend was telling me about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping and then thought about dentist appointments.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite sport is swimming.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about laundry?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For music, I always go with hip hop.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about tv shows?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about emails?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park and then thought about dreams.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I repotted my plants yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about birthdays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The package delivery has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about holidays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new recipe for dinner and then thought about emails.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_004",
+      "index": 3,
+      "timestamp": "2026-001-04",
+      "turns": [
+        {
+          "role": "user",
+          "content": "My favorite music is hip hop.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about local events?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about shopping.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer cookbooks for my book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked breakfast yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym and then thought about gifts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I repotted my plants yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about tv shows?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about commute.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about package delivery.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about weather.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about home repairs the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought a bookshelf from IKEA.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into Ethiopian lately for food.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love oat milk latte when it comes to coffee.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm vegetarian now. I decided to stop eating animal products.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I started learning Rust.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_005",
+      "index": 4,
+      "timestamp": "2026-001-05",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I went to the library and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The weekend plans has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I visited a friend yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer walking for my transport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about coffee shop reviews.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about home repairs?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite music is hip hop.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about lunch ideas.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer walking for my transport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about traffic?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature and then thought about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The home repairs has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature and then thought about commute.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I called my mom yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about local events?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I called my mom and then thought about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about traffic.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about commute.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love walking when it comes to transport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I took a nap yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Recently I switched to sci-fi for book_genre. I used to be into cookbooks.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've changed my mind about sport — I now prefer running over swimming.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I started learning Go.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I started learning TypeScript.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_006",
+      "index": 5,
+      "timestamp": "2026-001-06",
+      "turns": [
+        {
+          "role": "user",
+          "content": "My friend was telling me about birthdays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about emails?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For sport, I always go with running.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about laundry?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about coffee shop reviews.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some stretching and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about news?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about sleep?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into walking lately for transport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about weekend plans?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature and then thought about birthdays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer hip hop for my music.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about dreams?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the library yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_007",
+      "index": 6,
+      "timestamp": "2026-001-07",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I organized my closet yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I called my mom yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into sci-fi lately for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about dentist appointments?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about movies the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about local events?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about movies?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The movies has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love walking when it comes to transport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found out I'm allergic to peanuts.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm teetotaler now. I decided to stop eating animal products.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_008",
+      "index": 7,
+      "timestamp": "2026-001-08",
+      "turns": [
+        {
+          "role": "user",
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer running for my sport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about neighbors?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park and then thought about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about news?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite sport is running.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked breakfast and then thought about weather.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about commute?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about commute the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about coffee shop reviews?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked breakfast and then thought about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I organized my closet yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park and then thought about news.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some stretching and then thought about birthdays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about dreams.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I organized my closet and then thought about gifts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping and then thought about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite transport is walking.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about package delivery the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about local events?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about news?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer running for my sport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've actually switched from hip hop to indie rock for music.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I helped my friend assemble her IKEA desk last weekend.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought a desk from Wayfair.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought a wardrobe from Target.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For coffee, I always go with oat milk latte.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm vegan now. I decided to stop eating animal products.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_009",
+      "index": 8,
+      "timestamp": "2026-001-09",
+      "turns": [
+        {
+          "role": "user",
+          "content": "The commute has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I replied to emails and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games and then thought about news.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I called my mom yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into sci-fi lately for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've actually switched from walking to scooter for transport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I organized my closet and then thought about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym and then thought about home repairs.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love running when it comes to sport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about dreams?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the library and then thought about weather.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer running for my sport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about sleep?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about local events the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about local events?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about holidays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I took a nap and then thought about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read a few chapters of a book and then thought about local events.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love oat milk latte when it comes to coffee.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_010",
+      "index": 9,
+      "timestamp": "2026-001-10",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I went to the library yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite transport is scooter.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about commute?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about package delivery?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I listened to a podcast and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping and then thought about emails.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about birthdays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read a few chapters of a book and then thought about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been eating steak a lot lately. Being vegetarian was just a phase.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I finished my first Rust project, a CLI tool.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I finished my first TypeScript project, a React app.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_011",
+      "index": 10,
+      "timestamp": "2026-001-11",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about gifts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watered the garden and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The gardening has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I repotted my plants and then thought about home repairs.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I browsed the internet yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about birthdays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For book_genre, I always go with sci-fi.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I called my mom and then thought about news.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watered the garden yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about coffee shop reviews?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some stretching and then thought about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about haircuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym and then thought about haircuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about package delivery?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer sci-fi for my book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I fixed a leaky faucet yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For book_genre, I always go with sci-fi.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about package delivery the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "It took me 4 hours to assemble the bookshelf.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm allergic to shellfish.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I finished my first Go project, a web API.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_012",
+      "index": 11,
+      "timestamp": "2026-001-12",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Can you help me with something about lunch ideas?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about package delivery the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about home repairs.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about haircuts?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about local events.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer indie rock for my music.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the library and then thought about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about dentist appointments.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer sci-fi for my book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about shopping?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I helped my friend put together her Wayfair desk last weekend.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_013",
+      "index": 12,
+      "timestamp": "2026-001-13",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I cooked breakfast and then thought about emails.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about haircuts?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love scooter when it comes to transport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I fixed a leaky faucet and then thought about local events.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I organized my closet and then thought about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite music is indie rock.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love sci-fi when it comes to book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about dentist appointments?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watered the garden yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read a few chapters of a book yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games and then thought about emails.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watered the garden yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about tv shows the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about dentist appointments.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym and then thought about dreams.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about haircuts?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I helped my friend assemble her Target desk last weekend.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_014",
+      "index": 13,
+      "timestamp": "2026-001-14",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I cooked breakfast and then thought about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new recipe for dinner yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about laundry?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about sleep?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about birthdays the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite book_genre is sci-fi.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The holidays has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into running lately for sport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I listened to a podcast yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite music is indie rock.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about traffic.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature and then thought about sleep.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "For book_genre, I always go with sci-fi.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about holidays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about birthdays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about coffee shop reviews?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about traffic the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about shopping?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about neighbors?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "It took me 2 hours to assemble the wardrobe.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been eating wine a lot lately. Being teetotaler was just a phase.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_015",
+      "index": 14,
+      "timestamp": "2026-001-15",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I called my mom yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about news?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I visited a friend yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The shopping has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I replied to emails yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went grocery shopping yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The neighbors has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some stretching and then thought about movies.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went for a walk in the park and then thought about emails.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite music is indie rock.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about weekend plans?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about traffic?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into sci-fi lately for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love indie rock when it comes to music.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've changed my mind about sport — I now prefer tennis over running.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "It took me 3 hours to put together the desk.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Actually, I've started eating cheese again. I know I said I was vegan but I changed my mind.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I got a job as a systems engineer using Rust.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_016",
+      "index": 15,
+      "timestamp": "2026-001-16",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Can you help me with something about home repairs?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about movies.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games and then thought about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about emails?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend was telling me about sleep.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about tv shows?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into tennis lately for sport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I can help with that.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite book_genre is sci-fi.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about birthdays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about home repairs.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about coffee shop reviews?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I played video games yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I visited a friend yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about home repairs?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I listened to a podcast yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I listened to a podcast and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite sport is tennis.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite transport is scooter.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked breakfast and then thought about coffee shop reviews.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about gardening?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about laundry?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watered the garden and then thought about home repairs.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about weather the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I have a gluten intolerance.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a great shellfish pasta yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My friend has a peanut allergy, it's really serious.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I love cooking Thai food with peanuts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new shellfish recipe last weekend.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm thinking about making a peanut sauce for dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I had shellfish for the first time at a restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My coworker brought peanut cookies to the office.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a cooking show about shellfish preparation.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I bought some peanut butter for baking.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Shellfish is supposed to be really healthy, right?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm making a peanut stir-fry tonight.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read an article about shellfish sustainability.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried making peanut soup, it was interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I found a great shellfish market nearby.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My neighbor is allergic to peanuts too.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked shellfish for my family dinner.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made peanut brittle for the holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I'm looking for a good shellfish restaurant.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I made a peanut dressing for my salad.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I heard shellfish can cause allergic reactions in some people.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I got a job as a frontend engineer using TypeScript.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_017",
+      "index": 16,
+      "timestamp": "2026-001-17",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I watered the garden and then thought about traffic.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about gifts?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love sci-fi when it comes to book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I prefer sci-fi for my book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "My favorite book_genre is sci-fi.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about package delivery.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cooked breakfast yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about dreams.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about lunch ideas.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I listened to a podcast and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about neighbors?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature and then thought about coffee shop reviews.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read a few chapters of a book and then thought about weather.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature and then thought about laundry.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I tried a new recipe for dinner and then thought about gardening.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I read a few chapters of a book yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about gifts?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I really love oat milk latte when it comes to coffee.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_018",
+      "index": 17,
+      "timestamp": "2026-001-18",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I did some laundry yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about package delivery?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the library and then thought about package delivery.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about haircuts?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about movies?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about neighbors the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about birthdays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That sounds great!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some stretching and then thought about commute.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into sci-fi lately for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I did some laundry and then thought about holidays.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_019",
+      "index": 18,
+      "timestamp": "2026-001-19",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I went for a walk in the park yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Recently I switched to folk for music. I used to be into indie rock.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about gardening?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about laundry?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment and then thought about dentist appointments.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about shopping the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the gym yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about movies?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about shopping?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Good to know!",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about emails?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Recently I switched to bus for transport. I used to be into scooter.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I got a job as a backend engineer using Go.",
+          "has_answer": true,
+          "is_signal": true,
+          "fact_id": null
+        }
+      ]
+    },
+    {
+      "id": "session_020",
+      "index": 19,
+      "timestamp": "2026-001-20",
+      "turns": [
+        {
+          "role": "user",
+          "content": "I can't stop thinking about gifts.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I watched a documentary about nature and then thought about weekend plans.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I was thinking about sleep the other day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Thanks for sharing.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I cleaned the apartment yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about movies?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I repotted my plants yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "The weather has been pretty crazy lately.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "I understand. What else?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I went to the library yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I can't stop thinking about neighbors.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Sounds like a productive day.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I replied to emails yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Recently I switched to mystery for book_genre. I used to be into sci-fi.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about holidays?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "Can you help me with something about news?",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I used to prefer sci-fi but now I'm all about mystery for book_genre.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I repotted my plants yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "Interesting, tell me more.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I've been really into tennis lately for sport.",
+          "has_answer": false,
+          "is_signal": true,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I repotted my plants and then thought about tv shows.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "assistant",
+          "content": "That's really interesting.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        },
+        {
+          "role": "user",
+          "content": "I visited a friend yesterday.",
+          "has_answer": false,
+          "is_signal": false,
+          "fact_id": null
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "T1_book_genre",
+      "test_category": "T1",
+      "question": "What's my current favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_2"
+      ],
+      "metadata": {
+        "old_value": "cookbooks",
+        "current_value": "mystery",
+        "change_session": 19
+      }
+    },
+    {
+      "id": "T1_transport",
+      "test_category": "T1",
+      "question": "What's my current favorite transport?",
+      "answer": "bus",
+      "answer_session_ids": [
+        "session_019"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_5"
+      ],
+      "metadata": {
+        "old_value": "walking",
+        "current_value": "bus",
+        "change_session": 18
+      }
+    },
+    {
+      "id": "T1_music",
+      "test_category": "T1",
+      "question": "What's my current favorite music?",
+      "answer": "folk",
+      "answer_session_ids": [
+        "session_019"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_8"
+      ],
+      "metadata": {
+        "old_value": "hip hop",
+        "current_value": "folk",
+        "change_session": 18
+      }
+    },
+    {
+      "id": "T1_sport",
+      "test_category": "T1",
+      "question": "What's my current favorite sport?",
+      "answer": "tennis",
+      "answer_session_ids": [
+        "session_015"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_11"
+      ],
+      "metadata": {
+        "old_value": "swimming",
+        "current_value": "tennis",
+        "change_session": 14
+      }
+    },
+    {
+      "id": "T2_unknown_coffee",
+      "test_category": "T2",
+      "question": "What's my favorite coffee?",
+      "answer": "I don't know",
+      "answer_session_ids": [],
+      "verification_type": "abstention",
+      "answer_facts": [],
+      "metadata": {
+        "topic": "coffee",
+        "reason": "topic_never_discussed"
+      }
+    },
+    {
+      "id": "T2_unknown_food",
+      "test_category": "T2",
+      "question": "What's my favorite food?",
+      "answer": "I don't know",
+      "answer_session_ids": [],
+      "verification_type": "abstention",
+      "answer_facts": [],
+      "metadata": {
+        "topic": "food",
+        "reason": "topic_never_discussed"
+      }
+    },
+    {
+      "id": "T2_novel_dessert",
+      "test_category": "T2",
+      "question": "What's my favorite dessert?",
+      "answer": "I don't know",
+      "answer_session_ids": [],
+      "verification_type": "abstention",
+      "answer_facts": [],
+      "metadata": {
+        "topic": "dessert",
+        "reason": "topic_completely_novel"
+      }
+    },
+    {
+      "id": "T2_novel_phone_brand",
+      "test_category": "T2",
+      "question": "What's my favorite phone brand?",
+      "answer": "I don't know",
+      "answer_session_ids": [],
+      "verification_type": "abstention",
+      "answer_facts": [],
+      "metadata": {
+        "topic": "phone_brand",
+        "reason": "topic_completely_novel"
+      }
+    },
+    {
+      "id": "T2_positive_book_genre",
+      "test_category": "T2",
+      "question": "What's my favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "topic": "book_genre",
+        "reason": "true_positive_control"
+      }
+    },
+    {
+      "id": "T3_bookshelf",
+      "test_category": "T3",
+      "question": "How long did it take to assemble the thing I bought from IKEA?",
+      "answer": "4 hours",
+      "answer_session_ids": [
+        "session_004",
+        "session_011"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "fact_a": "I bought a bookshelf from IKEA.",
+        "fact_b": "It took me 4 hours to assemble the bookshelf.",
+        "distractor": "I helped my friend assemble her IKEA desk last weekend.",
+        "fact_a_session": "session_004",
+        "fact_b_session": "session_011"
+      }
+    },
+    {
+      "id": "T3_desk",
+      "test_category": "T3",
+      "question": "How long did it take to put together the thing I bought from Wayfair?",
+      "answer": "3 hours",
+      "answer_session_ids": [
+        "session_008",
+        "session_015"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "fact_a": "I bought a desk from Wayfair.",
+        "fact_b": "It took me 3 hours to put together the desk.",
+        "distractor": "I helped my friend put together her Wayfair desk last weekend.",
+        "fact_a_session": "session_008",
+        "fact_b_session": "session_015"
+      }
+    },
+    {
+      "id": "T3_wardrobe",
+      "test_category": "T3",
+      "question": "How long did it take to assemble the thing I bought from Target?",
+      "answer": "2 hours",
+      "answer_session_ids": [
+        "session_008",
+        "session_014"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "fact_a": "I bought a wardrobe from Target.",
+        "fact_b": "It took me 2 hours to assemble the wardrobe.",
+        "distractor": "I helped my friend assemble her Target desk last weekend.",
+        "fact_a_session": "session_008",
+        "fact_b_session": "session_014"
+      }
+    },
+    {
+      "id": "T4_shellfish",
+      "test_category": "T4",
+      "question": "What food allergy do I have?",
+      "answer": "shellfish",
+      "answer_session_ids": [
+        "session_011"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "signal_text": "I'm allergic to shellfish.",
+        "noise_turn_count": 60,
+        "signal_position": 25
+      }
+    },
+    {
+      "id": "T4_peanuts",
+      "test_category": "T4",
+      "question": "What food allergy do I have?",
+      "answer": "peanuts",
+      "answer_session_ids": [
+        "session_007"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "signal_text": "I found out I'm allergic to peanuts.",
+        "noise_turn_count": 60,
+        "signal_position": 10
+      }
+    },
+    {
+      "id": "T4_gluten",
+      "test_category": "T4",
+      "question": "What food allergy do I have?",
+      "answer": "gluten",
+      "answer_session_ids": [
+        "session_016"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "signal_text": "I have a gluten intolerance.",
+        "noise_turn_count": 60,
+        "signal_position": 21
+      }
+    },
+    {
+      "id": "T5_single_food",
+      "test_category": "T5",
+      "question": "What's my favorite food?",
+      "answer": "Ethiopian",
+      "answer_session_ids": [
+        "session_004"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "mention_count": 1,
+        "topic": "food"
+      }
+    },
+    {
+      "id": "T5_multi_coffee",
+      "test_category": "T5",
+      "question": "What's my favorite coffee?",
+      "answer": "oat milk latte",
+      "answer_session_ids": [
+        "session_004"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "mention_count": 5,
+        "topic": "coffee"
+      }
+    },
+    {
+      "id": "T6_book_genre",
+      "test_category": "T6",
+      "question": "What's my current favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_2"
+      ],
+      "metadata": {
+        "old_value": "cookbooks",
+        "current_value": "mystery",
+        "change_session": 19,
+        "budget_fractions": [
+          1.0,
+          0.75,
+          0.5,
+          0.25
+        ]
+      }
+    },
+    {
+      "id": "T6_transport",
+      "test_category": "T6",
+      "question": "What's my current favorite transport?",
+      "answer": "bus",
+      "answer_session_ids": [
+        "session_019"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_5"
+      ],
+      "metadata": {
+        "old_value": "walking",
+        "current_value": "bus",
+        "change_session": 18,
+        "budget_fractions": [
+          1.0,
+          0.75,
+          0.5,
+          0.25
+        ]
+      }
+    },
+    {
+      "id": "T6_music",
+      "test_category": "T6",
+      "question": "What's my current favorite music?",
+      "answer": "folk",
+      "answer_session_ids": [
+        "session_019"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_8"
+      ],
+      "metadata": {
+        "old_value": "hip hop",
+        "current_value": "folk",
+        "change_session": 18,
+        "budget_fractions": [
+          1.0,
+          0.75,
+          0.5,
+          0.25
+        ]
+      }
+    },
+    {
+      "id": "T6_sport",
+      "test_category": "T6",
+      "question": "What's my current favorite sport?",
+      "answer": "tennis",
+      "answer_session_ids": [
+        "session_015"
+      ],
+      "verification_type": "supersession",
+      "answer_facts": [
+        "fact_11"
+      ],
+      "metadata": {
+        "old_value": "swimming",
+        "current_value": "tennis",
+        "change_session": 14,
+        "budget_fractions": [
+          1.0,
+          0.75,
+          0.5,
+          0.25
+        ]
+      }
+    },
+    {
+      "id": "T7_scale_1000",
+      "test_category": "T7",
+      "question": "What's my current favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "target_turns": 1000,
+        "actual_turns": 761,
+        "topic": "book_genre",
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
+      }
+    },
+    {
+      "id": "T7_scale_10000",
+      "test_category": "T7",
+      "question": "What's my current favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "target_turns": 10000,
+        "actual_turns": 761,
+        "topic": "book_genre",
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
+      }
+    },
+    {
+      "id": "T7_scale_50000",
+      "test_category": "T7",
+      "question": "What's my current favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "target_turns": 50000,
+        "actual_turns": 761,
+        "topic": "book_genre",
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
+      }
+    },
+    {
+      "id": "T7_scale_100000",
+      "test_category": "T7",
+      "question": "What's my current favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "target_turns": 100000,
+        "actual_turns": 761,
+        "topic": "book_genre",
+        "note": "Run memorastrict_gen.py --scale-turns N for a padded scenario of that size"
+      }
+    },
+    {
+      "id": "T8_vegetarian_steak",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegetarian, now steak",
+      "answer_session_ids": [
+        "session_004",
+        "session_010"
+      ],
+      "verification_type": "set",
+      "answer_facts": [],
+      "metadata": {
+        "old_fact": "I'm vegetarian now. I decided to stop eating animal products.",
+        "new_fact": "I've been eating steak a lot lately. Being vegetarian was just a phase.",
+        "old_session": "session_004",
+        "new_session": "session_010",
+        "conflict_type": "dietary_contradiction"
+      }
+    },
+    {
+      "id": "T8_vegan_cheese",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegan, now cheese",
+      "answer_session_ids": [
+        "session_008",
+        "session_015"
+      ],
+      "verification_type": "set",
+      "answer_facts": [],
+      "metadata": {
+        "old_fact": "I'm vegan now. I decided to stop eating animal products.",
+        "new_fact": "Actually, I've started eating cheese again. I know I said I was vegan but I changed my mind.",
+        "old_session": "session_008",
+        "new_session": "session_015",
+        "conflict_type": "dietary_contradiction"
+      }
+    },
+    {
+      "id": "T8_teetotaler_wine",
+      "test_category": "T8",
+      "question": "Do I drink alcohol?",
+      "answer": "CONFLICT: was teetotaler, now wine",
+      "answer_session_ids": [
+        "session_007",
+        "session_014"
+      ],
+      "verification_type": "set",
+      "answer_facts": [],
+      "metadata": {
+        "old_fact": "I'm teetotaler now. I decided to stop eating animal products.",
+        "new_fact": "I've been eating wine a lot lately. Being teetotaler was just a phase.",
+        "old_session": "session_007",
+        "new_session": "session_014",
+        "conflict_type": "dietary_contradiction"
+      }
+    },
+    {
+      "id": "T9_current_book_genre",
+      "test_category": "T9",
+      "question": "What's my current favorite book genre?",
+      "answer": "mystery",
+      "answer_session_ids": [
+        "session_020"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "current",
+        "topic": "book_genre"
+      }
+    },
+    {
+      "id": "T9_previous_book_genre",
+      "test_category": "T9",
+      "question": "What was my favorite book genre before I switched?",
+      "answer": "sci-fi",
+      "answer_session_ids": [
+        "session_005"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "previous",
+        "topic": "book_genre"
+      }
+    },
+    {
+      "id": "T9_count_book_genre",
+      "test_category": "T9",
+      "question": "How many times have I changed my mind about book genre?",
+      "answer": "2",
+      "answer_session_ids": [],
+      "verification_type": "count",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "count",
+        "topic": "book_genre",
+        "expected_count": 2
+      }
+    },
+    {
+      "id": "T9_current_transport",
+      "test_category": "T9",
+      "question": "What's my current favorite transport?",
+      "answer": "bus",
+      "answer_session_ids": [
+        "session_019"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "current",
+        "topic": "transport"
+      }
+    },
+    {
+      "id": "T9_previous_transport",
+      "test_category": "T9",
+      "question": "What was my favorite transport before I switched?",
+      "answer": "scooter",
+      "answer_session_ids": [
+        "session_009"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "previous",
+        "topic": "transport"
+      }
+    },
+    {
+      "id": "T9_count_transport",
+      "test_category": "T9",
+      "question": "How many times have I changed my mind about transport?",
+      "answer": "2",
+      "answer_session_ids": [],
+      "verification_type": "count",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "count",
+        "topic": "transport",
+        "expected_count": 2
+      }
+    },
+    {
+      "id": "T9_current_music",
+      "test_category": "T9",
+      "question": "What's my current favorite music?",
+      "answer": "folk",
+      "answer_session_ids": [
+        "session_019"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "current",
+        "topic": "music"
+      }
+    },
+    {
+      "id": "T9_previous_music",
+      "test_category": "T9",
+      "question": "What was my favorite music before I switched?",
+      "answer": "indie rock",
+      "answer_session_ids": [
+        "session_008"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "previous",
+        "topic": "music"
+      }
+    },
+    {
+      "id": "T9_count_music",
+      "test_category": "T9",
+      "question": "How many times have I changed my mind about music?",
+      "answer": "2",
+      "answer_session_ids": [],
+      "verification_type": "count",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "count",
+        "topic": "music",
+        "expected_count": 2
+      }
+    },
+    {
+      "id": "T9_current_sport",
+      "test_category": "T9",
+      "question": "What's my current favorite sport?",
+      "answer": "tennis",
+      "answer_session_ids": [
+        "session_015"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "current",
+        "topic": "sport"
+      }
+    },
+    {
+      "id": "T9_previous_sport",
+      "test_category": "T9",
+      "question": "What was my favorite sport before I switched?",
+      "answer": "running",
+      "answer_session_ids": [
+        "session_005"
+      ],
+      "verification_type": "exact",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "previous",
+        "topic": "sport"
+      }
+    },
+    {
+      "id": "T9_count_sport",
+      "test_category": "T9",
+      "question": "How many times have I changed my mind about sport?",
+      "answer": "2",
+      "answer_session_ids": [],
+      "verification_type": "count",
+      "answer_facts": [],
+      "metadata": {
+        "drift_position": "count",
+        "topic": "sport",
+        "expected_count": 2
+      }
+    },
+    {
+      "id": "T10_Rust",
+      "test_category": "T10",
+      "question": "How long did it take from starting Rust to getting a job using it?",
+      "answer": "11 sessions",
+      "answer_session_ids": [
+        "session_004",
+        "session_010",
+        "session_015"
+      ],
+      "verification_type": "numeric",
+      "answer_facts": [],
+      "metadata": {
+        "fact_a": "I started learning Rust.",
+        "fact_b": "I finished my first Rust project, a CLI tool.",
+        "fact_c": "I got a job as a systems engineer using Rust.",
+        "start_session": "session_004",
+        "end_session": "session_015",
+        "session_span": 11
+      }
+    },
+    {
+      "id": "T10_Go",
+      "test_category": "T10",
+      "question": "How long did it take from starting Go to getting a job using it?",
+      "answer": "14 sessions",
+      "answer_session_ids": [
+        "session_005",
+        "session_011",
+        "session_019"
+      ],
+      "verification_type": "numeric",
+      "answer_facts": [],
+      "metadata": {
+        "fact_a": "I started learning Go.",
+        "fact_b": "I finished my first Go project, a web API.",
+        "fact_c": "I got a job as a backend engineer using Go.",
+        "start_session": "session_005",
+        "end_session": "session_019",
+        "session_span": 14
+      }
+    },
+    {
+      "id": "T10_TypeScript",
+      "test_category": "T10",
+      "question": "How long did it take from starting TypeScript to getting a job using it?",
+      "answer": "11 sessions",
+      "answer_session_ids": [
+        "session_005",
+        "session_010",
+        "session_016"
+      ],
+      "verification_type": "numeric",
+      "answer_facts": [],
+      "metadata": {
+        "fact_a": "I started learning TypeScript.",
+        "fact_b": "I finished my first TypeScript project, a React app.",
+        "fact_c": "I got a job as a frontend engineer using TypeScript.",
+        "start_session": "session_005",
+        "end_session": "session_016",
+        "session_span": 11
+      }
+    }
+  ]
+}

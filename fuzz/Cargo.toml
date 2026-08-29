@@ -1,0 +1,49 @@
+[package]
+name = "wm-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wm-core = { path = "../crates/wm-core" }
+wm-tools = { path = "../crates/wm-tools" }
+wm-governance = { path = "../crates/wm-governance" }
+wm-dispatch = { path = "../crates/wm-dispatch" }
+
+[[bin]]
+name = "nlu_classify"
+path = "fuzz_targets/nlu_classify.rs"
+
+[[bin]]
+name = "dharma_evaluate"
+path = "fuzz_targets/dharma_evaluate.rs"
+
+[[bin]]
+name = "rate_limiter"
+path = "fuzz_targets/rate_limiter.rs"
+
+[[bin]]
+name = "json_rpc_parse"
+path = "fuzz_targets/json_rpc_parse.rs"
+
+[[bin]]
+name = "effect_row"
+path = "fuzz_targets/effect_row.rs"
+
+[[bin]]
+name = "security_validation"
+path = "fuzz_targets/security_validation.rs"
+
+[[bin]]
+name = "tool_params"
+path = "fuzz_targets/tool_params.rs"
+
+[[bin]]
+name = "web_parsers"
+path = "fuzz_targets/web_parsers.rs"
