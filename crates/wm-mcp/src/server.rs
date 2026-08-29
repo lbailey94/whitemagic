@@ -72,6 +72,10 @@ pub struct McpServer {
     signal_broadcast: Arc<std::sync::Mutex<SignalBroadcast>>,
     sangha_chat: Arc<std::sync::Mutex<SanghaChat>>,
     lock_manager: Arc<std::sync::Mutex<ResourceLockManager>>,
+    /// Sangha mesh transport slot (R0) — the CLI fills it with the live
+    /// node after `MeshNode::start`; the `sangha.mesh.*` tools and
+    /// `/status` read it. Empty when the server runs without `--mesh`.
+    mesh_slot: Arc<wm_sangha::MeshSlot>,
     homeostatic_loop: Arc<std::sync::Mutex<HomeostaticLoop>>,
     anomaly_detector: Arc<std::sync::Mutex<AnomalyDetector>>,
     /// Embodiment I/O: sensorimotor bus and reflex loop
@@ -501,6 +505,7 @@ impl McpServer {
             signal_broadcast,
             sangha_chat,
             lock_manager,
+            mesh_slot: wm_sangha::MeshSlot::new(),
             homeostatic_loop,
             anomaly_detector,
             sensorimotor_bus,
@@ -964,6 +969,9 @@ impl McpServer {
             SanghaChat::new(100).with_signing_key(mesh_signing_key()),
         ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
+        // Mesh transport slot (R0): one handle shared by the `sangha.mesh.*`
+        // tools and the server; `wm serve --mesh` installs the node.
+        let mesh_slot = wm_sangha::MeshSlot::new();
 
         let registry = wm_tools::expansion::resonance::register_resonance(
             &registry,
@@ -975,6 +983,12 @@ impl McpServer {
             Arc::clone(&signal_broadcast),
             Arc::clone(&sangha_chat),
             Arc::clone(&lock_manager),
+        );
+        // R0: mesh transport tools (fail actionably when the CLI never
+        // installs a node — i.e. serve was started without --mesh).
+        let registry = wm_tools::expansion::mesh_tools::register_sangha_mesh(
+            &registry,
+            Arc::clone(&mesh_slot),
         );
         let calibration_store =
             Arc::new(std::sync::Mutex::new(wm_simulation::CalibrationStore::new()));
@@ -1104,6 +1118,9 @@ impl McpServer {
         )
         .with_readonly(readonly)
         .with_profile_name(profile.name);
+
+        // The tools and the server share this slot (created above).
+        server.mesh_slot = mesh_slot;
 
         server.profile_contract = Some(contract);
 
@@ -1764,6 +1781,11 @@ impl McpServer {
                 serde_json::Value::Null,
                 |r| serde_json::to_value(r).unwrap_or_else(|_| serde_json::Value::Null),
             ),
+            // Sangha mesh transport (R0) — null when started without --mesh.
+            "mesh": self
+                .mesh_slot
+                .get()
+                .map_or(serde_json::Value::Null, |node| node.status_try()),
             "project": self.project,
             "store_path": self.store_path,
             "brain_wave": format!("{:?}", self.eco_mode.current()),
@@ -1888,6 +1910,18 @@ impl McpServer {
 
     /// Attach the Landlock v0 startup report (serve path only) so `/status`
     /// discloses the process's filesystem-confinement state.
+    /// The shared mesh transport slot — `wm serve --mesh` installs the
+    /// live node through here; tests may install their own.
+    #[must_use]
+    pub fn mesh_slot(&self) -> Arc<wm_sangha::MeshSlot> {
+        Arc::clone(&self.mesh_slot)
+    }
+
+    /// Install (or replace) the live mesh node after `MeshNode::start`.
+    pub fn install_mesh_node(&self, node: Arc<wm_sangha::mesh_node::MeshNode>) {
+        self.mesh_slot.set(node);
+    }
+
     pub fn set_landlock_report(&mut self, report: crate::landlock_sandbox::LandlockReport) {
         self.landlock = Some(report);
     }
@@ -3428,7 +3462,7 @@ impl McpServer {
 /// When unset, a random per-process key is used — the node appears as a fresh
 /// identity each restart, but a hardcoded default would be shared by every
 /// WhiteMagic node, letting anyone impersonate another node's messages.
-fn mesh_signing_key() -> wm_sangha::MeshKeyPair {
+pub fn mesh_signing_key() -> wm_sangha::MeshKeyPair {
     match std::env::var("WM_MESH_KEY") {
         Ok(key) if !key.is_empty() => wm_sangha::MeshKeyPair::from_seed(key.as_bytes()),
         _ => {
@@ -3717,6 +3751,10 @@ mod tests {
             Arc::clone(&signal_broadcast),
             Arc::clone(&sangha_chat),
             Arc::clone(&lock_manager),
+        );
+        let registry = wm_tools::expansion::mesh_tools::register_sangha_mesh(
+            &registry,
+            wm_sangha::MeshSlot::new(),
         );
         let calibration_store =
             Arc::new(std::sync::Mutex::new(wm_simulation::CalibrationStore::new()));

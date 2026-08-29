@@ -106,21 +106,43 @@ pub fn requested() -> bool {
 /// Apply the v0 whole-process ruleset at the serve call-site.
 ///
 /// Handles every write-class filesystem right and grants them only beneath
-/// `store_root`. Never fatal — every failure mode degrades to a reported
-/// outcome and an unconfined process.
+/// `store_root`, plus two declared grants outside it: `/dev/null` (a black
+/// hole git needs) and the git common dir under `WM_PROJECT_ROOT` (the
+/// `code.claim` lease ledger is a designed Phase-2 write target there).
+/// Never fatal — every failure mode degrades to a reported outcome and an
+/// unconfined process.
 #[must_use]
 pub fn restrict_to_store_root(store_root: &Path) -> LandlockReport {
-    apply(store_root, true)
+    apply(store_root, true, git_dir_grant().as_deref())
 }
 
 /// Apply the ruleset without the production call-site (used by tests, which
 /// run on pooled harness threads and must confine only themselves).
 #[must_use]
 pub fn restrict_to_store_root_thread(store_root: &Path) -> LandlockReport {
-    apply(store_root, false)
+    apply(store_root, false, None)
 }
 
-fn apply(store_root: &Path, whole_process: bool) -> LandlockReport {
+/// Test-only variant with an explicit extra grant path (e.g. a repo's
+/// `.git`), so the lease-ledger contract can be pinned hermetically without
+/// touching process environment.
+#[must_use]
+pub fn restrict_with_grants_thread(store_root: &Path, git_dir: Option<&Path>) -> LandlockReport {
+    apply(store_root, false, git_dir)
+}
+
+/// The git common dir under `WM_PROJECT_ROOT` — the coordination lease
+/// ledger (`code.claim` → `wm-leases.json`) is a DESIGNED write target
+/// there, outside the store root. Only the default layout (`<root>/.git`
+/// as a directory) is granted: worktrees with a common dir elsewhere are
+/// the documented v0 limitation (v1 per-tool pathway is the seam).
+fn git_dir_grant() -> Option<std::path::PathBuf> {
+    let root = std::env::var("WM_PROJECT_ROOT").ok()?;
+    let dir = std::path::Path::new(&root).join(".git");
+    dir.is_dir().then_some(dir)
+}
+
+fn apply(store_root: &Path, whole_process: bool, git_dir: Option<&Path>) -> LandlockReport {
     let detail_root = store_root.display().to_string();
     let base = |outcome: LandlockOutcome, detail: String| LandlockReport {
         enabled: true,
@@ -132,9 +154,13 @@ fn apply(store_root: &Path, whole_process: bool) -> LandlockReport {
 
     #[cfg(target_os = "linux")]
     {
-        match imp::restrict(store_root, whole_process) {
-            Ok(Ok((status, abi))) => {
-                let (outcome, detail) = imp::outcome_of(&status, abi);
+        match imp::restrict(store_root, whole_process, git_dir) {
+            Ok(Ok((status, abi, grants))) => {
+                let (outcome, mut detail) = imp::outcome_of(&status, abi);
+                if !grants.is_empty() {
+                    detail.push_str("; declared grants: ");
+                    detail.push_str(&grants.join(", "));
+                }
                 base(
                     outcome,
                     format!("{detail} (no_new_privs={})", status.no_new_privs),
@@ -156,6 +182,7 @@ fn apply(store_root: &Path, whole_process: bool) -> LandlockReport {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = whole_process;
+        let _ = git_dir;
         base(
             LandlockOutcome::PlatformUnsupported,
             "Landlock is a Linux LSM; process continues unconfined on this platform".to_string(),
@@ -233,10 +260,17 @@ mod imp {
         None
     }
 
+    /// Restrict outcome: outer layer = ruleset setup errors; inner layer =
+    /// an `Unsupported` verdict or the restriction status with the
+    /// effective ABI and the declared extra grants.
+    type RestrictOutcome =
+        Result<Result<(RestrictionStatus, ABI, Vec<String>), LandlockOutcome>, String>;
+
     pub(super) fn restrict(
         store_root: &Path,
         whole_process: bool,
-    ) -> Result<Result<(RestrictionStatus, ABI), LandlockOutcome>, String> {
+        git_dir: Option<&Path>,
+    ) -> RestrictOutcome {
         // PathFd::new yields its own error type; the report only needs the
         // message, so every stage maps to String. The probe ladder finding
         // nothing means Landlock itself is unavailable — that is an
@@ -254,6 +288,7 @@ mod imp {
             .map_err(|e| e.to_string())?
             .add_rule(PathBeneath::new(root_fd, write_set))
             .map_err(|e| e.to_string())?;
+        let mut grants: Vec<String> = Vec::new();
         // git and other subprocesses open /dev/null O_RDWR ("could not open
         // '/dev/null' for reading and writing" under confinement). Grant
         // ONLY WriteFile: the full write set contains directory-class and
@@ -265,11 +300,25 @@ mod imp {
         created = created
             .add_rule(PathBeneath::new(devnull, AccessFs::WriteFile))
             .map_err(|e| e.to_string())?;
+        grants.push("/dev/null (WriteFile)".to_string());
+        // The coordination lease ledger (`code.claim` → `wm-leases.json` in
+        // the git common dir) is a designed write target OUTSIDE the store
+        // root (found live 2026-08-29: code.claim got EACCES under
+        // confinement on the wmv5 unit). Grant the full write set on the
+        // git dir itself — a purposeful, narrow grant of the repo's own
+        // coordination directory, not a widening of the data plane.
+        if let Some(dir) = git_dir {
+            let fd = PathFd::new(dir).map_err(|e| e.to_string())?;
+            created = created
+                .add_rule(PathBeneath::new(fd, write_set))
+                .map_err(|e| e.to_string())?;
+            grants.push(format!("git-dir {}", dir.display()));
+        }
         if whole_process {
             created = created.all_threads(true).map_err(|e| e.to_string())?;
         }
         let status = created.restrict_self().map_err(|e| e.to_string())?;
-        Ok(Ok((status, abi)))
+        Ok(Ok((status, abi, grants)))
     }
 
     pub(super) fn outcome_of(status: &RestrictionStatus, abi: ABI) -> (LandlockOutcome, String) {
@@ -503,6 +552,87 @@ mod tests {
                 status_fixed.0,
                 "git status with GIT_OPTIONAL_LOCKS=0 must work under confinement: {status_fixed:?}"
             );
+        }
+    }
+
+    /// The coordination lease ledger (`code.claim` → `wm-leases.json` in the
+    /// repo's git common dir under WM_PROJECT_ROOT) is a DESIGNED write
+    /// target outside the store root. Found live 2026-08-29: `code.claim`
+    /// failed with EACCES on the Landlock-confined wmv5 unit — two shipped
+    /// features conflicting at the boundary. This test pins both sides:
+    /// with the git-dir grant the ledger writes succeed; without it they
+    /// fail (the day-one catch, kept visible).
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn lease_ledger_writes_need_the_git_dir_grant() {
+        let repo_dir = tempfile::tempdir().expect("repo tempdir");
+        let store_dir = tempfile::tempdir().expect("store tempdir");
+        let run_unconfined = |args: &[&str]| {
+            let out = std::process::Command::new("git")
+                .args(args)
+                .current_dir(repo_dir.path())
+                .env("GIT_AUTHOR_NAME", "t")
+                .env("GIT_AUTHOR_EMAIL", "t@t")
+                .env("GIT_COMMITTER_NAME", "t")
+                .env("GIT_COMMITTER_EMAIL", "t@t")
+                .output()
+                .expect("spawn git (unconfined setup)");
+            assert!(
+                out.status.success(),
+                "setup git {args:?} failed: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+        };
+        run_unconfined(&["init", "-q"]);
+
+        // The exact write shape of the lease ledger: lock file, payload
+        // write, atomic rename (LeaseLedger's read-modify-write core).
+        let ledger_write = |git_dir: &std::path::Path| -> (bool, bool) {
+            let lock_ok = std::fs::write(git_dir.join("wm-leases.json.lock"), b"pid").is_ok();
+            let tmp = git_dir.join(".wm-leases.json.tmp");
+            let rename_ok = std::fs::write(&tmp, b"{}")
+                .and_then(|()| std::fs::rename(&tmp, git_dir.join("wm-leases.json")))
+                .is_ok();
+            (lock_ok, rename_ok)
+        };
+
+        let repo = repo_dir.path().to_path_buf();
+        let store = store_dir.path().to_path_buf();
+        let granted = std::thread::spawn(move || {
+            let git_dir = repo.join(".git");
+            let report = restrict_with_grants_thread(&store, Some(&git_dir));
+            (report.outcome, ledger_write(&git_dir))
+        })
+        .join()
+        .expect("granted thread joined");
+
+        let repo2 = repo_dir.path().to_path_buf();
+        let store2 = store_dir.path().to_path_buf();
+        let ungranted = std::thread::spawn(move || {
+            let git_dir = repo2.join(".git");
+            let report = restrict_to_store_root_thread(&store2);
+            (report.outcome, ledger_write(&git_dir))
+        })
+        .join()
+        .expect("ungranted thread joined");
+
+        println!("granted outcome: {:?}", granted.0);
+        println!("ungranted outcome: {:?}", ungranted.0);
+
+        if granted.0.is_enforcing() {
+            assert!(
+                granted.1 == (true, true),
+                "lease-ledger writes must succeed with the git-dir grant: {granted:?}"
+            );
+            if ungranted.0.is_enforcing() {
+                assert!(
+                    !(ungranted.1.0 && ungranted.1.1),
+                    "without the grant the ledger write must fail (the day-one catch): {ungranted:?}"
+                );
+            }
+        } else {
+            // Degraded kernel: everything succeeds either way.
+            assert!(granted.1 == (true, true) && ungranted.1 == (true, true));
         }
     }
 }

@@ -57,6 +57,7 @@ pub mod imagination;
 pub mod karma;
 pub mod knowledge_graph;
 pub mod memory_ops;
+pub mod mesh_tools;
 pub mod network;
 pub mod nlu_tools;
 pub mod patterns;
@@ -134,6 +135,10 @@ pub use memory_ops::{
     MemoryAggregateTool, MemoryBatchReadTool, MemoryConsolidateTool, MemoryDecayTool,
     MemoryDeduplicateTool, MemoryEpisodicSearchTool, MemoryExportTool, MemoryFilterTool,
     MemoryHybridRecallTool, MemorySortTool, MemoryStatsTool, MemoryTagTool, MemoryUpdateTool,
+};
+pub use mesh_tools::{
+    MeshChatTool, MeshJoinTool, MeshQuarantineTool, MeshReadTool, MeshStatusTool,
+    register_sangha_mesh,
 };
 pub use network::{
     AssociationMineTool, EmergenceReportTool, NetworkCentralityTool, NetworkClustersTool,

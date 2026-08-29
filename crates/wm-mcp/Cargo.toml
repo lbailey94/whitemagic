@@ -21,7 +21,7 @@ wm-polyglot = { workspace = true }
 wm-workspace = { workspace = true }
 wm-selfmodel = { workspace = true }
 wm-bicameral = { workspace = true }
-wm-sangha = { workspace = true }
+wm-sangha = { workspace = true, features = ["transport"] }
 wm-simulation = { workspace = true }
 wm-conformal = { workspace = true }
 serde = { workspace = true }

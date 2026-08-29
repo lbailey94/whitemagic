@@ -51,6 +51,14 @@ enum Commands {
         /// pins to the explicit scope= or the home scope (WM_PROJECT).
         #[arg(long)]
         federate: Option<String>,
+        /// Join the Sangha mesh: enable the TCP/UDP transport (R0). Identity
+        /// comes from WM_MESH_KEY; `sangha.mesh.*` tools live on --profile full.
+        #[arg(long)]
+        mesh: bool,
+        /// Bind address for the mesh transport (default 0.0.0.0:7369 or
+        /// WM_MESH_BIND; a 0.0.0.0 bind announces 127.0.0.1 to peers).
+        #[arg(long)]
+        mesh_bind: Option<String>,
     },
     /// Generate or show configuration
     Config {
@@ -342,6 +350,8 @@ fn main() -> anyhow::Result<()> {
             transport,
             bind,
             federate,
+            mesh,
+            mesh_bind,
         } => {
             // Federated gateway mode: one wm meta-tool over backing stores.
             // No store is opened here — the backings own theirs (proxy beats
@@ -489,6 +499,33 @@ fn main() -> anyhow::Result<()> {
 
             // Use tokio runtime for async event loop with brain-wave eco mode
             let rt = tokio::runtime::Runtime::new()?;
+
+            // Sangha mesh transport (R0): --mesh flag or WM_MESH=1. The node
+            // spawns on this runtime before the server loop starts, so the
+            // background tasks (TCP serve, beacon listener, auto-join) live
+            // as long as the process.
+            if mesh || wm_sangha::mesh_node::env_requested() {
+                let keypair = wm_mcp::server::mesh_signing_key();
+                let config = wm_sangha::MeshNodeConfig::from_env(mesh_bind.as_deref(), &keypair);
+                match rt.block_on(wm_sangha::MeshNode::start(config, keypair)) {
+                    Ok(node) => {
+                        tracing::info!(
+                            peer_id = %node.peer_id(),
+                            "Sangha mesh enabled — sangha.mesh.* tools are on \
+                             --profile full; identity is stable only with WM_MESH_KEY"
+                        );
+                        server.install_mesh_node(node);
+                    }
+                    Err(e) => {
+                        // Loud but non-fatal: the server stays up without the
+                        // mesh, mirroring the Landlock degradation doctrine.
+                        tracing::warn!(
+                            "mesh transport failed to start ({e}) — continuing unmeshed"
+                        );
+                    }
+                }
+            }
+
             match transport.as_str() {
                 "sse" => {
                     let addr = bind

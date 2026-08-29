@@ -32,6 +32,9 @@ pub mod signal;
 #[cfg(feature = "transport")]
 pub mod transport;
 
+#[cfg(feature = "transport")]
+pub mod mesh_node;
+
 pub use chat::{ChatChannel, ChatMessage, SanghaChat, VerificationReport};
 pub use containment::{ContainmentReport, ContainmentResult, run, simulate_mesh_containment};
 pub use crypto::{MeshKeyPair, hex_decode, hex_encode};
@@ -47,4 +50,10 @@ pub use signal::{Signal, SignalBroadcast, SignalType};
 pub use transport::{
     PeerAnnounce, RpcRequest, RpcResponse, SanghaState, SanghaTransport, TransportConfig,
     listen_for_beacons,
+};
+
+#[cfg(feature = "transport")]
+pub use mesh_node::{
+    ENV_MESH, ENV_MESH_BIND, ENV_MESH_INTERVAL, ENV_MESH_PEER_ID, MeshNode, MeshNodeConfig,
+    MeshSlot, env_requested, parse_flag,
 };

@@ -315,7 +315,18 @@ impl SanghaTransport {
         let listener = TcpListener::bind(&self.config.bind_addr)
             .await
             .map_err(|e| wm_core::CoreError::Internal(format!("TCP bind failed: {e}")))?;
+        self.serve_on(listener).await
+    }
 
+    /// Serve on an already-bound listener — no re-bind window between a
+    /// startup bind check and the accept loop (`MeshNode::start` binds in
+    /// the caller's context so bind failures are loud before any task
+    /// spawns).
+    ///
+    /// # Errors
+    /// Propagates nothing from the accept loop beyond shutdown; accept
+    /// errors are logged and continued.
+    pub async fn serve_on(&self, listener: TcpListener) -> Result<()> {
         tracing::info!(
             "Sangha transport listening on {} (peer_id={})",
             self.config.bind_addr,
@@ -511,6 +522,28 @@ impl SanghaTransport {
     pub async fn connected_count(&self) -> usize {
         self.connections.read().await.len()
     }
+
+    /// Keys of the currently connected peers (`remote:<addr>` form).
+    #[must_use]
+    pub async fn connected_peers(&self) -> Vec<String> {
+        self.connections.read().await.keys().cloned().collect()
+    }
+
+    /// Drop a peer connection (`remote:<addr>` key). Returns `false` when
+    /// no such connection exists.
+    pub async fn disconnect(&self, peer_key: &str) -> bool {
+        self.connections.write().await.remove(peer_key).is_some()
+    }
+
+    /// Non-blocking snapshot of the connected peer keys for synchronous
+    /// status probes — `None` when the connection map is contended.
+    #[must_use]
+    pub fn try_connected_peers(&self) -> Option<Vec<String>> {
+        self.connections
+            .try_read()
+            .ok()
+            .map(|map| map.keys().cloned().collect::<Vec<_>>())
+    }
 }
 
 /// Handle a single TCP connection.
@@ -637,6 +670,15 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                     format!(
                         "message rejected: sender '{sender}' failed signature/binding verification"
                     ),
+                    req.id,
+                );
+            }
+            // The bad-apple rule at ingest: a quarantined sender's messages
+            // are refused outright, even over a connection it opened before
+            // the quarantine (community read path additionally filters).
+            if state.peers.lock().await.is_quarantined(sender) {
+                return RpcResponse::err(
+                    format!("message rejected: sender '{sender}' is quarantined"),
                     req.id,
                 );
             }
@@ -780,6 +822,12 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
         socket2_socket
             .set_reuse_port(true)
             .map_err(|e| wm_core::CoreError::Internal(format!("set_reuse_port: {e}")))?;
+        // tokio::net::UdpSocket::from_std requires a non-blocking fd — a
+        // blocking one panics at registration inside the spawned listener task
+        // (swallowed there, killing discovery receive silently).
+        socket2_socket
+            .set_nonblocking(true)
+            .map_err(|e| wm_core::CoreError::Internal(format!("set_nonblocking: {e}")))?;
     }
 
     socket2_socket

@@ -1,0 +1,311 @@
+//! Sangha mesh R0 E2E — two real `wm serve --mesh` processes on one machine
+//! must discover each other, bind signed identities, exchange verified
+//! chat, and enforce the bad-apple rule (quarantine refuses chat and rejoin,
+//! release restores the join path). This is the two-node local proof the
+//! join protocol (`docs/MESH_JOIN_PROTOCOL.md`) is written from.
+
+use std::io::{BufRead, BufReader, Write};
+use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
+
+struct ServeProcess {
+    child: Child,
+    stdin: std::process::ChildStdin,
+    stdout: BufReader<std::process::ChildStdout>,
+}
+
+impl ServeProcess {
+    /// Spawn `wm serve --mesh` on a throwaway store with a fixed identity.
+    fn spawn(store_root: &std::path::Path, peer_id: &str, port: u16) -> Self {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_wm"));
+        cmd.args([
+            "serve",
+            "--store",
+            &store_root.display().to_string(),
+            "--transport",
+            "stdio",
+            "--rate-limit",
+            "0",
+            "--profile",
+            "full",
+            "--mesh",
+            "--mesh-bind",
+            &format!("127.0.0.1:{port}"),
+        ])
+        .env("WM_MESH_KEY", format!("e2e-mesh-key-{peer_id}"))
+        .env("WM_MESH_PEER_ID", peer_id)
+        .env("WM_MESH_INTERVAL", "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+        let mut child = cmd.spawn().expect("spawn wm serve --mesh");
+        let stdin = child.stdin.take().expect("stdin");
+        let stdout = BufReader::new(child.stdout.take().expect("stdout"));
+        Self {
+            child,
+            stdin,
+            stdout,
+        }
+    }
+
+    fn rpc(&mut self, method: &str, params: &serde_json::Value, id: u64) -> serde_json::Value {
+        let req = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": id,
+            "method": method,
+            "params": params,
+        });
+        writeln!(self.stdin, "{req}").expect("write request");
+        self.stdin.flush().expect("flush request");
+        let mut line = String::new();
+        self.stdout
+            .read_line(&mut line)
+            .expect("read response line");
+        serde_json::from_str(&line).expect("valid JSON-RPC response")
+    }
+
+    /// Call a `sangha.mesh.*` route; returns the parsed JSON content.
+    fn mesh(&mut self, route: &str, args: &serde_json::Value, id: u64) -> serde_json::Value {
+        let resp = self.rpc(
+            "tools/call",
+            &serde_json::json!({"name": "wm", "arguments": {"route": route, "args": args}}),
+            id,
+        );
+        let content = resp
+            .get("result")
+            .and_then(|r| r.get("content"))
+            .and_then(|c| c.as_array())
+            .and_then(|a| a.first())
+            .and_then(|c| c.get("text"))
+            .and_then(|t| t.as_str())
+            .map_or_else(
+                || panic!("tools/call {route} returned no content: {resp}"),
+                String::from,
+            );
+        serde_json::from_str(&content)
+            .unwrap_or_else(|_| panic!("tools/call {route} content is not JSON: {content}"))
+    }
+
+    /// Non-panicking variant for retry loops: `None` on error responses or
+    /// unparseable content (transient startup states).
+    fn try_mesh(
+        &mut self,
+        route: &str,
+        args: &serde_json::Value,
+        id: u64,
+    ) -> Option<serde_json::Value> {
+        let resp = self.rpc(
+            "tools/call",
+            &serde_json::json!({"name": "wm", "arguments": {"route": route, "args": args}}),
+            id,
+        );
+        let content = resp
+            .get("result")?
+            .get("content")?
+            .as_array()?
+            .first()?
+            .get("text")?
+            .as_str()?
+            .to_string();
+        match serde_json::from_str::<serde_json::Value>(&content) {
+            Ok(v) if v.get("status").and_then(serde_json::Value::as_str) != Some("error") => {
+                Some(v)
+            }
+            _ => None,
+        }
+    }
+
+    /// Call a route expecting an error result; returns the error text.
+    fn mesh_err(&mut self, route: &str, args: &serde_json::Value, id: u64) -> String {
+        let resp = self.rpc(
+            "tools/call",
+            &serde_json::json!({"name": "wm", "arguments": {"route": route, "args": args}}),
+            id,
+        );
+        let text = resp
+            .get("result")
+            .and_then(|r| r.get("content"))
+            .and_then(|c| c.as_array())
+            .and_then(|a| a.first())
+            .and_then(|c| c.get("text"))
+            .and_then(|t| t.as_str())
+            .unwrap_or("")
+            .to_string();
+        assert!(
+            !text.is_empty(),
+            "tools/call {route} must return content: {resp}"
+        );
+        text
+    }
+}
+
+impl Drop for ServeProcess {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+fn handshake(server: &mut ServeProcess, client: &str, id: u64) {
+    let init = server.rpc(
+        "initialize",
+        &serde_json::json!({
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": client, "version": "1.0"},
+        }),
+        id,
+    );
+    assert_eq!(
+        init["result"]["serverInfo"]["name"], "whitemagic",
+        "initialize handshake failed: {init}"
+    );
+}
+
+/// Retry a fallible closure until it succeeds or the deadline passes.
+fn wait_for<T>(what: &str, secs: u64, mut f: impl FnMut() -> Option<T>) -> T {
+    let deadline = Instant::now() + Duration::from_secs(secs);
+    loop {
+        if let Some(v) = f() {
+            return v;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "{what} did not happen within {secs}s"
+        );
+        std::thread::sleep(Duration::from_millis(300));
+    }
+}
+
+#[test]
+fn two_serve_nodes_discover_chat_and_quarantine() {
+    let store_a = tempfile::tempdir().expect("store a");
+    let store_b = tempfile::tempdir().expect("store b");
+    let mut a = ServeProcess::spawn(store_a.path(), "e2e-node-a", 17_411);
+    let mut b = ServeProcess::spawn(store_b.path(), "e2e-node-b", 17_412);
+    handshake(&mut a, "mesh-e2e-a", 1);
+    handshake(&mut b, "mesh-e2e-b", 1);
+
+    // 1. Both nodes disclose a live mesh through /status-equivalent tool.
+    let status_a = a.mesh("sangha.mesh.status", &serde_json::json!({}), 2);
+    assert_eq!(status_a["enabled"], true, "A mesh status: {status_a}");
+    assert_eq!(status_a["peer_id"], "e2e-node-a", "{status_a}");
+    assert_eq!(status_a["announce"], "127.0.0.1:17411", "{status_a}");
+    assert_eq!(status_a["public_key"].as_str().map(str::len), Some(64));
+
+    // 2. DISCOVER + BIND: A joins B — the signed heartbeat registers A's
+    //    identity on B (remote_registry reflects B's view after the bind).
+    let joined = wait_for("A join B", 30, || {
+        a.try_mesh(
+            "sangha.mesh.join",
+            &serde_json::json!({"address": "127.0.0.1:17412"}),
+            3,
+        )?
+        .get("remote_registry")
+        .cloned()
+    });
+    assert_eq!(
+        joined["peer_count"].as_u64(),
+        Some(1),
+        "B must have registered A: {joined}"
+    );
+
+    // 3. CHAT: signed message from A lands on B and verifies.
+    let sent = a.mesh(
+        "sangha.mesh.chat",
+        &serde_json::json!({
+            "peer": "127.0.0.1:17412",
+            "channel": "gana:room",
+            "content": "two-node proof: hello from A",
+        }),
+        4,
+    );
+    assert_eq!(sent["status"], "ok", "{sent}");
+    let inbox = wait_for("B receives the chat", 15, || {
+        let read = b.mesh(
+            "sangha.mesh.read",
+            &serde_json::json!({"channel": "gana:room"}),
+            5,
+        );
+        (read["count"].as_u64()? >= 1).then_some(read)
+    });
+    assert_eq!(inbox["messages"][0]["sender"], "e2e-node-a");
+    assert_eq!(
+        inbox["messages"][0]["content"],
+        "two-node proof: hello from A"
+    );
+
+    // 4. QUARANTINE: B cuts A off — registry quarantine (rejoin refused),
+    //    messages purged, locks revoked, connection dropped.
+    let q = b.mesh(
+        "sangha.mesh.quarantine",
+        &serde_json::json!({
+            "action": "quarantine",
+            "peer_id": "e2e-node-a",
+            "reason": "R0 E2E: simulated bad apple",
+        }),
+        6,
+    );
+    assert_eq!(q["quarantined"], true, "{q}");
+    let listed = b.mesh(
+        "sangha.mesh.quarantine",
+        &serde_json::json!({"action": "list"}),
+        7,
+    );
+    assert_eq!(
+        listed["quarantined"][0]["peer_id"], "e2e-node-a",
+        "{listed}"
+    );
+
+    // A's further chat is refused at ingest (bad-apple rule).
+    let refused = a.mesh_err(
+        "sangha.mesh.chat",
+        &serde_json::json!({
+            "peer": "127.0.0.1:17412",
+            "channel": "gana:room",
+            "content": "let me back in",
+        }),
+        8,
+    );
+    assert!(
+        refused.contains("quarantined") || refused.contains("rejected"),
+        "quarantine must refuse the message: {refused}"
+    );
+
+    // A fresh join attempt hits the rejoin refusal.
+    let rejoin = a.mesh_err(
+        "sangha.mesh.join",
+        &serde_json::json!({"address": "127.0.0.1:17412"}),
+        9,
+    );
+    assert!(
+        rejoin.contains("quarantined") || rejoin.contains("rejected"),
+        "quarantined peer must not re-register: {rejoin}"
+    );
+
+    // 5. RELEASE restores the join path (rejoin succeeds again).
+    let released = b.mesh(
+        "sangha.mesh.quarantine",
+        &serde_json::json!({"action": "release", "peer_id": "e2e-node-a"}),
+        10,
+    );
+    assert_eq!(released["released"], true, "{released}");
+    let rejoined = wait_for("A rejoin B after release", 30, || {
+        a.try_mesh(
+            "sangha.mesh.join",
+            &serde_json::json!({"address": "127.0.0.1:17412"}),
+            11,
+        )?
+        .get("remote_registry")
+        .cloned()
+    });
+    assert!(rejoined["peer_count"].as_u64().is_some(), "{rejoined}");
+
+    // 6. Mesh status on B reflects the restored relationship (A in the
+    //    registry, not quarantined).
+    let status_b = wait_for("B status shows A registered again", 15, || {
+        let s = b.try_mesh("sangha.mesh.status", &serde_json::json!({}), 12)?;
+        (s["peers"]["peer_count"].as_u64()? >= 1).then_some(s)
+    });
+    assert_eq!(status_b["peer_id"], "e2e-node-b", "{status_b}");
+}
