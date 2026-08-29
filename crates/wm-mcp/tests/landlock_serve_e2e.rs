@@ -112,7 +112,8 @@ fn assert_report_shape(report: &serde_json::Value, store_root: &std::path::Path)
     );
     let outcome = report["outcome"].as_str().expect("outcome string");
     assert!(
-        ["enforced", "partial", "unsupported", "failed"].contains(&outcome),
+        ["enforced", "partial", "unsupported", "platform_unsupported", "failed"]
+            .contains(&outcome),
         "outcome must be an honest v0 label: {report}"
     );
 }
