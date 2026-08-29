@@ -180,6 +180,7 @@ impl Tool for MemoryCreateTool {
                 "content": str_prop("Memory content (text)"),
                 "galaxy": str_prop("Target galaxy (default codex)"),
                 "tags": str_array_prop("Optional tags"),
+                "source": str_prop("Authorship claim: user (user-dictated content, trust 1.0) | agent (default, trust 0.7) | other free-form class (trust 0.7)"),
             }),
             &["content"],
         )
@@ -227,6 +228,23 @@ impl Tool for MemoryCreateTool {
             .collect();
         let mut memory = Memory::new(galaxy, content.to_string());
         memory.metadata.tags = tags;
+        // Provenance stamp: the caller claims authorship explicitly.
+        // Default is agent-authored (the tool is called by agents); a
+        // "user" claim must be passed deliberately — user-dictated content.
+        // Trust is DERIVED from the claimed class, never caller-chosen:
+        // user 1.0, anything else 0.7 (tool-ingested neutral).
+        let claimed_source = args
+            .get("source")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty());
+        let (source, trust) = match claimed_source {
+            Some("user") => ("user", 1.0),
+            Some(other) => (other, 0.7),
+            None => ("agent", 0.7),
+        };
+        memory.metadata.source = source.to_string();
+        memory.metadata.source_trust = trust;
         let id = memory.metadata.id;
 
         // If RecallEngine with a real embedder is available, use it for
@@ -280,7 +298,13 @@ impl Tool for MemoryCreateTool {
             &self.store,
             &memory,
             EpisodicKind::Observation,
-            ProvenanceSource::User,
+            // Episodic provenance follows the same claim: agent default,
+            // User only when deliberately claimed.
+            if source == "user" {
+                ProvenanceSource::User
+            } else {
+                ProvenanceSource::Agent
+            },
             ctx.session_id,
             0,
         );
@@ -290,6 +314,8 @@ impl Tool for MemoryCreateTool {
             "id": id.to_string(),
             "galaxy": galaxy.db_name(),
             "content_hash": memory.metadata.content_hash,
+            "source": source,
+            "source_trust": trust,
         });
         if !warnings.is_empty() {
             response["warnings"] = json!(warnings);
@@ -426,6 +452,21 @@ impl Tool for MemoryBatchCreateTool {
 
             let mut memory = Memory::new(galaxy, content.to_string());
             memory.metadata.tags = tags;
+            // Same provenance rule as memory.create: agent-authored by
+            // default; a "user" claim must be deliberate. Trust derives
+            // from the claimed class (user 1.0, otherwise 0.7).
+            let claimed_source = item
+                .get("source")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty());
+            let (source, trust) = match claimed_source {
+                Some("user") => ("user", 1.0),
+                Some(other) => (other, 0.7),
+                None => ("agent", 0.7),
+            };
+            memory.metadata.source = source.to_string();
+            memory.metadata.source_trust = trust;
             let id = memory.metadata.id;
             ids.push(id.to_string());
             for k in wm_memory::credential_shaped_content(content) {
@@ -3308,6 +3349,56 @@ mod tests {
         assert_eq!(result["status"], "success");
         assert_eq!(result["total"], 3);
         assert_eq!(result["returned"], 3);
+    }
+
+    /// Provenance contract (sessions-galaxy attribution fix, 2026-08-29):
+    /// memory.create defaults to agent/0.7 — a "user" claim must be
+    /// deliberate, and trust is derived from the claimed class, never
+    /// caller-chosen.
+    #[tokio::test]
+    async fn memory_create_stamps_provenance_by_claim() {
+        let store = test_store();
+        let create = MemoryCreateTool::new(store.clone(), None, None);
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        let silent = create
+            .call(&mut ctx, json!({"content": "no claim"}))
+            .await
+            .unwrap();
+        assert_eq!(silent["source"], "agent");
+        assert!((silent["source_trust"].as_f64().unwrap() - 0.7).abs() < 1e-5);
+
+        let claimed = create
+            .call(
+                &mut ctx,
+                json!({"content": "user dictated this", "source": "user"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(claimed["source"], "user");
+        assert!((claimed["source_trust"].as_f64().unwrap() - 1.0).abs() < 1e-5);
+
+        let custom = create
+            .call(&mut ctx, json!({"content": "web import", "source": "web"}))
+            .await
+            .unwrap();
+        assert_eq!(custom["source"], "web");
+        assert!((custom["source_trust"].as_f64().unwrap() - 0.7).abs() < 1e-5);
+
+        let fetch = |id: &str| {
+            store
+                .get(wm_core::Galaxy::Codex, uuid::Uuid::parse_str(id).unwrap())
+                .expect("stored")
+                .expect("present")
+        };
+        assert_eq!(
+            fetch(silent["id"].as_str().unwrap()).metadata.source,
+            "agent"
+        );
+        assert_eq!(
+            fetch(claimed["id"].as_str().unwrap()).metadata.source,
+            "user"
+        );
     }
 
     #[tokio::test]

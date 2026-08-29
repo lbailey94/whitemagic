@@ -138,6 +138,9 @@ impl Tool for SessionStartTool {
         );
         mem.metadata.tags = vec!["session".into(), "start".into()];
         mem.metadata.importance = 0.7;
+        // Machine-captured event — claims system provenance, never user.
+        mem.metadata.source = "system".to_string();
+        mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
         crate::capture_explicit_memory(
             &self.store,
@@ -272,6 +275,9 @@ impl Tool for SessionCheckpointTool {
         );
         mem.metadata.tags = vec!["session".into(), "checkpoint".into()];
         mem.metadata.importance = 0.5;
+        // Machine-captured event — claims system provenance, never user.
+        mem.metadata.source = "system".to_string();
+        mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
         crate::capture_explicit_memory(
             &self.store,
@@ -557,6 +563,9 @@ impl Tool for SessionEndTool {
         );
         mem.metadata.tags = vec!["session".into(), "end".into()];
         mem.metadata.importance = 0.6;
+        // Machine-captured event — claims system provenance, never user.
+        mem.metadata.source = "system".to_string();
+        mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
         crate::capture_explicit_memory(
             &self.store,
@@ -619,6 +628,26 @@ mod tests {
                 .success()
         );
         (dir, root)
+    }
+
+    /// Machine events claim system provenance (never user) — the
+    /// sessions-galaxy attribution fix (2026-08-29).
+    #[tokio::test]
+    async fn start_marker_stamps_system_provenance() {
+        let store = test_store();
+        let tool = SessionStartTool::new(store.clone());
+        let mut ctx = Context::default();
+        let out = tool
+            .call(&mut ctx, json!({"title": "prov test"}))
+            .await
+            .unwrap();
+        let sid = uuid::Uuid::parse_str(out["session_id"].as_str().unwrap()).unwrap();
+        let mem = store
+            .get(Galaxy::Sessions, sid)
+            .expect("start stored")
+            .expect("start present");
+        assert_eq!(mem.metadata.source, "system");
+        assert!((mem.metadata.source_trust - 0.7).abs() < 1e-5);
     }
 
     #[tokio::test]

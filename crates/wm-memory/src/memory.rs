@@ -149,11 +149,20 @@ const fn default_novelty_score() -> f32 {
 }
 
 fn default_source() -> String {
-    "user".to_string()
+    // Unstamped writes claim nothing. "user" as a default was an
+    // attribution lie: agent-authored session turns and machine outputs
+    // all claimed user provenance because Memory::new defaulted there
+    // (sessions-galaxy archaeology finding, 2026-08-29). Write paths that
+    // know authorship stamp explicitly — memory.create, the session tools.
+    "unattributed".to_string()
 }
 
 const fn default_source_trust() -> f32 {
-    1.0
+    // Below tool-neutral (0.7): unstamped content must not outrank any
+    // attributed class under trust weighting. Heritage records are
+    // unaffected — their stored JSON carries whatever was stamped at
+    // write time.
+    0.5
 }
 
 /// Retrieval trust factor (V8.1, evidence-gated via `WM_TRUST_WEIGHT`).
@@ -489,8 +498,8 @@ mod tests {
         assert!(!m.is_protected);
         assert!(!m.is_private);
         assert!(!m.model_exclude);
-        assert_eq!(m.source, "user");
-        assert!((m.source_trust - 1.0).abs() < f32::EPSILON);
+        assert_eq!(m.source, "unattributed");
+        assert!((m.source_trust - 0.5).abs() < f32::EPSILON);
         assert!((m.half_life_days - 30.0).abs() < f32::EPSILON);
         assert_eq!(m.recall_count, 0);
         assert_eq!(m.version, 1);
@@ -720,8 +729,11 @@ mod tests {
         assert!((mem.metadata.neuro_score - 0.5).abs() < f32::EPSILON);
         assert!((mem.metadata.novelty_score - 1.0).abs() < f32::EPSILON);
         assert!(!mem.metadata.is_protected);
-        assert_eq!(mem.metadata.source, "user");
-        assert!((mem.metadata.source_trust - 1.0).abs() < f32::EPSILON);
+        // Heritage JSON missing the source fields deserializes as
+        // UNATTRIBUTED — absent stamps claim nothing; they must not
+        // materialize as a user claim.
+        assert_eq!(mem.metadata.source, "unattributed");
+        assert!((mem.metadata.source_trust - 0.5).abs() < f32::EPSILON);
         assert!((mem.metadata.half_life_days - 30.0).abs() < f32::EPSILON);
         assert_eq!(mem.metadata.recall_count, 0);
         assert_eq!(mem.metadata.version, 1);

@@ -252,6 +252,19 @@ impl Tool for SessionRecordTool {
             turn_type.into(),
             format!("session:{session_id}"),
         ];
+        // Provenance: the turn's role IS the authorship claim. An ai-role
+        // turn is agent-written and must not claim user provenance — the
+        // sessions-galaxy archaeology finding (2026-08-29) was that every
+        // turn stamped user/1.0 because Memory::new defaulted there. Trust
+        // classes per the retrieval-trust semantics: user 1.0, agent 0.7
+        // (tool-ingested neutral).
+        let (source, trust): (&str, f32) = if role == "user" {
+            ("user", 1.0)
+        } else {
+            ("agent", 0.7)
+        };
+        mem.metadata.source = source.to_string();
+        mem.metadata.source_trust = trust;
 
         // Amend-with-supersede (P2): mark the corrected turn so default
         // retrieval uses the new record. History stays intact — the old turn
@@ -1647,6 +1660,51 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    /// Provenance contract (sessions-galaxy archaeology fix, 2026-08-29):
+    /// the turn's role is its authorship claim — ai turns stamp agent/0.7,
+    /// user turns stamp user/1.0, and nothing defaults to a user claim.
+    #[tokio::test]
+    async fn record_stamps_provenance_from_role() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+        let ai = record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "content": "agent turn", "session_id": sid}),
+            )
+            .await
+            .unwrap();
+        let user = record
+            .call(
+                &mut ctx,
+                json!({"role": "user", "content": "human turn", "session_id": sid}),
+            )
+            .await
+            .unwrap();
+
+        let ai_mem = store
+            .get(
+                Galaxy::Sessions,
+                uuid::Uuid::parse_str(ai["memory_id"].as_str().unwrap()).unwrap(),
+            )
+            .expect("ai turn stored")
+            .expect("ai turn present");
+        assert_eq!(ai_mem.metadata.source, "agent");
+        assert!((ai_mem.metadata.source_trust - 0.7).abs() < 1e-5);
+
+        let user_mem = store
+            .get(
+                Galaxy::Sessions,
+                uuid::Uuid::parse_str(user["memory_id"].as_str().unwrap()).unwrap(),
+            )
+            .expect("user turn stored")
+            .expect("user turn present");
+        assert_eq!(user_mem.metadata.source, "user");
+        assert!((user_mem.metadata.source_trust - 1.0).abs() < f32::EPSILON);
     }
 
     #[tokio::test]
