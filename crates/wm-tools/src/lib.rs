@@ -1055,7 +1055,7 @@ impl Tool for MemoryQueryTool {
     fn input_schema(&self) -> Value {
         schema(
             &json!({
-                "query": str_prop("NOT a text filter — accepted for meta-tool routing validation only; results are unchanged by it. Use memory.search for full-text"),
+                "query": str_prop("Case-insensitive substring filter over content (literal match). For tokenized, ranked full-text retrieval use memory.search"),
                 "galaxy": str_prop("Galaxy to query (default codex)"),
                 "tags": str_array_prop("Filter: memories with all of these tags"),
                 "min_importance": num_prop("Filter: minimum importance (0-1)"),
@@ -1076,6 +1076,14 @@ impl Tool for MemoryQueryTool {
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(50) as usize;
         let mut query = MemoryQuery::new().with_limit(limit);
+        if let Some(text) = args
+            .get("query")
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            query = query.with_content_substring(text);
+        }
         if let Some(tags) = args.get("tags").and_then(|v| v.as_array()) {
             let tag_list: Vec<String> = tags
                 .iter()
@@ -1114,12 +1122,13 @@ impl Tool for MemoryQueryTool {
             })
             .collect();
 
-        // Truthfulness guard: `query` exists only for the meta-tool's routing
-        // validation and does NOT filter anything (found 2026-08-29 when a
-        // friction triage matched on it expecting full-text). Agents passing
-        // text here get an arbitrary page of memories — say so, loudly, and
-        // point at the verb that actually searches.
-        let query_ignored = args
+        // `query` is a real case-insensitive substring filter over content
+        // (the 2026-08-29 trap — text silently ignored, arbitrary page
+        // returned — is fixed; MemoryQuery applies it galaxy-wide via the
+        // matches() path). It is still a LITERAL match, not tokenized or
+        // ranked — when text was passed, disclose that distinction so
+        // agents know memory.search is the ranked verb.
+        let query_applied = args
             .get("query")
             .and_then(|v| v.as_str())
             .is_some_and(|s| !s.trim().is_empty());
@@ -1129,10 +1138,10 @@ impl Tool for MemoryQueryTool {
             "total": entries.len(),
             "memories": entries,
         });
-        if query_ignored {
-            response["warning"] = json!(
-                "'query' is not a filter on memory.query (it filters by tags/importance only) \
-                 — results are an arbitrary page. For full-text search use memory.search."
+        if query_applied {
+            response["note"] = json!(
+                "'query' applied as a literal substring filter over content — \
+                 for tokenized, ranked full-text retrieval use memory.search."
             );
         }
         Ok(response)

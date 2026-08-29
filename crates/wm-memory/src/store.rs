@@ -31,6 +31,9 @@ pub struct MemoryQuery {
     pub created_after: Option<chrono::DateTime<chrono::Utc>>,
     /// Only memories created before this timestamp.
     pub created_before: Option<chrono::DateTime<chrono::Utc>>,
+    /// Case-insensitive substring filter over content (literal match —
+    /// not tokenized or ranked; that is what the search engine is for).
+    pub content_substring: Option<String>,
     /// Maximum number of results.
     pub limit: usize,
 }
@@ -79,6 +82,13 @@ impl MemoryQuery {
         self
     }
 
+    /// Set a case-insensitive substring filter over content.
+    #[must_use]
+    pub fn with_content_substring(mut self, substring: impl Into<String>) -> Self {
+        self.content_substring = Some(substring.into().to_lowercase());
+        self
+    }
+
     /// Check if a memory matches this query.
     #[must_use]
     pub fn matches(&self, mem: &Memory) -> bool {
@@ -111,6 +121,13 @@ impl MemoryQuery {
         }
         if let Some(before) = self.created_before {
             if mem.metadata.created_at > before {
+                return false;
+            }
+        }
+
+        // Substring filter (literal, case-insensitive — never ranked).
+        if let Some(sub) = &self.content_substring {
+            if !mem.content.to_lowercase().contains(sub) {
                 return false;
             }
         }
@@ -840,8 +857,10 @@ impl MemoryStore {
     /// (single tag, importance range, or time range with no other filters).
     /// Falls back to scan for complex multi-dimensional queries.
     pub fn query(&self, galaxy: Galaxy, query: &MemoryQuery) -> Result<Vec<Memory>> {
-        // Try indexed fast paths for single-dimension queries
-        if query.tags.len() == 1
+        // Try indexed fast paths for single-dimension queries. A substring
+        // filter forces the full scan — the indexes cannot evaluate it.
+        if query.content_substring.is_none()
+            && query.tags.len() == 1
             && query.min_importance.is_none()
             && query.max_importance.is_none()
             && query.created_after.is_none()
@@ -850,7 +869,8 @@ impl MemoryStore {
             return self.query_by_tag_indexed(galaxy, &query.tags[0], query.limit);
         }
 
-        if query.tags.is_empty()
+        if query.content_substring.is_none()
+            && query.tags.is_empty()
             && let Some(min) = query.min_importance
             && let Some(max) = query.max_importance
             && query.created_after.is_none()
@@ -859,7 +879,8 @@ impl MemoryStore {
             return self.query_by_importance_indexed(galaxy, min, max, query.limit);
         }
 
-        if query.tags.is_empty()
+        if query.content_substring.is_none()
+            && query.tags.is_empty()
             && query.min_importance.is_none()
             && query.max_importance.is_none()
             && let Some(after) = query.created_after
@@ -1093,6 +1114,63 @@ mod tests {
         for galaxy in Galaxy::all() {
             let _db = store.galaxy_db(galaxy).unwrap();
         }
+    }
+
+    /// Substring filter (memory.query trap fix, 2026-08-29): literal
+    /// case-insensitive content match, galaxy-wide — never an arbitrary
+    /// page, never routed through the indexed fast paths.
+    #[test]
+    fn query_substring_filters_galaxy_wide() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        for (i, content) in [
+            "the mesh joins at dawn",
+            "unrelated content entirely",
+            "MESH joins at dusk",
+        ]
+        .iter()
+        .enumerate()
+        {
+            let mut m = Memory::new(Galaxy::Codex, content.to_string());
+            m.metadata.importance = 0.5 + i as f32 / 10.0;
+            store.put(Galaxy::Codex, &m).unwrap();
+        }
+
+        let hits = store
+            .query(
+                Galaxy::Codex,
+                &MemoryQuery::new().with_content_substring("mesh joins"),
+            )
+            .unwrap();
+        assert_eq!(hits.len(), 2, "CI substring must match both: {hits:?}");
+        assert!(
+            hits.iter()
+                .all(|m| m.content.to_lowercase().contains("mesh joins"))
+        );
+
+        let none = store
+            .query(
+                Galaxy::Codex,
+                &MemoryQuery::new().with_content_substring("quantum calendar"),
+            )
+            .unwrap();
+        assert!(none.is_empty(), "no match must be an honest empty set");
+
+        // Substring + tag combined still applies (no fast-path bypass).
+        let mut tagged = Memory::new(Galaxy::Codex, "mesh joins again".to_string());
+        tagged.metadata.tags = vec!["mesh".into()];
+        store.put(Galaxy::Codex, &tagged).unwrap();
+        let combined = store
+            .query(
+                Galaxy::Codex,
+                &MemoryQuery::new()
+                    .with_tags(vec!["mesh".into()])
+                    .with_content_substring("again"),
+            )
+            .unwrap();
+        assert_eq!(combined.len(), 1);
+        assert_eq!(combined[0].content, "mesh joins again");
     }
 
     #[cfg(unix)]
