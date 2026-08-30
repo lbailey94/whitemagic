@@ -1,5 +1,12 @@
 # Two-Laptop Rehearsal — install-gate evidence runbook
 
+> **Stranger runs:** for a faithful first-contact simulation (agent or
+> human stranger, minimal supervision), follow
+> [`docs/STRANGER_SIMULATION_SCRIPT.md`](STRANGER_SIMULATION_SCRIPT.md)
+> instead — it is the pre-committed protocol and scoring rubric for
+> that mode. This runbook remains the developer-mode install-gate
+> evidence procedure.
+
 **Consumes:** the `v7.0.0-alpha.6` release (or the current Latest).
 **Produces:** dated friction logs + pass/fail evidence per machine, filed
 as Gate 2 kit input. The rehearsal is a *gate*, not a demo: every friction
