@@ -563,7 +563,22 @@ impl PeerDiscovery {
     }
 
     /// Discover a new peer (or update an existing one).
+    ///
+    /// Callers of this method announce **unsigned** (UDP beacons, legacy
+    /// heartbeats) — beacons carry addresses, not identity. If the peer is
+    /// already identity-bound (a signed heartbeat bound its public key),
+    /// an unsigned announcement may only refresh liveness and address;
+    /// replacing the entry would clobber the binding and break signature
+    /// verification for everything that peer sends afterwards.
     pub fn discover(&mut self, peer: PeerInfo) {
+        if let Some(existing) = self.peers.get_mut(&peer.id) {
+            if !existing.public_key.is_empty() {
+                existing.address = peer.address;
+                existing.last_seen = peer.last_seen;
+                existing.alive = true;
+                return;
+            }
+        }
         if !self.peers.contains_key(&peer.id) {
             self.total_discovered += 1;
         }
@@ -919,6 +934,26 @@ mod tests {
             .discover_signed(forged)
             .expect_err("key change on a bound ID must be refused");
         assert!(err.contains("identity theft"), "{err}");
+    }
+
+    #[test]
+    fn unsigned_beacon_never_clobbers_bound_identity() {
+        let mut registry = PeerDiscovery::default();
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"node-1-seed");
+        registry
+            .discover_signed(PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp))
+            .expect("signed heartbeat binds");
+
+        // A later unsigned beacon refreshes liveness — and must keep the
+        // bound key, or every signed message that peer sends afterwards
+        // fails binding verification.
+        registry.discover(PeerInfo::new("node-1", "127.0.0.1:8080"));
+        assert_eq!(
+            registry.bound_public_key("node-1"),
+            Some(kp.public_key_hex()),
+            "unsigned announce must not wipe the identity binding"
+        );
+        assert!(registry.get("node-1").is_some_and(|p| p.alive));
     }
 
     #[test]
