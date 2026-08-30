@@ -5,7 +5,44 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v6-dev
+## [Unreleased]
+
+## [7.0.0-alpha.7] — 2026-08-31
+
+### Mesh: beacon-first identity binding fixed (live-confirmed on second hardware)
+
+- Unsigned beacons no longer seed identity bindings (`12c933c`,
+  `5b4f54e`): beacons inform discovery only; the first **signed**
+  heartbeat performs the binding, and a bound entry is never clobbered
+  by an unsigned announce. Found live during the two-laptop rehearsal
+  (cross-host joins were refused as identity theft after beacon
+  pollution).
+
+### memory.query semantics fixed (6da07b4)
+
+- `memory.query` now performs the documented case-insensitive literal
+  substring match across the galaxy; no-match returns an honest empty
+  result. (The alpha.6 binary shipped before this fix landed —
+  rehearsal-confirmed.)
+
+### Provenance attribution defaults fixed (68547b9)
+
+- Unattributed memories default to `source: unattributed` / trust 0.5
+  instead of claiming `user` authorship; session and tool paths stamp
+  honestly.
+
+### CI hardening (6a929f9)
+
+- Bounded RPC everywhere + job timeouts: no test may hang a job.
+
+### Public surface hygiene (release re-audit, 2026-08-31)
+
+- Removed `python/mcp_config_*.json` sample configs (hardcoded dev
+  paths + retired repo name; `docs/MCP_CONFIG_GUIDE.md` is canonical).
+- CHANGELOG: dev-local artifact reference reworded.
+- Added `docs/STRANGER_SIMULATION_SCRIPT.md` — the faithful
+  first-contact protocol and pre-committed scoring rubric for stranger
+  runs.
 
 ### Friction auto-log default-off (2026-08-30)
 
@@ -460,7 +497,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ledger reviewed end-to-end: 9 claims (5 validated, 1 falsified, 3 pending),
   77.14 points; mean Brier 0.082; the only miss came at the lowest confidence
   (0.5) — calibrated shape; 0.6–0.8 bin overperforms by +0.275 (watch item)
-- Full review artifact: `~/Desktop/WMv5_CLAIMS_AND_SCORECARDS.md`
+- Full review artifact: the claims-and-scorecards review doc (kept locally; not part of the public tree)
 
 ### Counts
 
