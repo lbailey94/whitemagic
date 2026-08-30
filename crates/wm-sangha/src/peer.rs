@@ -580,6 +580,11 @@ impl PeerDiscovery {
     /// public key is bound and any later announcement claiming the same
     /// ID with a different key is refused. Quarantined peers cannot
     /// re-register until released.
+    ///
+    /// An existing registry entry with an **empty** bound key (e.g. from a
+    /// UDP beacon — beacons carry addresses, not identity) is unbound: the
+    /// first signed heartbeat performs the binding. Only a conflict with
+    /// an already-bound key is identity theft.
     pub fn discover_signed(&mut self, peer: PeerInfo) -> Result<(), String> {
         if peer.signature.is_empty() || peer.public_key.is_empty() {
             return Err(format!(
@@ -605,7 +610,7 @@ impl PeerDiscovery {
                         .unwrap_or_default()
                 ));
             }
-            if existing.public_key != peer.public_key {
+            if !existing.public_key.is_empty() && existing.public_key != peer.public_key {
                 return Err(format!(
                     "peer '{}' identity theft refused: public key changed from {} to {}",
                     peer.id, existing.public_key, peer.public_key
@@ -870,6 +875,50 @@ mod tests {
         assert_eq!(peer.address, "127.0.0.1:8080");
         assert!(peer.alive);
         assert_eq!(peer.heartbeat_count, 0);
+    }
+
+    #[test]
+    fn signed_heartbeat_binds_over_unsigned_beacon_entry() {
+        let mut registry = PeerDiscovery::default();
+        // A UDP beacon carries addresses, not identity: it registers the
+        // peer with no public key bound.
+        registry.discover(PeerInfo::new("node-1", "127.0.0.1:8080"));
+        assert_eq!(
+            registry.bound_public_key("node-1"),
+            Some(String::new()),
+            "beacon-discovered entry must be unbound"
+        );
+
+        // The peer's first signed heartbeat performs the binding — it must
+        // not be refused as identity theft just because a beacon arrived
+        // first (fast beacon cadence, slow process startup).
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"node-1-seed");
+        let signed = PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp);
+        registry
+            .discover_signed(signed)
+            .expect("signed heartbeat must bind over an unbound beacon entry");
+        assert_eq!(
+            registry.bound_public_key("node-1"),
+            Some(kp.public_key_hex())
+        );
+    }
+
+    #[test]
+    fn identity_theft_refused_after_key_is_bound() {
+        let mut registry = PeerDiscovery::default();
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"node-1-seed");
+        let signed = PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp);
+        registry
+            .discover_signed(signed)
+            .expect("first signed heartbeat binds");
+
+        // A different key claiming the same (now-bound) ID is theft.
+        let impostor = crate::crypto::MeshKeyPair::from_seed(b"impostor-seed");
+        let forged = PeerInfo::new("node-1", "127.0.0.1:8080").signed(&impostor);
+        let err = registry
+            .discover_signed(forged)
+            .expect_err("key change on a bound ID must be refused");
+        assert!(err.contains("identity theft"), "{err}");
     }
 
     #[test]

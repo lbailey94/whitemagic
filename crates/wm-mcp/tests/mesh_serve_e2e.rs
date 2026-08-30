@@ -86,32 +86,38 @@ impl ServeProcess {
             .unwrap_or_else(|_| panic!("tools/call {route} content is not JSON: {content}"))
     }
 
-    /// Non-panicking variant for retry loops: `None` on error responses or
-    /// unparseable content (transient startup states).
+    /// Non-panicking variant for retry loops: `Ok` on a usable report,
+    /// `Err` carrying the raw failure text on error responses or
+    /// unparseable content (transient startup states) — so retry loops can
+    /// surface *why* they kept failing instead of just timing out.
     fn try_mesh(
         &mut self,
         route: &str,
         args: &serde_json::Value,
         id: u64,
-    ) -> Option<serde_json::Value> {
+    ) -> Result<serde_json::Value, String> {
         let resp = self.rpc(
             "tools/call",
             &serde_json::json!({"name": "wm", "arguments": {"route": route, "args": args}}),
             id,
         );
         let content = resp
-            .get("result")?
-            .get("content")?
-            .as_array()?
-            .first()?
-            .get("text")?
-            .as_str()?
-            .to_string();
-        match serde_json::from_str::<serde_json::Value>(&content) {
-            Ok(v) if v.get("status").and_then(serde_json::Value::as_str) != Some("error") => {
-                Some(v)
+            .get("result")
+            .and_then(|r| r.get("content"))
+            .and_then(|c| c.as_array())
+            .and_then(|a| a.first())
+            .and_then(|c| c.get("text"))
+            .and_then(|t| t.as_str())
+            .map(String::from);
+        let content = match content {
+            Some(c) => c,
+            None => {
+                return Err(format!("tools/call {route} returned no content: {resp}"));
             }
-            _ => None,
+        };
+        match serde_json::from_str::<serde_json::Value>(&content) {
+            Ok(v) if v.get("status").and_then(serde_json::Value::as_str) != Some("error") => Ok(v),
+            _ => Err(format!("tools/call {route} failed: {content}")),
         }
     }
 
@@ -195,19 +201,39 @@ fn two_serve_nodes_discover_chat_and_quarantine() {
 
     // 2. DISCOVER + BIND: A joins B — the signed heartbeat registers A's
     //    identity on B (remote_registry reflects B's view after the bind).
-    let joined = wait_for("A join B", 30, || {
-        a.try_mesh(
+    //    Each failed attempt carries the tool's error text; the timeout
+    //    panic surfaces the last one so CI logs name the actual failure.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let mut last_err;
+    let joined = loop {
+        match a.try_mesh(
             "sangha.mesh.join",
             &serde_json::json!({"address": "127.0.0.1:17412"}),
             3,
-        )?
-        .get("remote_registry")
-        .cloned()
-    });
-    assert_eq!(
-        joined["peer_count"].as_u64(),
-        Some(1),
+        ) {
+            Ok(report) => match report.get("remote_registry") {
+                Some(registry) => break registry.clone(),
+                None => last_err = format!("join report has no remote_registry: {report}"),
+            },
+            Err(err) => last_err = err,
+        }
+        assert!(
+            Instant::now() < deadline,
+            "A join B did not happen within 30s — last error: {last_err}"
+        );
+        std::thread::sleep(Duration::from_millis(300));
+    };
+    // B's registry must contain A (the signed heartbeat bound it), and must
+    // never contain B itself: multicast loopback delivers a node's own
+    // beacon back to its listener, and a self-entry is a registry bug.
+    let peers = joined["peers"].as_array().cloned().unwrap_or_default();
+    assert!(
+        peers.iter().any(|p| p["id"] == "e2e-node-a"),
         "B must have registered A: {joined}"
+    );
+    assert!(
+        peers.iter().all(|p| p["id"] != "e2e-node-b"),
+        "a node must never register itself in its own registry: {joined}"
     );
 
     // 3. CHAT: signed message from A lands on B and verifies.
@@ -295,7 +321,8 @@ fn two_serve_nodes_discover_chat_and_quarantine() {
             "sangha.mesh.join",
             &serde_json::json!({"address": "127.0.0.1:17412"}),
             11,
-        )?
+        )
+        .ok()?
         .get("remote_registry")
         .cloned()
     });
@@ -304,7 +331,9 @@ fn two_serve_nodes_discover_chat_and_quarantine() {
     // 6. Mesh status on B reflects the restored relationship (A in the
     //    registry, not quarantined).
     let status_b = wait_for("B status shows A registered again", 15, || {
-        let s = b.try_mesh("sangha.mesh.status", &serde_json::json!({}), 12)?;
+        let s = b
+            .try_mesh("sangha.mesh.status", &serde_json::json!({}), 12)
+            .ok()?;
         (s["peers"]["peer_count"].as_u64()? >= 1).then_some(s)
     });
     assert_eq!(status_b["peer_id"], "e2e-node-b", "{status_b}");

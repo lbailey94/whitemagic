@@ -855,15 +855,9 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
     let mut buf = vec![0u8; 4096];
     loop {
         match sock.recv_from(&mut buf).await {
-            Ok((len, addr)) => {
+            Ok((len, _addr)) => {
                 if let Some(announce) = PeerAnnounce::from_bytes(&buf[..len]) {
-                    tracing::debug!(
-                        "Discovered peer: {} at {} (from {addr})",
-                        announce.peer_id,
-                        announce.tcp_addr
-                    );
-                    let peer_info = PeerInfo::new(&announce.peer_id, &announce.tcp_addr);
-                    state.peers.lock().await.discover(peer_info);
+                    ingest_beacon(&state, &announce).await;
                 }
             }
             Err(e) => {
@@ -871,6 +865,27 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
             }
         }
     }
+}
+
+/// Ingest one received beacon into the discovery registry.
+///
+/// A node must never register itself: multicast loopback (`IP_MULTICAST_LOOP`
+/// defaults to enabled) delivers a node's own beacon back to its listener,
+/// and a self-entry would pollute peer counts and make the auto-join loop
+/// see a phantom peer. Beacons carry addresses, not identity — the signed
+/// heartbeat at join time is what binds a key.
+async fn ingest_beacon(state: &SanghaState, announce: &PeerAnnounce) {
+    if announce.peer_id == state.peer_id {
+        tracing::debug!("ignoring own beacon (multicast loopback)");
+        return;
+    }
+    tracing::debug!(
+        "Discovered peer: {} at {}",
+        announce.peer_id,
+        announce.tcp_addr
+    );
+    let peer_info = PeerInfo::new(&announce.peer_id, &announce.tcp_addr);
+    state.peers.lock().await.discover(peer_info);
 }
 
 /// Generate a random RPC ID.
@@ -896,6 +911,26 @@ mod tests {
         let decoded = PeerAnnounce::from_bytes(&bytes).unwrap();
         assert_eq!(decoded.peer_id, "peer-1");
         assert_eq!(decoded.tcp_addr, "127.0.0.1:7369");
+    }
+
+    #[tokio::test]
+    async fn beacon_ingest_ignores_own_loopback_beacon() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        // Multicast loopback delivers the node's own beacon back to its
+        // listener — it must never register itself.
+        let own = PeerAnnounce::new("self-node", "127.0.0.1:7369");
+        ingest_beacon(&state, &own).await;
+        assert_eq!(
+            state.peers.lock().await.summary()["peer_count"],
+            0,
+            "a node must not appear in its own discovery registry"
+        );
+
+        let other = PeerAnnounce::new("other-node", "127.0.0.1:7370");
+        ingest_beacon(&state, &other).await;
+        let summary = state.peers.lock().await.summary();
+        assert_eq!(summary["peer_count"], 1);
+        assert_eq!(summary["peers"][0]["id"], "other-node");
     }
 
     #[test]
