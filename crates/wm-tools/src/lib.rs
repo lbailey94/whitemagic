@@ -2450,7 +2450,7 @@ impl WmMetaTool {
             ("memory.read", "id") => "Provide a memory UUID, e.g. wm(thought='recall <uuid>') or wm(route='memory.read', args={\"id\": \"<uuid>\"}). To list memories instead, use wm(route='memory.list', args={\"galaxy\": \"codex\", \"limit\": 10})".into(),
             ("memory.delete", "id") => "Provide a memory UUID, e.g. wm(thought='delete memory <uuid>')".into(),
             ("memory.search", "query") => "Provide a search query, e.g. wm(thought='search for rust')".into(),
-            ("memory.query", "query") => "Provide a query string, e.g. wm(route='memory.query', args={\"query\": \"tag:rust\"})".into(),
+            ("memory.query", "query") => "Provide a literal substring to match against memory content, e.g. wm(route='memory.query', args={\"query\": \"rust\", \"tags\": [\"project:myapp\"]}). Note: substring match, not ranked full-text — use memory.search for that.".into(),
             ("memory.vector.search", "memory_id") => "Provide a memory UUID for similarity search, e.g. wm(thought='find similar to <uuid>')".into(),
             ("memory.update", "id") => "Provide a memory UUID to update, e.g. wm(route='memory.update', args={\"id\": \"<uuid>\", \"tags\": [\"new\"]})".into(),
             ("memory.tag", "id") => "Provide a memory UUID to tag, e.g. wm(route='memory.tag', args={\"id\": \"<uuid>\", \"tags\": [\"rust\"]})".into(),

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v6-dev
 
+### Friction auto-log default-off (2026-08-30)
+
+- **`WM_FRICTION_AUTOLOG` (opt-in, default off)** — the RSI friction
+  auto-logger no longer writes memories to the store unless explicitly
+  enabled with `WM_FRICTION_AUTOLOG=1`. Shakeout evidence on a fresh
+  store: the anomaly heuristics fired on successful dispatches
+  ("high_latency" = any new peak latency, however small; "high_karma_debt"
+  at debt > 0.5), grew the codex galaxy from 6 seeds to ~60 records in
+  ~10 minutes at importance 0.9 (dominating every ranked view), and
+  logged its own internal `__karma__:wm` refusals as user-facing
+  friction — a self-amplifying loop. Read-only servers keep the
+  `friction_ro.jsonl` sidecar in both modes (file, not store). Enabling
+  restores the pre-change behavior exactly.
+
 ### Episodic memory capabilities (2026-08-20/21)
 
 - **Temporal supersession (T1/T6)** — current-value queries ("What's my

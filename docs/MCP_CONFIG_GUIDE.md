@@ -128,6 +128,7 @@ explicit routes:
 | `WM_PROJECT` | unset | Project scope label disclosed in the MCP handshake and `tools/list` |
 | `WM_PROJECT_ROOT` | unset | Repository root — `session.checkpoint` auto-captures git state; `session.verify` reports drift against it |
 | `WM_EMBEDDER_ENDPOINT` | unset | Optional embedding backend for semantic routing (e.g. llama-server `/v1/embeddings`) |
+| `WM_FRICTION_AUTOLOG` | off | Opt-in (`1`): auto-write friction/anomaly memories to the store on dispatch errors and latency/karma anomalies. Default off — failures remain visible in tool errors and (in `--readonly` mode) the `friction_ro.jsonl` sidecar |
 
 ## Troubleshooting
 

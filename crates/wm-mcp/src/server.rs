@@ -132,6 +132,11 @@ pub struct McpServer {
     /// every tool that declares writes, and telemetry/mutable-state writes
     /// are suppressed.
     readonly: bool,
+    /// Friction auto-log gate (`WM_FRICTION_AUTOLOG=1` opt-in, default
+    /// off) — when off, dispatch telemetry is still computed but no
+    /// friction/anomaly memories are written to the store. The read-only
+    /// sidecar trace is unaffected (it never touches the store).
+    friction_autolog: bool,
     /// Active tool surface profile name — reported in `tools/list` so
     /// discovery reflects the profile instead of the full archive.
     profile_name: &'static str,
@@ -532,6 +537,8 @@ impl McpServer {
             escalation_queue: None,
             tx_firewall: None,
             readonly: false,
+            friction_autolog: std::env::var("WM_FRICTION_AUTOLOG")
+                .is_ok_and(|v| v == "1" || v == "true"),
             profile_name: "full",
             profile_contract: None,
             landlock: None,
@@ -3014,42 +3021,52 @@ impl McpServer {
             response_size_bytes: response_size,
         };
 
-        if success {
-            // Anomaly detection on successful dispatches (suppressed in
-            // read-only mode — friction auto-log writes to the store).
-            let peak_ms = telemetry.tool_stats.peak_latency_ns as f32 / 1_000_000.0;
-            if !self.readonly && peak_ms > 0.0 && telemetry.latency_ms > peak_ms {
-                if let Err(e) = self
-                    .friction_auto_log
-                    .log_anomaly(&telemetry, "high_latency")
+        if self.friction_autolog {
+            if success {
+                // Anomaly detection on successful dispatches (suppressed in
+                // read-only mode — friction auto-log writes to the store).
+                let peak_ms = telemetry.tool_stats.peak_latency_ns as f32 / 1_000_000.0;
+                if !self.readonly && peak_ms > 0.0 && telemetry.latency_ms > peak_ms {
+                    if let Err(e) = self
+                        .friction_auto_log
+                        .log_anomaly(&telemetry, "high_latency")
+                    {
+                        tracing::warn!("Failed to auto-log anomaly entry: {e}");
+                    }
+                } else if !self.readonly
+                    && effectiveness < 0.3
+                    && telemetry.tool_stats.call_count > 5
                 {
-                    tracing::warn!("Failed to auto-log anomaly entry: {e}");
+                    // Only flag low_effectiveness after enough calls for a
+                    // meaningful success rate. Skip on fresh processes where
+                    // stats haven't accumulated yet (avoids false positives).
+                    if let Err(e) = self
+                        .friction_auto_log
+                        .log_anomaly(&telemetry, "low_effectiveness")
+                    {
+                        tracing::warn!("Failed to auto-log anomaly entry: {e}");
+                    }
+                } else if !self.readonly && ctx.karma_debt > 0.5 {
+                    if let Err(e) = self
+                        .friction_auto_log
+                        .log_anomaly(&telemetry, "high_karma_debt")
+                    {
+                        tracing::warn!("Failed to auto-log anomaly entry: {e}");
+                    }
                 }
-            } else if !self.readonly && effectiveness < 0.3 && telemetry.tool_stats.call_count > 5 {
-                // Only flag low_effectiveness after enough calls for a
-                // meaningful success rate. Skip on fresh processes where
-                // stats haven't accumulated yet (avoids false positives).
-                if let Err(e) = self
-                    .friction_auto_log
-                    .log_anomaly(&telemetry, "low_effectiveness")
-                {
-                    tracing::warn!("Failed to auto-log anomaly entry: {e}");
+            } else if !self.readonly {
+                if let Err(e) = self.friction_auto_log.log_error(&telemetry) {
+                    tracing::warn!("Failed to auto-log friction entry: {e}");
                 }
-            } else if !self.readonly && ctx.karma_debt > 0.5 {
-                if let Err(e) = self
-                    .friction_auto_log
-                    .log_anomaly(&telemetry, "high_karma_debt")
-                {
-                    tracing::warn!("Failed to auto-log anomaly entry: {e}");
-                }
+            } else {
+                // Read-only mode: LMDB friction logging is suppressed; keep a
+                // sidecar trace so agent failures stay observable.
+                self.append_friction_ro(&telemetry);
             }
-        } else if !self.readonly {
-            if let Err(e) = self.friction_auto_log.log_error(&telemetry) {
-                tracing::warn!("Failed to auto-log friction entry: {e}");
-            }
-        } else {
-            // Read-only mode: LMDB friction logging is suppressed; keep a
-            // sidecar trace so agent failures stay observable.
+        } else if self.readonly {
+            // Autolog off: keep the read-only sidecar trace (a file beside
+            // the store, not a memory) so agent failures stay observable
+            // without writing the store.
             self.append_friction_ro(&telemetry);
         }
 
@@ -3095,7 +3112,8 @@ impl McpServer {
                 let hash_tag = format!("rsi:hash:{hash}");
                 // Only log if no existing governance friction with this hash
                 // (and never in read-only mode — the friction log writes).
-                if !self.readonly
+                if self.friction_autolog
+                    && !self.readonly
                     && !wm_tools::expansion::friction_hash_exists(&self.store, &hash_tag)
                 {
                     if let Err(e) = self.friction_auto_log.log_error(&gov_telemetry) {
