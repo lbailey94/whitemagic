@@ -525,6 +525,20 @@ async fn auto_join_loop(node: Arc<MeshNode>, interval: std::time::Duration) {
 mod tests {
     use super::*;
     use crate::crypto::MeshKeyPair;
+    use std::future::Future;
+    use std::time::Duration;
+
+    /// A wedged mesh rpc must fail the test with a name, not hang the CI
+    /// job forever (tokio tests have no built-in time limit).
+    async fn within<T>(
+        what: &str,
+        fut: impl Future<Output = wm_core::Result<T>>,
+    ) -> wm_core::Result<T> {
+        const LIMIT: Duration = Duration::from_secs(10);
+        tokio::time::timeout(LIMIT, fut)
+            .await
+            .unwrap_or_else(|_| panic!("{what} timed out after {LIMIT:?}"))
+    }
 
     async fn spawn_node_with(peer_id: &str, port: u16, auto_join: bool) -> Arc<MeshNode> {
         let keypair = MeshKeyPair::from_seed(peer_id.as_bytes());
@@ -587,7 +601,9 @@ mod tests {
         let b = spawn_node_with("node-b", 17_603, false).await;
 
         // A joins B: A's signed heartbeat lands on B → B binds A's key.
-        let report = a.join("127.0.0.1:17603").await.expect("a join b");
+        let report = within("a join b", a.join("127.0.0.1:17603"))
+            .await
+            .expect("a join b");
         assert_eq!(report["connected"], "127.0.0.1:17603");
         // B's registry now contains A (the heartbeat registered it).
         assert_eq!(
@@ -597,11 +613,12 @@ mod tests {
         );
 
         // B joins A so both registries know both peers.
-        b.join("127.0.0.1:17602").await.expect("b join a");
+        within("b join a", b.join("127.0.0.1:17602"))
+            .await
+            .expect("b join a");
 
         // Chat by peer ID (resolved through the registry), signed.
-        let sent = a
-            .chat("node-b", "general", "hello from a")
+        let sent = within("a chat b", a.chat("node-b", "general", "hello from a"))
             .await
             .expect("a chat b");
         assert_eq!(sent["status"], "ok");
@@ -618,12 +635,15 @@ mod tests {
     async fn quarantine_cuts_off_and_refuses_rejoin() {
         let a = spawn_node_with("node-a", 17_604, false).await;
         let b = spawn_node_with("node-b", 17_605, false).await;
-        a.join("127.0.0.1:17605").await.expect("a join b");
-        b.join("127.0.0.1:17604").await.expect("b join a");
+        within("a join b", a.join("127.0.0.1:17605"))
+            .await
+            .expect("a join b");
+        within("b join a", b.join("127.0.0.1:17604"))
+            .await
+            .expect("b join a");
 
         // B quarantines A: locks revoked, messages purged, connection dropped.
-        let report = b
-            .quarantine_peer("node-a", "e2e bad apple")
+        let report = within("quarantine", b.quarantine_peer("node-a", "e2e bad apple"))
             .await
             .expect("quarantine");
         assert_eq!(report["quarantined"], true);
@@ -635,7 +655,11 @@ mod tests {
 
         // A's further chat is refused: the connection was dropped and the
         // re-dial's identity heartbeat hits the quarantine refusal.
-        let refused = a.chat("node-b", "general", "let me back in").await;
+        let refused = within(
+            "chat after quarantine",
+            a.chat("node-b", "general", "let me back in"),
+        )
+        .await;
         assert!(
             refused.is_err(),
             "quarantined peer must not rejoin or send: {refused:?}"
@@ -644,7 +668,7 @@ mod tests {
         // Release → rejoin works again.
         let released = b.release_quarantine("node-a").await.expect("release");
         assert_eq!(released["released"], true);
-        a.join("127.0.0.1:17605")
+        within("rejoin after release", a.join("127.0.0.1:17605"))
             .await
             .expect("rejoin after release");
     }

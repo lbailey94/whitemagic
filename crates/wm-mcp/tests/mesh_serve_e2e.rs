@@ -6,12 +6,13 @@
 
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};
+use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
 struct ServeProcess {
     child: Child,
     stdin: std::process::ChildStdin,
-    stdout: BufReader<std::process::ChildStdout>,
+    responses: Receiver<String>,
 }
 
 impl ServeProcess {
@@ -40,11 +41,30 @@ impl ServeProcess {
         .stderr(Stdio::null());
         let mut child = cmd.spawn().expect("spawn wm serve --mesh");
         let stdin = child.stdin.take().expect("stdin");
-        let stdout = BufReader::new(child.stdout.take().expect("stdout"));
+        let stdout = child.stdout.take().expect("stdout");
+        // Drain stdout on a dedicated thread: a wedged serve process must
+        // surface as a timeout error here, not hang the whole CI job (a
+        // blocking read_line has no deadline of its own).
+        let (tx, responses) = channel();
+        std::thread::spawn(move || {
+            let mut reader = BufReader::new(stdout);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {
+                        if tx.send(line.clone()).is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+        });
         Self {
             child,
             stdin,
-            stdout,
+            responses,
         }
     }
 
@@ -57,11 +77,14 @@ impl ServeProcess {
         });
         writeln!(self.stdin, "{req}").expect("write request");
         self.stdin.flush().expect("flush request");
-        let mut line = String::new();
-        self.stdout
-            .read_line(&mut line)
-            .expect("read response line");
-        serde_json::from_str(&line).expect("valid JSON-RPC response")
+        let line = self
+            .responses
+            .recv_timeout(Duration::from_secs(30))
+            .unwrap_or_else(|_| {
+                panic!("{method} (id {id}) got no response within 30s — serve process wedged?")
+            });
+        serde_json::from_str(&line)
+            .unwrap_or_else(|e| panic!("{method} (id {id}) returned invalid JSON ({e}): {line}"))
     }
 
     /// Call a `sangha.mesh.*` route; returns the parsed JSON content.

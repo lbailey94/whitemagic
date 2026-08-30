@@ -12,6 +12,7 @@ env:
 
 jobs:
   fmt:
+    timeout-minutes: 10
     name: Format Check
     runs-on: ubuntu-latest
     steps:
@@ -22,6 +23,7 @@ jobs:
       - run: cargo fmt --all -- --check
 
   clippy:
+    timeout-minutes: 15
     name: Clippy
     runs-on: ubuntu-latest
     steps:
@@ -33,6 +35,7 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
 
   test-linux:
+    timeout-minutes: 20
     name: Tests (Linux)
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +45,7 @@ jobs:
       - run: cargo test --all-targets
 
   smoke:
+    timeout-minutes: 15
     name: Curated Smoke Test (Linux)
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +56,7 @@ jobs:
       - run: python3 scripts/curated_smoke_test.py
 
   optional-features:
+    timeout-minutes: 20
     name: Optional Feature Builds
     runs-on: ubuntu-latest
     strategy:
@@ -71,6 +76,7 @@ jobs:
       - run: cargo build --features "${{ matrix.features }}"
 
   test-macos:
+    timeout-minutes: 20
     name: Tests (macOS)
     runs-on: macos-latest
     steps:
@@ -80,6 +86,7 @@ jobs:
       - run: cargo test --all-targets
 
   test-windows:
+    timeout-minutes: 45
     name: Tests (Windows)
     runs-on: windows-latest
     env:
@@ -103,6 +110,7 @@ jobs:
       - run: cargo test --all-targets
 
   bench-compile:
+    timeout-minutes: 25
     name: Benchmark Compile Check
     runs-on: ubuntu-latest
     steps:
@@ -112,6 +120,7 @@ jobs:
       - run: cargo bench --no-run
 
   proptest:
+    timeout-minutes: 15
     name: Property-Based Tests
     runs-on: ubuntu-latest
     env:
@@ -128,6 +137,7 @@ jobs:
       - run: cargo test -p wm-core --lib effects
 
   audit:
+    timeout-minutes: 10
     name: Dependency Audit
     runs-on: ubuntu-latest
     steps:
