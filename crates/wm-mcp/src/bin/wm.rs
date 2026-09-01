@@ -2525,6 +2525,40 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     println!();
     issues += run_network_audit();
 
+    // 11g. Recall-route honesty (V8 ship list #1/#6) — disclose which
+    //      route memory.search will take in this deployment and what
+    //      quality to expect from it. The hybrid route requires a real
+    //      embedder; without one the default route is the episodic
+    //      deterministic machinery, and the measured gap is what
+    //      route-honesty exists to surface (LongMemEval-S 50q, S8
+    //      protocol 2026-09-01: episodic 0.86 R@1 vs BM25 fallback 0.64).
+    println!();
+    let embedder_env = std::env::var("WM_EMBEDDER_BACKEND")
+        .ok()
+        .map(|backend| format!("onnx backend {backend}"))
+        .or_else(|| {
+            std::env::var("WM_EMBEDDER_ENDPOINT")
+                .ok()
+                .map(|endpoint| format!("endpoint {endpoint}"))
+        });
+    if let Some(description) = embedder_env {
+        println!(
+            "[OK]   Recall route: hybrid fusion (real embedder per this invocation's env: {description}) — memory.search runs BM25+vector fusion"
+        );
+    } else {
+        let episodic_count = server.store_arc().episodic().record_count().unwrap_or(0);
+        if episodic_count > 0 {
+            println!(
+                "[OK]   Recall route: episodic deterministic default (stub embedder, {episodic_count} episodic records mirror the memory lane) — measured R@1 0.86 (LongMemEval-S 50q, S8 protocol 2026-09-01)"
+            );
+        } else {
+            println!(
+                "[WARN] Recall route: BM25 full-text fallback (stub embedder, episodic lane empty) — measured R@1 0.64 vs 0.86 on the episodic route (LongMemEval-S 50q, S8 protocol 2026-09-01); memory writes populate the episodic mirror, which upgrades the default route"
+            );
+            issues += 1;
+        }
+    }
+
     // 12. Write-audit journal — misdeclarations become visible here.
     //     The journal is append-only and lives in the Karma LMDB galaxy;
     //     the doctor opens it directly (read-only) from the store.

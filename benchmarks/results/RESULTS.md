@@ -28,12 +28,16 @@ the evidence-bearing session (R@k) and mean reciprocal rank (MRR).
 | 2026-09-01 | **`v6_50q_s8_hybrid_trust05_labels`** | 0.64 | 0.82 | **0.7217** | Trust A/B on the same path with `WM_TRUST_WEIGHT=0.5` + corrected stamps (`--trust-labels`: needle-session turns `source=user`/1.0, distractors 0.7). MRR +0.007 — trust weighting reorders meaningfully; head-of-list recall unchanged at this knob. |
 | 2026-09-01 | **`v6_50q_s8_hybrid_trust10_labels`** | **0.68** | 0.82 | **0.7417** | Knob at 1.0 (factor span 0.65–1.3): R@1 +4 pts and MRR +0.027 vs knobs-off — **monotonic in the knob** on the deployed (BM25-fallback) path. Trust-into-fusion behaves as designed where it lives. |
 | 2026-09-01 | **`v6_50q_s8_conformal_alpha01`** | 0.48 | 0.76 | — | Conformal plumbing run (`WM_RECALL_CONFORMAL_ALPHA=0.1`, persistent store — accumulating corpus, NOT protocol-comparable to the fresh-store rows above; expect degradation, the claim here is plumbing not quality). The calibrated-loop evidence lives in the live verification: honest `uncalibrated` disclosure → `memory.recall_feedback` ≥10 samples → `active` with threshold 0.85 + per-result `in_conformal_set` + write-through persistence. Harness coverage metric needs a fix (conformal_set capture fired only when status was active at search time) — parked with the ONNX follow-up below. |
+| 2026-09-01 | **`v8_50q_route_default`** | **0.86** | **1.00** | **0.923** | Ship list #1/#6 ACCEPTANCE: `memory.search` DEFAULT route (harness v5 shape: per-question galaxy + `min_score_ratio=0`) now prefers the episodic deterministic machinery when no real embedder — **byte-identical to the episodic baseline (fifth consecutive 0.86/1.00/0.923)**, so the 0.64-vs-0.86 route gap is closed on the product surface. Disclosure live-verified on the release binary (`recall_mode: episodic`, per-result `source: episodic`); doctor §11g grades deployed-route honesty. Search p50 59.4ms / p95 124.6ms. |
 | — | *parked: ONNX hybrid A/B + coverage* | — | — | — | Real-fusion runs (baseline / trust / conformal coverage on vector+BM25) are parked until the fleet actually deploys a real embedder — the shipped configuration is stub-embedder (see the honest note above), so those numbers would describe a configuration nobody runs. Harness additions (`--trust-labels`, `--conformal`) are landed and ready for that day. |
 
 Current claim backed by these files: **LongMemEval-S 50q retrieval
 R@1 = 0.86, R@5 = 1.00, MRR ≈ 0.92** (`v6_50q_dupsort_sidecar`, 2026-08-27,
 confirmed twice on 2026-08-29 by `..._rerun_alpha6` and `..._splitwindows_alpha6`)
-on the reference machine. Search latency claim: **p50 ≈ 74ms, p95 ≈ 235ms
+on the reference machine — and since 2026-09-01 the claim holds through
+the **default `memory.search` route** too (`v8_50q_route_default`: the
+no-embedder default prefers the episodic machinery; byte-identical).
+Search latency claim: **p50 ≈ 74ms, p95 ≈ 235ms
 search-only** (`..._splitwindows_alpha6`); the pre-split conflated p50
 (6.6s) must not be cited as search latency.
 

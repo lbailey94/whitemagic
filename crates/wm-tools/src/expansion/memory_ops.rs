@@ -683,7 +683,7 @@ impl Tool for MemoryHybridRecallTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Search memories (BM25 by default; BM25 + vector fusion when WM_EMBEDDER_ENDPOINT is set). memory.hybrid_recall is a compatibility alias."
+        "Search memories: hybrid BM25+vector fusion with a real embedder; otherwise the episodic deterministic route, falling back to BM25 full-text. Every result discloses recall_mode (hybrid|episodic|fts). memory.hybrid_recall is a compatibility alias."
     }
     fn input_schema(&self) -> Value {
         schema(
@@ -741,13 +741,27 @@ impl Tool for MemoryHybridRecallTool {
         let mut result_extra: Option<serde_json::Value> = None;
         let mut trust_disclosure: Option<serde_json::Value> = None;
 
+        // Recall-mode honesty (V8 ship list #1/#6): which route answered
+        // this query is disclosed on the result — hybrid | episodic | fts |
+        // importance | none.
+        let mut recall_mode = "none";
+        // Hybrid fusion requires a REAL embedder: with the stub, vector
+        // halves are noise, so a stub-wired engine must not claim the
+        // hybrid route (the server already refuses to wire one; this gate
+        // makes the tool honest even when constructed directly).
+        let hybrid_available = self
+            .recall
+            .as_ref()
+            .is_some_and(|recall| recall.embedder_is_real());
+
         // Phase 0: If RecallEngine with a real embedder is available, use
         // hybrid BM25 + vector search for fused ranking. Trust weighting
         // lives INSIDE the fusion since V8 S8 (single application point —
         // applying it again here would double-count); the per-result
         // trust_factor + conformal set disclosure come straight from the
         // engine.
-        if let Some(ref recall) = self.recall {
+        if hybrid_available {
+            let recall = self.recall.as_ref().expect("hybrid_available checked");
             if !query.is_empty() {
                 let (hybrid_results, conformal) = recall.hybrid_search_with_disclosure(
                     query,
@@ -787,6 +801,68 @@ impl Tool for MemoryHybridRecallTool {
                         "applied_in": "fuse_results",
                     }));
                 }
+                if !results.is_empty() {
+                    recall_mode = "hybrid";
+                }
+            }
+        }
+
+        // Phase E: the episodic deterministic route (V8 ship list #1) —
+        // preferred over plain FTS whenever the hybrid route is
+        // unavailable. The episodic lane mirrors every v5 write
+        // (capture_explicit_memory), its deterministic scorer measures
+        // R@1 0.86 vs the BM25 fallback's 0.64 (LongMemEval-S 50q, S8
+        // protocol 2026-09-01), and this wire is exactly the v26
+        // "one fast brain" lesson: route to the best machinery by
+        // default, disclose which one ran. Falls through to FTS only
+        // when episodic yields nothing (legacy stores, empty lane,
+        // genuine no-match). Pool 100 mirrors the acceptance protocol
+        // (retrieve broad, truncate to `limit` below).
+        if results.is_empty() && !query.is_empty() && !hybrid_available {
+            const EPISODIC_RECALL_POOL: usize = 100;
+            let pool = limit.max(EPISODIC_RECALL_POOL);
+            // Degradation is never fatal: an episodic-lane error falls
+            // through to the FTS phases like an empty lane would.
+            let episodic_hits = match self
+                .store
+                .episodic()
+                .search_with_limits(query, pool, pool, false)
+            {
+                Ok(hits) => hits,
+                Err(error) => {
+                    tracing::warn!("episodic default-route search failed: {error}");
+                    Vec::new()
+                }
+            };
+            for er in episodic_hits {
+                // Record ids mirror the v5 memory id; resolve to carry
+                // galaxy/importance/visibility from the source of truth.
+                let Some((hit_galaxy, mem)) =
+                    resolve_memory_across_galaxies(&self.store, er.record.id)
+                else {
+                    continue;
+                };
+                if galaxy_explicit && hit_galaxy != galaxy {
+                    continue;
+                }
+                if mem.metadata.importance < min_importance
+                    || !crate::expansion::common::mcp_visible(&mem)
+                {
+                    continue;
+                }
+                results.push(json!({
+                    "id": mem.metadata.id,
+                    "galaxy": hit_galaxy.db_name(),
+                    "content": wm_memory::scrub_text(&mem.content),
+                    "importance": mem.metadata.importance,
+                    "score": er.score,
+                    "matched_terms": er.matched_terms,
+                    "trust": mem.metadata.source_trust,
+                    "source": "episodic",
+                }));
+            }
+            if !results.is_empty() {
+                recall_mode = "episodic";
             }
         }
 
@@ -830,19 +906,22 @@ impl Tool for MemoryHybridRecallTool {
                                     && crate::expansion::common::mcp_visible(&mem)
                                 {
                                     results.push(json!({
-                                        "id": mem.metadata.id,
-                                        "galaxy": hit_galaxy.db_name(),
-                                        "content": wm_memory::scrub_text(&mem.content),
-                                        "importance": mem.metadata.importance,
-                                        "score": wm_memory::trust_weighted_score(
-                                            hit.score,
-                                            mem.metadata.source_trust,
-                                            trust_weight,
-                                        ),
-                                        "normalized_score": hit.normalized_score,
+                                            "id": mem.metadata.id,
+                                            "galaxy": hit_galaxy.db_name(),
+                                            "content": wm_memory::scrub_text(&mem.content),
+                                            "importance": mem.metadata.importance,
+                                            "score": wm_memory::trust_weighted_score(
+                                                hit.score,
+                                                mem.metadata.source_trust,
+                                                trust_weight,
+                                            ),
+                                            "normalized_score": hit.normalized_score,
                                         "trust": mem.metadata.source_trust,
                                         "source": "fts",
                                     }));
+                                    if recall_mode == "none" {
+                                        recall_mode = "fts";
+                                    }
                                 }
                             }
                         }
@@ -876,6 +955,9 @@ impl Tool for MemoryHybridRecallTool {
                     "score": mem.metadata.importance,
                     "source": "importance",
                 }));
+                if recall_mode == "none" {
+                    recall_mode = "importance";
+                }
             }
         }
         // Phase 3: bounded spreading activation over the association graph.
@@ -1007,6 +1089,7 @@ impl Tool for MemoryHybridRecallTool {
                 serde_json::Value::from("all")
             },
             "count": results.len(),
+            "recall_mode": recall_mode,
             "results": results,
             "hint": hint,
         });
@@ -2177,6 +2260,222 @@ mod tests {
             .unwrap();
         assert_eq!(result["count"], 1);
         assert_eq!(result["results"][0]["id"], json!(public.id));
+    }
+
+    /// Mirror a v5 memory into the episodic lane exactly like the write
+    /// path does (capture_explicit_memory): record id = memory id.
+    fn mirror_memory(
+        store: &Arc<MemoryStore>,
+        mem: &Memory,
+        session: Option<uuid::Uuid>,
+        sequence: u64,
+    ) {
+        use wm_core::EpisodicCapturePolicy;
+        let record = EpisodicRecord::new(
+            session,
+            sequence,
+            EpisodicKind::Observation,
+            mem.content.clone(),
+            Provenance::new(ProvenanceSource::User),
+        )
+        .with_id(mem.metadata.id)
+        .with_visibility(mem.metadata.is_private, mem.metadata.model_exclude);
+        store
+            .episodic()
+            .append_explicit(&record, EpisodicCapturePolicy::explicit_only())
+            .unwrap();
+    }
+
+    fn default_search_tool(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+    ) -> MemoryHybridRecallTool {
+        MemoryHybridRecallTool::as_search(store, search, None)
+    }
+
+    #[tokio::test]
+    async fn default_route_prefers_episodic_and_discloses_mode() {
+        // V8 ship list #1: with no real embedder, memory.search must route
+        // through the episodic deterministic machinery by default and
+        // disclose `recall_mode: episodic` + per-result `source`.
+        let (_dir, store, search) = hybrid_fixture();
+        let needle = Memory::new(
+            Galaxy::Codex,
+            "Kotlin coroutine budget meeting notes".into(),
+        );
+        let needle_id = needle.metadata.id;
+        let other = Memory::new(Galaxy::Codex, "Grocery list eggs and flour".into());
+        store.put(Galaxy::Codex, &needle).unwrap();
+        store.put(Galaxy::Codex, &other).unwrap();
+        mirror_memory(&store, &needle, None, 1);
+        mirror_memory(&store, &other, None, 2);
+
+        let tool = default_search_tool(store.clone(), Some(search));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "kotlin coroutine budget", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["recall_mode"], "episodic");
+        assert_eq!(v["results"][0]["source"], "episodic");
+        assert_eq!(v["results"][0]["id"], json!(needle_id.to_string()));
+        assert!(v["results"][0]["score"].as_f64().unwrap() > 0.0);
+    }
+
+    #[tokio::test]
+    async fn default_route_matches_the_episodic_machinery_ranking() {
+        // The default route must BE the episodic machinery, not a lookalike:
+        // same corpus, same query, first result identical to
+        // memory.episodic_search's top hit.
+        let (_dir, store, search) = hybrid_fixture();
+        let contents = [
+            "Deployed the telemetry agent on Tuesday",
+            "Cancun trip booked for the twelfth",
+            "Telemetry agent rollout postponed to Friday",
+            "Deadline for the quarterly report moved",
+        ];
+        let mut memories: Vec<(uuid::Uuid, &str)> = Vec::new();
+        for (i, content) in contents.iter().enumerate() {
+            let mem = Memory::new(Galaxy::Codex, (*content).to_string());
+            memories.push((mem.metadata.id, content));
+            store.put(Galaxy::Codex, &mem).unwrap();
+            mirror_memory(&store, &mem, None, i as u64 + 1);
+        }
+        let query = "when was the telemetry agent deployed";
+
+        let default_tool = default_search_tool(store.clone(), Some(search.clone()));
+        let mut ctx = Context::default();
+        let default_v = default_tool
+            .call(&mut ctx, json!({"query": query, "limit": 10}))
+            .await
+            .unwrap();
+        let episodic_tool = MemoryEpisodicSearchTool::new(store);
+        let episodic_v = episodic_tool
+            .call(&mut ctx, json!({"query": query, "limit": 10}))
+            .await
+            .unwrap();
+        assert_eq!(
+            default_v["results"][0]["id"], episodic_v["results"][0]["id"],
+            "default route must rank exactly like the episodic machinery"
+        );
+        let top = memories
+            .iter()
+            .find(|(id, _)| id.to_string() == default_v["results"][0]["id"])
+            .map(|(_, c)| *c)
+            .unwrap();
+        assert_eq!(top, "Deployed the telemetry agent on Tuesday");
+    }
+
+    #[tokio::test]
+    async fn default_route_falls_back_to_fts_when_episodic_yields_nothing() {
+        // Legacy store shape: memories indexed but the episodic lane never
+        // populated. The default route must disclose `fts` honestly.
+        let (_dir, store, search) = hybrid_fixture();
+        let mem = Memory::new(Galaxy::Codex, "Zebra quotas revised upward".into());
+        let id = mem.metadata.id;
+        store.put(Galaxy::Codex, &mem).unwrap();
+        {
+            let mut writer = search.writer().unwrap();
+            search
+                .add_document(
+                    &mut writer,
+                    &id.to_string(),
+                    "codex",
+                    "Zebra quotas revised upward",
+                    &mem.metadata.tags,
+                    mem.metadata.created_at.timestamp(),
+                )
+                .unwrap();
+            search.commit(&mut writer).unwrap();
+        }
+
+        let tool = default_search_tool(store, Some(search));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"query": "zebra quotas", "limit": 10}))
+            .await
+            .unwrap();
+        assert_eq!(v["recall_mode"], "fts");
+        assert_eq!(v["results"][0]["source"], "fts");
+        assert_eq!(v["results"][0]["id"], json!(id.to_string()));
+    }
+
+    #[tokio::test]
+    async fn episodic_default_route_respects_galaxy_filter() {
+        let (_dir, store, search) = hybrid_fixture();
+        let in_galaxy = Memory::new(Galaxy::Codex, "Marble fountain restoration plan".into());
+        let other_galaxy =
+            Memory::new(Galaxy::Sessions, "Marble fountain restoration notes".into());
+        store.put(Galaxy::Codex, &in_galaxy).unwrap();
+        store.put(Galaxy::Sessions, &other_galaxy).unwrap();
+        mirror_memory(&store, &in_galaxy, None, 1);
+        mirror_memory(&store, &other_galaxy, None, 2);
+
+        let tool = default_search_tool(store, Some(search));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "marble fountain", "galaxy": "sessions", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["recall_mode"], "episodic");
+        for r in v["results"].as_array().unwrap() {
+            assert_eq!(r["galaxy"], "sessions", "galaxy filter must hold");
+        }
+        assert_eq!(
+            v["results"][0]["id"],
+            json!(other_galaxy.metadata.id.to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn episodic_default_route_filters_private_and_stale() {
+        let (_dir, store, search) = hybrid_fixture();
+        let public = Memory::new(
+            Galaxy::Codex,
+            "Lighthouse maintenance schedule confirmed".into(),
+        );
+        let mut private = Memory::new(Galaxy::Codex, "Lighthouse access code renewal".into());
+        private.metadata.is_private = true;
+        let stale = Memory::new(Galaxy::Codex, "Lighthouse inspection legacy draft".into());
+        let stale_id = stale.metadata.id;
+        store.put(Galaxy::Codex, &public).unwrap();
+        store.put(Galaxy::Codex, &private).unwrap();
+        store.put(Galaxy::Codex, &stale).unwrap();
+        mirror_memory(&store, &public, None, 1);
+        mirror_memory(&store, &private, None, 2);
+        mirror_memory(&store, &stale, None, 3);
+        // The stale record's v5 memory is gone — the mirror survived, the
+        // source of truth did not.
+        store.delete(Galaxy::Codex, stale_id).unwrap();
+
+        let tool = default_search_tool(store, Some(search));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"query": "lighthouse", "limit": 10}))
+            .await
+            .unwrap();
+        assert_eq!(v["recall_mode"], "episodic");
+        let ids: Vec<&str> = v["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|r| r["id"].as_str())
+            .collect();
+        assert!(
+            !ids.contains(&private.metadata.id.to_string().as_str()),
+            "private memories must never surface on the default route"
+        );
+        assert!(
+            !ids.contains(&stale_id.to_string().as_str()),
+            "episodic records without a live v5 memory must be skipped"
+        );
+        assert!(!ids.is_empty(), "the public hit must still surface");
     }
 
     #[tokio::test]

@@ -8110,6 +8110,7 @@ dependencies = [
  "tracing",
  "ureq",
  "uuid",
+ "wm-conformal",
  "wm-core",
 ]
 
