@@ -3526,20 +3526,51 @@ impl McpServer {
 /// When unset, a random per-process key is used — the node appears as a fresh
 /// identity each restart, but a hardcoded default would be shared by every
 /// WhiteMagic node, letting anyone impersonate another node's messages.
+///
+/// S9 key derivation: `WM_MESH_KEY` is master key material, never a seed —
+/// the identity key is HKDF-derived with domain separation
+/// (`sangha/identity/v1`), so the same master cannot silently serve other
+/// purposes and weak ASCII keys are normalized through KDF. Set
+/// `WM_MESH_KEY_DERIVATION=legacy` to restore the pre-S9
+/// direct-seed derivation (keeps an old peer identity; the HKDF default
+/// rotates it once per node).
+///
+/// The result is cached process-wide: every caller (mesh node + in-process
+/// chat) shares ONE identity key. Previously, without `WM_MESH_KEY`, the
+/// two call sites generated *different* random keys per process — the node
+/// and its chat signature did not even agree with each other.
 pub fn mesh_signing_key() -> wm_sangha::MeshKeyPair {
-    match std::env::var("WM_MESH_KEY") {
-        Ok(key) if !key.is_empty() => wm_sangha::MeshKeyPair::from_seed(key.as_bytes()),
-        _ => {
-            tracing::warn!(
-                "WM_MESH_KEY not set — using a random per-process Sangha identity; \
-                 set WM_MESH_KEY for a stable node identity across restarts"
-            );
-            let mut seed = [0u8; 32];
-            seed[..16].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
-            seed[16..].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
-            wm_sangha::MeshKeyPair::from_secret(seed)
-        }
-    }
+    static MESH_KEY: std::sync::OnceLock<wm_sangha::MeshKeyPair> = std::sync::OnceLock::new();
+    MESH_KEY
+        .get_or_init(|| match std::env::var("WM_MESH_KEY") {
+            Ok(key) if !key.is_empty() => {
+                let legacy =
+                    std::env::var("WM_MESH_KEY_DERIVATION").is_ok_and(|v| v.trim() == "legacy");
+                if legacy {
+                    tracing::warn!(
+                        "WM_MESH_KEY_DERIVATION=legacy — pre-S9 direct-seed identity in use; \
+                         migrate to the HKDF default and re-join the mesh"
+                    );
+                    wm_sangha::MeshKeyPair::from_seed(key.as_bytes())
+                } else {
+                    wm_sangha::MeshKeyPair::derive_from_master(
+                        key.as_bytes(),
+                        wm_sangha::crypto::DOMAIN_IDENTITY,
+                    )
+                }
+            }
+            _ => {
+                tracing::warn!(
+                    "WM_MESH_KEY not set — using a random per-process Sangha identity; \
+                     set WM_MESH_KEY for a stable node identity across restarts"
+                );
+                let mut seed = [0u8; 32];
+                seed[..16].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
+                seed[16..].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
+                wm_sangha::MeshKeyPair::from_secret(seed)
+            }
+        })
+        .clone()
 }
 
 #[cfg(test)]

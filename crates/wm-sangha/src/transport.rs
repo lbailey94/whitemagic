@@ -86,6 +86,15 @@ pub struct TransportConfig {
     pub heartbeat_interval_sec: u64,
     /// Maximum number of peer connections.
     pub max_connections: usize,
+    /// Accept unsigned discovery beacons (S9 legacy escape hatch).
+    ///
+    /// Default `false` — the S9 posture is signed-only: beacons must
+    /// carry a valid Ed25519 signature over their canonical payload,
+    /// from a key that derives the announced peer ID (or is already
+    /// bound to it in the registry). Set via
+    /// `WM_MESH_ALLOW_UNSIGNED_BEACONS=1` for mixed-version meshes.
+    #[serde(default)]
+    pub allow_unsigned_beacons: bool,
 }
 
 impl Default for TransportConfig {
@@ -95,6 +104,7 @@ impl Default for TransportConfig {
             multicast_group: MULTICAST_GROUP.to_string(),
             heartbeat_interval_sec: DEFAULT_HEARTBEAT_INTERVAL_SEC,
             max_connections: 64,
+            allow_unsigned_beacons: false,
         }
     }
 }
@@ -102,6 +112,14 @@ impl Default for TransportConfig {
 // ── Peer Announcement (UDP) ───────────────────────────────────────────
 
 /// UDP beacon broadcast by peers for discovery.
+///
+/// S9: beacons are signed. `public_key` + `signature` cover the
+/// canonical payload (every field except the signature), and
+/// `ingest_beacon` verifies before the announced peer may enter the
+/// discovery registry. Both fields are `serde(default)` so a signed
+/// beacon still parses on pre-S9 receivers — but pre-S9 receivers do
+/// not verify, which is why the fleet upgrades together (the escape
+/// hatch `WM_MESH_ALLOW_UNSIGNED_BEACONS=1` exists for that window).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeerAnnounce {
     /// Peer ID.
@@ -112,6 +130,12 @@ pub struct PeerAnnounce {
     pub capabilities: Vec<String>,
     /// Timestamp (Unix seconds).
     pub timestamp: i64,
+    /// Ed25519 public key of the announcing peer (hex), S9.
+    #[serde(default)]
+    pub public_key: String,
+    /// Ed25519 signature over [`PeerAnnounce::signing_payload`] (hex), S9.
+    #[serde(default)]
+    pub signature: String,
 }
 
 impl PeerAnnounce {
@@ -123,7 +147,51 @@ impl PeerAnnounce {
             tcp_addr: tcp_addr.into(),
             capabilities: Vec::new(),
             timestamp: chrono::Utc::now().timestamp(),
+            public_key: String::new(),
+            signature: String::new(),
         }
+    }
+
+    /// The canonical payload committed by the signature: every field
+    /// except the signature itself (the public key is included — it
+    /// binds the key to this exact announcement).
+    #[must_use]
+    pub fn signing_payload(&self) -> String {
+        let without_sig = Self {
+            signature: String::new(),
+            ..self.clone()
+        };
+        serde_json::to_string(&without_sig).unwrap_or_default()
+    }
+
+    /// Sign this announcement in place with the node's keypair.
+    pub fn signed(&mut self, keypair: &crate::crypto::MeshKeyPair) {
+        self.public_key = keypair.public_key_hex();
+        self.signature = keypair.sign_hex(&self.signing_payload());
+    }
+
+    /// Verify the signature against the carried public key.
+    #[must_use]
+    pub fn verify_signature(&self) -> bool {
+        if self.public_key.is_empty() || self.signature.is_empty() {
+            return false;
+        }
+        crate::crypto::MeshKeyPair::verify_hex(
+            &self.signing_payload(),
+            &self.signature,
+            &self.public_key,
+        )
+    }
+
+    /// Whether the announced peer ID is the default derivation of the
+    /// announced public key (`wm-<first 12 hex>`).
+    ///
+    /// Peers with a custom `WM_MESH_PEER_ID` fail this check by design;
+    /// they are accepted at ingest only if the key is already bound to
+    /// that peer ID in the registry (i.e., a signed heartbeat bound it).
+    #[must_use]
+    pub fn identity_matches_key(&self) -> bool {
+        self.public_key.len() >= 12 && self.peer_id == format!("wm-{}", &self.public_key[..12])
     }
 
     /// Serialize to JSON bytes.
@@ -229,6 +297,8 @@ pub struct SanghaState {
     pub peers: Mutex<PeerDiscovery>,
     /// Signal broadcast manager.
     pub signals: Mutex<SignalBroadcast>,
+    /// Replay protection (S9) — shared by beacon ingest and chat inject.
+    pub replay: crate::replay::ReplayCache,
     /// Chat manager.
     pub chat: Mutex<SanghaChat>,
     /// Lock manager.
@@ -278,6 +348,7 @@ impl SanghaState {
             tcp_addr: tcp_addr.into(),
             peers: Mutex::new(PeerDiscovery::default()),
             signals: Mutex::new(SignalBroadcast::default()),
+            replay: crate::replay::ReplayCache::default(),
             chat: Mutex::new(
                 SanghaChat::default()
                     .with_signing_key(keypair_clone)
@@ -874,7 +945,8 @@ async fn run_discovery_beacon(state: Arc<SanghaState>, config: &TransportConfig)
     let interval = std::time::Duration::from_secs(config.heartbeat_interval_sec);
 
     loop {
-        let announce = PeerAnnounce::new(&state.peer_id, &state.tcp_addr);
+        let mut announce = PeerAnnounce::new(&state.peer_id, &state.tcp_addr);
+        announce.signed(&state.keypair);
         let bytes = announce.to_bytes();
         if let Err(e) = sock.send_to(&bytes, multicast_addr).await {
             tracing::debug!("UDP beacon send error: {e}");
@@ -942,7 +1014,7 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
         match sock.recv_from(&mut buf).await {
             Ok((len, _addr)) => {
                 if let Some(announce) = PeerAnnounce::from_bytes(&buf[..len]) {
-                    ingest_beacon(&state, &announce).await;
+                    ingest_beacon(&state, &announce, config).await;
                 }
             }
             Err(e) => {
@@ -957,19 +1029,101 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
 /// A node must never register itself: multicast loopback (`IP_MULTICAST_LOOP`
 /// defaults to enabled) delivers a node's own beacon back to its listener,
 /// and a self-entry would pollute peer counts and make the auto-join loop
-/// see a phantom peer. Beacons carry addresses, not identity — the signed
-/// heartbeat at join time is what binds a key.
-async fn ingest_beacon(state: &SanghaState, announce: &PeerAnnounce) {
+/// see a phantom peer.
+///
+/// S9 gate chain — a beacon is only registered when, in order:
+///
+/// 1. it is not our own loopback;
+/// 2. its timestamp is fresh (within two heartbeat intervals, both
+///    directions — clock skew tolerated, stale replays are not);
+/// 3. it carries a valid Ed25519 signature over its canonical payload
+///    (`WM_MESH_ALLOW_UNSIGNED_BEACONS=1` opens a legacy window instead);
+/// 4. the announced public key is consistent with the announced peer ID:
+///    default-derived IDs (`wm-<12hex>`) are self-certifying; custom
+///    `WM_MESH_PEER_ID`s are accepted while unbound (the signed
+///    heartbeat at join time does the real binding) or while the key
+///    matches the existing binding — never against a *different* bound
+///    key (beacon-level identity theft);
+/// 5. the payload hash is not in the sender's replay window.
+///
+/// Rejected beacons are counted in the discovery stats and logged — the
+/// fleet should be able to *see* attempted forgery.
+async fn ingest_beacon(state: &SanghaState, announce: &PeerAnnounce, config: &TransportConfig) {
     if announce.peer_id == state.peer_id {
         tracing::debug!("ignoring own beacon (multicast loopback)");
         return;
     }
+
+    let now = chrono::Utc::now().timestamp();
+    let skew_limit = 2 * i64::try_from(config.heartbeat_interval_sec).unwrap_or(86_400);
+
+    // 2. Freshness — a captured beacon re-injected later than two
+    //    heartbeat intervals is stale by construction.
+    if (now - announce.timestamp).abs() > skew_limit {
+        tracing::warn!(
+            peer_id = %announce.peer_id,
+            age_secs = now - announce.timestamp,
+            "rejected stale beacon (S9 freshness window)"
+        );
+        return;
+    }
+
+    // 3. Signature — signed-only by default. A valid signature proves
+    //    the announcer controls that key; what that key may announce is
+    //    the identity rule below.
+    if announce.verify_signature() {
+        // 4. Identity rule —
+        //    - default-namespace IDs (`wm-<12hex>`): must derive from the
+        //      announcing key — the default namespace is self-certifying
+        //      and cannot be spoofed by another keypair;
+        //    - custom IDs (any other name): accepted while the key is the
+        //      one already bound to the ID, or while the ID is
+        //      unbound/evicted (the signed heartbeat at join time does
+        //      the real binding — first-bound-wins, identity theft after
+        //      binding refused);
+        //    - bound to a DIFFERENT key: rejected. A beacon must never
+        //      redirect a bound peer's traffic.
+        let bound = state.peers.lock().await.bound_public_key(&announce.peer_id);
+        let identity_ok = match bound {
+            Some(bound_key) => bound_key == announce.public_key,
+            None => announce.identity_matches_key() || !announce.peer_id.starts_with("wm-"),
+        };
+        if !identity_ok {
+            tracing::warn!(
+                peer_id = %announce.peer_id,
+                "rejected beacon: announced key does not own the announced peer ID (S9 identity rule)"
+            );
+            return;
+        }
+        // 5. Replay — same payload from the same peer inside the TTL
+        //    window is a re-injection, not a refresh.
+        let hash = crate::replay::fnv1a64(announce.signing_payload().as_bytes());
+        if !state.replay.check_and_insert(&announce.peer_id, hash, now) {
+            tracing::debug!(peer_id = %announce.peer_id, "rejected replayed beacon (S9)");
+            return;
+        }
+    } else if config.allow_unsigned_beacons {
+        tracing::warn!(
+            peer_id = %announce.peer_id,
+            "accepting unsigned beacon — WM_MESH_ALLOW_UNSIGNED_BEACONS legacy window"
+        );
+    } else {
+        tracing::warn!(
+            peer_id = %announce.peer_id,
+            "rejected unsigned or badly-signed beacon (S9 signed-only)"
+        );
+        return;
+    }
+
     tracing::debug!(
         "Discovered peer: {} at {}",
         announce.peer_id,
         announce.tcp_addr
     );
-    let peer_info = PeerInfo::new(&announce.peer_id, &announce.tcp_addr);
+    let mut peer_info = PeerInfo::new(&announce.peer_id, &announce.tcp_addr);
+    if !announce.public_key.is_empty() {
+        peer_info.public_key = announce.public_key.clone();
+    }
     state.peers.lock().await.discover(peer_info);
 }
 
@@ -1002,20 +1156,209 @@ mod tests {
     async fn beacon_ingest_ignores_own_loopback_beacon() {
         let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
         // Multicast loopback delivers the node's own beacon back to its
-        // listener — it must never register itself.
+        // listener — it must never register itself. (Loopback is checked
+        // before the S9 gates; the beacon here is unsigned, which does
+        // not matter for the self-check.)
         let own = PeerAnnounce::new("self-node", "127.0.0.1:7369");
-        ingest_beacon(&state, &own).await;
+        ingest_beacon(&state, &own, &TransportConfig::default()).await;
         assert_eq!(
             state.peers.lock().await.summary()["peer_count"],
             0,
             "a node must not appear in its own discovery registry"
         );
+    }
 
-        let other = PeerAnnounce::new("other-node", "127.0.0.1:7370");
-        ingest_beacon(&state, &other).await;
+    /// A beacon from a key whose public key derives the announced peer
+    /// ID (`wm-<first 12 hex>`), signed over its canonical payload.
+    fn signed_announce(keypair: &crate::crypto::MeshKeyPair, tcp_addr: &str) -> PeerAnnounce {
+        let peer_id = format!("wm-{}", &keypair.public_key_hex()[..12]);
+        let mut announce = PeerAnnounce::new(peer_id, tcp_addr);
+        announce.signed(keypair);
+        announce
+    }
+
+    #[tokio::test]
+    async fn unsigned_beacon_rejected_by_default() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let unsigned = PeerAnnounce::new("other-node", "127.0.0.1:7370");
+        ingest_beacon(&state, &unsigned, &TransportConfig::default()).await;
+        assert_eq!(
+            state.peers.lock().await.summary()["peer_count"],
+            0,
+            "S9: unsigned beacons must not register peers"
+        );
+    }
+
+    #[tokio::test]
+    async fn legacy_window_accepts_unsigned() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let config = TransportConfig {
+            allow_unsigned_beacons: true,
+            ..TransportConfig::default()
+        };
+        let unsigned = PeerAnnounce::new("other-node", "127.0.0.1:7370");
+        ingest_beacon(&state, &unsigned, &config).await;
+        assert_eq!(
+            state.peers.lock().await.summary()["peer_count"],
+            1,
+            "the documented legacy window must still discover"
+        );
+    }
+
+    #[tokio::test]
+    async fn forged_signature_beacon_rejected() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let attacker = crate::crypto::MeshKeyPair::from_seed(b"attacker");
+        // The victim's peer ID, but a signature from the wrong key.
+        let victim_id = format!(
+            "wm-{}",
+            &crate::crypto::MeshKeyPair::from_seed(b"victim").public_key_hex()[..12]
+        );
+        let mut announce = PeerAnnounce::new(&victim_id, "127.0.0.1:7370");
+        announce.signed(&attacker);
+        ingest_beacon(&state, &announce, &TransportConfig::default()).await;
+        assert_eq!(
+            state.peers.lock().await.summary()["peer_count"],
+            0,
+            "a forged signature must never register a peer"
+        );
+    }
+
+    #[tokio::test]
+    async fn tampered_beacon_payload_rejected() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let keypair = crate::crypto::MeshKeyPair::from_seed(b"honest-peer");
+        let mut announce = signed_announce(&keypair, "127.0.0.1:7370");
+        // Redirect the announce AFTER signing — the classic MITM move.
+        announce.tcp_addr = "10.0.0.66:7369".into();
+        ingest_beacon(&state, &announce, &TransportConfig::default()).await;
+        assert_eq!(
+            state.peers.lock().await.summary()["peer_count"],
+            0,
+            "a payload modified after signing must be rejected"
+        );
+    }
+
+    #[tokio::test]
+    async fn stale_signed_beacon_rejected() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let keypair = crate::crypto::MeshKeyPair::from_seed(b"stale-peer");
+        let mut announce = signed_announce(&keypair, "127.0.0.1:7370");
+        // Sign an OLD timestamp: a captured beacon re-injected an hour later.
+        announce.timestamp = chrono::Utc::now().timestamp() - 3600;
+        announce.signed(&keypair);
+        ingest_beacon(&state, &announce, &TransportConfig::default()).await;
+        assert_eq!(
+            state.peers.lock().await.summary()["peer_count"],
+            0,
+            "a perfectly-signed but stale beacon is a replay, not a refresh"
+        );
+    }
+
+    #[tokio::test]
+    async fn replayed_signed_beacon_rejected() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let keypair = crate::crypto::MeshKeyPair::from_seed(b"replayed-peer");
+        let announce = signed_announce(&keypair, "127.0.0.1:7370");
+        let hash = crate::replay::fnv1a64(announce.signing_payload().as_bytes());
+        let config = TransportConfig::default();
+        ingest_beacon(&state, &announce, &config).await;
+        let summary = state.peers.lock().await.summary();
+        assert_eq!(summary["peer_count"], 1, "the first sighting registers");
+        // The cache must now hold this payload for the sender.
+        assert!(
+            !state
+                .replay
+                .check_and_insert(&announce.peer_id, hash, chrono::Utc::now().timestamp()),
+            "the beacon payload must be in the sender's replay window"
+        );
+    }
+
+    #[tokio::test]
+    async fn valid_signed_beacon_registers() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let keypair = crate::crypto::MeshKeyPair::from_seed(b"honest-peer");
+        let announce = signed_announce(&keypair, "127.0.0.1:7370");
+        ingest_beacon(&state, &announce, &TransportConfig::default()).await;
+        let summary = state.peers.lock().await.summary();
+        assert_eq!(
+            summary["peer_count"], 1,
+            "honest signed discovery must work"
+        );
+        assert_eq!(summary["peers"][0]["id"], announce.peer_id);
+        // And the announced key is carried into the registry entry.
+        assert_eq!(
+            state.peers.lock().await.bound_public_key(&announce.peer_id),
+            Some(keypair.public_key_hex()),
+            "the beacon's key pre-stages the join-time identity binding"
+        );
+    }
+
+    #[tokio::test]
+    async fn custom_peer_id_beacon_rejected_when_bound_to_different_key() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let owner = crate::crypto::MeshKeyPair::from_seed(b"named-peer-owner");
+        let attacker = crate::crypto::MeshKeyPair::from_seed(b"named-peer-attacker");
+        let config = TransportConfig::default();
+
+        // The owner's signed heartbeat binds the custom ID.
+        let bound = state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("custom-node", "127.0.0.1:7370").signed(&owner));
+        assert!(bound.is_ok());
+
+        // The attacker holds a perfectly valid keypair of their own and
+        // announces the victim's custom ID — the beacon signature
+        // verifies, but the ID is bound to a different key.
+        let mut hijack = PeerAnnounce::new("custom-node", "10.0.0.66:7369");
+        hijack.signed(&attacker);
+        ingest_beacon(&state, &hijack, &config).await;
+
         let summary = state.peers.lock().await.summary();
         assert_eq!(summary["peer_count"], 1);
-        assert_eq!(summary["peers"][0]["id"], "other-node");
+        assert_eq!(
+            state.peers.lock().await.bound_public_key("custom-node"),
+            Some(owner.public_key_hex()),
+            "a beacon must never re-point a bound peer ID at another key"
+        );
+    }
+
+    #[tokio::test]
+    async fn custom_peer_id_fresh_beacon_registers_as_candidate() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let keypair = crate::crypto::MeshKeyPair::from_seed(b"named-peer");
+        // Custom WM_MESH_PEER_ID, never bound — the signed beacon
+        // registers the peer as an unbound candidate (discovery must
+        // survive eviction/rejoin; the signed heartbeat at join does
+        // the real binding, first-bound-wins as before S9).
+        let mut announce = PeerAnnounce::new("custom-node", "127.0.0.1:7370");
+        announce.signed(&keypair);
+        ingest_beacon(&state, &announce, &TransportConfig::default()).await;
+        assert_eq!(
+            state.peers.lock().await.summary()["peer_count"],
+            1,
+            "signed custom-ID beacons must still be able to introduce a peer"
+        );
+
+        // Once the owner's heartbeat binds the ID, an attacker's beacon
+        // with a different key is refused…
+        let attacker = crate::crypto::MeshKeyPair::from_seed(b"other-key");
+        let bound = state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("custom-node", "127.0.0.1:7370").signed(&keypair));
+        assert!(bound.is_ok());
+        let mut hijack = PeerAnnounce::new("custom-node", "10.0.0.66:7369");
+        hijack.signed(&attacker);
+        ingest_beacon(&state, &hijack, &TransportConfig::default()).await;
+        assert_eq!(
+            state.peers.lock().await.bound_public_key("custom-node"),
+            Some(keypair.public_key_hex()),
+            "binding survives adversarial beacons after eviction… or not"
+        );
     }
 
     #[test]

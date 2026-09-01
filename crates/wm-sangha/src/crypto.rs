@@ -124,6 +124,50 @@ pub fn hex_decode(hex: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
+// ── Key derivation (S9) ───────────────────────────────────────────────
+//
+// The fleet master secret (`WM_MESH_KEY`) must never seed a key directly:
+// raw ASCII bytes are a biased, low-entropy seed, and sharing one key
+// across purposes couples every protocol. HKDF-SHA256 with explicit
+// domain strings derives one independent subkey per purpose.
+
+/// HKDF domain for the node identity (Ed25519) key.
+pub const DOMAIN_IDENTITY: &str = "sangha/identity/v1";
+/// HKDF domain for future chat-specific key material.
+///
+/// Note: chat *signatures* deliberately use the identity key (chat
+/// messages bind to the peer identity established by signed heartbeats);
+/// this domain is reserved for chat-specific symmetric material.
+pub const DOMAIN_CHAT: &str = "sangha/chat/v1";
+/// HKDF domain for mail-slot key material.
+pub const DOMAIN_MAIL_SLOT: &str = "sangha/mailslot/v1";
+
+const HKDF_SALT: &[u8] = b"sangha/hkdf/v1";
+
+/// Derive a domain-separated 32-byte subkey from the fleet master secret
+/// via HKDF-SHA256. Deterministic: the same master + domain always yields
+/// the same key; different domains yield independent keys.
+#[must_use]
+pub fn derive_key(master: &[u8], domain: &str) -> [u8; 32] {
+    let hk = hkdf::Hkdf::<sha2::Sha256>::new(Some(HKDF_SALT), master);
+    let mut okm = [0u8; 32];
+    // 32 bytes never exceeds the HKDF output limit; expand cannot fail.
+    hk.expand(domain.as_bytes(), &mut okm)
+        .expect("32-byte OKM is a valid HKDF length");
+    okm
+}
+
+impl MeshKeyPair {
+    /// Derive a keypair from the fleet master secret and an HKDF domain.
+    ///
+    /// This is the production path: `WM_MESH_KEY` is master key material,
+    /// never a seed. Changing the domain derives an unrelated key.
+    #[must_use]
+    pub fn derive_from_master(master: &[u8], domain: &str) -> Self {
+        Self::from_secret(derive_key(master, domain))
+    }
+}
+
 const fn hex_val(b: u8) -> Option<u8> {
     match b {
         b'0'..=b'9' => Some(b - b'0'),
@@ -180,5 +224,41 @@ mod tests {
         assert_eq!(hex_decode(&hex).unwrap(), bytes);
         assert!(hex_decode("abc").is_none());
         assert!(hex_decode("zz").is_none());
+    }
+
+    #[test]
+    fn hkdf_deterministic_and_domain_separated() {
+        let master = b"fleet-master-secret";
+        let a1 = derive_key(master, DOMAIN_IDENTITY);
+        let a2 = derive_key(master, DOMAIN_IDENTITY);
+        assert_eq!(a1, a2, "same master + domain must be deterministic");
+
+        let chat = derive_key(master, DOMAIN_CHAT);
+        let mail = derive_key(master, DOMAIN_MAIL_SLOT);
+        assert_ne!(a1, chat, "different domains must derive independent keys");
+        assert_ne!(chat, mail);
+
+        let other = derive_key(b"another-master", DOMAIN_IDENTITY);
+        assert_ne!(a1, other, "different masters must derive different keys");
+
+        // Derived keypairs sign and verify like any other.
+        let kp = MeshKeyPair::derive_from_master(master, DOMAIN_IDENTITY);
+        let sig = kp.sign_hex("payload");
+        assert!(MeshKeyPair::verify_hex(
+            "payload",
+            &sig,
+            &kp.public_key_hex()
+        ));
+    }
+
+    #[test]
+    fn weak_ascii_master_still_yields_full_entropy_key() {
+        // The historical bug: raw ASCII env bytes as the Ed25519 seed are
+        // biased (each byte < 128, human-readable). HKDF output must not
+        // reproduce the master bytes in the derived key.
+        let master = b"aaaaaaaaaaaaaaaa";
+        let derived = derive_key(master, DOMAIN_IDENTITY);
+        assert!(derived.iter().any(|&b| b > 0x7f));
+        assert_ne!(&derived[..16], master);
     }
 }

@@ -27,6 +27,7 @@ pub mod hologram;
 pub mod lock;
 pub mod peer;
 pub mod radiant;
+pub mod replay;
 pub mod signal;
 
 #[cfg(feature = "transport")]

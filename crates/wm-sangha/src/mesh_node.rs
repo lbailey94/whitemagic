@@ -238,6 +238,8 @@ impl MeshNode {
             bind_addr: config.bind_addr.clone(),
             heartbeat_interval_sec: config.beacon_interval_sec,
             multicast_group: config.multicast_group.clone(),
+            allow_unsigned_beacons: std::env::var("WM_MESH_ALLOW_UNSIGNED_BEACONS")
+                .is_ok_and(|v| v.trim() == "1"),
             ..TransportConfig::default()
         };
         let chat_log_path = config

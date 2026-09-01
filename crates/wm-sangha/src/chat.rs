@@ -154,7 +154,57 @@ pub struct SanghaChat {
     signing_key: Option<MeshKeyPair>,
     /// Optional persistence path (store-root file). `None` = in-memory.
     persistence: Option<std::path::PathBuf>,
+    /// Replay protection (S9): bounded seen-payload window, keyed on the
+    /// FNV-1a hash of each message's signing payload (sender + channel +
+    /// content + timestamp — the exact bytes the signature commits). A
+    /// captured packet re-injected verbatim hashes identically and is
+    /// dropped; a re-sent message (mail-slot flush re-signs with a fresh
+    /// timestamp) hashes differently and passes.
+    ///
+    /// NOT the message `id`: remote chat ids are not carried across the
+    /// send_chat RPC (they arrive as 0), so ids cannot discriminate.
+    seen_hashes: SeenHashes,
 }
+
+/// Bounded FIFO set of seen payload hashes for replay rejection. When
+/// the cap is reached the oldest hashes fall out first (an attacker who
+/// floods enough distinct payloads can eventually re-admit an old
+/// replay — the cap is sized so that requires sustained flooding, which
+/// signatures and quarantine make traceable).
+#[derive(Default)]
+struct SeenHashes {
+    queue: std::collections::VecDeque<u64>,
+    set: std::collections::HashSet<u64>,
+    cap: usize,
+}
+
+impl SeenHashes {
+    fn new(cap: usize) -> Self {
+        Self {
+            queue: std::collections::VecDeque::new(),
+            set: std::collections::HashSet::new(),
+            cap,
+        }
+    }
+
+    /// Returns `true` if the hash is fresh (first sighting), recording it.
+    fn check_and_insert(&mut self, hash: u64) -> bool {
+        if self.set.contains(&hash) {
+            return false;
+        }
+        if self.queue.len() >= self.cap {
+            if let Some(old) = self.queue.pop_front() {
+                self.set.remove(&old);
+            }
+        }
+        self.queue.push_back(hash);
+        self.set.insert(hash);
+        true
+    }
+}
+
+/// Default seen-payload window for replay rejection.
+const SEEN_HASHES_CAP: usize = 8192;
 
 impl Default for SanghaChat {
     fn default() -> Self {
@@ -204,6 +254,7 @@ impl SanghaChat {
             total_messages: 0,
             signing_key: None,
             persistence: None,
+            seen_hashes: SeenHashes::new(SEEN_HASHES_CAP),
         }
     }
 
@@ -362,7 +413,16 @@ impl SanghaChat {
     /// The signature is preserved so verification passes later can judge
     /// it against the sender's bound public key (unlike [`send`], which
     /// signs with this node's own keypair).
+    ///
+    /// S9: a message whose id is already in the replay window is dropped
+    /// — a captured packet re-injected verbatim verifies perfectly, so
+    /// freshness is enforced here, not by the signature.
     pub fn inject_signed(&mut self, msg: ChatMessage) {
+        let payload_hash = crate::replay::fnv1a64(msg.signing_payload().as_bytes());
+        if !self.seen_hashes.check_and_insert(payload_hash) {
+            tracing::debug!(msg_id = msg.id, "rejected replayed chat message (S9)");
+            return;
+        }
         self.next_msg_id = self.next_msg_id.max(msg.id + 1);
         self.total_messages += 1;
         let msgs = self.channels.entry(msg.channel.clone()).or_default();
@@ -865,6 +925,38 @@ mod tests {
         let report = chat.verify_channel("gana:1");
         assert!(!report.mesh_signing);
         assert!(report.is_clean());
+    }
+
+    #[test]
+    fn replayed_chat_payload_rejected_fresh_payload_accepted() {
+        let mut chat = SanghaChat::new(10);
+        let make = |ts: i64, content: &str| ChatMessage {
+            id: 0, // remote chat ids arrive as 0 across the send_chat RPC
+            channel: "gana:room".to_string(),
+            sender: "peer-a".to_string(),
+            content: content.to_string(),
+            timestamp: ts,
+            signature: String::new(),
+            public_key: String::new(),
+        };
+
+        chat.inject_signed(make(1_000, "hello"));
+        // Byte-identical re-injection (a captured packet) — dropped.
+        chat.inject_signed(make(1_000, "hello"));
+        assert_eq!(
+            chat.read("gana:room", None).len(),
+            1,
+            "replay must be dropped"
+        );
+
+        // Same content, different timestamp (the mail-slot flush re-signs
+        // with a fresh clock) — a genuinely new delivery, accepted.
+        chat.inject_signed(make(2_000, "hello"));
+        assert_eq!(
+            chat.read("gana:room", None).len(),
+            2,
+            "re-signed re-delivery must not be mistaken for a replay"
+        );
     }
 
     #[test]

@@ -18,6 +18,8 @@ tracing = { workspace = true }
 tokio = { workspace = true, optional = true, features = ["net", "sync"] }
 socket2 = { workspace = true, optional = true }
 ed25519-dalek = "3.0.0"
+hkdf = "0.12"
+sha2 = "0.10"
 
 [features]
 default = ["transport"]
