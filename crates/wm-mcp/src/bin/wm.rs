@@ -85,6 +85,11 @@ enum Commands {
         /// Repair corrupted entries (implies --check-integrity)
         #[arg(long)]
         repair: bool,
+        /// Audit live network posture by observation (no store required):
+        /// read the socket tables, attribute sockets to WhiteMagic processes
+        /// and the fleet transport, flag non-LAN egress (board item 2).
+        #[arg(long)]
+        network: bool,
     },
     /// Show resource usage and brain-wave state
     Stats {
@@ -577,8 +582,25 @@ fn main() -> anyhow::Result<()> {
             store,
             check_integrity,
             repair,
+            network,
         } => {
-            let issues = run_doctor(store, check_integrity, repair)?;
+            // Posture-by-observation is store-independent: `--network` runs
+            // the socket audit alone and never opens the LMDB env.
+            let issues = if network {
+                println!("=== WhiteMagic Doctor — Network Posture ===");
+                println!();
+                let issues = run_network_audit();
+                println!();
+                println!("=== Doctor Summary ===");
+                if issues == 0 {
+                    println!("Network posture clean — local-only asserted by observation.");
+                } else {
+                    println!("{issues} issue(s) found — exit code 1.");
+                }
+                issues
+            } else {
+                run_doctor(store, check_integrity, repair)?
+            };
             if issues > 0 {
                 std::process::exit(1);
             }
@@ -1472,6 +1494,77 @@ fn format_bytes(bytes: u64) -> String {
     }
 }
 
+/// Run the live network posture audit and print it in doctor voice.
+/// Returns the issue count (each non-LAN egress violation is an issue).
+fn run_network_audit() -> u32 {
+    let posture = wm_mcp::network_audit::audit();
+    if !posture.platform_supported {
+        println!(
+            "[INFO] Network posture: /proc socket tables unavailable — local-only cannot \
+             be asserted by observation on this platform"
+        );
+        return 0;
+    }
+    if posture.subjects.is_empty() {
+        println!(
+            "[INFO] Network posture: no WhiteMagic processes or fleet transport observed \
+             running — nothing to grade"
+        );
+        return 0;
+    }
+
+    let mut issues = 0u32;
+    let mut established_total = 0usize;
+    for subject in &posture.subjects {
+        established_total += subject.established_remote.len();
+        let kind = if subject.is_fleet_transport() {
+            "fleet transport"
+        } else {
+            "whitemagic"
+        };
+        let violations: Vec<_> = posture
+            .violations
+            .iter()
+            .filter(|v| v.pid == subject.pid)
+            .collect();
+        if violations.is_empty() {
+            println!(
+                "[OK]   {kind} {}: pid {} — {} established (all LAN/loopback), {} non-loopback listener(s)",
+                subject.comm,
+                subject.pid,
+                subject.established_remote.len(),
+                subject.lan_listeners.len()
+            );
+        } else {
+            issues += violations.len() as u32;
+            println!(
+                "[WARN] {kind} {}: pid {} — non-LAN egress observed",
+                subject.comm, subject.pid
+            );
+            for v in &violations {
+                println!(
+                    "       established to {}:{} — outside the LAN fence",
+                    v.remote.addr, v.remote.port
+                );
+            }
+        }
+        for listener in &subject.lan_listeners {
+            println!(
+                "       listener {}:{} (LAN inbound exposure — disclosed, egress is what grades)",
+                listener.addr, listener.port
+            );
+        }
+    }
+    println!(
+        "[{}] Network posture: {established_total} established socket(s) observed, {issues} non-LAN egress violation(s) — local-only asserted by observation, not assumed from config",
+        if issues == 0 { "OK" } else { "WARN" }
+    );
+    println!(
+        "       scope: WhiteMagic processes + fleet transport (syncthing); the egress lesson (defaults are privacy decisions) verified live"
+    );
+    issues
+}
+
 fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> anyhow::Result<u32> {
     let store_path = store.unwrap_or_else(default_store_path);
     let lmdb_path = store_path.join("lmdb");
@@ -2189,6 +2282,13 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
             "[INFO] Gateway contract: none on file (no wm-gateway start since the feature landed)"
         );
     }
+
+    // 11f. Network posture (board item 2) — "local-only" is asserted by
+    //      observing the live socket tables, attributing sockets to
+    //      WhiteMagic processes + the fleet transport, and grading egress.
+    //      Read-only /proc observation; feeds off the egress lesson (item 8).
+    println!();
+    issues += run_network_audit();
 
     // 12. Write-audit journal — misdeclarations become visible here.
     //     The journal is append-only and lives in the Karma LMDB galaxy;
