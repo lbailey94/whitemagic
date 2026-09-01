@@ -288,6 +288,14 @@ enum Commands {
         #[arg(long)]
         apply: bool,
     },
+    /// Session continuity over LMDB directly — CLI parity for the MCP
+    /// session routes (board item 1): the continuity promise must not
+    /// depend on MCP transport health. Shares the exact tool
+    /// implementations the server dispatches to.
+    Session {
+        #[command(subcommand)]
+        command: SessionCommands,
+    },
     /// Survey or correct memory source-trust provenance (V8.1 groundwork)
     ///
     /// source_trust semantics: 1.0 = user-confirmed, 0.7 = tool-ingested
@@ -329,6 +337,99 @@ enum TrustCommand {
         /// Actually write (default: dry-run report only)
         #[arg(long)]
         apply: bool,
+    },
+}
+
+/// Subcommands for `wm session` — each maps 1:1 onto an MCP session route
+/// and carries its own `--store` override.
+#[derive(Subcommand)]
+enum SessionCommands {
+    /// Start a new session (session.start parity)
+    Start {
+        /// Session title
+        #[arg(long)]
+        title: String,
+        /// User identifier
+        #[arg(long, default_value = "default")]
+        user: String,
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Record a conversation turn (session.record parity)
+    Record {
+        /// Turn content
+        #[arg(long)]
+        content: String,
+        /// Author role: user | ai
+        #[arg(long, default_value = "user")]
+        role: String,
+        /// Turn type (message, decision, breakthrough, question, answer, code_change, error, summary, context)
+        #[arg(long, default_value = "message")]
+        turn_type: String,
+        /// Importance 0.0-1.0
+        #[arg(long, default_value_t = 0.5)]
+        importance: f64,
+        /// Target session id (default: most recent session)
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Memory id of an earlier turn this record corrects/replaces
+        #[arg(long)]
+        supersedes: Option<String>,
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Save a structured checkpoint (session.checkpoint parity)
+    Checkpoint {
+        /// Target session id (default: most recent session)
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Checkpoint label
+        #[arg(long, default_value = "checkpoint")]
+        label: String,
+        /// Repository root for git auto-capture (default: WM_PROJECT_ROOT env)
+        #[arg(long)]
+        root: Option<String>,
+        /// Manual commit hash (auto-captured from git when available)
+        #[arg(long)]
+        commit: Option<String>,
+        /// Manual branch name
+        #[arg(long)]
+        branch: Option<String>,
+        /// Whether the test suite was green at checkpoint time
+        #[arg(long)]
+        tests_green: Option<bool>,
+        /// Ordered next-step strings for the next session (repeatable)
+        #[arg(long = "next-queue")]
+        next_queue: Vec<String>,
+        /// Open concerns worth surfacing on resume (repeatable)
+        #[arg(long = "open-flag")]
+        open_flags: Vec<String>,
+        /// Claimed scope (code.claim lease_id) that remains held
+        #[arg(long)]
+        lease_id: Option<String>,
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Recall where the previous session left off (session.continuity parity)
+    Continuity {
+        /// Number of prior turns to show
+        #[arg(long, default_value_t = 10)]
+        n: usize,
+        /// Current session id to exclude
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Time-range floor (epoch seconds | RFC 3339 | YYYY-MM-DD)
+        #[arg(long)]
+        since: Option<String>,
+        /// Time-range ceiling (epoch seconds | RFC 3339 | YYYY-MM-DD)
+        #[arg(long)]
+        until: Option<String>,
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
     },
 }
 
@@ -864,6 +965,9 @@ fn main() -> anyhow::Result<()> {
         } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_repair_content(&store_path, &galaxy, apply)?;
+        }
+        Commands::Session { command } => {
+            run_session_command(command)?;
         }
         Commands::Seal { store } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
@@ -1492,6 +1596,137 @@ fn format_bytes(bytes: u64) -> String {
     } else {
         format!("{value:.1} {}", units[unit])
     }
+}
+
+/// `wm session` — CLI parity for the MCP session routes (board item 1).
+/// The Mac had to hand-roll JSON-RPC over stdio to keep continuity alive
+/// when MCP dropped twice in one session; these subcommands share the exact
+/// tool implementations the server routes to over a direct LMDB open, so
+/// the session rhythm survives transport failure. Mirrors migrate.rs's
+/// multi-process-safe `MemoryStore::open` (4 GiB map) — short transactions
+/// coexist with a live daemon via LMDB's writer lock.
+fn run_session_command(command: SessionCommands) -> anyhow::Result<()> {
+    use wm_core::{BrainWave, Context, Tool};
+    use wm_tools::expansion::{
+        SessionCheckpointTool, SessionContinuityTool, SessionRecordTool, SessionStartTool,
+    };
+
+    let store_root = match &command {
+        SessionCommands::Start { store, .. }
+        | SessionCommands::Record { store, .. }
+        | SessionCommands::Checkpoint { store, .. }
+        | SessionCommands::Continuity { store, .. } => {
+            store.clone().unwrap_or_else(default_store_path)
+        }
+    };
+    let lmdb_path = store_root.join("lmdb");
+    if !lmdb_path.exists() {
+        anyhow::bail!(
+            "LMDB store not found at {} — pass --store or start 'wm serve' first",
+            lmdb_path.display()
+        );
+    }
+    let store = std::sync::Arc::new(wm_memory::MemoryStore::open(
+        &lmdb_path,
+        4 * 1024 * 1024 * 1024,
+    )?);
+
+    let rt = tokio::runtime::Runtime::new()?;
+    let result = rt.block_on(async {
+        let mut ctx = Context::new(BrainWave::Beta);
+        match command {
+            SessionCommands::Start { title, user, .. } => {
+                SessionStartTool::new(store)
+                    .call(&mut ctx, serde_json::json!({"title": title, "user": user}))
+                    .await
+            }
+            SessionCommands::Record {
+                content,
+                role,
+                turn_type,
+                importance,
+                session_id,
+                supersedes,
+                ..
+            } => {
+                let mut args = serde_json::json!({
+                    "content": content,
+                    "role": role,
+                    "turn_type": turn_type,
+                    "importance": importance,
+                });
+                if let Some(sid) = session_id {
+                    args["session_id"] = serde_json::json!(sid);
+                }
+                if let Some(old) = supersedes {
+                    args["supersedes"] = serde_json::json!(old);
+                }
+                SessionRecordTool::new(store).call(&mut ctx, args).await
+            }
+            SessionCommands::Checkpoint {
+                session_id,
+                label,
+                root,
+                commit,
+                branch,
+                tests_green,
+                next_queue,
+                open_flags,
+                lease_id,
+                ..
+            } => {
+                // Only provided fields are passed — explicit arguments win,
+                // absent keys stay absent (the tool's own handoff semantics).
+                let mut args = serde_json::json!({ "label": label });
+                if let Some(v) = session_id {
+                    args["session_id"] = serde_json::json!(v);
+                }
+                if let Some(v) = root {
+                    args["root"] = serde_json::json!(v);
+                }
+                if let Some(v) = commit {
+                    args["commit"] = serde_json::json!(v);
+                }
+                if let Some(v) = branch {
+                    args["branch"] = serde_json::json!(v);
+                }
+                if let Some(v) = tests_green {
+                    args["tests_green"] = serde_json::json!(v);
+                }
+                if !next_queue.is_empty() {
+                    args["next_queue"] = serde_json::json!(next_queue);
+                }
+                if !open_flags.is_empty() {
+                    args["open_flags"] = serde_json::json!(open_flags);
+                }
+                if let Some(v) = lease_id {
+                    args["lease_id"] = serde_json::json!(v);
+                }
+                SessionCheckpointTool::new(store).call(&mut ctx, args).await
+            }
+            SessionCommands::Continuity {
+                n,
+                session_id,
+                since,
+                until,
+                ..
+            } => {
+                let mut args = serde_json::json!({ "n": n });
+                if let Some(v) = session_id {
+                    args["current_session_id"] = serde_json::json!(v);
+                }
+                if let Some(v) = since {
+                    args["since"] = serde_json::json!(v);
+                }
+                if let Some(v) = until {
+                    args["until"] = serde_json::json!(v);
+                }
+                SessionContinuityTool::new(store).call(&mut ctx, args).await
+            }
+        }
+    })?;
+    println!("{}", serde_json::to_string_pretty(&result)?);
+    Ok(())
 }
 
 /// Run the live network posture audit and print it in doctor voice.
