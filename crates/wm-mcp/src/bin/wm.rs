@@ -2547,9 +2547,15 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         );
     } else {
         let episodic_count = server.store_arc().episodic().record_count().unwrap_or(0);
+        let cache_count = server.store_arc().embedding_cache_count().unwrap_or(0);
+        let cache_note = if cache_count > 0 {
+            format!(", embedding cache: {cache_count} vectors")
+        } else {
+            String::new()
+        };
         if episodic_count > 0 {
             println!(
-                "[OK]   Recall route: episodic deterministic default (stub embedder, {episodic_count} episodic records mirror the memory lane) — measured R@1 0.86 (LongMemEval-S 50q, S8 protocol 2026-09-01)"
+                "[OK]   Recall route: episodic deterministic default (stub embedder, {episodic_count} episodic records mirror the memory lane{cache_note}) — measured R@1 0.86 (LongMemEval-S 50q, S8 protocol 2026-09-01)"
             );
         } else {
             println!(

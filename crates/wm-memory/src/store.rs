@@ -172,6 +172,11 @@ pub struct MemoryStore {
     episodic_db: Database,
     /// DUP_SORT term→id postings for bounded episodic search (v2 sidecar).
     episodic_terms_v2_db: Database,
+    /// Content-hash → vector cache (v26 "Tier 2" idea, finally wired):
+    /// warm-start for re-ingest and re-runs. Keyed by the embedder
+    /// namespace + content hash, so switching models never serves stale
+    /// vectors.
+    embedding_cache_db: Database,
     /// Warm term-posting cache shared by episodic search views.
     episodic_term_cache: std::sync::Arc<RwLock<HashMap<String, Vec<uuid::Uuid>>>>,
     /// Optional embedder for episodic vector reranking.
@@ -247,6 +252,11 @@ impl MemoryStore {
             .map_err(|e| {
                 CoreError::Memory(format!("LMDB create_db failed for episodic_terms_v2: {e}"))
             })?;
+        let embedding_cache_db = env
+            .create_db(Some("embedding_cache"), DatabaseFlags::default())
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB create_db failed for embedding_cache: {e}"))
+            })?;
         Ok(Self {
             path,
             env,
@@ -256,6 +266,7 @@ impl MemoryStore {
             mutation_count: AtomicU64::new(0),
             episodic_db,
             episodic_terms_v2_db,
+            embedding_cache_db,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
@@ -1116,6 +1127,114 @@ impl MemoryStore {
         }
         Ok(exists)
     }
+
+    // ── Embedding cache (content-hash → vector) ────────────────────────
+
+    /// Store a cached embedding under a caller-computed cache key
+    /// (embedder namespace + content hash). Vectors for the same content
+    /// differ across models, so the key must carry the namespace.
+    pub fn put_embedding_cache(&self, cache_key: &str, embedding: &[f32]) -> Result<()> {
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        tx.put(
+            self.embedding_cache_db,
+            &cache_key.as_bytes().to_vec(),
+            &encode_embedding(embedding),
+            WriteFlags::default(),
+        )
+        .map_err(|e| CoreError::Memory(format!("LMDB put_embedding_cache failed: {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    /// Batched cache write: one transaction for the whole ingest chunk.
+    pub fn put_embedding_cache_batch(&self, entries: &[(String, Vec<f32>)]) -> Result<()> {
+        if entries.is_empty() {
+            return Ok(());
+        }
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        for (key, embedding) in entries {
+            tx.put(
+                self.embedding_cache_db,
+                &key.as_bytes().to_vec(),
+                &encode_embedding(embedding),
+                WriteFlags::default(),
+            )
+            .map_err(|e| CoreError::Memory(format!("LMDB put_embedding_cache failed: {e}")))?;
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count
+            .fetch_add(entries.len() as u64, Ordering::Relaxed);
+        Ok(())
+    }
+
+    /// Look up a cached embedding. `Ok(None)` = miss; the caller embeds.
+    pub fn get_embedding_cache(&self, cache_key: &str) -> Result<Option<Vec<f32>>> {
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        match tx.get(self.embedding_cache_db, &cache_key.as_bytes().to_vec()) {
+            Ok(bytes) => {
+                let embedding = decode_embedding(bytes);
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(Some(embedding))
+            }
+            Err(lmdb::Error::NotFound) => {
+                tx.commit()
+                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                Ok(None)
+            }
+            Err(e) => Err(CoreError::Memory(format!(
+                "LMDB get_embedding_cache failed: {e}"
+            ))),
+        }
+    }
+
+    /// Batched lookup: one read transaction for the whole ingest chunk.
+    /// Result aligns 1:1 with `keys`.
+    pub fn get_embedding_cache_batch(&self, keys: &[String]) -> Result<Vec<Option<Vec<f32>>>> {
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let mut out = Vec::with_capacity(keys.len());
+        for key in keys {
+            out.push(
+                tx.get(self.embedding_cache_db, &key.as_bytes().to_vec())
+                    .ok()
+                    .map(decode_embedding),
+            );
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(out)
+    }
+
+    /// Number of cached vectors (doctor / honesty surfaces).
+    pub fn embedding_cache_count(&self) -> Result<u64> {
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let mut cursor = tx
+            .open_ro_cursor(self.embedding_cache_db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor embedding_cache failed: {e}")))?;
+        let mut count = 0u64;
+        for _ in cursor.iter() {
+            count += 1;
+        }
+        Ok(count)
+    }
 }
 
 #[cfg(test)]
@@ -1481,6 +1600,65 @@ mod tests {
 
         assert!(store.delete_embedding(id).unwrap());
         assert!(store.get_embedding(id).unwrap().is_none());
+    }
+
+    #[test]
+    fn embedding_cache_roundtrip_batch_and_count() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        let entries: Vec<(String, Vec<f32>)> = (0..5)
+            .map(|i| (format!("ns:model:{i:016x}"), vec![i as f32; 8]))
+            .collect();
+        store.put_embedding_cache_batch(&entries).unwrap();
+        assert_eq!(store.embedding_cache_count().unwrap(), 5);
+
+        // Single read
+        let hit = store
+            .get_embedding_cache("ns:model:0000000000000003")
+            .unwrap();
+        assert_eq!(hit.unwrap(), vec![3.0f32; 8]);
+        assert!(
+            store
+                .get_embedding_cache("ns:model:absent")
+                .unwrap()
+                .is_none()
+        );
+
+        // Batched read aligns 1:1, misses are None
+        let keys: Vec<String> = (0..6).map(|i| format!("ns:model:{i:016x}")).collect();
+        let batch = store.get_embedding_cache_batch(&keys).unwrap();
+        assert_eq!(batch.len(), 6);
+        assert!(batch[0..5].iter().all(Option::is_some));
+        assert!(batch[5].is_none());
+
+        // Overwrite is a put, not a duplicate
+        store
+            .put_embedding_cache("ns:model:0000000000000001", &[9.0; 8])
+            .unwrap();
+        assert_eq!(store.embedding_cache_count().unwrap(), 5);
+        assert_eq!(
+            store
+                .get_embedding_cache("ns:model:0000000000000001")
+                .unwrap()
+                .unwrap(),
+            vec![9.0f32; 8]
+        );
+    }
+
+    #[test]
+    fn embedding_cache_survives_store_reopen() {
+        // V8 ship list #2 acceptance shape: vectors persist across restart.
+        let tmp = tempfile::tempdir().unwrap();
+        {
+            let store = MemoryStore::open_default(tmp.path()).unwrap();
+            store
+                .put_embedding_cache("onnx:bge-small:abc", &[0.5; 384])
+                .unwrap();
+        }
+        let reopened = MemoryStore::open_default(tmp.path()).unwrap();
+        let cached = reopened.get_embedding_cache("onnx:bge-small:abc").unwrap();
+        assert_eq!(cached.unwrap(), vec![0.5f32; 384]);
     }
 
     #[test]

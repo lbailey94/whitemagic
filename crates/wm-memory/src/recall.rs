@@ -345,14 +345,25 @@ impl RecallEngine {
 
     // ── Write path: auto-embed ─────────────────────────────────────────
 
+    /// Persistent cache key for a text: embedder namespace + content hash.
+    /// Vectors differ across models, so the namespace rides the key.
+    fn embedding_cache_key(&self, embedded_text: &str) -> String {
+        format!(
+            "{}:{}",
+            self.embedder.cache_namespace(),
+            content_hash(embedded_text)
+        )
+    }
+
     /// Embed content and cache the result.
     ///
-    /// Returns the embedding vector. If the content has been embedded
-    /// before (same hash), returns the cached result.
+    /// Returns the embedding vector. Lookup order: in-memory LRU, then the
+    /// persistent content-hash cache (survives restarts — re-runs and
+    /// re-ingest warm-start instead of re-embedding), then the embedder.
     fn embed_content(&self, content: &str) -> Result<Vec<f32>> {
         let hash = content_hash(content);
 
-        // Check cache
+        // Check in-memory cache
         if self.config.cache_embeddings {
             let cache = self
                 .embedding_cache
@@ -363,10 +374,30 @@ impl RecallEngine {
             }
         }
 
+        // Check the persistent cache (v26 "Tier 2", finally wired).
+        let cache_key = self.embedding_cache_key(content);
+        match self.store.get_embedding_cache(&cache_key) {
+            Ok(Some(vector)) => {
+                if self.config.cache_embeddings {
+                    if let Ok(mut cache) = self.embedding_cache.lock() {
+                        cache.insert(hash, vector.clone());
+                    }
+                }
+                return Ok(vector);
+            }
+            Ok(None) => {}
+            Err(error) => tracing::warn!("embedding cache read failed: {error}"),
+        }
+
         // Embed
         let embedding = self.embedder.embed(content)?;
 
-        // Cache
+        // Persist (non-fatal: a cache write failure must not fail the ingest)
+        if let Err(error) = self.store.put_embedding_cache(&cache_key, &embedding) {
+            tracing::warn!("embedding cache write failed: {error}");
+        }
+
+        // Cache in memory
         if self.config.cache_embeddings {
             let mut cache = self
                 .embedding_cache
@@ -448,12 +479,10 @@ impl RecallEngine {
             return Ok(0);
         }
 
-        // 1. Batch embed all content, chunked to stay under the embedder's
-        //    token batch limit (e.g. llama-server with bge-small defaults to
-        //    512 tokens). We estimate ~4 chars/token and target ~480 tokens
-        //    per chunk to stay safely under the limit. Individual items that
-        //    exceed the limit are truncated — the embedding still captures
-        //    semantic signal from the beginning of the content.
+        // 1. Resolve the persistent cache first (v26 "Tier 2", wired):
+        //    only the misses reach the embedder, chunked as before; hits
+        //    are reassembled in order. Cache keys ride the EMBEDDED text
+        //    (the chunked form), matching the single-item path.
         const MAX_CHARS_PER_CHUNK: usize = 1500; // ~465 tokens worst case (3.21 chars/token)
         const MAX_CHARS_PER_ITEM: usize = 1500; // same limit for individual items
         let contents: Vec<String> = entries
@@ -467,44 +496,89 @@ impl RecallEngine {
             })
             .collect();
         let content_refs: Vec<&str> = contents.iter().map(String::as_str).collect();
-        let mut embeddings: Vec<Vec<f32>> = Vec::with_capacity(entries.len());
-        let mut chunk: Vec<&str> = Vec::new();
-        let mut chunk_chars: usize = 0;
-        for &content in &content_refs {
-            let content_chars = content.len();
-            if chunk_chars + content_chars > MAX_CHARS_PER_CHUNK && !chunk.is_empty() {
-                let chunk_vecs = self.embedder.embed_batch(&chunk)?;
-                if chunk_vecs.len() != chunk.len() {
-                    return Err(CoreError::Memory(format!(
-                        "embed_batch returned {} vectors for {} inputs (chunk)",
-                        chunk_vecs.len(),
-                        chunk.len()
-                    )));
+        let cache_keys: Vec<String> = content_refs
+            .iter()
+            .map(|c| self.embedding_cache_key(c))
+            .collect();
+        let mut embeddings: Vec<Option<Vec<f32>>> =
+            match self.store.get_embedding_cache_batch(&cache_keys) {
+                Ok(cached) => cached,
+                Err(error) => {
+                    tracing::warn!("embedding cache batch read failed: {error}");
+                    vec![None; cache_keys.len()]
                 }
-                embeddings.extend(chunk_vecs);
-                chunk.clear();
-                chunk_chars = 0;
-            }
-            chunk.push(content);
-            chunk_chars += content_chars;
-        }
-        if !chunk.is_empty() {
-            let chunk_vecs = self.embedder.embed_batch(&chunk)?;
+            };
+        let misses: Vec<(usize, &str)> = content_refs
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| embeddings[*i].is_none())
+            .map(|(i, content)| (i, *content))
+            .collect();
+
+        // Chunked embedding for the misses only. Two stopping rules: the
+        // char cap (HTTP token limits) and the embedder's preferred batch
+        // size in texts (local engines want big batches so the session
+        // pool fans out efficiently).
+        let max_batch_texts = self.embedder.preferred_max_batch_texts();
+        let mut chunk: Vec<&str> = Vec::new();
+        let mut chunk_positions: Vec<usize> = Vec::new();
+        let mut chunk_chars: usize = 0;
+        let mut embed_chunk = |chunk: &[&str], positions: &[usize], store: &Self| -> Result<()> {
+            let chunk_vecs = store.embedder.embed_batch(chunk)?;
             if chunk_vecs.len() != chunk.len() {
                 return Err(CoreError::Memory(format!(
-                    "embed_batch returned {} vectors for {} inputs (final chunk)",
+                    "embed_batch returned {} vectors for {} inputs (chunk)",
                     chunk_vecs.len(),
                     chunk.len()
                 )));
             }
-            embeddings.extend(chunk_vecs);
+            for (pos, vector) in positions.iter().zip(chunk_vecs) {
+                embeddings[*pos] = Some(vector);
+            }
+            Ok(())
+        };
+        for &(position, content) in &misses {
+            let content_chars = content.len();
+            let flush = !chunk.is_empty()
+                && (chunk_chars + content_chars > MAX_CHARS_PER_CHUNK
+                    || chunk.len() >= max_batch_texts);
+            if flush {
+                embed_chunk(&chunk, &chunk_positions, self)?;
+                chunk.clear();
+                chunk_positions.clear();
+                chunk_chars = 0;
+            }
+            chunk.push(content);
+            chunk_positions.push(position);
+            chunk_chars += content_chars;
+        }
+        if !chunk.is_empty() {
+            embed_chunk(&chunk, &chunk_positions, self)?;
+        }
+
+        // Persist the freshly embedded vectors (one transaction; a cache
+        // write failure must not fail the ingest).
+        let fresh: Vec<(String, Vec<f32>)> = misses
+            .iter()
+            .filter_map(|&(position, _)| {
+                embeddings[position]
+                    .clone()
+                    .map(|vector| (cache_keys[position].clone(), vector))
+            })
+            .collect();
+        if let Err(error) = self.store.put_embedding_cache_batch(&fresh) {
+            tracing::warn!("embedding cache batch write failed: {error}");
         }
 
         // 2. Store all memories to LMDB + embeddings
         for (i, (galaxy, memory)) in entries.iter().enumerate() {
+            let Some(ref embedding) = embeddings[i] else {
+                return Err(CoreError::Memory(format!(
+                    "embedding missing for entry {i} after cache resolution"
+                )));
+            };
             self.store.put(*galaxy, memory)?;
-            self.store
-                .put_embedding(memory.metadata.id, &embeddings[i])?;
+            self.store.put_embedding(memory.metadata.id, embedding)?;
         }
 
         // 3. Add all to vector store
@@ -514,7 +588,9 @@ impl RecallEngine {
                 .lock()
                 .map_err(|e| CoreError::Memory(format!("vector store lock: {e}")))?;
             for (i, (galaxy, memory)) in entries.iter().enumerate() {
-                vs.add(memory.metadata.id, *galaxy, embeddings[i].clone());
+                if let Some(ref embedding) = embeddings[i] {
+                    vs.add(memory.metadata.id, *galaxy, embedding.clone());
+                }
             }
         }
 
@@ -536,14 +612,19 @@ impl RecallEngine {
             self.search_engine.commit(&mut writer)?;
         }
 
-        // 5. Cache embeddings
+        // 5. Fill the in-memory cache for the misses (hits already ride
+        //    the persistent layer; no need to burn LRU slots on them).
+        //    Keyed on the ORIGINAL content hash, matching embed_content.
         if self.config.cache_embeddings {
             let mut cache = self
                 .embedding_cache
                 .lock()
                 .map_err(|e| CoreError::Memory(format!("embedding cache lock: {e}")))?;
-            for (i, (_, memory)) in entries.iter().enumerate() {
-                let hash = content_hash(&memory.content);
+            for &(position, _) in &misses {
+                let Some(ref vector) = embeddings[position] else {
+                    continue;
+                };
+                let hash = content_hash(&entries[position].1.content);
                 if cache.len() >= self.config.max_cache_entries {
                     let to_remove: Vec<String> =
                         cache.keys().take(cache.len() / 10).cloned().collect();
@@ -551,7 +632,7 @@ impl RecallEngine {
                         cache.remove(&key);
                     }
                 }
-                cache.insert(hash, embeddings[i].clone());
+                cache.insert(hash, vector.clone());
             }
         }
 
@@ -1067,6 +1148,148 @@ mod tests {
             engine_with_graph: mk_engine(0.5),
             engine_plain: mk_engine(0.0),
         }
+    }
+
+    /// Counts embedder invocations; delegates to the stub. The persistent
+    /// embedding-cache acceptance is measured in CALLS, not assumptions.
+    struct CountingEmbedder {
+        inner: StubEmbedder,
+        calls: std::sync::atomic::AtomicUsize,
+    }
+
+    impl CountingEmbedder {
+        fn new() -> Self {
+            Self {
+                inner: StubEmbedder::default(),
+                calls: std::sync::atomic::AtomicUsize::new(0),
+            }
+        }
+
+        fn call_count(&self) -> usize {
+            self.calls.load(std::sync::atomic::Ordering::SeqCst)
+        }
+    }
+
+    impl Embedder for CountingEmbedder {
+        fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+            self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.inner.embed_batch(texts)
+        }
+        fn dimension(&self) -> usize {
+            self.inner.dimension()
+        }
+        fn is_available(&self) -> bool {
+            true
+        }
+        fn backend_name(&self) -> &'static str {
+            "stub-counting"
+        }
+    }
+
+    fn engine_fixture() -> (tempfile::TempDir, Arc<MemoryStore>, Arc<SearchEngine>) {
+        let dir = tempfile::tempdir().unwrap();
+        let lmdb = dir.path().join("lmdb");
+        std::fs::create_dir_all(&lmdb).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&lmdb).unwrap());
+        let tantivy = dir.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy).unwrap();
+        let search = Arc::new(SearchEngine::open(&tantivy).unwrap());
+        (dir, store, search)
+    }
+
+    fn mk_engine(
+        store: &Arc<MemoryStore>,
+        search: &Arc<SearchEngine>,
+        embedder: Arc<dyn Embedder>,
+    ) -> RecallEngine {
+        RecallEngine::new(
+            store.clone(),
+            search.clone(),
+            VectorStore::new(),
+            embedder,
+            RecallConfig::default(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn embedding_cache_warm_starts_reingest_across_engine_restart() {
+        // V8 ship list #2: the content-hash vector cache persists in the
+        // store, so a fresh engine over the same store re-ingests identical
+        // content with ZERO embedder calls (v26 Tier-2, wired).
+        let (_dir, store, search) = engine_fixture();
+
+        let contents: Vec<String> = (0..12)
+            .map(|i| format!("cache warm-start probe number {i} with distinct wording {i}"))
+            .collect();
+        let entries: Vec<(Galaxy, crate::Memory)> = contents
+            .iter()
+            .map(|c| (Galaxy::Codex, crate::Memory::new(Galaxy::Codex, c.clone())))
+            .collect();
+        let refs: Vec<(Galaxy, &crate::Memory)> = entries.iter().map(|(g, m)| (*g, m)).collect();
+
+        let first = Arc::new(CountingEmbedder::new());
+        let engine = mk_engine(&store, &search, first.clone());
+        assert_eq!(engine.store_batch_with_embedding(&refs).unwrap(), 12);
+        let first_calls = first.call_count();
+        assert!(first_calls > 0, "first ingest must embed");
+        assert_eq!(store.embedding_cache_count().unwrap(), 12);
+
+        // Fresh engine over the SAME store (restart semantics: empty
+        // in-memory cache, persistent layer intact).
+        let second = Arc::new(CountingEmbedder::new());
+        let engine2 = mk_engine(&store, &search, second.clone());
+        let entries2: Vec<(Galaxy, crate::Memory)> = contents
+            .iter()
+            .map(|c| (Galaxy::Codex, crate::Memory::new(Galaxy::Codex, c.clone())))
+            .collect();
+        let refs2: Vec<(Galaxy, &crate::Memory)> = entries2.iter().map(|(g, m)| (*g, m)).collect();
+        assert_eq!(engine2.store_batch_with_embedding(&refs2).unwrap(), 12);
+        assert_eq!(
+            second.call_count(),
+            0,
+            "re-ingest of identical content must serve from the persistent cache"
+        );
+        assert_eq!(store.embedding_cache_count().unwrap(), 12);
+    }
+
+    #[test]
+    fn embedding_cache_scopes_vectors_by_embedder_namespace() {
+        // Switching models must never serve stale vectors: the cache key
+        // carries the embedder namespace, so a "different model" is a miss.
+        let (_dir, store, search) = engine_fixture();
+
+        let content = "namespace isolation probe";
+        let first = Arc::new(CountingEmbedder::new());
+        let engine = mk_engine(&store, &search, first.clone());
+        let mem = crate::Memory::new(Galaxy::Codex, content.into());
+        engine.store_with_embedding(Galaxy::Codex, &mem).unwrap();
+        assert_eq!(first.call_count(), 1);
+
+        // A second engine whose embedder reports a DIFFERENT namespace
+        // must re-embed the same content.
+        struct OtherNamespaceEmbedder(StubEmbedder);
+        impl Embedder for OtherNamespaceEmbedder {
+            fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+                self.0.embed_batch(texts)
+            }
+            fn dimension(&self) -> usize {
+                self.0.dimension()
+            }
+            fn is_available(&self) -> bool {
+                true
+            }
+            fn backend_name(&self) -> &'static str {
+                "stub-other"
+            }
+        }
+        let second = Arc::new(OtherNamespaceEmbedder(StubEmbedder::default()));
+        let engine2 = mk_engine(&store, &search, second);
+        let mem2 = crate::Memory::new(Galaxy::Codex, content.into());
+        engine2.store_with_embedding(Galaxy::Codex, &mem2).unwrap();
+
+        // Two cache entries: one per namespace.
+        assert_eq!(store.embedding_cache_count().unwrap(), 2);
     }
 
     #[test]

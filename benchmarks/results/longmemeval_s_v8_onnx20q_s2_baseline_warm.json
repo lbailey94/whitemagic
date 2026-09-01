@@ -1,0 +1,57 @@
+{
+  "system": "whitemagic-v6",
+  "benchmark": "longmemeval_s",
+  "version": "v6-dev",
+  "dataset": "LongMemEval-S (ICLR 2025)",
+  "protocol": "turn-level retrieval R@k, substring-or-id. Not official LongMemEval QA.",
+  "search_route": "memory.episodic_search",
+  "rerank": false,
+  "rerank_alpha": 0.7,
+  "keyword_extraction": false,
+  "composite_windows": false,
+  "contextual_indexing": false,
+  "candidate_limit": 100,
+  "timing": "fresh-process path: split windows \u2014 spawn_ms = start->initialize response, ingest_ms = batch_create round-trips, search_ms = search request round-trip (p50/p95 below are SEARCH-ONLY on that path). persistent path: whole-batch timing (no spawn per question).",
+  "split_windows": {
+    "spawn": {
+      "count": 0,
+      "p50_ms": 0
+    },
+    "ingest": {
+      "count": 0,
+      "p50_ms": 0
+    },
+    "search_p50_source": "whole batch (persistent path)"
+  },
+  "total_questions": 20,
+  "timestamp": "2026-09-01T15:32:33Z",
+  "total_elapsed_s": 1058.7,
+  "search": {
+    "count": 20,
+    "p50_ms": 52310.00774499989,
+    "p95_ms": 56361.572759999945,
+    "p99_ms": 56361.572759999945
+  },
+  "ingest": {
+    "avg_time_s": 52.28420611345,
+    "total_time_s": 1045.684122269
+  },
+  "recall": {
+    "total_queries": 20,
+    "recall_at_1": 0.3,
+    "recall_at_5": 0.85,
+    "recall_at_10": 0.85,
+    "mrr": 0.5058333333333334,
+    "candidate_presence": 1.0,
+    "expected_session_presence": 0.9
+  },
+  "category_results": {
+    "single-session-user": {
+      "total": 20,
+      "recall_at_1": 0.3,
+      "recall_at_5": 0.85,
+      "recall_at_10": 0.85
+    }
+  },
+  "errors": []
+}

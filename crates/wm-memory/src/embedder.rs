@@ -57,6 +57,25 @@ pub trait Embedder: Send + Sync {
 
     /// Name of this embedder backend.
     fn backend_name(&self) -> &'static str;
+
+    /// Identity used to namespace the persistent embedding cache.
+    ///
+    /// Vectors for identical text differ across models, quantization, and
+    /// endpoints, so the cache key must carry this — switching models must
+    /// never serve stale vectors. Default is the backend name.
+    fn cache_namespace(&self) -> String {
+        self.backend_name().to_string()
+    }
+
+    /// Preferred batch granularity in TEXTS for batch write paths.
+    ///
+    /// The write path's char-chunking exists for HTTP token limits; local
+    /// engines have no such limit and want bigger batches so session
+    /// pools fan out efficiently (4-7 texts per call starves each shard).
+    /// `usize::MAX` = char-chunking only (the HTTP shape).
+    fn preferred_max_batch_texts(&self) -> usize {
+        usize::MAX
+    }
 }
 
 /// Configuration for the HTTP-based embedder.
@@ -256,6 +275,10 @@ impl Embedder for HttpEmbedder {
     fn backend_name(&self) -> &'static str {
         "http"
     }
+
+    fn cache_namespace(&self) -> String {
+        format!("http:{}:{}", self.config.endpoint, self.config.model)
+    }
 }
 
 /// OpenAI-compatible embeddings request.
@@ -354,12 +377,19 @@ impl Embedder for StubEmbedder {
 /// | `WM_EMBEDDER_ORT_THREADS` | min(logical cores, 4) | Number of intra-op threads |
 #[cfg(feature = "onnx")]
 pub struct OrtEmbedder {
-    model: std::sync::Mutex<Option<fastembed::TextEmbedding>>,
+    /// Sharded session pool (v26 `parallel/pools.py` idea, finally wired):
+    /// one ORT session per shard, mutex per shard — a batch fans out
+    /// across shards concurrently instead of serializing on one session.
+    /// Ingest-scale workloads are the target; single-text calls use
+    /// shard 0 directly.
+    shards: Vec<std::sync::Mutex<Option<fastembed::TextEmbedding>>>,
     model_name: String,
     cache_dir: Option<std::path::PathBuf>,
     threads: usize,
     dimension: usize,
     available: std::sync::atomic::AtomicBool,
+    /// Pinned fastembed batch_size (32–64 band per the ship list).
+    batch_size: usize,
 }
 
 /// Default ORT intra-op thread count.
@@ -369,7 +399,8 @@ pub struct OrtEmbedder {
 /// box into swap thrash and OOM (see `docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md`).
 /// Physical-core count is not exposed by std; `min(logical, 4)` approximates
 /// it and stays conservative on both small and large machines. Explicit
-/// `WM_EMBEDDER_ORT_THREADS` always wins over this default.
+/// `WM_EMBEDDER_ORT_THREADS` always wins over this default (values above 4
+/// are honored explicitly — they raise the TOTAL intra-op budget).
 #[cfg(feature = "onnx")]
 fn default_intra_threads() -> usize {
     std::thread::available_parallelism()
@@ -388,13 +419,28 @@ impl OrtEmbedder {
         threads: usize,
         dimension: usize,
     ) -> Self {
+        let threads = threads.max(1);
+        // Total intra-op budget = `threads`, distributed across the pool.
+        // MEASURED on the reference machine (2026-09-01, ingest probe +
+        // pool-shape microbench): in-server, 2 shards × intra/2 ≈ parity
+        // with the legacy single session, while full fan-out (4×1) LOSES
+        // ~11% to tokio-worker contention, and 1 shard pays the cache's
+        // small tax. So the default halves the budget into shards,
+        // capped at 4; `WM_EMBEDDER_ORT_SHARDS` overrides explicitly
+        // (1 = legacy single-session shape, higher = fuller fan-out for
+        // batch-heavy hosts).
+        let shard_count = (threads / 2).clamp(1, 4);
+        let shards = (0..shard_count)
+            .map(|_| std::sync::Mutex::new(None))
+            .collect();
         Self {
-            model: std::sync::Mutex::new(None),
+            shards,
             model_name: model_name.to_string(),
             cache_dir,
             threads,
             dimension,
             available: std::sync::atomic::AtomicBool::new(false),
+            batch_size: 32,
         }
     }
 
@@ -418,6 +464,20 @@ impl OrtEmbedder {
             .unwrap_or(384);
 
         Some(Self::new(&model_name, cache_dir, threads, dimension))
+    }
+
+    /// Override the derived shard count (`WM_EMBEDDER_ORT_SHARDS`).
+    ///
+    /// The derived count (min(threads, logical cores)) is a reasonable
+    /// default, but ORT scaling is model- and workload-dependent — this
+    /// explicit override exists so the pool shape can be tuned per
+    /// machine without recompiling (1 = legacy single-session shape).
+    #[must_use]
+    pub fn with_shard_override(mut self, shards: usize) -> Self {
+        self.shards = (0..shards.max(1))
+            .map(|_| std::sync::Mutex::new(None))
+            .collect();
+        self
     }
 
     /// Map model name string to fastembed EmbeddingModel enum.
@@ -466,54 +526,79 @@ impl OrtEmbedder {
         }
     }
 
-    /// Number of intra-op threads configured for inference.
+    /// Number of intra-op threads configured for inference (the TOTAL
+    /// budget across the session pool).
     #[cfg(feature = "onnx")]
     #[must_use]
     pub const fn threads(&self) -> usize {
         self.threads
     }
 
-    /// Lazy-load the model on first use.
+    /// Number of ORT sessions in the pool.
+    #[cfg(feature = "onnx")]
+    #[must_use]
+    pub fn shard_count(&self) -> usize {
+        self.shards.len()
+    }
+
+    /// Intra-op threads per session (the budget divided across the pool).
+    #[cfg(feature = "onnx")]
+    #[must_use]
+    fn intra_per_shard(&self) -> usize {
+        (self.threads / self.shards.len().max(1)).max(1)
+    }
+
+    /// Lazy-load the pool on first use: every shard gets its own session
+    /// over the shared on-disk model files.
     fn ensure_loaded(&self) -> bool {
         // Fast path: already loaded
-        {
-            let guard = self.model.lock().expect("model mutex poisoned");
-            if guard.is_some() {
-                return self.available.load(std::sync::atomic::Ordering::Relaxed);
-            }
+        if self.available.load(std::sync::atomic::Ordering::Relaxed) {
+            return true;
         }
 
-        let Some(embedding_model) = self.resolve_model() else {
-            return false;
-        };
-
-        let mut options = fastembed::TextInitOptions::new(embedding_model)
-            .with_show_download_progress(false)
-            .with_intra_threads(self.threads);
-
-        if let Some(ref cache_dir) = self.cache_dir {
-            options = options.with_cache_dir(cache_dir.clone());
-        }
-
-        tracing::info!("loading ONNX embedding model: {}", self.model_name);
-        match fastembed::TextEmbedding::try_new(options) {
-            Ok(model) => {
-                {
-                    let mut guard = self.model.lock().expect("model mutex poisoned");
-                    *guard = Some(model);
-                }
-                self.available
-                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                tracing::info!("ONNX embedding model loaded (dim={})", self.dimension);
-                true
-            }
-            Err(e) => {
-                tracing::warn!("failed to load ONNX embedding model: {e}");
+        let intra = self.intra_per_shard();
+        let mut loaded = Vec::with_capacity(self.shards.len());
+        for _ in 0..self.shards.len() {
+            let Some(embedding_model) = self.resolve_model() else {
                 self.available
                     .store(false, std::sync::atomic::Ordering::Relaxed);
-                false
+                return false;
+            };
+            let mut options = fastembed::TextInitOptions::new(embedding_model)
+                .with_show_download_progress(false)
+                .with_intra_threads(intra);
+
+            if let Some(ref cache_dir) = self.cache_dir {
+                options = options.with_cache_dir(cache_dir.clone());
+            }
+
+            match fastembed::TextEmbedding::try_new(options) {
+                Ok(model) => loaded.push(Some(model)),
+                Err(e) => {
+                    tracing::warn!("failed to load ONNX embedding model: {e}");
+                    self.available
+                        .store(false, std::sync::atomic::Ordering::Relaxed);
+                    return false;
+                }
             }
         }
+
+        {
+            for (shard, model) in self.shards.iter().zip(loaded) {
+                let mut guard = shard.lock().expect("shard mutex poisoned");
+                *guard = model;
+            }
+        }
+        self.available
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        tracing::info!(
+            "ONNX embedding model loaded: {} ({} session shards × {} intra threads, dim={})",
+            self.model_name,
+            self.shards.len(),
+            intra,
+            self.dimension
+        );
+        true
     }
 }
 
@@ -530,18 +615,82 @@ impl Embedder for OrtEmbedder {
             ));
         }
 
-        let mut guard = self.model.lock().expect("model mutex poisoned");
-        let Some(ref mut model) = guard.as_mut() else {
-            return Err(CoreError::Memory("ONNX embedder model not loaded".into()));
-        };
-
         let owned_texts: Vec<String> = texts.iter().map(|t| (*t).to_string()).collect();
-        let embeddings = model
-            .embed(owned_texts, None)
-            .map_err(|e| CoreError::Memory(format!("ONNX embedding error: {e}")))?;
 
-        drop(guard);
-        Ok(embeddings)
+        // Single text (the query path): no fan-out machinery, shard 0.
+        if owned_texts.len() == 1 {
+            let mut guard = self.shards[0].lock().expect("shard mutex poisoned");
+            let Some(ref mut model) = guard.as_mut() else {
+                return Err(CoreError::Memory("ONNX embedder model not loaded".into()));
+            };
+            let embeddings = model
+                .embed(owned_texts, Some(self.batch_size))
+                .map_err(|e| CoreError::Memory(format!("ONNX embedding error: {e}")))?;
+            return Ok(embeddings);
+        }
+
+        // Fan out: round-robin split across shards, each embedding its
+        // subset concurrently on its own session (no cross-shard locks).
+        let shard_count = self.shards.len();
+        let mut split: Vec<Vec<String>> = vec![Vec::new(); shard_count];
+        for (i, text) in owned_texts.into_iter().enumerate() {
+            split[i % shard_count].push(text);
+        }
+
+        let results: Vec<Result<Vec<Vec<f32>>>> = std::thread::scope(|scope| {
+            let handles: Vec<_> = split
+                .into_iter()
+                .zip(&self.shards)
+                .map(|(subset, shard)| {
+                    scope.spawn(move || {
+                        let mut guard = shard.lock().expect("shard mutex poisoned");
+                        let Some(ref mut model) = guard.as_mut() else {
+                            return Err(CoreError::Memory("ONNX embedder model not loaded".into()));
+                        };
+                        model
+                            .embed(subset, Some(self.batch_size))
+                            .map_err(|e| CoreError::Memory(format!("ONNX embedding error: {e}")))
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|h| h.join().expect("shard worker panicked"))
+                .collect()
+        });
+
+        // Reassemble in the original order: position i came from shard
+        // i % shard_count (round-robin split is deterministic, so the
+        // interleave is too).
+        let mut per_shard: Vec<std::collections::VecDeque<Vec<f32>>> = results
+            .into_iter()
+            .map(|r| {
+                r.map(|vectors| {
+                    vectors
+                        .into_iter()
+                        .collect::<std::collections::VecDeque<_>>()
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let mut out: Vec<Vec<f32>> = Vec::with_capacity(texts.len());
+        for i in 0..texts.len() {
+            let shard_idx = i % shard_count;
+            let Some(vector) = per_shard[shard_idx].pop_front() else {
+                return Err(CoreError::Memory(format!(
+                    "embed_batch shard {shard_idx} returned too few vectors"
+                )));
+            };
+            out.push(vector);
+        }
+
+        if out.len() != texts.len() {
+            return Err(CoreError::Memory(format!(
+                "embed_batch returned {} vectors for {} inputs",
+                out.len(),
+                texts.len()
+            )));
+        }
+        Ok(out)
     }
 
     fn dimension(&self) -> usize {
@@ -554,6 +703,18 @@ impl Embedder for OrtEmbedder {
 
     fn backend_name(&self) -> &'static str {
         "onnx"
+    }
+
+    fn cache_namespace(&self) -> String {
+        // Dimension included: quantization or an unknown-name fallback can
+        // change the effective model under the same requested name.
+        format!("onnx:{}:{}", self.model_name, self.dimension)
+    }
+
+    fn preferred_max_batch_texts(&self) -> usize {
+        // Big enough that each session shard sees a real batch (32+ texts)
+        // after the round-robin split.
+        128
     }
 }
 
@@ -576,8 +737,17 @@ pub fn create_embedder() -> Box<dyn Embedder> {
             .unwrap_or(false);
 
         if prefer_ort {
-            if let Some(ort) = OrtEmbedder::from_env() {
-                tracing::info!("onnx embedder configured (dim={})", ort.dimension());
+            if let Some(mut ort) = OrtEmbedder::from_env() {
+                if let Ok(shards) = std::env::var("WM_EMBEDDER_ORT_SHARDS") {
+                    if let Ok(n) = shards.parse::<usize>() {
+                        ort = ort.with_shard_override(n);
+                    }
+                }
+                tracing::info!(
+                    "onnx embedder configured (dim={}, shards={})",
+                    ort.dimension(),
+                    ort.shard_count()
+                );
                 return Box::new(ort);
             }
         }
@@ -866,6 +1036,135 @@ mod tests {
     fn ort_embedder_dimension_custom() {
         let embedder = OrtEmbedder::new("minilm", None, 1, 256);
         assert_eq!(embedder.dimension(), 256);
+    }
+
+    #[cfg(feature = "onnx")]
+    #[test]
+    fn ort_embedder_pool_shards_the_thread_budget() {
+        // V8 ship list #3: the pool distributes the TOTAL intra-op budget
+        // across session shards. Threads=1 keeps the legacy single-session
+        // shape; larger budgets fan out without exceeding the total.
+        for threads in [1usize, 2, 4, 8] {
+            let embedder = OrtEmbedder::new("bge-small", None, threads, 384);
+            assert_eq!(
+                embedder.threads(),
+                threads,
+                "total budget must be preserved"
+            );
+            let shards = embedder.shard_count();
+            assert!(shards >= 1, "at least one session");
+            assert!(
+                shards <= threads,
+                "shards ({shards}) must not exceed the total budget ({threads})"
+            );
+        }
+        let single = OrtEmbedder::new("bge-small", None, 1, 384);
+        assert_eq!(single.shard_count(), 1, "threads=1 is the legacy shape");
+    }
+
+    #[cfg(feature = "onnx")]
+    #[test]
+    fn ort_embedder_namespace_carries_model_and_dimension() {
+        // Cache keys must change when the effective model changes.
+        let small = OrtEmbedder::new("bge-small", None, 2, 384);
+        let large = OrtEmbedder::new("bge-large", None, 2, 1024);
+        assert_ne!(
+            small.cache_namespace(),
+            large.cache_namespace(),
+            "different models must not share cache entries"
+        );
+        assert!(small.cache_namespace().contains("bge-small"));
+    }
+
+    /// Pool-shape microbench: run explicitly, it loads the real model
+    /// (`cargo test -p wm-memory --features onnx ort_pool_shape_microbench
+    /// -- --ignored --nocapture`). Measures embed_batch wall time for one
+    /// ingest-shaped call per (threads, shards) config on realistic text.
+    #[cfg(feature = "onnx")]
+    #[test]
+    #[ignore = "loads the real ONNX model; run explicitly for pool tuning"]
+    fn ort_pool_shape_microbench() {
+        let texts: Vec<String> = (0..128)
+            .map(|i| {
+                format!(
+                    "Session {i} of the deployment retrospective covered the rollout \
+                     schedule for the telemetry agent, the budget review outcomes, and \
+                     the follow-up decisions about the quarterly report timeline {i}."
+                )
+            })
+            .collect();
+        let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+
+        // (threads, shard_override) — shard_override None = derived.
+        let configs: Vec<(usize, Option<usize>)> = vec![
+            (1, Some(1)),
+            (2, Some(1)),
+            (4, Some(1)),
+            (4, None),
+            (4, Some(2)),
+            (8, None),
+            (8, Some(4)),
+        ];
+        for (threads, shards) in configs {
+            let mut embedder = OrtEmbedder::new("bge-small-q", None, threads, 384);
+            if let Some(n) = shards {
+                embedder = embedder.with_shard_override(n);
+            }
+            // Warm the pool (model load) before timing.
+            let warm = embedder.embed_batch(&refs[..1]).unwrap();
+            assert_eq!(warm.len(), 1);
+            let t0 = std::time::Instant::now();
+            let out = embedder.embed_batch(&refs).unwrap();
+            let dt = t0.elapsed();
+            assert_eq!(out.len(), refs.len());
+            println!(
+                "pool shape: threads={threads} shards={} intra={} → {} texts in {:.2?} ({:.1} texts/s)",
+                embedder.shard_count(),
+                embedder.intra_per_shard(),
+                refs.len(),
+                dt,
+                refs.len() as f64 / dt.as_secs_f64()
+            );
+
+            // Ingest shape: ~30-text chunks, many calls (the write path
+            // chunks by chars, so embed_batch sees small slices).
+            let t1 = std::time::Instant::now();
+            let mut total = 0usize;
+            for chunk in refs.chunks(30) {
+                total += embedder.embed_batch(chunk).unwrap().len();
+            }
+            let dt1 = t1.elapsed();
+            assert_eq!(total, refs.len());
+            println!(
+                "  ingest shape (30-text chunks): {:.2?} ({:.1} texts/s)",
+                dt1,
+                refs.len() as f64 / dt1.as_secs_f64()
+            );
+        }
+    }
+
+    /// Determinism across pool shapes: the same text must produce the same
+    /// vector whether embedded on the single-session shape or the fanned
+    /// out pool (intra/shard parallelism must not change the math).
+    #[cfg(feature = "onnx")]
+    #[test]
+    #[ignore = "loads the real ONNX model; run explicitly as a pool-identity gate"]
+    fn ort_pool_shapes_produce_identical_vectors() {
+        let text = "determinism probe across session pool shapes";
+        let single = OrtEmbedder::new("bge-small-q", None, 1, 384).with_shard_override(1);
+        let pooled = OrtEmbedder::new("bge-small-q", None, 4, 384);
+        let v1 = single.embed(text).unwrap();
+        let v2 = pooled.embed(text).unwrap();
+        assert_eq!(v1.len(), v2.len());
+        let max_diff = v1
+            .iter()
+            .zip(v2.iter())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f32, f32::max);
+        assert!(
+            max_diff < 1e-6,
+            "pool shape changed the vector math (max diff {max_diff})"
+        );
     }
 
     #[cfg(feature = "onnx")]
