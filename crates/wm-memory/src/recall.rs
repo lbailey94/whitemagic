@@ -26,6 +26,8 @@
 //! | `WM_RECALL_BM25_WEIGHT` | `0.5` | Weight for BM25 text score |
 //! | `WM_RECALL_VECTOR_WEIGHT` | `0.3` | Weight for vector cosine similarity |
 //! | `WM_RECALL_IMPORTANCE_WEIGHT` | `0.2` | Weight for memory importance |
+//! | `WM_TRUST_WEIGHT` | `0.0` | Post-fusion trust multiplier (source_trust 0.7 neutral) |
+//! | `WM_RECALL_CONFORMAL_ALPHA` | unset | Conformal set miscoverage level (unset = off) |
 
 #![allow(clippy::missing_const_for_fn)]
 
@@ -63,6 +65,12 @@ pub struct RecallResult {
     /// unless the result was injected or boosted by walking association
     /// edges from a fused seed.
     pub graph_score: f32,
+    /// Trust multiplier actually applied to `score` in fusion (V8 S8) —
+    /// 1.0 when `WM_TRUST_WEIGHT` is off, so disclosure never lies.
+    pub trust_factor: f32,
+    /// Conformal-set membership (V8 S8) — meaningful only when the
+    /// disclosure says `active`; always `false` otherwise.
+    pub in_conformal_set: bool,
     /// Content snippet.
     pub content: String,
 }
@@ -85,6 +93,20 @@ pub struct RecallConfig {
     /// boosted by `seed_score * edge_weight * graph_weight`, and results
     /// carry the contribution in `RecallResult::graph_score`.
     pub graph_weight: f32,
+    /// Post-fusion trust multiplier (V8 S8, default 0.0 = OFF).
+    ///
+    /// Like the graph weight, deliberately OUTSIDE the normalized fusion
+    /// sum: when > 0, every fused score is scaled by
+    /// `1 + weight * (source_trust − 0.7)` (user-confirmed ranks up,
+    /// tool-ingested 0.7 unchanged, low trust down), and the factor is
+    /// disclosed per-result in `RecallResult::trust_factor`.
+    pub trust_weight: f32,
+    /// Conformal-set miscoverage level (V8 S8, default None = OFF). When
+    /// set in (0, 1), fused results are graded against a calibrated
+    /// prediction set and the search carries a `ConformalSetInfo`
+    /// disclosure — `active` with a real threshold, or `uncalibrated`
+    /// until feedback samples exist.
+    pub conformal_alpha: Option<f32>,
     /// Whether to cache embeddings (default true).
     pub cache_embeddings: bool,
     /// Maximum cache entries (default 1000).
@@ -102,6 +124,8 @@ impl Default for RecallConfig {
             vector_weight: 0.3,
             importance_weight: 0.2,
             graph_weight: 0.0,
+            trust_weight: 0.0,
+            conformal_alpha: None,
             cache_embeddings: true,
             max_cache_entries: 1000,
             writer_heap_size: 50_000_000,
@@ -148,6 +172,25 @@ impl RecallConfig {
                 }
             }
         }
+        // Trust weighting (V8 S8) — same post-fusion treatment: a
+        // multiplier, not a fusion signal. Same env the tool-side
+        // post-hoc path reads, so semantics are shared.
+        if let Ok(v) = std::env::var("WM_TRUST_WEIGHT") {
+            if let Ok(w) = v.parse::<f32>() {
+                if w.is_finite() && w >= 0.0 {
+                    config.trust_weight = w.min(1.0);
+                }
+            }
+        }
+        // Conformal sets (V8 S8) — an alpha in (0, 1) enables calibrated
+        // membership grading; anything else (unset, invalid) stays off.
+        if let Ok(v) = std::env::var("WM_RECALL_CONFORMAL_ALPHA") {
+            if let Ok(a) = v.parse::<f32>() {
+                if a.is_finite() && a > 0.0 && a < 1.0 {
+                    config.conformal_alpha = Some(a);
+                }
+            }
+        }
 
         // Normalize weights to sum to 1.0 if they don't already
         let sum = config.bm25_weight + config.vector_weight + config.importance_weight;
@@ -181,6 +224,9 @@ pub struct RecallEngine {
     embedder: Arc<dyn Embedder>,
     config: RecallConfig,
     embedding_cache: Mutex<HashMap<String, Vec<f32>>>,
+    /// Conformal-set state (V8 S8) — `None` unless
+    /// `WM_RECALL_CONFORMAL_ALPHA` is configured.
+    conformal: Mutex<Option<crate::recall_conformal::RecallConformal>>,
 }
 
 impl RecallEngine {
@@ -194,6 +240,10 @@ impl RecallEngine {
         embedder: Arc<dyn Embedder>,
         config: RecallConfig,
     ) -> Result<Self> {
+        let conformal =
+            Mutex::new(config.conformal_alpha.and_then(|alpha| {
+                crate::recall_conformal::RecallConformal::new(alpha, store.clone())
+            }));
         Ok(Self {
             store,
             search_engine,
@@ -201,7 +251,81 @@ impl RecallEngine {
             embedder,
             config,
             embedding_cache: Mutex::new(HashMap::new()),
+            conformal,
         })
+    }
+
+    /// Record one relevance-feedback sample into the conformal calibrator
+    /// (V8 S8). Errors honestly when the knob is off — there is no
+    /// calibrated set to feed.
+    pub fn record_relevance_feedback(&self, score: f32, relevant: bool) -> Result<usize> {
+        let mut guard = self
+            .conformal
+            .lock()
+            .map_err(|e| CoreError::Memory(format!("recall conformal lock: {e}")))?;
+        match guard.as_mut() {
+            Some(rc) => Ok(rc.record_feedback(score, relevant)),
+            None => Err(CoreError::InvalidArgs(
+                "conformal calibration is not enabled — set WM_RECALL_CONFORMAL_ALPHA in (0,1)"
+                    .into(),
+            )),
+        }
+    }
+
+    /// Conformal disclosure for a completed search: grades the results
+    /// against the calibrated set (marking `in_conformal_set`) and returns
+    /// the set-level info. `Ok(None)` when the knob is off — no claim is
+    /// made at all.
+    // The lock must span the whole grading: membership is read from the
+    // same fitted state that produced the threshold, and a concurrent
+    // record_feedback/fit must not split the disclosure from the marks.
+    #[allow(clippy::significant_drop_tightening)]
+    pub fn conformal_disclosure(
+        &self,
+        results: &mut [RecallResult],
+    ) -> Result<Option<crate::recall_conformal::ConformalSetInfo>> {
+        use crate::recall_conformal::ConformalSetInfo;
+        let guard = self
+            .conformal
+            .lock()
+            .map_err(|e| CoreError::Memory(format!("recall conformal lock: {e}")))?;
+        let Some(rc) = guard.as_ref() else {
+            return Ok(None);
+        };
+        let coverage_target = Some(f64::from(1.0 - rc.alpha()));
+        let info = if rc.is_fitted() {
+            let threshold = rc.threshold();
+            let mut set_size = 0usize;
+            for r in results.iter_mut() {
+                r.in_conformal_set = rc.membership(r.score) == Some(true);
+                if r.in_conformal_set {
+                    set_size += 1;
+                }
+            }
+            ConformalSetInfo {
+                status: "active".into(),
+                alpha: Some(f64::from(rc.alpha())),
+                coverage_target,
+                calibration_samples: Some(rc.sample_count()),
+                threshold,
+                set_size: Some(set_size),
+                hint: None,
+            }
+        } else {
+            ConformalSetInfo {
+                status: "uncalibrated".into(),
+                alpha: Some(f64::from(rc.alpha())),
+                coverage_target,
+                calibration_samples: Some(rc.sample_count()),
+                threshold: None,
+                set_size: None,
+                hint: Some(format!(
+                    "record ≥ {} relevance-feedback samples to calibrate",
+                    crate::recall_conformal::MIN_SAMPLES
+                )),
+            }
+        };
+        Ok(Some(info))
     }
 
     /// Get the configuration.
@@ -446,10 +570,26 @@ impl RecallEngine {
         limit: usize,
         galaxy_filter: Option<Galaxy>,
     ) -> Vec<RecallResult> {
+        self.hybrid_search_with_disclosure(query, limit, galaxy_filter)
+            .0
+    }
+
+    /// Hybrid search plus the V8 S8 disclosure: `(results, conformal)`.
+    /// `conformal` is `None` when `WM_RECALL_CONFORMAL_ALPHA` is unset —
+    /// no calibrated claim exists, so none is made.
+    pub fn hybrid_search_with_disclosure(
+        &self,
+        query: &str,
+        limit: usize,
+        galaxy_filter: Option<Galaxy>,
+    ) -> (
+        Vec<RecallResult>,
+        Option<crate::recall_conformal::ConformalSetInfo>,
+    ) {
         // 1. Embed query
         let query_vec = match self.embedder.embed_query(query) {
             Ok(v) => v,
-            Err(_) => return Vec::new(),
+            Err(_) => return (Vec::new(), None),
         };
 
         // 2. BM25 search (get more than limit for fusion)
@@ -462,17 +602,27 @@ impl RecallEngine {
         // 3. Vector search
         let vector_results = {
             let Ok(vs) = self.vector_store.lock() else {
-                return Vec::new();
+                return (Vec::new(), None);
             };
             vs.search(&query_vec, bm25_limit, galaxy_filter)
         };
 
-        // 4. Fuse results
+        // 4. Fuse results (trust weighting applied inside when enabled)
         let fused = self.fuse_results(&bm25_results, &vector_results, limit);
 
         // 5. Graph expansion (V8 S6 third fusion phase) — off unless
         // WM_RECALL_GRAPH_WEIGHT > 0.
-        self.expand_with_graph(fused, limit)
+        let mut expanded = self.expand_with_graph(fused, limit);
+
+        // 6. Conformal grading (V8 S8) — off unless
+        // WM_RECALL_CONFORMAL_ALPHA is set; honest disclosure either way.
+        match self.conformal_disclosure(&mut expanded) {
+            Ok(info) => (expanded, info),
+            Err(e) => {
+                tracing::warn!(error = %e, "recall conformal disclosure failed");
+                (expanded, None)
+            }
+        }
     }
 
     /// Pure vector search (no BM25).
@@ -507,6 +657,8 @@ impl RecallEngine {
                     vector_score: vr.score,
                     importance: 0.0,
                     graph_score: 0.0,
+                    trust_factor: 1.0,
+                    in_conformal_set: false,
                     content,
                 }
             })
@@ -531,6 +683,8 @@ impl RecallEngine {
                     vector_score: 0.0,
                     importance: 0.0,
                     graph_score: 0.0,
+                    trust_factor: 1.0,
+                    in_conformal_set: false,
                     content: sr.content,
                 })
             })
@@ -553,8 +707,10 @@ impl RecallEngine {
             self.config.bm25_weight,
             self.config.vector_weight,
             self.config.importance_weight,
+            self.config.trust_weight,
             |id, galaxy| self.get_memory_content(id, galaxy),
             |id, galaxy| self.get_memory_importance(id, galaxy),
+            |id, galaxy| self.get_memory_source_trust(id, galaxy),
         )
     }
 
@@ -611,6 +767,8 @@ impl RecallEngine {
                         vector_score: 0.0,
                         importance: mem.metadata.importance,
                         graph_score: contribution,
+                        trust_factor: 1.0,
+                        in_conformal_set: false,
                         content: mem.content.chars().take(400).collect(),
                     });
                 }
@@ -665,6 +823,17 @@ impl RecallEngine {
             .map_or(0.0, |m| m.metadata.importance)
     }
 
+    /// Get memory `source_trust` by ID (V8 S8 trust-into-fusion).
+    /// Missing memories resolve to 0.7 — the tool-ingested neutral point —
+    /// so an absent row is trust-neutral rather than trust-maximal.
+    fn get_memory_source_trust(&self, id: Uuid, galaxy: Galaxy) -> f32 {
+        self.store
+            .get(galaxy, id)
+            .ok()
+            .flatten()
+            .map_or(0.7, |m| m.metadata.source_trust)
+    }
+
     /// Get the number of cached embeddings.
     #[must_use]
     pub fn cache_size(&self) -> usize {
@@ -688,6 +857,7 @@ impl RecallEngine {
 // ── Fusion implementation ─────────────────────────────────────────────
 
 /// Inner fusion logic, extracted for testability without a full engine.
+#[allow(clippy::too_many_arguments)]
 fn fuse_results_inner(
     bm25_results: &[SearchResult],
     vector_results: &[VectorSearchResult],
@@ -695,8 +865,10 @@ fn fuse_results_inner(
     bm25_weight: f32,
     vector_weight: f32,
     importance_weight: f32,
+    trust_weight: f32,
     mut get_content: impl FnMut(Uuid, Galaxy) -> String,
     mut get_importance: impl FnMut(Uuid, Galaxy) -> f32,
+    mut get_source_trust: impl FnMut(Uuid, Galaxy) -> f32,
 ) -> Vec<RecallResult> {
     // Normalize BM25 scores
     let max_bm25 = bm25_results
@@ -768,14 +940,31 @@ fn fuse_results_inner(
                 vector_weight.mul_add(vector_score, importance_weight * importance),
             );
 
+            // Trust weighting (V8 S8): post-fusion multiplier, applied
+            // here so every consumer of the hybrid path sees the same
+            // ranking. Factor disclosed per-result; 1.0 when the knob is
+            // off (byte-identical base fusion). Plain float ops by
+            // design — mul_add would change rounding and with it the
+            // ranking (the deterministic-scorer allow class, AGENTS.md).
+            #[allow(clippy::suboptimal_flops)]
+            let (score, trust_factor) = if trust_weight > 0.0 {
+                let source_trust = get_source_trust(id, galaxy);
+                let factor = (1.0 + trust_weight * (source_trust.clamp(0.0, 1.0) - 0.7)).max(0.0);
+                (fused * factor, factor)
+            } else {
+                (fused, 1.0)
+            };
+
             RecallResult {
                 memory_id: id,
                 galaxy,
-                score: fused,
+                score,
                 bm25_score,
                 vector_score,
                 importance,
                 graph_score: 0.0,
+                trust_factor,
+                in_conformal_set: false,
                 content,
             }
         })
@@ -996,6 +1185,8 @@ mod tests {
             vector_score: 0.9,
             importance: 0.5,
             graph_score: 0.0,
+            trust_factor: 1.0,
+            in_conformal_set: false,
             content: "test content".into(),
         };
         assert_eq!(result.score, 0.85);
@@ -1017,8 +1208,10 @@ mod tests {
             0.5,
             0.3,
             0.2,
+            0.0,
             |_, _| String::new(),
             |_, _| 0.0,
+            |_, _| 0.7,
         )
     }
 
@@ -1187,8 +1380,10 @@ mod tests {
             0.5,
             0.3,
             0.2,
+            0.0,
             |_, _| String::new(),
             |_, _| 0.0,
+            |_, _| 0.7,
         );
         assert!((results[0].score - 0.5).abs() < 0.01);
     }
@@ -1208,10 +1403,119 @@ mod tests {
             0.5,
             0.3,
             0.2,
+            0.0,
             |_, _| String::new(),
             |_, _| 0.0,
+            |_, _| 0.7,
         );
         assert!((results[0].score - 0.27).abs() < 0.01);
+    }
+
+    #[test]
+    fn trust_weight_zero_is_byte_identical_to_no_weight() {
+        let id = Uuid::new_v4();
+        let bm25 = vec![SearchResult {
+            memory_id: id.to_string(),
+            galaxy: Galaxy::Codex.db_name().to_string(),
+            score: 5.0,
+            normalized_score: 0.0,
+            content: "test".into(),
+        }];
+        // Knob off: the low-trust getter is never consulted, the score is
+        // the plain fused value, and the disclosure never lies.
+        let results = fuse_results_inner(
+            &bm25,
+            &[],
+            10,
+            0.5,
+            0.3,
+            0.2,
+            0.0,
+            |_, _| String::new(),
+            |_, _| 0.0,
+            |_, _| 0.4,
+        );
+        assert!((results[0].score - 0.5).abs() < 0.01);
+        assert!((results[0].trust_factor - 1.0).abs() < f32::EPSILON);
+        assert!(!results[0].in_conformal_set);
+    }
+
+    #[test]
+    fn trust_weight_orders_high_trust_above_low() {
+        // Two candidates with identical fused scores; only source_trust
+        // differs. With weight 0.5: factor = 1 + 0.5*(trust − 0.7).
+        let high = Uuid::new_v4();
+        let low = Uuid::new_v4();
+        let mk = |id: &Uuid| SearchResult {
+            memory_id: id.to_string(),
+            galaxy: Galaxy::Codex.db_name().to_string(),
+            score: 5.0,
+            normalized_score: 0.0,
+            content: "test".into(),
+        };
+        let bm25 = vec![mk(&high), mk(&low)];
+        let mut trust_calls = 0;
+        let results = fuse_results_inner(
+            &bm25,
+            &[],
+            10,
+            0.5,
+            0.3,
+            0.2,
+            0.5,
+            |_, _| String::new(),
+            |_, _| 0.0,
+            |id, _| {
+                trust_calls += 1;
+                if id == high { 1.0 } else { 0.4 }
+            },
+        );
+        let hi = results.iter().find(|r| r.memory_id == high).unwrap();
+        let lo = results.iter().find(|r| r.memory_id == low).unwrap();
+        assert!(
+            hi.score > lo.score,
+            "user-confirmed (1.0) must outrank low-trust (0.4) at equal fused score"
+        );
+        // Factors disclosed: 1 + 0.5*(1.0−0.7) = 1.15; 1 + 0.5*(0.4−0.7) = 0.85.
+        assert!((hi.trust_factor - 1.15).abs() < 0.001);
+        assert!((lo.trust_factor - 0.85).abs() < 0.001);
+        assert!(trust_calls >= 2, "getter consulted per candidate");
+        // Neutral 0.7 stays exactly neutral even with the knob on.
+        let neutral = Uuid::new_v4();
+        let bm25_neutral = vec![SearchResult {
+            memory_id: neutral.to_string(),
+            galaxy: Galaxy::Codex.db_name().to_string(),
+            score: 5.0,
+            normalized_score: 0.0,
+            content: "test".into(),
+        }];
+        let res_n = fuse_results_inner(
+            &bm25_neutral,
+            &[],
+            10,
+            0.5,
+            0.3,
+            0.2,
+            0.5,
+            |_, _| String::new(),
+            |_, _| 0.0,
+            |_, _| 0.7,
+        );
+        assert!((res_n[0].trust_factor - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn config_defaults_keep_both_s8_knobs_off() {
+        // Evidence-gated defaults: trust weighting and conformal sets ship
+        // OFF — the base fusion must be untouched unless the operator opts
+        // in. (Env parsing for the knobs follows the same guard pattern as
+        // WM_RECALL_GRAPH_WEIGHT: finite, clamped to range, else default.)
+        let cfg = RecallConfig::default();
+        assert_eq!(cfg.trust_weight, 0.0);
+        assert_eq!(cfg.conformal_alpha, None);
+        let env_cfg = RecallConfig::from_env();
+        assert_eq!(env_cfg.trust_weight, 0.0, "unset env stays off");
+        assert_eq!(env_cfg.conformal_alpha, None, "unset env stays off");
     }
 
     // ── GalaxyExt tests ────────────────────────────────────────────────

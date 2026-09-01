@@ -23,6 +23,7 @@ pub mod memory;
 pub mod predictive_cache;
 pub mod query_planner;
 pub mod recall;
+pub mod recall_conformal;
 pub mod recovery;
 pub mod reindex;
 pub mod search;

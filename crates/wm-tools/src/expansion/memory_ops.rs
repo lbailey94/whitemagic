@@ -737,13 +737,23 @@ impl Tool for MemoryHybridRecallTool {
             .and_then(|v| v.parse::<f32>().ok())
             .unwrap_or(0.0)
             .clamp(0.0, 1.0);
+        // V8 S8 disclosures, populated by Phase 0 when applicable.
+        let mut result_extra: Option<serde_json::Value> = None;
+        let mut trust_disclosure: Option<serde_json::Value> = None;
 
         // Phase 0: If RecallEngine with a real embedder is available, use
-        // hybrid BM25 + vector search for fused ranking.
+        // hybrid BM25 + vector search for fused ranking. Trust weighting
+        // lives INSIDE the fusion since V8 S8 (single application point —
+        // applying it again here would double-count); the per-result
+        // trust_factor + conformal set disclosure come straight from the
+        // engine.
         if let Some(ref recall) = self.recall {
             if !query.is_empty() {
-                let hybrid_results =
-                    recall.hybrid_search(query, limit * 2, galaxy_explicit.then_some(galaxy));
+                let (hybrid_results, conformal) = recall.hybrid_search_with_disclosure(
+                    query,
+                    limit * 2,
+                    galaxy_explicit.then_some(galaxy),
+                );
                 for hr in hybrid_results {
                     if let Ok(Some(mem)) = self.store.get(hr.galaxy, hr.memory_id) {
                         if mem.metadata.importance >= min_importance
@@ -754,11 +764,9 @@ impl Tool for MemoryHybridRecallTool {
                                 "galaxy": mem.metadata.galaxy.db_name(),
                                 "content": wm_memory::scrub_text(&mem.content),
                                 "importance": mem.metadata.importance,
-                                "score": wm_memory::trust_weighted_score(
-                                    hr.score,
-                                    mem.metadata.source_trust,
-                                    trust_weight,
-                                ),
+                                "score": hr.score,
+                                "trust_factor": hr.trust_factor,
+                                "in_conformal_set": hr.in_conformal_set,
                                 "bm25_score": hr.bm25_score,
                                 "vector_score": hr.vector_score,
                                 "trust": mem.metadata.source_trust,
@@ -766,6 +774,18 @@ impl Tool for MemoryHybridRecallTool {
                             }));
                         }
                     }
+                }
+                // Set-level calibrated coverage disclosure (V8 S8) —
+                // attached whenever conformal mode is configured, honest
+                // about `uncalibrated` until feedback exists.
+                if let Some(info) = conformal {
+                    result_extra = serde_json::to_value(&info).ok();
+                }
+                if trust_weight > 0.0 {
+                    trust_disclosure = Some(json!({
+                        "wm_trust_weight": trust_weight,
+                        "applied_in": "fuse_results",
+                    }));
                 }
             }
         }
@@ -979,7 +999,7 @@ impl Tool for MemoryHybridRecallTool {
         } else {
             None
         };
-        Ok(json!({
+        let mut out = json!({
             "status": "success",
             "galaxy": if galaxy_explicit {
                 serde_json::Value::from(galaxy_name(galaxy))
@@ -989,6 +1009,134 @@ impl Tool for MemoryHybridRecallTool {
             "count": results.len(),
             "results": results,
             "hint": hint,
+        });
+        // V8 S8 disclosures: the conformal set claim (active/uncalibrated)
+        // and, when the trust knob is on, where the weighting was applied.
+        if let Some(extra) = result_extra {
+            out["conformal_set"] = extra;
+        }
+        if let Some(td) = trust_disclosure {
+            out["trust_weighting"] = td;
+        }
+        Ok(out)
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+/// `memory.recall_feedback` — record relevance feedback into the recall
+/// engine's conformal calibrator (V8 S8).
+///
+/// This is how retrieval earns the right to claim coverage: explicit
+/// labels (human feedback or a harness with ground truth) become
+/// calibration samples; results then carry set membership against a
+/// threshold with a real guarantee. Refuses honestly when
+/// `WM_RECALL_CONFORMAL_ALPHA` is unset — there is no calibrated set to
+/// feed.
+pub struct MemoryRecallFeedbackTool {
+    recall: Option<Arc<RecallEngine>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl MemoryRecallFeedbackTool {
+    #[must_use]
+    pub fn new(recall: Option<Arc<RecallEngine>>) -> Self {
+        Self {
+            recall,
+            stats: ToolStats::default(),
+            // Persists the fitted classifier JSON to the store root when
+            // the calibrator crosses its fit threshold — a filesystem
+            // write outside LMDB, declared as a capability (usage is
+            // conditional on WM_RECALL_CONFORMAL_ALPHA + fit state).
+            effects: EffectRow {
+                writes: vec![Resource::Filesystem],
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for MemoryRecallFeedbackTool {
+    fn name(&self) -> &str {
+        "memory.recall_feedback"
+    }
+    fn gana(&self) -> Gana {
+        Gana::WinnowingBasket
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Record relevance feedback for conformal retrieval calibration (V8 S8). Args: samples (array of {score: number 0-1, relevant: bool}) or score+relevant for a single sample. Requires WM_RECALL_CONFORMAL_ALPHA."
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "samples": {"type": "array", "description": "Feedback samples: [{score: 0-1 fused score, relevant: bool}]"},
+                "score": num_prop("Single-sample fused score (0-1)"),
+                "relevant": {"type": "boolean", "description": "Single-sample relevance label"},
+            }),
+            &[],
+        )
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let Some(ref recall) = self.recall else {
+            return Ok(json!({
+                "status": "error",
+                "message": "no recall engine on this server (hybrid search unavailable) — nothing to calibrate",
+            }));
+        };
+        let mut samples: Vec<(f32, bool)> = Vec::new();
+        if let Some(list) = args.get("samples").and_then(Value::as_array) {
+            for s in list {
+                let score = s.get("score").and_then(Value::as_f64).unwrap_or(-1.0);
+                let relevant = s.get("relevant").and_then(Value::as_bool);
+                if !(0.0..=1.0).contains(&score) || relevant.is_none() {
+                    return Err(wm_core::CoreError::InvalidArgs(
+                        "each sample needs score in [0,1] and a boolean 'relevant'".into(),
+                    ));
+                }
+                samples.push((score as f32, relevant.unwrap_or(false)));
+            }
+        } else if let Some(score) = args.get("score").and_then(Value::as_f64) {
+            let relevant = args
+                .get("relevant")
+                .and_then(Value::as_bool)
+                .ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs("'relevant' is required with 'score'".into())
+                })?;
+            if !(0.0..=1.0).contains(&score) {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "'score' must be within [0,1]".into(),
+                ));
+            }
+            samples.push((score as f32, relevant));
+        } else {
+            return Err(wm_core::CoreError::InvalidArgs(
+                "provide 'samples' (array of {score, relevant}) or a single 'score' + 'relevant'"
+                    .into(),
+            ));
+        }
+
+        let mut recorded = 0usize;
+        let mut count = 0usize;
+        for (score, relevant) in samples {
+            count = recall.record_relevance_feedback(score, relevant)?;
+            recorded += 1;
+        }
+        // Honest post-state disclosure so the caller can see whether the
+        // calibrator crossed its fit threshold.
+        let status = recall
+            .conformal_disclosure(&mut Vec::new())?
+            .map_or_else(|| "off".into(), |info| info.status);
+        Ok(json!({
+            "status": "success",
+            "recorded": recorded,
+            "calibration_samples": count,
+            "conformal_status": status,
         }))
     }
     fn stats(&self) -> &ToolStats {

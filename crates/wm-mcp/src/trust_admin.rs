@@ -8,6 +8,15 @@
 //! selected population (dry-run by default). The retrieval scorer consumes
 //! the corrected values behind `WM_TRUST_WEIGHT` (evidence-gated: enable
 //! after the recall benchmark re-run).
+//!
+//! Tantivy trust-field decision (V8 S8, closes the open question noted
+//! here): **no indexed trust field.** `source_trust` stays LMDB metadata,
+//! resolved per-candidate at fusion time via the store getter — one
+//! source of truth, no index migration, and `wm trust correct` takes
+//! effect on the next search without a reindex. A Tantivy field would
+//! buy nothing at fleet scale and would silently split truth between
+//! LMDB and the index after a correction. Revisit only if fusion ever
+//! moves index-side.
 
 use serde_json::{Value, json};
 use wm_core::Galaxy;

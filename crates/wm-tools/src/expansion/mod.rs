@@ -134,7 +134,8 @@ pub use knowledge_graph::{KgExtractTool, KgQueryTool, KgTopTool};
 pub use memory_ops::{
     MemoryAggregateTool, MemoryBatchReadTool, MemoryConsolidateTool, MemoryDecayTool,
     MemoryDeduplicateTool, MemoryEpisodicSearchTool, MemoryExportTool, MemoryFilterTool,
-    MemoryHybridRecallTool, MemorySortTool, MemoryStatsTool, MemoryTagTool, MemoryUpdateTool,
+    MemoryHybridRecallTool, MemoryRecallFeedbackTool, MemorySortTool, MemoryStatsTool,
+    MemoryTagTool, MemoryUpdateTool,
 };
 pub use mesh_tools::{
     MeshChatTool, MeshJoinTool, MeshQuarantineTool, MeshReadTool, MeshStatusTool,
@@ -235,9 +236,10 @@ pub fn register_expansion(
         .register(Arc::new(MemoryTagTool::new(store.clone())))
         .register(Arc::new(MemoryStatsTool::new(store.clone())))
         .register(Arc::new(
-            MemoryHybridRecallTool::new(store.clone(), search.clone(), recall)
+            MemoryHybridRecallTool::new(store.clone(), search.clone(), recall.clone())
                 .with_associations(Some(associations.clone())),
         ))
+        .register(Arc::new(MemoryRecallFeedbackTool::new(recall)))
         .register(Arc::new(MemoryEpisodicSearchTool::new(store.clone())))
         .register(Arc::new(MemoryAggregateTool::new(
             search.clone(),
