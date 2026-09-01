@@ -1,0 +1,98 @@
+{
+  "note": "Reconstructed 2026-08-16 from the per-weight JSON files. The original combined file (timestamp 2026-08-15T02:52:46Z) recorded all-zero recall because batch embedding was still broken. Do not treat those zeros as hybrid results. Successful reruns are the four files below with R@5=0.90. Three leftover files (grid_bm25-heavy_10q.json, grid_vector-heavy_10q.json, grid_no-importance_10q.json) are still the failed first pass.",
+  "protocol": "turn-level retrieval R@k on LongMemEval-S single-session-user, n=10, substring-or-id match. Not official LongMemEval QA accuracy.",
+  "bm25_stem_10q_baseline": {
+    "source": "benchmarks/results/longmemeval_s_v5_10q_stem.json",
+    "recall_at_1": 0.5,
+    "recall_at_5": 0.7,
+    "recall_at_10": 0.7,
+    "mrr": 0.5833
+  },
+  "timestamp": "2026-08-16T22:40:00Z",
+  "max_questions": 10,
+  "limit": 10,
+  "embedder_endpoint": "http://localhost:8081",
+  "results": [
+    {
+      "label": "default",
+      "weights": {"bm25": 0.5, "vector": 0.3, "importance": 0.2, "label": "default"},
+      "status": "success",
+      "source": "benchmarks/results/grid_default_10q.json",
+      "recall_at_1": 0.4,
+      "recall_at_5": 0.9,
+      "recall_at_10": 0.9,
+      "mrr": 0.5833333333333334,
+      "total_elapsed_s": 589.1,
+      "search_p50_ms": 3055.744039549978
+    },
+    {
+      "label": "bm25-dominant",
+      "weights": {"bm25": 0.7, "vector": 0.2, "importance": 0.1, "label": "bm25-dominant"},
+      "status": "success",
+      "source": "benchmarks/results/grid_bm25-dominant_10q.json",
+      "recall_at_1": 0.4,
+      "recall_at_5": 0.9,
+      "recall_at_10": 0.9,
+      "mrr": 0.5833333333333334,
+      "total_elapsed_s": 647.7,
+      "search_p50_ms": 3261.0116668001865
+    },
+    {
+      "label": "vector-dominant",
+      "weights": {"bm25": 0.3, "vector": 0.5, "importance": 0.2, "label": "vector-dominant"},
+      "status": "success",
+      "source": "benchmarks/results/grid_vector-dominant_10q.json",
+      "recall_at_1": 0.4,
+      "recall_at_5": 0.9,
+      "recall_at_10": 0.9,
+      "mrr": 0.5666666666666667,
+      "total_elapsed_s": 647.2,
+      "search_p50_ms": 3279.3984855499757
+    },
+    {
+      "label": "balanced",
+      "weights": {"bm25": 0.4, "vector": 0.4, "importance": 0.2, "label": "balanced"},
+      "status": "success",
+      "source": "benchmarks/results/grid_balanced_10q.json",
+      "recall_at_1": 0.4,
+      "recall_at_5": 0.9,
+      "recall_at_10": 0.9,
+      "mrr": 0.5833333333333334,
+      "total_elapsed_s": 655.2,
+      "search_p50_ms": 3276.989717749899
+    },
+    {
+      "label": "bm25-heavy",
+      "weights": {"bm25": 0.6, "vector": 0.3, "importance": 0.1, "label": "bm25-heavy"},
+      "status": "failed_first_pass",
+      "source": "benchmarks/results/grid_bm25-heavy_10q.json",
+      "note": "All-zero recall from the 2026-08-15T02:49 interrupted/broken-embed pass. Not a measured hybrid result.",
+      "recall_at_1": null,
+      "recall_at_5": null,
+      "recall_at_10": null,
+      "mrr": null
+    },
+    {
+      "label": "vector-heavy",
+      "weights": {"bm25": 0.2, "vector": 0.6, "importance": 0.2, "label": "vector-heavy"},
+      "status": "failed_first_pass",
+      "source": "benchmarks/results/grid_vector-heavy_10q.json",
+      "note": "All-zero recall from the 2026-08-15T02:51 interrupted/broken-embed pass. Not a measured hybrid result.",
+      "recall_at_1": null,
+      "recall_at_5": null,
+      "recall_at_10": null,
+      "mrr": null
+    },
+    {
+      "label": "no-importance",
+      "weights": {"bm25": 0.5, "vector": 0.5, "importance": 0.0, "label": "no-importance"},
+      "status": "failed_first_pass",
+      "source": "benchmarks/results/grid_no-importance_10q.json",
+      "note": "All-zero recall from the 2026-08-15T02:52 interrupted/broken-embed pass. Not a measured hybrid result.",
+      "recall_at_1": null,
+      "recall_at_5": null,
+      "recall_at_10": null,
+      "mrr": null
+    }
+  ]
+}

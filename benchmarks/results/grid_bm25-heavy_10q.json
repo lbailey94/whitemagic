@@ -1,0 +1,37 @@
+{
+  "system": "whitemagic-v5",
+  "benchmark": "longmemeval_s",
+  "version": "v5.8.0-rc1",
+  "invalid": true,
+  "note": "Failed first pass 2026-08-15T02:49 (broken batch embed). All-zero recall is not a hybrid result. See grid_search_weights.json.",
+  "dataset": "LongMemEval-S (ICLR 2025)",
+  "total_questions": 10,
+  "timestamp": "2026-08-15T02:49:31Z",
+  "total_elapsed_s": 102.9,
+  "search": {
+    "count": 10,
+    "p50_ms": 439.1179769001621,
+    "p95_ms": 877.0171550499093,
+    "p99_ms": 877.0171550499093
+  },
+  "ingest": {
+    "avg_time_s": 9.763433060669957,
+    "total_time_s": 97.63433060669958
+  },
+  "recall": {
+    "total_queries": 10,
+    "recall_at_1": 0.0,
+    "recall_at_5": 0.0,
+    "recall_at_10": 0.0,
+    "mrr": 0.0
+  },
+  "category_results": {
+    "single-session-user": {
+      "total": 10,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0
+    }
+  },
+  "errors": []
+}

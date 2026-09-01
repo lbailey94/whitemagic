@@ -1,0 +1,46 @@
+{
+  "system": "whitemagic-v6",
+  "benchmark": "longmemeval_s",
+  "version": "v6-dev",
+  "dataset": "LongMemEval-S (ICLR 2025)",
+  "protocol": "turn-level retrieval R@k, substring-or-id. Not official LongMemEval QA.",
+  "search_route": "memory.episodic_search",
+  "rerank": false,
+  "rerank_alpha": 0.7,
+  "keyword_extraction": false,
+  "composite_windows": false,
+  "contextual_indexing": false,
+  "candidate_limit": 100,
+  "timing": "ingest and search are separate process batches; search p50 is query-only (includes process start).",
+  "total_questions": 50,
+  "timestamp": "2026-08-30T00:04:36Z",
+  "total_elapsed_s": 126.2,
+  "search": {
+    "count": 50,
+    "p50_ms": 1571.0674520087196,
+    "p95_ms": 9248.966686005588,
+    "p99_ms": 21594.271113004652
+  },
+  "ingest": {
+    "avg_time_s": 2.5205629671600764,
+    "total_time_s": 126.02814835800382
+  },
+  "recall": {
+    "total_queries": 50,
+    "recall_at_1": 0.86,
+    "recall_at_5": 1.0,
+    "recall_at_10": 1.0,
+    "mrr": 0.9233333333333335,
+    "candidate_presence": 1.0,
+    "expected_session_presence": 1.0
+  },
+  "category_results": {
+    "single-session-user": {
+      "total": 50,
+      "recall_at_1": 0.86,
+      "recall_at_5": 1.0,
+      "recall_at_10": 1.0
+    }
+  },
+  "errors": []
+}

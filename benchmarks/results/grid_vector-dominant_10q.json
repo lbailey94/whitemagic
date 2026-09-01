@@ -1,0 +1,35 @@
+{
+  "system": "whitemagic-v5",
+  "benchmark": "longmemeval_s",
+  "version": "v5.8.0-rc1",
+  "dataset": "LongMemEval-S (ICLR 2025)",
+  "total_questions": 10,
+  "timestamp": "2026-08-15T03:57:30Z",
+  "total_elapsed_s": 647.2,
+  "search": {
+    "count": 10,
+    "p50_ms": 3279.3984855499757,
+    "p95_ms": 3452.0372067498074,
+    "p99_ms": 3452.0372067498074
+  },
+  "ingest": {
+    "avg_time_s": 61.47184252946961,
+    "total_time_s": 614.7184252946961
+  },
+  "recall": {
+    "total_queries": 10,
+    "recall_at_1": 0.4,
+    "recall_at_5": 0.9,
+    "recall_at_10": 0.9,
+    "mrr": 0.5666666666666667
+  },
+  "category_results": {
+    "single-session-user": {
+      "total": 10,
+      "recall_at_1": 0.4,
+      "recall_at_5": 0.9,
+      "recall_at_10": 0.9
+    }
+  },
+  "errors": []
+}

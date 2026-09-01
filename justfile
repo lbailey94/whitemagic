@@ -1,0 +1,89 @@
+# WhiteMagic v5 build targets
+
+default: build
+
+build:
+    cargo build --release
+
+dev:
+    cargo build
+
+test:
+    cargo test --all
+
+test-fast:
+    cargo test --all -- --test-threads=8
+
+# Lint all crates (default features — no Julia required)
+lint:
+    cargo clippy --all-targets
+
+# Lint including polyglot feature builds (requires a Julia install)
+lint-all:
+    cargo clippy --all-targets --all-features
+
+fmt:
+    cargo fmt --all
+
+fmt-check:
+    cargo fmt --all -- --check
+
+bench:
+    cargo bench --all
+
+clean:
+    cargo clean
+
+# Polyglot builds
+build-julia:
+    cargo build --release --features wm-polyglot/julia
+
+build-python:
+    cargo build --release --features wm-mcp/python
+
+build-lancedb:
+    cargo build --release --features wm-memory/lancedb
+
+# Run MCP server (pure Rust)
+serve:
+    cargo run --release --bin wm -- serve
+
+# Run MCP server via Python shell
+serve-python:
+    python python/whitemagic_v5_server.py --store .whitemagic/lmdb
+
+# Quickstart demo
+quickstart:
+    cargo run --release --bin wm -- quickstart
+
+# Doctor (health check)
+doctor:
+    cargo run --release --bin wm -- doctor
+
+# Brain-wave state
+brain-wave:
+    cargo run --release --bin wm -- brain-wave
+
+# Full workspace verification: fmt + clippy + tests + dependency audit
+verify: fmt-check lint
+    cargo test --all
+    cargo deny check
+
+# Remove all build artifacts (reclaims ~8GB)
+prune: clean
+    rm -rf .criterion
+    rm -rf crates/*/benches/target
+    find . -name "*.profraw" -delete 2>/dev/null
+    @echo "Build artifacts removed"
+
+# Dependency security audit (RustSec advisories + licenses + duplicate bans)
+audit:
+    cargo deny check
+
+# Fuzz smoke: replay committed corpus seeds for every target (from fuzz/)
+fuzz:
+    cargo fuzz build --fuzz-dir fuzz
+    @for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers; do \
+        echo "--- $$target ---"; \
+        cargo fuzz run --fuzz-dir fuzz "$$target" -- -runs=1000; \
+    done

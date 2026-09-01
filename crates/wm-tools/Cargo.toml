@@ -1,0 +1,51 @@
+[package]
+name = "wm-tools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wm-core = { workspace = true }
+wm-memory = { workspace = true }
+wm-dispatch = { workspace = true }
+wm-cognitive = { workspace = true }
+wm-governance = { workspace = true }
+wm-substrate = { workspace = true }
+wm-workspace = { workspace = true }
+wm-selfmodel = { workspace = true }
+wm-conformal = { workspace = true }
+wm-bicameral = { workspace = true }
+wm-sangha = { workspace = true, features = ["transport"] }
+wm-simulation = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+ahash = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+ureq = { workspace = true }
+sha2 = "0.11.0"
+
+[features]
+acs-yaml = ["wm-governance/acs-yaml"]
+
+[dev-dependencies]
+proptest = { workspace = true }
+tempfile = "3"
+criterion = { workspace = true }
+
+[[bench]]
+name = "rsi_bench"
+harness = false
+
+[[bench]]
+name = "transaction_bench"
+harness = false

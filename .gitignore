@@ -1,0 +1,112 @@
+/target
+**/*.rs.bk
+*.swp
+*.swo
+*~
+.DS_Store
+.env
+.env.local
+__pycache__/
+*.pyc
+.koka/
+.julia/
+.ghc/
+
+# v2 reference code (not compiled)
+/v2-reference/
+
+# Local data store (LMDB, Tantivy index)
+/.whitemagic/
+
+# Vercel placeholder (deployed separately)
+/vercel-placeholder/
+
+# Embedding model cache
+.fastembed_cache/
+
+# IDE config
+.windsurf/
+
+# Criterion benchmark artifacts
+/criterion
+/crates/**/benches/**/target
+
+# Fuzz build artifacts
+/fuzz/target/
+/fuzz/artifacts/
+
+# Curated fuzz corpus seeds (named seed_*) are committed so CI bootstraps
+# from them; files libFuzzer regenerates (sha1-named) stay ignored.
+/fuzz/corpus/*
+!/fuzz/corpus/*/
+/fuzz/corpus/*/*
+!/fuzz/corpus/*/seed_*
+
+# Per-project opencode MCP wiring — machine-specific absolute paths; the
+# committed template lives in docs/MULTI_PROJECT_MEMORY.md
+/opencode.jsonc
+
+# Memorastrict scale-stress fixtures — derived by `memorastrict_gen.py
+# --scale-turns N`; the tracked root seeds are the source of truth.
+/benchmarks/data/memorastrict/scale_*/
+
+# ── Dev-internal surfaces (kept locally for development; not part of the
+#    public v7 archive — the user-facing minimum is README + QUICKSTART +
+#    MCP_CONFIG_GUIDE + MULTI_LAPTOP + install.sh + the smoke gate) ──
+/AGENTS.md
+/STRATEGY_V5.md
+/STRATEGY_V6.md
+/ops/
+/docs/notes/
+/docs/ACS_ALIGNMENT.md
+/docs/ARCHIVE_CAPABILITY_MAP.md
+/docs/ARCHIVE_FINDINGS.md
+/docs/CHIPS_ARCHITECTURE.md
+/docs/CLAIMS_LEDGER.json
+/docs/CLAIMS_LEDGER.md
+/docs/CLAIMS_LEDGER_REVIEW.json
+/docs/CONFORMAL_PREDICTION.md
+/docs/GAP_ANALYSIS.md
+/docs/GAP_ANALYSIS_v26_v4.md
+/docs/GATE2_RECRUITMENT_KIT.md
+/docs/IMAGINATION_ENGINE.md
+/docs/LINEAGE_LEDGER.md
+/docs/MCP_REGISTRY_LISTING.md
+/docs/MIGRATION.md
+/docs/MODEL_GUIDE.md
+/docs/MULTI_PROJECT_MEMORY.md
+/docs/NEXT_SESSION.md
+/docs/OPERATIONS.md
+/docs/OWASP_LLM_TOP10_MAPPING.md
+/docs/PET_HARDENING.md
+/docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md
+/docs/PRE_RELEASE_LAUNCH_PLAN.md
+/docs/PRODUCT_CUT.md
+/docs/PROGRESS.md
+/docs/REDTEAM_STRATEGY.md
+/docs/RELEASE_READINESS.md
+/docs/RETRIEVAL_DEVELOPMENT_PLAN.md
+/docs/RETRIEVAL_RESEARCH_ROADMAP.md
+/docs/SANGHA_SECURITY.md
+/docs/STRATEGY.md
+/docs/TANTIVY_RECALL_QUALITY_FIX.md
+/docs/TIMESTAMP_CONVENTIONS.md
+/docs/V6_ACCURACY_PERFORMANCE_ROADMAP.md
+/docs/V6_BENCHMARK_DESIGN.md
+/docs/V6_EPISODIC_PERFORMANCE_PLAN.md
+/docs/V6_HOLOGRAPHIC_MEMORY.md
+/scripts/collect_shadow_data.py
+/scripts/eval_all_tools.py
+/scripts/export_v26_heritage.py
+/scripts/grid_search_weights.py
+/scripts/live_perf_test.py
+/scripts/live_shadow_serve.sh
+/scripts/longmemeval_bench.py
+/scripts/lora_finetune.py
+/scripts/memorastrict_bench.py
+/scripts/memorastrict_gen.py
+/scripts/memorastrict_miss_analysis.py
+/scripts/mine_opencode_corpus.py
+/scripts/pin-cpu-cores.sh
+/scripts/vault_canary.py
+/scripts/vault_canaries.json

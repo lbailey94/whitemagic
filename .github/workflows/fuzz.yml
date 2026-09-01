@@ -1,0 +1,41 @@
+name: Fuzz Smoke
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fuzz-smoke:
+    name: Fuzz Smoke Tests (30s each)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Corpus regression (replay committed seeds, 1k runs each)
+        run: |
+          for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers; do
+            echo "--- $target ---"
+            cargo fuzz run --fuzz-dir . "$target" -- -runs=1000
+          done
+        working-directory: fuzz
+
+      - name: Smoke-fuzz all targets (30s each)
+        run: |
+          for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers; do
+            echo "--- $target ---"
+            cargo fuzz run --fuzz-dir . "$target" -- -max_total_time=30
+          done
+        working-directory: fuzz

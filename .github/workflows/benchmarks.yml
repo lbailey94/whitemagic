@@ -1,0 +1,110 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install criterion dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnuplot
+
+      - name: Run benchmarks (release)
+        run: |
+          # No --output-format bencher: criterion benches reject libtest-only
+          # flags, and one bad crate fails the whole workspace run.
+          cargo bench --workspace 2>&1 | tee benchmark_results.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark_results.txt
+            target/criterion/
+
+      - name: Upload benchmark results on release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            benchmark_results.txt
+          body: "## Benchmark Results\n\nSee attached benchmark_results.txt for full details."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare with baseline (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat benchmark_results.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  bench-regression-check:
+    name: Benchmark Regression Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run PR benchmarks
+        run: cargo bench --workspace -- --save-baseline pr
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Run base benchmarks
+        working-directory: base
+        run: cargo bench --workspace -- --save-baseline base
+
+      - name: Import base baseline into PR checkout
+        run: |
+          mkdir -p target/criterion
+          rm -rf target/criterion/base
+          cp -r base/target/criterion/base target/criterion/base
+
+      - name: Compare PR against base
+        run: |
+          # Advisory comparison (shared CI runners are noisy); results are
+          # posted to the step summary for review. The old step compared the
+          # base branch against its own baseline, which could never detect a
+          # PR regression.
+          cargo bench --workspace -- --baseline base --noplot 2>&1 | tee comparison.txt || true
+
+      - name: Check for regressions
+        run: |
+          echo "## Benchmark Comparison (PR vs base)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat comparison.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if grep -qiE "regressed" comparison.txt; then
+            echo ":warning: Some benchmarks regressed vs base — review before merging." >> $GITHUB_STEP_SUMMARY
+          fi

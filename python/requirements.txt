@@ -1,0 +1,13 @@
+# WhiteMagic v3 Python MCP Shell — Optional Dependencies
+#
+# The Python shell works without any of these. They enable optional
+# embedding and tokenizer features that complement the Rust core.
+
+# ONNX embedding fallback (fastembed wraps onnxruntime)
+fastembed>=0.2.0
+
+# HuggingFace tokenizer (for tokenization utilities)
+transformers>=4.40.0
+
+# Note: The Rust extension module (whitemagic_v3) must be built separately:
+#   cargo build --release --features python -p wm-mcp

@@ -1,0 +1,18 @@
+# Gitleaks configuration — allowlist for WhiteMagic's own credential-detector
+# test fixtures. crates/wm-memory/src/credentials.rs and
+# scripts/mine_opencode_corpus.py contain placeholder shapes (ghp_0123…,
+# AKIAIOSFODNN7EXAMPLE, RFC 7519 example JWT, correct-horse-battery-staple)
+# used to TEST the ingest-path credential-shape detector
+# (wm_memory::credential_shaped_content). The Slack token fixture is
+# assembled at runtime so the raw shape never appears in source. Nothing
+# here is a real credential; gitleaks findings scoped to these two paths
+# are false positives by construction.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "credential-detector test fixtures (placeholder shapes only)"
+paths = [
+    '''(^|/)crates/wm-memory/src/credentials\.rs$''',
+    '''(^|/)scripts/mine_opencode_corpus\.py$''',
+]
