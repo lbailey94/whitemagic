@@ -35,6 +35,7 @@
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -72,6 +73,24 @@ pub const MESH_DIAL_TIMEOUT_SECS: u64 = 5;
 
 /// Maximum message size (1 MB).
 pub const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
+
+/// Upper bound on how long an established inbound connection may sit idle
+/// between frames before the node closes it.
+///
+/// Peers speak on demand (RPCs), so a quiet connection is a dead one — and
+/// an open socket a slowloris can hold forever is a resource the LAN must
+/// not be able to pin.
+pub const MESH_IDLE_TIMEOUT_SECS: u64 = 120;
+
+/// Upper bound on requests served over ONE inbound connection — mirrors
+/// the MCP server's per-session request budget. A connection that exceeds
+/// it is closed; the peer simply reconnects.
+pub const MAX_REQUESTS_PER_CONNECTION: usize = 10_000;
+
+/// Environment escape hatch for dialing/announcing non-local addresses.
+/// The mesh is LAN-scoped by design; only set this when a relay/WAN phase
+/// is deliberately enabled.
+pub const ENV_ALLOW_PUBLIC_ADDRS: &str = "WM_MESH_ALLOW_PUBLIC_ADDRS";
 
 // ── Transport Config ──────────────────────────────────────────────────
 
@@ -217,6 +236,115 @@ async fn read_frame(stream: &mut TcpStream) -> std::io::Result<Vec<u8>> {
     Ok(buf)
 }
 
+// ── Address Policy ───────────────────────────────────────────────────
+
+/// Whether an IP is inside the mesh's local scope: loopback, RFC1918
+/// private, IPv4 link-local, IPv6 unique-local, or IPv6 link-local.
+const fn ip_is_mesh_scoped(ip: std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
+        std::net::IpAddr::V6(v6) => {
+            v6.is_loopback() || v6.is_unique_local() || v6.is_unicast_link_local()
+        }
+    }
+}
+
+/// Validate a mesh address (beacon target, heartbeat address, dial
+/// target): it must resolve ONLY to local-scope IPs. A beacon claiming a
+/// public address is either misconfiguration or a dial-out injection —
+/// without this check, a spoofed beacon makes the node open TCP to an
+/// arbitrary internet host. `WM_MESH_ALLOW_PUBLIC_ADDRS=1` lifts the
+/// restriction explicitly (relay/WAN phase).
+fn validate_mesh_addr(addr: &str) -> std::result::Result<(), String> {
+    if std::env::var(ENV_ALLOW_PUBLIC_ADDRS).is_ok_and(|v| v.trim() == "1") {
+        return Ok(());
+    }
+    let resolved: Vec<std::net::IpAddr> = addr
+        .to_socket_addrs()
+        .map_err(|e| format!("unresolvable mesh address '{addr}': {e}"))?
+        .map(|s| s.ip())
+        .collect();
+    if resolved.is_empty() {
+        return Err(format!("mesh address '{addr}' resolved to nothing"));
+    }
+    let offenders: Vec<String> = resolved
+        .iter()
+        .filter(|ip| !ip_is_mesh_scoped(**ip))
+        .map(std::net::IpAddr::to_string)
+        .collect();
+    if !offenders.is_empty() {
+        return Err(format!(
+            "mesh address '{addr}' resolves outside the local network ({offenders:?}) — \
+             refusing; set {ENV_ALLOW_PUBLIC_ADDRS}=1 to override"
+        ));
+    }
+    Ok(())
+}
+
+// ── Signed RPC Envelope ──────────────────────────────────────────────
+
+/// Canonical payload of a signed RPC envelope: the params minus the
+/// envelope fields (`signature`, `public_key`). Both sides derive the
+/// same bytes through the same serde_json canonicalization (lockstep
+/// fleet builds share one serde_json mode).
+fn envelope_payload(params: &serde_json::Value) -> String {
+    let mut payload = params.clone();
+    if let Some(obj) = payload.as_object_mut() {
+        obj.remove("signature");
+        obj.remove("public_key");
+    }
+    payload.to_string()
+}
+
+/// Extract the sender and verified payload from a signed RPC envelope.
+/// The envelope shape is uniform across mutating methods:
+/// `{"sender", "payload", "public_key", "signature"}` — the signature
+/// covers the params minus the envelope fields, and the signer key must
+/// be the one the community has bound to `sender`. Returns
+/// `(sender, payload)`.
+fn verify_signed_envelope(
+    params: &serde_json::Value,
+    peers: &crate::peer::PeerDiscovery,
+) -> std::result::Result<(String, serde_json::Value), String> {
+    let sender = params
+        .get("sender")
+        .and_then(serde_json::Value::as_str)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| "envelope missing 'sender'".to_string())?;
+    let signature = params
+        .get("signature")
+        .and_then(serde_json::Value::as_str)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| format!("envelope from '{sender}' missing 'signature'"))?;
+    let public_key = params
+        .get("public_key")
+        .and_then(serde_json::Value::as_str)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| format!("envelope from '{sender}' missing 'public_key'"))?;
+    let payload = params
+        .get("payload")
+        .cloned()
+        .ok_or_else(|| format!("envelope from '{sender}' missing 'payload'"))?;
+    // The signature covers sender + payload (everything except the
+    // envelope fields), so the sender field itself is tamper-evident.
+    if !crate::crypto::MeshKeyPair::verify_hex(&envelope_payload(params), signature, public_key) {
+        return Err(format!(
+            "envelope from '{sender}' failed signature verification"
+        ));
+    }
+    match peers.bound_public_key(sender) {
+        Some(bound) if bound == public_key => Ok((sender.to_string(), payload)),
+        Some(bound) => Err(format!(
+            "envelope from '{sender}' carries an unbound key (bound: {bound}) — \
+             possible identity theft"
+        )),
+        None => Err(format!(
+            "sender '{sender}' is not identity-bound on this node — join before \
+             sending signed RPCs"
+        )),
+    }
+}
+
 // ── Sangha Server State ───────────────────────────────────────────────
 
 /// Shared state for the Sangha Mesh server.
@@ -301,6 +429,9 @@ pub struct SanghaTransport {
     state: Arc<SanghaState>,
     /// Connected peer streams (peer_id -> writer half).
     connections: Arc<RwLock<HashMap<PeerId, TcpStream>>>,
+    /// Live inbound connection count — enforces `max_connections` in the
+    /// accept loop so the LAN cannot exhaust the node by connect flood.
+    inbound: Arc<std::sync::atomic::AtomicUsize>,
     /// Shutdown signal for graceful termination.
     shutdown: Arc<Notify>,
 }
@@ -311,6 +442,7 @@ impl Clone for SanghaTransport {
             config: self.config.clone(),
             state: Arc::clone(&self.state),
             connections: Arc::clone(&self.connections),
+            inbound: Arc::clone(&self.inbound),
             shutdown: Arc::clone(&self.shutdown),
         }
     }
@@ -324,6 +456,7 @@ impl SanghaTransport {
             config,
             state,
             connections: Arc::new(RwLock::new(HashMap::new())),
+            inbound: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
             shutdown: Arc::new(Notify::new()),
         }
     }
@@ -390,9 +523,25 @@ impl SanghaTransport {
                     match result {
                         Ok((stream, addr)) => {
                             tracing::debug!("Sangha connection from {addr}");
+                            // Connection-cap enforcement: refuse beyond
+                            // max_connections (the config value is a real
+                            // limit, not decoration).
+                            if self.inbound.load(std::sync::atomic::Ordering::SeqCst)
+                                >= self.config.max_connections
+                            {
+                                tracing::warn!(
+                                    "Sangha connection cap ({}) reached — refusing {addr}",
+                                    self.config.max_connections
+                                );
+                                continue;
+                            }
+                            self.inbound
+                                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                             let state = Arc::clone(&self.state);
                             let shutdown = Arc::clone(&self.shutdown);
+                            let inbound = Arc::clone(&self.inbound);
                             tokio::spawn(async move {
+                                let _guard = InboundGuard(inbound);
                                 tokio::select! {
                                     () = shutdown.notified() => {}
                                     result = handle_connection(stream, state) => {
@@ -419,6 +568,10 @@ impl SanghaTransport {
     /// # Errors
     /// Returns an error if connection fails.
     pub async fn connect_to_peer(&self, addr: &str) -> Result<()> {
+        // Address policy: the mesh dials LAN-scope targets only. A
+        // beacon-fed address outside that scope is refused here (belt to
+        // the suspenders of the ingest-time check in `ingest_beacon`).
+        validate_mesh_addr(addr).map_err(wm_core::CoreError::Internal)?;
         let stream = tokio::time::timeout(
             std::time::Duration::from_secs(MESH_DIAL_TIMEOUT_SECS),
             TcpStream::connect(addr),
@@ -511,6 +664,21 @@ impl SanghaTransport {
             .ok_or_else(|| wm_core::CoreError::Internal("empty result".into()))
     }
 
+    /// Build a signed RPC envelope over `payload` — the mirror of the
+    /// receiver-side `verify_signed_envelope`. The signature covers the
+    /// params minus the envelope fields, exactly as the receiver will
+    /// re-derive them.
+    fn signed_rpc_params(&self, payload: &serde_json::Value) -> serde_json::Value {
+        let mut params = serde_json::json!({
+            "sender": self.state.peer_id,
+            "payload": payload,
+        });
+        let signature = self.state.keypair.sign_hex(&envelope_payload(&params));
+        params["signature"] = serde_json::Value::String(signature);
+        params["public_key"] = serde_json::Value::String(self.state.keypair.public_key_hex());
+        params
+    }
+
     /// Broadcast a signal to all connected peers.
     ///
     /// Per-peer failures are warn-logged; a broadcast that reaches **no**
@@ -524,10 +692,12 @@ impl SanghaTransport {
         let peer_ids: Vec<String> = connections.keys().cloned().collect();
         drop(connections);
 
+        let payload = signal.to_json();
+        let params = self.signed_rpc_params(&payload);
         let mut failed: Vec<String> = Vec::new();
         for peer_id in &peer_ids {
             if self
-                .rpc_call(peer_id, "broadcast_signal", signal.to_json())
+                .rpc_call(peer_id, "broadcast_signal", params.clone())
                 .await
                 .is_err()
             {
@@ -597,8 +767,8 @@ impl SanghaTransport {
             let hologram = self.state.hologram.lock().await;
             hologram.export()
         };
-        let params = serde_json::to_value(&entries)
-            .map_err(|e| wm_core::CoreError::Internal(format!("serialize hologram: {e}")))?;
+        let payload = serde_json::json!({ "entries": entries });
+        let params = self.signed_rpc_params(&payload);
         self.rpc_call(peer_id, "sync_hologram", params).await
     }
 
@@ -631,10 +801,41 @@ impl SanghaTransport {
     }
 }
 
+/// RAII decrement for the inbound connection counter.
+struct InboundGuard(Arc<std::sync::atomic::AtomicUsize>);
+
+impl Drop for InboundGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
 /// Handle a single TCP connection.
+///
+/// Two per-connection defenses: an idle timeout (a connection that sends
+/// nothing for `MESH_IDLE_TIMEOUT_SECS` is closed — open sockets must not
+/// be pinnable forever) and a per-connection request budget
+/// (`MAX_REQUESTS_PER_CONNECTION`) that closes runaway connections.
 async fn handle_connection(mut stream: TcpStream, state: Arc<SanghaState>) -> std::io::Result<()> {
+    let mut served: usize = 0;
     loop {
-        let frame = read_frame(&mut stream).await?;
+        let Ok(frame) = tokio::time::timeout(
+            std::time::Duration::from_secs(MESH_IDLE_TIMEOUT_SECS),
+            read_frame(&mut stream),
+        )
+        .await
+        else {
+            tracing::debug!("Sangha connection idle > {MESH_IDLE_TIMEOUT_SECS}s — closing");
+            return Ok(());
+        };
+        let frame = frame?;
+        served += 1;
+        if served > MAX_REQUESTS_PER_CONNECTION {
+            tracing::debug!(
+                "Sangha connection exceeded {MAX_REQUESTS_PER_CONNECTION} requests — closing"
+            );
+            return Ok(());
+        }
         let req: RpcRequest = match serde_json::from_slice(&frame) {
             Ok(r) => r,
             Err(e) => {
@@ -658,14 +859,27 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 Err(e) => return RpcResponse::err(format!("invalid params: {e}"), req.id),
             };
             let peer_id = peer_info.id.clone();
-            let result = if peer_info.signature.is_empty() {
-                // Legacy unsigned announcement — accepted without identity
-                // binding (single-node/trusted transport).
-                state.peers.lock().await.discover(peer_info);
-                Ok(())
-            } else {
-                // Signed announcement: verify + bind the public key.
-                state.peers.lock().await.discover_signed(peer_info)
+            // Address policy: refuse announcements that point outside the
+            // local network (a signed-but-public address is still a
+            // dial-out injection channel).
+            if let Err(e) = validate_mesh_addr(&peer_info.address) {
+                return RpcResponse::err(format!("address refused: {e}"), req.id);
+            }
+            // Signed announcements ONLY over the wire. The legacy unsigned
+            // path was in-process use — it must never traverse TCP, where
+            // an unsigned heartbeat would let anyone on the LAN inject or
+            // steer registry entries.
+            let result = {
+                let mut peers = state.peers.lock().await;
+                let outcome = peers.discover_signed(peer_info);
+                if outcome.is_err() {
+                    // Feed the auto-quarantine policy: repeated identity
+                    // failures cut the offender off without a human.
+                    peers.record_verification_failure(&peer_id);
+                } else {
+                    peers.record_verification_success(&peer_id);
+                }
+                outcome
             };
             match result {
                 Ok(()) => RpcResponse::ok(
@@ -682,10 +896,30 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
         }
 
         "broadcast_signal" => {
-            let signal: crate::signal::Signal = match serde_json::from_value(req.params.clone()) {
+            // Signed envelope required — an unauthenticated LAN host must
+            // not be able to inject signals (they feed agent coordination).
+            let (sender, payload) = {
+                let peers = state.peers.lock().await;
+                match verify_signed_envelope(&req.params, &peers) {
+                    Ok(result) => result,
+                    Err(e) => return RpcResponse::err(format!("signal refused: {e}"), req.id),
+                }
+            };
+            let signal: crate::signal::Signal = match serde_json::from_value(payload) {
                 Ok(s) => s,
                 Err(e) => return RpcResponse::err(format!("invalid signal: {e}"), req.id),
             };
+            // The signal's own source must match the envelope sender — a
+            // bound peer cannot launder a signal through another's name.
+            if signal.source != sender {
+                return RpcResponse::err(
+                    format!(
+                        "signal refused: source '{}' does not match envelope sender '{sender}'",
+                        signal.source
+                    ),
+                    req.id,
+                );
+            }
             state.signals.lock().await.broadcast(signal);
             RpcResponse::ok(serde_json::json!({"status": "ok"}), req.id)
         }
@@ -723,13 +957,13 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 .unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
 
             if signature.is_empty() || public_key.is_empty() {
-                // Legacy unsigned relay — accepted (trusted transport).
-                let msg = {
-                    let mut chat = state.chat.lock().await;
-                    chat.send(channel, sender, content)
-                };
-                return RpcResponse::ok(
-                    serde_json::json!({"status": "ok", "channel": msg.channel, "id": msg.id}),
+                // Unsigned relay REFUSED over the wire. The legacy path was
+                // in-process use only — on TCP it is an unauthenticated
+                // channel-pollution primitive for anyone on the LAN.
+                return RpcResponse::err(
+                    "message rejected: unsigned chat is not accepted over mesh TCP — \
+                     sign it (sangha.mesh.chat signs every send)"
+                        .to_string(),
                     req.id,
                 );
             }
@@ -744,12 +978,19 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 signature: signature.to_string(),
                 public_key: public_key.to_string(),
             };
-            let bound = {
-                let peers = state.peers.lock().await;
-                peers.bound_public_key(sender)
+            let valid = {
+                let mut peers = state.peers.lock().await;
+                let bound = peers.bound_public_key(sender);
+                let ok = msg.verify_signature()
+                    && bound.is_none_or(|bound| msg.verify_as_sender(&bound));
+                if ok {
+                    peers.record_verification_success(sender);
+                } else {
+                    // Feed the auto-quarantine policy.
+                    peers.record_verification_failure(sender);
+                }
+                ok
             };
-            let valid =
-                msg.verify_signature() && bound.is_none_or(|bound| msg.verify_as_sender(&bound));
             if !valid {
                 return RpcResponse::err(
                     format!(
@@ -778,21 +1019,36 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
         }
 
         "acquire_lock" => {
-            let resource = req
-                .params
+            // Signed envelope required; the holder must be the signer —
+            // an unauthenticated host cannot lock (or lock-squat) a
+            // resource under someone else's name.
+            let (sender, payload) = {
+                let peers = state.peers.lock().await;
+                match verify_signed_envelope(&req.params, &peers) {
+                    Ok(result) => result,
+                    Err(e) => return RpcResponse::err(format!("lock refused: {e}"), req.id),
+                }
+            };
+            let resource = payload
                 .get("resource")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
-            let holder = req
-                .params
+            let holder = payload
                 .get("holder")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
-            let ttl = req
-                .params
+            let ttl = payload
                 .get("ttl_sec")
                 .and_then(serde_json::Value::as_i64)
                 .unwrap_or(30);
+            if holder != sender {
+                return RpcResponse::err(
+                    format!(
+                        "lock refused: holder '{holder}' does not match envelope sender '{sender}'"
+                    ),
+                    req.id,
+                );
+            }
 
             let result = {
                 let mut locks = state.locks.lock().await;
@@ -808,16 +1064,30 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
         }
 
         "release_lock" => {
-            let resource = req
-                .params
+            // Signed envelope required; the releaser must be the holder.
+            let (sender, payload) = {
+                let peers = state.peers.lock().await;
+                match verify_signed_envelope(&req.params, &peers) {
+                    Ok(result) => result,
+                    Err(e) => return RpcResponse::err(format!("lock refused: {e}"), req.id),
+                }
+            };
+            let resource = payload
                 .get("resource")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
-            let holder = req
-                .params
+            let holder = payload
                 .get("holder")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
+            if holder != sender {
+                return RpcResponse::err(
+                    format!(
+                        "lock refused: holder '{holder}' does not match envelope sender '{sender}'"
+                    ),
+                    req.id,
+                );
+            }
 
             let released = {
                 let mut locks = state.locks.lock().await;
@@ -833,8 +1103,21 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
         }
 
         "sync_hologram" => {
+            // Signed envelope required — hologram merges feed the
+            // importance-wins conflict rule, so an unauthenticated host
+            // could otherwise drown real coordinates with high-importance
+            // junk.
+            let (_sender, payload) = {
+                let peers = state.peers.lock().await;
+                match verify_signed_envelope(&req.params, &peers) {
+                    Ok(result) => result,
+                    Err(e) => {
+                        return RpcResponse::err(format!("hologram sync refused: {e}"), req.id);
+                    }
+                }
+            };
             let remote_entries: Vec<crate::hologram::HologramEntry> =
-                match serde_json::from_value(req.params.clone()) {
+                match serde_json::from_value(payload.get("entries").cloned().unwrap_or_default()) {
                     Ok(e) => e,
                     Err(e) => {
                         return RpcResponse::err(format!("invalid hologram entries: {e}"), req.id);
@@ -964,6 +1247,13 @@ async fn ingest_beacon(state: &SanghaState, announce: &PeerAnnounce) {
         tracing::debug!("ignoring own beacon (multicast loopback)");
         return;
     }
+    // Address policy: a beacon pointing outside the local network is
+    // refused at ingest — the auto-join loop dials beaconed addresses,
+    // so an unvalidated beacon is a dial-out injection primitive.
+    if let Err(e) = validate_mesh_addr(&announce.tcp_addr) {
+        tracing::debug!("refusing beacon from '{}': {e}", announce.peer_id);
+        return;
+    }
     tracing::debug!(
         "Discovered peer: {} at {}",
         announce.peer_id,
@@ -1018,6 +1308,79 @@ mod tests {
         assert_eq!(summary["peers"][0]["id"], "other-node");
     }
 
+    #[tokio::test]
+    async fn beacon_cannot_redirect_bound_peer() {
+        // Address-redirect guard: once a peer is identity-bound, an
+        // unsigned beacon (or any unsigned announcement) may refresh
+        // liveness but MUST NOT rewrite the address — otherwise a spoofed
+        // beacon silently reroutes the peer's traffic (and mail flushes)
+        // to an attacker-chosen host.
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"victim");
+        let original_addr = "10.0.0.68:7369";
+
+        // Bind the victim via its signed identity.
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("victim", original_addr).signed(&kp))
+            .unwrap();
+
+        // A spoofed beacon claims the victim's ID at the ATTACKER's address.
+        let spoof = PeerAnnounce::new("victim", "10.0.0.99:7369");
+        ingest_beacon(&state, &spoof).await;
+        {
+            let peers = state.peers.lock().await;
+            assert_eq!(
+                peers.get("victim").map(|p| p.address.as_str()),
+                Some(original_addr),
+                "an unsigned beacon must not redirect a bound peer"
+            );
+        }
+
+        // The legitimate signed re-announcement (e.g. after a DHCP change)
+        // DOES move the address.
+        let moved = PeerInfo::new("victim", "10.0.0.77:7369").signed(&kp);
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(moved)
+            .expect("legit signed re-announce must succeed");
+        {
+            let peers = state.peers.lock().await;
+            assert_eq!(
+                peers.get("victim").map(|p| p.address.as_str()),
+                Some("10.0.0.77:7369"),
+                "a signed announcement from the bound key may update the address"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn beacon_with_public_address_refused() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let spoof = PeerAnnounce::new("stranger", "93.184.216.34:7369");
+        ingest_beacon(&state, &spoof).await;
+        assert_eq!(
+            state.peers.lock().await.peer_count(),
+            0,
+            "a beacon pointing outside the local network must be refused at ingest"
+        );
+    }
+
+    #[test]
+    fn validate_mesh_addr_scopes() {
+        assert!(validate_mesh_addr("127.0.0.1:7369").is_ok());
+        assert!(validate_mesh_addr("10.0.0.57:7369").is_ok());
+        assert!(validate_mesh_addr("192.168.1.10:7369").is_ok());
+        assert!(validate_mesh_addr("169.254.1.1:7369").is_ok());
+        assert!(validate_mesh_addr("[fd00::1]:7369").is_ok());
+        assert!(validate_mesh_addr("93.184.216.34:7369").is_err());
+        assert!(validate_mesh_addr("[2606:2800:220:1:248:1893:25c8:1946]:7369").is_err());
+    }
+
     #[test]
     fn rpc_response_ok() {
         let resp = RpcResponse::ok(serde_json::json!({"status": "ok"}), 42);
@@ -1066,7 +1429,8 @@ mod tests {
     #[allow(clippy::significant_drop_tightening)]
     async fn handle_rpc_heartbeat() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
-        let peer = PeerInfo::new("remote-1", "127.0.0.1:7370");
+        let client_kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
+        let peer = PeerInfo::new("remote-1", "127.0.0.1:7370").signed(&client_kp);
         let params = serde_json::to_value(&peer).unwrap();
 
         let req = RpcRequest {
@@ -1076,14 +1440,83 @@ mod tests {
         };
 
         let resp = handle_rpc_request(&req, &state).await;
-        assert!(resp.result.is_some());
+        assert!(
+            resp.result.is_some(),
+            "signed heartbeat must register: {resp:?}"
+        );
         assert_eq!(resp.id, 1);
 
-        // Verify peer was registered
+        // Verify peer was registered AND identity-bound
         {
             let peers = state.peers.lock().await;
             assert_eq!(peers.peer_count(), 1);
+            assert!(peers.bound_public_key("remote-1").is_some());
         }
+    }
+
+    #[tokio::test]
+    async fn handle_rpc_heartbeat_unsigned_refused() {
+        // The v0 code accepted unsigned heartbeats over TCP ("legacy
+        // path") — that was a LAN-wide registry-injection primitive. The
+        // wire is signed-only now; the in-process path never traverses
+        // this handler.
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let peer = PeerInfo::new("remote-1", "127.0.0.1:7370");
+        let req = RpcRequest {
+            method: "heartbeat".to_string(),
+            params: serde_json::to_value(&peer).unwrap(),
+            id: 1,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.error.is_some(), "unsigned heartbeat must be refused");
+        assert_eq!(state.peers.lock().await.peer_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn handle_rpc_heartbeat_public_address_refused() {
+        // Address policy: even a well-signed announcement pointing at a
+        // public IP is refused — it is a dial-out injection channel.
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
+        let peer = PeerInfo::new("remote-1", "93.184.216.34:7369").signed(&kp);
+        let req = RpcRequest {
+            method: "heartbeat".to_string(),
+            params: serde_json::to_value(&peer).unwrap(),
+            id: 2,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.error.is_some(), "public address must be refused");
+        assert_eq!(state.peers.lock().await.peer_count(), 0);
+    }
+
+    /// Bind a peer identity directly in the registry (in-process shortcut
+    /// for tests that then exercise signed RPCs from that identity).
+    async fn bind_peer(
+        state: &SanghaState,
+        peer_id: &str,
+        addr: &str,
+        kp: &crate::crypto::MeshKeyPair,
+    ) {
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new(peer_id, addr).signed(kp))
+            .expect("bind must succeed");
+    }
+
+    /// Build the sender side of a signed RPC envelope (mirror of
+    /// `SanghaTransport::signed_rpc_params` for direct-handler tests).
+    fn signed_envelope(
+        kp: &crate::crypto::MeshKeyPair,
+        sender: &str,
+        payload: serde_json::Value,
+    ) -> serde_json::Value {
+        let mut params = serde_json::json!({"sender": sender, "payload": payload});
+        let signature = kp.sign_hex(&envelope_payload(&params));
+        params["signature"] = serde_json::Value::String(signature);
+        params["public_key"] = serde_json::Value::String(kp.public_key_hex());
+        params
     }
 
     #[tokio::test]
@@ -1124,7 +1557,35 @@ mod tests {
     #[tokio::test]
     async fn handle_rpc_acquire_lock() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
+        bind_peer(&state, "remote-1", "127.0.0.1:7370", &kp).await;
 
+        let req = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: signed_envelope(
+                &kp,
+                "remote-1",
+                serde_json::json!({
+                    "resource": "memory:galaxy:codex",
+                    "holder": "remote-1",
+                    "ttl_sec": 30,
+                }),
+            ),
+            id: 4,
+        };
+
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.result.is_some(), "signed lock must acquire: {resp:?}");
+        let result = resp.result.unwrap();
+        assert_eq!(
+            result.get("acquired").and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
+    }
+
+    #[tokio::test]
+    async fn handle_rpc_acquire_lock_unsigned_refused() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
         let req = RpcRequest {
             method: "acquire_lock".to_string(),
             params: serde_json::json!({
@@ -1134,28 +1595,51 @@ mod tests {
             }),
             id: 4,
         };
-
         let resp = handle_rpc_request(&req, &state).await;
-        assert!(resp.result.is_some());
-        let result = resp.result.unwrap();
-        assert_eq!(
-            result.get("acquired").and_then(serde_json::Value::as_bool),
-            Some(true)
-        );
+        assert!(resp.error.is_some(), "unsigned lock must be refused");
+    }
+
+    #[tokio::test]
+    async fn handle_rpc_acquire_lock_holder_mismatch_refused() {
+        // A bound peer cannot lock under someone else's name.
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
+        bind_peer(&state, "remote-1", "127.0.0.1:7370", &kp).await;
+        let req = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: signed_envelope(
+                &kp,
+                "remote-1",
+                serde_json::json!({
+                    "resource": "memory:galaxy:codex",
+                    "holder": "someone-else",
+                    "ttl_sec": 30,
+                }),
+            ),
+            id: 4,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.error.is_some(), "holder mismatch must be refused");
     }
 
     #[tokio::test]
     async fn handle_rpc_release_lock() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
+        bind_peer(&state, "remote-1", "127.0.0.1:7370", &kp).await;
 
         // Acquire first
         let acquire_req = RpcRequest {
             method: "acquire_lock".to_string(),
-            params: serde_json::json!({
-                "resource": "memory:galaxy:codex",
-                "holder": "remote-1",
-                "ttl_sec": 30,
-            }),
+            params: signed_envelope(
+                &kp,
+                "remote-1",
+                serde_json::json!({
+                    "resource": "memory:galaxy:codex",
+                    "holder": "remote-1",
+                    "ttl_sec": 30,
+                }),
+            ),
             id: 5,
         };
         let _ = handle_rpc_request(&acquire_req, &state).await;
@@ -1163,15 +1647,22 @@ mod tests {
         // Release
         let release_req = RpcRequest {
             method: "release_lock".to_string(),
-            params: serde_json::json!({
-                "resource": "memory:galaxy:codex",
-                "holder": "remote-1",
-            }),
+            params: signed_envelope(
+                &kp,
+                "remote-1",
+                serde_json::json!({
+                    "resource": "memory:galaxy:codex",
+                    "holder": "remote-1",
+                }),
+            ),
             id: 6,
         };
 
         let resp = handle_rpc_request(&release_req, &state).await;
-        assert!(resp.result.is_some());
+        assert!(
+            resp.result.is_some(),
+            "signed release must succeed: {resp:?}"
+        );
         let result = resp.result.unwrap();
         assert_eq!(
             result.get("released").and_then(serde_json::Value::as_bool),
@@ -1182,6 +1673,8 @@ mod tests {
     #[tokio::test]
     async fn handle_rpc_broadcast_signal() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
+        bind_peer(&state, "remote-1", "127.0.0.1:7370", &kp).await;
 
         let signal = crate::signal::Signal::new(
             crate::signal::SignalType::MemoryCreated,
@@ -1191,18 +1684,72 @@ mod tests {
 
         let req = RpcRequest {
             method: "broadcast_signal".to_string(),
-            params: serde_json::to_value(&signal).unwrap(),
+            params: signed_envelope(&kp, "remote-1", serde_json::to_value(&signal).unwrap()),
             id: 7,
         };
 
         let resp = handle_rpc_request(&req, &state).await;
-        assert!(resp.result.is_some());
+        assert!(resp.result.is_some(), "signed signal must land: {resp:?}");
+    }
+
+    #[tokio::test]
+    async fn handle_rpc_broadcast_signal_unsigned_refused() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let signal = crate::signal::Signal::new(
+            crate::signal::SignalType::MemoryCreated,
+            "remote-1",
+            serde_json::json!({"galaxy": "codex"}),
+        );
+        let req = RpcRequest {
+            method: "broadcast_signal".to_string(),
+            params: serde_json::to_value(&signal).unwrap(),
+            id: 7,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.error.is_some(), "unsigned signal must be refused");
     }
 
     #[tokio::test]
     async fn handle_rpc_send_chat() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
 
+        let signed = crate::chat::ChatMessage {
+            id: 0,
+            channel: "general".to_string(),
+            sender: "remote-1".to_string(),
+            content: "hello mesh".to_string(),
+            timestamp: chrono::Utc::now().timestamp_millis(),
+            signature: String::new(),
+            public_key: String::new(),
+        }
+        .signed(&kp);
+
+        let req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: serde_json::json!({
+                "channel": signed.channel,
+                "sender": signed.sender,
+                "content": signed.content,
+                "timestamp": signed.timestamp,
+                "signature": signed.signature,
+                "public_key": signed.public_key,
+            }),
+            id: 8,
+        };
+
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.result.is_some(), "signed chat must land: {resp:?}");
+        let result = resp.result.unwrap();
+        assert_eq!(
+            result.get("channel").and_then(|v| v.as_str()),
+            Some("general")
+        );
+    }
+
+    #[tokio::test]
+    async fn handle_rpc_send_chat_unsigned_refused() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
         let req = RpcRequest {
             method: "send_chat".to_string(),
             params: serde_json::json!({
@@ -1212,14 +1759,10 @@ mod tests {
             }),
             id: 8,
         };
-
         let resp = handle_rpc_request(&req, &state).await;
-        assert!(resp.result.is_some());
-        let result = resp.result.unwrap();
-        assert_eq!(
-            result.get("channel").and_then(|v| v.as_str()),
-            Some("general")
-        );
+        assert!(resp.error.is_some(), "unsigned chat must be refused");
+        let chat_count = { state.chat.lock().await.read("general", None).len() };
+        assert_eq!(chat_count, 0, "refused chat must not be stored");
     }
 
     #[test]
@@ -1255,6 +1798,8 @@ mod tests {
     #[tokio::test]
     async fn handle_rpc_sync_hologram() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"remote-1");
+        bind_peer(&state, "remote-1", "127.0.0.1:7370", &kp).await;
 
         // Add a local entry first
         let entry =
@@ -1274,12 +1819,19 @@ mod tests {
 
         let req = RpcRequest {
             method: "sync_hologram".to_string(),
-            params: serde_json::to_value(&remote_entries).unwrap(),
+            params: signed_envelope(
+                &kp,
+                "remote-1",
+                serde_json::json!({ "entries": remote_entries }),
+            ),
             id: 9,
         };
 
         let resp = handle_rpc_request(&req, &state).await;
-        assert!(resp.result.is_some());
+        assert!(
+            resp.result.is_some(),
+            "signed hologram sync must merge: {resp:?}"
+        );
         let result = resp.result.unwrap();
         assert_eq!(
             result
@@ -1386,10 +1938,11 @@ mod tests {
             let _ = handle_connection(stream, server_state).await;
         });
 
-        // Connect as client and send a heartbeat RPC
+        // Connect as client and send a signed heartbeat RPC
         let mut client = TcpStream::connect(bound_addr).await.unwrap();
 
-        let peer = PeerInfo::new("client-1", "127.0.0.1:9999");
+        let client_kp = crate::crypto::MeshKeyPair::from_seed(b"client-1");
+        let peer = PeerInfo::new("client-1", "127.0.0.1:9999").signed(&client_kp);
         let req = RpcRequest {
             method: "heartbeat".to_string(),
             params: serde_json::to_value(&peer).unwrap(),
@@ -1440,13 +1993,29 @@ mod tests {
 
         let mut client = TcpStream::connect(bound_addr).await.unwrap();
 
-        // Send chat message
+        // Send a signed chat message (self-consistent signature; the
+        // sender is not bound on the server — chat accepts that, forged
+        // claims of a BOUND sender would not pass).
+        let client_kp = crate::crypto::MeshKeyPair::from_seed(b"client-1");
+        let signed = crate::chat::ChatMessage {
+            id: 0,
+            channel: "mesh".to_string(),
+            sender: "client-1".to_string(),
+            content: "hello from the mesh".to_string(),
+            timestamp: chrono::Utc::now().timestamp_millis(),
+            signature: String::new(),
+            public_key: String::new(),
+        }
+        .signed(&client_kp);
         let chat_req = RpcRequest {
             method: "send_chat".to_string(),
             params: serde_json::json!({
-                "channel": "mesh",
-                "sender": "client-1",
-                "content": "hello from the mesh",
+                "channel": signed.channel,
+                "sender": signed.sender,
+                "content": signed.content,
+                "timestamp": signed.timestamp,
+                "signature": signed.signature,
+                "public_key": signed.public_key,
             }),
             id: 200,
         };
@@ -1474,7 +2043,20 @@ mod tests {
         assert_eq!(msg_count, 1);
         assert_eq!(msg_content, "hello from the mesh");
 
-        // Send a signal broadcast
+        // Send a signal broadcast — signals require a BOUND identity, so
+        // the client registers itself with a signed heartbeat first.
+        let identity = PeerInfo::new("client-1", "127.0.0.1:9999").signed(&client_kp);
+        let hb_req = RpcRequest {
+            method: "heartbeat".to_string(),
+            params: serde_json::to_value(&identity).unwrap(),
+            id: 205,
+        };
+        let hb_bytes = serde_json::to_vec(&hb_req).unwrap();
+        write_frame(&mut client, &hb_bytes).await.unwrap();
+        let hb_resp_bytes = read_frame(&mut client).await.unwrap();
+        let hb_resp: RpcResponse = serde_json::from_slice(&hb_resp_bytes).unwrap();
+        assert!(hb_resp.result.is_some(), "bind must succeed: {hb_resp:?}");
+
         let signal = crate::signal::Signal::new(
             crate::signal::SignalType::PeerStatus,
             "client-1",
@@ -1482,7 +2064,11 @@ mod tests {
         );
         let sig_req = RpcRequest {
             method: "broadcast_signal".to_string(),
-            params: serde_json::to_value(&signal).unwrap(),
+            params: signed_envelope(
+                &client_kp,
+                "client-1",
+                serde_json::to_value(&signal).unwrap(),
+            ),
             id: 201,
         };
         let sig_bytes = serde_json::to_vec(&sig_req).unwrap();
@@ -1530,9 +2116,28 @@ mod tests {
             ),
         ];
 
+        // Bind the client identity (hologram sync requires a signed
+        // envelope from a bound sender), then send signed remote entries.
+        let client_kp = crate::crypto::MeshKeyPair::from_seed(b"client-1");
+        let identity = PeerInfo::new("client-1", "127.0.0.1:9999").signed(&client_kp);
+        let hb_req = RpcRequest {
+            method: "heartbeat".to_string(),
+            params: serde_json::to_value(&identity).unwrap(),
+            id: 299,
+        };
+        let hb_bytes = serde_json::to_vec(&hb_req).unwrap();
+        write_frame(&mut client, &hb_bytes).await.unwrap();
+        let hb_resp_bytes = read_frame(&mut client).await.unwrap();
+        let hb_resp: RpcResponse = serde_json::from_slice(&hb_resp_bytes).unwrap();
+        assert!(hb_resp.result.is_some(), "bind must succeed: {hb_resp:?}");
+
         let sync_req = RpcRequest {
             method: "sync_hologram".to_string(),
-            params: serde_json::to_value(&remote_entries).unwrap(),
+            params: signed_envelope(
+                &client_kp,
+                "client-1",
+                serde_json::json!({ "entries": remote_entries }),
+            ),
             id: 300,
         };
         let sync_bytes = serde_json::to_vec(&sync_req).unwrap();

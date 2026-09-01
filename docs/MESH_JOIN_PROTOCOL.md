@@ -48,7 +48,9 @@ Quarantined peers are never auto-dialed.
 ## 4. Join — the signed heartbeat binds identity
 
 1. **Dial.** The joiner opens TCP to the announced address
-   (`connect_to_peer`; connections are keyed `remote:<addr>`).
+   (`connect_to_peer`; connections are keyed `remote:<addr>`). Dial
+   targets are **address-policy-checked** (§5b): the mesh dials
+   local-scope addresses only.
 2. **Announce.** The joiner sends `heartbeat` with its `PeerInfo` signed
    by its Ed25519 key (`PeerInfo::signed`): the payload is the canonical
    JSON of the record minus signature and public key; the public key
@@ -57,9 +59,14 @@ Quarantined peers are never auto-dialed.
    to the peer ID **on first sight** (`discover_signed`). From then on:
    - a later announcement claiming the same ID with a **different key is
      refused as identity theft**;
-   - unsigned or wrongly-signed announcements are refused (the legacy
-     unsigned path exists only for in-process, non-mesh use);
-   - a **quarantined** peer's re-registration is refused until released.
+   - **unsigned announcements are refused over the wire** (alpha.8
+     security hardening — the in-process unsigned path never traverses
+     TCP). Wire-heartbeat is signed-only, no exceptions;
+   - an announcement pointing at a **non-local address is refused**
+     (§5b) even when well-signed;
+   - a **quarantined** peer's re-registration is refused until released;
+   - repeated verification failures **auto-quarantine** the offender
+     (3 strikes, `AutoQuarantineConfig`).
 4. **Read back.** The joiner's `sangha.mesh.join` response carries the
    remote's registry summary after the bind — the proof the other side
    now knows who you are.
@@ -67,13 +74,40 @@ Quarantined peers are never auto-dialed.
 Mesh-wide identity is symmetric: both sides join both ways (organically,
 via the auto-join loop on each node's beacons).
 
+### 4b. Address policy — the mesh never leaves the LAN
+
+Every address the mesh ingests (beacon `tcp_addr`, heartbeat `address`)
+or dials (`connect_to_peer`, auto-join) must resolve **only** to
+local-scope IPs: loopback, RFC1918 private, IPv4 link-local, IPv6
+unique-local, IPv6 link-local. Refusals happen at **ingest** (beacons
+never enter the registry) and at **dial** (belt to the suspenders).
+`WM_MESH_ALLOW_PUBLIC_ADDRS=1` lifts the policy explicitly for a future
+relay/WAN phase — off by default, loud in logs.
+
+This closes the dial-out injection channel: a spoofed beacon with a
+public IP used to make the node open TCP to an arbitrary internet host.
+
 ## 5. Keys
 
-- `WM_MESH_KEY` (any non-empty string) seeds the node's Ed25519 keypair;
-  set it for a **stable identity across restarts**. Unset → a random
-  per-process key + a loud warning (a hardcoded default would be shared
-  by every WhiteMagic node — an impersonation primitive, not a
-  convenience).
+- `WM_MESH_KEY` seeds the node's Ed25519 keypair in one of **two modes**
+  (`MeshKeyPair::from_secret_material`):
+  - **Keyfile mode** (preferred): the value is 64 hex chars — decoded
+    directly into the 32-byte seed. Generate with `openssl rand -hex 32`,
+    store 0600, never put it on the board.
+  - **Passphrase mode** (compatibility): anything else is stretched
+    through a domain-separated iterated SHA-256 (100k rounds). v0 used
+    the raw bytes as the seed — with a plaintext wire handing every
+    passive observer the signature + public key needed to brute-force a
+    low-entropy passphrase offline. Passphrase mode is a hardening, not
+    an endorsement; keyfile mode is the destination.
+  Unset → a random per-process key + a loud warning (a hardcoded default
+  would be shared by every WhiteMagic node — an impersonation primitive,
+  not a convenience).
+- **Identity rotation:** changing modes or values changes the public key.
+  A peer's registry binding decays after `heartbeat_timeout_sec` (30s) of
+  silence; the next join re-binds the new key fresh. Planned rotations
+  need only a ≥30s quiet gap — no release tooling required (quarantined
+  entries never decay, but rotation does not involve quarantine).
 - Peer ID default: `wm-` + first 12 hex chars of the public key.
   `WM_MESH_PEER_ID` overrides with a readable name; identity binding
   still keys on the public key, so names are labels, not credentials.
@@ -88,11 +122,23 @@ via the auto-join loop on each node's beacons).
 
 Signed chat flows over the bound connection: the receiver verifies the
 message signature, checks the sender binding, and refuses quarantined
-senders at ingest (§7). Unsigned relay over mesh TCP is refused in the
-same handler. Locks (`acquire_lock`/`release_lock`) are TTL-bounded and
-per-peer; a quarantine revokes the bad apple's locks so the community is
-never held hostage by its resources. Hologram sync merges coordinate
-entries with importance-wins conflict resolution.
+senders at ingest (§7). **Unsigned chat is refused over mesh TCP**
+(alpha.8 hardening — the legacy in-process relay path never traverses
+the wire).
+
+Locks, signals, and hologram sync carry a **signed RPC envelope**
+(alpha.8 hardening): params are
+`{"sender", "payload", "public_key", "signature"}`, the signature covers
+the params minus the envelope fields, and the signer key must be the one
+bound to `sender` on the receiving node. Lock acquire/release further
+require the holder to be the envelope sender (no lock-squatting under
+someone else's name), and signal `source` must match the sender (no
+laundering a signal through another peer's identity). Locks
+(`acquire_lock`/`release_lock`) are TTL-bounded and per-peer; a
+quarantine revokes the bad apple's locks so the community is never held
+hostage by its resources. Hologram sync merges coordinate entries with
+importance-wins conflict resolution — signed, because an unauthenticated
+host could otherwise drown real coordinates with high-importance junk.
 
 ## 7. Quarantine — the bad-apple rule
 
@@ -119,6 +165,7 @@ re-binds (same key required — the binding survives the quarantine).
 | `WM_MESH_KEY` | Identity seed (stable across restarts) |
 | `WM_MESH_PEER_ID` | Readable node name |
 | `WM_MESH_INTERVAL` | Beacon + auto-join cadence (seconds) |
+| `WM_MESH_ALLOW_PUBLIC_ADDRS` | Set to `1` to allow non-local dial/announce targets (relay/WAN phase; default off) |
 | `sangha.mesh.status` | Node identity, connections, registry, chat/lock summaries |
 | `sangha.mesh.join` | Dial + bind (§4) |
 | `sangha.mesh.chat` / `.read` | Signed chat send / receive |
@@ -234,9 +281,42 @@ implementation surface for the CSA MAESTRO agentic layers:
 ## 11. What v0 does not do
 
 Honest list, so nobody assumes otherwise: no encryption in transit (TLS
-is a V8+ item; the wire is readable by a local passive observer), no
-relay/multi-hop or NAT traversal, no peer discovery across subnets
-(multicast is link-local), no revocation lists (quarantine is per-node,
-by design), and key management is a shared-secret-free but unmanaged
-file/env surface pending B7. Each of these is a gate on Gate 2 cohort
-use, not a silent gap.
+is a V8+ item; the wire is readable by a local passive observer — see
+§5b for why dialing is still LAN-scoped), no relay/multi-hop or NAT
+traversal (and no dial-out: addresses outside the local network are
+refused), no peer discovery across subnets (multicast is link-local), no
+revocation lists (quarantine is per-node, by design), and key management
+is a shared-secret-free but unmanaged file/env surface pending B7. Each
+of these is a gate on Gate 2 cohort use, not a silent gap.
+
+## 12. Alpha.8 security hardening (2026-09-01)
+
+The September 1 security review (fresh-eyes audit of the transport)
+found the implementation trusting the LAN more than this document
+claimed. All findings are now fixed in code, with tests pinning each:
+
+1. **Raw-seed key derivation → dual-mode `from_secret_material`** (§5).
+   Pinned by `secret_material_*` tests in `crypto.rs`.
+2. **Unsigned heartbeat accepted over TCP** → refused; signed-only wire
+   heartbeats, with auto-quarantine fed on failures. Pinned by
+   `handle_rpc_heartbeat_unsigned_refused` and friends.
+3. **Bound-peer address redirect via unsigned announcement** → blocked;
+   only signed re-announcements from the bound key move an address.
+   Pinned by `beacon_cannot_redirect_bound_peer`.
+4. **Dial-out injection via spoofed beacons** → local-scope address
+   policy at ingest and dial (§4b). Pinned by
+   `beacon_with_public_address_refused`, `validate_mesh_addr_scopes`,
+   `handle_rpc_heartbeat_public_address_refused`.
+5. **Unsigned chat relay accepted over TCP** → refused. Pinned by
+   `handle_rpc_send_chat_unsigned_refused`.
+6. **Unauthenticated locks/signals/hologram** → signed RPC envelopes
+   (§6). Pinned by the `*_unsigned_refused` and holder-mismatch tests.
+7. **Unbounded inbound connections and idle sockets** → enforced
+   `max_connections` in the accept loop, 120s idle timeout, and a
+   10k-request per-connection budget.
+8. **`is_refusal` false positives** — OS "Connection refused" must stay
+   availability (queue-able); wire refusals use distinct phrases.
+
+**Fleet rollout note:** envelope shapes and refusal semantics changed —
+meshing requires all nodes on this build or newer (the existing lockstep
+deployment discipline). `WM_MESH_KEY` mode changes rotate identity (§5).
