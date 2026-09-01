@@ -1,0 +1,61 @@
+{
+  "system": "whitemagic-v5-compat",
+  "benchmark": "longmemeval_s",
+  "version": "v5.8.0-compat-on-v6",
+  "dataset": "LongMemEval-S (ICLR 2025)",
+  "protocol": "turn-level retrieval R@k, substring-or-id. Not official LongMemEval QA.",
+  "search_route": "memory.search",
+  "rerank": false,
+  "rerank_alpha": 0.7,
+  "keyword_extraction": false,
+  "composite_windows": false,
+  "contextual_indexing": false,
+  "candidate_limit": 100,
+  "timing": "fresh-process path: split windows \u2014 spawn_ms = start->initialize response, ingest_ms = batch_create round-trips, search_ms = search request round-trip (p50/p95 below are SEARCH-ONLY on that path). persistent path: whole-batch timing (no spawn per question).",
+  "split_windows": {
+    "spawn": {
+      "count": 50,
+      "p50_ms": 46.52435200114269
+    },
+    "ingest": {
+      "count": 50,
+      "p50_ms": 1156.717382997158
+    },
+    "search_p50_source": "search window only (split)"
+  },
+  "total_questions": 50,
+  "timestamp": "2026-09-01T02:42:44Z",
+  "total_elapsed_s": 78.2,
+  "search": {
+    "count": 50,
+    "p50_ms": 10.643044995958917,
+    "p95_ms": 24.38630700635258,
+    "p99_ms": 32.39454800495878
+  },
+  "ingest": {
+    "avg_time_s": 1.5620231034999597,
+    "total_time_s": 78.10115517499798
+  },
+  "recall": {
+    "total_queries": 50,
+    "recall_at_1": 0.68,
+    "recall_at_5": 0.82,
+    "recall_at_10": 0.82,
+    "mrr": 0.7416666666666666,
+    "candidate_presence": 0.78,
+    "expected_session_presence": 0.84
+  },
+  "category_results": {
+    "single-session-user": {
+      "total": 50,
+      "recall_at_1": 0.68,
+      "recall_at_5": 0.82,
+      "recall_at_10": 0.82
+    }
+  },
+  "errors": [],
+  "trust_labels": {
+    "enabled": true,
+    "scheme": "needle-session turns source=user (1.0); others heritage-distractor (0.7)"
+  }
+}
