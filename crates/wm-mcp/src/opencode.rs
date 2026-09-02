@@ -94,24 +94,40 @@ fn resolve_db(path: &Path) -> Result<PathBuf> {
         || "snapshot".to_string(),
         |s| s.to_string_lossy().into_owned(),
     );
-    let key: String = format!("{stem}-{size}")
-        .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect();
+    let key: String = {
+        // size + mtime: a re-snapshot of identical size must not serve stale
+        let mtime = path
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map_or(0, |d| d.as_secs());
+        format!("{stem}-{size}-{mtime}")
+    }
+    .chars()
+    .map(|c| {
+        if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') {
+            c
+        } else {
+            '_'
+        }
+    })
+    .collect();
     let cached = cache.join(format!("{}.db", key.trim_end_matches(".tar")));
     if cached.exists() && cached.metadata().is_ok_and(|m| m.len() > 0) {
         return Ok(cached);
     }
     // The snapshot pipeline writes the .db member first; --occurrence=1
     // lets tar stop right after it instead of streaming the whole archive.
-    let out = std::fs::File::create(&cached)
-        .with_context(|| format!("creating cache file {}", cached.display()))?;
+    // create_new (O_EXCL) + rename: refuse to follow a pre-planted symlink
+    // at the predictable cache path, then move atomically into place.
+    let staging = cached.with_extension("db.part");
+    let _ = std::fs::remove_file(&staging);
+    let out = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&staging)
+        .with_context(|| format!("creating cache file {}", staging.display()))?;
     let status = Command::new("tar")
         .args([
             "-xzf",
@@ -125,10 +141,12 @@ fn resolve_db(path: &Path) -> Result<PathBuf> {
         .stderr(std::process::Stdio::null())
         .status()
         .context("spawning system tar (is it installed?)")?;
-    if !status.success() || !cached.exists() || !cached.metadata().is_ok_and(|m| m.len() > 0) {
-        let _ = std::fs::remove_file(&cached);
+    if !status.success() || !staging.exists() || !staging.metadata().is_ok_and(|m| m.len() > 0) {
+        let _ = std::fs::remove_file(&staging);
         bail!("failed to extract .db from snapshot {}", path.display());
     }
+    std::fs::rename(&staging, &cached)
+        .with_context(|| format!("finalizing cache file {}", cached.display()))?;
     Ok(cached)
 }
 
@@ -173,9 +191,11 @@ struct SessionStat {
 
 /// Two-pass aggregation (messages, then text/tool parts). Per-session
 /// rescans would be quadratic on multi-GB snapshot DBs; this is linear.
-/// Returns per-session stats keyed by opencode session id.
-fn bulk_stats(conn: &Connection) -> Result<HashMap<String, SessionStat>> {
+/// Returns per-session stats keyed by opencode session id plus the number
+/// of malformed rows skipped (surfaced, never silent).
+fn bulk_stats(conn: &Connection) -> Result<(HashMap<String, SessionStat>, u64)> {
     let mut by_session: HashMap<String, SessionStat> = HashMap::new();
+    let mut skipped_malformed: u64 = 0;
     let mut role_of: HashMap<String, (String, String)> = HashMap::new();
     let mut stmt = conn.prepare("SELECT id, session_id, data FROM message")?;
     let mut rows = stmt.query([])?;
@@ -184,6 +204,7 @@ fn bulk_stats(conn: &Connection) -> Result<HashMap<String, SessionStat>> {
         let sid: String = row.get(1)?;
         let data: String = row.get(2)?;
         let Ok(v) = serde_json::from_str::<serde_json::Value>(&data) else {
+            skipped_malformed += 1;
             continue;
         };
         let s = by_session.entry(sid.clone()).or_default();
@@ -242,6 +263,7 @@ fn bulk_stats(conn: &Connection) -> Result<HashMap<String, SessionStat>> {
             continue;
         };
         let Ok(v) = serde_json::from_str::<serde_json::Value>(&data) else {
+            skipped_malformed += 1;
             continue;
         };
         match v.get("type").and_then(serde_json::Value::as_str) {
@@ -274,7 +296,7 @@ fn bulk_stats(conn: &Connection) -> Result<HashMap<String, SessionStat>> {
             s.model = m.clone();
         }
     }
-    Ok(by_session)
+    Ok((by_session, skipped_malformed))
 }
 
 impl SessionStat {
@@ -410,7 +432,7 @@ pub fn run_digest(db: &Path, since: Option<&str>, as_json: bool) -> Result<()> {
     // read transaction never blocks a live opencode's writers.
     conn.execute_batch("BEGIN")?;
     let sessions = load_sessions(&conn, since)?;
-    let stats = bulk_stats(&conn)?;
+    let (stats, skipped_malformed) = bulk_stats(&conn)?;
     conn.execute_batch("COMMIT")?;
 
     if as_json {
@@ -445,6 +467,7 @@ pub fn run_digest(db: &Path, since: Option<&str>, as_json: bool) -> Result<()> {
             serde_json::to_string_pretty(&json!({
                 "generated": utc(Utc::now().timestamp_millis()),
                 "device_sessions": arr.len(),
+                "skipped_malformed_rows": skipped_malformed,
                 "sessions": arr,
             }))?
         );
@@ -483,6 +506,9 @@ pub fn run_digest(db: &Path, since: Option<&str>, as_json: bool) -> Result<()> {
             topics
         );
     }
+    if skipped_malformed > 0 {
+        println!("\n_{skipped_malformed} malformed row(s) skipped (counted, not silent)_");
+    }
     Ok(())
 }
 
@@ -501,6 +527,10 @@ fn clip_turn(text: &str) -> String {
 fn namespace_uuid(session_id: &str) -> Uuid {
     Uuid::new_v5(&namespace(), format!("opencode:{session_id}").as_bytes())
 }
+
+/// Holographic-coords galaxy ordinal for the Sessions galaxy — derived
+/// from the enum, never hand-maintained.
+const SESSIONS_COORD_GALAXY: u8 = Galaxy::Sessions as i32 as u8;
 
 // ── Export ───────────────────────────────────────────────────────────
 
@@ -522,7 +552,7 @@ fn memory_envelope(
     mem.metadata.source = "tool".into();
     mem.metadata.source_trust = 0.7;
     mem.metadata.coords = HolographicCoords {
-        galaxy: u8::try_from(Galaxy::Sessions as i32).unwrap_or(6),
+        galaxy: SESSIONS_COORD_GALAXY,
         sector: 0,
         radial: 0.5,
         angular: 0.0,
@@ -555,7 +585,7 @@ pub fn run_export(
                 .any(|f| r.id.starts_with(f.as_str()) || r.slug.starts_with(f.as_str()))
         });
     }
-    let stats = bulk_stats(&conn)?;
+    let (stats, skipped_malformed) = bulk_stats(&conn)?;
     conn.execute_batch("COMMIT")?;
 
     let stdout = std::io::stdout();
@@ -630,7 +660,7 @@ pub fn run_export(
     }
     if let Some(p) = out {
         println!(
-            "exported {} sessions / {n_turns} turns -> {}",
+            "exported {} sessions / {n_turns} turns -> {} (skipped_malformed: {skipped_malformed})",
             rows.len(),
             p.display()
         );
@@ -672,6 +702,8 @@ mod tests {
                 r#"{"role":"assistant","tokens":{"input":100,"output":50},"cost":0.0125,"modelID":"test-model"}"#,
             ),
             ("m3", "ses_other", r#"{"role":"user"}"#),
+            // malformed row: counted as skipped, never silently dropped
+            ("m4", "ses_test1234", "not-json{{"),
         ];
         for (id, sid, data) in msgs {
             conn.execute("INSERT INTO message VALUES (?1, ?2, ?3)", [id, sid, data])
@@ -741,7 +773,8 @@ mod tests {
         let conn = open_ro(&db).unwrap();
         let sessions = load_sessions(&conn, None).unwrap();
         assert_eq!(sessions.len(), 1, "child session must be excluded");
-        let stats = bulk_stats(&conn).unwrap();
+        let (stats, skipped) = bulk_stats(&conn).unwrap();
+        assert_eq!(skipped, 1, "malformed rows must be counted, not silent");
         let s = stats.get("ses_test1234").unwrap();
         assert_eq!(s.n_user, 1);
         assert_eq!(s.n_ai, 1);
