@@ -593,6 +593,260 @@ fn collect_files(
     }
 }
 
+// ── v26 heritage export files ────────────────────────────────────────
+
+/// Parsed `<!-- wm-key: value -->` provenance block from a v26 heritage
+/// export file (written by `scripts/export_v26_heritage.py`). Field
+/// values had `--` escaped to `__` by the exporter; parsing unescapes.
+#[derive(Debug, Default)]
+struct HeritageHeader {
+    fields: BTreeMap<String, String>,
+    tags: Vec<String>,
+}
+
+/// Recognize a v26 heritage export file and split it into its header
+/// block and body. Returns `None` for any file that does not start with
+/// the heritage marker — the caller falls back to normal chunking.
+fn parse_heritage(text: &str) -> Option<(HeritageHeader, String)> {
+    const MARKER: &str = "<!-- WhiteMagic v26 heritage export -->";
+    let mut lines = text.lines();
+    let first = lines.next()?;
+    if first.trim() != MARKER {
+        return None;
+    }
+    let mut hdr = HeritageHeader::default();
+    let mut body_line: Option<usize> = None;
+    for (i, line) in lines.enumerate() {
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        let Some(inner) = t
+            .strip_prefix("<!-- wm-")
+            .and_then(|s| s.strip_suffix("-->"))
+        else {
+            body_line = Some(i); // first non-header, non-blank line: the body
+            break;
+        };
+        let Some((k, v)) = inner.split_once(':') else {
+            body_line = Some(i);
+            break;
+        };
+        let val = v.trim().replace("__", "--");
+        if k.trim() == "tags" {
+            hdr.tags = val
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .collect();
+        } else {
+            hdr.fields.insert(k.trim().to_string(), val);
+        }
+    }
+    // Marker line + 0-based body index → lines to skip in the full text.
+    let body = match body_line {
+        Some(i) => text.lines().skip(i + 1).collect::<Vec<_>>().join("\n"),
+        None => String::new(),
+    };
+    Some((hdr, body))
+}
+
+/// Map a v26 heritage export directory name onto a v5 galaxy. Categories
+/// that are not native v5 galaxies land in Codex (the knowledge/documents
+/// galaxy) with a `heritage-category:<dir>` tag preserving the origin.
+#[must_use]
+fn heritage_galaxy(dir: &str) -> (Galaxy, Option<String>) {
+    match dir {
+        "aria" => (Galaxy::Aria, None),
+        "citta" => (Galaxy::Citta, None),
+        "codex" => (Galaxy::Codex, None),
+        "journals" => (Galaxy::Journals, None),
+        "dreams" => (Galaxy::Dreams, None),
+        "research" => (Galaxy::Research, None),
+        "sessions" => (Galaxy::Sessions, None),
+        "substrate" => (Galaxy::Substrate, None),
+        "universal" => (Galaxy::Universal, None),
+        other => (Galaxy::Codex, Some(other.to_string())),
+    }
+}
+
+/// Recover the v26 memory-id reference from the export filename's
+/// trailing 12-hex suffix (`<date>_i<imp>_<title>_<sha12>.md`).
+#[must_use]
+fn heritage_ref_from_path(path: &Path) -> Option<String> {
+    let stem = path.file_stem()?.to_string_lossy();
+    let seg = stem.rsplit('_').next()?;
+    if seg.len() == 12 && seg.bytes().all(|b| b.is_ascii_hexdigit()) {
+        Some(seg.to_ascii_lowercase())
+    } else {
+        None
+    }
+}
+
+/// v26 `memory_type` label → v5 [`wm_memory::memory::MemoryType`].
+/// Unknown labels fall back to the v5 default (LongTerm) — heritage
+/// rows are classified honestly by the tag family instead.
+#[must_use]
+fn heritage_memory_type(s: &str) -> wm_memory::memory::MemoryType {
+    match s.to_ascii_lowercase().as_str() {
+        "short_term" | "shortterm" => wm_memory::memory::MemoryType::ShortTerm,
+        "emotional" => wm_memory::memory::MemoryType::Emotional,
+        "narrative" => wm_memory::memory::MemoryType::Narrative,
+        "symbolic" => wm_memory::memory::MemoryType::Symbolic,
+        "pattern" => wm_memory::memory::MemoryType::Pattern,
+        "procedural" => wm_memory::memory::MemoryType::Procedural,
+        "citta" => wm_memory::memory::MemoryType::Citta,
+        "hypothesis" => wm_memory::memory::MemoryType::Hypothesis,
+        _ => wm_memory::memory::MemoryType::LongTerm,
+    }
+}
+
+/// Parse a v26 heritage timestamp ("2026-07-28T22:46:35.205434", naive
+/// UTC, or RFC 3339). Returns None when absent/unparseable — callers
+/// fall back to file mtime and the miss is visible in the record's tags.
+#[must_use]
+fn heritage_date(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(s) {
+        return Some(dt.with_timezone(&chrono::Utc));
+    }
+    for fmt in [
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S%.f",
+    ] {
+        if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(s, fmt) {
+            return Some(dt.and_utc());
+        }
+    }
+    None
+}
+
+/// v26 `source_trust` ("user"/"tool"/"inferred"/"web" or numeric) → v5
+/// numeric trust. Semantics per `wm-mcp/src/trust_admin.rs`: 1.0
+/// user-confirmed, 0.7 tool-neutral; unknown classes are unverified.
+#[must_use]
+fn heritage_trust(s: &str) -> f32 {
+    match s.to_ascii_lowercase().as_str() {
+        "user" => 1.0,
+        "tool" => 0.7,
+        "inferred" => 0.6,
+        "web" => 0.5,
+        other => other.parse::<f32>().unwrap_or(0.5).clamp(0.0, 1.0),
+    }
+}
+
+fn heritage_bool(s: &str) -> bool {
+    matches!(s, "1" | "true" | "TRUE" | "True")
+}
+
+/// Apply a parsed heritage header onto a freshly built memory: the 1:1
+/// metadata mapping required by the unification plan (P3). The body was
+/// already placed in `mem.content`; only metadata is overridden here.
+fn apply_heritage_header(
+    mem: &mut Memory,
+    hdr: &HeritageHeader,
+    category: Option<&str>,
+    heritage_ref: Option<&str>,
+    fallback_created: chrono::DateTime<chrono::Utc>,
+) {
+    let f = |k: &str| hdr.fields.get(k).map(String::as_str);
+
+    let mut tags = vec![
+        "source:heritage-v26".to_string(),
+        format!("ingest:{INGEST_VERSION}"),
+        "heritage:v26".to_string(),
+        "chunk:1/1".to_string(),
+    ];
+    if let Some(c) = category {
+        tags.push(format!("heritage-category:{c}"));
+    }
+    if let Some(r) = heritage_ref {
+        tags.push(format!("heritage-ref:{r}"));
+    }
+    tags.extend(hdr.tags.iter().cloned());
+    mem.metadata.tags = tags;
+
+    if let Some(v) = f("memory_type") {
+        mem.metadata.memory_type = heritage_memory_type(v);
+    }
+    if let Some(v) = f("importance") {
+        if let Ok(x) = v.parse::<f32>() {
+            mem.metadata.importance = x.clamp(0.0, 1.0);
+        }
+    }
+    if let Some(v) = f("neuro_score") {
+        if let Ok(x) = v.parse::<f32>() {
+            mem.metadata.neuro_score = x.clamp(0.0, 1.0);
+        }
+    }
+    if let Some(v) = f("novelty_score") {
+        if let Ok(x) = v.parse::<f32>() {
+            mem.metadata.novelty_score = x.clamp(0.0, 1.0);
+        }
+    }
+    if let Some(v) = f("emotional_valence") {
+        if let Ok(x) = v.parse::<f32>() {
+            mem.metadata.emotional_valence = x.clamp(-1.0, 1.0);
+        }
+    }
+    if let Some(v) = f("half_life_days") {
+        if let Ok(x) = v.parse::<f32>() {
+            mem.metadata.half_life_days = x.max(0.0);
+        }
+    }
+    if let Some(v) = f("access_count") {
+        if let Ok(x) = v.parse::<u64>() {
+            mem.metadata.access_count = x;
+        }
+    }
+    if let Some(v) = f("recall_count") {
+        if let Ok(x) = v.parse::<u64>() {
+            mem.metadata.recall_count = x;
+        }
+    }
+    if let Some(v) = f("is_protected") {
+        mem.metadata.is_protected = heritage_bool(v);
+    }
+    if let Some(v) = f("is_private") {
+        mem.metadata.is_private = heritage_bool(v);
+    }
+    if let Some(v) = f("model_exclude") {
+        mem.metadata.model_exclude = heritage_bool(v);
+    }
+    if let Some(v) = f("source_trust") {
+        mem.metadata.source = v.to_string();
+        mem.metadata.source_trust = heritage_trust(v);
+    }
+    if let Some(v) = f("agent_id") {
+        mem.metadata.agent_id = v.to_string();
+    }
+    if let Some(v) = f("title") {
+        mem.metadata.title = Some(v.to_string());
+    }
+    let created = f("created_at")
+        .and_then(heritage_date)
+        .unwrap_or(fallback_created);
+    mem.metadata.created_at = created;
+    if let Some(v) = f("accessed_at") {
+        mem.metadata.accessed_at = heritage_date(v).unwrap_or(created);
+    } else {
+        mem.metadata.accessed_at = created;
+    }
+    // Heritage is born cold (typology §6): RawArchive class + Archival
+    // tier. Header importance is preserved 1:1 (the plan's fidelity
+    // mandate) — the RawArchive importance ceiling is a dispatch-path
+    // write-gate policy, not a store invariant.
+    mem.metadata.class = Some(wm_memory::typology::MemoryClass::RawArchive);
+    mem.metadata.tier = wm_memory::typology::initial_tier(
+        wm_memory::typology::MemoryClass::RawArchive,
+    );
+    mem.metadata.coords = wm_core::HolographicCoords::new(
+        mem.metadata.galaxy,
+        mem.metadata.created_at.timestamp().max(0) as u64,
+    );
+}
+
 // ── Main entry ───────────────────────────────────────────────────────
 
 /// Parse a galaxy name for the `--galaxy` override.
@@ -760,17 +1014,64 @@ pub fn run_ingest(
             continue;
         };
 
-        let chunks: Vec<Chunk> = match kind {
-            SourceKind::Transcript => chunk_transcript(&text),
-            SourceKind::Markdown | SourceKind::PlainText => chunk_document(&text)
-                .into_iter()
-                .enumerate()
-                .map(|(seq, content)| Chunk {
-                    content,
-                    seq,
+        // v26 heritage exports carry a `<!-- wm-key: value -->` provenance
+        // block (scripts/export_v26_heritage.py). When present, one file is
+        // ONE memory and the headers map 1:1 onto memory metadata (P3).
+        let heritage = matches!(kind, SourceKind::Markdown | SourceKind::PlainText)
+            .then(|| parse_heritage(&text))
+            .flatten();
+        let heritage_meta = heritage.as_ref().map(|_| {
+            // Galaxy category: first path component relative to the source
+            // root. When the source IS the galaxy directory itself
+            // (single-category run), fall back to the source dir's name.
+            let rel_dir = path
+                .parent()
+                .and_then(|p| p.strip_prefix(source).ok())
+                .and_then(|p| p.components().next())
+                .map(|c| c.as_os_str().to_string_lossy().to_string())
+                .filter(|d| !d.is_empty());
+            let dir = rel_dir.or_else(|| {
+                source
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+            });
+            let (galaxy, category) = match dir {
+                Some(d) => {
+                    let (g, c) = heritage_galaxy(&d);
+                    (g, c)
+                }
+                None => (Galaxy::Codex, Some("root".to_string())),
+            };
+            (galaxy, category, heritage_ref_from_path(path))
+        });
+
+        let chunks: Vec<Chunk> = if heritage.is_some() {
+            match heritage.as_ref().map(|(_, b)| b.trim()) {
+                Some(b) if !b.is_empty() => vec![Chunk {
+                    content: b.to_string(),
+                    seq: 0,
                     role: None,
-                })
-                .collect(),
+                }],
+                _ => {
+                    report
+                        .skipped
+                        .push((rel.clone(), "empty heritage body".into()));
+                    continue;
+                }
+            }
+        } else {
+            match kind {
+                SourceKind::Transcript => chunk_transcript(&text),
+                SourceKind::Markdown | SourceKind::PlainText => chunk_document(&text)
+                    .into_iter()
+                    .enumerate()
+                    .map(|(seq, content)| Chunk {
+                        content,
+                        seq,
+                        role: None,
+                    })
+                    .collect(),
+            }
         };
 
         if chunks.is_empty() {
@@ -780,12 +1081,16 @@ pub fn run_ingest(
             continue;
         }
 
-        let galaxy = match galaxy_override {
-            Some(g) => parse_galaxy_override(g)?,
-            None => match kind {
-                SourceKind::Transcript => Galaxy::Sessions,
-                SourceKind::Markdown | SourceKind::PlainText => Galaxy::Research,
-            },
+        let galaxy = if let Some((g, _, _)) = &heritage_meta {
+            *g
+        } else {
+            match galaxy_override {
+                Some(g) => parse_galaxy_override(g)?,
+                None => match kind {
+                    SourceKind::Transcript => Galaxy::Sessions,
+                    SourceKind::Markdown | SourceKind::PlainText => Galaxy::Research,
+                },
+            }
         };
 
         if let Some(prev) = ledger.entries.get(&rel) {
@@ -856,6 +1161,19 @@ pub fn run_ingest(
             mem.metadata.agent_id = "ingest".to_string();
             mem.metadata.coords =
                 wm_core::HolographicCoords::new(galaxy, created_at.timestamp() as u64);
+            if chunk.seq == 0 {
+                if let (Some((hdr, _)), Some((_, category, href))) =
+                    (&heritage, &heritage_meta)
+                {
+                    apply_heritage_header(
+                        &mut mem,
+                        hdr,
+                        category.as_deref(),
+                        href.as_deref(),
+                        created_at,
+                    );
+                }
+            }
             mems.push(mem);
         }
 
@@ -955,6 +1273,103 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn heritage_header_parses_fields_tags_and_body() {
+        let text = "<!-- WhiteMagic v26 heritage export -->\n\
+                    <!-- wm-memory_type: SHORT_TERM -->\n\
+                    <!-- wm-created_at: 2026-07-28T22:46:35.205434 -->\n\
+                    <!-- wm-importance: 0.5 -->\n\
+                    <!-- wm-source_trust: user -->\n\
+                    <!-- wm-title: fact_00117 -->\n\
+                    <!-- wm-tags: alpha,beta -->\n\
+                    \n\
+                    entity_023 has project Beta.\n";
+        let (hdr, body) = parse_heritage(text).expect("heritage file must parse");
+        assert_eq!(hdr.fields.get("memory_type").map(String::as_str), Some("SHORT_TERM"));
+        assert_eq!(hdr.fields.get("title").map(String::as_str), Some("fact_00117"));
+        assert_eq!(hdr.fields.get("source_trust").map(String::as_str), Some("user"));
+        assert_eq!(hdr.tags, vec!["alpha", "beta"]);
+        assert_eq!(body, "entity_023 has project Beta.");
+    }
+
+    #[test]
+    fn heritage_parse_rejects_non_heritage_and_unescapes_values() {
+        assert!(parse_heritage("# just a doc\n").is_none());
+        let text = "<!-- WhiteMagic v26 heritage export -->\n\
+                    <!-- wm-title: has--dashes -->\n\
+                    \n\
+                    body\n";
+        let (hdr, _) = parse_heritage(text).unwrap();
+        // The exporter escaped `--` to `__`; parsing unescapes it back.
+        assert_eq!(hdr.fields.get("title").map(String::as_str), Some("has--dashes"));
+    }
+
+    #[test]
+    fn heritage_galaxy_maps_native_dirs_and_tags_the_rest() {
+        assert_eq!(heritage_galaxy("codex"), (Galaxy::Codex, None));
+        assert_eq!(heritage_galaxy("sessions"), (Galaxy::Sessions, None));
+        assert_eq!(heritage_galaxy("substrate"), (Galaxy::Substrate, None));
+        let (g, cat) = heritage_galaxy("meta");
+        assert_eq!(g, Galaxy::Codex);
+        assert_eq!(cat.as_deref(), Some("meta"));
+    }
+
+    #[test]
+    fn heritage_mapping_covers_types_trust_and_dates() {
+        assert_eq!(
+            heritage_memory_type("SHORT_TERM"),
+            wm_memory::memory::MemoryType::ShortTerm
+        );
+        assert_eq!(
+            heritage_memory_type("nonsense"),
+            wm_memory::memory::MemoryType::LongTerm
+        );
+        assert_eq!(heritage_trust("user"), 1.0);
+        assert_eq!(heritage_trust("tool"), 0.7);
+        assert_eq!(heritage_trust("0.9"), 0.9);
+        let dt = heritage_date("2026-07-28T22:46:35.205434").expect("naive parse");
+        assert_eq!(dt.timestamp(), 1_785_278_795);
+    }
+
+    #[test]
+    fn heritage_apply_maps_metadata_one_to_one() {
+        let text = "<!-- WhiteMagic v26 heritage export -->\n\
+                    <!-- wm-memory_type: SHORT_TERM -->\n\
+                    <!-- wm-created_at: 2026-07-28T22:46:35.205434 -->\n\
+                    <!-- wm-importance: 0.8 -->\n\
+                    <!-- wm-access_count: 7 -->\n\
+                    <!-- wm-source_trust: user -->\n\
+                    <!-- wm-agent_id: lucas -->\n\
+                    <!-- wm-title: the crown jewel -->\n\
+                    <!-- wm-tags: provenance-test -->\n\
+                    \n\
+                    body text here\n";
+        let (hdr, body) = parse_heritage(text).unwrap();
+        let mut mem = Memory::new(Galaxy::Codex, body);
+        mem.metadata.galaxy = Galaxy::Codex;
+        apply_heritage_header(&mut mem, &hdr, Some("meta"), Some("abc123def456"), chrono::Utc::now());
+        assert_eq!(mem.content, "body text here");
+        assert_eq!(mem.metadata.importance, 0.8);
+        assert_eq!(mem.metadata.access_count, 7);
+        assert_eq!(mem.metadata.source, "user");
+        assert_eq!(mem.metadata.source_trust, 1.0);
+        assert_eq!(mem.metadata.agent_id, "lucas");
+        assert_eq!(mem.metadata.title.as_deref(), Some("the crown jewel"));
+        assert_eq!(
+            mem.metadata.memory_type,
+            wm_memory::memory::MemoryType::ShortTerm
+        );
+        assert_eq!(mem.metadata.created_at.timestamp(), 1_785_278_795);
+        assert_eq!(
+            mem.metadata.class,
+            Some(wm_memory::typology::MemoryClass::RawArchive)
+        );
+        assert_eq!(mem.metadata.tier, wm_memory::memory::Tier::Archival);
+        assert!(mem.metadata.tags.contains(&"heritage-category:meta".to_string()));
+        assert!(mem.metadata.tags.contains(&"heritage-ref:abc123def456".to_string()));
+        assert!(mem.metadata.tags.contains(&"provenance-test".to_string()));
+    }
 
     fn write_tree(root: &Path) {
         fs::create_dir_all(root.join("docs")).unwrap();
