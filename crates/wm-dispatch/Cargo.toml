@@ -28,6 +28,7 @@ smallvec = { workspace = true }
 proptest = { workspace = true }
 tempfile = "3"
 criterion = { workspace = true }
+uuid = { workspace = true }
 
 [[bench]]
 name = "pipeline_bench"

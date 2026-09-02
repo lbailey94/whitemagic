@@ -52,10 +52,12 @@ fn first_str(v: &serde_json::Value, keys: &[&str]) -> Option<String> {
 /// [`WriteAuditJournal::dispatch_baseline`]) so the entry attributes exactly
 /// the mutations that happened while this dispatch ran — not whatever other
 /// dispatches (or bookkeeping flushes) wrote since the previous entry.
+#[allow(clippy::too_many_arguments)]
 fn record_write_audit(
     journal: &wm_governance::WriteAuditJournal,
     store_write_baseline: u64,
     tool: &str,
+    actor: wm_governance::ActorIdentity,
     declared_writes: bool,
     args_memory_id: Option<&str>,
     args_content_hash: Option<&str>,
@@ -73,6 +75,7 @@ fn record_write_audit(
     if let Err(e) = journal.record_since(
         store_write_baseline,
         tool,
+        actor,
         memory_id.as_deref(),
         content_hash.as_deref(),
         declared_writes,
@@ -617,6 +620,7 @@ impl DispatchPipeline {
                     journal,
                     write_audit_baseline,
                     tool.name(),
+                    wm_governance::ActorIdentity::from_context(ctx),
                     declared_writes,
                     args_memory_id.as_deref(),
                     args_content_hash.as_deref(),
@@ -642,6 +646,7 @@ impl DispatchPipeline {
                     journal,
                     write_audit_baseline,
                     tool.name(),
+                    wm_governance::ActorIdentity::from_context(ctx),
                     declared_writes,
                     args_memory_id.as_deref(),
                     args_content_hash.as_deref(),
@@ -1776,6 +1781,44 @@ mod tests {
         assert_eq!(entry.memory_id.as_deref(), Some("abc-123"));
         assert_eq!(entry.content_hash.as_deref(), Some("hash-xyz"));
         assert!(journal.misdeclarations().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn pipeline_write_audit_captures_actor_identity() {
+        // S11b: the journal answers "which agent did this" — identity rides
+        // the Context (_meta-derived) into every entry.
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(wm_memory::MemoryStore::open_default(tmp.path()).unwrap());
+        let journal = Arc::new(WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap());
+        let pipeline = DispatchPipeline::with_defaults().with_write_audit(journal.clone());
+        let mut ctx = Context::new(BrainWave::Gamma);
+        ctx.session_id = Some(uuid::Uuid::nil());
+        ctx.user_id = Some("agent-b".to_string());
+        ctx.compartment = Some("production".to_string());
+
+        let tool = TestTool::new(
+            "honest_tool",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                ..Default::default()
+            },
+        )
+        .with_store(store);
+
+        let result = pipeline
+            .dispatch(&tool, &mut ctx, serde_json::json!({"id": "abc-123"}))
+            .await;
+        assert!(result.is_ok());
+
+        let entries = journal.scan_entries().unwrap();
+        assert_eq!(entries.len(), 1);
+        let entry = &entries[0];
+        assert_eq!(
+            entry.actor_session.as_deref(),
+            Some(uuid::Uuid::nil().to_string().as_str())
+        );
+        assert_eq!(entry.actor_user.as_deref(), Some("agent-b"));
+        assert_eq!(entry.actor_compartment.as_deref(), Some("production"));
     }
 
     #[tokio::test]

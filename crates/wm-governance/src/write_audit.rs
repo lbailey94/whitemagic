@@ -32,6 +32,35 @@ use serde::{Deserialize, Serialize};
 use wm_core::{CoreError, Galaxy, Result};
 use wm_memory::MemoryStore;
 
+/// Attributed actor for a dispatch — who was behind the tool call.
+///
+/// Attribution, not authentication: `user` is the MCP client's own
+/// `_meta.user_id` label, asserted by the client and never verified
+/// (same contract as the compartment controls). The journal records it
+/// so an entry answers "which agent did this" — the first question any
+/// incident investigation asks.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ActorIdentity {
+    /// WM session id the dispatch ran inside (when known).
+    pub session: Option<String>,
+    /// Client-asserted user label from MCP `_meta`.
+    pub user: Option<String>,
+    /// Mandala compartment the dispatch ran under (when declared).
+    pub compartment: Option<String>,
+}
+
+impl ActorIdentity {
+    /// Snapshot the identity fields of a dispatch context.
+    #[must_use]
+    pub fn from_context(ctx: &wm_core::Context) -> Self {
+        Self {
+            session: ctx.session_id.map(|id| id.to_string()),
+            user: ctx.user_id.clone(),
+            compartment: ctx.compartment.clone(),
+        }
+    }
+}
+
 /// Auto-flush every N entries.
 const DEFAULT_FLUSH_THRESHOLD: usize = 64;
 
@@ -54,6 +83,17 @@ pub struct WriteAuditEntry {
     pub memory_id: Option<String>,
     /// Content hash of the memory touched (when reported).
     pub content_hash: Option<String>,
+    /// Attributed actor session (WM session id) when the dispatch ran
+    /// inside one. `None` = unknown, not "no session".
+    #[serde(default)]
+    pub actor_session: Option<String>,
+    /// Attributed actor user label from MCP `_meta.user_id`.
+    /// Attribution, never authentication — the label is client-asserted.
+    #[serde(default)]
+    pub actor_user: Option<String>,
+    /// Mandala compartment the dispatch ran under (when declared).
+    #[serde(default)]
+    pub actor_compartment: Option<String>,
     /// Whether the tool's `EffectRow` declared writes.
     pub declared_writes: bool,
     /// Write count reported by the tool's output (`writes` array).
@@ -139,6 +179,7 @@ impl WriteAuditJournal {
     pub fn record(
         &self,
         tool: &str,
+        actor: ActorIdentity,
         memory_id: Option<&str>,
         content_hash: Option<&str>,
         declared_writes: bool,
@@ -151,6 +192,7 @@ impl WriteAuditJournal {
         self.append_entry(
             store_write_delta,
             tool,
+            actor,
             memory_id,
             content_hash,
             declared_writes,
@@ -180,6 +222,7 @@ impl WriteAuditJournal {
         &self,
         dispatch_start: u64,
         tool: &str,
+        actor: ActorIdentity,
         memory_id: Option<&str>,
         content_hash: Option<&str>,
         declared_writes: bool,
@@ -193,6 +236,7 @@ impl WriteAuditJournal {
         self.append_entry(
             store_write_delta,
             tool,
+            actor,
             memory_id,
             content_hash,
             declared_writes,
@@ -207,6 +251,7 @@ impl WriteAuditJournal {
         &self,
         store_write_delta: u32,
         tool: &str,
+        actor: ActorIdentity,
         memory_id: Option<&str>,
         content_hash: Option<&str>,
         declared_writes: bool,
@@ -222,6 +267,9 @@ impl WriteAuditJournal {
             tool: tool.to_string(),
             memory_id: memory_id.map(str::to_string),
             content_hash: content_hash.map(str::to_string),
+            actor_session: actor.session,
+            actor_user: actor.user,
+            actor_compartment: actor.compartment,
             declared_writes,
             reported_writes,
             store_write_delta,
@@ -366,6 +414,7 @@ mod tests {
         let entry = journal
             .record(
                 "memory.create",
+                ActorIdentity::default(),
                 Some(&mem.metadata.id.to_string()),
                 Some(&mem.metadata.content_hash),
                 true,
@@ -395,7 +444,15 @@ mod tests {
 
         // Tool declared no writes, but the store counter moved.
         journal
-            .record("sneaky.read", None, None, false, 0, true)
+            .record(
+                "sneaky.read",
+                ActorIdentity::default(),
+                None,
+                None,
+                false,
+                0,
+                true,
+            )
             .unwrap();
 
         let mis = journal.misdeclarations().unwrap();
@@ -411,7 +468,15 @@ mod tests {
 
         // No store mutation happens; tool declares writes and succeeds.
         journal
-            .record("memory.delete", Some("missing-id"), None, true, 0, true)
+            .record(
+                "memory.delete",
+                ActorIdentity::default(),
+                Some("missing-id"),
+                None,
+                true,
+                0,
+                true,
+            )
             .unwrap();
 
         assert!(journal.misdeclarations().unwrap().is_empty());
@@ -429,6 +494,7 @@ mod tests {
             journal
                 .record(
                     "memory.create",
+                    ActorIdentity::default(),
                     Some(&mem.metadata.id.to_string()),
                     None,
                     true,
@@ -456,7 +522,15 @@ mod tests {
         ledger.record("memory.create", true, 1, true).unwrap();
         ledger.record("memory.read", false, 0, true).unwrap();
         journal
-            .record("memory.create", None, None, true, 0, true)
+            .record(
+                "memory.create",
+                ActorIdentity::default(),
+                None,
+                None,
+                true,
+                0,
+                true,
+            )
             .unwrap();
 
         let karma_entries = ledger.scan_entries().unwrap();
@@ -474,6 +548,62 @@ mod tests {
     }
 
     #[test]
+    fn record_captures_actor_identity() {
+        let store = make_store();
+        let journal = WriteAuditJournal::with_flush_threshold(store, 0).unwrap();
+
+        let actor = ActorIdentity {
+            session: Some("4e3ece8c-4e59-4486-8f07-91945337e361".to_string()),
+            user: Some("lucas".to_string()),
+            compartment: Some("production".to_string()),
+        };
+        let entry = journal
+            .record(
+                "memory.update",
+                actor,
+                Some("mem-1"),
+                Some("hash-1"),
+                true,
+                0,
+                true,
+            )
+            .unwrap();
+
+        assert_eq!(
+            entry.actor_session.as_deref(),
+            Some("4e3ece8c-4e59-4486-8f07-91945337e361")
+        );
+        assert_eq!(entry.actor_user.as_deref(), Some("lucas"));
+        assert_eq!(entry.actor_compartment.as_deref(), Some("production"));
+
+        let entries = journal.scan_entries().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0], entry, "identity survives the LMDB roundtrip");
+    }
+
+    #[test]
+    fn legacy_entry_without_actor_fields_deserializes() {
+        // Pre-S11b journaled entries have no actor fields; serde defaults
+        // must admit them (the Karma galaxy holds live history).
+        let legacy = serde_json::json!({
+            "id": 7u64,
+            "timestamp": 1_700_000_000u64,
+            "tool": "memory.update",
+            "memory_id": null,
+            "content_hash": "abc",
+            "declared_writes": true,
+            "reported_writes": 1,
+            "store_write_delta": 1,
+            "success": true,
+        });
+        let entry: WriteAuditEntry = serde_json::from_value(legacy).unwrap();
+        assert_eq!(entry.tool, "memory.update");
+        assert_eq!(entry.actor_session, None);
+        assert_eq!(entry.actor_user, None);
+        assert_eq!(entry.actor_compartment, None);
+    }
+
+    #[test]
     fn record_since_ignores_writes_before_dispatch_start() {
         let store = make_store();
         let journal = WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap();
@@ -485,7 +615,16 @@ mod tests {
         let baseline = journal.dispatch_baseline();
         // An honest read-only dispatch runs and records.
         let entry = journal
-            .record_since(baseline, "memory.search", None, None, false, 0, true)
+            .record_since(
+                baseline,
+                "memory.search",
+                ActorIdentity::default(),
+                None,
+                None,
+                false,
+                0,
+                true,
+            )
             .unwrap();
 
         assert_eq!(
@@ -505,7 +644,16 @@ mod tests {
         put_one(&store, "written while the dispatch ran");
 
         let entry = journal
-            .record_since(baseline, "sneaky.read", None, None, false, 0, true)
+            .record_since(
+                baseline,
+                "sneaky.read",
+                ActorIdentity::default(),
+                None,
+                None,
+                false,
+                0,
+                true,
+            )
             .unwrap();
 
         assert!(entry.store_write_delta >= 1);
@@ -522,7 +670,15 @@ mod tests {
         // Threshold 0: record() flushes synchronously — the flush writes N+1
         // raw entries (N journal rows + the next-id key) and must not tick.
         journal
-            .record("memory.create", None, None, true, 0, true)
+            .record(
+                "memory.create",
+                ActorIdentity::default(),
+                None,
+                None,
+                true,
+                0,
+                true,
+            )
             .unwrap();
         assert_eq!(journal.pending_count(), 0, "flush should have fired");
 
@@ -535,7 +691,16 @@ mod tests {
         // A subsequent per-dispatch window sees the flush as zero writes.
         let baseline2 = journal.dispatch_baseline();
         let entry = journal
-            .record_since(baseline2, "memory.search", None, None, false, 0, true)
+            .record_since(
+                baseline2,
+                "memory.search",
+                ActorIdentity::default(),
+                None,
+                None,
+                false,
+                0,
+                true,
+            )
             .unwrap();
         assert_eq!(entry.store_write_delta, 0);
     }

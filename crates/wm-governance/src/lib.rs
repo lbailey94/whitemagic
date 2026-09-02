@@ -23,4 +23,4 @@ pub use policy::{
     PolicyUpdateError,
 };
 pub use resource_rules::{BudgetUsage, ResourceRules, ResourceRulesConfig, ResourceVerdict};
-pub use write_audit::{WriteAuditEntry, WriteAuditJournal};
+pub use write_audit::{ActorIdentity, WriteAuditEntry, WriteAuditJournal};
