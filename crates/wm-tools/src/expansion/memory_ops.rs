@@ -324,6 +324,8 @@ impl Tool for MemoryUpdateTool {
                 galaxy_name(galaxy)
             ))
         })?;
+        let previous_hash = mem.metadata.content_hash.clone();
+        let content_changed = args.get("content").and_then(|v| v.as_str()).is_some();
         if let Some(tags) = args.get("tags").and_then(|v| v.as_array()) {
             mem.metadata.tags = tags
                 .iter()
@@ -391,7 +393,15 @@ impl Tool for MemoryUpdateTool {
             "galaxy": galaxy_name(galaxy),
             "tags": mem.metadata.tags,
             "importance": mem.metadata.importance,
+            // V8 S11a: the write-audit journal scrapes `content_hash` from
+            // tool output (pipeline record_write_audit), so disclosing it
+            // here gives every update a hash-timeline journal entry;
+            // `prev_content_hash` is the agent/human-facing amendment trail.
+            "content_hash": mem.metadata.content_hash,
         });
+        if content_changed {
+            response["prev_content_hash"] = json!(previous_hash);
+        }
         if !cred_kinds.is_empty() {
             response["warnings"] = json!(
                 cred_kinds
@@ -2829,6 +2839,47 @@ mod tests {
             wm_memory::content_hash("changed text")
         );
         assert_ne!(stored.metadata.content_hash, original_hash);
+    }
+
+    #[tokio::test]
+    async fn memory_update_discloses_hash_timeline() {
+        // V8 S11a: every update response carries the (new) content_hash so
+        // the write-audit journal records a hash timeline per memory; a
+        // content-changing update additionally carries prev_content_hash.
+        let store = test_store();
+        let mem = Memory::new(Galaxy::Codex, "original text".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let id = mem.metadata.id;
+        let original_hash = mem.metadata.content_hash.clone();
+        let tool = MemoryUpdateTool::new(store.clone(), None);
+        let mut ctx = Context::default();
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": id.to_string(), "content": "changed text"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            v["content_hash"],
+            json!(wm_memory::content_hash("changed text"))
+        );
+        assert_eq!(v["prev_content_hash"], json!(original_hash));
+
+        // A metadata-only update discloses the current hash and no prev.
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": id.to_string(), "tags": ["amended"]}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            v["content_hash"],
+            json!(wm_memory::content_hash("changed text"))
+        );
+        assert!(v.get("prev_content_hash").is_none());
     }
 
     #[tokio::test]
