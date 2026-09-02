@@ -196,6 +196,19 @@ enum Commands {
         #[arg(long)]
         galaxy: Option<String>,
     },
+    /// Bridge opencode session data into whitemagic (digest or export)
+    ///
+    /// Reads an opencode session DB (live local, or another seat's lane
+    /// snapshot .tar.gz — the first .db member is extracted to a cache) and
+    /// either prints a per-session digest (markdown or JSON) or emits
+    /// `session.import`-compatible JSONL. Read-only on the source DB; a
+    /// single deferred read transaction keeps scans consistent against a
+    /// live opencode without blocking it. Ids are UUIDv5-deterministic, so
+    /// re-importing an export is an idempotent upsert.
+    Opencode {
+        #[command(subcommand)]
+        command: OpencodeCommands,
+    },
     /// Seal the store directory with an HMAC-SHA256 integrity manifest
     ///
     /// Computes a digest for every file in the store and writes `seal.json`.
@@ -308,6 +321,38 @@ enum Commands {
         store: Option<PathBuf>,
         #[command(subcommand)]
         command: TrustCommand,
+    },
+}
+
+#[derive(clap::Subcommand)]
+enum OpencodeCommands {
+    /// Print a per-session digest table (markdown, or --json) for this seat
+    /// or a lane snapshot (--db path/to/opencode-snapshot-*.tar.gz)
+    Digest {
+        /// opencode session DB (default: ~/.local/share/opencode/opencode.db)
+        #[arg(long)]
+        db: Option<PathBuf>,
+        /// Only sessions updated on/after YYYY-MM-DD (UTC)
+        #[arg(long)]
+        since: Option<String>,
+        /// Emit JSON instead of the markdown table
+        #[arg(long)]
+        json: bool,
+    },
+    /// Emit session.import-compatible JSONL (session_start + session_turn)
+    Export {
+        /// opencode session DB (default: ~/.local/share/opencode/opencode.db)
+        #[arg(long)]
+        db: Option<PathBuf>,
+        /// Only these sessions (id/slug prefix; repeatable)
+        #[arg(long = "session")]
+        session: Vec<String>,
+        /// Write JSONL here instead of stdout
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Device tag embedded in titles and tags (default: this hostname)
+        #[arg(long)]
+        device: Option<String>,
     },
 }
 
@@ -448,6 +493,24 @@ fn default_store_path() -> PathBuf {
         },
         |xdg| PathBuf::from(xdg).join("whitemagic"),
     )
+}
+
+/// Best-effort hostname for bridge device tags.
+fn detect_hostname() -> String {
+    if let Ok(h) = std::env::var("HOSTNAME") {
+        if !h.trim().is_empty() {
+            return h.trim().to_string();
+        }
+    }
+    for path in ["/proc/sys/kernel/hostname", "/etc/hostname"] {
+        if let Ok(s) = std::fs::read_to_string(path) {
+            let h = s.trim();
+            if !h.is_empty() {
+                return h.to_string();
+            }
+        }
+    }
+    "unknown".to_string()
 }
 
 fn main() -> anyhow::Result<()> {
@@ -949,6 +1012,22 @@ fn main() -> anyhow::Result<()> {
             let store_path = store.unwrap_or_else(default_store_path);
             wm_mcp::ingest::run_ingest(&source, &store_path, dry_run, limit, galaxy.as_deref())?;
         }
+        Commands::Opencode { command } => match command {
+            OpencodeCommands::Digest { db, since, json } => {
+                let db_path = db.unwrap_or_else(wm_mcp::opencode::default_opencode_db);
+                wm_mcp::opencode::run_digest(&db_path, since.as_deref(), json)?;
+            }
+            OpencodeCommands::Export {
+                db,
+                session,
+                out,
+                device,
+            } => {
+                let db_path = db.unwrap_or_else(wm_mcp::opencode::default_opencode_db);
+                let device = device.unwrap_or_else(detect_hostname);
+                wm_mcp::opencode::run_export(&db_path, &session, out.as_deref(), &device)?;
+            }
+        },
         Commands::Reindex {
             store,
             no_backup,

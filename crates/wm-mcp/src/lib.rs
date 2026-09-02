@@ -19,6 +19,7 @@ pub mod input_validation;
 pub mod landlock_sandbox;
 pub mod migrate;
 pub mod network_audit;
+pub mod opencode;
 pub mod seal;
 pub mod server;
 pub mod trust_admin;
