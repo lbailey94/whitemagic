@@ -72,7 +72,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Run PR benchmarks
-        run: cargo bench --workspace -- --save-baseline pr
+        # Criterion benches only (crates/*/Cargo.toml `harness = false`):
+        # the `--` args are criterion flags and the libtest-harness
+        # targets compiled by `cargo bench --workspace` reject them
+        # (2026-09-02 CI reds, classified by inspiron-prime board 41).
+        run: >-
+          cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench
+          -- --save-baseline pr
 
       - name: Checkout base branch
         uses: actions/checkout@v4
@@ -82,7 +88,13 @@ jobs:
 
       - name: Run base benchmarks
         working-directory: base
-        run: cargo bench --workspace -- --save-baseline base
+        # Criterion benches only (crates/*/Cargo.toml `harness = false`):
+        # the `--` args are criterion flags and the libtest-harness
+        # targets compiled by `cargo bench --workspace` reject them
+        # (2026-09-02 CI reds, classified by inspiron-prime board 41).
+        run: >-
+          cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench
+          -- --save-baseline base
 
       - name: Import base baseline into PR checkout
         run: |
@@ -96,7 +108,8 @@ jobs:
           # posted to the step summary for review. The old step compared the
           # base branch against its own baseline, which could never detect a
           # PR regression.
-          cargo bench --workspace -- --baseline base --noplot 2>&1 | tee comparison.txt || true
+          cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench \
+            -- --baseline base --noplot 2>&1 | tee comparison.txt || true
 
       - name: Check for regressions
         run: |

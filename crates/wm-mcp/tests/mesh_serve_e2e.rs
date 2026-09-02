@@ -206,6 +206,13 @@ fn wait_for<T>(what: &str, secs: u64, mut f: impl FnMut() -> Option<T>) -> T {
     }
 }
 
+// Unix-gated: both e2e tests wedge on Windows CI runners (UDP multicast
+// discovery never completes, rpc() hits its 30s timeout — 2026-09-02 reds
+// on f550abe, classified pre-existing by inspiron-prime board 41). Root
+// cause is Windows multicast support, tracked with the WM_MESH_MULTICAST_GROUP
+// work on the alpha.8.x train (mac-stranger board 31 §B2); until then these
+// run on Linux/macOS only rather than block Windows CI on an env difference.
+#[cfg(unix)]
 #[test]
 fn two_serve_nodes_discover_chat_and_quarantine() {
     let store_a = tempfile::tempdir().expect("store a");
@@ -369,6 +376,7 @@ fn two_serve_nodes_discover_chat_and_quarantine() {
 /// shadowed by the ghost until restart. With evict-on-IO-error and
 /// fresh-dial joins, the survivor must self-heal: the dead entry evicts on
 /// the first failed rpc, and the returning peer reconnects cleanly.
+#[cfg(unix)]
 #[test]
 fn dead_peer_connection_does_not_poison_rejoin() {
     let store_a = tempfile::tempdir().expect("store survivor");
