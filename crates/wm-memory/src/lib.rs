@@ -26,6 +26,7 @@ pub mod recall;
 pub mod recall_conformal;
 pub mod recovery;
 pub mod reindex;
+pub mod revision;
 pub mod search;
 pub mod semantic;
 pub mod store;
@@ -67,6 +68,7 @@ pub use reindex::{
     GalaxyContentRepairStats, GalaxyDriftClass, GalaxyRebuildStats, IndexRebuildReport,
     check_consistency, classify_drift, heal_index_drift, rebuild_index, repair_content,
 };
+pub use revision::{MemoryRevision, RevisionActor, RevisionChainReport};
 pub use search::{
     IndexHealth, MAX_INDEX_CONTENT_LEN, MIN_PRINTABLE_RATIO, STOPWORDS, SearchEngine,
     SearchOptions, SearchResult, sanitize_content_for_index, sanitize_tantivy_query, scrub_text,

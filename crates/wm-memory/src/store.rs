@@ -15,7 +15,7 @@ use std::os::unix::fs::PermissionsExt;
 
 use crate::episodic::EpisodicStore;
 use crate::indexes::IndexDbs;
-use crate::memory::{Memory, decode_embedding, encode_embedding};
+use crate::memory::{Memory, MemoryId, decode_embedding, encode_embedding};
 use crate::semantic::SemanticEncoder;
 
 /// Query filter for memories.
@@ -177,6 +177,10 @@ pub struct MemoryStore {
     /// namespace + content hash, so switching models never serves stale
     /// vectors.
     embedding_cache_db: Database,
+    /// Per-memory revision chains (V8 S11c): append-only content-change
+    /// history, self-verifying (seq continuity + hash linkage + head
+    /// match). See [`crate::revision`].
+    revisions_db: Database,
     /// Warm term-posting cache shared by episodic search views.
     episodic_term_cache: std::sync::Arc<RwLock<HashMap<String, Vec<uuid::Uuid>>>>,
     /// Optional embedder for episodic vector reranking.
@@ -257,6 +261,9 @@ impl MemoryStore {
             .map_err(|e| {
                 CoreError::Memory(format!("LMDB create_db failed for embedding_cache: {e}"))
             })?;
+        let revisions_db = env
+            .create_db(Some("revisions"), DatabaseFlags::default())
+            .map_err(|e| CoreError::Memory(format!("LMDB create_db failed for revisions: {e}")))?;
         Ok(Self {
             path,
             env,
@@ -267,6 +274,7 @@ impl MemoryStore {
             episodic_db,
             episodic_terms_v2_db,
             embedding_cache_db,
+            revisions_db,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
@@ -1234,6 +1242,100 @@ impl MemoryStore {
             count += 1;
         }
         Ok(count)
+    }
+
+    // ── Revision chain (V8 S11c) ────────────────────────────────────────
+
+    /// Append one content revision to a memory's chain. Seq is derived
+    /// from the current chain tail (append-only by convention); the write
+    /// bumps the store mutation counter so dispatch windows attribute it.
+    pub fn record_revision(
+        &self,
+        galaxy: Galaxy,
+        id: MemoryId,
+        old_hash: &str,
+        new_hash: &str,
+        actor: crate::revision::RevisionActor,
+    ) -> Result<crate::revision::MemoryRevision> {
+        let seq = self.revisions(galaxy, id)?.len() as u32;
+        let entry = crate::revision::MemoryRevision {
+            seq,
+            timestamp: wm_core::time::now_unix_secs(),
+            old_hash: old_hash.to_string(),
+            new_hash: new_hash.to_string(),
+            actor_session: actor.session,
+            actor_user: actor.user,
+        };
+        let key = crate::revision::revision_key(galaxy, id, seq);
+        let val = serde_json::to_vec(&entry)
+            .map_err(|e| CoreError::Memory(format!("revision serialize failed: {e}")))?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        tx.put(self.revisions_db, &key, &val, WriteFlags::default())
+            .map_err(|e| CoreError::Memory(format!("LMDB put revision failed: {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        Ok(entry)
+    }
+
+    /// Full revision chain for a memory, ordered by seq. Empty for
+    /// memories never content-updated (or pre-S11c).
+    pub fn revisions(
+        &self,
+        galaxy: Galaxy,
+        id: MemoryId,
+    ) -> Result<Vec<crate::revision::MemoryRevision>> {
+        // Cursor-op constants from lmdb.h (frozen LMDB ABI): the `lmdb`
+        // crate's `iter_from` panics on a SetRange miss, and a miss is a
+        // normal state here (a memory with no revisions yet sorts after
+        // every existing key), so the cursor is driven manually.
+        const MDB_GET_CURRENT: u32 = 4;
+        const MDB_NEXT: u32 = 8;
+        const MDB_SET_RANGE: u32 = 17;
+        let prefix = crate::revision::revision_prefix(galaxy, id);
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let cursor = tx
+            .open_ro_cursor(self.revisions_db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor revisions failed: {e}")))?;
+        let mut out = Vec::new();
+        if cursor.get(Some(&prefix), None, MDB_SET_RANGE).is_ok() {
+            while let Ok((key, val)) = cursor.get(None, None, MDB_GET_CURRENT) {
+                // `key` is None only for ops that return no key — GET_CURRENT
+                // after a positioned read always carries one.
+                if !key.is_some_and(|k| k.starts_with(&prefix)) {
+                    break;
+                }
+                let entry: crate::revision::MemoryRevision = serde_json::from_slice(val)
+                    .map_err(|e| CoreError::Memory(format!("revision deserialize failed: {e}")))?;
+                out.push(entry);
+                // Bounded walk — corrupt data can never spin this loop.
+                if out.len() >= 10_000 || cursor.get(None, None, MDB_NEXT).is_err() {
+                    break;
+                }
+            }
+        }
+        drop(cursor);
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(out)
+    }
+
+    /// Walk one memory's revision chain and grade it against the memory's
+    /// current content hash (seq continuity, hash linkage, head match).
+    pub fn verify_revision_chain(
+        &self,
+        galaxy: Galaxy,
+        id: MemoryId,
+        current_hash: &str,
+    ) -> Result<crate::revision::RevisionChainReport> {
+        let entries = self.revisions(galaxy, id)?;
+        Ok(crate::revision::verify_chain(&entries, current_hash))
     }
 }
 

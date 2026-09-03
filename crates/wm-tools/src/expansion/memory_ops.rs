@@ -302,7 +302,7 @@ impl Tool for MemoryUpdateTool {
     fn description(&self) -> &str {
         "Update tags, importance, title/topic, or content of an existing memory"
     }
-    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let id_str = args
             .get("id")
@@ -332,8 +332,27 @@ impl Tool for MemoryUpdateTool {
                 .filter_map(|t| t.as_str().map(String::from))
                 .collect();
         }
+        // V8 S11d: the create-path class policy governs update too — a
+        // classed memory's importance stays inside its band regardless of
+        // which edit path touches it (update cannot mutate tier; now it
+        // cannot escape the importance ceiling either).
+        let mut class_policy = None;
         if let Some(importance) = args.get("importance").and_then(serde_json::Value::as_f64) {
-            mem.metadata.importance = importance as f32;
+            let requested = importance as f32;
+            let applied = mem.metadata.class.map_or(requested, |class| {
+                wm_memory::typology::apply_class_policy(class, requested)
+            });
+            if (applied - requested).abs() > f32::EPSILON {
+                // Round like the write-gate's jnum(): f32 artifacts
+                // (0.4000000059604645) must not leak into responses.
+                let clean = |v: f32| serde_json::json!((f64::from(v) * 1000.0).round() / 1000.0);
+                class_policy = Some(serde_json::json!({
+                    "class": mem.metadata.class.map(wm_memory::typology::MemoryClass::as_str),
+                    "importance_before": clean(requested),
+                    "importance_applied": clean(applied),
+                }));
+            }
+            mem.metadata.importance = applied;
         }
         // Envelope v2 (S4): title/topic are settable and clearable
         // (explicit null clears; absent leaves untouched).
@@ -356,8 +375,41 @@ impl Tool for MemoryUpdateTool {
             // Content changes invalidate the hash — keep it in sync so
             // dedup and content-hash lookups stay truthful.
             mem.metadata.content_hash = wm_memory::content_hash(content);
+            // V8 S11c: content changes bump the revision counter; the
+            // chain entry itself is recorded after the row lands.
+            mem.metadata.revision_count = mem.metadata.revision_count.saturating_add(1);
         }
         self.store.put(galaxy, &mem)?;
+
+        // V8 S11c: append the revision entry — seq, hashes, and the
+        // attributed actor from the dispatch context. A chain failure
+        // degrades loud (warn + disclosure), never silently.
+        let mut revision_disclosure = None;
+        if content_changed {
+            let actor = wm_memory::RevisionActor {
+                session: ctx.session_id.map(|sid| sid.to_string()),
+                user: ctx.user_id.clone(),
+            };
+            match self.store.record_revision(
+                galaxy,
+                id,
+                &previous_hash,
+                &mem.metadata.content_hash,
+                actor,
+            ) {
+                Ok(rev) => {
+                    revision_disclosure = Some(serde_json::json!({
+                        "seq": rev.seq,
+                        "old_hash": rev.old_hash,
+                        "new_hash": rev.new_hash,
+                    }));
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "revision chain record failed for {id_str}");
+                    revision_disclosure = Some(serde_json::json!({"record_failed": e.to_string()}));
+                }
+            }
+        }
 
         // Phase 3 secrets hygiene: an update that introduces credential-
         // shaped content gets the same boundary warning as memory.create.
@@ -402,6 +454,12 @@ impl Tool for MemoryUpdateTool {
         if content_changed {
             response["prev_content_hash"] = json!(previous_hash);
         }
+        if let Some(rev) = revision_disclosure {
+            response["revision"] = rev;
+        }
+        if let Some(policy) = class_policy {
+            response["class_policy"] = policy;
+        }
         if !cred_kinds.is_empty() {
             response["warnings"] = json!(
                 cred_kinds
@@ -414,6 +472,101 @@ impl Tool for MemoryUpdateTool {
             );
         }
         Ok(response)
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+/// `memory.revisions` — list or verify a memory's content revision chain
+/// (V8 S11c).
+///
+/// `action: "list"` returns the entries; `action: "verify"` grades the
+/// chain against the memory's current content hash (seq continuity, hash
+/// linkage, head match) — the tamper-evidence walk.
+pub struct MemoryRevisionsTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl MemoryRevisionsTool {
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow {
+                reads: super::common::memory_galaxy_reads(),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for MemoryRevisionsTool {
+    fn name(&self) -> &str {
+        "memory.revisions"
+    }
+    fn gana(&self) -> Gana {
+        Gana::WinnowingBasket
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "List or verify a memory's content revision chain (tamper evidence)"
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
+        let id_str = args
+            .get("id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("Missing 'id'".into()))?;
+        let id = uuid::Uuid::parse_str(id_str)
+            .map_err(|e| wm_core::CoreError::InvalidArgs(format!("Invalid UUID: {e}")))?;
+        let action = args
+            .get("action")
+            .and_then(|v| v.as_str())
+            .unwrap_or("list");
+        let revisions = self.store.revisions(galaxy, id)?;
+        match action {
+            "verify" => {
+                let mem = self.store.get(galaxy, id)?.ok_or_else(|| {
+                    wm_core::CoreError::NotFound(format!(
+                        "Memory {id} not found in {}",
+                        galaxy_name(galaxy)
+                    ))
+                })?;
+                let report =
+                    self.store
+                        .verify_revision_chain(galaxy, id, &mem.metadata.content_hash)?;
+                Ok(json!({
+                    "status": "success",
+                    "id": id,
+                    "galaxy": galaxy_name(galaxy),
+                    "action": "verify",
+                    "valid": report.valid,
+                    "entries": report.entries,
+                    "matches_head": report.matches_head,
+                    "breaks": report.breaks,
+                    "note": if report.entries == 0 {
+                        "no revisions recorded (never content-updated or pre-S11c)"
+                    } else { "" },
+                }))
+            }
+            "list" => Ok(json!({
+                "status": "success",
+                "id": id,
+                "galaxy": galaxy_name(galaxy),
+                "action": "list",
+                "count": revisions.len(),
+                "revisions": revisions,
+            })),
+            other => Err(wm_core::CoreError::InvalidArgs(format!(
+                "Unknown action '{other}' (expected 'list' or 'verify')"
+            ))),
+        }
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -2880,6 +3033,220 @@ mod tests {
             json!(wm_memory::content_hash("changed text"))
         );
         assert!(v.get("prev_content_hash").is_none());
+    }
+
+    #[tokio::test]
+    async fn memory_update_appends_revision_chain() {
+        // V8 S11c: content changes append hash-linked revision entries;
+        // metadata-only edits do not; the actor rides in from the context.
+        let store = test_store();
+        let mem = Memory::new(Galaxy::Codex, "original text".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let id = mem.metadata.id;
+        let tool = MemoryUpdateTool::new(store.clone(), None);
+        let mut ctx = Context {
+            user_id: Some("agent-b".to_string()),
+            session_id: Some(uuid::Uuid::nil()),
+            ..Default::default()
+        };
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": id.to_string(), "content": "second text"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["revision"]["seq"], 0);
+        assert_eq!(
+            v["revision"]["old_hash"],
+            json!(wm_memory::content_hash("original text"))
+        );
+        assert_eq!(
+            v["revision"]["new_hash"],
+            json!(wm_memory::content_hash("second text"))
+        );
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": id.to_string(), "content": "third text"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["revision"]["seq"], 1);
+
+        let revisions = store.revisions(Galaxy::Codex, id).unwrap();
+        assert_eq!(revisions.len(), 2);
+        assert_eq!(revisions[1].old_hash, revisions[0].new_hash, "chain links");
+        assert_eq!(revisions[0].actor_user.as_deref(), Some("agent-b"));
+        assert_eq!(
+            revisions[0].actor_session.as_deref(),
+            Some(uuid::Uuid::nil().to_string().as_str())
+        );
+
+        let stored = store.get(Galaxy::Codex, id).unwrap().unwrap();
+        assert_eq!(stored.metadata.revision_count, 2);
+
+        // The honest chain verifies clean against the live content hash.
+        let report = store
+            .verify_revision_chain(Galaxy::Codex, id, &stored.metadata.content_hash)
+            .unwrap();
+        assert!(report.valid, "{:?}", report.breaks);
+        assert!(report.matches_head);
+    }
+
+    #[tokio::test]
+    async fn memory_update_out_of_band_edit_breaks_chain() {
+        // Content changed WITHOUT the update tool (the write path the
+        // journal sees but cannot describe) must break the head match.
+        let store = test_store();
+        let mem = Memory::new(Galaxy::Codex, "original text".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let id = mem.metadata.id;
+        let tool = MemoryUpdateTool::new(store.clone(), None);
+        tool.call(
+            &mut Context::default(),
+            json!({"galaxy": "codex", "id": id.to_string(), "content": "second text"}),
+        )
+        .await
+        .unwrap();
+
+        // Out-of-band rewrite: hash moved, no revision appended.
+        let mut row = store.get(Galaxy::Codex, id).unwrap().unwrap();
+        row.content = "smuggled text".to_string();
+        row.metadata.content_hash = wm_memory::content_hash("smuggled text");
+        store.put(Galaxy::Codex, &row).unwrap();
+
+        let report = store
+            .verify_revision_chain(Galaxy::Codex, id, &row.metadata.content_hash)
+            .unwrap();
+        assert!(!report.valid);
+        assert!(!report.matches_head);
+        assert!(report.breaks.iter().any(|b| b.contains("head mismatch")));
+    }
+
+    #[tokio::test]
+    async fn memory_revisions_tool_list_and_verify() {
+        let store = test_store();
+        let mem = Memory::new(Galaxy::Codex, "v1".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let id = mem.metadata.id;
+        let update = MemoryUpdateTool::new(store.clone(), None);
+        update
+            .call(
+                &mut Context::default(),
+                json!({"galaxy": "codex", "id": id.to_string(), "content": "v2"}),
+            )
+            .await
+            .unwrap();
+
+        let tool = MemoryRevisionsTool::new(store.clone());
+        let v = tool
+            .call(&mut Context::default(), json!({"id": id.to_string()}))
+            .await
+            .unwrap();
+        assert_eq!(v["action"], "list");
+        assert_eq!(v["count"], 1);
+
+        let v = tool
+            .call(
+                &mut Context::default(),
+                json!({"id": id.to_string(), "action": "verify"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["valid"], true);
+        assert_eq!(v["entries"], 1);
+
+        // An injected splice is detectable: entry 1 claims an old_hash the
+        // chain never produced.
+        store
+            .record_revision(
+                Galaxy::Codex,
+                id,
+                "forged_old_hash",
+                &wm_memory::content_hash("v2"),
+                wm_memory::RevisionActor::default(),
+            )
+            .unwrap();
+        let v = tool
+            .call(
+                &mut Context::default(),
+                json!({"id": id.to_string(), "action": "verify"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["valid"], false);
+        let breaks: Vec<String> = v["breaks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| b.as_str().unwrap().to_string())
+            .collect();
+        assert!(
+            breaks.iter().any(|b| b.contains("hash-linkage")),
+            "{breaks:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_update_class_policy_caps_telemetry_and_floors_dialogue() {
+        // V8 S11d: update cannot push a classed memory outside its band.
+        let store = test_store();
+
+        // Telemetry by construction (template shape) → ceiling 0.40.
+        let tel = Memory::new(
+            Galaxy::Codex,
+            "## Auto-logged Friction: dispatch error\n\nbody".into(),
+        );
+        store.put(Galaxy::Codex, &tel).unwrap();
+        // Dialogue by construction (start tag + stamped class) → floor 0.75.
+        let mut dlg = Memory::new(Galaxy::Codex, "session marker".into());
+        dlg.metadata.tags.push("start".to_string());
+        dlg.metadata.class = Some(wm_memory::typology::MemoryClass::Dialogue);
+        store.put(Galaxy::Codex, &dlg).unwrap();
+
+        let tool = MemoryUpdateTool::new(store.clone(), None);
+        let mut ctx = Context::default();
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": tel.metadata.id.to_string(), "importance": 0.9}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["class_policy"]["importance_applied"], 0.40);
+        let stored = store.get(Galaxy::Codex, tel.metadata.id).unwrap().unwrap();
+        assert!((stored.metadata.importance - 0.40).abs() < 1e-5);
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": dlg.metadata.id.to_string(), "importance": 0.2}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["class_policy"]["importance_applied"], 0.75);
+        let stored = store.get(Galaxy::Codex, dlg.metadata.id).unwrap().unwrap();
+        assert!((stored.metadata.importance - 0.75).abs() < 1e-5);
+
+        // Unstamped memories stay untouched by the policy.
+        let plain = Memory::new(Galaxy::Codex, "a normal thought".into());
+        store.put(Galaxy::Codex, &plain).unwrap();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": plain.metadata.id.to_string(), "importance": 0.95}),
+            )
+            .await
+            .unwrap();
+        assert!(v.get("class_policy").is_none());
+        let stored = store
+            .get(Galaxy::Codex, plain.metadata.id)
+            .unwrap()
+            .unwrap();
+        assert!((stored.metadata.importance - 0.95).abs() < 1e-5);
     }
 
     #[tokio::test]

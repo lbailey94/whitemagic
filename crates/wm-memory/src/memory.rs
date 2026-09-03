@@ -192,6 +192,11 @@ pub struct MemoryMetadata {
     /// re-inserting identical content; importance decays with it.
     #[serde(default)]
     pub dup_count: u64,
+    /// Content-revision counter (V8 S11c) — how many times this memory's
+    /// content has changed through `memory.update`. The per-entry chain
+    /// itself lives in the store's `revisions` DBI (`memory.revisions`).
+    #[serde(default)]
+    pub revision_count: u32,
 }
 
 const fn default_coord5d() -> Coordinate5D {
@@ -301,6 +306,7 @@ impl Memory {
                 tier: Tier::Working,
                 class: crate::typology::detect_class(&content, &[]),
                 dup_count: 0,
+                revision_count: 0,
             },
             content,
             embedding: None,

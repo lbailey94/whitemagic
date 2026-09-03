@@ -2690,6 +2690,7 @@ impl WmMetaTool {
             "memory.associate" => Some("source"),
             "memory.associations" => Some("id"),
             "memory.update" => Some("id"),
+            "memory.revisions" => Some("id"),
             "memory.tag" => Some("id"),
             "memory.batch_read" => Some("ids"),
             "memory.nearby" => Some("query"),
@@ -2720,6 +2721,7 @@ impl WmMetaTool {
             ("memory.query", "query") => "Provide a literal substring to match against memory content, e.g. wm(route='memory.query', args={\"query\": \"rust\", \"tags\": [\"project:myapp\"]}). Note: substring match, not ranked full-text — use memory.search for that.".into(),
             ("memory.vector.search", "memory_id") => "Provide a memory UUID for similarity search, e.g. wm(thought='find similar to <uuid>')".into(),
             ("memory.update", "id") => "Provide a memory UUID to update, e.g. wm(route='memory.update', args={\"id\": \"<uuid>\", \"tags\": [\"new\"]})".into(),
+            ("memory.revisions", "id") => "Provide a memory UUID to inspect, e.g. wm(route='memory.revisions', args={\"id\": \"<uuid>\", \"action\": \"verify\"}) — actions: list (default) | verify".into(),
             ("memory.tag", "id") => "Provide a memory UUID to tag, e.g. wm(route='memory.tag', args={\"id\": \"<uuid>\", \"tags\": [\"rust\"]})".into(),
             _ => format!("Missing required argument: '{missing}' for tool '{tool_name}'"),
         }
