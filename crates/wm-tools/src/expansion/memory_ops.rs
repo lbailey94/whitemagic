@@ -857,6 +857,7 @@ impl Tool for MemoryHybridRecallTool {
                 "min_importance": num_prop("Minimum memory importance (0-1)"),
                 "min_score": num_prop("Absolute BM25 score floor"),
                 "min_score_ratio": num_prop("Relative floor: reject hits below this fraction of the top score"),
+                "min_trust": num_prop("Minimum source_trust (0-1): drop results below this trust floor"),
             }),
             &["query"],
         )
@@ -1230,6 +1231,24 @@ impl Tool for MemoryHybridRecallTool {
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
         }
+        // V8 T-b: explicit trust floor — a FILTER, not a ranking weight
+        // (WM_TRUST_WEIGHT reorders; min_trust removes). Post-resolution
+        // on every route: results carry `trust`, so the floor applies
+        // uniformly, including the trust-inert episodic route.
+        let min_trust = args
+            .get("min_trust")
+            .and_then(serde_json::Value::as_f64)
+            .filter(|v| (0.0..=1.0).contains(v));
+        let pre_filter = results.len();
+        if let Some(min) = min_trust {
+            results.retain(
+                |r| match r.get("trust").and_then(serde_json::Value::as_f64) {
+                    Some(t) => (t as f32) >= min as f32,
+                    None => true,
+                },
+            );
+        }
+        let min_trust_filtered = pre_filter - results.len();
         results.truncate(limit);
         // Empty-result guidance: when a query matched nothing, tell the caller
         // where the content actually lives. Prevents the "silent zero" class
@@ -1263,6 +1282,10 @@ impl Tool for MemoryHybridRecallTool {
         }
         if let Some(td) = trust_disclosure {
             out["trust_weighting"] = td;
+        }
+        if let Some(min) = min_trust {
+            out["min_trust"] = json!(min);
+            out["min_trust_filtered"] = json!(min_trust_filtered);
         }
         Ok(out)
     }
@@ -3247,6 +3270,54 @@ mod tests {
             .unwrap()
             .unwrap();
         assert!((stored.metadata.importance - 0.95).abs() < 1e-5);
+    }
+
+    #[tokio::test]
+    async fn memory_search_min_trust_filter_drops_low_trust() {
+        // V8 T-b: min_trust is a post-resolution FILTER on every route —
+        // user-confirmed (1.0) survives a 0.9 floor, tool-ingested (0.7)
+        // does not; the response discloses what it filtered.
+        let (_dir, store, search) = hybrid_fixture();
+        let mut confirmed = Memory::new(Galaxy::Codex, "Quantum foal registry minutes".into());
+        confirmed.metadata.source_trust = 1.0;
+        confirmed.metadata.source = "user".to_string();
+        let mut ingested = Memory::new(Galaxy::Codex, "Quantum foal registry draft".into());
+        ingested.metadata.source_trust = 0.7;
+        ingested.metadata.source = "tool".to_string();
+        store.put(Galaxy::Codex, &confirmed).unwrap();
+        store.put(Galaxy::Codex, &ingested).unwrap();
+        mirror_memory(&store, &confirmed, None, 1);
+        mirror_memory(&store, &ingested, None, 2);
+
+        let tool = default_search_tool(store, Some(search));
+        let mut ctx = Context::default();
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "quantum foal registry", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 2, "no floor: both results surface");
+        assert!(v.get("min_trust").is_none());
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "quantum foal registry", "limit": 10, "min_trust": 0.9}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["min_trust"], 0.9);
+        assert_eq!(v["min_trust_filtered"], 1);
+        let trusts: Vec<f64> = v["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["trust"].as_f64().unwrap())
+            .collect();
+        assert!(trusts.iter().all(|t| *t >= 0.9), "{trusts:?}");
     }
 
     #[tokio::test]

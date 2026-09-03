@@ -2666,8 +2666,22 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
     let journal_entries = journal.scan_entries().map_or(0, |e| e.len());
     match journal.misdeclarations() {
         Ok(mis) => {
+            // S11b: attribution coverage — how much of the journal actually
+            // names its actor. Labeled 0% on an old store is honest, not a
+            // failure; 0% on a new one means dispatches run without
+            // identity in their Context.
+            let scan = journal.scan_entries().unwrap_or_default();
+            let labeled = scan
+                .iter()
+                .filter(|e| e.actor_user.is_some() || e.actor_session.is_some())
+                .count();
+            let coverage = if journal_entries == 0 {
+                "n/a".to_string()
+            } else {
+                format!("{labeled}/{journal_entries}")
+            };
             println!(
-                "[{}] Write-audit journal: {journal_entries} entries, {} undeclared-mutation entries",
+                "[{}] Write-audit journal: {journal_entries} entries (actor labeled: {coverage}), {} undeclared-mutation entries",
                 if mis.is_empty() { "OK" } else { "WARN" },
                 mis.len()
             );
@@ -2678,8 +2692,16 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
                         .ok()
                         .and_then(|t| chrono::DateTime::<chrono::Utc>::from_timestamp(t, 0))
                         .map_or_else(|| entry.timestamp.to_string(), |d| d.to_rfc3339());
+                    // S11b: name the actor when the journal has one — the
+                    // first question any investigation asks.
+                    let actor = match (&entry.actor_user, &entry.actor_session) {
+                        (Some(u), Some(s)) => format!("{u}@{s}"),
+                        (Some(u), None) => u.clone(),
+                        (None, Some(s)) => format!("session {s}"),
+                        (None, None) => "unknown actor".to_string(),
+                    };
                     println!(
-                        "       [WARN] '{}' mutated the store without declaring writes (entry {}, {} store writes, {when})",
+                        "       [WARN] '{}' by {actor} mutated the store without declaring writes (entry {}, {} store writes, {when})",
                         entry.tool, entry.id, entry.store_write_delta
                     );
                 }
