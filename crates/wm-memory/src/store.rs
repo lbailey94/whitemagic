@@ -181,6 +181,10 @@ pub struct MemoryStore {
     /// history, self-verifying (seq continuity + hash linkage + head
     /// match). See [`crate::revision`].
     revisions_db: Database,
+    /// Per-memory creation attestations (Track F Slice A, D5): one signed
+    /// record per created memory, keyed `att:{galaxy}:{memory_id}`.
+    /// See [`crate::attestation`].
+    attestations_db: Database,
     /// Warm term-posting cache shared by episodic search views.
     episodic_term_cache: std::sync::Arc<RwLock<HashMap<String, Vec<uuid::Uuid>>>>,
     /// Optional embedder for episodic vector reranking.
@@ -264,6 +268,14 @@ impl MemoryStore {
         let revisions_db = env
             .create_db(Some("revisions"), DatabaseFlags::default())
             .map_err(|e| CoreError::Memory(format!("LMDB create_db failed for revisions: {e}")))?;
+        let attestations_db = env
+            .create_db(
+                Some(crate::attestation::ATTESTATIONS_DB),
+                DatabaseFlags::default(),
+            )
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB create_db failed for attestations: {e}"))
+            })?;
         Ok(Self {
             path,
             env,
@@ -275,6 +287,7 @@ impl MemoryStore {
             episodic_terms_v2_db,
             embedding_cache_db,
             revisions_db,
+            attestations_db,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
@@ -1336,6 +1349,182 @@ impl MemoryStore {
     ) -> Result<crate::revision::RevisionChainReport> {
         let entries = self.revisions(galaxy, id)?;
         Ok(crate::revision::verify_chain(&entries, current_hash))
+    }
+
+    // ── Record attestations (Track F Slice A, D5) ───────────────────────
+
+    /// Record one creation attestation for a memory. Upsert by key
+    /// (`att:{galaxy}:{memory_id}`): re-attestation overwrites, which is
+    /// safe because attestation covers the *creation* event and memory ids
+    /// are unique per create. The write bumps the mutation counter like
+    /// every other store mutation.
+    pub fn record_attestation(
+        &self,
+        galaxy: Galaxy,
+        id: MemoryId,
+        entry: &crate::attestation::RecordAttestation,
+    ) -> Result<()> {
+        let key = crate::attestation::attestation_key(galaxy, id);
+        let val = serde_json::to_vec(entry)
+            .map_err(|e| CoreError::Memory(format!("attestation serialize failed: {e}")))?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        tx.put(self.attestations_db, &key, &val, WriteFlags::default())
+            .map_err(|e| CoreError::Memory(format!("LMDB put attestation failed: {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    /// This memory's creation attestation, if the creating dispatch signed
+    /// one (key-available creates only — absence is honest, not an error).
+    pub fn attestation(
+        &self,
+        galaxy: Galaxy,
+        id: MemoryId,
+    ) -> Result<Option<crate::attestation::RecordAttestation>> {
+        let key = crate::attestation::attestation_key(galaxy, id);
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let out =
+            match tx.get(self.attestations_db, &key) {
+                Ok(val) => Some(serde_json::from_slice(val).map_err(|e| {
+                    CoreError::Memory(format!("attestation deserialize failed: {e}"))
+                })?),
+                Err(lmdb::Error::NotFound) => None,
+                Err(e) => {
+                    return Err(CoreError::Memory(format!(
+                        "LMDB get attestation failed: {e}"
+                    )));
+                }
+            };
+        drop(tx);
+        Ok(out)
+    }
+
+    /// Every attestation in the store (for `wm anchor`). Bounded walk —
+    /// corrupt data can never spin this loop.
+    pub fn scan_attestations(&self) -> Result<Vec<crate::attestation::RecordAttestation>> {
+        const MDB_GET_CURRENT: u32 = 4;
+        const MDB_NEXT: u32 = 8;
+        const MDB_FIRST: u32 = 9;
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let cursor = tx
+            .open_ro_cursor(self.attestations_db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor attestations failed: {e}")))?;
+        let mut out = Vec::new();
+        if cursor.get(None, None, MDB_FIRST).is_ok() {
+            while let Ok((_, val)) = cursor.get(None, None, MDB_GET_CURRENT) {
+                let entry: crate::attestation::RecordAttestation = serde_json::from_slice(val)
+                    .map_err(|e| {
+                        CoreError::Memory(format!("attestation deserialize failed: {e}"))
+                    })?;
+                out.push(entry);
+                // Bounded walk — corrupt data can never spin this loop.
+                if out.len() >= 1_000_000 || cursor.get(None, None, MDB_NEXT).is_err() {
+                    break;
+                }
+            }
+        }
+        drop(cursor);
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(out)
+    }
+
+    /// Grade one memory's attestation: presence, signature validity, and
+    /// whether the attested hash still matches the live content hash.
+    /// A content *update* after creation flips `matches_head` to false by
+    /// design — updates are covered by the revisions chain, not by
+    /// re-attestation.
+    pub fn verify_attestation(
+        &self,
+        galaxy: Galaxy,
+        id: MemoryId,
+    ) -> Result<crate::attestation::AttestationReport> {
+        use crate::attestation::AttestationReport;
+        let Some(att) = self.attestation(galaxy, id)? else {
+            return Ok(AttestationReport {
+                attested: false,
+                signature_valid: false,
+                matches_head: false,
+                memory_present: self.get(galaxy, id)?.is_some(),
+                breaks: vec!["no attestation recorded for this memory".to_string()],
+            });
+        };
+        let mut breaks = Vec::new();
+        let signature_valid = crate::attestation::verify_attestation(&att);
+        if !signature_valid {
+            breaks.push("signature does not verify against recorded pubkey".to_string());
+        }
+        let (matches_head, memory_present) = if let Some(memory) = self.get(galaxy, id)? {
+            let matches = memory.metadata.content_hash == att.record_hash;
+            if !matches {
+                breaks.push(
+                    "attested record_hash != live content_hash (memory updated after attestation)"
+                        .to_string(),
+                );
+            }
+            (matches, true)
+        } else {
+            breaks.push("attested memory id not present in galaxy".to_string());
+            (false, false)
+        };
+        Ok(AttestationReport {
+            attested: true,
+            signature_valid,
+            matches_head,
+            memory_present,
+            breaks,
+        })
+    }
+
+    /// Grade every attestation in the store (for `wm anchor`). Entries
+    /// whose galaxy/id no longer parse are reported as broken — never
+    /// skipped silently.
+    pub fn attestation_sweep(
+        &self,
+    ) -> Result<
+        Vec<(
+            crate::attestation::RecordAttestation,
+            crate::attestation::AttestationReport,
+        )>,
+    > {
+        use crate::attestation::AttestationReport;
+        let mut out = Vec::new();
+        for att in self.scan_attestations()? {
+            let parsed = match (
+                Galaxy::from_db_name(&att.galaxy),
+                uuid::Uuid::parse_str(&att.memory_id),
+            ) {
+                (Some(galaxy), Ok(id)) => Some((galaxy, id)),
+                _ => None,
+            };
+            match parsed {
+                Some((galaxy, id)) => out.push((att, self.verify_attestation(galaxy, id)?)),
+                None => out.push((
+                    att,
+                    AttestationReport {
+                        attested: true,
+                        signature_valid: false,
+                        matches_head: false,
+                        memory_present: false,
+                        breaks: vec![
+                            "attestation row has unparseable galaxy or memory id".to_string(),
+                        ],
+                    },
+                )),
+            }
+        }
+        Ok(out)
     }
 }
 

@@ -26,6 +26,11 @@ tantivy = { version = "0.26", features = ["stemmer"] }
 rayon = { workspace = true }
 sha2 = "0.10"
 hmac = "0.12"
+# Ed25519 record attestations (Track F Slice A) — same algorithm and key
+# material as the Sangha mesh identity, implemented here so wm-memory
+# stays free of wm-sangha (mesh is a transport over stores, never a
+# store dependency).
+ed25519-dalek = "3.0.0"
 ureq = { workspace = true }
 
 # Optional ONNX Runtime local embedder (fastembed-rs)

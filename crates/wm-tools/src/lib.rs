@@ -127,6 +127,76 @@ fn capture_explicit_memories(
 
 // ── Tool: memory.create ──────────────────────────────────────────────
 
+// ── Creation attestations (Track F Slice A, D5) ──────────────────────────
+
+/// Agent attribution for an attestation: dispatch session UUID when inside
+/// one, client-asserted user id when set, else `"local"`.
+fn attestation_agent_id(ctx: &Context) -> String {
+    ctx.session_id
+        .map(|u| u.to_string())
+        .or_else(|| ctx.user_id.clone())
+        .unwrap_or_else(|| "local".to_string())
+}
+
+/// Read the node signing key for creation attestations. `None` (unset or
+/// blank) is normal on keyless nodes — the tool discloses `attested: false`
+/// instead of failing.
+fn node_attestation_key() -> Option<String> {
+    std::env::var(wm_memory::attestation::ATTESTATION_KEY_ENV)
+        .ok()
+        .filter(|k| !k.trim().is_empty())
+}
+
+/// Attempt to attest one created memory with an explicit key (the
+/// `with_armed`-style seam: production passes the env-read key, tests pass
+/// fixed keys — env is process-global and this crate forbids `unsafe`, so
+/// tests never mutate it). Absence or invalidity is honest and never fatal:
+/// the create already succeeded, attestation is evidence, not a gate.
+/// Returns `(attested, reason)` — reason is `Some` exactly when false.
+fn attest_created_memory(
+    store: &MemoryStore,
+    galaxy: Galaxy,
+    id: uuid::Uuid,
+    record_hash: &str,
+    ctx: &Context,
+    key_hex: Option<&str>,
+) -> (bool, Option<String>) {
+    let key_hex = match key_hex {
+        Some(k) if !k.trim().is_empty() => k,
+        _ => return (false, Some("node key unavailable".to_string())),
+    };
+    let agent_id = attestation_agent_id(ctx);
+    let timestamp = wm_core::time::now_unix_secs();
+    let payload = wm_memory::attestation::attestation_payload(
+        galaxy.db_name(),
+        &id.to_string(),
+        record_hash,
+        &agent_id,
+        timestamp,
+    );
+    let Some((public_key_hex, signature_hex)) =
+        wm_memory::attestation::sign_attestation(&payload, key_hex)
+    else {
+        tracing::warn!("creation attestation skipped for memory {id}: key material invalid");
+        return (false, Some("node key invalid".to_string()));
+    };
+    let entry = wm_memory::attestation::RecordAttestation {
+        domain: wm_memory::attestation::ATTESTATION_DOMAIN.to_string(),
+        galaxy: galaxy.db_name().to_string(),
+        memory_id: id.to_string(),
+        record_hash: record_hash.to_string(),
+        agent_id,
+        timestamp,
+        public_key_hex,
+        signature_hex,
+    };
+    if let Err(e) = store.record_attestation(galaxy, id, &entry) {
+        tracing::warn!("creation attestation write failed for memory {id}: {e}");
+        return (false, Some("attestation store write failed".to_string()));
+    }
+    (true, None)
+}
+
 /// Create a memory in a galaxy.
 ///
 /// If a `SearchEngine` is provided, the memory is also indexed into Tantivy
@@ -137,6 +207,10 @@ pub struct MemoryCreateTool {
     recall: Option<Arc<RecallEngine>>,
     stats: ToolStats,
     effects: EffectRow,
+    /// Node signing key for creation attestations (Track F Slice A).
+    /// Read from the environment at construction — the mesh identity is
+    /// process-stable by design, so no re-read is needed per dispatch.
+    attestation_key: Option<String>,
 }
 
 impl MemoryCreateTool {
@@ -158,7 +232,22 @@ impl MemoryCreateTool {
                 invokes: vec![Capability::MemoryWrite],
                 ..Default::default()
             },
+            attestation_key: node_attestation_key(),
         }
+    }
+
+    /// Explicit attestation key (tests; the `with_armed` seam — production
+    /// uses [`Self::new`]'s env read).
+    #[must_use]
+    pub fn with_attestation_key(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+        recall: Option<Arc<RecallEngine>>,
+        attestation_key: Option<String>,
+    ) -> Self {
+        let mut tool = Self::new(store, search, recall);
+        tool.attestation_key = attestation_key;
+        tool
     }
 }
 
@@ -337,6 +426,18 @@ impl Tool for MemoryCreateTool {
             0,
         );
 
+        // Track F Slice A (D5): attest the create when a node key is
+        // available. Evidence, not a gate — attestation outcome never
+        // fails the create (see helper docs).
+        let (attested, attested_reason) = attest_created_memory(
+            &self.store,
+            galaxy,
+            id,
+            &memory.metadata.content_hash,
+            ctx,
+            self.attestation_key.as_deref(),
+        );
+
         let mut response = json!({
             "status": "success",
             "id": id.to_string(),
@@ -344,7 +445,11 @@ impl Tool for MemoryCreateTool {
             "content_hash": memory.metadata.content_hash,
             "source": source,
             "source_trust": trust,
+            "attested": attested,
         });
+        if let Some(reason) = attested_reason {
+            response["attested_reason"] = json!(reason);
+        }
         if !warnings.is_empty() {
             response["warnings"] = json!(warnings);
         }
@@ -368,6 +473,9 @@ pub struct MemoryBatchCreateTool {
     recall: Option<Arc<RecallEngine>>,
     stats: ToolStats,
     effects: EffectRow,
+    /// Node signing key for creation attestations (Track F Slice A) —
+    /// same env-at-construction rule as [`MemoryCreateTool`].
+    attestation_key: Option<String>,
 }
 
 impl MemoryBatchCreateTool {
@@ -386,7 +494,21 @@ impl MemoryBatchCreateTool {
                 invokes: vec![Capability::MemoryWrite],
                 ..Default::default()
             },
+            attestation_key: node_attestation_key(),
         }
+    }
+
+    /// Explicit attestation key (tests; the `with_armed` seam).
+    #[must_use]
+    pub fn with_attestation_key(
+        store: Arc<MemoryStore>,
+        search: Option<Arc<SearchEngine>>,
+        recall: Option<Arc<RecallEngine>>,
+        attestation_key: Option<String>,
+    ) -> Self {
+        let mut tool = Self::new(store, search, recall);
+        tool.attestation_key = attestation_key;
+        tool
     }
 }
 
@@ -629,10 +751,26 @@ impl Tool for MemoryBatchCreateTool {
             ctx.session_id,
         );
 
+        // Track F Slice A (D5): same attestation class as memory.create —
+        // one signed record per created memory, evidence never a gate.
+        let mut attested_count = 0usize;
+        for (galaxy, memory) in &memories {
+            let (ok, _) = attest_created_memory(
+                &self.store,
+                *galaxy,
+                memory.metadata.id,
+                &memory.metadata.content_hash,
+                ctx,
+                self.attestation_key.as_deref(),
+            );
+            attested_count += usize::from(ok);
+        }
+
         let mut response = json!({
             "status": "success",
             "count": ids.len(),
             "ids": ids,
+            "attested_count": attested_count,
         });
         if !cred_kinds.is_empty() {
             response["warnings"] = json!(
@@ -3583,6 +3721,119 @@ mod tests {
             .unwrap()
             .expect("explicit memory writes mirror into episodic storage");
         assert_eq!(episodic.content, "test memory content");
+    }
+
+    /// Track F Slice A: `attested` disclosure on memory.create. Fully
+    /// hermetic — keys flow through the `with_attestation_key` seam, never
+    /// the process environment (this crate forbids `unsafe`, and env
+    /// mutation is `unsafe` in edition 2024).
+    #[tokio::test]
+    async fn memory_create_attestation_disclosure() {
+        const TEST_KEY: &str = "0bd1c44170ca3d916648a983dcdb8583d22f2da5b29fdd5ede4b38e805435577";
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // Path 1: no key — honest negative, create still succeeds.
+        let store = test_store();
+        let tool = MemoryCreateTool::with_attestation_key(store.clone(), None, None, None);
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"content": "unattested create", "galaxy": "codex"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
+        assert_eq!(result["attested"], false);
+        assert_eq!(result["attested_reason"], "node key unavailable");
+
+        // Path 2: invalid key material — honest negative, create succeeds.
+        let tool = MemoryCreateTool::with_attestation_key(
+            store.clone(),
+            None,
+            None,
+            Some("not-hex".to_string()),
+        );
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"content": "bad key create", "galaxy": "codex"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["attested"], false);
+        assert_eq!(result["attested_reason"], "node key invalid");
+
+        // Path 3: key present — signed, stored, verifiable.
+        let tool = MemoryCreateTool::with_attestation_key(
+            store.clone(),
+            None,
+            None,
+            Some(TEST_KEY.to_string()),
+        );
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"content": "attested create", "galaxy": "codex"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["attested"], true);
+        assert!(result.get("attested_reason").is_none());
+        let id = uuid::Uuid::parse_str(result["id"].as_str().unwrap()).unwrap();
+        let report = store.verify_attestation(Galaxy::Codex, id).unwrap();
+        assert!(report.attested, "{:?}", report.breaks);
+        assert!(report.signature_valid, "{:?}", report.breaks);
+        assert!(report.matches_head, "{:?}", report.breaks);
+        assert!(report.memory_present);
+        assert!(report.breaks.is_empty());
+
+        // Stale path: rewrite the content out from under the attestation —
+        // signature still verifies, head no longer matches (updates ride
+        // the revisions chain, not re-attestation).
+        let mut memory = store.get(Galaxy::Codex, id).unwrap().unwrap();
+        memory.content = "edited after attestation".to_string();
+        memory.metadata.content_hash = wm_memory::content_hash(&memory.content);
+        store.put(Galaxy::Codex, &memory).unwrap();
+        let stale = store.verify_attestation(Galaxy::Codex, id).unwrap();
+        assert!(stale.attested);
+        assert!(stale.signature_valid);
+        assert!(!stale.matches_head);
+
+        // Scan sees exactly the one attested create.
+        let scanned = store.scan_attestations().unwrap();
+        assert_eq!(scanned.len(), 1);
+        assert_eq!(scanned[0].memory_id, id.to_string());
+    }
+
+    #[tokio::test]
+    async fn memory_batch_create_attests_each_item() {
+        const TEST_KEY: &str = "0bd1c44170ca3d916648a983dcdb8583d22f2da5b29fdd5ede4b38e805435577";
+        let store = test_store();
+        let tool = MemoryBatchCreateTool::with_attestation_key(
+            store.clone(),
+            None,
+            None,
+            Some(TEST_KEY.to_string()),
+        );
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"items": [{"content": "batch one"}, {"content": "batch two"}]}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["attested_count"], 2);
+        assert_eq!(store.scan_attestations().unwrap().len(), 2);
+
+        // Keyless batch: zero attested, creates still succeed.
+        let tool = MemoryBatchCreateTool::with_attestation_key(store.clone(), None, None, None);
+        let result = tool
+            .call(&mut ctx, json!({"items": [{"content": "batch three"}]}))
+            .await
+            .unwrap();
+        assert_eq!(result["attested_count"], 0);
+        assert_eq!(result["count"], 1);
     }
 
     #[tokio::test]

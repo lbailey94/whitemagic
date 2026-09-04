@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 pub mod associations;
+pub mod attestation;
 pub mod conversational;
 pub mod credentials;
 pub mod embedder;
@@ -35,6 +36,11 @@ pub mod validator;
 pub mod vector;
 
 pub use associations::{Association, AssociationStore, LinkType};
+pub use attestation::{
+    ATTESTATION_DOMAIN, ATTESTATION_KEY_ENV, ATTESTATIONS_DB, AttestationReport, RecordAttestation,
+    anchor_leaf_input, attestation_key, attestation_payload, attestation_prefix, merkle_root_hex,
+    sha256_hex, sign_attestation, verify_attestation,
+};
 pub use conversational::{
     ConversationalConfig, ConversationalResult, ConversationalSearch, QueryClassification,
     SearchMetrics,

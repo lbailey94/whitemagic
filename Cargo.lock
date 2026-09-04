@@ -8093,6 +8093,7 @@ dependencies = [
  "arrow-schema",
  "chrono",
  "criterion",
+ "ed25519-dalek",
  "fastembed",
  "futures",
  "hmac",

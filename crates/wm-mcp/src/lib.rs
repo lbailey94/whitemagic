@@ -10,6 +10,7 @@
 // `forbid` — the pyo3_bridge module can locally allow unsafe for PyO3 macros.
 #![deny(unsafe_code)]
 
+pub mod anchor;
 pub mod config;
 pub mod cyberbrain;
 pub mod daemon;

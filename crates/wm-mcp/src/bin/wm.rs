@@ -231,6 +231,27 @@ enum Commands {
         #[arg(long)]
         store: Option<PathBuf>,
     },
+    /// Merkle-anchor the store's record attestations (Track F Slice A, D5)
+    ///
+    /// Verifies every attestation in the `attestations` DBI, computes a
+    /// Merkle root over the validly-signed set (valid + stale + missing —
+    /// staleness is lifecycle, not forgery; only a bad signature excludes
+    /// a leaf), and prints the report as JSON. With --publish, appends the
+    /// report to a chained external JSONL log (prev_hash per record, same
+    /// pattern as karma.anchor's publish_path — the log is the persistence;
+    /// put it somewhere versioned for out-of-band verifiability).
+    ///
+    /// Takes the LMDB lock — stop the store's server unit first (same
+    /// posture as `wm trust`). Exits with code 1 when any signature is
+    /// invalid: tamper evidence is loud, never advisory.
+    Anchor {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Append the anchor report to this chained JSONL log
+        #[arg(long)]
+        publish: Option<PathBuf>,
+    },
     /// Back up the FULL store (LMDB + indexes + all JSON state) for disaster recovery
     ///
     /// Copies the entire store root into a timestamped backup directory and
@@ -1060,6 +1081,10 @@ fn main() -> anyhow::Result<()> {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_verify(&store_path)?;
         }
+        Commands::Anchor { store, publish } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            run_anchor(&store_path, publish.as_deref())?;
+        }
         Commands::Backup { store, out } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_backup(&store_path, out.as_deref())?;
@@ -1449,6 +1474,41 @@ fn run_verify(store_path: &std::path::Path) -> anyhow::Result<()> {
             }
         }
         std::process::exit(1);
+    }
+    Ok(())
+}
+
+/// Merkle-anchor the store's record attestations (`wm anchor`).
+///
+/// Takes the LMDB lock — stop the store's server unit first (same posture
+/// as `wm trust`).
+fn run_anchor(
+    store_path: &std::path::Path,
+    publish: Option<&std::path::Path>,
+) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.join("data.mdb").exists() {
+        anyhow::bail!("No LMDB data found at {}.", lmdb_path.display());
+    }
+    let store = wm_memory::MemoryStore::open_default(&lmdb_path).map_err(|e| {
+        anyhow::anyhow!(
+            "Could not take the LMDB lock at {} — a server may be running \
+             (stop the store's wm-serve unit first). Error: {e}",
+            lmdb_path.display()
+        )
+    })?;
+    let report = wm_mcp::anchor::anchor_report(&store).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let invalid = report
+        .get("invalid")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
+    println!("{}", serde_json::to_string_pretty(&report)?);
+    if let Some(path) = publish {
+        wm_mcp::anchor::append_anchor_log(path, &report).map_err(|e| anyhow::anyhow!("{e}"))?;
+        eprintln!("Published anchor to {}", path.display());
+    }
+    if invalid > 0 {
+        anyhow::bail!("{invalid} attestation signature(s) INVALID — see report above");
     }
     Ok(())
 }
