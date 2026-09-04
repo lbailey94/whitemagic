@@ -4,6 +4,8 @@
 
 **Positioning**: WM is already a substrate ("persistent state for many agents, indefinitely") with governance the field lacks. V8 should deepen memory science without losing that moat.
 
+**Companion agenda (2026-09-03, Track E):** [`TRACK_E_COLLECTIVE_SUBSTRATE_RESEARCH.md`](TRACK_E_COLLECTIVE_SUBSTRATE_RESEARCH.md) — stigmergy, consensus correction, and pattern-engine revival; the collective-medium view of this same substrate. Its priorities fold in here once evidence-verified.
+
 ---
 
 ## 1. Memory hierarchy: make the tiers explicit (working → episodic → semantic)
@@ -51,3 +53,42 @@
 3. §4c conformal retrieval sets (differentiator)
 4. §2 temporal edges (largest effort)
 5. §6 standards, §7 positioning, §5 metrics
+
+## 8. Ratified implementation queue (Track E fold-in, Lucas 2026-09-03)
+
+Research basis: [`TRACK_E_COLLECTIVE_SUBSTRATE_RESEARCH.md`](TRACK_E_COLLECTIVE_SUBSTRATE_RESEARCH.md)
+§7 (W1–W10; port specs + integration seams at line level). Sequencing rule:
+**code slices queue behind the Track A/Track C commit batch** (firebreak +
+expedition staging go before review first — inspiron + mac AI get review
+rights, per board 45/46). Ordered:
+
+1. **Slice A — attested creates + anchored nightly Merkle** (D5 opening
+   move; scope `wm-memory` + `wm-tools` + `wm-mcp` + `ops/`): `attestations`
+   DBI copying the S11c `revisions` recipe; signing in
+   `MemoryCreateTool::call` behind key-availability with `attested`
+   disclosure; `wm anchor` subcommand reusing the generic karma tree loop +
+   `append_external_anchor` git-JSONL; wired into `wm-nightly-backup.sh`.
+2. **Slice B — validity states + corrections-as-notes** (D1+D2; scope
+   `wm-memory` + `wm-cognitive` + `wm-tools`): serde-default `validity` field
+   reusing wm-core's `ValidityState`/`MemoryTransition` legality;
+   `validity_sweep` beside `tier_sweep` (knob OFF); third visibility
+   predicate (byte-identical default). Ship gate: v6_50q fresh baseline
+   byte-identical. Bridging consensus counter = second PR.
+3. **D6 revival** (Track C adjacent): G1 serendipity dormant/ancient/bridge
+   modes → G2 graph bridge/centrality/echo-chamber → G3 novelty-spike
+   emergence, per the W9 port specs (telemetry/raw-archive class exclusion
+   mandatory in emergence scans; dream-cycle writes via `yama_admit`).
+4. **HiveMemBench pilot** (later, per Lucas): W8 sketch is the seed; claim
+   narrowed to "coordination over a persistent shared substrate among
+   autonomous agents"; pairs with the arXiv position-paper decision.
+
+Messaging basis (W7, ratified as the sharing priority): (1) memory you can
+audit and verify — tamper-evident writes, **cryptographically verifiable**
+provenance, off-store Merkle sealing; (2) governed autonomy — poisoned
+writers quarantined, not obeyed; (3) stigmergic substrate. Language
+constraints: no bare "provenance" (Zep ships structural), no
+poisoning-prevention claims (containment controls framing), no benchmark
+SOTA claims without independent runs. Recall numbers we *can* cite when
+contextualized: internal 50q canonical R@1 0.86 / R@5 1.00 / MRR 0.923 with
+per-route disclosure. New public claims get ledger rows + falsifiers per
+house doctrine.
