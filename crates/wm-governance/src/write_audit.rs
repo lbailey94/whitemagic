@@ -100,6 +100,15 @@ pub struct WriteAuditEntry {
     pub reported_writes: u32,
     /// Store mutation-counter delta observed while the dispatch ran.
     pub store_write_delta: u32,
+    /// Whether the dispatch was confirm-gated and what the caller declared.
+    /// `None` = not a confirm-gated (destructive) dispatch. `Some(true)` =
+    /// a destructive dispatch that carried `confirm: true`. `Some(false)` =
+    /// a destructive dispatch recorded without confirm (direct journal
+    /// callers only — the pipeline gate refuses those before execution).
+    /// The delete-confirm audit field (fix-queue P1.6, the Jul-13 law):
+    /// every destructive journal entry answers "was this confirmed?".
+    #[serde(default)]
+    pub confirmed: Option<bool>,
     /// Whether the dispatch succeeded.
     pub success: bool,
 }
@@ -198,6 +207,7 @@ impl WriteAuditJournal {
             declared_writes,
             reported_writes,
             success,
+            None,
         )
     }
 
@@ -242,6 +252,43 @@ impl WriteAuditJournal {
             declared_writes,
             reported_writes,
             success,
+            None,
+        )
+    }
+
+    /// [`Self::record_since`] for a confirm-gated (destructive) dispatch:
+    /// the entry records what the caller declared under `confirmed` — the
+    /// delete-confirm audit field. `Some(true)` means the dispatch carried
+    /// `confirm: true`; `Some(false)` is only reachable through direct
+    /// journal callers, since the pipeline gate refuses unconfirmed
+    /// destructive dispatches before execution.
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_since_confirmed(
+        &self,
+        dispatch_start: u64,
+        tool: &str,
+        actor: ActorIdentity,
+        memory_id: Option<&str>,
+        content_hash: Option<&str>,
+        declared_writes: bool,
+        reported_writes: u32,
+        success: bool,
+        confirmed: bool,
+    ) -> Result<WriteAuditEntry> {
+        let current = self.store.mutation_count();
+        let store_write_delta = current
+            .saturating_sub(dispatch_start)
+            .min(u64::from(u32::MAX)) as u32;
+        self.append_entry(
+            store_write_delta,
+            tool,
+            actor,
+            memory_id,
+            content_hash,
+            declared_writes,
+            reported_writes,
+            success,
+            Some(confirmed),
         )
     }
 
@@ -257,6 +304,7 @@ impl WriteAuditJournal {
         declared_writes: bool,
         reported_writes: u32,
         success: bool,
+        confirmed: Option<bool>,
     ) -> Result<WriteAuditEntry> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let timestamp = wm_core::time::now_unix_secs();
@@ -274,6 +322,7 @@ impl WriteAuditJournal {
             reported_writes,
             store_write_delta,
             success,
+            confirmed,
         };
 
         let key = [KEY_PREFIX, &id.to_be_bytes()].concat();

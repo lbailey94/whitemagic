@@ -8029,6 +8029,7 @@ dependencies = [
  "chrono",
  "lmdb",
  "proptest",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml",

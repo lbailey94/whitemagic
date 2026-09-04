@@ -610,10 +610,12 @@ mod tests {
                 .contains(&Resource::Galaxy("codex".to_string()))
         );
 
+        // Scoped to the one galaxy (firebreak bulk-scope law, P1.6: a
+        // destructive flush must name its target).
         dispatch(
             &server,
             "system.flush",
-            serde_json::json!({"threshold": 0.5, "confirm": true}),
+            serde_json::json!({"threshold": 0.5, "confirm": true, "galaxy": "codex"}),
         )
         .await
         .expect("system.flush should succeed");

@@ -8,7 +8,12 @@
 //! 5. Circuit breaker — fault tolerance, fast-fail on repeated errors
 //! 6. Tool call — execute the tool (optionally bounded by a dispatch timeout)
 //! 7. Karma record + write-audit journal — declared vs actual effects
+//!    (confirm-gated dispatches record the confirm — the delete-confirm audit)
 //! 8. Stats — success/failure and latency tracking
+//!
+//! Between 4 and 5 sits the firebreak (fix-queue P1.4+P1.6): the explicit
+//! `confirm: true` gate for destructive tools, the promoted Jan-11
+//! forbidden-command veto, the bulk-scope law, and advisory disclosure.
 
 #[cfg(test)]
 use async_trait::async_trait;
@@ -18,7 +23,9 @@ use wm_core::{Args, Context, CoreError, Output, Result, Tool};
 
 use crate::circuit_breaker::CircuitBreakerRegistry;
 use crate::rate_limiter::RateLimiter;
-use wm_governance::{ActionVerdict, DharmaGate, KarmaLedger, ResourceRules, ResourceVerdict};
+use wm_governance::{
+    ActionVerdict, DharmaGate, FirebreakOutcome, KarmaLedger, ResourceRules, ResourceVerdict,
+};
 
 /// Default dispatch timeout (300s) applied by [`DispatchPipeline::from_env`]
 /// when `WM_DISPATCH_TIMEOUT_MS` is unset.
@@ -52,6 +59,8 @@ fn first_str(v: &serde_json::Value, keys: &[&str]) -> Option<String> {
 /// [`WriteAuditJournal::dispatch_baseline`]) so the entry attributes exactly
 /// the mutations that happened while this dispatch ran — not whatever other
 /// dispatches (or bookkeeping flushes) wrote since the previous entry.
+/// `confirm_gated` is `Some(confirm)` for destructive dispatches — the
+/// delete-confirm audit field (P1.6) — and `None` for everything else.
 #[allow(clippy::too_many_arguments)]
 fn record_write_audit(
     journal: &wm_governance::WriteAuditJournal,
@@ -63,6 +72,7 @@ fn record_write_audit(
     args_content_hash: Option<&str>,
     output: &serde_json::Value,
     success: bool,
+    confirm_gated: Option<bool>,
 ) {
     let reported_writes = output
         .get("writes")
@@ -72,16 +82,30 @@ fn record_write_audit(
         .or_else(|| args_memory_id.map(str::to_string));
     let content_hash = first_str(output, &["content_hash", "hash", "sha256"])
         .or_else(|| args_content_hash.map(str::to_string));
-    if let Err(e) = journal.record_since(
-        store_write_baseline,
-        tool,
-        actor,
-        memory_id.as_deref(),
-        content_hash.as_deref(),
-        declared_writes,
-        reported_writes,
-        success,
-    ) {
+    let result = match confirm_gated {
+        Some(confirmed) => journal.record_since_confirmed(
+            store_write_baseline,
+            tool,
+            actor,
+            memory_id.as_deref(),
+            content_hash.as_deref(),
+            declared_writes,
+            reported_writes,
+            success,
+            confirmed,
+        ),
+        None => journal.record_since(
+            store_write_baseline,
+            tool,
+            actor,
+            memory_id.as_deref(),
+            content_hash.as_deref(),
+            declared_writes,
+            reported_writes,
+            success,
+        ),
+    };
+    if let Err(e) = result {
         tracing::warn!(error = %e, "Write-audit journal record failed");
     }
 }
@@ -103,6 +127,10 @@ pub struct DispatchPipeline {
     /// Optional write-audit journal — append-only record of declared vs
     /// actual store mutations per dispatch.
     write_audit: Option<Arc<wm_governance::WriteAuditJournal>>,
+    /// The firebreak — forbidden-command guardrail (P1.4) + bulk-scope law
+    /// (P1.6). Armed by default on every construction path; see
+    /// [`wm_governance::Firebreak`].
+    firebreak: Option<Arc<wm_governance::Firebreak>>,
     /// Optional GanaRegistry for tracking co-usage patterns (Phase 6)
     gana_registry: Option<Arc<std::sync::Mutex<wm_core::GanaRegistry>>>,
     /// Optional upper bound on tool execution. When a call exceeds it, the
@@ -113,7 +141,10 @@ pub struct DispatchPipeline {
 
 impl DispatchPipeline {
     /// Create a new dispatch pipeline with the given components.
-    pub const fn new(
+    ///
+    /// Not `const`: the default-armed firebreak is built here (pattern
+    /// sets compile once per pipeline).
+    pub fn new(
         rate_limiter: Arc<RateLimiter>,
         circuit_breakers: Arc<CircuitBreakerRegistry>,
         dharma_gate: Arc<DharmaGate>,
@@ -127,6 +158,12 @@ impl DispatchPipeline {
             resource_rules: None,
             write_gate: None,
             write_audit: None,
+            // The firebreak arms by default: every construction path (server,
+            // daemon, CLI, tests) inherits the veto + scope law unless it is
+            // explicitly disarmed with `with_firebreak_option(None)` or the
+            // `WM_FIREBREAK=0` kill-switch. A guardrail you must remember to
+            // attach is not a guardrail.
+            firebreak: Some(Arc::new(wm_governance::Firebreak::promoted())),
             gana_registry: None,
             dispatch_timeout: None,
         }
@@ -204,6 +241,33 @@ impl DispatchPipeline {
     pub fn with_write_audit(mut self, journal: Arc<wm_governance::WriteAuditJournal>) -> Self {
         self.write_audit = Some(journal);
         self
+    }
+
+    /// Attach a firebreak with an explicit arm state (tests, special
+    /// constructions) — see [`Self::with_firebreak_option`].
+    #[must_use]
+    pub fn with_firebreak(mut self, firebreak: Arc<wm_governance::Firebreak>) -> Self {
+        self.firebreak = Some(firebreak);
+        self
+    }
+
+    /// Replace the default-armed firebreak — `None` disarms it entirely
+    /// for this pipeline (the `WM_FIREBREAK=0` env kill-switch operates
+    /// inside [`wm_governance::Firebreak::promoted`] and is the normal
+    /// off switch; this builder is for tests and special constructions).
+    #[must_use]
+    pub fn with_firebreak_option(
+        mut self,
+        firebreak: Option<Arc<wm_governance::Firebreak>>,
+    ) -> Self {
+        self.firebreak = firebreak;
+        self
+    }
+
+    /// The firebreak attached to this pipeline (if any).
+    #[must_use]
+    pub fn firebreak(&self) -> Option<&wm_governance::Firebreak> {
+        self.firebreak.as_deref()
     }
 
     /// Optional variant of [`Self::with_write_audit`] — read-only servers
@@ -415,20 +479,47 @@ impl DispatchPipeline {
         }
 
         // 4b. Destructive tool confirmation — requires explicit `confirm: true` in args
-        if tool.effects().destructive {
-            let confirmed = args
-                .get("confirm")
-                .and_then(serde_json::Value::as_bool)
-                .unwrap_or(false);
+        let confirmed = args
+            .get("confirm")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let confirm_gated = if tool.effects().destructive {
             if !confirmed {
                 return Err(CoreError::Governance(format!(
                     "tool '{}' is destructive — pass `\"confirm\": true` in args to proceed",
                     tool.name()
                 )));
             }
+            // The delete-confirm audit field (P1.6): the journal entry for
+            // this dispatch records that the caller confirmed.
+            Some(true)
+        } else {
+            None
+        };
+
+        // 4c. Firebreak — the promoted Jan-11 forbidden-command guardrail
+        // (P1.4) plus the bulk-scope law (P1.6, the Jul-13 lesson). Blocks
+        // before execution: forbidden patterns veto even a confirmed call;
+        // dangerous patterns demand explicit confirm; destructive tools
+        // must carry a scope their registry rule accepts. See
+        // `wm_governance::firebreak` for the doctrine and scoping (the
+        // veto gates the irreversible seam, never prose).
+        let mut firebreak_advisories: Vec<String> = Vec::new();
+        if let Some(ref firebreak) = self.firebreak {
+            match firebreak.enforce(tool.name(), tool.effects(), &args) {
+                FirebreakOutcome::Blocked(reason) => {
+                    tracing::warn!(tool = tool.name(), reason = %reason, "firebreak VETO");
+                    return Err(CoreError::Governance(reason));
+                }
+                FirebreakOutcome::Proceed { advisories } if !advisories.is_empty() => {
+                    tracing::info!(tool = tool.name(), advisories = ?advisories, "firebreak advisories");
+                    firebreak_advisories = advisories;
+                }
+                FirebreakOutcome::Proceed { .. } => {}
+            }
         }
 
-        // 4c. Compartment access control — check declared galaxy reads/writes
+        // 4d. Compartment access control — check declared galaxy reads/writes
         //        plus runtime galaxy argument from tool args.
         //
         //        Tools like memory.read accept a `galaxy` argument at runtime that
@@ -597,6 +688,22 @@ impl DispatchPipeline {
             (result, _) => result,
         };
 
+        // Attach firebreak advisories the same way — a gate that acts
+        // silently is a gate nobody can audit. Caution-class findings and
+        // confirmed dangerous patterns surface under `firebreak.advisories`.
+        let result = match (result, firebreak_advisories) {
+            (Ok(mut output), advisories) if !advisories.is_empty() => {
+                if let serde_json::Value::Object(ref mut map) = output {
+                    map.insert(
+                        "firebreak".to_string(),
+                        serde_json::json!({ "advisories": advisories }),
+                    );
+                }
+                Ok(output)
+            }
+            (result, _) => result,
+        };
+
         // 6. Stats + circuit breaker feedback + karma record + write audit
         if let Ok(output) = &result {
             tool.stats().record_success(elapsed, elapsed);
@@ -626,6 +733,7 @@ impl DispatchPipeline {
                     args_content_hash.as_deref(),
                     output,
                     true,
+                    confirm_gated,
                 );
             }
         } else {
@@ -652,6 +760,7 @@ impl DispatchPipeline {
                     args_content_hash.as_deref(),
                     &serde_json::Value::Null,
                     false,
+                    confirm_gated,
                 );
             }
         }
@@ -1852,6 +1961,249 @@ mod tests {
         );
         let entries = journal.scan_entries().unwrap();
         assert_eq!(entries.last().unwrap().store_write_delta, 0);
+    }
+
+    // ── Firebreak (P1.4 forbidden-command veto + P1.6 bulk-scope law) ──
+
+    #[tokio::test]
+    async fn pipeline_firebreak_forbidden_blocks_even_with_confirm() {
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "destructive_tool",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                destructive: true,
+                ..Default::default()
+            },
+        );
+
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"confirm": true, "cmd": "rm -rf /"}),
+            )
+            .await;
+        match result {
+            Err(CoreError::Governance(msg)) => {
+                assert!(msg.contains("FORBIDDEN"), "got: {msg}");
+                assert!(msg.contains("never allowed"), "got: {msg}");
+            }
+            other => panic!("Expected Governance error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn pipeline_firebreak_scope_law_blocks_unscoped_destructive() {
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        // Named like the real tool so the scope registry entry applies.
+        let tool = TestTool::new(
+            "memory.delete",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                destructive: true,
+                ..Default::default()
+            },
+        );
+
+        let result = pipeline
+            .dispatch(&tool, &mut ctx, serde_json::json!({"confirm": true}))
+            .await;
+        match result {
+            Err(CoreError::Governance(msg)) => {
+                assert!(msg.contains("no explicit scope"), "got: {msg}");
+                assert!(msg.contains("id"), "names the scope field: {msg}");
+            }
+            other => panic!("Expected Governance error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn pipeline_firebreak_scope_law_allows_scoped_destructive() {
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "memory.delete",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                destructive: true,
+                ..Default::default()
+            },
+        );
+
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"confirm": true, "id": "0f0e0d0c-0000-0000-0000-000000000000"}),
+            )
+            .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn pipeline_firebreak_caution_disclosed_in_response() {
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "galaxy.transfer",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                destructive: true,
+                ..Default::default()
+            },
+        )
+        .with_output(serde_json::json!({"status": "success"}));
+
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"confirm": true, "from_galaxy": "codex", "note": "mv old new"}),
+            )
+            .await;
+        let output = result.expect("caution must not block");
+        let advisories = output
+            .get("firebreak")
+            .and_then(|f| f.get("advisories"))
+            .and_then(|a| a.as_array())
+            .expect("advisories must reach the response");
+        assert_eq!(advisories.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn pipeline_firebreak_dangerous_escalates_off_confirm_gate() {
+        // A spawn-class seam tool that is NOT destructive-flagged: the
+        // confirm gate (4b) never fires, but a dangerous payload in args
+        // must still demand explicit confirm — the confirm-gate hardening.
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "spawn_tool",
+            EffectRow {
+                spawns: true,
+                ..Default::default()
+            },
+        );
+
+        let blocked = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"cmd": "sudo rm -r /tmp/build"}),
+            )
+            .await;
+        match blocked {
+            Err(CoreError::Governance(msg)) => {
+                assert!(msg.contains("dangerous"), "got: {msg}");
+                assert!(msg.contains("confirm"), "got: {msg}");
+            }
+            other => panic!("Expected Governance error, got {other:?}"),
+        }
+
+        let allowed = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"cmd": "sudo rm -r /tmp/build", "confirm": true}),
+            )
+            .await;
+        assert!(allowed.is_ok());
+    }
+
+    #[tokio::test]
+    async fn pipeline_firebreak_never_scans_prose() {
+        // The seam is irreversible dispatches — a memory-create-style tool
+        // recording an incident note quoting a forbidden command must pass.
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "memory.create",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                ..Default::default()
+            },
+        );
+
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"content": "incident: operator ran rm -rf / on the store"}),
+            )
+            .await;
+        assert!(result.is_ok(), "prose is never vetoed");
+    }
+
+    #[tokio::test]
+    async fn pipeline_firebreak_disarmable_per_pipeline() {
+        let pipeline = DispatchPipeline::with_defaults()
+            .with_firebreak_option(None::<Arc<wm_governance::Firebreak>>);
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "destructive_tool",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                destructive: true,
+                ..Default::default()
+            },
+        );
+
+        // Confirm gate still fires (it is outside the firebreak).
+        let result = pipeline
+            .dispatch(&tool, &mut ctx, serde_json::json!({}))
+            .await;
+        assert!(result.is_err());
+
+        // But the forbidden-command veto is gone.
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"confirm": true, "cmd": "rm -rf /"}),
+            )
+            .await;
+        assert!(result.is_ok(), "disarmed pipeline must not veto");
+    }
+
+    #[tokio::test]
+    async fn pipeline_write_audit_records_destructive_confirm() {
+        // The delete-confirm audit (P1.6): a destructive dispatch's journal
+        // entry answers "was this confirmed?".
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(wm_memory::MemoryStore::open_default(tmp.path()).unwrap());
+        let journal = Arc::new(WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap());
+        let pipeline = DispatchPipeline::with_defaults().with_write_audit(journal.clone());
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        let tool = TestTool::new(
+            "memory.delete",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                destructive: true,
+                ..Default::default()
+            },
+        )
+        .with_store(store);
+
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut ctx,
+                serde_json::json!({"confirm": true, "id": "abc-123"}),
+            )
+            .await;
+        assert!(result.is_ok());
+
+        let entries = journal.scan_entries().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(
+            entries[0].confirmed,
+            Some(true),
+            "destructive entry must record the confirm"
+        );
     }
 
     // ── Runtime galaxy argument enforcement tests ──────────────────────

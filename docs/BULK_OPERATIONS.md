@@ -50,6 +50,39 @@ Practical: batch tools should chunk ids at ~1,500/call (64 KiB params) and
 Measured: 49,809 deletes via 34 × 1,500-id batches ≈ 15 min, vs an
 estimated 5+ hours through the per-row pipe.
 
+## The firebreak — delete-confirm audit and scope law (2026-09-03)
+
+The Jan-11 forbidden-command guardrail is now promoted (`wm-governance`
+`firebreak.rs`, enforced at the dispatch seam by `wm-dispatch` stage 4c):
+forbidden patterns (`rm -rf /`-class, disk writes, pipe-to-shell,
+credential paths) veto a confirmed dispatch; dangerous patterns require
+`confirm: true`; the veto scans the irreversible seam only (destructive /
+spawn / FS+Process+Network writes) — prose is never scanned, so incident
+notes quoting commands still store fine. Kill switch: `WM_FIREBREAK=0`
+(the doctor flags a disarmed firebreak as an issue).
+
+The bulk-scope law (the Jul-13 lesson, enforced at the same seam): every
+destructive dispatch must satisfy its registry scope before execution,
+and the write-audit journal records the confirm per destructive entry
+(`confirmed` field — the delete-confirm audit). Registry as shipped:
+
+| Tool | Scope rule | Verdict |
+|---|---|---|
+| `memory.delete` | `id` required | compliant |
+| `memory.batch_delete` | `ids` required (capped) | compliant (reference) |
+| `galaxy.purge` | `galaxy` required | compliant |
+| `galaxy.transfer` | `from_galaxy` required | compliant |
+| `galaxy.restore` | `snapshot_id` required | compliant |
+| `memory.consolidate` | `galaxy` required | compliant |
+| `memory.deduplicate` | `galaxy` required at the seam | **default-Codex path retired at the seam** — pass `galaxy` explicitly |
+| `system.flush` | `galaxy` **or** `store_wide: true` | **store-wide mode is an acknowledged rm-rf-class** — pass a scope; tool-level `dry_run`/galaxy-honoring hardening is the documented follow-up in the wm-tools scope |
+| `transaction.rollback` | self-bounded (snapshot id from `transaction.begin`) | compliant |
+| `karma.clear` | self-bounded (keeps most recent N) | compliant |
+
+Unregistered destructive tools fail loud-but-open (warn per dispatch) —
+add them to `SCOPE_REGISTRY`. `wm doctor` (section 11h) reports arm state
+and registry coverage.
+
 ## Ops pitfalls (each cost real time; do not re-learn them)
 
 1. **`pkill` self-match** — a pattern appearing anywhere in your own command

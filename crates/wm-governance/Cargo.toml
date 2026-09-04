@@ -20,6 +20,7 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 ahash = { workspace = true }
+regex = { workspace = true }
 sha2 = "0.10"
 lmdb = "0.8"
 wm-substrate = { workspace = true }

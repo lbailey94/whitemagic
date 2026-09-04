@@ -2644,6 +2644,30 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
         }
     }
 
+    // 11h. Firebreak (fix-queue P1.4+P1.6) — the promoted Jan-11
+    //      forbidden-command guardrail plus the bulk-scope law. Static
+    //      grading: the veto arms with every pipeline (armed unless
+    //      WM_FIREBREAK=0), so the doctor reports arm state, pattern
+    //      coverage, and scope-registry size. Disarming is visible here
+    //      and counts as an issue — a disarmed guardrail is a finding,
+    //      not a configuration.
+    println!();
+    {
+        let firebreak = wm_governance::Firebreak::promoted();
+        let (forbidden, dangerous, caution) = firebreak.pattern_counts();
+        if firebreak.is_armed() {
+            println!(
+                "[OK]   Firebreak: armed — {forbidden} forbidden / {dangerous} dangerous / {caution} caution patterns, {} scope-registry entries (Jan-11 guardrail promotion)",
+                wm_governance::SCOPE_REGISTRY.len()
+            );
+        } else {
+            println!(
+                "[WARN] Firebreak: DISARMED (WM_FIREBREAK=0) — forbidden-command veto and bulk-scope law off; {forbidden}/{dangerous}/{caution} patterns compiled but not enforcing"
+            );
+            issues += 1;
+        }
+    }
+
     // 12. Write-audit journal — misdeclarations become visible here.
     //     The journal is append-only and lives in the Karma LMDB galaxy;
     //     the doctor opens it directly (read-only) from the store.
