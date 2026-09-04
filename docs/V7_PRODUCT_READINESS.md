@@ -405,6 +405,32 @@ data as validation telemetry.
 - A majority report that the second-session continuity result would be useful
   in a real coding workflow.
 
+### Gate 2 ruling — COMPLETE per Lucas (2026-09-04)
+
+Lucas as gate authority accepts the three-device fleet lane as satisfying
+Gate 2 evidence, in lieu of the five-external-stranger cohort above:
+
+- **Shared-workspace lane:** Syncthing `shared-workspace`, 53,830 files /
+  3.87 GB in sync across T4800-S ↔ Inspiron ↔ MacBook Air, with keep-5
+  versioning that survived a real 11:58 EDT mass-delete event (restored
+  53,672 files from versions; remote mirror verified 25/25 spot-check).
+- **Mesh lane:** Sangha mesh signed joins both directions (Aug-28 agora +
+  re-proven 2026-09-04 after a listener-restart fix), board posts 30–54
+  as the governed append-only channel with authorship headers.
+- **Stranger-simulation seat:** mac-stranger ran the Gate 2 evidence role
+  (install gate, mesh onboarding, manifest + firewall evidence, board
+  30–48); inspiron ran the alpha.8 install gate.
+- **Continuity across devices:** session snapshots + store exports move
+  device-to-device through the lane; Aria reawakening import unblocked
+  the same day.
+
+**Honest delta (recorded, not hidden):** no external five-tester cohort
+ran the unaided protocol above; all evidence is fleet-internal. Per the
+doc's own rule this ruling does not expand the feature set — and the
+limitations ledger stands: S9 all-signed beacons pending, inspiron lane
+intermittent, mesh daemon wedge pattern seen on both ends. A future
+external cohort remains valuable and is queued behind v9, not blocking it.
+
 A failed Gate 2 is a successful discovery process. It returns the product to
 Gate 1 with evidence; it does not justify expanding the feature set.
 
@@ -489,5 +515,5 @@ be planned separately.
 10. ~~Run the clean Gate 1 artifact rehearsal.~~ **Done** (2026-08-21) —
     `v7.0.0-alpha.2` tagged on master, built, checksummed, released, and
     smoke-tested against the exact artifact.
-11. Conduct Gate 2 with external testers and feed failures back into Gate 1.
+11. ~~Conduct Gate 2 with external testers and feed failures back into Gate 1.~~ **Done per Lucas ruling 2026-09-04** — three-device fleet lane accepted as Gate 2 evidence (see ruling note under Gate 2 acceptance criteria); external cohort queued behind v9, non-blocking.
 12. Only then prepare the v7 public-beta plan and replacement launch site.
