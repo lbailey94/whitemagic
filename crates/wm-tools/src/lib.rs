@@ -954,6 +954,7 @@ impl Tool for MemoryListTool {
         let visible: Vec<&wm_memory::Memory> = memories
             .iter()
             .filter(|m| crate::expansion::common::mcp_visible(m))
+            .filter(|m| crate::expansion::common::validity_visible(m))
             .filter(|m| {
                 !exclude_tags
                     .iter()
@@ -1508,6 +1509,7 @@ impl Tool for MemoryQueryTool {
         let entries: Vec<Value> = memories
             .iter()
             .filter(|m| crate::expansion::common::mcp_visible(m))
+            .filter(|m| crate::expansion::common::validity_visible(m))
             .map(|m| {
                 json!({
                     "id": m.metadata.id.to_string(),
@@ -1647,6 +1649,9 @@ impl Tool for MemorySearchTool {
                 let id = uuid::Uuid::parse_str(&r.memory_id).ok()?;
                 let mem = self.store.get(galaxy, id).ok().flatten()?;
                 if !crate::expansion::common::mcp_visible(&mem) {
+                    return None;
+                }
+                if !crate::expansion::common::validity_visible(&mem) {
                     return None;
                 }
                 Some(json!({
@@ -1889,6 +1894,9 @@ impl Tool for MemoryVectorSearchTool {
                 let stored = self.store.get(r.galaxy, r.memory_id).ok().flatten();
                 if let Some(mem) = &stored {
                     if !crate::expansion::common::mcp_visible(mem) {
+                        return None;
+                    }
+                    if !crate::expansion::common::validity_visible(mem) {
                         return None;
                     }
                 }

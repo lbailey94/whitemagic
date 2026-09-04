@@ -192,6 +192,13 @@ pub struct MemoryMetadata {
     /// re-inserting identical content; importance decays with it.
     #[serde(default)]
     pub dup_count: u64,
+    /// Lifecycle validity (V8 Slice B, D1+D2) — reuses
+    /// [`wm_core::episodic::ValidityState`]; the dream cycle is the only
+    /// transition path (see `validity_sweep`). Pre-Slice-B rows default to
+    /// `Active`, so the recall surface is byte-identical until the
+    /// `WM_VALIDITY_ENFORCE` knob turns on.
+    #[serde(default)]
+    pub validity: wm_core::episodic::ValidityState,
     /// Content-revision counter (V8 S11c) — how many times this memory's
     /// content has changed through `memory.update`. The per-entry chain
     /// itself lives in the store's `revisions` DBI (`memory.revisions`).
@@ -226,6 +233,17 @@ const fn default_source_trust() -> f32 {
     // unaffected — their stored JSON carries whatever was stamped at
     // write time.
     0.5
+}
+
+/// Validity enforcement knob (V8 Slice B, D1+D2).
+///
+/// Off by default: returns true only when `WM_VALIDITY_ENFORCE=1` (exact
+/// match — anything else, including unset, stays off). While off, the
+/// validity predicate is identically true and the recall surface is
+/// byte-identical with or without validity stamps (the S8 doctrine).
+#[must_use]
+pub fn validity_enforced() -> bool {
+    matches!(std::env::var("WM_VALIDITY_ENFORCE"), Ok(v) if v == "1")
 }
 
 /// Retrieval trust factor (V8.1, evidence-gated via `WM_TRUST_WEIGHT`).
@@ -306,6 +324,7 @@ impl Memory {
                 tier: Tier::Working,
                 class: crate::typology::detect_class(&content, &[]),
                 dup_count: 0,
+                validity: wm_core::episodic::ValidityState::default(),
                 revision_count: 0,
             },
             content,
@@ -419,6 +438,22 @@ impl Memory {
         }
         self.metadata.tier = to;
         Ok(())
+    }
+
+    /// Transition the lifecycle validity (V8 Slice B, D1+D2).
+    ///
+    /// The dream cycle's `validity_sweep` is the ONLY legitimate caller —
+    /// validity moves are a sleep-time lifecycle decision, never a
+    /// request-path one (no tool accepts a validity argument).
+    /// Legality is exactly [`wm_core::episodic::ValidityState::transition`];
+    /// this wrapper only supplies the record id so callers cannot
+    /// fabricate a mismatched identity.
+    pub fn transition_validity(
+        &mut self,
+        transition: wm_core::episodic::MemoryTransition,
+    ) -> Result<(), wm_core::episodic::ValidityTransitionError> {
+        let id = self.metadata.id;
+        self.metadata.validity.transition(id, transition)
     }
 
     /// Set agent identity and version.
@@ -607,6 +642,83 @@ mod tests {
         assert_eq!(m.recall_count, 0);
         assert_eq!(m.version, 1);
         assert_eq!(m.agent_id, "system");
+    }
+
+    // ── Validity states (V8 Slice B, D1+D2) ─────────────────────────────
+
+    #[test]
+    fn new_memory_validity_defaults_active() {
+        let mem = Memory::new(Galaxy::Codex, "test".into());
+        assert_eq!(
+            mem.metadata.validity,
+            wm_core::episodic::ValidityState::Active
+        );
+        assert!(mem.metadata.validity.is_current());
+    }
+
+    #[test]
+    fn legacy_metadata_without_validity_deserializes_active() {
+        // Pre-Slice-B rows carry no `validity` key — serde default must be
+        // Active so old stores read byte-identical.
+        let mem = Memory::new(Galaxy::Codex, "test".into());
+        let mut json = serde_json::to_value(&mem.metadata).unwrap();
+        json.as_object_mut().unwrap().remove("validity");
+        let back: MemoryMetadata = serde_json::from_value(json).unwrap();
+        assert_eq!(back.validity, wm_core::episodic::ValidityState::Active);
+    }
+
+    #[test]
+    fn transition_validity_supersede_roundtrip() {
+        let mut mem = Memory::new(Galaxy::Codex, "old claim".into());
+        let replacement = uuid::Uuid::new_v4();
+        mem.transition_validity(wm_core::episodic::MemoryTransition::Supersede { replacement })
+            .unwrap();
+        assert_eq!(
+            mem.metadata.validity,
+            wm_core::episodic::ValidityState::Superseded { by: replacement }
+        );
+        assert!(!mem.metadata.validity.is_current());
+        assert!(mem.metadata.validity.is_historical());
+    }
+
+    #[test]
+    fn transition_validity_refuses_self_supersession() {
+        let mut mem = Memory::new(Galaxy::Codex, "test".into());
+        let own = mem.metadata.id;
+        let err = mem
+            .transition_validity(wm_core::episodic::MemoryTransition::Supersede {
+                replacement: own,
+            })
+            .unwrap_err();
+        assert_eq!(
+            err,
+            wm_core::episodic::ValidityTransitionError::SelfSupersession
+        );
+        assert!(mem.metadata.validity.is_current());
+    }
+
+    #[test]
+    fn transition_validity_erased_is_terminal() {
+        let mut mem = Memory::new(Galaxy::Codex, "test".into());
+        mem.transition_validity(wm_core::episodic::MemoryTransition::Erase)
+            .unwrap();
+        assert_eq!(
+            mem.metadata.validity,
+            wm_core::episodic::ValidityState::Erased
+        );
+        let err = mem
+            .transition_validity(wm_core::episodic::MemoryTransition::Archive)
+            .unwrap_err();
+        assert_eq!(err, wm_core::episodic::ValidityTransitionError::Erased);
+    }
+
+    #[test]
+    fn validity_enforced_defaults_off() {
+        // Load-bearing for the S8 byte-identical doctrine: unless a session
+        // deliberately opts in via WM_VALIDITY_ENFORCE=1, enforcement is off.
+        // (Env mutation is `unsafe` under edition-2024 `forbid(unsafe)`, so
+        // the ON case is covered by inspection + the benchmark gate, not here.)
+        assert!(!validity_enforced());
     }
 
     // ── recall() Hebbian dynamics ──────────────────────────────────────

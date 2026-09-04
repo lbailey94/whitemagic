@@ -383,6 +383,7 @@ impl Tool for MemoryNearbyTool {
         let results: Vec<Value> = nearby
             .iter()
             .filter(|(idx, _)| crate::expansion::common::mcp_visible(&memories[*idx]))
+            .filter(|(idx, _)| crate::expansion::common::validity_visible(&memories[*idx]))
             .take(limit)
             .map(|(idx, dist)| {
                 let mem = &memories[*idx];

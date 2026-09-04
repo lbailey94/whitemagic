@@ -32,6 +32,15 @@ const SEMANTIC_MIN_IMPORTANCE: f32 = 0.7;
 /// memory's own `half_life_days`).
 const ARCHIVAL_MAX_IMPORTANCE: f32 = 0.3;
 
+/// Validity-sweep knob (V8 Slice B, D1+D2). Off by default: true only on
+/// exact `WM_VALIDITY_SWEEP=1` — the same exact-match shape as
+/// `wm_memory::memory::validity_enforced`, so sleep stays byte-identical
+/// until a session deliberately opts in.
+#[must_use]
+fn validity_sweep_enabled() -> bool {
+    matches!(std::env::var("WM_VALIDITY_SWEEP"), Ok(v) if v == "1")
+}
+
 /// The 12 phases of the dream cycle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DreamPhase {
@@ -749,19 +758,28 @@ impl DreamCycle {
         processed += tier_inspected;
         modified += tier_moved;
 
+        // Slice B: validity derivation moves ONLY here (D1+D2). Off by
+        // default — knob-off the sweep is a (0, 0) no-op and the only
+        // report change is the zeroed validity tail.
+        let (validity_inspected, validity_moved) = self.validity_sweep(ctx);
+        processed += validity_inspected;
+        modified += validity_moved;
+
         (
             processed,
             modified + strategies_created,
             0,
             true,
             format!(
-                "consolidated {} memories, {} transferred/deduplicated, {} strategies synthesized, {} turns consolidated, {} tier moves over {} inspected",
+                "consolidated {} memories, {} transferred/deduplicated, {} strategies synthesized, {} turns consolidated, {} tier moves over {} inspected, {} validity moves over {} inspected",
                 processed,
                 modified,
                 strategies_created,
                 self.consolidation.consolidated(),
                 tier_moved,
-                tier_inspected
+                tier_inspected,
+                validity_moved,
+                validity_inspected
             ),
         )
     }
@@ -825,6 +843,75 @@ impl DreamCycle {
                 if let Some(to) = target {
                     let mut staged = mem.clone();
                     if staged.transition_tier(to).is_ok() && ctx.store.put(*galaxy, &staged).is_ok()
+                    {
+                        moved += 1;
+                    }
+                }
+            }
+        }
+        (inspected, moved)
+    }
+
+    /// Validity sweep — the ONLY validity-transition path in the system
+    /// (V8 Slice B, D1+D2). Corrections arrive as notes: a correction is a
+    /// new memory plus a `Supersedes` edge (`memory.relate` — target
+    /// supersedes source); this sweep derives the validity stamp from the
+    /// edge, so the graph is the claim and sleep is the adjudication.
+    ///
+    /// Policy (one move per memory per dream cycle, same pacing as the
+    /// tier ladder):
+    /// - outgoing `Supersedes` edge `M → T`: `M` transitions to
+    ///   `Superseded { by: T }` via `Memory::transition_validity` (which
+    ///   enforces the `ValidityState` legality matrix — e.g. revoked or
+    ///   erased records refuse, and the move is skipped, never forced).
+    /// - non-`Active` records are left untouched (no revival of old
+    ///   evidence through this path).
+    /// - `Contradicts` edges are NOT adjudicated here (TANGLE semantics:
+    ///   both sides stay visible; a future adjudication step decides).
+    ///
+    /// Gated by `WM_VALIDITY_SWEEP=1` (exact match — anything else,
+    /// including unset, stays off). Knob-off this returns `(0, 0)` without
+    /// scanning, so sleep is byte-identical to pre-Slice-B.
+    fn validity_sweep(&self, ctx: &DreamContext) -> (usize, usize) {
+        self.validity_sweep_inner(ctx, validity_sweep_enabled())
+    }
+
+    /// Sweep core with the gate as a parameter, so tests can exercise the
+    /// derivation without mutating process env (which is `unsafe` under
+    /// edition-2024 `forbid(unsafe)`).
+    fn validity_sweep_inner(&self, ctx: &DreamContext, enabled: bool) -> (usize, usize) {
+        if !enabled {
+            return (0, 0);
+        }
+        let Ok(galaxy_mems) = ctx.cached_scan_all_galaxies(10_000) else {
+            return (0, 0);
+        };
+        let env = ctx.store.env();
+        let mut inspected = 0usize;
+        let mut moved = 0usize;
+
+        for (galaxy, mems) in &galaxy_mems {
+            for mem in mems {
+                if !mem.metadata.validity.is_current() {
+                    continue;
+                }
+                inspected += 1;
+                let outgoing = ctx
+                    .associations
+                    .find_from(env, mem.metadata.id)
+                    .unwrap_or_default();
+                let superseded_by = outgoing.iter().find_map(|edge| {
+                    if edge.link_type == wm_memory::LinkType::Supersedes {
+                        Some(edge.target)
+                    } else {
+                        None
+                    }
+                });
+                if let Some(replacement) = superseded_by {
+                    let mut staged = mem.clone();
+                    let transition = wm_core::MemoryTransition::Supersede { replacement };
+                    if staged.transition_validity(transition).is_ok()
+                        && ctx.store.put(*galaxy, &staged).is_ok()
                     {
                         moved += 1;
                     }
@@ -1626,6 +1713,122 @@ mod tests {
             wm_memory::Tier::Episodic,
             "protection must shield from decay-out"
         );
+    }
+
+    /// Slice B: validity derives from the graph in sleep, never on the
+    /// request path. Corrections are notes (a new memory + a Supersedes
+    /// edge); the sweep stamps the source Superseded. Knob-off the sweep
+    /// is a (0, 0) no-op even with edges present.
+    #[test]
+    fn validity_sweep_derives_superseded_from_edges() {
+        let (_tmp, store, assoc) = test_ctx();
+        let env = store.env();
+
+        let old = Memory::new(Galaxy::Codex, "old claim".into());
+        let old_id = old.metadata.id;
+        store.put(Galaxy::Codex, &old).unwrap();
+        let new = Memory::new(Galaxy::Codex, "corrected claim".into());
+        let new_id = new.metadata.id;
+        store.put(Galaxy::Codex, &new).unwrap();
+
+        // Correction-as-note: target supersedes source.
+        let edge =
+            wm_memory::Association::new(old_id, new_id, wm_memory::LinkType::Supersedes, 0.9);
+        assoc.put(env, &edge).unwrap();
+
+        let ctx = DreamContext::new(&store, &assoc);
+        let cycle = DreamCycle::new();
+
+        // Knob-off: no-op, source stays current.
+        let (inspected_off, moved_off) = cycle.validity_sweep(&ctx);
+        assert_eq!((inspected_off, moved_off), (0, 0));
+        let validity_of = |id: uuid::Uuid| {
+            store
+                .get(Galaxy::Codex, id)
+                .unwrap()
+                .unwrap()
+                .metadata
+                .validity
+        };
+        assert!(validity_of(old_id).is_current());
+
+        // Enabled: source derives Superseded{by: new}, target untouched.
+        let (inspected_on, moved_on) = cycle.validity_sweep_inner(&ctx, true);
+        assert_eq!(inspected_on, 2);
+        assert_eq!(moved_on, 1);
+        assert_eq!(
+            validity_of(old_id),
+            wm_core::episodic::ValidityState::Superseded { by: new_id }
+        );
+        assert!(validity_of(new_id).is_current());
+    }
+
+    /// Slice B: revoked records refuse re-derivation, and non-Supersedes
+    /// edges (e.g. Contradicts) are surfaced, never adjudicated, by the
+    /// sweep (TANGLE semantics).
+    #[test]
+    fn validity_sweep_leaves_revoked_and_contradicted_alone() {
+        let (_tmp, store, assoc) = test_ctx();
+        let env = store.env();
+
+        let mut revoked = Memory::new(Galaxy::Codex, "revoked claim".into());
+        revoked
+            .transition_validity(wm_core::MemoryTransition::Revoke {
+                reason: "test".into(),
+            })
+            .unwrap();
+        let revoked_id = revoked.metadata.id;
+        store.put(Galaxy::Codex, &revoked).unwrap();
+        let replacement = Memory::new(Galaxy::Codex, "replacement".into());
+        let replacement_id = replacement.metadata.id;
+        store.put(Galaxy::Codex, &replacement).unwrap();
+        assoc
+            .put(
+                env,
+                &wm_memory::Association::new(
+                    revoked_id,
+                    replacement_id,
+                    wm_memory::LinkType::Supersedes,
+                    0.9,
+                ),
+            )
+            .unwrap();
+
+        let a = Memory::new(Galaxy::Codex, "claim A".into());
+        let a_id = a.metadata.id;
+        store.put(Galaxy::Codex, &a).unwrap();
+        let b = Memory::new(Galaxy::Codex, "claim B".into());
+        let b_id = b.metadata.id;
+        store.put(Galaxy::Codex, &b).unwrap();
+        assoc
+            .put(
+                env,
+                &wm_memory::Association::new(a_id, b_id, wm_memory::LinkType::Contradicts, 0.9),
+            )
+            .unwrap();
+
+        let ctx = DreamContext::new(&store, &assoc);
+        let cycle = DreamCycle::new();
+        let (inspected, moved) = cycle.validity_sweep_inner(&ctx, true);
+        // Only Active memories are inspected (revoked is skipped); the
+        // Contradicts edge adjudicates nothing, and the revoked record
+        // refuses the Supersede transition — so nothing moves.
+        assert_eq!(inspected, 3);
+        assert_eq!(moved, 0);
+        let validity_of = |id: uuid::Uuid| {
+            store
+                .get(Galaxy::Codex, id)
+                .unwrap()
+                .unwrap()
+                .metadata
+                .validity
+        };
+        assert!(matches!(
+            validity_of(revoked_id),
+            wm_core::episodic::ValidityState::Revoked { .. }
+        ));
+        assert!(validity_of(a_id).is_current());
+        assert!(validity_of(b_id).is_current());
     }
 
     #[test]

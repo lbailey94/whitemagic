@@ -56,6 +56,22 @@ pub const fn model_visible(mem: &Memory) -> bool {
     !mem.metadata.model_exclude
 }
 
+/// Validity visibility (V8 Slice B, D1+D2): the third visibility predicate
+/// beside [`mcp_visible`]/[`model_visible`].
+///
+/// True unless the memory carries a non-`Active` validity stamp AND the
+/// `WM_VALIDITY_ENFORCE` knob is on. Knob-off (the default) the predicate
+/// is identically true, so every wired call site is byte-identical with
+/// or without validity stamps (the S8 doctrine).
+#[must_use]
+pub fn validity_visible(mem: &Memory) -> bool {
+    if wm_memory::memory::validity_enforced() {
+        mem.metadata.validity.is_current()
+    } else {
+        true
+    }
+}
+
 // ── JSON-Schema helpers for `Tool::input_schema()` ─────────────────────
 
 /// Build an object schema from properties and required keys.
@@ -194,5 +210,28 @@ pub const fn galaxy_name(g: Galaxy) -> &'static str {
         Galaxy::Dharma => "dharma",
         Galaxy::Associations => "associations",
         Galaxy::Embeddings => "embeddings",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Validity visibility (V8 Slice B, D1+D2) ─────────────────────────
+
+    #[test]
+    fn validity_visible_defaults_true_even_when_stamped() {
+        // Knob-off (the default) the predicate is identically true — even
+        // for a stamped non-Active memory — so every wired call site is
+        // byte-identical with or without validity stamps (S8 doctrine).
+        // (The ON case needs env mutation, `unsafe` under edition-2024
+        // `forbid(unsafe)` — covered by inspection, not here.)
+        let mut mem = Memory::new(Galaxy::Codex, "old claim".into());
+        assert!(validity_visible(&mem));
+        let replacement = uuid::Uuid::new_v4();
+        mem.transition_validity(wm_core::episodic::MemoryTransition::Supersede { replacement })
+            .unwrap();
+        assert!(!mem.metadata.validity.is_current());
+        assert!(validity_visible(&mem));
     }
 }

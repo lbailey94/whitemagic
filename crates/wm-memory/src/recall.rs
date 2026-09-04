@@ -691,6 +691,21 @@ impl RecallEngine {
         // 4. Fuse results (trust weighting applied inside when enabled)
         let fused = self.fuse_results(&bm25_results, &vector_results, limit);
 
+        // 4b. Validity filter (V8 Slice B) — off unless
+        // WM_VALIDITY_ENFORCE=1; knob-off this retains everything and the
+        // surface is byte-identical.
+        let fused = if crate::memory::validity_enforced() {
+            fused
+                .into_iter()
+                .filter(|r| {
+                    self.find_memory_anywhere(r.memory_id)
+                        .is_none_or(|mem| mem.metadata.validity.is_current())
+                })
+                .collect()
+        } else {
+            fused
+        };
+
         // 5. Graph expansion (V8 S6 third fusion phase) — off unless
         // WM_RECALL_GRAPH_WEIGHT > 0.
         let mut expanded = self.expand_with_graph(fused, limit);
@@ -830,6 +845,16 @@ impl RecallEngine {
                 if neighbor_id == seed.memory_id {
                     continue;
                 }
+                // Validity-aware graph phase (V8 Slice B, knob-gated):
+                // non-current neighbors contribute nothing while enforced.
+                // Knob-off this block never runs and fusion is byte-identical.
+                if crate::memory::validity_enforced()
+                    && self
+                        .find_memory_anywhere(neighbor_id)
+                        .is_some_and(|mem| !mem.metadata.validity.is_current())
+                {
+                    continue;
+                }
                 let contribution = seed.score * edge.weight * self.config.graph_weight;
                 if let Some(existing) = results.iter_mut().find(|r| r.memory_id == neighbor_id) {
                     existing.score += contribution;
@@ -837,7 +862,11 @@ impl RecallEngine {
                 } else if let Some(mem) = self.find_memory_anywhere(neighbor_id) {
                     // Injected neighbors honor the privacy flag — the main
                     // path must never gain a side door through the graph.
+                    // Same for validity while enforced (Slice B).
                     if mem.metadata.is_private {
+                        continue;
+                    }
+                    if crate::memory::validity_enforced() && !mem.metadata.validity.is_current() {
                         continue;
                     }
                     results.push(RecallResult {

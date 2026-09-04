@@ -228,7 +228,10 @@ impl Tool for MemoryBatchReadTool {
             if let Some(id_str) = id_val.as_str() {
                 if let Ok(id) = uuid::Uuid::parse_str(id_str) {
                     match self.store.get(galaxy, id)? {
-                        Some(mem) if crate::expansion::common::mcp_visible(&mem) => {
+                        Some(mem)
+                            if crate::expansion::common::mcp_visible(&mem)
+                                && crate::expansion::common::validity_visible(&mem) =>
+                        {
                             results.push(json!({
                                 "id": mem.metadata.id,
                                 "content": mem.content,
@@ -936,6 +939,7 @@ impl Tool for MemoryHybridRecallTool {
                     if let Ok(Some(mem)) = self.store.get(hr.galaxy, hr.memory_id) {
                         if mem.metadata.importance >= min_importance
                             && crate::expansion::common::mcp_visible(&mem)
+                            && crate::expansion::common::validity_visible(&mem)
                         {
                             results.push(json!({
                                 "id": mem.metadata.id,
@@ -1011,6 +1015,7 @@ impl Tool for MemoryHybridRecallTool {
                 }
                 if mem.metadata.importance < min_importance
                     || !crate::expansion::common::mcp_visible(&mem)
+                    || !crate::expansion::common::validity_visible(&mem)
                 {
                     continue;
                 }
@@ -1068,6 +1073,7 @@ impl Tool for MemoryHybridRecallTool {
                             if let Ok(Some(mem)) = self.store.get(hit_galaxy, id) {
                                 if mem.metadata.importance >= min_importance
                                     && crate::expansion::common::mcp_visible(&mem)
+                                    && crate::expansion::common::validity_visible(&mem)
                                 {
                                     results.push(json!({
                                             "id": mem.metadata.id,
@@ -1109,6 +1115,7 @@ impl Tool for MemoryHybridRecallTool {
                 .filter(|m| {
                     m.metadata.importance >= min_importance
                         && crate::expansion::common::mcp_visible(m)
+                        && crate::expansion::common::validity_visible(m)
                 })
                 .take(limit)
             {
@@ -1205,6 +1212,7 @@ impl Tool for MemoryHybridRecallTool {
                     };
                     if mem.metadata.importance < min_importance
                         || !crate::expansion::common::mcp_visible(&mem)
+                        || !crate::expansion::common::validity_visible(&mem)
                     {
                         continue;
                     }
@@ -1732,7 +1740,7 @@ impl Tool for MemoryAggregateTool {
             let Ok(Some(mem)) = self.store.get(galaxy, id) else {
                 continue;
             };
-            if super::common::mcp_visible(&mem) {
+            if super::common::mcp_visible(&mem) && super::common::validity_visible(&mem) {
                 memories.push((r.score, mem));
             }
         }
@@ -1892,8 +1900,12 @@ impl Tool for MemorySortTool {
             .unwrap_or(50) as usize;
 
         let mut memories = self.store.scan(galaxy, 10_000)?;
-        // Private memories never appear in MCP responses.
-        memories.retain(crate::expansion::common::mcp_visible);
+        // Private memories never appear in MCP responses. Non-current
+        // validity likewise hides while enforced (Slice B, off by default).
+        memories.retain(|m| {
+            crate::expansion::common::mcp_visible(m)
+                && crate::expansion::common::validity_visible(m)
+        });
 
         match sort_by {
             "importance" => memories.sort_by(|a, b| {
@@ -2061,6 +2073,10 @@ impl Tool for MemoryFilterTool {
             .filter(|m| {
                 // Private memories never appear in MCP responses.
                 if !crate::expansion::common::mcp_visible(m) {
+                    return false;
+                }
+                // Non-current validity hides while enforced (Slice B).
+                if !crate::expansion::common::validity_visible(m) {
                     return false;
                 }
                 if m.metadata.importance < min_importance || m.metadata.importance > max_importance
