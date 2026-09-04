@@ -222,29 +222,91 @@ impl Tool for SystemFlushTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Flush low-importance memories across all galaxies (gentle GC)"
+        "Flush low-importance memories (gentle GC) — scoped: pass `galaxy` for one galaxy or `store_wide: true` to acknowledge a store-wide flush. Preview-only unless `dry_run: false`."
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "threshold": {"type": "number", "description": "Flush memories below this importance (default 0.05)"},
+                "galaxy": {"type": "string", "description": "Scope the flush to one galaxy (e.g. 'codex')"},
+                "store_wide": {"type": "boolean", "description": "Acknowledge a store-wide flush across all galaxies"},
+                "dry_run": {"type": "boolean", "description": "Preview only (default true) — count without deleting"},
+            }),
+            &[],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let threshold = args
             .get("threshold")
             .and_then(serde_json::Value::as_f64)
             .unwrap_or(0.05) as f32;
+        // Scope is mandatory and value-checked (the firebreak seam only
+        // checks presence): exactly one of a non-empty `galaxy` or an
+        // explicit `store_wide: true`.
+        let galaxy_arg = args.get("galaxy").and_then(serde_json::Value::as_str);
+        let store_wide = args
+            .get("store_wide")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let targets: Vec<Galaxy> = match (galaxy_arg, store_wide) {
+            (Some(name), false) if !name.is_empty() => {
+                vec![super::common::parse_galaxy(name)?]
+            }
+            (None, true) => Galaxy::all().to_vec(),
+            (Some(_), true) => {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "system.flush takes exactly one scope: `galaxy` or `store_wide: true`, not both"
+                        .into(),
+                ));
+            }
+            _ => {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "system.flush requires a scope: pass `galaxy` (e.g. {\"galaxy\": \"codex\"}) or acknowledge the blast radius with `store_wide: true`"
+                        .into(),
+                ));
+            }
+        };
+        let dry_run = args
+            .get("dry_run")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(true);
+        let mut per_galaxy = Vec::new();
+        let mut preview: Vec<Value> = Vec::new();
         let mut flushed = 0u32;
-        for galaxy in Galaxy::all() {
-            let memories = self.store.scan(galaxy, 10_000)?;
+        for galaxy in &targets {
+            let memories = self.store.scan(*galaxy, 10_000)?;
+            let mut count = 0u32;
             for mem in &memories {
                 if mem.metadata.importance < threshold
                     && !mem.metadata.tags.contains(&"system".to_string())
                 {
-                    self.store.delete(galaxy, mem.metadata.id)?;
-                    super::common::deindex(self.search.as_deref(), &mem.metadata.id.to_string());
-                    flushed += 1;
+                    count += 1;
+                    if preview.len() < 50 {
+                        preview.push(json!({
+                            "id": mem.metadata.id,
+                            "galaxy": galaxy.db_name(),
+                            "importance": mem.metadata.importance,
+                        }));
+                    }
+                    if !dry_run {
+                        self.store.delete(*galaxy, mem.metadata.id)?;
+                        super::common::deindex(
+                            self.search.as_deref(),
+                            &mem.metadata.id.to_string(),
+                        );
+                        flushed += 1;
+                    }
                 }
             }
+            per_galaxy.push(json!({"galaxy": galaxy.db_name(), "candidates": count}));
         }
         Ok(json!({
             "status": "success",
             "threshold": threshold,
+            "dry_run": dry_run,
+            "scope": galaxy_arg.unwrap_or("store_wide"),
+            "per_galaxy": per_galaxy,
+            "preview": preview,
             "flushed": flushed,
         }))
     }
@@ -314,5 +376,94 @@ mod tests {
         assert_eq!(v["index_consistency"]["has_drift"], true);
         assert_eq!(v["index_consistency"]["total_lmdb"], 1);
         assert_eq!(v["index_consistency"]["total_tantivy"], 0);
+    }
+
+    // ── system.flush scope + dry_run hardening ──────────────────────────
+
+    fn flush_fixture() -> (tempfile::TempDir, Arc<MemoryStore>) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(dir.path()).unwrap());
+        // Low-importance flushable in Codex + Sessions; high-importance kept.
+        for (galaxy, importance) in [
+            (Galaxy::Codex, 0.01),
+            (Galaxy::Sessions, 0.02),
+            (Galaxy::Codex, 0.9),
+        ] {
+            let mut mem = wm_memory::Memory::new(galaxy, "flush me".into());
+            mem.metadata.importance = importance;
+            store.put(galaxy, &mem).unwrap();
+        }
+        (dir, store)
+    }
+
+    #[tokio::test]
+    async fn flush_requires_a_scope() {
+        let (_dir, store) = flush_fixture();
+        let tool = SystemFlushTool::new(store, None);
+        let err = tool
+            .call(&mut Context::default(), json!({"threshold": 0.05}))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, wm_core::CoreError::InvalidArgs(_)));
+        // store_wide:false is not an acknowledgement either.
+        let err = tool
+            .call(
+                &mut Context::default(),
+                json!({"threshold": 0.05, "store_wide": false}),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, wm_core::CoreError::InvalidArgs(_)));
+    }
+
+    #[tokio::test]
+    async fn flush_dry_run_previews_without_deleting() {
+        let (_dir, store) = flush_fixture();
+        let tool = SystemFlushTool::new(store.clone(), None);
+        // dry_run defaults true: 1 Codex candidate reported, nothing deleted.
+        let v = tool
+            .call(&mut Context::default(), json!({"galaxy": "codex"}))
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["dry_run"], true);
+        assert_eq!(v["flushed"], 0);
+        assert_eq!(v["scope"], "codex");
+        assert_eq!(v["per_galaxy"][0]["candidates"], 1);
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 2);
+        assert_eq!(store.count(Galaxy::Sessions).unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn flush_galaxy_scope_isolates() {
+        let (_dir, store) = flush_fixture();
+        let tool = SystemFlushTool::new(store.clone(), None);
+        let v = tool
+            .call(
+                &mut Context::default(),
+                json!({"galaxy": "codex", "dry_run": false}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["flushed"], 1);
+        // Sessions untouched by a Codex-scoped flush.
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 1);
+        assert_eq!(store.count(Galaxy::Sessions).unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn flush_store_wide_acknowledged() {
+        let (_dir, store) = flush_fixture();
+        let tool = SystemFlushTool::new(store.clone(), None);
+        let v = tool
+            .call(
+                &mut Context::default(),
+                json!({"store_wide": true, "dry_run": false}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["flushed"], 2);
+        assert_eq!(store.count(Galaxy::Codex).unwrap(), 1);
+        assert_eq!(store.count(Galaxy::Sessions).unwrap(), 0);
     }
 }

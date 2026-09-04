@@ -75,7 +75,7 @@ and the write-audit journal records the confirm per destructive entry
 | `galaxy.restore` | `snapshot_id` required | compliant |
 | `memory.consolidate` | `galaxy` required | compliant |
 | `memory.deduplicate` | `galaxy` required at the seam | **default-Codex path retired at the seam** — pass `galaxy` explicitly |
-| `system.flush` | `galaxy` **or** `store_wide: true` | **store-wide mode is an acknowledged rm-rf-class** — pass a scope; tool-level `dry_run`/galaxy-honoring hardening is the documented follow-up in the wm-tools scope |
+| `system.flush` | `galaxy` **or** `store_wide: true` | **hardened** — tool-level `dry_run` (default true) + galaxy-honoring + value-checked scope (exactly one of non-empty `galaxy` / `store_wide: true`); per-galaxy counts + 50-id preview in the response |
 | `transaction.rollback` | self-bounded (snapshot id from `transaction.begin`) | compliant |
 | `karma.clear` | self-bounded (keeps most recent N) | compliant |
 

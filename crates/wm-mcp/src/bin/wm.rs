@@ -2755,9 +2755,31 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
             // failure; 0% on a new one means dispatches run without
             // identity in their Context.
             let scan = journal.scan_entries().unwrap_or_default();
+            let actor_name = |e: &wm_governance::WriteAuditEntry| -> String {
+                // The first question any investigation asks is "which
+                // agent" — user, session, AND compartment (the compartment
+                // was recorded but never rendered before this fix).
+                match (&e.actor_user, &e.actor_session, &e.actor_compartment) {
+                    (None, None, None) => "unknown actor".to_string(),
+                    (u, s, c) => {
+                        let mut name = match (u, s) {
+                            (Some(u), Some(s)) => format!("{u}@{s}"),
+                            (Some(u), None) => u.clone(),
+                            (None, Some(s)) => format!("session {s}"),
+                            (None, None) => "unknown".to_string(),
+                        };
+                        if let Some(c) = c {
+                            name.push('[');
+                            name.push_str(c);
+                            name.push(']');
+                        }
+                        name
+                    }
+                }
+            };
             let labeled = scan
                 .iter()
-                .filter(|e| e.actor_user.is_some() || e.actor_session.is_some())
+                .filter(|e| actor_name(e) != "unknown actor")
                 .count();
             let coverage = if journal_entries == 0 {
                 "n/a".to_string()
@@ -2769,6 +2791,57 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
                 if mis.is_empty() { "OK" } else { "WARN" },
                 mis.len()
             );
+            if journal_entries > 0 && labeled == 0 {
+                println!(
+                    "       [INFO] no entries name an actor (expected on pre-S11b stores; new stores at 0% mean dispatches run without identity)"
+                );
+            }
+            if !scan.is_empty() {
+                // Top actors + compartment distribution + confirm audit —
+                // the per-actor breakdown the healthy path never showed.
+                let mut by_actor: std::collections::HashMap<String, usize> =
+                    std::collections::HashMap::new();
+                let mut by_compartment: std::collections::HashMap<String, usize> =
+                    std::collections::HashMap::new();
+                let mut destructive = 0usize;
+                let mut unconfirmed = 0usize;
+                for e in &scan {
+                    *by_actor.entry(actor_name(e)).or_insert(0) += 1;
+                    *by_compartment
+                        .entry(
+                            e.actor_compartment
+                                .clone()
+                                .unwrap_or_else(|| "undeclared".to_string()),
+                        )
+                        .or_insert(0) += 1;
+                    if e.confirmed.is_some() {
+                        destructive += 1;
+                        if e.confirmed == Some(false) {
+                            unconfirmed += 1;
+                        }
+                    }
+                }
+                let mut top: Vec<(&String, &usize)> = by_actor.iter().collect();
+                top.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+                let top_str = top
+                    .iter()
+                    .take(5)
+                    .map(|(name, n)| format!("{name}×{n}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                println!("       top actors: {top_str}");
+                let mut compartments: Vec<(&String, &usize)> = by_compartment.iter().collect();
+                compartments.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+                let comp_str = compartments
+                    .iter()
+                    .map(|(name, n)| format!("{name}×{n}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                println!("       compartments: {comp_str}");
+                println!(
+                    "       destructive dispatches: {destructive} (unconfirmed: {unconfirmed})"
+                );
+            }
             if !mis.is_empty() {
                 issues += 1;
                 for entry in mis.iter().take(5) {
@@ -2778,12 +2851,7 @@ fn run_doctor(store: Option<PathBuf>, check_integrity: bool, repair: bool) -> an
                         .map_or_else(|| entry.timestamp.to_string(), |d| d.to_rfc3339());
                     // S11b: name the actor when the journal has one — the
                     // first question any investigation asks.
-                    let actor = match (&entry.actor_user, &entry.actor_session) {
-                        (Some(u), Some(s)) => format!("{u}@{s}"),
-                        (Some(u), None) => u.clone(),
-                        (None, Some(s)) => format!("session {s}"),
-                        (None, None) => "unknown actor".to_string(),
-                    };
+                    let actor = actor_name(entry);
                     println!(
                         "       [WARN] '{}' by {actor} mutated the store without declaring writes (entry {}, {} store writes, {when})",
                         entry.tool, entry.id, entry.store_write_delta

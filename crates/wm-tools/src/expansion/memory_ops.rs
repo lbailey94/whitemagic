@@ -1759,12 +1759,20 @@ impl Tool for MemoryAggregateTool {
 
         // Anchor narrowing for session metrics: keep only results matching
         // the rarest query term (fewest matches; ties by query order).
+        // Honesty fallbacks (previously both yielded an empty anchor set,
+        // reporting session_count 0 / span null DESPITE session-tagged
+        // evidence): with fewer than 2 session-tagged hits there is nothing
+        // to disambiguate, so the session-tagged set IS the anchor; when no
+        // term matches (stopword-only query, vocab mismatch) the same
+        // fallback applies. The `anchor` disclosure says which ran.
         let session_tagged: Vec<_> = memories
             .iter()
             .filter(|(_, mem)| session_ordinal(&mem.metadata.tags).is_some())
             .collect();
-        let anchored: Vec<_> = if metric == "count" || session_tagged.len() < 2 {
-            Vec::new()
+        let (anchored, anchor): (Vec<_>, &str) = if metric == "count" {
+            (Vec::new(), "none")
+        } else if session_tagged.len() < 2 {
+            (session_tagged.clone(), "session_tagged_fallback")
         } else {
             let terms: Vec<String> = wm_memory::strip_stopwords(query)
                 .split(|c: char| !c.is_alphanumeric())
@@ -1788,12 +1796,15 @@ impl Tool for MemoryAggregateTool {
                 }
             }
             match best {
-                Some((term, _)) => session_tagged
-                    .iter()
-                    .filter(|(_, mem)| contains_term(&mem.content, &term))
-                    .copied()
-                    .collect(),
-                None => Vec::new(),
+                Some((term, _)) => (
+                    session_tagged
+                        .iter()
+                        .filter(|(_, mem)| contains_term(&mem.content, &term))
+                        .copied()
+                        .collect(),
+                    "rarest_term",
+                ),
+                None => (session_tagged.clone(), "session_tagged_fallback"),
             }
         };
 
@@ -1846,6 +1857,9 @@ impl Tool for MemoryAggregateTool {
             "status": "success",
             "query": query,
             "total": memories.len(),
+            "session_tagged": session_tagged.len(),
+            "anchor": anchor,
+            "limit_hit": results.len() >= limit,
             "aggregate": aggregate,
             "results": evidence,
         }))
@@ -1995,7 +2009,7 @@ impl Tool for MemoryFilterTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Filter memories by tags, date range, and importance thresholds"
+        "Filter memories by tags, date range, importance thresholds, and a content query substring"
     }
     fn input_schema(&self) -> Value {
         super::common::schema(
@@ -2005,6 +2019,7 @@ impl Tool for MemoryFilterTool {
                 "exclude_tags": super::common::str_array_prop("Filter: drop memories carrying any of these tags"),
                 "min_importance": super::common::num_prop("Filter: minimum importance (0-1)"),
                 "max_importance": super::common::num_prop("Filter: maximum importance (0-1)"),
+                "query": super::common::str_prop("Filter: every whitespace-separated term must appear (case-insensitive) in the content or title"),
                 "created_after": super::common::str_prop("Filter: only memories created at or after this RFC 3339 timestamp (e.g. 2026-08-01T00:00:00Z)"),
                 "created_before": super::common::str_prop("Filter: only memories created at or before this RFC 3339 timestamp"),
                 "limit": super::common::int_prop("Maximum entries (default 50)"),
@@ -2065,6 +2080,14 @@ impl Tool for MemoryFilterTool {
         };
         let created_after = parse_bound("created_after")?;
         let created_before = parse_bound("created_before")?;
+        // Content query — previously accepted-and-ignored (the arg was
+        // silently dropped). Every term must appear case-insensitively in
+        // the content or title; empty/absent means no content filtering.
+        let query_terms: Vec<String> = args
+            .get("query")
+            .and_then(|v| v.as_str())
+            .map(|q| q.split_whitespace().map(str::to_lowercase).collect())
+            .unwrap_or_default();
 
         let memories = self.store.scan(galaxy, 10_000)?;
 
@@ -2102,6 +2125,15 @@ impl Tool for MemoryFilterTool {
                         return false;
                     }
                 }
+                if !query_terms.is_empty() {
+                    let haystack = match &m.metadata.title {
+                        Some(title) => format!("{}\n{}", m.content, title).to_lowercase(),
+                        None => m.content.to_lowercase(),
+                    };
+                    if !query_terms.iter().all(|t| haystack.contains(t)) {
+                        return false;
+                    }
+                }
                 true
             })
             .collect();
@@ -2134,6 +2166,7 @@ impl Tool for MemoryFilterTool {
                 "exclude_tags": exclude_tags,
                 "min_importance": min_importance,
                 "max_importance": max_importance,
+                "query_terms": query_terms,
                 "created_after": created_after.map(|t| t.to_rfc3339()),
                 "created_before": created_before.map(|t| t.to_rfc3339()),
             },
@@ -3412,6 +3445,35 @@ mod tests {
         assert_eq!(v["matched"], 1);
     }
 
+    /// The `query` arg was silently dropped before this fix — every term
+    /// must now match (case-insensitive) against content or title, and the
+    /// terms are echoed in `filters` so callers can see what ran.
+    #[tokio::test]
+    async fn memory_filter_query_matches_content_and_title() {
+        let store = test_store();
+        let tool = MemoryFilterTool::new(store.clone());
+        let mut ctx = Context::default();
+
+        let mut titled = Memory::new(Galaxy::Codex, "unrelated body text".into());
+        titled.metadata.title = Some("Rust Borrow Checker".into());
+        let plain = Memory::new(Galaxy::Codex, "rust ownership rules".into());
+        let other = Memory::new(Galaxy::Codex, "gardening tips".into());
+        for m in [&titled, &plain, &other] {
+            store.put(Galaxy::Codex, m).unwrap();
+        }
+
+        let v = tool.call(&mut ctx, json!({"query": "RUST"})).await.unwrap();
+        assert_eq!(v["matched"], 2, "content hit + title hit: {v}");
+        assert_eq!(v["filters"]["query_terms"], json!(["rust"]));
+
+        let v = tool
+            .call(&mut ctx, json!({"query": "rust borrow"}))
+            .await
+            .unwrap();
+        assert_eq!(v["matched"], 1, "all terms must match: {v}");
+        assert_eq!(v["memories"][0]["content"], "unrelated body text");
+    }
+
     #[tokio::test]
     async fn memory_filter_no_matches() {
         let store = test_store();
@@ -4184,6 +4246,34 @@ mod tests {
             .unwrap();
         // OR semantics: all three Rust turns match "rust".
         assert_eq!(v["aggregate"]["value"], 3);
+    }
+
+    /// Previously a single session-tagged hit (or a stopword-only query
+    /// with no anchor term) reported session_count 0 / span null DESPITE
+    /// evidence. The fallback anchors on the session-tagged set instead.
+    #[tokio::test]
+    async fn aggregate_single_session_falls_back_honestly() {
+        let (_dir, store, search) = aggregate_fixture();
+        let tool = MemoryAggregateTool::new(Some(search), store);
+        let mut ctx = Context::default();
+        // "CLI tool" narrows to the session_007 turn alone.
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "CLI tool", "metric": "session_count"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["aggregate"]["value"], 1, "one session in evidence: {v}");
+        assert_eq!(v["anchor"], "session_tagged_fallback");
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "CLI tool", "metric": "session_span"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["aggregate"]["value"], 0, "single point spans 0: {v}");
     }
 
     #[tokio::test]

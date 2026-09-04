@@ -611,11 +611,12 @@ mod tests {
         );
 
         // Scoped to the one galaxy (firebreak bulk-scope law, P1.6: a
-        // destructive flush must name its target).
+        // destructive flush must name its target) with an explicit
+        // dry_run:false (flush previews by default since the hardening).
         dispatch(
             &server,
             "system.flush",
-            serde_json::json!({"threshold": 0.5, "confirm": true, "galaxy": "codex"}),
+            serde_json::json!({"threshold": 0.5, "confirm": true, "galaxy": "codex", "dry_run": false}),
         )
         .await
         .expect("system.flush should succeed");
