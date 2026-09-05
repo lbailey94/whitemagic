@@ -612,7 +612,24 @@ impl PeerDiscovery {
         if let Some(existing) = self.peers.get_mut(&peer.id) {
             self.observed.insert(peer.id.clone(), now);
             if !existing.public_key.is_empty() {
-                existing.address = peer.address;
+                // BOUND PEER — the identity-theft defense also guards the
+                // address. An UNSIGNED announcement (UDP beacon, legacy
+                // heartbeat) may refresh liveness only: letting it rewrite
+                // the address would let anyone on the LAN silently reroute
+                // a bound peer's traffic (and mail-slot flushes) to an
+                // attacker-chosen host. Address changes require a SIGNED
+                // announcement that verifies against the bound key —
+                // `discover_signed` enforces that before reaching here;
+                // anything else keeps the stored address.
+                if peer.signature.is_empty() {
+                    existing.alive = true;
+                    return;
+                }
+                if peer.public_key == existing.public_key && peer.verify_signature() {
+                    existing.address = peer.address;
+                    existing.alive = true;
+                    return;
+                }
                 existing.alive = true;
                 return;
             }

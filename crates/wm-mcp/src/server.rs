@@ -3523,12 +3523,20 @@ impl McpServer {
 /// Build the node's Sangha signing keypair.
 ///
 /// Seeded from `WM_MESH_KEY` when set (stable node identity across restarts).
-/// When unset, a random per-process key is used — the node appears as a fresh
-/// identity each restart, but a hardcoded default would be shared by every
-/// WhiteMagic node, letting anyone impersonate another node's messages.
+/// Keyfile mode (64 hex chars) uses the decoded seed directly; any other
+/// value is treated as a passphrase and stretched (see
+/// `MeshKeyPair::from_secret_material`). When unset, a random per-process
+/// key is used — the node appears as a fresh identity each restart, but a
+/// hardcoded default would be shared by every WhiteMagic node, letting
+/// anyone impersonate another node's messages.
+///
+/// NOTE: the v0 derivation used the raw bytes as the seed. Switching a
+/// node to `from_secret_material` ROTATES ITS IDENTITY — see
+/// MESH_JOIN_PROTOCOL.md §5 for the rotation procedure (registry decay
+/// re-binds the new key after the heartbeat timeout).
 pub fn mesh_signing_key() -> wm_sangha::MeshKeyPair {
     match std::env::var("WM_MESH_KEY") {
-        Ok(key) if !key.is_empty() => wm_sangha::MeshKeyPair::from_seed(key.as_bytes()),
+        Ok(key) if !key.is_empty() => wm_sangha::MeshKeyPair::from_secret_material(&key),
         _ => {
             tracing::warn!(
                 "WM_MESH_KEY not set — using a random per-process Sangha identity; \

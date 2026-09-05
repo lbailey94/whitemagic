@@ -193,7 +193,18 @@ fn conn_key(addr: &str) -> String {
 /// false negative would queue a message that flush then drops on the next
 /// refusal, so the failure mode is bounded.
 fn is_refusal(text: &str) -> bool {
-    text.contains("quarantined") || text.contains("identity") || text.contains("rejected")
+    // NOTE: deliberately NOT a bare "refused" — OS connect errors say
+    // "Connection refused" and are AVAILABILITY, never refusals.
+    text.contains("quarantined")
+        || text.contains("identity")
+        || text.contains("rejected")
+        || text.contains("verification failed")
+        || text.contains("unsigned")
+        || text.contains("not identity-bound")
+        || text.contains("lock refused:")
+        || text.contains("signal refused:")
+        || text.contains("hologram sync refused:")
+        || text.contains("address refused:")
 }
 
 // ── MeshNode ──────────────────────────────────────────────────────────

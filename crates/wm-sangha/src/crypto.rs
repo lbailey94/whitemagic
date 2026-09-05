@@ -60,6 +60,35 @@ impl MeshKeyPair {
         }
     }
 
+    /// Create a keypair from a secret material string — the production
+    /// path for `WM_MESH_KEY`. Two modes:
+    ///
+    /// - **Keyfile mode** (preferred): the material is 64 hex chars —
+    ///   decoded directly into the 32-byte seed. The material IS the
+    ///   seed: generate it with `openssl rand -hex 32` and store it
+    ///   0600. No stretching needed; the entropy is already full.
+    /// - **Passphrase mode** (compatibility): anything else is stretched
+    ///   through a domain-separated iterated SHA-256 (100k rounds).
+    ///   This exists so a human-memorable `WM_MESH_KEY` does not become
+    ///   the raw Ed25519 seed — the v0 derivation was the raw bytes,
+    ///   and the plaintext wire hands every attacker the signature +
+    ///   public key needed to brute-force such a seed offline.
+    ///
+    /// Passphrase mode is a hardening, not an endorsement: rotate to
+    /// keyfile mode (backlog B7 makes it the default) — each mode switch
+    /// rotates the node identity (see MESH_JOIN_PROTOCOL.md §5).
+    #[must_use]
+    pub fn from_secret_material(material: &str) -> Self {
+        if material.len() == 64 {
+            if let Some(bytes) = hex_decode(material) {
+                if let Ok(seed) = <[u8; 32]>::try_from(bytes.as_slice()) {
+                    return Self::from_secret(seed);
+                }
+            }
+        }
+        Self::from_secret(stretch_passphrase(material.as_bytes()))
+    }
+
     /// The public key as lowercase hex (the peer's mesh identity).
     #[must_use]
     pub fn public_key_hex(&self) -> String {
@@ -94,6 +123,31 @@ impl MeshKeyPair {
         let sig = ed25519_dalek::Signature::from_bytes(&sig_bytes);
         pk.verify(payload.as_bytes(), &sig).is_ok()
     }
+}
+
+/// Domain-separated iterated SHA-256 passphrase stretch (100k rounds).
+/// Fixed domain tag + length prefix bind the hash to this exact KDF so a
+/// future parameter change cannot silently re-derive the same key.
+fn stretch_passphrase(material: &[u8]) -> [u8; 32] {
+    const DOMAIN: &[u8] = b"wm-sangha-mesh-kdf-v1";
+    const ROUNDS: u32 = 100_000;
+
+    use sha2::Digest;
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(DOMAIN);
+    hasher.update((material.len() as u64).to_be_bytes());
+    hasher.update(material);
+    let mut state = hasher.finalize();
+
+    for round in 0..ROUNDS {
+        let mut h = sha2::Sha256::new();
+        h.update(state);
+        h.update(round.to_be_bytes());
+        state = h.finalize();
+    }
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&state);
+    out
 }
 
 /// Encode bytes as lowercase hex.
@@ -170,6 +224,37 @@ mod tests {
             "zz",
             &kp_a.public_key_hex()
         ));
+    }
+
+    #[test]
+    fn secret_material_keyfile_mode_uses_hex_seed_directly() {
+        // 64 hex chars decode to the exact 32-byte seed — no stretching,
+        // so a keyfile derives the same key forever (upgrade-stable).
+        let hex = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+        let kp = MeshKeyPair::from_secret_material(hex);
+        assert_eq!(
+            kp.public_key_hex(),
+            MeshKeyPair::from_secret(hex_decode(hex).unwrap().try_into().unwrap()).public_key_hex()
+        );
+    }
+
+    #[test]
+    fn secret_material_passphrase_mode_is_stretched_and_stable() {
+        // A passphrase must NOT derive the same key as the raw v0 path
+        // (the old code used the bytes directly), and must be
+        // deterministic across calls.
+        let kp_a = MeshKeyPair::from_secret_material("correct horse battery staple");
+        let kp_b = MeshKeyPair::from_secret_material("correct horse battery staple");
+        assert_eq!(kp_a.public_key_hex(), kp_b.public_key_hex());
+        let raw = MeshKeyPair::from_seed(b"correct horse battery staple");
+        assert_ne!(
+            kp_a.public_key_hex(),
+            raw.public_key_hex(),
+            "passphrase mode must differ from the v0 raw-seed derivation"
+        );
+        // Different passphrases → different keys.
+        let other = MeshKeyPair::from_secret_material("another passphrase");
+        assert_ne!(kp_a.public_key_hex(), other.public_key_hex());
     }
 
     #[test]
