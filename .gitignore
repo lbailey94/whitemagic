@@ -1,0 +1,147 @@
+/target
+**/*.rs.bk
+*.swp
+*.swo
+*~
+.DS_Store
+.env
+.env.*
+*.env
+*.env.*
+__pycache__/
+*.pyc
+.koka/
+.julia/
+.ghc/
+
+# Security & Private Credentials
+*.pem
+*.key
+*.crt
+*.cer
+*id_rsa*
+*id_ed25519*
+*.p12
+*.pfx
+
+# v2 reference code (not compiled)
+/v2-reference/
+
+# Local data store (LMDB, SQLite, Tantivy index, memory cores)
+/.whitemagic/
+/data/
+*.mdb
+*.db
+*.sqlite
+*.sqlite3
+*.seal*
+tantivy/
+write_budget.json*
+calibration_store.json
+conformal_store.json
+self_model.json
+claims_ledger.json
+tx_firewall_policy.json
+escalation_queue.json
+ingest-manifest.json
+wm-leases.json
+/receipts/
+/reports/
+/staging/
+/archives/
+*.log
+*.out
+*.tmp
+
+# Vercel placeholder (deployed separately)
+/vercel-placeholder/
+
+# Embedding model cache
+.fastembed_cache/
+
+# IDE config
+.windsurf/
+
+# Criterion benchmark artifacts
+/criterion
+/crates/**/benches/**/target
+
+# Fuzz build artifacts
+/fuzz/target/
+/fuzz/artifacts/
+
+# Curated fuzz corpus seeds (named seed_*) are committed so CI bootstraps
+# from them; files libFuzzer regenerates (sha1-named) stay ignored.
+/fuzz/corpus/*
+!/fuzz/corpus/*/
+/fuzz/corpus/*/*
+!/fuzz/corpus/*/seed_*
+
+# Per-project opencode MCP wiring — machine-specific absolute paths; the
+# committed template lives in docs/MULTI_PROJECT_MEMORY.md
+/opencode.jsonc
+
+# Memorastrict scale-stress fixtures — derived by `memorastrict_gen.py
+# --scale-turns N`; the tracked root seeds are the source of truth.
+/benchmarks/data/memorastrict/scale_*/
+
+# Internal estate expedition drills and local test runners
+/crates/wm-tools/examples/
+
+# ── Dev-internal surfaces (kept locally for development; not part of the
+#    public v9 archive — the user-facing minimum is README + QUICKSTART +
+#    MCP_CONFIG_GUIDE + MULTI_LAPTOP + install.sh + the smoke gate) ──
+/AGENTS.md
+/STRATEGY_V5.md
+/STRATEGY_V6.md
+/ops/
+/docs/notes/
+/docs/ACS_ALIGNMENT.md
+/docs/ARCHIVE_CAPABILITY_MAP.md
+/docs/ARCHIVE_FINDINGS.md
+/docs/CHIPS_ARCHITECTURE.md
+/docs/CLAIMS_LEDGER.json
+/docs/CLAIMS_LEDGER.md
+/docs/CLAIMS_LEDGER_MERGE_*.md
+/docs/CLAIMS_LEDGER_REVIEW.json
+/docs/CONFORMAL_PREDICTION.md
+/docs/GAP_ANALYSIS.md
+/docs/GAP_ANALYSIS_v26_v4.md
+/docs/GATE2_RECRUITMENT_KIT.md
+/docs/IMAGINATION_ENGINE.md
+/docs/LINEAGE_LEDGER.md
+/docs/MCP_REGISTRY_LISTING.md
+/docs/MIGRATION.md
+/docs/MODEL_GUIDE.md
+/docs/MULTI_PROJECT_MEMORY.md
+/docs/NEXT_SESSION.md
+/docs/OPERATIONS.md
+/docs/OWASP_LLM_TOP10_MAPPING.md
+/docs/PET_HARDENING.md
+/docs/POLYGLOT_SIMD_MEMORY_STRATEGY.md
+/docs/PRE_RELEASE_LAUNCH_PLAN.md
+/docs/PRODUCT_CUT.md
+/docs/PROGRESS.md
+/docs/REDTEAM_STRATEGY.md
+/docs/RELEASE_READINESS.md
+/docs/RETRIEVAL_DEVELOPMENT_PLAN.md
+/docs/RETRIEVAL_RESEARCH_ROADMAP.md
+/docs/REVIEW_BRIEF_*.md
+/docs/SANGHA_SECURITY.md
+/docs/STRANGER_SIMULATION_SCRIPT.md
+/docs/STRATEGY.md
+/docs/TANTIVY_RECALL_QUALITY_FIX.md
+/docs/TIMELINE_CONVERGENCE.md
+/docs/TIMESTAMP_CONVENTIONS.md
+/docs/TRACK_E_COLLECTIVE_SUBSTRATE_RESEARCH.md
+/docs/TWO_LAPTOP_REHEARSAL.md
+/docs/V6_*.md
+/docs/V7_PRODUCT_READINESS.md
+/docs/V8_MEMORY_RESEARCH_AGENDA.md
+/docs/VECTOR_SEARCH_ROADMAP.md
+
+# Internal development and staging scripts (public surface: install.sh + smoke test)
+/scripts/*
+!/scripts/install.sh
+!/scripts/curated_smoke_test.py
+

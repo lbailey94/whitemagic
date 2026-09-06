@@ -1,0 +1,36 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the scan covers every commit
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Ported concept from the v26 archives (og_whitemagic
+  # .github/workflows/security-ci.yml: STRATA checkers + dependency audits).
+  # The Rust-side equivalents: clippy (lint gate in ci.yml) + cargo-deny
+  # style dependency auditing rides here until a dedicated deny job lands.
+  cargo-deny:
+    name: dependency audit (cargo-deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        continue-on-error: true # advisory until a deny.toml lands

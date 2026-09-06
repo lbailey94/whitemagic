@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  fmt:
+    timeout-minutes: 10
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    timeout-minutes: 15
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-targets -- -D warnings
+
+  test-linux:
+    timeout-minutes: 20
+    name: Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-targets
+
+  smoke:
+    timeout-minutes: 15
+    name: Curated Smoke Test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --bin wm
+      - run: python3 scripts/curated_smoke_test.py
+
+  optional-features:
+    timeout-minutes: 20
+    name: Optional Feature Builds
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - "wm-mcp/python"
+          - "wm-memory/lancedb"
+          - "wm-memory/onnx"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install protoc (required by lance-encoding)
+        if: matrix.features == 'wm-memory/lancedb'
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: cargo build --features "${{ matrix.features }}"
+
+  test-macos:
+    timeout-minutes: 20
+    name: Tests (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-targets
+
+  test-windows:
+    timeout-minutes: 45
+    name: Tests (Windows)
+    runs-on: windows-latest
+    env:
+      # NTFS materializes each LMDB map file at full size on open; hundreds
+      # of parallel test stores would exhaust the runner disk otherwise.
+      WM_DEFAULT_MAP_SIZE: "33554432"
+    steps:
+      - name: Free disk space (LMDB 4GB test maps fail on a full runner disk)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-targets
+
+  bench-compile:
+    timeout-minutes: 25
+    name: Benchmark Compile Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo bench --no-run
+
+  proptest:
+    timeout-minutes: 15
+    name: Property-Based Tests
+    runs-on: ubuntu-latest
+    env:
+      PROPTEST_CASES: "4096"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-targets proptest
+      - run: cargo test -p wm-core --test taxonomy
+      - run: cargo test -p wm-tools --lib nlu
+      - run: cargo test -p wm-governance --lib dharma_gate
+      - run: cargo test -p wm-dispatch --lib rate_limiter
+      - run: cargo test -p wm-core --lib effects
+
+  audit:
+    timeout-minutes: 10
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check
