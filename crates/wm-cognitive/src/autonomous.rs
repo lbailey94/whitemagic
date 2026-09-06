@@ -719,7 +719,10 @@ impl AutonomousCycleRunner {
             }
         }
 
-        self.proposals_generated += result.proposals_generated as u64;
+        // Only count proposals from completed (novel) cycles toward total
+        if result.status == CycleStatus::Completed {
+            self.proposals_generated += result.proposals_generated as u64;
+        }
 
         // Log to Gnosis
         ctx.log_to_gnosis(&result);

@@ -317,7 +317,11 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         // path, scaled by health and the current brain wave)
         if now.duration_since(last_dream) >= config.dream_interval {
             let bw = server.eco_mode().current();
-            if server.dream().should_run(bw) {
+            // Allow dream cycle to run during Theta OR during scheduled Delta maintenance
+            let should_dream = server.dream().should_run(bw)
+                || ((bw == wm_core::BrainWave::Delta || bw == wm_core::BrainWave::Theta)
+                    && !server.dream().is_running());
+            if should_dream {
                 // Owned Arc handle: the context shares the live Yama
                 // budget instance without borrowing the server, so
                 // dream_mut() below stays free to mutate.
@@ -351,7 +355,10 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
 
                 for result in &results {
                     stats.cycles_run += 1;
-                    stats.proposals_generated += result.proposals_generated as u64;
+                    // Only novel (Completed) cycles add to the cumulative proposals count
+                    if result.status == CycleStatus::Completed {
+                        stats.proposals_generated += result.proposals_generated as u64;
+                    }
                     if result.status == CycleStatus::Suspended {
                         stats.cycles_suspended += 1;
                     }
