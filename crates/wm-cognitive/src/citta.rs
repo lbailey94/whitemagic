@@ -257,6 +257,8 @@ pub struct Smarana {
     last_score: f32,
     /// When smarana was last evaluated
     last_eval: Instant,
+    /// Optional Autonomous Smarana engine for continuous spaced-repetition & Hebbian dynamics
+    autonomous: Option<Box<crate::smarana::AutonomousSmarana>>,
 }
 
 impl Smarana {
@@ -268,18 +270,50 @@ impl Smarana {
             misses: 0,
             last_score: 1.0,
             last_eval: Instant::now(),
+            autonomous: None,
         }
+    }
+
+    /// Attach an autonomous Smarana engine.
+    #[must_use]
+    pub fn with_autonomous(mut self, auto: crate::smarana::AutonomousSmarana) -> Self {
+        self.autonomous = Some(Box::new(auto));
+        self
+    }
+
+    /// Enable autonomous Smarana with default config.
+    #[must_use]
+    pub fn with_default_autonomous(mut self) -> Self {
+        self.autonomous = Some(Box::new(crate::smarana::AutonomousSmarana::default()));
+        self
+    }
+
+    /// Access the autonomous engine, if attached.
+    #[must_use]
+    pub fn autonomous(&self) -> Option<&crate::smarana::AutonomousSmarana> {
+        self.autonomous.as_deref()
+    }
+
+    /// Access mutable autonomous engine, if attached.
+    pub fn autonomous_mut(&mut self) -> Option<&mut crate::smarana::AutonomousSmarana> {
+        self.autonomous.as_deref_mut()
     }
 
     /// Record a successful recall.
     pub fn record_recall(&mut self) {
         self.recalls += 1;
+        if let Some(ref mut auto) = self.autonomous {
+            auto.record_tool_outcome(true, 1.0);
+        }
         self.update_score();
     }
 
     /// Record a failed recall (miss).
     pub fn record_miss(&mut self) {
         self.misses += 1;
+        if let Some(ref mut auto) = self.autonomous {
+            auto.record_tool_outcome(false, 0.0);
+        }
         self.update_score();
     }
 
@@ -296,8 +330,12 @@ impl Smarana {
 
     /// Get the current retention score (0.0–1.0).
     #[must_use]
-    pub const fn score(&self) -> f32 {
-        self.last_score
+    pub fn score(&self) -> f32 {
+        if let Some(ref auto) = self.autonomous {
+            auto.composite_score(chrono::Utc::now())
+        } else {
+            self.last_score
+        }
     }
 
     /// Total recall attempts.
@@ -539,6 +577,13 @@ impl CittaHeartbeat {
         }
     }
 
+    /// Attach autonomous Smarana to heartbeat.
+    #[must_use]
+    pub fn with_autonomous_smarana(mut self) -> Self {
+        self.smarana = self.smarana.with_default_autonomous();
+        self
+    }
+
     /// Fire the heartbeat after a tool call.
     ///
     /// - `success`: whether the tool call succeeded
@@ -778,6 +823,20 @@ mod tests {
         s.record_miss();
         assert_eq!(s.total(), 3);
         assert!((s.score() - (2.0 / 3.0)).abs() < 0.01);
+    }
+
+    #[test]
+    fn smarana_autonomous_integration() {
+        let mut s = Smarana::new().with_default_autonomous();
+        assert!(s.autonomous().is_some());
+        s.record_recall();
+        s.record_recall();
+        assert!(s.score() > 0.0);
+
+        let mut hb = CittaHeartbeat::new().with_autonomous_smarana();
+        hb.beat(true, "memory.recall", 0.95);
+        assert!(hb.smarana.score() > 0.0);
+        assert!(hb.apotheosis.score() > 0.0);
     }
 
     #[test]

@@ -221,6 +221,10 @@ pub struct DaemonConfig {
     /// than the entire process lifetime.
     #[serde(default = "default_checkpoint_interval")]
     pub checkpoint_interval_secs: u64,
+
+    /// Interval between Autonomous Gan Ying resonance sweeps (seconds).
+    #[serde(default = "default_gan_ying_interval")]
+    pub gan_ying_interval_secs: u64,
 }
 
 impl Default for DaemonConfig {
@@ -237,8 +241,13 @@ impl Default for DaemonConfig {
             selfplay_interval_secs: 0,
             watchdog_timeout_secs: 60,
             checkpoint_interval_secs: 300,
+            gan_ying_interval_secs: 300,
         }
     }
+}
+
+const fn default_gan_ying_interval() -> u64 {
+    300
 }
 
 const fn default_cycle_interval() -> u64 {
@@ -441,6 +450,7 @@ impl WmConfig {
             selfplay_interval: Duration::from_secs(self.daemon.selfplay_interval_secs),
             watchdog_timeout: Duration::from_secs(self.daemon.watchdog_timeout_secs),
             checkpoint_interval: Duration::from_secs(self.daemon.checkpoint_interval_secs),
+            gan_ying_interval: Duration::from_secs(self.daemon.gan_ying_interval_secs),
         }
     }
 
@@ -702,12 +712,14 @@ llama_endpoint = "http://localhost:8080"
                 selfplay_interval_secs: 900,
                 watchdog_timeout_secs: 120,
                 checkpoint_interval_secs: 180,
+                gan_ying_interval_secs: 150,
             },
             ..Default::default()
         };
         let d = cfg.daemon_durations();
         assert_eq!(d.cycle_interval, Duration::from_secs(120));
         assert_eq!(d.dream_interval, Duration::from_secs(240));
+        assert_eq!(d.gan_ying_interval, Duration::from_secs(150));
         assert_eq!(d.brain_wave_interval, Duration::from_secs(15));
         assert_eq!(d.homeostasis_interval, Duration::from_secs(30));
         assert_eq!(d.min_health_score, 0.5);

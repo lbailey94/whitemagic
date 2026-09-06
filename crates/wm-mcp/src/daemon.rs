@@ -91,6 +91,8 @@ pub struct DaemonConfig {
     /// shutdown still saves). A SIGKILL loses learning since the last
     /// checkpoint rather than since process start.
     pub checkpoint_interval: Duration,
+    /// Interval between Autonomous Gan Ying resonance sweeps and pre-conscious buffer warming.
+    pub gan_ying_interval: Duration,
 }
 
 impl Default for DaemonConfig {
@@ -107,6 +109,7 @@ impl Default for DaemonConfig {
             selfplay_interval: Duration::from_secs(0), // 0 = disabled
             watchdog_timeout: Duration::from_secs(60), // 1 minute without a tick = stalled
             checkpoint_interval: Duration::from_secs(300), // 5 minutes
+            gan_ying_interval: Duration::from_secs(300),   // 5 minutes
         }
     }
 }
@@ -140,6 +143,12 @@ pub struct DaemonStats {
     pub selfplay_samples: u64,
     /// Total LoRA adapter updates from self-play.
     pub selfplay_adapter_updates: u64,
+    /// Total Autonomous Gan Ying resonance sweeps completed.
+    pub gan_ying_sweeps: u64,
+    /// Total memories pre-warmed into L1 Conscious Fringe.
+    pub gan_ying_prewarmed_l1: u64,
+    /// Total memories pre-warmed into L2 Subconscious Reservoir.
+    pub gan_ying_prewarmed_l2: u64,
 }
 
 /// Run the persistent daemon.
@@ -183,6 +192,11 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     let mut last_research = std::time::Instant::now();
     let mut last_selfplay = std::time::Instant::now();
     let mut last_checkpoint = std::time::Instant::now();
+    let mut last_gan_ying = std::time::Instant::now();
+    let mut gan_ying = wm_cognitive::AutonomousGanYing::new(wm_cognitive::GanYingConfig {
+        sweep_interval: config.gan_ying_interval,
+        ..Default::default()
+    });
 
     // Build imagination engine for Research cycle and dream cycle integration
     let world_model = world_model_from_env();
@@ -233,6 +247,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     println!("=== WhiteMagic Daemon ===");
     println!("  Cycle interval:  {:?}", config.cycle_interval);
     println!("  Dream interval:  {:?}", config.dream_interval);
+    println!("  Gan Ying pulse:  {:?}", config.gan_ying_interval);
     println!("  Brain-wave tick: {:?}", config.brain_wave_interval);
     println!("  Min health:      {:.2}", config.min_health_score);
     if config.research_interval > Duration::from_secs(0) {
@@ -573,6 +588,45 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             last_selfplay = now;
         }
 
+        // Autonomous Gan Ying resonance sweep & pre-conscious buffer warming
+        if now.duration_since(last_gan_ying) >= config.gan_ying_interval {
+            let bw = server.eco_mode().current();
+            let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+            let citta_vec = Some(&server.citta().vector);
+            if let Some(report) = resilient("gan_ying_sweep", || {
+                gan_ying.daemon_pulse(
+                    &cwd,
+                    bw,
+                    citta_vec,
+                    &store,
+                    &associations,
+                    None,
+                )
+            })
+            .and_then(|res| res.ok().flatten())
+            {
+                stats.gan_ying_sweeps += 1;
+                stats.gan_ying_prewarmed_l1 += report.l1_prewarmed as u64;
+                stats.gan_ying_prewarmed_l2 += report.l2_prewarmed as u64;
+                tracing::info!(
+                    memories = report.memories_resonated,
+                    l1 = report.l1_prewarmed,
+                    l2 = report.l2_prewarmed,
+                    duration_ms = report.duration_ms,
+                    "Autonomous Gan Ying sweep: pre-conscious buffer pre-warmed"
+                );
+                println!(
+                    "[gan_ying {}] pre-warmed L1: {} L2: {}, {} resonant memories ({:?})",
+                    stats.gan_ying_sweeps,
+                    report.l1_prewarmed,
+                    report.l2_prewarmed,
+                    report.memories_resonated,
+                    report.top_galaxies
+                );
+            }
+            last_gan_ying = now;
+        }
+
         // Periodic mutable-state checkpoint — closes the SIGKILL-loses-
         // learning window to `checkpoint_interval` instead of process lifetime.
         if config.checkpoint_interval > Duration::from_secs(0)
@@ -657,6 +711,11 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         println!("  SP samples:       {}", stats.selfplay_samples);
         println!("  SP adapter upds:  {}", stats.selfplay_adapter_updates);
     }
+    if stats.gan_ying_sweeps > 0 {
+        println!("  Gan Ying sweeps:  {}", stats.gan_ying_sweeps);
+        println!("  L1 pre-warmed:    {}", stats.gan_ying_prewarmed_l1);
+        println!("  L2 pre-warmed:    {}", stats.gan_ying_prewarmed_l2);
+    }
 
     if hung.load(Ordering::SeqCst) {
         anyhow::bail!("daemon watchdog triggered — main loop stalled; restart for recovery")
@@ -692,9 +751,11 @@ mod tests {
             selfplay_interval: Duration::from_secs(900),
             watchdog_timeout: Duration::from_secs(120),
             checkpoint_interval: Duration::from_secs(180),
+            gan_ying_interval: Duration::from_secs(150),
         };
         assert_eq!(config.cycle_interval, Duration::from_secs(60));
         assert_eq!(config.dream_interval, Duration::from_secs(120));
+        assert_eq!(config.gan_ying_interval, Duration::from_secs(150));
         assert_eq!(config.codegen_interval, Duration::from_secs(1800));
         assert!(config.codegen_auto_apply);
         assert_eq!(config.research_interval, Duration::from_secs(600));

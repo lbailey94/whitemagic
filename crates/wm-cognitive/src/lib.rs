@@ -25,6 +25,7 @@ pub mod redteam_manifest;
 pub mod retention;
 pub mod spiral;
 pub mod strategy;
+pub mod smarana;
 pub mod wu_xing;
 
 // ── Merged modules ──────────────────────────────────────────────────
@@ -76,6 +77,12 @@ pub use pattern_dream_bridge::{BridgeSummary, DreamSynthesis, PatternDreamBridge
 pub use retention::{
     RetentionConfig, RetentionEngine, RetentionSignal, RetentionVerdict, SweepReport,
 };
+pub use smarana::{
+    AlchemicalDistribution, AlchemicalPhaseBridge, AlchemicalStage, AutonomousSmarana,
+    CoActivationRecord, GistDistiller, GistVector, HebbianConsolidationReport, HebbianReinforcer,
+    ProbeKind, ProbeResult, RepetitionItem, ReviewOutcome, SmaranaConfig, SmaranaProbe,
+    SpacedRepetitionTracker, SynapticPruneReport, EBBINGHAUS_DECAY_CONSTANT,
+};
 pub use spiral::{
     CycleSpiralData, EscalationCallback, SemanticConfig, SpiralDirection, SpiralReport,
     SpiralTracker, jaccard_similarity, novelty_score,
@@ -104,10 +111,13 @@ pub use drive::{
 
 // ── Resonance re-exports (from wm-resonance) ────────────────────────
 pub use resonance::{
-    BusStats, EventCallback, EventCategory, EventType, GanYingBus, MAX_CASCADE_DEPTH,
-    NervousSubsystem, ResonanceEvent, SubscriptionFilter, SubscriptionId, SubsystemHealth,
-    Synchronicity, SynchronicityConfig, SynchronicityDetector, UnifiedNervousSystem,
-    default_cascade_rules,
+    AmbientContextObserver, AmbientSignal, AmbientSnapshot, AutonomousGanYing, BufferProbeResult,
+    BufferTier, BusStats, CircadianPhase, EventCallback, EventCategory, EventType, GanYingBus,
+    GanYingConfig, GanYingResonanceEngine, GanYingSweepReport, L1ConsciousFringe,
+    L2SubconsciousReservoir, MAX_CASCADE_DEPTH, NervousSubsystem, PreConsciousBuffer,
+    PreConsciousMemory, RecentToolCall, ResonanceEvent, ResonanceWeights, ResonantCandidate,
+    SubscriptionFilter, SubscriptionId, SubsystemHealth, Synchronicity, SynchronicityConfig,
+    SynchronicityDetector, UnifiedNervousSystem, default_cascade_rules,
 };
 
 // ── Autonomic re-exports (from wm-autonomic) ────────────────────────

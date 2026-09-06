@@ -34,6 +34,7 @@
 
 pub mod bus;
 pub mod event_type;
+pub mod gan_ying;
 pub mod nervous_system;
 pub mod synchronicity;
 
@@ -43,5 +44,11 @@ pub use bus::{
     SubscriptionId, default_cascade_rules,
 };
 pub use event_type::{EventCategory, EventType};
+pub use gan_ying::{
+    AmbientContextObserver, AmbientSignal, AmbientSnapshot, AutonomousGanYing, BufferProbeResult,
+    BufferTier, CircadianPhase, GanYingConfig, GanYingResonanceEngine, GanYingSweepReport,
+    L1ConsciousFringe, L2SubconsciousReservoir, PreConsciousBuffer, PreConsciousMemory,
+    RecentToolCall, ResonanceWeights, ResonantCandidate,
+};
 pub use nervous_system::{NervousSubsystem, SubsystemHealth, UnifiedNervousSystem};
 pub use synchronicity::{Synchronicity, SynchronicityConfig, SynchronicityDetector};

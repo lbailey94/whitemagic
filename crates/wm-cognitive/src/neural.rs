@@ -13,6 +13,7 @@
 //! 8. Predictive coding — JEPA-style surprise for memory prioritization
 
 use std::collections::{HashMap, HashSet};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wm_core::{Galaxy, Result};
 use wm_memory::{AssociationStore, Memory, MemoryStore};
@@ -25,6 +26,7 @@ use wm_memory::Association;
 /// Spreading activation engine — propagates activation through the
 /// association graph. Recalling one memory activates connected ones,
 /// with decaying activation along edges.
+#[derive(Debug)]
 pub struct SpreadingActivation {
     /// Decay factor per hop (0.0 = no spread, 1.0 = no decay)
     pub decay: f32,
@@ -635,7 +637,7 @@ impl MomentumDynamics {
 // based on cognitive context.
 
 /// Cognitive context for thalamic gating.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum CognitiveContext {
     /// Default — all galaxies weighted equally
     #[default]
@@ -685,6 +687,7 @@ impl CognitiveContext {
 /// The thalamus gates sensory input to the cortex; this gates which memory
 /// galaxies are most relevant for the current cognitive context. Sub-ms
 /// computation via a simple lookup table.
+#[derive(Debug)]
 pub struct ThalamicGate {
     context: CognitiveContext,
     /// Cross-galaxy boost factor for galaxies not in the current mask

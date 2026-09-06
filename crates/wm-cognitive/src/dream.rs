@@ -450,6 +450,8 @@ pub struct DreamCycle {
     /// In-memory only: after a daemon restart one redundant pass may run,
     /// which `put_dedup` absorbs.
     distill_fingerprints: HashMap<String, u64>,
+    /// Optional Autonomous Smarana engine for continuous spaced-repetition & Hebbian consolidation
+    smarana: Option<crate::smarana::AutonomousSmarana>,
 }
 
 impl DreamCycle {
@@ -463,7 +465,26 @@ impl DreamCycle {
             last_result: None,
             learned: None,
             distill_fingerprints: HashMap::new(),
+            smarana: None,
         }
+    }
+
+    /// Attach an Autonomous Smarana engine for spaced-repetition & Hebbian consolidation.
+    #[must_use]
+    pub fn with_smarana(mut self, smarana: crate::smarana::AutonomousSmarana) -> Self {
+        self.smarana = Some(smarana);
+        self
+    }
+
+    /// Get a reference to the Autonomous Smarana engine, if attached.
+    #[must_use]
+    pub const fn smarana(&self) -> Option<&crate::smarana::AutonomousSmarana> {
+        self.smarana.as_ref()
+    }
+
+    /// Get a mutable reference to the Autonomous Smarana engine, if attached.
+    pub fn smarana_mut(&mut self) -> Option<&mut crate::smarana::AutonomousSmarana> {
+        self.smarana.as_mut()
     }
 
     /// Attach a LearnedDreamCycle for adaptive phase selection (Phase 6).
@@ -772,13 +793,21 @@ impl DreamCycle {
         processed += validity_inspected;
         modified += validity_moved;
 
+        // Autonomous Smarana: Hebbian synaptic consolidation & association formation
+        let mut smarana_synapses = 0;
+        if let Some(ref mut smarana) = self.smarana {
+            if let Ok(report) = smarana.run_consolidation_step(ctx.store, ctx.associations, chrono::Utc::now()) {
+                smarana_synapses = report.associations_reinforced + report.associations_created;
+            }
+        }
+
         (
             processed,
             modified + strategies_created,
-            0,
+            smarana_synapses,
             true,
             format!(
-                "consolidated {} memories, {} transferred/deduplicated, {} strategies synthesized, {} turns consolidated, {} tier moves over {} inspected, {} validity moves over {} inspected",
+                "consolidated {} memories, {} transferred/deduplicated, {} strategies synthesized, {} turns consolidated, {} tier moves over {} inspected, {} validity moves over {} inspected, {} smarana synapses consolidated",
                 processed,
                 modified,
                 strategies_created,
@@ -786,7 +815,8 @@ impl DreamCycle {
                 tier_moved,
                 tier_inspected,
                 validity_moved,
-                validity_inspected
+                validity_inspected,
+                smarana_synapses
             ),
         )
     }
@@ -1414,11 +1444,13 @@ impl DreamCycle {
         )
     }
 
-    /// Decay — apply mindful forgetting via `RetentionEngine`.
-    fn phase_decay(&self, ctx: &DreamContext) -> (usize, usize, usize, bool, String) {
+    /// Decay — apply mindful forgetting via `RetentionEngine` and Autonomous Smarana.
+    fn phase_decay(&mut self, ctx: &DreamContext) -> (usize, usize, usize, bool, String) {
         let engine = RetentionEngine::default_config();
         let mut total_processed = 0;
         let mut total_decayed = 0;
+        let mut smarana_decayed = 0;
+        let now = chrono::Utc::now();
 
         for galaxy in Galaxy::all() {
             match galaxy {
@@ -1438,15 +1470,27 @@ impl DreamCycle {
                 total_processed += report.total_evaluated;
                 total_decayed += report.decayed;
             }
+
+            if let Some(ref mut smarana) = self.smarana {
+                if let Ok(s_report) = smarana.run_decay_step(ctx.store, ctx.associations, galaxy, now) {
+                    smarana_decayed += s_report.decayed;
+                }
+            }
         }
+
+        let smarana_note = if smarana_decayed > 0 {
+            format!(", {} Ebbinghaus-decayed via Smarana", smarana_decayed)
+        } else {
+            String::new()
+        };
 
         (
             total_processed,
-            total_decayed,
+            total_decayed + smarana_decayed,
             0,
             true,
             format!(
-                "decay processed {total_processed} memories, decayed {total_decayed} (never deleted)"
+                "decay processed {total_processed} memories, decayed {total_decayed} (never deleted){smarana_note}"
             ),
         )
     }
@@ -2503,5 +2547,24 @@ mod tests {
             .expect("narrative effectiveness recorded");
         assert!(eff.runs >= 1);
         assert!(eff.useful_results >= 1, "distillation produced memories");
+    }
+
+    #[test]
+    fn dream_cycle_with_autonomous_smarana() {
+        let (_tmp, store, assoc) = test_ctx();
+        let mut smarana = crate::smarana::AutonomousSmarana::default();
+        let id1 = uuid::Uuid::new_v4();
+        let id2 = uuid::Uuid::new_v4();
+        let now = chrono::Utc::now();
+        smarana.record_coactivation_batch(&[id1, id2], 0.9, now);
+        smarana.record_coactivation_batch(&[id1, id2], 0.9, now);
+
+        let ctx = DreamContext::new(&store, &assoc);
+        let mut cycle = DreamCycle::new().with_smarana(smarana);
+        assert!(cycle.smarana().is_some());
+
+        let result = cycle.run(&ctx);
+        assert!(result.success);
+        assert!(cycle.smarana().unwrap().last_composite_score > 0.0);
     }
 }
