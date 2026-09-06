@@ -41,7 +41,6 @@ impl Default for SimMcTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SimMcTool {
     fn name(&self) -> &str {
         "sim.mc"
@@ -135,7 +134,6 @@ impl Default for SimForecastTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SimForecastTool {
     fn name(&self) -> &str {
         "sim.forecast"
@@ -219,7 +217,6 @@ impl Default for SimCounterfactualTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SimCounterfactualTool {
     fn name(&self) -> &str {
@@ -347,7 +344,6 @@ impl Default for SimulationCalibrateTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SimulationCalibrateTool {
     fn name(&self) -> &str {

@@ -99,7 +99,6 @@ impl TransactionBeginTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for TransactionBeginTool {
     fn name(&self) -> &str {
         "transaction.begin"
@@ -207,7 +206,6 @@ impl TransactionCommitTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for TransactionCommitTool {
     fn name(&self) -> &str {
         "transaction.commit"
@@ -297,7 +295,6 @@ impl TransactionRollbackTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for TransactionRollbackTool {
     fn name(&self) -> &str {

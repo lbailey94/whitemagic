@@ -33,7 +33,6 @@ impl BusStatsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for BusStatsTool {
     fn name(&self) -> &str {
         "bus.stats"
@@ -92,7 +91,6 @@ impl BusEmitTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for BusEmitTool {
     fn name(&self) -> &str {
@@ -157,7 +155,6 @@ impl BusRecentTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for BusRecentTool {
     fn name(&self) -> &str {

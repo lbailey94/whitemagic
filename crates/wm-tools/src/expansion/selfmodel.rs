@@ -90,7 +90,6 @@ impl Default for SelfModelForecastTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SelfModelForecastTool {
     fn name(&self) -> &str {
         "selfmodel.forecast"
@@ -177,7 +176,6 @@ impl Default for SelfModelAlertsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SelfModelAlertsTool {
     fn name(&self) -> &str {
         "selfmodel.alerts"
@@ -256,7 +254,6 @@ impl Default for SelfModelSnapshotTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SelfModelSnapshotTool {
     fn name(&self) -> &str {
@@ -350,7 +347,6 @@ impl Default for SelfModelGnosisTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SelfModelGnosisTool {
     fn name(&self) -> &str {

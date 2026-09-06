@@ -177,7 +177,6 @@ impl Default for ToolsEffectivenessReportTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ToolsEffectivenessReportTool {
     fn name(&self) -> &str {
         "tools.effectiveness_report"
@@ -241,7 +240,6 @@ impl Default for ToolsRetireTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ToolsRetireTool {
     fn name(&self) -> &str {

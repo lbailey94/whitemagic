@@ -42,7 +42,6 @@ impl PipelineCreateTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for PipelineCreateTool {
     fn name(&self) -> &str {
         "pipeline.create"
@@ -110,7 +109,6 @@ impl PipelineListTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for PipelineListTool {
     fn name(&self) -> &str {
         "pipeline.list"
@@ -173,7 +171,6 @@ impl PipelineStatusTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for PipelineStatusTool {
     fn name(&self) -> &str {
@@ -250,7 +247,6 @@ impl SkillInvokeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SkillInvokeTool {
     fn name(&self) -> &str {
         "skill.invoke"
@@ -318,7 +314,6 @@ impl SkillListTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SkillListTool {
     fn name(&self) -> &str {

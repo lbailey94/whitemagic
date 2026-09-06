@@ -44,7 +44,6 @@ impl AnomalyDetectTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AnomalyDetectTool {
     fn name(&self) -> &str {
         "anomaly.detect"
@@ -255,7 +254,6 @@ impl StateSnapshotTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for StateSnapshotTool {
     fn name(&self) -> &str {
         "state.snapshot"
@@ -353,7 +351,6 @@ impl StateRevertTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for StateRevertTool {
     fn name(&self) -> &str {

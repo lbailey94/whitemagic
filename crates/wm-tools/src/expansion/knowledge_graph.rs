@@ -198,7 +198,6 @@ impl KgExtractTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for KgExtractTool {
     fn name(&self) -> &str {
         "kg.extract"
@@ -313,7 +312,6 @@ impl KgQueryTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for KgQueryTool {
     fn name(&self) -> &str {
@@ -437,7 +435,6 @@ impl KgTopTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for KgTopTool {
     fn name(&self) -> &str {

@@ -37,7 +37,6 @@ impl GraphWalkTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GraphWalkTool {
     fn name(&self) -> &str {
         "graph.walk"
@@ -172,7 +171,6 @@ impl GraphCommunityTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GraphCommunityTool {
     fn name(&self) -> &str {
@@ -334,7 +332,6 @@ impl GraphPropagateTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GraphPropagateTool {
     fn name(&self) -> &str {

@@ -28,7 +28,6 @@ impl MemoryCountTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryCountTool {
     fn name(&self) -> &str {
         "memory.count"
@@ -69,7 +68,6 @@ impl MemoryTagsTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryTagsTool {
     fn name(&self) -> &str {
@@ -118,7 +116,6 @@ impl SessionListTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SessionListTool {
     fn name(&self) -> &str {
@@ -233,7 +230,6 @@ impl Default for CittaCoherenceTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for CittaCoherenceTool {
     fn name(&self) -> &str {
         "citta.coherence"
@@ -286,7 +282,6 @@ impl Default for DharmaProfilesTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for DharmaProfilesTool {
     fn name(&self) -> &str {
         "dharma.profiles"
@@ -333,7 +328,6 @@ impl MemoryNearbyTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryNearbyTool {
     fn name(&self) -> &str {

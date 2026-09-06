@@ -56,7 +56,6 @@ impl MemoryConsolidateTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryConsolidateTool {
     fn name(&self) -> &str {
         "memory.consolidate"
@@ -127,7 +126,6 @@ impl MemoryDecayTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryDecayTool {
     fn name(&self) -> &str {
         "memory.decay"
@@ -197,7 +195,6 @@ impl MemoryBatchReadTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryBatchReadTool {
     fn name(&self) -> &str {
@@ -290,7 +287,6 @@ impl MemoryUpdateTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryUpdateTool {
     fn name(&self) -> &str {
@@ -598,7 +594,6 @@ impl MemoryTagTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryTagTool {
     fn name(&self) -> &str {
         "memory.tag"
@@ -675,7 +670,6 @@ impl MemoryStatsTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryStatsTool {
     fn name(&self) -> &str {
@@ -1888,7 +1882,6 @@ impl MemorySortTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemorySortTool {
     fn name(&self) -> &str {
         "memory.sort"
@@ -1997,7 +1990,6 @@ impl MemoryFilterTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryFilterTool {
     fn name(&self) -> &str {
@@ -2204,7 +2196,6 @@ impl MemoryDeduplicateTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryDeduplicateTool {
     fn name(&self) -> &str {
         "memory.deduplicate"
@@ -2336,7 +2327,6 @@ impl MemoryExportTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryExportTool {
     fn name(&self) -> &str {

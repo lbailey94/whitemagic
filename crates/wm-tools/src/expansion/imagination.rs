@@ -82,7 +82,6 @@ impl ImagineScenarioTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ImagineScenarioTool {
     fn name(&self) -> &str {
         "imagine.scenario"
@@ -218,7 +217,6 @@ impl Default for ImaginePredictTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ImaginePredictTool {
     fn name(&self) -> &str {
         "imagine.predict"
@@ -320,7 +318,6 @@ impl Default for ImagineReflectTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ImagineReflectTool {
     fn name(&self) -> &str {

@@ -208,7 +208,6 @@ impl Default for ConformalFitClassifierTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ConformalFitClassifierTool {
     fn name(&self) -> &str {
         "conformal.fit_classifier"
@@ -289,7 +288,6 @@ impl Default for ConformalFitRegressorTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ConformalFitRegressorTool {
     fn name(&self) -> &str {
@@ -385,7 +383,6 @@ impl Default for ConformalPredictSetTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ConformalPredictSetTool {
     fn name(&self) -> &str {
         "conformal.predict_set"
@@ -470,7 +467,6 @@ impl Default for ConformalPredictIntervalTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ConformalPredictIntervalTool {
     fn name(&self) -> &str {
         "conformal.predict_interval"
@@ -541,7 +537,6 @@ impl Default for ConformalStatusTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ConformalStatusTool {
     fn name(&self) -> &str {
         "conformal.status"
@@ -609,7 +604,6 @@ impl Default for ConformalMonitorTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ConformalMonitorTool {
     fn name(&self) -> &str {
@@ -770,7 +764,6 @@ impl Default for ConformalExportTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ConformalExportTool {
     fn name(&self) -> &str {
         "conformal.export"
@@ -817,7 +810,6 @@ impl Default for ConformalImportTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ConformalImportTool {
     fn name(&self) -> &str {

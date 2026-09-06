@@ -45,7 +45,6 @@ impl AntiLoopCheckTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AntiLoopCheckTool {
     fn name(&self) -> &str {
         "anti_loop.check"
@@ -230,7 +229,6 @@ impl BoundaryEnforceTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for BoundaryEnforceTool {
     fn name(&self) -> &str {

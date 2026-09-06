@@ -39,7 +39,6 @@ impl SystemHealthTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SystemHealthTool {
     fn name(&self) -> &str {
         "system.health"
@@ -151,7 +150,6 @@ impl Default for SystemConfigTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SystemConfigTool {
     fn name(&self) -> &str {
         "system.config"
@@ -209,7 +207,6 @@ impl SystemFlushTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SystemFlushTool {
     fn name(&self) -> &str {

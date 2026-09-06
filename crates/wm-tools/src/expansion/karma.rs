@@ -84,7 +84,6 @@ impl KarmaHistoryTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for KarmaHistoryTool {
     fn name(&self) -> &str {
         "karma.history"
@@ -151,7 +150,6 @@ impl KarmaClearTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for KarmaClearTool {
     fn name(&self) -> &str {

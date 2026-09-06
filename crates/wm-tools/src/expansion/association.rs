@@ -31,7 +31,6 @@ impl MemoryAssociateMineTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryAssociateMineTool {
     fn name(&self) -> &str {
         "memory.associate_mine"
@@ -136,7 +135,6 @@ impl MemoryCorroborateTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryCorroborateTool {
     fn name(&self) -> &str {
@@ -533,7 +531,6 @@ impl MemoryRelateTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryRelateTool {
     fn name(&self) -> &str {

@@ -44,7 +44,6 @@ impl HomeostasisCheckTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for HomeostasisCheckTool {
     fn name(&self) -> &str {
         "homeostasis.check"
@@ -152,7 +151,6 @@ impl HomeostasisAdjustTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for HomeostasisAdjustTool {
     fn name(&self) -> &str {
         "homeostasis.adjust"
@@ -255,7 +253,6 @@ impl HomeostasisHistoryTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for HomeostasisHistoryTool {
     fn name(&self) -> &str {
         "homeostasis.history"
@@ -342,7 +339,6 @@ impl HomeostasisAlertsTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for HomeostasisAlertsTool {
     fn name(&self) -> &str {

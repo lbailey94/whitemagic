@@ -162,7 +162,6 @@ impl FrictionLogTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for FrictionLogTool {
     fn name(&self) -> &str {
         "friction.log"
@@ -374,7 +373,6 @@ impl FrictionReviewTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for FrictionReviewTool {
     fn name(&self) -> &str {
@@ -767,7 +765,6 @@ impl FrictionAutoLogTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for FrictionAutoLogTool {
     fn name(&self) -> &str {
         "friction.auto_log"
@@ -839,7 +836,6 @@ impl ImproveProposalsTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ImproveProposalsTool {
     fn name(&self) -> &str {
@@ -925,7 +921,6 @@ impl RedteamProposalsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for RedteamProposalsTool {
     fn name(&self) -> &str {
         "redteam.proposals"
@@ -1006,7 +1001,6 @@ impl FrictionResolveTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for FrictionResolveTool {
     fn name(&self) -> &str {
@@ -1147,7 +1141,6 @@ impl ActiveProposalsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ActiveProposalsTool {
     fn name(&self) -> &str {
         "improve.active_proposals"
@@ -1241,7 +1234,6 @@ impl RedteamFromFrictionTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for RedteamFromFrictionTool {
     fn name(&self) -> &str {
@@ -1404,7 +1396,6 @@ impl RedteamCoverageReportTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for RedteamCoverageReportTool {
     fn name(&self) -> &str {

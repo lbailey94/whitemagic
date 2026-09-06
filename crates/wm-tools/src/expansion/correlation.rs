@@ -42,7 +42,6 @@ impl CorrelationAnalyzeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for CorrelationAnalyzeTool {
     fn name(&self) -> &str {
         "correlation.analyze"
@@ -232,7 +231,6 @@ impl GodNodesTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GodNodesTool {
     fn name(&self) -> &str {

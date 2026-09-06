@@ -33,7 +33,6 @@ impl Default for CittaStatusTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for CittaStatusTool {
     fn name(&self) -> &str {
         "citta.status"
@@ -79,7 +78,6 @@ impl CittaReflectTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for CittaReflectTool {
     fn name(&self) -> &str {
@@ -136,7 +134,6 @@ impl DreamStatusTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for DreamStatusTool {
     fn name(&self) -> &str {
         "dream.status"
@@ -187,7 +184,6 @@ impl DreamTriggerTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for DreamTriggerTool {
     fn name(&self) -> &str {
@@ -252,7 +248,6 @@ impl SmaranaStatusTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SmaranaStatusTool {
     fn name(&self) -> &str {
         "smarana.status"
@@ -316,7 +311,6 @@ impl SmaranaTraceTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SmaranaTraceTool {
     fn name(&self) -> &str {
@@ -409,7 +403,6 @@ impl ApotheosisCheckTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ApotheosisCheckTool {
     fn name(&self) -> &str {
@@ -521,7 +514,6 @@ impl CittaHistoryTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for CittaHistoryTool {
     fn name(&self) -> &str {
         "citta.history"
@@ -599,7 +591,6 @@ impl DreamAnalyzeTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for DreamAnalyzeTool {
     fn name(&self) -> &str {
@@ -711,7 +702,6 @@ impl ConsciousnessDepthTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ConsciousnessDepthTool {
     fn name(&self) -> &str {

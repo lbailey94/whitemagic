@@ -31,7 +31,6 @@ impl Default for DharmaRulesTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for DharmaRulesTool {
     fn name(&self) -> &str {
         "dharma.rules"
@@ -79,7 +78,6 @@ impl DharmaAuditTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for DharmaAuditTool {
     fn name(&self) -> &str {

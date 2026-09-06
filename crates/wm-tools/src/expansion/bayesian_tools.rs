@@ -42,7 +42,6 @@ impl Default for McSurrogateTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for McSurrogateTool {
     fn name(&self) -> &str {
         "mc.surrogate"
@@ -184,7 +183,6 @@ impl Default for McOptimizeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for McOptimizeTool {
     fn name(&self) -> &str {
         "mc.optimize"
@@ -318,7 +316,6 @@ impl Default for McRareEventTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for McRareEventTool {
     fn name(&self) -> &str {
         "mc.rare_event"
@@ -427,7 +424,6 @@ impl Default for McSdeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for McSdeTool {
     fn name(&self) -> &str {
         "mc.sde"
@@ -526,7 +522,6 @@ impl Default for McSuperforecasterTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for McSuperforecasterTool {
     fn name(&self) -> &str {

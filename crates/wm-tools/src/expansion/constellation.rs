@@ -28,7 +28,6 @@ impl ConstellationDetectTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ConstellationDetectTool {
     fn name(&self) -> &str {
         "constellation.detect"
@@ -129,7 +128,6 @@ impl ConstellationListTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ConstellationListTool {
     fn name(&self) -> &str {

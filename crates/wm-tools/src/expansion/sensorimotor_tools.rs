@@ -44,7 +44,6 @@ impl SensorListTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SensorListTool {
     fn name(&self) -> &str {
         "sensor.list"
@@ -90,7 +89,6 @@ impl SensorReadTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SensorReadTool {
     fn name(&self) -> &str {
@@ -168,7 +166,6 @@ impl SensorPollTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SensorPollTool {
     fn name(&self) -> &str {
@@ -250,7 +247,6 @@ impl SensorHistoryTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SensorHistoryTool {
     fn name(&self) -> &str {
         "sensor.history"
@@ -314,7 +310,6 @@ impl ActuatorListTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ActuatorListTool {
     fn name(&self) -> &str {
@@ -381,7 +376,6 @@ impl ActuatorCommandTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ActuatorCommandTool {
     fn name(&self) -> &str {
@@ -496,7 +490,6 @@ impl ActuatorEStopTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ActuatorEStopTool {
     fn name(&self) -> &str {
         "actuator.estop"
@@ -563,7 +556,6 @@ impl ReflexListTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ReflexListTool {
     fn name(&self) -> &str {
         "reflex.list"
@@ -610,7 +602,6 @@ impl ReflexAddTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ReflexAddTool {
     fn name(&self) -> &str {
@@ -732,7 +723,6 @@ impl ReflexEvaluateTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ReflexEvaluateTool {
     fn name(&self) -> &str {

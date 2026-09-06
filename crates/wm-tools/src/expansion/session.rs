@@ -95,7 +95,6 @@ impl SessionStartTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SessionStartTool {
     fn name(&self) -> &str {
         "session.start"
@@ -182,7 +181,6 @@ impl SessionCheckpointTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SessionCheckpointTool {
     fn name(&self) -> &str {
@@ -462,7 +460,6 @@ impl SessionRecallTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SessionRecallTool {
     fn name(&self) -> &str {
         "session.recall"
@@ -531,7 +528,6 @@ impl SessionEndTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SessionEndTool {
     fn name(&self) -> &str {

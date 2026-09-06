@@ -41,7 +41,6 @@ impl ReasoningBicameralTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ReasoningBicameralTool {
     fn name(&self) -> &str {
         "reasoning.bicameral"
@@ -220,7 +219,6 @@ impl ThinkTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ThinkTool {
     fn name(&self) -> &str {
@@ -411,7 +409,6 @@ impl ExplainTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ExplainTool {
     fn name(&self) -> &str {

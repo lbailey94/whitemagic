@@ -29,7 +29,6 @@ impl AgentRegisterTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AgentRegisterTool {
     fn name(&self) -> &str {
         "agent.register"
@@ -90,7 +89,6 @@ impl AgentListTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AgentListTool {
     fn name(&self) -> &str {
         "agent.list"
@@ -148,7 +146,6 @@ impl AgentHeartbeatTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for AgentHeartbeatTool {
     fn name(&self) -> &str {
@@ -214,7 +211,6 @@ impl AgentTrustTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for AgentTrustTool {
     fn name(&self) -> &str {
@@ -311,7 +307,6 @@ impl AgentDescriptionsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AgentDescriptionsTool {
     fn name(&self) -> &str {
         "agent.descriptions"
@@ -406,7 +401,6 @@ impl AgentCapabilitiesTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AgentCapabilitiesTool {
     fn name(&self) -> &str {
         "agent.capabilities"
@@ -494,7 +488,6 @@ impl AgentHeartbeatHistoryTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AgentHeartbeatHistoryTool {
     fn name(&self) -> &str {
         "agent.heartbeat.history"
@@ -576,7 +569,6 @@ impl AgentDeregisterTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for AgentDeregisterTool {
     fn name(&self) -> &str {

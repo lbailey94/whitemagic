@@ -26,7 +26,6 @@ impl SpiralReportTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SpiralReportTool {
     fn name(&self) -> &str {
         "spiral.report"
@@ -90,7 +89,6 @@ impl ConsolidationConnectTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ConsolidationConnectTool {
     fn name(&self) -> &str {
@@ -175,7 +173,6 @@ impl ConsolidationCompressTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ConsolidationCompressTool {
     fn name(&self) -> &str {
         "consolidation.compress"
@@ -259,7 +256,6 @@ impl EmergenceScanTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for EmergenceScanTool {
     fn name(&self) -> &str {
         "emergence.scan"
@@ -342,7 +338,6 @@ impl RetentionPruneTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for RetentionPruneTool {
     fn name(&self) -> &str {
@@ -433,7 +428,6 @@ impl SensorimotorScanTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SensorimotorScanTool {
     fn name(&self) -> &str {

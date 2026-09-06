@@ -44,7 +44,6 @@ impl PolyglotTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for PolyglotTool {
     fn name(&self) -> &str {
         "polyglot.call"

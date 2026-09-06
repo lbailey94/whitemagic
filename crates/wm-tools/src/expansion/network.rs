@@ -45,7 +45,6 @@ impl AssociationMineTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for AssociationMineTool {
     fn name(&self) -> &str {
         "association.mine"
@@ -170,7 +169,6 @@ impl PatternDetectTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for PatternDetectTool {
     fn name(&self) -> &str {
@@ -332,7 +330,6 @@ impl EmergenceReportTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for EmergenceReportTool {
     fn name(&self) -> &str {
         "emergence.report"
@@ -435,7 +432,6 @@ impl NetworkStatsTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for NetworkStatsTool {
     fn name(&self) -> &str {
@@ -560,7 +556,6 @@ impl NetworkCentralityTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for NetworkCentralityTool {
     fn name(&self) -> &str {
         "network.centrality"
@@ -663,7 +658,6 @@ impl NetworkClustersTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for NetworkClustersTool {
     fn name(&self) -> &str {

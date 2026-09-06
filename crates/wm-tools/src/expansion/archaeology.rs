@@ -41,7 +41,6 @@ impl ArchaeologySearchTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ArchaeologySearchTool {
     fn name(&self) -> &str {
         "archaeology.search"
@@ -172,7 +171,6 @@ impl LearningPatternTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for LearningPatternTool {
     fn name(&self) -> &str {
@@ -313,7 +311,6 @@ impl LearningSuggestTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for LearningSuggestTool {
     fn name(&self) -> &str {

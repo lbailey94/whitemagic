@@ -37,7 +37,6 @@ impl DriveSnapshotTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for DriveSnapshotTool {
     fn name(&self) -> &str {
         "drive.snapshot"
@@ -98,7 +97,6 @@ impl DriveEventTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for DriveEventTool {
     fn name(&self) -> &str {

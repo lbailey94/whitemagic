@@ -47,7 +47,6 @@ impl BicameralReasonTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for BicameralReasonTool {
     fn name(&self) -> &str {
         "bicameral.reason"
@@ -171,7 +170,6 @@ impl BicameralStatusTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for BicameralStatusTool {
     fn name(&self) -> &str {
         "bicameral.status"
@@ -283,7 +281,6 @@ impl SpeculativeDecodeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SpeculativeDecodeTool {
     fn name(&self) -> &str {
         "speculative.decode"
@@ -350,7 +347,6 @@ impl SpeculativeStatsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SpeculativeStatsTool {
     fn name(&self) -> &str {
         "speculative.stats"
@@ -414,7 +410,6 @@ impl MetaEnhanceTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MetaEnhanceTool {
     fn name(&self) -> &str {
@@ -497,7 +492,6 @@ impl MetaStatsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MetaStatsTool {
     fn name(&self) -> &str {
         "meta.stats"
@@ -576,7 +570,6 @@ impl DenseEncodeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for DenseEncodeTool {
     fn name(&self) -> &str {
         "dense.encode"
@@ -634,7 +627,6 @@ impl DenseDecodeTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for DenseDecodeTool {
     fn name(&self) -> &str {

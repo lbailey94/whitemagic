@@ -252,7 +252,6 @@ impl MemoryCreateTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryCreateTool {
     fn name(&self) -> &str {
         "memory.create"
@@ -810,7 +809,6 @@ impl MemoryReadTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryReadTool {
     fn name(&self) -> &str {
         "memory.read"
@@ -894,7 +892,6 @@ impl MemoryListTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryListTool {
     fn name(&self) -> &str {
@@ -1022,7 +1019,6 @@ impl GnosisTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GnosisTool {
     fn name(&self) -> &str {
         "gnosis"
@@ -1079,7 +1075,6 @@ impl ToolsListTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for ToolsListTool {
     fn name(&self) -> &str {
@@ -1160,7 +1155,6 @@ impl MemoryDeleteTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryDeleteTool {
     fn name(&self) -> &str {
@@ -1415,7 +1409,6 @@ impl MemoryQueryTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryQueryTool {
     fn name(&self) -> &str {
         "memory.query"
@@ -1583,7 +1576,6 @@ impl MemorySearchTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemorySearchTool {
     fn name(&self) -> &str {
         "memory.search"
@@ -1698,7 +1690,6 @@ impl MemoryChatTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryChatTool {
     fn name(&self) -> &str {
@@ -1823,7 +1814,6 @@ impl MemoryVectorSearchTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryVectorSearchTool {
     fn name(&self) -> &str {
         "memory.vector.search"
@@ -1947,7 +1937,6 @@ impl MemoryAssociateTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for MemoryAssociateTool {
     fn name(&self) -> &str {
         "memory.associate"
@@ -2014,7 +2003,6 @@ impl MemoryAssociationsTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for MemoryAssociationsTool {
     fn name(&self) -> &str {
@@ -2103,7 +2091,6 @@ impl KarmaReportTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for KarmaReportTool {
     fn name(&self) -> &str {
         "karma.report"
@@ -2182,7 +2169,6 @@ impl DharmaStatusTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for DharmaStatusTool {
     fn name(&self) -> &str {
         "dharma.status"
@@ -2237,7 +2223,6 @@ impl HarmonyVectorTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for HarmonyVectorTool {
     fn name(&self) -> &str {
         "harmony.vector"
@@ -2279,7 +2264,6 @@ impl HarmonyHistoryTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for HarmonyHistoryTool {
     fn name(&self) -> &str {
@@ -2341,7 +2325,6 @@ impl GnosisStatusTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GnosisStatusTool {
     fn name(&self) -> &str {
@@ -2411,7 +2394,6 @@ impl GnosisHistoryTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GnosisHistoryTool {
     fn name(&self) -> &str {
@@ -2501,7 +2483,6 @@ impl GnosisExplainTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GnosisExplainTool {
     fn name(&self) -> &str {
@@ -3184,7 +3165,6 @@ impl WmMetaTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for WmMetaTool {
     fn name(&self) -> &str {

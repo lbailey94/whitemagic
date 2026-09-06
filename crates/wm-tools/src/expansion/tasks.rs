@@ -29,7 +29,6 @@ impl TaskDistributeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for TaskDistributeTool {
     fn name(&self) -> &str {
         "task.distribute"
@@ -91,7 +90,6 @@ impl TaskStatusTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for TaskStatusTool {
     fn name(&self) -> &str {

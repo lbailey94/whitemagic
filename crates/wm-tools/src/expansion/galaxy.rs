@@ -28,7 +28,6 @@ impl GalaxyStatsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GalaxyStatsTool {
     fn name(&self) -> &str {
         "galaxy.stats"
@@ -81,7 +80,6 @@ impl GalaxyExportTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GalaxyExportTool {
     fn name(&self) -> &str {
@@ -147,7 +145,6 @@ impl GalaxyImportTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GalaxyImportTool {
     fn name(&self) -> &str {
@@ -230,7 +227,6 @@ impl GalaxyTransferTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GalaxyTransferTool {
     fn name(&self) -> &str {
@@ -333,7 +329,6 @@ impl GalaxyMergeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GalaxyMergeTool {
     fn name(&self) -> &str {
         "galaxy.merge"
@@ -430,7 +425,6 @@ impl GalaxySnapshotTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GalaxySnapshotTool {
     fn name(&self) -> &str {
         "galaxy.snapshot"
@@ -523,7 +517,6 @@ impl GalaxyRestoreTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GalaxyRestoreTool {
     fn name(&self) -> &str {
@@ -635,7 +628,6 @@ impl GalaxyDashboardTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GalaxyDashboardTool {
     fn name(&self) -> &str {
         "galaxy.dashboard"
@@ -732,7 +724,6 @@ impl GalaxyBackupTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GalaxyBackupTool {
     fn name(&self) -> &str {
         "galaxy.backup"
@@ -818,7 +809,6 @@ impl GalaxyTaxonomyTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GalaxyTaxonomyTool {
     fn name(&self) -> &str {
         "galaxy.taxonomy"
@@ -885,7 +875,6 @@ impl GalaxyPurgeTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for GalaxyPurgeTool {
     fn name(&self) -> &str {
         "galaxy.purge"
@@ -940,7 +929,6 @@ impl GalaxyHealthTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for GalaxyHealthTool {
     fn name(&self) -> &str {

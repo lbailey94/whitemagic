@@ -37,7 +37,6 @@ impl SanghaPeersTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SanghaPeersTool {
     fn name(&self) -> &str {
         "sangha.peers"
@@ -108,7 +107,6 @@ impl SanghaDiscoverTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SanghaDiscoverTool {
     fn name(&self) -> &str {
@@ -182,7 +180,6 @@ impl SanghaSignalTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SanghaSignalTool {
     fn name(&self) -> &str {
         "sangha.signal"
@@ -248,7 +245,6 @@ impl SanghaChatTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SanghaChatTool {
     fn name(&self) -> &str {
@@ -373,7 +369,6 @@ impl SanghaLocksTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SanghaLocksTool {
     fn name(&self) -> &str {

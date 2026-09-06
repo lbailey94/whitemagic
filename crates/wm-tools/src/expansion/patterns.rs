@@ -28,7 +28,6 @@ impl PatternSearchTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for PatternSearchTool {
     fn name(&self) -> &str {
         "pattern.search"
@@ -110,7 +109,6 @@ impl SalienceSpotlightTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for SalienceSpotlightTool {
     fn name(&self) -> &str {
         "salience.spotlight"
@@ -184,7 +182,6 @@ impl SerendipitySurfaceTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for SerendipitySurfaceTool {
     fn name(&self) -> &str {

@@ -109,7 +109,6 @@ impl ReflexDispatchTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ReflexDispatchTool {
     fn name(&self) -> &str {
         "reflex.dispatch"
@@ -192,7 +191,6 @@ impl ReflexStatusTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for ReflexStatusTool {
     fn name(&self) -> &str {
         "reflex.status"
@@ -252,7 +250,6 @@ impl WorkspaceSpotlightTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for WorkspaceSpotlightTool {
     fn name(&self) -> &str {
@@ -315,7 +312,6 @@ impl WorkspaceEventsTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for WorkspaceEventsTool {
     fn name(&self) -> &str {
@@ -386,7 +382,6 @@ impl WorkspacePublishTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for WorkspacePublishTool {
     fn name(&self) -> &str {
@@ -471,7 +466,6 @@ impl WorkspaceStatsTool {
 }
 
 #[async_trait]
-#[async_trait]
 impl Tool for WorkspaceStatsTool {
     fn name(&self) -> &str {
         "workspace.stats"
@@ -533,7 +527,6 @@ impl TimescaleStatusTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for TimescaleStatusTool {
     fn name(&self) -> &str {
@@ -603,7 +596,6 @@ impl TimescaleHooksTool {
     }
 }
 
-#[async_trait]
 #[async_trait]
 impl Tool for TimescaleHooksTool {
     fn name(&self) -> &str {
