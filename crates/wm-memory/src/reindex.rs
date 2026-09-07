@@ -408,9 +408,26 @@ pub fn repair_content(
                 continue;
             }
             let mut repaired_mem = mem;
+            let old_hash = repaired_mem.metadata.content_hash.clone();
             repaired_mem.content = cleaned;
             repaired_mem.metadata.content_hash = crate::content_hash(&repaired_mem.content);
+            repaired_mem.metadata.revision_count =
+                repaired_mem.metadata.revision_count.saturating_add(1);
             store.put(*galaxy, &repaired_mem)?;
+            // V8 S11c: an operator repair IS a content change — chain it
+            // like any update so `memory.revisions verify` stays truthful
+            // afterwards instead of crying tamper on repaired docs.
+            store.record_revision(
+                *galaxy,
+                repaired_mem.metadata.id,
+                &old_hash,
+                &repaired_mem.metadata.content_hash,
+                crate::revision::RevisionActor {
+                    session: None,
+                    user: Some("wm-repair-content".to_string()),
+                    compartment: None,
+                },
+            )?;
             let id_str = repaired_mem.metadata.id.to_string();
             // Defensive delete-then-add: gate-failing docs have no index
             // doc, but a prior partial repair could have left one.
@@ -828,6 +845,27 @@ mod tests {
         assert_eq!(row.content, "kumquat  ratchet   repair end");
         assert_eq!(row.metadata.content_hash, crate::content_hash(&row.content));
         assert!(sanitize_content_for_index(&row.content).is_some());
+        assert_eq!(row.metadata.revision_count, 1);
+
+        // V8 S11c: the repair chained itself — old hash preserved, operator
+        // actor labeled, head verifies against the repaired content.
+        let chain = store.revisions(Galaxy::Codex, id_r).unwrap();
+        assert_eq!(chain.len(), 1);
+        assert_eq!(
+            chain[0].old_hash,
+            crate::content_hash("kumquat\u{0} ratchet \u{1} repair end")
+        );
+        assert_eq!(chain[0].new_hash, row.metadata.content_hash);
+        assert_eq!(chain[0].actor_user.as_deref(), Some("wm-repair-content"));
+        assert_eq!(chain[0].actor_session, None);
+        let verdict = store
+            .verify_revision_chain(Galaxy::Codex, id_r, &row.metadata.content_hash)
+            .unwrap();
+        assert!(verdict.valid, "{:?}", verdict.breaks);
+
+        // Untouched rows chained nothing.
+        assert!(store.revisions(Galaxy::Codex, id_b).unwrap().is_empty());
+        assert!(store.revisions(Galaxy::Codex, id_c).unwrap().is_empty());
 
         // True-binary row untouched.
         let untouched = store.get(Galaxy::Codex, id_b).unwrap().unwrap();
@@ -848,6 +886,11 @@ mod tests {
         let again = repair_content(&store, &search, &[Galaxy::Codex]).unwrap();
         assert_eq!(again.repaired, 0);
         assert_eq!(again.already_clean, 2);
+        assert_eq!(
+            store.revisions(Galaxy::Codex, id_r).unwrap().len(),
+            1,
+            "idempotent re-run must not append"
+        );
         drop(tmp);
     }
 }

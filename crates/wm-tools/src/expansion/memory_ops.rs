@@ -388,6 +388,7 @@ impl Tool for MemoryUpdateTool {
             let actor = wm_memory::RevisionActor {
                 session: ctx.session_id.map(|sid| sid.to_string()),
                 user: ctx.user_id.clone(),
+                compartment: ctx.compartment.clone(),
             };
             match self.store.record_revision(
                 galaxy,
@@ -3110,6 +3111,7 @@ mod tests {
         let mut ctx = Context {
             user_id: Some("agent-b".to_string()),
             session_id: Some(uuid::Uuid::nil()),
+            compartment: Some("production".to_string()),
             ..Default::default()
         };
         let v = tool
@@ -3142,6 +3144,10 @@ mod tests {
         assert_eq!(revisions.len(), 2);
         assert_eq!(revisions[1].old_hash, revisions[0].new_hash, "chain links");
         assert_eq!(revisions[0].actor_user.as_deref(), Some("agent-b"));
+        assert_eq!(
+            revisions[0].actor_compartment.as_deref(),
+            Some("production")
+        );
         assert_eq!(
             revisions[0].actor_session.as_deref(),
             Some(uuid::Uuid::nil().to_string().as_str())

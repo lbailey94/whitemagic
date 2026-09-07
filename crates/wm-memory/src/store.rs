@@ -1292,6 +1292,7 @@ impl MemoryStore {
             new_hash: new_hash.to_string(),
             actor_session: actor.session,
             actor_user: actor.user,
+            actor_compartment: actor.compartment,
         };
         let key = crate::revision::revision_key(galaxy, id, seq);
         let val = serde_json::to_vec(&entry)

@@ -39,6 +39,11 @@ pub struct MemoryRevision {
     /// Attributed actor user label from MCP `_meta` (client-asserted).
     #[serde(default)]
     pub actor_user: Option<String>,
+    /// Mandala compartment the dispatch ran under (when declared).
+    /// S11b parity: the write-audit journal carries the same field, so a
+    /// revision and its journal entry attribute identically.
+    #[serde(default)]
+    pub actor_compartment: Option<String>,
 }
 
 /// Who performed a revision — snapshotted from the dispatch context.
@@ -46,6 +51,7 @@ pub struct MemoryRevision {
 pub struct RevisionActor {
     pub session: Option<String>,
     pub user: Option<String>,
+    pub compartment: Option<String>,
 }
 
 /// Result of walking one memory's revision chain.
@@ -125,6 +131,7 @@ mod tests {
             new_hash: new_hash.to_string(),
             actor_session: Some("ses-1".to_string()),
             actor_user: None,
+            actor_compartment: None,
         }
     }
 
