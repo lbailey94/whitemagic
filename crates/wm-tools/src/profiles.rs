@@ -62,20 +62,27 @@ pub static PROFILE_MINIMAL: ToolProfile = ToolProfile {
     ],
 };
 
-/// The ultimate single-tool PRAT meta-tool surface: zero schema bloat.
-pub static PROFILE_PRAT: ToolProfile = ToolProfile {
-    name: "prat",
+/// The ultimate single-tool PRAY meta-tool surface: zero schema bloat.
+/// (PRAY = Polymorphic Resonant Adaptive Yoga; renamed from PRAT in v9.2.)
+pub static PROFILE_PRAY: ToolProfile = ToolProfile {
+    name: "pray",
     prefixes: &["whitemagic"],
 };
 
-/// Look up a profile by name (`full`, `curated`, `minimal`, `prat`).
+/// Deprecated alias kept for back-compat — renamed to [`PROFILE_PRAY`] in v9.2.
+#[deprecated(since = "9.2.0", note = "renamed to PROFILE_PRAY")]
+pub use self::PROFILE_PRAY as PROFILE_PRAT;
+
+/// Look up a profile by name (`full`, `curated`, `minimal`, `pray`; `prat` kept as a deprecated alias).
 #[must_use]
 pub fn profile_from_name(name: &str) -> Option<&'static ToolProfile> {
     match name.trim().to_ascii_lowercase().as_str() {
         "full" => Some(&PROFILE_FULL),
         "curated" => Some(&PROFILE_CURATED),
         "minimal" => Some(&PROFILE_MINIMAL),
-        "prat" => Some(&PROFILE_PRAT),
+        "pray" => Some(&PROFILE_PRAY),
+        // Deprecated alias: pre-v9.2 configs used `--profile prat`.
+        "prat" => Some(&PROFILE_PRAY),
         _ => None,
     }
 }
@@ -504,8 +511,10 @@ mod tests {
     }
 
     #[test]
-    fn prat_profile_is_single_surface() {
-        assert_eq!(PROFILE_PRAT.prefixes, &["whitemagic"]);
-        assert_eq!(profile_from_name("prat").unwrap().name, "prat");
+    fn pray_profile_is_single_surface() {
+        assert_eq!(PROFILE_PRAY.prefixes, &["whitemagic"]);
+        assert_eq!(profile_from_name("pray").unwrap().name, "pray");
+        // Deprecated `prat` alias keeps resolving to the same surface.
+        assert_eq!(profile_from_name("prat").unwrap().name, "pray");
     }
 }

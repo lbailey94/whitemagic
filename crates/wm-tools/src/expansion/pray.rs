@@ -1,4 +1,7 @@
-//! Polymorphic Resonant Adaptive Tool (PRAT) & Hongmen / White Lotus Hierarchy.
+//! Polymorphic Resonant Adaptive Yoga (PRAY) & Hongmen / White Lotus Hierarchy.
+//! Formerly PRAT (Polymorphic Resonant Adaptive Tools), renamed in v9.2.
+//! Yoga (Skt. √yuj, "to yoke, join"): that which ties together — one serve
+//! folding a thousand or more tools and systems into a single entrypoint.
 //!
 //! Grounded in the unified meta-tool doctrine:
 //! - A single universal server surface exposing all of WhiteMagic through a polymorphic entrypoint.
@@ -105,15 +108,15 @@ impl WhiteLotusLodge {
     }
 }
 
-// ── PRAT Meta-Tool (Polymorphic Resonant Adaptive Tool) ────────────────
+// ── PRAY Meta-Tool (Polymorphic Resonant Adaptive Yoga) ────────────────
 
-pub struct PratMetaTool {
+pub struct PrayMetaTool {
     store: Arc<MemoryStore>,
     stats: ToolStats,
     effects: EffectRow,
 }
 
-impl PratMetaTool {
+impl PrayMetaTool {
     #[must_use]
     pub fn new(store: Arc<MemoryStore>) -> Self {
         Self {
@@ -129,7 +132,7 @@ impl PratMetaTool {
 }
 
 #[async_trait]
-impl Tool for PratMetaTool {
+impl Tool for PrayMetaTool {
     fn name(&self) -> &str {
         "whitemagic"
     }
@@ -143,7 +146,7 @@ impl Tool for PratMetaTool {
     }
 
     fn description(&self) -> &str {
-        "Polymorphic Resonant Adaptive Tool (PRAT): Unified meta-tool for WhiteMagic substrate operations (scout, query, audit, distill, rebalance, bagua, cold_rotate, hierarchy)."
+        "Polymorphic Resonant Adaptive Yoga (PRAY): Unified meta-tool for WhiteMagic substrate operations (scout, query, audit, distill, rebalance, bagua, cold_rotate, hierarchy)."
     }
 
     async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
@@ -166,7 +169,7 @@ impl Tool for PratMetaTool {
                 })).await?;
 
                 Ok(json!({
-                    "prat_action": "scout",
+                    "pray_action": "scout",
                     "hongmen_officer": HongmenRank::IncenseMaster.chinese_title(),
                     "duration_ms": start.elapsed().as_millis() as u64,
                     "result": res
@@ -182,7 +185,7 @@ impl Tool for PratMetaTool {
                 })).await?;
 
                 Ok(json!({
-                    "prat_action": "audit",
+                    "pray_action": "audit",
                     "hongmen_officer": HongmenRank::RedPole.chinese_title(),
                     "duration_ms": start.elapsed().as_millis() as u64,
                     "result": res
@@ -198,7 +201,7 @@ impl Tool for PratMetaTool {
                 })).await?;
 
                 Ok(json!({
-                    "prat_action": "distill",
+                    "pray_action": "distill",
                     "hongmen_officer": HongmenRank::WhitePaperFan.chinese_title(),
                     "duration_ms": start.elapsed().as_millis() as u64,
                     "result": res
@@ -215,7 +218,7 @@ impl Tool for PratMetaTool {
                 })).await?;
 
                 Ok(json!({
-                    "prat_action": "rebalance",
+                    "pray_action": "rebalance",
                     "hongmen_officer": HongmenRank::StrawSandal.chinese_title(),
                     "duration_ms": start.elapsed().as_millis() as u64,
                     "result": res
@@ -234,7 +237,7 @@ impl Tool for PratMetaTool {
                 })).await?;
 
                 Ok(json!({
-                    "prat_action": "hologram_query",
+                    "pray_action": "hologram_query",
                     "hongmen_officer": HongmenRank::StrawSandal.chinese_title(),
                     "duration_ms": start.elapsed().as_millis() as u64,
                     "result": res
@@ -245,7 +248,7 @@ impl Tool for PratMetaTool {
                 let res = bagua.call(ctx, params).await?;
 
                 Ok(json!({
-                    "prat_action": "bagua_dispatch",
+                    "pray_action": "bagua_dispatch",
                     "duration_ms": start.elapsed().as_millis() as u64,
                     "result": res
                 }))
@@ -261,7 +264,7 @@ impl Tool for PratMetaTool {
                 })).await?;
 
                 Ok(json!({
-                    "prat_action": "cold_rotate",
+                    "pray_action": "cold_rotate",
                     "hongmen_officer": HongmenRank::RedPole.chinese_title(),
                     "duration_ms": start.elapsed().as_millis() as u64,
                     "result": res
@@ -293,15 +296,15 @@ impl Tool for PratMetaTool {
                 ];
 
                 Ok(json!({
-                    "prat_action": "hierarchy_status",
-                    "system": "WhiteMagic v8/v9 PRAT Meta-Tool System",
+                    "pray_action": "hierarchy_status",
+                    "system": "WhiteMagic v9 PRAY Meta-Tool System",
                     "hongmen_ranks": hierarchy_info,
                     "white_lotus_lodges": lodges,
                     "duration_ms": start.elapsed().as_millis() as u64
                 }))
             }
             other => Err(CoreError::InvalidArgs(format!(
-                "Unknown PRAT action: '{other}'. Valid: scout, audit, distill, rebalance, query, bagua, cold_rotate, hierarchy"
+                "Unknown PRAY action: '{other}'. Valid: scout, audit, distill, rebalance, query, bagua, cold_rotate, hierarchy"
             ))),
         }
     }
@@ -310,6 +313,10 @@ impl Tool for PratMetaTool {
         &self.stats
     }
 }
+
+/// Deprecated alias kept for back-compat — renamed to [`PrayMetaTool`] in v9.2.
+#[deprecated(since = "9.2.0", note = "renamed to PrayMetaTool")]
+pub use self::PrayMetaTool as PratMetaTool;
 
 #[cfg(test)]
 mod tests {
@@ -325,13 +332,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_prat_meta_tool_hierarchy() {
+    async fn test_pray_meta_tool_hierarchy() {
         let (_tmp, store) = open_store();
-        let prat = PratMetaTool::new(Arc::new(store));
+        let pray = PrayMetaTool::new(Arc::new(store));
         let mut ctx = Context::default();
 
-        let res = prat.call(&mut ctx, json!({ "action": "hierarchy" })).await.unwrap();
-        assert_eq!(res["prat_action"], "hierarchy_status");
+        let res = pray.call(&mut ctx, json!({ "action": "hierarchy" })).await.unwrap();
+        assert_eq!(res["pray_action"], "hierarchy_status");
         let ranks = res["hongmen_ranks"].as_array().unwrap();
         assert_eq!(ranks.len(), 7);
         assert_eq!(ranks[0]["code"], 489);
@@ -339,18 +346,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_prat_meta_tool_scout_and_audit() {
+    async fn test_pray_meta_tool_scout_and_audit() {
         let (_tmp, store) = open_store();
         let store = Arc::new(store);
 
         let m = Memory::new(Galaxy::Codex, "Dharma boundary rule test".into());
         store.put(Galaxy::Codex, &m).unwrap();
 
-        let prat = PratMetaTool::new(store);
+        let pray = PrayMetaTool::new(store);
         let mut ctx = Context::default();
 
-        let res = prat.call(&mut ctx, json!({ "action": "audit" })).await.unwrap();
-        assert_eq!(res["prat_action"], "audit");
+        let res = pray.call(&mut ctx, json!({ "action": "audit" })).await.unwrap();
+        assert_eq!(res["pray_action"], "audit");
         assert_eq!(res["hongmen_officer"], "紅棍 (Hung Kwan / Red Pole 426)");
     }
 }

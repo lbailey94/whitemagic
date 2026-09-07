@@ -67,7 +67,7 @@ pub mod network;
 pub mod nlu_tools;
 pub mod patterns;
 pub mod pipeline;
-pub mod prat;
+pub mod pray;
 pub mod reasoning;
 pub mod research;
 pub mod resonance;
@@ -160,7 +160,7 @@ pub use patterns::{PatternSearchTool, SalienceSpotlightTool, SerendipitySurfaceT
 pub use pipeline::{
     PipelineCreateTool, PipelineListTool, PipelineStatusTool, SkillInvokeTool, SkillListTool,
 };
-pub use prat::{HongmenRank, PratMetaTool, WhiteLotusLodge};
+pub use pray::{HongmenRank, PrayMetaTool, WhiteLotusLodge};
 pub use reasoning::{ExplainTool, ReasoningBicameralTool, ThinkTool};
 pub use research::{
     ResearchRabbitHoleTool, ResearchRepoTool, ResearchTopicTool, register_research,
@@ -310,8 +310,8 @@ pub fn register_expansion(
         .register(Arc::new(ArmyDeployTool::new(store.clone())))
         .register(Arc::new(GalacticTriageTool::new(store.clone())))
         .register(Arc::new(GalacticColdRotateTool::new(store.clone())))
-        // Subagent Captains, 5D Hologram, Bagua Dispatch & PRAT Universal Meta-Tool (5)
-        .register(Arc::new(PratMetaTool::new(store.clone())))
+        // Subagent Captains, 5D Hologram, Bagua Dispatch & PRAY Universal Meta-Tool (5)
+        .register(Arc::new(PrayMetaTool::new(store.clone())))
         .register(Arc::new(CaptainDeployTool::new(store.clone())))
         .register(Arc::new(HologramRebalanceTool::new(store.clone())))
         .register(Arc::new(HologramQueryTool::new(store.clone())))
