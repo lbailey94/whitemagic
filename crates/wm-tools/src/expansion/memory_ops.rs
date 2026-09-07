@@ -331,27 +331,12 @@ impl Tool for MemoryUpdateTool {
                 .filter_map(|t| t.as_str().map(String::from))
                 .collect();
         }
-        // V8 S11d: the create-path class policy governs update too — a
-        // classed memory's importance stays inside its band regardless of
-        // which edit path touches it (update cannot mutate tier; now it
-        // cannot escape the importance ceiling either).
-        let mut class_policy = None;
+        // Importance is applied verbatim: class ceilings/floors live in
+        // the pipeline write gate (V8 S5/S11d), the single seam every
+        // dispatch passes through. Direct tool calls bypass the gate by
+        // construction — same contract as the create path.
         if let Some(importance) = args.get("importance").and_then(serde_json::Value::as_f64) {
-            let requested = importance as f32;
-            let applied = mem.metadata.class.map_or(requested, |class| {
-                wm_memory::typology::apply_class_policy(class, requested)
-            });
-            if (applied - requested).abs() > f32::EPSILON {
-                // Round like the write-gate's jnum(): f32 artifacts
-                // (0.4000000059604645) must not leak into responses.
-                let clean = |v: f32| serde_json::json!((f64::from(v) * 1000.0).round() / 1000.0);
-                class_policy = Some(serde_json::json!({
-                    "class": mem.metadata.class.map(wm_memory::typology::MemoryClass::as_str),
-                    "importance_before": clean(requested),
-                    "importance_applied": clean(applied),
-                }));
-            }
-            mem.metadata.importance = applied;
+            mem.metadata.importance = importance as f32;
         }
         // Envelope v2 (S4): title/topic are settable and clearable
         // (explicit null clears; absent leaves untouched).
@@ -456,9 +441,6 @@ impl Tool for MemoryUpdateTool {
         }
         if let Some(rev) = revision_disclosure {
             response["revision"] = rev;
-        }
-        if let Some(policy) = class_policy {
-            response["class_policy"] = policy;
         }
         if !cred_kinds.is_empty() {
             response["warnings"] = json!(
@@ -3259,21 +3241,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn memory_update_class_policy_caps_telemetry_and_floors_dialogue() {
-        // V8 S11d: update cannot push a classed memory outside its band.
+    async fn memory_update_applies_importance_verbatim() {
+        // V8 S11d: class ceilings/floors live in the pipeline write gate,
+        // the single seam every dispatch passes through (same contract as
+        // the create path). The tool itself applies the arg verbatim, so a
+        // direct call performs no policy — gate coverage is pinned in
+        // `wm-dispatch/src/write_gate.rs` instead.
         let store = test_store();
 
-        // Telemetry by construction (template shape) → ceiling 0.40.
         let tel = Memory::new(
             Galaxy::Codex,
             "## Auto-logged Friction: dispatch error\n\nbody".into(),
         );
         store.put(Galaxy::Codex, &tel).unwrap();
-        // Dialogue by construction (start tag + stamped class) → floor 0.75.
-        let mut dlg = Memory::new(Galaxy::Codex, "session marker".into());
-        dlg.metadata.tags.push("start".to_string());
-        dlg.metadata.class = Some(wm_memory::typology::MemoryClass::Dialogue);
-        store.put(Galaxy::Codex, &dlg).unwrap();
 
         let tool = MemoryUpdateTool::new(store.clone(), None);
         let mut ctx = Context::default();
@@ -3285,37 +3265,10 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(v["class_policy"]["importance_applied"], 0.40);
-        let stored = store.get(Galaxy::Codex, tel.metadata.id).unwrap().unwrap();
-        assert!((stored.metadata.importance - 0.40).abs() < 1e-5);
-
-        let v = tool
-            .call(
-                &mut ctx,
-                json!({"galaxy": "codex", "id": dlg.metadata.id.to_string(), "importance": 0.2}),
-            )
-            .await
-            .unwrap();
-        assert_eq!(v["class_policy"]["importance_applied"], 0.75);
-        let stored = store.get(Galaxy::Codex, dlg.metadata.id).unwrap().unwrap();
-        assert!((stored.metadata.importance - 0.75).abs() < 1e-5);
-
-        // Unstamped memories stay untouched by the policy.
-        let plain = Memory::new(Galaxy::Codex, "a normal thought".into());
-        store.put(Galaxy::Codex, &plain).unwrap();
-        let v = tool
-            .call(
-                &mut ctx,
-                json!({"galaxy": "codex", "id": plain.metadata.id.to_string(), "importance": 0.95}),
-            )
-            .await
-            .unwrap();
         assert!(v.get("class_policy").is_none());
-        let stored = store
-            .get(Galaxy::Codex, plain.metadata.id)
-            .unwrap()
-            .unwrap();
-        assert!((stored.metadata.importance - 0.95).abs() < 1e-5);
+        assert!(v.get("write_gate").is_none());
+        let stored = store.get(Galaxy::Codex, tel.metadata.id).unwrap().unwrap();
+        assert!((stored.metadata.importance - 0.9).abs() < 1e-5);
     }
 
     #[tokio::test]

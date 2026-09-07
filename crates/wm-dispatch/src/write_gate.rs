@@ -20,9 +20,15 @@
 //! telemetry today; making it a gate is its own evidence-gated step.
 //!
 //! Scope: `memory.create` and `memory.batch_create` — the generic fresh-
-//! write tools. Every other tool passes untouched; the session-record
-//! path keeps its role-derived stamping (shipped `68547b9`), and the RSI
-//! recorder keeps its own dedup (it is the pattern's origin).
+//! write tools — plus the plausibility arm of `memory.update` (V8 S11d).
+//! Every other tool passes untouched; the session-record path keeps its
+//! role-derived stamping (shipped `68547b9`), and the RSI recorder keeps
+//! its own dedup (it is the pattern's origin).
+//!
+//! Update carries no junk filter and no dedup short-circuit: a targeted id
+//! rewrite is never silently dropped or rewritten into something else —
+//! only the importance ceiling/floor follows the resulting content's
+//! class. Cross-row content identity stays a harvest/dedupe concern.
 //!
 //! Disclosure: gate decisions ride the response as a `write_gate` object
 //! (attached by the pipeline, mirroring the `resource_flags` pattern) —
@@ -68,6 +74,7 @@ impl WriteGate {
         match tool_name {
             "memory.create" => self.gate_create(args),
             "memory.batch_create" => self.gate_batch(args),
+            "memory.update" => self.gate_update(args),
             _ => Ok(GateOutcome::default()),
         }
     }
@@ -174,6 +181,88 @@ impl WriteGate {
         };
         Ok(GateOutcome {
             disclosure,
+            short_circuit: None,
+        })
+    }
+
+    /// V8 S11d: the create-path class policy governs updates too — a
+    /// classed memory's importance stays inside its band regardless of
+    /// which edit path touches it.
+    ///
+    /// Class resolution prefers the row's stamped class and falls back to
+    /// detecting the *resulting* content (new content + new-or-existing
+    /// tags), so unstamped rows and content-change reclassifications are
+    /// covered — the two gaps the in-tool check could not see. Requested
+    /// importance is the arg when present, else the row's own (an edit
+    /// that reshapes content into a capped class cannot keep a tall
+    /// importance by omitting the field). Arg rewrite only fires when the
+    /// policy actually moves the value; unresolvable targets (bad id,
+    /// missing row, store hiccup) pass through — the tool owns those
+    /// errors, the gate never blocks on them.
+    fn gate_update(&self, args: &mut serde_json::Value) -> Result<GateOutcome> {
+        let galaxy = if args.get("galaxy").is_none() {
+            // Mirrors the tool default (Galaxy::Codex on absent arg).
+            Galaxy::Codex
+        } else {
+            match parse_galaxy_lenient(args.get("galaxy")) {
+                Some(g) => g,
+                None => return Ok(GateOutcome::default()),
+            }
+        };
+        let id = args
+            .get("id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<wm_memory::MemoryId>().ok());
+        let Some(id) = id else {
+            return Ok(GateOutcome::default());
+        };
+        let existing = match self.store.get(galaxy, id) {
+            Ok(Some(row)) => row,
+            _ => return Ok(GateOutcome::default()),
+        };
+
+        let content = args
+            .get("content")
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| existing.content.clone());
+        let tags: Vec<String> = args
+            .get("tags")
+            .and_then(|v| v.as_array())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_else(|| existing.metadata.tags.clone());
+
+        let class = existing
+            .metadata
+            .class
+            .or_else(|| typology::detect_class(&content, &tags));
+        let Some(class) = class else {
+            return Ok(GateOutcome::default());
+        };
+
+        let requested = args
+            .get("importance")
+            .and_then(|v| v.as_f64())
+            .map_or(existing.metadata.importance, |v| v as f32);
+        let policy = typology::apply_class_policy(class, requested);
+
+        let mut disclosure = serde_json::Map::new();
+        disclosure.insert("class".into(), serde_json::json!(class.as_str()));
+        disclosure.insert(
+            "tier".into(),
+            serde_json::json!(typology::initial_tier(class).as_str()),
+        );
+        if (policy - requested).abs() > f32::EPSILON {
+            disclosure.insert("importance_capped".into(), serde_json::json!(true));
+            disclosure.insert("importance_before".into(), serde_json::json!(requested));
+            args["importance"] = jnum(policy);
+        }
+        Ok(GateOutcome {
+            disclosure: Some(serde_json::Value::Object(disclosure)),
             short_circuit: None,
         })
     }
@@ -347,10 +436,98 @@ mod tests {
     fn out_of_scope_tools_pass_untouched() {
         let (_d, g, _s) = gate();
         let mut args = create_args("## Auto-logged Friction: x");
-        let outcome = g.enforce("memory.update", &mut args).unwrap();
+        let outcome = g.enforce("memory.search", &mut args).unwrap();
         assert!(outcome.disclosure.is_none());
         assert!(outcome.short_circuit.is_none());
         assert!(args.get("importance").is_none());
+    }
+
+    fn update_args(id: &str) -> serde_json::Value {
+        serde_json::json!({"galaxy": "codex", "id": id})
+    }
+
+    #[test]
+    fn update_caps_importance_by_stamped_class() {
+        let (_d, g, store) = gate();
+        let mut tel = Memory::new(
+            Galaxy::Codex,
+            "## Auto-logged Friction: dispatch error\n\nbody".into(),
+        );
+        tel.metadata.importance = 0.9;
+        store.put(Galaxy::Codex, &tel).unwrap();
+
+        let mut args = update_args(&tel.metadata.id.to_string());
+        args["importance"] = serde_json::json!(0.95);
+        let outcome = g.enforce("memory.update", &mut args).unwrap();
+        assert!(outcome.short_circuit.is_none());
+        assert_eq!(args["importance"], serde_json::json!(0.40));
+        let d = outcome.disclosure.unwrap();
+        assert_eq!(d["class"], "telemetry");
+        assert_eq!(d["importance_capped"], true);
+    }
+
+    #[test]
+    fn update_detects_class_on_unstamped_rows() {
+        let (_d, g, store) = gate();
+        // Unstamped telemetry-shaped row: the stored class is None, so
+        // only content detection can hold the ceiling.
+        let mut tel = Memory::new(
+            Galaxy::Codex,
+            "## Auto-logged Friction: dispatch error\n\nbody".into(),
+        );
+        tel.metadata.class = None;
+        tel.metadata.importance = 0.9;
+        store.put(Galaxy::Codex, &tel).unwrap();
+
+        let mut args = update_args(&tel.metadata.id.to_string());
+        args["importance"] = serde_json::json!(0.95);
+        let outcome = g.enforce("memory.update", &mut args).unwrap();
+        assert_eq!(args["importance"], serde_json::json!(0.40));
+        assert_eq!(outcome.disclosure.unwrap()["class"], "telemetry");
+    }
+
+    #[test]
+    fn update_content_change_into_capped_class_caps_existing_importance() {
+        let (_d, g, store) = gate();
+        // Tall unclassed row edited into telemetry shape WITHOUT an
+        // importance arg: the existing importance must still be capped.
+        let mut mem = Memory::new(Galaxy::Codex, "a normal thought".into());
+        mem.metadata.class = None;
+        mem.metadata.importance = 0.9;
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let mut args = update_args(&mem.metadata.id.to_string());
+        args["content"] = serde_json::json!("## Auto-logged Friction: now telemetry");
+        let outcome = g.enforce("memory.update", &mut args).unwrap();
+        assert_eq!(args["importance"], serde_json::json!(0.40));
+        assert_eq!(outcome.disclosure.unwrap()["importance_capped"], true);
+    }
+
+    #[test]
+    fn update_unrecognized_content_passes_untouched() {
+        let (_d, g, store) = gate();
+        let mut mem = Memory::new(Galaxy::Codex, "a normal thought".into());
+        mem.metadata.class = None;
+        mem.metadata.importance = 0.9;
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let mut args = update_args(&mem.metadata.id.to_string());
+        args["importance"] = serde_json::json!(0.95);
+        let outcome = g.enforce("memory.update", &mut args).unwrap();
+        assert!(outcome.disclosure.is_none());
+        assert_eq!(args["importance"], serde_json::json!(0.95));
+    }
+
+    #[test]
+    fn update_missing_row_passes_through_for_tool_error() {
+        let (_d, g, _s) = gate();
+        let mut args = update_args("99999999-9999-9999-9999-999999999999");
+        args["importance"] = serde_json::json!(0.95);
+        let outcome = g.enforce("memory.update", &mut args).unwrap();
+        assert!(outcome.disclosure.is_none());
+        assert!(outcome.short_circuit.is_none());
+        // Untouched: the tool owns the not-found error.
+        assert_eq!(args["importance"], serde_json::json!(0.95));
     }
 
     #[test]
