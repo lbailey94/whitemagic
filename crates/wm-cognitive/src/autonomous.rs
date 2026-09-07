@@ -455,6 +455,12 @@ pub struct CycleContext<'a> {
     pub imagination: Option<&'a ScenarioEngine>,
     /// Optional DynamicGalaxyRegistry for creating dynamic galaxies from emergence clusters
     pub dynamic_galaxies: Option<&'a std::sync::Mutex<DynamicGalaxyRegistry>>,
+    /// Strong-coincidence summaries drained from the SynchronicityDetector
+    /// (the PatternDetected consumer). The daemon hands the drain to the
+    /// next Research cycle exactly once; the cycle treats each hint as an
+    /// open problem alongside friction entries and questions. Bounded by
+    /// the producer (daemon caps the buffer); empty by default.
+    pub synchronicity_hints: Vec<String>,
 }
 
 impl<'a> CycleContext<'a> {
@@ -472,6 +478,7 @@ impl<'a> CycleContext<'a> {
             reflex_loop: None,
             imagination: None,
             dynamic_galaxies: None,
+            synchronicity_hints: Vec::new(),
         }
     }
 
@@ -501,6 +508,14 @@ impl<'a> CycleContext<'a> {
         registry: &'a std::sync::Mutex<DynamicGalaxyRegistry>,
     ) -> Self {
         self.dynamic_galaxies = Some(registry);
+        self
+    }
+
+    /// Attach drained synchronicity summaries for the Research cycle.
+    /// Each hint becomes an open-problem candidate (see `run_research`).
+    #[must_use]
+    pub fn with_synchronicity(mut self, hints: Vec<String>) -> Self {
+        self.synchronicity_hints = hints;
         self
     }
 
@@ -2055,6 +2070,15 @@ impl AutonomousCycleRunner {
             }
         }
 
+        // PatternDetected consumer: strong coincidences drained from the
+        // SynchronicityDetector arrive as ready-made open problems. They
+        // carry no memory ids (detection reads the bus, not the store);
+        // the "Synchronicity:" prefix keeps the provenance visible in
+        // hypotheses and notes downstream.
+        for hint in &ctx.synchronicity_hints {
+            open_problems.push((format!("Synchronicity: {hint}"), Vec::new()));
+        }
+
         if open_problems.is_empty() {
             result.status = CycleStatus::NoProposals;
             result.notes = "No open problems found for research".into();
@@ -3182,6 +3206,27 @@ mod tests {
         assert_eq!(result.status, CycleStatus::Completed);
         assert!(!result.hypotheses.is_empty());
         assert!(result.hypotheses[0].problem.contains("Question"));
+        drop(tmp);
+    }
+
+    #[test]
+    fn research_cycle_consumes_synchronicity_hints() {
+        // PatternDetected consumer: drained strong-coincidence summaries
+        // become open problems even with an otherwise empty store.
+        let (tmp, store, assoc) = setup();
+        let ctx = CycleContext::new(&store, &assoc, 0.8).with_synchronicity(vec![
+            "3 subsystems [sensory, memory, drive] co-fired ev_a+ev_b salience 0.91 over 120ms"
+                .to_string(),
+        ]);
+        let mut runner = AutonomousCycleRunner::default();
+        let result = runner.run_cycle(CycleType::Research, &ctx);
+        assert_eq!(result.status, CycleStatus::Completed);
+        assert!(!result.hypotheses.is_empty());
+        assert!(
+            result.hypotheses[0].problem.contains("Synchronicity:"),
+            "hint provenance must stay visible: {}",
+            result.hypotheses[0].problem
+        );
         drop(tmp);
     }
 

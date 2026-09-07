@@ -230,6 +230,12 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     ));
     let mut nervous = wm_cognitive::UnifiedNervousSystem::new();
     let mut last_sync_count: usize = 0;
+    // PatternDetected consumer: strong-coincidence summaries wait here for
+    // the next Research cycle (sweep or dedicated), which consumes them
+    // exactly once via `CycleContext::with_synchronicity`. Bounded: only
+    // strong coincidences qualify and the oldest drops past the cap, so a
+    // coincidence storm can delay but never flood Research inputs.
+    let mut pending_sync_hints: Vec<String> = Vec::new();
     {
         let detector_bus = Arc::clone(&synchronicity);
         if let Ok(mut bus) = server.gan_ying_bus().lock() {
@@ -409,7 +415,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             let ctx = CycleContext::new(&store, &associations, health)
                 .with_sensorimotor(&sensorimotor_bus, &reflex_loop)
                 .with_imagination(&scenario_engine)
-                .with_dynamic_galaxies(server.dynamic_galaxies());
+                .with_dynamic_galaxies(server.dynamic_galaxies())
+                .with_synchronicity(std::mem::take(&mut pending_sync_hints));
 
             if let Some(results) = resilient("cycle_sweep", || runner.run_all(&ctx)) {
                 stats.cycle_sweeps += 1;
@@ -546,8 +553,9 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             && now.duration_since(last_research) >= config.research_interval
         {
             let health = server.dharma_gate().homeostasis().health_score();
-            let ctx =
-                CycleContext::new(&store, &associations, health).with_imagination(&scenario_engine);
+            let ctx = CycleContext::new(&store, &associations, health)
+                .with_imagination(&scenario_engine)
+                .with_synchronicity(std::mem::take(&mut pending_sync_hints));
 
             let result = resilient("research_cycle", || {
                 runner.run_cycle(CycleType::Research, &ctx)
@@ -688,6 +696,24 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 for sync in &fresh {
                     if sync.is_strong() {
                         stats.strong_synchronicities += 1;
+                        // Consumer handoff: render the coincidence as a
+                        // Research open-problem hint (subsystems + event
+                        // types + salience — no ids, detection never reads
+                        // the store). Weak coincidences stay log-only.
+                        let subs: Vec<&str> = sync.subsystems.iter().map(|s| s.as_str()).collect();
+                        let evts: Vec<&str> = sync.event_types.iter().map(|e| e.as_str()).collect();
+                        pending_sync_hints.push(format!(
+                            "{} subsystems [{}] co-fired {} events ({}) salience {:.2} over {}ms",
+                            sync.subsystem_count,
+                            subs.join(", "),
+                            sync.event_count,
+                            evts.join("+"),
+                            sync.mean_salience,
+                            sync.time_span_ms,
+                        ));
+                        while pending_sync_hints.len() > 10 {
+                            pending_sync_hints.remove(0);
+                        }
                     }
                     for event_type in &sync.event_types {
                         let subsystem = nervous.route(*event_type, is_error_event(*event_type));
