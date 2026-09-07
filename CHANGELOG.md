@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Visibility boundaries on content-returning paths
+- New `content_visible` gate (`mcp_visible` + `model_visible` + `validity_visible` + compartment access), enforced where hologram query builds candidates and where the Alchemist emits insight previews. Private, model-excluded, and compartment-forbidden records can no longer leak through ids, tags, previews, or coordinates on captain / hologram / PRAY / Bagua paths (which share these implementations).
+- Aggregate counts are unchanged; only content-bearing outputs are filtered.
+
+### Hardened cold rotation: fail-closed two-phase archive
+- `galaxy.cold_rotate` apply path rewritten as chunked two-phase commit (archive → flush + sync → verify id-set → delete); any archive failure aborts before further deletions.
+- Exclusive `create_new` archive files (timestamp + nanos + pid stems) plus per-run recovery manifest; same-second reruns can no longer truncate archives.
+- Tantivy de-indexing and association cleanup on rotation (mirrors `memory.deduplicate`), with honest per-record counts; `destructive: true` with Filesystem/SearchIndex effects (pipeline requires `confirm: true`).
+- NLU structural-gate test corrected to assert the true invariant (no destructive tool executes via NLU) rather than the proxy (no success at all).
+
+### Governed wrapper defaults (PRAY / Bagua)
+- PRAY `rebalance` and Bagua Kun preserve the child's dry-run default (`apply` now defaults false); Bagua Kun honors the caller's `galaxy`/`limit` instead of forcing all-galaxy writes.
+- PRAY `cold_rotate` forwards caller bounds (`limit`, `output_dir`, `project_name`) and carries the same search/association cleanup wiring as the direct route.
+- Removed the `ground` keyword trigger (it matched `background` and routed loose objectives into the write-capable trigram).
+- Outer effects of both routers now truthfully declare Filesystem reads/writes.
+
 ### Gan Ying revival: synchronicity + rabbit-hole loop
 - New taxonomy event `PatternDetected = 233` (Coordination; taxonomy now 234 types) for novel-cluster discoveries; mapped to the Sensory nervous subsystem.
 - `SynchronicityDetector` revived: daemon subscribes it to the live Gan Ying Bus and drains new cross-subsystem coincidences on the Gan Ying tick (detection only, no store writes; stats + subsystem health accounting via `UnifiedNervousSystem`).

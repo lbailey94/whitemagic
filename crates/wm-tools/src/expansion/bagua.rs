@@ -93,7 +93,9 @@ impl Trigram {
     #[must_use]
     pub fn from_objective(objective: &str) -> Self {
         let lower = objective.to_ascii_lowercase();
-        if lower.contains("rebalance") || lower.contains("dispersion") || lower.contains("manifold") || lower.contains("ground") {
+        // Note: "ground" is deliberately NOT a Kun trigger — it matches
+        // "background" and would turn loose objectives into bulk writes.
+        if lower.contains("rebalance") || lower.contains("dispersion") || lower.contains("manifold") {
             Self::Kun
         } else if lower.contains("ast") || lower.contains("lightning") || lower.contains("shock") {
             Self::Zhen
@@ -146,8 +148,10 @@ impl BaguaDispatchTool {
             store,
             stats: ToolStats::default(),
             effects: EffectRow {
-                reads: vec![Resource::Galaxy("*".into())],
-                writes: vec![Resource::Galaxy("*".into())],
+                // Truthful outer surface: scouts read files, the Kun branch
+                // rewrites coordinates, Li shells out to git.
+                reads: vec![Resource::Galaxy("*".into()), Resource::Filesystem],
+                writes: vec![Resource::Galaxy("*".into()), Resource::Filesystem],
                 ..Default::default()
             },
         }
@@ -197,11 +201,19 @@ impl Tool for BaguaDispatchTool {
             }
             Trigram::Kun => {
                 let rebalance = HologramRebalanceTool::new(self.store.clone());
-                let apply = args.get("apply").and_then(Value::as_bool).unwrap_or(true);
-                let res = rebalance.call(ctx, json!({
-                    "galaxy": "all",
+                // Preserve the child's dry-run default and honor the
+                // caller's scope: a keyword match must never become an
+                // all-galaxy bulk write on its own.
+                let apply = args.get("apply").and_then(Value::as_bool).unwrap_or(false);
+                let galaxy = args.get("galaxy").and_then(Value::as_str).unwrap_or("all");
+                let mut child_args = json!({
+                    "galaxy": galaxy,
                     "apply": apply
-                })).await?;
+                });
+                if let Some(limit) = args.get("limit").and_then(Value::as_u64) {
+                    child_args["limit"] = json!(limit);
+                }
+                let res = rebalance.call(ctx, child_args).await?;
                 ("Captain Cartographer (Shan)", res)
             }
             Trigram::Zhen => {
@@ -324,5 +336,61 @@ mod tests {
         assert_eq!(res["trigram"]["symbol"], "☶");
         assert_eq!(res["captain_dispatched"], "Captain Sentry (Lin - Mountain Dharma)");
         assert_eq!(res["execution_receipt"]["memories_audited"], 1);
+    }
+
+    #[test]
+    fn background_objective_does_not_route_to_kun() {
+        // "ground" matched "background" and turned loose objectives into
+        // bulk writes. The keyword is removed; only explicit rebalancing
+        // language selects the write-capable trigram.
+        assert_ne!(
+            Trigram::from_objective("background task cleanup"),
+            Trigram::Kun
+        );
+        assert_eq!(Trigram::from_objective("rebalance the store"), Trigram::Kun);
+        assert_eq!(
+            Trigram::from_objective("dispersion manifold check"),
+            Trigram::Kun
+        );
+    }
+
+    #[tokio::test]
+    async fn kun_preserves_dry_run_and_caller_scope() {
+        let (_tmp, store) = open_store();
+        let store = Arc::new(store);
+
+        let codex_mem = Memory::new(Galaxy::Codex, "Logic algorithm compute binary structure".into());
+        let journals_mem =
+            Memory::new(Galaxy::Journals, "Dream consolidation nightly summary".into());
+        let journals_before = format!("{:?}", journals_mem.metadata.coord5d);
+        store.put(Galaxy::Codex, &codex_mem).unwrap();
+        store.put(Galaxy::Journals, &journals_mem).unwrap();
+
+        let bagua = BaguaDispatchTool::new(store.clone());
+        let mut ctx = Context::default();
+
+        // No `apply`: keyword routing must stay a dry run.
+        let res = bagua
+            .call(&mut ctx, json!({ "trigram": "kun" }))
+            .await
+            .unwrap();
+        assert_eq!(res["status"], "completed");
+        assert_eq!(res["execution_receipt"]["apply"], false);
+
+        // Scoped apply: only the requested galaxy may be rewritten.
+        let res = bagua
+            .call(
+                &mut ctx,
+                json!({ "trigram": "kun", "galaxy": "codex", "apply": true }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res["execution_receipt"]["apply"], true);
+        let journals_after = store.get(Galaxy::Journals, journals_mem.metadata.id).unwrap().unwrap();
+        assert_eq!(
+            format!("{:?}", journals_after.metadata.coord5d),
+            journals_before,
+            "a codex-scoped rebalance must leave other galaxies pristine"
+        );
     }
 }

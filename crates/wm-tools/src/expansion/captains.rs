@@ -22,7 +22,7 @@ use std::time::Instant;
 use wm_core::{Context, Coordinate5D, CoreError, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
 use wm_memory::{Memory, MemoryStore, SemanticEncoder};
 
-use super::common::parse_galaxy;
+use super::common::{content_visible, parse_galaxy};
 
 // ── Captain Roles ──────────────────────────────────────────────────────
 
@@ -140,7 +140,7 @@ impl Tool for CaptainDeployTool {
         "Deploy an autonomous Subagent Captain to command a specialized Tokio clone army for parallel codebase, memory, or holographic spatial tasks."
     }
 
-    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let role_str = args.get("role").and_then(Value::as_str).unwrap_or("cartographer");
         let role = CaptainRole::parse_role(role_str).ok_or_else(|| {
             CoreError::InvalidArgs(format!("Unknown captain role: {role_str}. Valid: vanguard, sentry, alchemist, cartographer"))
@@ -271,7 +271,10 @@ impl Tool for CaptainDeployTool {
                         if m.metadata.class == Some(wm_memory::typology::MemoryClass::Knowledge) {
                             knowledge_class += 1;
                         }
-                        if m.metadata.importance >= 0.8 && top_insights.len() < 15 {
+                        if m.metadata.importance >= 0.8
+                            && top_insights.len() < 15
+                            && content_visible(ctx, g, &m)
+                        {
                             top_insights.push(json!({
                                 "id": m.metadata.id.to_string(),
                                 "galaxy": g.db_name(),
@@ -417,7 +420,7 @@ impl Tool for HologramQueryTool {
         "Perform hyper-fast 5D nearest-neighbor holographic retrieval across memories using multidimensional geometric resonance."
     }
 
-    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query_str = args.get("query").and_then(Value::as_str).unwrap_or("");
         if query_str.is_empty() {
             return Err(CoreError::InvalidArgs("Missing required argument: query".into()));
@@ -465,7 +468,13 @@ impl Tool for HologramQueryTool {
             match self.store.scan(g, 50_000) {
                 Ok(mems) => {
                     for m in mems {
-                        if m.metadata.importance >= min_importance {
+                        // Visibility boundary: private, model-excluded,
+                        // non-current, or compartment-forbidden records never
+                        // become candidates, so they cannot leak through
+                        // previews, tags, or coordinates.
+                        if m.metadata.importance >= min_importance
+                            && content_visible(ctx, g, &m)
+                        {
                             candidate_memories.push((g, m));
                         }
                     }
@@ -769,5 +778,98 @@ mod tests {
         // The top match must be m1
         assert_eq!(results[0]["id"], m1.metadata.id.to_string());
         assert!(results[0]["similarity"].as_f64().unwrap() > results[1]["similarity"].as_f64().unwrap());
+    }
+
+    #[tokio::test]
+    async fn hologram_query_excludes_nonvisible_memories() {
+        let (_tmp, store) = open_store();
+        let store = Arc::new(store);
+
+        // Three identical memories: same coordinates, different visibility.
+        // Only the public one may surface through previews or ids.
+        let public = Memory::new(Galaxy::Codex, "shared resonance content".into());
+        let public_id = public.metadata.id;
+        store.put(Galaxy::Codex, &public).unwrap();
+
+        let mut private =
+            Memory::new(Galaxy::Codex, "shared resonance content".into());
+        private.metadata.is_private = true;
+        store.put(Galaxy::Codex, &private).unwrap();
+
+        let mut excluded =
+            Memory::new(Galaxy::Codex, "shared resonance content".into());
+        excluded.metadata.model_exclude = true;
+        store.put(Galaxy::Codex, &excluded).unwrap();
+
+        let query_tool = HologramQueryTool::new(store.clone());
+        let mut ctx = Context::default();
+        let res = query_tool
+            .call(
+                &mut ctx,
+                json!({"query": "shared resonance", "galaxy": "codex", "k": 10}),
+            )
+            .await
+            .unwrap();
+
+        let results = res["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["id"], public_id.to_string());
+    }
+
+    #[tokio::test]
+    async fn hologram_query_honors_compartment() {
+        let (_tmp, store) = open_store();
+        let store = Arc::new(store);
+
+        let m = Memory::new(Galaxy::Codex, "sandbox-visible content check".into());
+        store.put(Galaxy::Codex, &m).unwrap();
+
+        // A sandbox context may only see Tutorial/Research: Codex records
+        // must not surface even when explicitly requested.
+        let query_tool = HologramQueryTool::new(store);
+        let mut ctx = Context {
+            compartment: Some("sandbox".to_string()),
+            ..Default::default()
+        };
+        let res = query_tool
+            .call(
+                &mut ctx,
+                json!({"query": "sandbox", "galaxy": "codex", "k": 10}),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(res["status"], "completed");
+        assert!(res["results"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn alchemist_withholds_private_insights() {
+        let (_tmp, store) = open_store();
+        let store = Arc::new(store);
+
+        let mut public = Memory::new(Galaxy::Codex, "public breakthrough insight".into());
+        public.metadata.importance = 0.9;
+        let public_id = public.metadata.id;
+        store.put(Galaxy::Codex, &public).unwrap();
+
+        let mut private = Memory::new(Galaxy::Codex, "private breakthrough insight".into());
+        private.metadata.importance = 0.9;
+        private.metadata.is_private = true;
+        store.put(Galaxy::Codex, &private).unwrap();
+
+        let captain_tool = CaptainDeployTool::new(store);
+        let mut ctx = Context::default();
+        let res = captain_tool
+            .call(&mut ctx, json!({"role": "alchemist"}))
+            .await
+            .unwrap();
+
+        // Aggregates still count scanned records, but content-bearing
+        // insights must never include the private memory.
+        assert_eq!(res["memories_analyzed"], 2);
+        let insights = res["distilled_insights"].as_array().unwrap();
+        assert_eq!(insights.len(), 1);
+        assert_eq!(insights[0]["id"], public_id.to_string());
     }
 }

@@ -4751,19 +4751,25 @@ mod tests {
                 .await
                 .unwrap();
 
-            // A destructive tool must never return success via NLU.
-            assert_ne!(
-                result["status"], "success",
-                "destructive tool '{tool_name}' returned success via NLU — structural gate failed"
-            );
-
-            // If NLU did route to the destructive tool, the gate message must
-            // be present (proving the structural block, not just a miss).
+            // A destructive tool must never EXECUTE via NLU. Fuzzy routing
+            // may land on a different, non-destructive tool that succeeds —
+            // that is fine. What must not happen is success from a tool
+            // whose own effects are destructive.
             let routed_tool = result
                 .get("_wm_route")
                 .and_then(|r| r.get("tool"))
                 .and_then(|t| t.as_str())
                 .unwrap_or("");
+            let resolved_destructive = registry
+                .get(routed_tool)
+                .is_some_and(|t| t.effects().destructive);
+            assert!(
+                result["status"] != "success" || !resolved_destructive,
+                "destructive tool '{tool_name}' executed via NLU (resolved as '{routed_tool}') — structural gate failed"
+            );
+
+            // If NLU did route to the destructive tool, the gate message must
+            // be present (proving the structural block, not just a miss).
             if routed_tool == tool_name {
                 assert!(
                     result
@@ -4788,6 +4794,7 @@ mod tests {
                 "memory.deduplicate" => "deduplicate memories in codex",
                 "karma.purge" => "purge karma ledger",
                 "system.flush" => "flush low importance memories",
+                "galaxy.cold_rotate" => "rotate telemetry noise to cold storage",
                 _ => tool_name.as_str(),
             };
             let result2 = wm
@@ -4795,16 +4802,18 @@ mod tests {
                 .await
                 .unwrap();
 
-            assert_ne!(
-                result2["status"], "success",
-                "destructive tool '{tool_name}' returned success via NLU phrase '{nl_phrase}' — structural gate failed"
-            );
-
             let routed_tool2 = result2
                 .get("_wm_route")
                 .and_then(|r| r.get("tool"))
                 .and_then(|t| t.as_str())
                 .unwrap_or("");
+            let resolved_destructive2 = registry
+                .get(routed_tool2)
+                .is_some_and(|t| t.effects().destructive);
+            assert!(
+                result2["status"] != "success" || !resolved_destructive2,
+                "destructive tool '{tool_name}' executed via NLU phrase '{nl_phrase}' (resolved as '{routed_tool2}') — structural gate failed"
+            );
             if routed_tool2 == tool_name {
                 assert!(
                     result2

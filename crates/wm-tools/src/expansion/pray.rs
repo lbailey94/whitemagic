@@ -21,7 +21,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::Instant;
 use wm_core::{Context, CoreError, EffectRow, Gana, Resource, Tool, ToolStats};
-use wm_memory::MemoryStore;
+use wm_memory::{AssociationStore, MemoryStore, SearchEngine};
 
 use super::army::GalacticColdRotateTool;
 use super::bagua::BaguaDispatchTool;
@@ -112,6 +112,8 @@ impl WhiteLotusLodge {
 
 pub struct PrayMetaTool {
     store: Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
+    associations: Option<Arc<AssociationStore>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -121,13 +123,32 @@ impl PrayMetaTool {
     pub fn new(store: Arc<MemoryStore>) -> Self {
         Self {
             store,
+            search: None,
+            associations: None,
             stats: ToolStats::default(),
             effects: EffectRow {
-                reads: vec![Resource::Galaxy("*".into())],
-                writes: vec![Resource::Galaxy("*".into())],
+                // Truthful outer surface: scouts read files, cold rotation
+                // writes archives, queries read stores. Children invoked
+                // through this router inherit these declarations.
+                reads: vec![Resource::Galaxy("*".into()), Resource::Filesystem],
+                writes: vec![Resource::Galaxy("*".into()), Resource::Filesystem],
                 ..Default::default()
             },
         }
+    }
+
+    /// Attach full-text de-indexing for the cold-rotation child.
+    #[must_use]
+    pub fn with_search(mut self, search: Arc<SearchEngine>) -> Self {
+        self.search = Some(search);
+        self
+    }
+
+    /// Attach association cleanup for the cold-rotation child.
+    #[must_use]
+    pub fn with_associations(mut self, associations: Arc<AssociationStore>) -> Self {
+        self.associations = Some(associations);
+        self
     }
 }
 
@@ -209,13 +230,19 @@ impl Tool for PrayMetaTool {
             }
             "rebalance" | "cartographer" => {
                 let rebalance = HologramRebalanceTool::new(self.store.clone());
-                let apply = params.get("apply").and_then(Value::as_bool).unwrap_or(true);
+                // Preserve the child's dry-run default: routing through PRAY
+                // must never flip a read into a bulk write.
+                let apply = params.get("apply").and_then(Value::as_bool).unwrap_or(false);
                 let galaxy = params.get("galaxy").and_then(Value::as_str).unwrap_or("all");
 
-                let res = rebalance.call(ctx, json!({
+                let mut child_args = json!({
                     "galaxy": galaxy,
                     "apply": apply
-                })).await?;
+                });
+                if let Some(limit) = params.get("limit").and_then(Value::as_u64) {
+                    child_args["limit"] = json!(limit);
+                }
+                let res = rebalance.call(ctx, child_args).await?;
 
                 Ok(json!({
                     "pray_action": "rebalance",
@@ -254,14 +281,28 @@ impl Tool for PrayMetaTool {
                 }))
             }
             "cold_rotate" | "denoise" => {
-                let rotate_tool = GalacticColdRotateTool::new(self.store.clone());
+                let mut rotate_tool = GalacticColdRotateTool::new(self.store.clone());
+                if let Some(search) = &self.search {
+                    rotate_tool = rotate_tool.with_search(search.clone());
+                }
+                if let Some(associations) = &self.associations {
+                    rotate_tool = rotate_tool.with_associations(associations.clone());
+                }
                 let dry_run = params.get("dry_run").and_then(Value::as_bool).unwrap_or(true);
                 let galaxy = params.get("galaxy").and_then(Value::as_str).unwrap_or("all");
 
-                let res = rotate_tool.call(ctx, json!({
+                // Forward caller bounds instead of dropping them: a wrapper
+                // must not silently widen scope.
+                let mut child_args = json!({
                     "galaxy": galaxy,
                     "dry_run": dry_run
-                })).await?;
+                });
+                for key in ["limit", "output_dir", "project_name"] {
+                    if let Some(value) = params.get(key) {
+                        child_args[key] = value.clone();
+                    }
+                }
+                let res = rotate_tool.call(ctx, child_args).await?;
 
                 Ok(json!({
                     "pray_action": "cold_rotate",
@@ -359,5 +400,119 @@ mod tests {
         let res = pray.call(&mut ctx, json!({ "action": "audit" })).await.unwrap();
         assert_eq!(res["pray_action"], "audit");
         assert_eq!(res["hongmen_officer"], "紅棍 (Hung Kwan / Red Pole 426)");
+    }
+
+    #[tokio::test]
+    async fn pray_rebalance_preserves_dry_run_default() {
+        let (_tmp, store) = open_store();
+        let store = Arc::new(store);
+
+        let m = Memory::new(Galaxy::Codex, "Logic algorithm compute binary structure".into());
+        let before = format!("{:?}", m.metadata.coord5d);
+        store.put(Galaxy::Codex, &m).unwrap();
+
+        // No `apply` param: routing through PRAY must not flip the child's
+        // dry-run default into a bulk write.
+        let pray = PrayMetaTool::new(store.clone());
+        let mut ctx = Context::default();
+        let res = pray
+            .call(&mut ctx, json!({ "action": "rebalance" }))
+            .await
+            .unwrap();
+        assert_eq!(res["pray_action"], "rebalance");
+        assert_eq!(res["result"]["apply"], false);
+
+        let after = store.get(Galaxy::Codex, m.metadata.id).unwrap().unwrap();
+        assert_eq!(
+            format!("{:?}", after.metadata.coord5d),
+            before,
+            "dry-run rebalance through PRAY must not rewrite coordinates"
+        );
+    }
+
+    #[tokio::test]
+    async fn pray_cold_rotate_forwards_caller_bounds() {
+        let (_tmp, store) = open_store();
+        let store = Arc::new(store);
+
+        for i in 0..3 {
+            let mut mem =
+                Memory::new(Galaxy::Codex, format!("{{\"turn_type\": \"ping{i}\"}}").into());
+            mem.metadata.tags = vec!["telemetry".into()];
+            store.put(Galaxy::Codex, &mem).unwrap();
+        }
+
+        // `limit` must reach the child instead of being silently dropped:
+        // with limit=1 only one record may rotate.
+        let pray = PrayMetaTool::new(store.clone());
+        let cold_dir = tempfile::tempdir().unwrap();
+        let mut ctx = Context::default();
+        let res = pray
+            .call(
+                &mut ctx,
+                json!({
+                    "action": "cold_rotate",
+                    "params": {
+                        "dry_run": false,
+                        "output_dir": cold_dir.path().to_str().unwrap(),
+                        "limit": 1
+                    }
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res["result"]["deleted_confirmed"], 1);
+        assert_eq!(res["result"]["archived_confirmed"], 1);
+    }
+
+    #[tokio::test]
+    async fn pray_cold_rotate_reports_cleanup_wiring() {
+        let (_tmp, store) = open_store();
+        let store = Arc::new(store);
+        let cold_dir = tempfile::tempdir().unwrap();
+        let mut ctx = Context::default();
+
+        // Unwired wrapper: cleanup honestly reported as skipped.
+        let bare = PrayMetaTool::new(store.clone());
+        let res = bare
+            .call(
+                &mut ctx,
+                json!({
+                    "action": "cold_rotate",
+                    "params": {
+                        "dry_run": true,
+                        "output_dir": cold_dir.path().to_str().unwrap()
+                    }
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res["result"]["search_cleanup_skipped"], true);
+        assert_eq!(res["result"]["assoc_cleanup_skipped"], true);
+
+        // Wired wrapper: cleanup active.
+        let tantivy_dir = cold_dir.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy_dir).unwrap();
+        let search = Arc::new(wm_memory::SearchEngine::open(&tantivy_dir).unwrap());
+        let assoc_store =
+            Arc::new(wm_memory::AssociationStore::open(store.env()).expect("assoc store"));
+        let wired = PrayMetaTool::new(store)
+            .with_search(search)
+            .with_associations(assoc_store);
+        let res = wired
+            .call(
+                &mut ctx,
+                json!({
+                    "action": "cold_rotate",
+                    "params": {
+                        "dry_run": true,
+                        "output_dir": cold_dir.path().to_str().unwrap()
+                    }
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res["result"]["search_cleanup_skipped"], false);
+        assert_eq!(res["result"]["assoc_cleanup_skipped"], false);
     }
 }

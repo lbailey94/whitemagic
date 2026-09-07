@@ -212,6 +212,36 @@ use wm_substrate::anomaly::AnomalyDetector;
 use wm_substrate::homeostatic::HomeostaticLoop;
 use wm_substrate::sensorimotor::{ReflexLoop, SensorimotorBus};
 
+/// Build the PRAY meta-tool with the same cleanup wiring its cold-rotation
+/// child receives standalone, so the wrapper never silently degrades it.
+fn pray_meta_tool(
+    store: &Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
+    associations: Arc<AssociationStore>,
+) -> Arc<PrayMetaTool> {
+    let mut tool =
+        PrayMetaTool::new(store.clone()).with_associations(associations.clone());
+    if let Some(search) = search {
+        tool = tool.with_search(search);
+    }
+    Arc::new(tool)
+}
+
+/// Build the cold-rotation tool with full cleanup wiring: Tantivy
+/// de-indexing plus association cleanup (mirrors `memory.deduplicate`).
+fn cold_rotate_tool(
+    store: &Arc<MemoryStore>,
+    search: Option<Arc<SearchEngine>>,
+    associations: Arc<AssociationStore>,
+) -> Arc<GalacticColdRotateTool> {
+    let mut tool =
+        GalacticColdRotateTool::new(store.clone()).with_associations(associations.clone());
+    if let Some(search) = search {
+        tool = tool.with_search(search);
+    }
+    Arc::new(tool)
+}
+
 /// Register all expansion tools into a registry.
 #[allow(clippy::too_many_arguments)]
 pub fn register_expansion(
@@ -309,9 +339,9 @@ pub fn register_expansion(
         // Tokio Army & Galactic Triage & Cold Rotate (3)
         .register(Arc::new(ArmyDeployTool::new(store.clone())))
         .register(Arc::new(GalacticTriageTool::new(store.clone())))
-        .register(Arc::new(GalacticColdRotateTool::new(store.clone())))
+        .register(cold_rotate_tool(store, search.clone(), associations.clone()))
         // Subagent Captains, 5D Hologram, Bagua Dispatch & PRAY Universal Meta-Tool (5)
-        .register(Arc::new(PrayMetaTool::new(store.clone())))
+        .register(pray_meta_tool(store, search.clone(), associations.clone()))
         .register(Arc::new(CaptainDeployTool::new(store.clone())))
         .register(Arc::new(HologramRebalanceTool::new(store.clone())))
         .register(Arc::new(HologramQueryTool::new(store.clone())))
