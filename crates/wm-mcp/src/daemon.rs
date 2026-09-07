@@ -8,6 +8,7 @@
 //! dreams, and self-organizes continuously between requests.
 
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
@@ -149,6 +150,29 @@ pub struct DaemonStats {
     pub gan_ying_prewarmed_l1: u64,
     /// Total memories pre-warmed into L2 Subconscious Reservoir.
     pub gan_ying_prewarmed_l2: u64,
+    /// Total synchronicity observation ticks performed.
+    pub synchronicity_scans: u64,
+    /// Total cross-subsystem coincidences detected since startup.
+    pub synchronicities_found: u64,
+    /// Total strong (3+ subsystem) coincidences detected.
+    pub strong_synchronicities: u64,
+}
+
+/// Whether an event type denotes a failure, for nervous-system health
+/// accounting. Only variants whose names denote failures qualify.
+const fn is_error_event(event_type: wm_cognitive::EventType) -> bool {
+    use wm_cognitive::EventType as E;
+    matches!(
+        event_type,
+        E::SystemError
+            | E::SystemCrash
+            | E::ToolDispatchError
+            | E::ToolDispatchTimeout
+            | E::ToolCircuitBroken
+            | E::MandalaAccessDenied
+            | E::KarmaChainBroken
+            | E::ReflexEmergencyStop
+    )
 }
 
 /// Run the persistent daemon.
@@ -197,6 +221,28 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         sweep_interval: config.gan_ying_interval,
         ..Default::default()
     });
+
+    // Synchronicity revival: live observation of bus events. The detector is
+    // fed at fire time via subscription; the Gan Ying tick below only drains
+    // newly detected coincidences. Detection only — no store writes.
+    let synchronicity = Arc::new(Mutex::new(
+        wm_cognitive::SynchronicityDetector::default(),
+    ));
+    let mut nervous = wm_cognitive::UnifiedNervousSystem::new();
+    let mut last_sync_count: usize = 0;
+    {
+        let detector_bus = Arc::clone(&synchronicity);
+        if let Ok(mut bus) = server.gan_ying_bus().lock() {
+            bus.subscribe(
+                wm_cognitive::SubscriptionFilter::All,
+                Box::new(move |event| {
+                    if let Ok(mut detector) = detector_bus.lock() {
+                        detector.observe(event);
+                    }
+                }),
+            );
+        }
+    }
 
     // Build imagination engine for Research cycle and dream cycle integration
     let world_model = world_model_from_env();
@@ -624,6 +670,55 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                     report.top_galaxies
                 );
             }
+
+            // Synchronicity revival: drain coincidences detected since the
+            // last tick and route their events through the nervous system
+            // for subsystem health accounting. Detection only — no writes.
+            let fresh: Vec<wm_cognitive::Synchronicity> = synchronicity
+                .lock()
+                .map(|detector| {
+                    let fresh_count = detector.count().saturating_sub(last_sync_count);
+                    last_sync_count = detector.count();
+                    detector.recent(fresh_count.min(50)).to_vec()
+                })
+                .unwrap_or_default();
+            stats.synchronicity_scans += 1;
+            if !fresh.is_empty() {
+                let mut subsystems: Vec<String> = Vec::new();
+                for sync in &fresh {
+                    if sync.is_strong() {
+                        stats.strong_synchronicities += 1;
+                    }
+                    for event_type in &sync.event_types {
+                        let subsystem = nervous.route(*event_type, is_error_event(*event_type));
+                        let label = format!("{subsystem:?}");
+                        if !subsystems.contains(&label) {
+                            subsystems.push(label);
+                        }
+                    }
+                }
+                subsystems.sort();
+                stats.synchronicities_found += fresh.len() as u64;
+                tracing::info!(
+                    coincidences = fresh.len(),
+                    subsystems = ?subsystems,
+                    "Synchronicity revival: cross-subsystem coincidences detected"
+                );
+                println!(
+                    "[synchronicity {}] {} new coincidences ({} strong) across: {}",
+                    stats.synchronicity_scans,
+                    fresh.len(),
+                    fresh.iter().filter(|s| s.is_strong()).count(),
+                    subsystems.join(", ")
+                );
+            }
+            // Bound detector memory on long-lived daemons.
+            if last_sync_count > 10_000 {
+                if let Ok(mut detector) = synchronicity.lock() {
+                    detector.clear();
+                }
+                last_sync_count = 0;
+            }
             last_gan_ying = now;
         }
 
@@ -716,6 +811,11 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         println!("  L1 pre-warmed:    {}", stats.gan_ying_prewarmed_l1);
         println!("  L2 pre-warmed:    {}", stats.gan_ying_prewarmed_l2);
     }
+    if stats.synchronicity_scans > 0 {
+        println!("  Sync scans:       {}", stats.synchronicity_scans);
+        println!("  Coincidences:     {}", stats.synchronicities_found);
+        println!("  Strong syncs:     {}", stats.strong_synchronicities);
+    }
 
     if hung.load(Ordering::SeqCst) {
         anyhow::bail!("daemon watchdog triggered — main loop stalled; restart for recovery")
@@ -726,6 +826,18 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn error_event_mapping_marks_failures_only() {
+        use wm_cognitive::EventType as E;
+        assert!(is_error_event(E::SystemError));
+        assert!(is_error_event(E::ToolDispatchError));
+        assert!(is_error_event(E::MandalaAccessDenied));
+        assert!(!is_error_event(E::PatternDetected));
+        assert!(!is_error_event(E::SystemHeartbeat));
+        assert!(!is_error_event(E::MemoryCreated));
+        assert!(!is_error_event(E::CittaAdvance));
+    }
 
     #[test]
     fn daemon_config_default() {

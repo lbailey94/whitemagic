@@ -2,11 +2,11 @@
 //!
 //! "Things that accord in tone vibrate together" — the Gan Ying Bus is
 //! WhiteMagic v5's internal event resonance system, connecting all
-//! subsystems through 233 event types across 10 categories.
+//! subsystems through 234 event types across 10 categories.
 //!
 //! # Architecture
 //!
-//! - **[`event_type`]** — 233 event types in 10 categories
+//! - **[`event_type`]** — 234 event types in 10 categories
 //! - **[`bus`]** — subscribe/emit/cascade event bus
 //! - **[`nervous_system`]** — Unified Nervous System (7 biological subsystems)
 //! - **[`synchronicity`]** — Synchronicity Detector (meaningful coincidence detection)

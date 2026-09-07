@@ -510,8 +510,8 @@ pub fn register_expansion(
     // Web research tools (4) — fetch, deep_fetch, search, search_and_read
     reg = register_web(&reg);
 
-    // Research tools (3) — topic, repo, rabbit_hole
-    reg = register_research(&reg, store);
+    // Research tools (3) — topic, repo, rabbit_hole (bus-wired Gan Ying loop)
+    reg = register_research(&reg, store, gan_ying_bus);
 
     // Session ops (4) — record, replay, continuity, handoff
     reg = register_session_ops(&reg, store, search);

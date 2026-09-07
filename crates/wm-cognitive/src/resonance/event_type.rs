@@ -1,4 +1,4 @@
-//! Gan Ying (感應) event type taxonomy — 233 event types across 10 categories.
+//! Gan Ying (感應) event type taxonomy — 234 event types across 10 categories.
 //!
 //! "Things that accord in tone vibrate together" — the Gan Ying Bus is
 //! WhiteMagic's internal event resonance system. Every significant
@@ -83,7 +83,7 @@ impl std::fmt::Display for EventCategory {
 
 // ── Event Type ────────────────────────────────────────────────────────
 
-/// Gan Ying event type — 233 types across 10 categories.
+/// Gan Ying event type — 234 types across 10 categories.
 ///
 /// The enum is organized by category with explicit variant naming.
 /// Each variant maps to its category via [`EventType::category()`].
@@ -338,11 +338,14 @@ pub enum EventType {
     LimbicDecayCycle = 227,
     LimbicCompositeAffect = 228,
 
-    // ── Coordination (229–232) ───────────────────────────────────
+    // ── Coordination (229–233) ───────────────────────────────────
     CoordinationClaimAcquired = 229,
     CoordinationClaimReleased = 230,
     CoordinationClaimDenied = 231,
     CoordinationClaimExpired = 232,
+    /// Novel semantic cluster discovered (e.g. rabbit-hole research) —
+    /// cross-subsystem awakening signal for background reflection.
+    PatternDetected = 233,
 }
 
 impl EventType {
@@ -360,7 +363,7 @@ impl EventType {
             150..=174 => EventCategory::Tool,
             175..=199 => EventCategory::Agent,
             200..=228 => EventCategory::Embodiment,
-            229..=232 => EventCategory::Coordination,
+            229..=233 => EventCategory::Coordination,
             _ => EventCategory::System, // unreachable
         }
     }
@@ -612,6 +615,7 @@ impl EventType {
             Self::CoordinationClaimReleased => "coordination_claim_released",
             Self::CoordinationClaimDenied => "coordination_claim_denied",
             Self::CoordinationClaimExpired => "coordination_claim_expired",
+            Self::PatternDetected => "pattern_detected",
         }
     }
 
@@ -624,14 +628,14 @@ impl EventType {
             .collect()
     }
 
-    /// All 233 event types in canonical order.
+    /// All 234 event types in canonical order.
     #[must_use]
     pub fn all() -> Vec<Self> {
-        (0..=232u16).map(Self::from_id).collect()
+        (0..=233u16).map(Self::from_id).collect()
     }
 
     /// Total number of event types.
-    pub const COUNT: usize = 233;
+    pub const COUNT: usize = 234;
 
     /// Convert from u16 id.
     #[must_use]
@@ -870,6 +874,7 @@ impl EventType {
             230 => Self::CoordinationClaimReleased,
             231 => Self::CoordinationClaimDenied,
             232 => Self::CoordinationClaimExpired,
+            233 => Self::PatternDetected,
             _ => Self::SystemStartup, // unreachable
         }
     }
@@ -888,9 +893,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn event_count_is_233() {
-        assert_eq!(EventType::all().len(), 233);
-        assert_eq!(EventType::COUNT, 233);
+    fn event_count_is_234() {
+        assert_eq!(EventType::all().len(), 234);
+        assert_eq!(EventType::COUNT, 234);
     }
 
     #[test]
@@ -979,6 +984,10 @@ mod tests {
             EventType::CoordinationClaimExpired.category(),
             EventCategory::Coordination
         );
+        assert_eq!(
+            EventType::PatternDetected.category(),
+            EventCategory::Coordination
+        );
     }
 
     #[test]
@@ -995,7 +1004,7 @@ mod tests {
         assert_eq!(EventType::in_category(EventCategory::Tool).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Agent).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Embodiment).len(), 29);
-        assert_eq!(EventType::in_category(EventCategory::Coordination).len(), 4);
+        assert_eq!(EventType::in_category(EventCategory::Coordination).len(), 5);
     }
 
     #[test]

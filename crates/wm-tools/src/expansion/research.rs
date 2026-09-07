@@ -19,7 +19,9 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
+use wm_cognitive::{EventType, GanYingBus};
 use wm_core::security::is_url_safe;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
 use wm_memory::{Memory, MemoryStore};
@@ -537,6 +539,7 @@ impl Tool for ResearchRepoTool {
 /// parallelism is bounded, so a call cannot fan out unboundedly.
 pub struct ResearchRabbitHoleTool {
     store: Option<Arc<MemoryStore>>,
+    bus: Option<Arc<Mutex<GanYingBus>>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -546,12 +549,52 @@ impl ResearchRabbitHoleTool {
     pub fn new(store: Option<Arc<MemoryStore>>) -> Self {
         Self {
             store,
+            bus: None,
             stats: ToolStats::default(),
             effects: EffectRow::read_only(vec![
                 Resource::Network,
                 Resource::Galaxy("research".into()),
             ]),
         }
+    }
+
+    /// Attach the Gan Ying Bus. When present, a `PatternDetected` event is
+    /// emitted for the explored terms so background reflection can awaken
+    /// (ROADMAP v9.1 §3.3). Emission is best-effort and never fails the call.
+    #[must_use]
+    pub fn with_bus(mut self, bus: Arc<Mutex<GanYingBus>>) -> Self {
+        self.bus = Some(bus);
+        self
+    }
+}
+
+/// Publish a rabbit-hole discovery to the Gan Ying Bus as `PatternDetected`.
+/// Best-effort: a locked or missing bus is silently skipped.
+fn publish_pattern_detected(
+    bus: Option<&Arc<Mutex<GanYingBus>>>,
+    topic: &str,
+    terms: &[String],
+    depth_used: usize,
+) {
+    if terms.is_empty() {
+        return;
+    }
+    let Some(bus) = bus else {
+        return;
+    };
+    if let Ok(mut bus) = bus.lock() {
+        bus.emit_with(
+            EventType::PatternDetected,
+            "research.rabbit_hole",
+            json!({
+                "topic": topic,
+                "terms": terms,
+                "entries_count": terms.len(),
+                "depth_used": depth_used,
+            }),
+            0.7,
+            false,
+        );
     }
 }
 
@@ -762,6 +805,16 @@ impl Tool for ResearchRabbitHoleTool {
                 report["memory_id"] = json!(id);
             }
         }
+        // Gan Ying loop: announce the explored terms so background
+        // reflection can awaken. Best-effort; never fails the call.
+        if !entries.is_empty() {
+            let terms: Vec<String> = entries
+                .iter()
+                .filter_map(|e| e.get("term").and_then(Value::as_str))
+                .map(str::to_string)
+                .collect();
+            publish_pattern_detected(self.bus.as_ref(), topic, &terms, max_depth);
+        }
         Ok(report)
     }
     fn stats(&self) -> &ToolStats {
@@ -769,16 +822,22 @@ impl Tool for ResearchRabbitHoleTool {
     }
 }
 
-/// Register the research tools (3). `store` enables `store_memories`.
+/// Register the research tools (3). `store` enables `store_memories`;
+/// `bus` wires the rabbit-hole Gan Ying loop (ROADMAP v9.1 §3.3).
 #[must_use]
 pub fn register_research(
     registry: &wm_dispatch::ToolRegistry,
     store: &Arc<MemoryStore>,
+    bus: Option<&Arc<Mutex<GanYingBus>>>,
 ) -> wm_dispatch::ToolRegistry {
+    let mut rabbit_hole = ResearchRabbitHoleTool::new(Some(store.clone()));
+    if let Some(bus) = bus {
+        rabbit_hole = rabbit_hole.with_bus(Arc::clone(bus));
+    }
     registry
         .register(Arc::new(ResearchTopicTool::new(Some(store.clone()))))
         .register(Arc::new(ResearchRepoTool::new()))
-        .register(Arc::new(ResearchRabbitHoleTool::new(Some(store.clone()))))
+        .register(Arc::new(rabbit_hole))
 }
 
 #[cfg(test)]
@@ -839,6 +898,27 @@ mod tests {
         let tool = ResearchRabbitHoleTool::new(None);
         let mut ctx = Context::default();
         assert!(tool.call(&mut ctx, json!({})).await.is_err());
+    }
+
+    #[test]
+    fn rabbit_hole_publishes_pattern_detected() {
+        let bus = Arc::new(Mutex::new(GanYingBus::default()));
+        let seen: Arc<Mutex<Vec<EventType>>> = Arc::new(Mutex::new(Vec::new()));
+        let seen_cb = Arc::clone(&seen);
+        bus.lock().unwrap().subscribe(
+            wm_cognitive::SubscriptionFilter::All,
+            Box::new(move |event| {
+                seen_cb.lock().unwrap().push(event.event_type);
+            }),
+        );
+        let terms = vec!["photosynthesis".to_string(), "chlorophyll".to_string()];
+        publish_pattern_detected(Some(&bus), "plants", &terms, 2);
+        assert_eq!(seen.lock().unwrap().as_slice(), &[EventType::PatternDetected]);
+
+        // Empty terms and a missing bus emit nothing.
+        publish_pattern_detected(Some(&bus), "plants", &[], 2);
+        publish_pattern_detected(None, "plants", &terms, 2);
+        assert_eq!(seen.lock().unwrap().len(), 1);
     }
 
     #[tokio::test]

@@ -1,6 +1,6 @@
 //! Unified Nervous System — 7-subsystem architecture for the Gan Ying Bus.
 //!
-//! Maps the 233 event types to 7 biological nervous system analogs,
+//! Maps the 234 event types to 7 biological nervous system analogs,
 //! providing a structured way to route events through the appropriate
 //! processing pipeline.
 //!
@@ -181,7 +181,8 @@ impl NervousSubsystem {
             | EventType::CerebellarPrediction
             | EventType::CerebellarErrorCorrection
             | EventType::CerebellarTimingCalibration
-            | EventType::CerebellarMotorMemoryRecalled => Self::Sensory,
+            | EventType::CerebellarMotorMemoryRecalled
+            | EventType::PatternDetected => Self::Sensory,
 
             // Motor — output, action
             EventType::MemoryCreated
@@ -703,7 +704,7 @@ mod tests {
     }
 
     #[test]
-    fn all_233_events_map_to_a_subsystem() {
+    fn all_234_events_map_to_a_subsystem() {
         for event_type in EventType::all() {
             let subsystem = NervousSubsystem::from_event_type(event_type);
             // Just ensure it doesn't panic — all events must be covered

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Gan Ying revival: synchronicity + rabbit-hole loop
+- New taxonomy event `PatternDetected = 233` (Coordination; taxonomy now 234 types) for novel-cluster discoveries; mapped to the Sensory nervous subsystem.
+- `SynchronicityDetector` revived: daemon subscribes it to the live Gan Ying Bus and drains new cross-subsystem coincidences on the Gan Ying tick (detection only, no store writes; stats + subsystem health accounting via `UnifiedNervousSystem`).
+- `ResearchRabbitHoleTool` wired to the bus (`with_bus`; registered with the server bus): emits `PatternDetected` with topic/terms after synthesis, best-effort.
+
+### Renamed: PRAT → PRAY (Polymorphic Resonant Adaptive Yoga)
+- The meta-tool system is now **PRAY** — Polymorphic Resonant Adaptive Yoga (Skt. √*yuj*, "to yoke, join"): the method that ties a thousand or more tools and systems into a single `wm serve` surface. Renamed from PRAT (Polymorphic Resonant Adaptive Tools); PRAT remains the correct name in pre-v9.2 history.
+- Code: `expansion::pray::PrayMetaTool` (deprecated `PratMetaTool` alias kept), `PROFILE_PRAY` / `--profile pray` (deprecated `prat` profile name still resolves), response key `pray_action` (was `prat_action`).
+
 ## [9.0.0] — 2026-09-06 (Rubedo — The Philosopher's Stone)
 
 ### Polymorphic Resonant Adaptive Tools (PRAT) & Single-Tool Default Profile
