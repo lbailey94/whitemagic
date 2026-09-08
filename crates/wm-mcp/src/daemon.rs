@@ -110,7 +110,7 @@ impl Default for DaemonConfig {
             selfplay_interval: Duration::from_secs(0), // 0 = disabled
             watchdog_timeout: Duration::from_secs(60), // 1 minute without a tick = stalled
             checkpoint_interval: Duration::from_secs(300), // 5 minutes
-            gan_ying_interval: Duration::from_secs(300),   // 5 minutes
+            gan_ying_interval: Duration::from_secs(300), // 5 minutes
         }
     }
 }
@@ -225,9 +225,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     // Synchronicity revival: live observation of bus events. The detector is
     // fed at fire time via subscription; the Gan Ying tick below only drains
     // newly detected coincidences. Detection only — no store writes.
-    let synchronicity = Arc::new(Mutex::new(
-        wm_cognitive::SynchronicityDetector::default(),
-    ));
+    let synchronicity = Arc::new(Mutex::new(wm_cognitive::SynchronicityDetector::default()));
     let mut nervous = wm_cognitive::UnifiedNervousSystem::new();
     let mut last_sync_count: usize = 0;
     // PatternDetected consumer: strong-coincidence summaries wait here for
@@ -648,14 +646,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
             let citta_vec = Some(&server.citta().vector);
             if let Some(report) = resilient("gan_ying_sweep", || {
-                gan_ying.daemon_pulse(
-                    &cwd,
-                    bw,
-                    citta_vec,
-                    &store,
-                    &associations,
-                    None,
-                )
+                gan_ying.daemon_pulse(&cwd, bw, citta_vec, &store, &associations, None)
             })
             .and_then(|res| res.ok().flatten())
             {

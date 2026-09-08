@@ -12,8 +12,8 @@
 //! 7. Thalamic gating — context-dependent galaxy access masks
 //! 8. Predictive coding — JEPA-style surprise for memory prioritization
 
-use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 use wm_core::{Galaxy, Result};
 use wm_memory::{AssociationStore, Memory, MemoryStore};

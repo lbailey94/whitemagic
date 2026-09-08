@@ -838,9 +838,8 @@ fn apply_heritage_header(
     // mandate) — the RawArchive importance ceiling is a dispatch-path
     // write-gate policy, not a store invariant.
     mem.metadata.class = Some(wm_memory::typology::MemoryClass::RawArchive);
-    mem.metadata.tier = wm_memory::typology::initial_tier(
-        wm_memory::typology::MemoryClass::RawArchive,
-    );
+    mem.metadata.tier =
+        wm_memory::typology::initial_tier(wm_memory::typology::MemoryClass::RawArchive);
     mem.metadata.coords = wm_core::HolographicCoords::new(
         mem.metadata.galaxy,
         mem.metadata.created_at.timestamp().max(0) as u64,
@@ -1030,11 +1029,8 @@ pub fn run_ingest(
                 .and_then(|p| p.components().next())
                 .map(|c| c.as_os_str().to_string_lossy().to_string())
                 .filter(|d| !d.is_empty());
-            let dir = rel_dir.or_else(|| {
-                source
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-            });
+            let dir =
+                rel_dir.or_else(|| source.file_name().map(|n| n.to_string_lossy().to_string()));
             let (galaxy, category) = match dir {
                 Some(d) => {
                     let (g, c) = heritage_galaxy(&d);
@@ -1162,9 +1158,7 @@ pub fn run_ingest(
             mem.metadata.coords =
                 wm_core::HolographicCoords::new(galaxy, created_at.timestamp() as u64);
             if chunk.seq == 0 {
-                if let (Some((hdr, _)), Some((_, category, href))) =
-                    (&heritage, &heritage_meta)
-                {
+                if let (Some((hdr, _)), Some((_, category, href))) = (&heritage, &heritage_meta) {
                     apply_heritage_header(
                         &mut mem,
                         hdr,
@@ -1286,9 +1280,18 @@ mod tests {
                     \n\
                     entity_023 has project Beta.\n";
         let (hdr, body) = parse_heritage(text).expect("heritage file must parse");
-        assert_eq!(hdr.fields.get("memory_type").map(String::as_str), Some("SHORT_TERM"));
-        assert_eq!(hdr.fields.get("title").map(String::as_str), Some("fact_00117"));
-        assert_eq!(hdr.fields.get("source_trust").map(String::as_str), Some("user"));
+        assert_eq!(
+            hdr.fields.get("memory_type").map(String::as_str),
+            Some("SHORT_TERM")
+        );
+        assert_eq!(
+            hdr.fields.get("title").map(String::as_str),
+            Some("fact_00117")
+        );
+        assert_eq!(
+            hdr.fields.get("source_trust").map(String::as_str),
+            Some("user")
+        );
         assert_eq!(hdr.tags, vec!["alpha", "beta"]);
         assert_eq!(body, "entity_023 has project Beta.");
     }
@@ -1302,7 +1305,10 @@ mod tests {
                     body\n";
         let (hdr, _) = parse_heritage(text).unwrap();
         // The exporter escaped `--` to `__`; parsing unescapes it back.
-        assert_eq!(hdr.fields.get("title").map(String::as_str), Some("has--dashes"));
+        assert_eq!(
+            hdr.fields.get("title").map(String::as_str),
+            Some("has--dashes")
+        );
     }
 
     #[test]
@@ -1348,7 +1354,13 @@ mod tests {
         let (hdr, body) = parse_heritage(text).unwrap();
         let mut mem = Memory::new(Galaxy::Codex, body);
         mem.metadata.galaxy = Galaxy::Codex;
-        apply_heritage_header(&mut mem, &hdr, Some("meta"), Some("abc123def456"), chrono::Utc::now());
+        apply_heritage_header(
+            &mut mem,
+            &hdr,
+            Some("meta"),
+            Some("abc123def456"),
+            chrono::Utc::now(),
+        );
         assert_eq!(mem.content, "body text here");
         assert_eq!(mem.metadata.importance, 0.8);
         assert_eq!(mem.metadata.access_count, 7);
@@ -1366,8 +1378,16 @@ mod tests {
             Some(wm_memory::typology::MemoryClass::RawArchive)
         );
         assert_eq!(mem.metadata.tier, wm_memory::memory::Tier::Archival);
-        assert!(mem.metadata.tags.contains(&"heritage-category:meta".to_string()));
-        assert!(mem.metadata.tags.contains(&"heritage-ref:abc123def456".to_string()));
+        assert!(
+            mem.metadata
+                .tags
+                .contains(&"heritage-category:meta".to_string())
+        );
+        assert!(
+            mem.metadata
+                .tags
+                .contains(&"heritage-ref:abc123def456".to_string())
+        );
         assert!(mem.metadata.tags.contains(&"provenance-test".to_string()));
     }
 

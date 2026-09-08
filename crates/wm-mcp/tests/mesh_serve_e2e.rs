@@ -3,6 +3,12 @@
 //! chat, and enforce the bad-apple rule (quarantine refuses chat and rejoin,
 //! release restores the join path). This is the two-node local proof the
 //! join protocol (`docs/MESH_JOIN_PROTOCOL.md`) is written from.
+//!
+//! Unix-only: both test cases bind loopback TCP listeners and spawn real
+//! server processes, and every helper exists solely for those tests —
+//! without this gate the helpers are dead code on Windows and trip
+//! `deny(dead_code)` there.
+#![cfg(unix)]
 
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};

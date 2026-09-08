@@ -223,8 +223,7 @@ impl RepetitionItem {
             self.reps += 1;
             // Spacing effect: Desirable difficulties yield higher stability growth
             // when recall occurs at lower retrievability (high forgetting delay).
-            let spacing_factor =
-                (config.spacing_bonus_factor * (1.0 - prior_retrievability)).exp();
+            let spacing_factor = (config.spacing_bonus_factor * (1.0 - prior_retrievability)).exp();
             let diff_factor = (1.0 - 0.5 * self.difficulty).max(0.1);
             let delta_stability =
                 self.stability * 1.2 * diff_factor * spacing_factor * grade_clamped;
@@ -302,7 +301,9 @@ impl SpacedRepetitionTracker {
     /// Compute current retrievability for a memory ID (returns 1.0 if untracked).
     #[must_use]
     pub fn retrievability(&self, memory_id: &Uuid, now: DateTime<Utc>) -> f32 {
-        self.items.get(memory_id).map_or(1.0, |i| i.retrievability(now))
+        self.items
+            .get(memory_id)
+            .map_or(1.0, |i| i.retrievability(now))
     }
 
     /// Record a review outcome for a memory.
@@ -435,11 +436,14 @@ impl HebbianReinforcer {
                 if pair.0 == pair.1 {
                     continue;
                 }
-                let record = self.coactivations.entry(pair).or_insert(CoActivationRecord {
-                    count: 0,
-                    last_coactivated_at: now,
-                    cumulative_salience: 0.0,
-                });
+                let record = self
+                    .coactivations
+                    .entry(pair)
+                    .or_insert(CoActivationRecord {
+                        count: 0,
+                        last_coactivated_at: now,
+                        cumulative_salience: 0.0,
+                    });
                 record.count += 1;
                 record.last_coactivated_at = now;
                 record.cumulative_salience += salience_clamped;
@@ -470,7 +474,8 @@ impl HebbianReinforcer {
         report.coactivations_processed = ready_pairs.len();
 
         for (u, v, record) in ready_pairs {
-            let mean_salience = (record.cumulative_salience / (record.count as f32)).clamp(0.1, 1.0);
+            let mean_salience =
+                (record.cumulative_salience / (record.count as f32)).clamp(0.1, 1.0);
 
             // Check if association already exists in either direction
             let existing_uv = assoc_store.get(env, u, v)?;
@@ -493,7 +498,8 @@ impl HebbianReinforcer {
                 report.associations_reinforced += 1;
             } else {
                 // Synthesize de-novo association
-                let initial_weight = (0.35 * learning_rate * mean_salience + 0.20).clamp(0.10, 0.60);
+                let initial_weight =
+                    (0.35 * learning_rate * mean_salience + 0.20).clamp(0.10, 0.60);
                 let new_assoc = Association {
                     source: u,
                     target: v,
@@ -628,7 +634,9 @@ impl AlchemicalPhaseBridge {
         } else {
             let elapsed_days = (now - mem.metadata.accessed_at).num_seconds() as f32 / 86400.0;
             let s = mem.metadata.half_life_days.max(1.0);
-            let r = (-EBBINGHAUS_DECAY_CONSTANT * elapsed_days / s).exp().clamp(0.0, 1.0);
+            let r = (-EBBINGHAUS_DECAY_CONSTANT * elapsed_days / s)
+                .exp()
+                .clamp(0.0, 1.0);
             (r, s, mem.metadata.recall_count as u32)
         };
 
@@ -741,11 +749,8 @@ impl GistDistiller {
 
         let mut sorted_words: Vec<(String, usize)> = word_counts.into_iter().collect();
         sorted_words.sort_by(|a, b| b.1.cmp(&a.1));
-        let salient_keywords: Vec<String> = sorted_words
-            .into_iter()
-            .take(6)
-            .map(|(w, _)| w)
-            .collect();
+        let salient_keywords: Vec<String> =
+            sorted_words.into_iter().take(6).map(|(w, _)| w).collect();
 
         // 4. Extract Core Predicates / Sentences
         let mut core_predicates = Vec::new();
@@ -753,7 +758,9 @@ impl GistDistiller {
             for sentence in mem.content.split(['.', '\n', ';']) {
                 let trimmed = sentence.trim();
                 if trimmed.len() >= 15 && trimmed.len() <= 120 {
-                    let has_keyword = salient_keywords.iter().any(|k| trimmed.to_lowercase().contains(k));
+                    let has_keyword = salient_keywords
+                        .iter()
+                        .any(|k| trimmed.to_lowercase().contains(k));
                     if has_keyword && !core_predicates.contains(&trimmed.to_string()) {
                         core_predicates.push(trimmed.to_string());
                         if core_predicates.len() >= 3 {
@@ -769,7 +776,11 @@ impl GistDistiller {
 
         // 5. Synthesize Abstract Summary
         let summary_body = if core_predicates.is_empty() {
-            format!("Distilled cluster of {} memories around concepts: {}", memories.len(), salient_keywords.join(", "))
+            format!(
+                "Distilled cluster of {} memories around concepts: {}",
+                memories.len(),
+                salient_keywords.join(", ")
+            )
         } else {
             core_predicates.join(". ")
         };
@@ -781,7 +792,8 @@ impl GistDistiller {
             .flatten()
             .map(|r| r.stability)
             .fold(1.0f32, f32::max);
-        let stability_days = (max_constituent_stability * (1.0 + 0.25 * (n + 1.0).ln())).clamp(1.0, 3650.0);
+        let stability_days =
+            (max_constituent_stability * (1.0 + 0.25 * (n + 1.0).ln())).clamp(1.0, 3650.0);
 
         // 7. Compression Ratio
         let gist_len = abstract_summary.len().max(1);
@@ -834,10 +846,7 @@ pub enum ProbeKind {
         link_type: LinkType,
     },
     /// Gist Verification Probe: Retrieve target memory given distilled gist cues.
-    GistVerification {
-        memory_id: Uuid,
-        query_cue: String,
-    },
+    GistVerification { memory_id: Uuid, query_cue: String },
     /// Retention Check Probe: Spaced-repetition probe testing due item.
     RetentionCheck {
         memory_id: Uuid,
@@ -977,7 +986,8 @@ impl AutonomousSmarana {
         if success {
             self.successful_probes += 1;
         }
-        self.tracker.record_review(memory_id, grade, &self.config, now)
+        self.tracker
+            .record_review(memory_id, grade, &self.config, now)
     }
 
     /// Record co-activations of memories during reasoning or context injection.
@@ -987,7 +997,8 @@ impl AutonomousSmarana {
         salience: f32,
         now: DateTime<Utc>,
     ) {
-        self.hebbian.record_coactivation_batch(memory_ids, salience, now);
+        self.hebbian
+            .record_coactivation_batch(memory_ids, salience, now);
     }
 
     /// Get current composite Smarana retention score for ApotheosisEngine.
@@ -1010,14 +1021,19 @@ impl AutonomousSmarana {
             0.0
         };
 
-        (0.40 * mean_r + 0.30 * stability_factor + 0.20 * probe_accuracy + 0.10 * crystallization_ratio)
+        (0.40 * mean_r
+            + 0.30 * stability_factor
+            + 0.20 * probe_accuracy
+            + 0.10 * crystallization_ratio)
             .clamp(0.0, 1.0)
     }
 
     /// Generate due spaced-repetition probes for active testing.
     #[must_use]
     pub fn generate_due_probes(&self, limit: usize, now: DateTime<Utc>) -> Vec<SmaranaProbe> {
-        let due_ids = self.tracker.due_items(self.config.target_retrievability, now);
+        let due_ids = self
+            .tracker
+            .due_items(self.config.target_retrievability, now);
         due_ids
             .into_iter()
             .take(limit)
@@ -1038,7 +1054,11 @@ impl AutonomousSmarana {
     }
 
     /// Process the result of an executed probe.
-    pub fn process_probe_result(&mut self, result: &ProbeResult, now: DateTime<Utc>) -> ReviewOutcome {
+    pub fn process_probe_result(
+        &mut self,
+        result: &ProbeResult,
+        now: DateTime<Utc>,
+    ) -> ReviewOutcome {
         self.record_retrieval(result.memory_id, result.success, result.grade, now)
     }
 
@@ -1058,8 +1078,12 @@ impl AutonomousSmarana {
         for mem in memories {
             report.evaluated += 1;
             let rep_item = self.tracker.get(&mem.metadata.id);
-            let from_count = assoc_store.find_from(env, mem.metadata.id).map_or(0, |v| v.len());
-            let to_count = assoc_store.find_to(env, mem.metadata.id).map_or(0, |v| v.len());
+            let from_count = assoc_store
+                .find_from(env, mem.metadata.id)
+                .map_or(0, |v| v.len());
+            let to_count = assoc_store
+                .find_to(env, mem.metadata.id)
+                .map_or(0, |v| v.len());
             let stage = AlchemicalPhaseBridge::classify(
                 &mem,
                 rep_item,
@@ -1076,7 +1100,8 @@ impl AutonomousSmarana {
                     let r = rep_item.map_or(0.5, |i| i.retrievability(now));
                     let factor = (0.5 + 0.4 * r).clamp(0.4, 0.9);
                     decayed.decay_importance(factor);
-                    decayed.metadata.neuro_score = (decayed.metadata.neuro_score * factor).clamp(0.0, 1.0);
+                    decayed.metadata.neuro_score =
+                        (decayed.metadata.neuro_score * factor).clamp(0.0, 1.0);
                     to_update.push(decayed);
                 }
                 _ => {
@@ -1099,7 +1124,8 @@ impl AutonomousSmarana {
         assoc_store: &AssociationStore,
         now: DateTime<Utc>,
     ) -> Result<HebbianConsolidationReport> {
-        self.hebbian.consolidate_synapses(store, assoc_store, &self.config, now)
+        self.hebbian
+            .consolidate_synapses(store, assoc_store, &self.config, now)
     }
 
     /// Execute Alchemical Crystallization (Rubedo): Solidify hyper-stable memories.
@@ -1120,8 +1146,12 @@ impl AutonomousSmarana {
                 continue;
             }
             let rep_item = self.tracker.get(&mem.metadata.id);
-            let from_count = assoc_store.find_from(env, mem.metadata.id).map_or(0, |v| v.len());
-            let to_count = assoc_store.find_to(env, mem.metadata.id).map_or(0, |v| v.len());
+            let from_count = assoc_store
+                .find_from(env, mem.metadata.id)
+                .map_or(0, |v| v.len());
+            let to_count = assoc_store
+                .find_to(env, mem.metadata.id)
+                .map_or(0, |v| v.len());
             let stage = AlchemicalPhaseBridge::classify(
                 &mem,
                 rep_item,
@@ -1134,7 +1164,10 @@ impl AutonomousSmarana {
                 let mut crystallized = mem.clone();
                 crystallized.metadata.is_protected = true;
                 crystallized.metadata.tier = Tier::Semantic;
-                crystallized.metadata.tags.push("crystallized:rubedo".to_string());
+                crystallized
+                    .metadata
+                    .tags
+                    .push("crystallized:rubedo".to_string());
                 crystallized_memories.push(crystallized);
                 report.crystallized += 1;
             }
@@ -1176,7 +1209,9 @@ impl AutonomousSmarana {
             for edge in outgoing {
                 if edge.weight >= 0.45 && cluster.len() < self.config.max_gist_cluster_size {
                     if let Some((_, neighbor)) = store.find_across_galaxies(edge.target)? {
-                        if !visited.contains(&neighbor.metadata.id) && !neighbor.is_telemetry_or_noise() {
+                        if !visited.contains(&neighbor.metadata.id)
+                            && !neighbor.is_telemetry_or_noise()
+                        {
                             visited.insert(neighbor.metadata.id);
                             cluster.push(neighbor);
                         }
@@ -1225,8 +1260,12 @@ impl AutonomousSmarana {
             for mem in memories {
                 dist.total += 1;
                 let rep = self.tracker.get(&mem.metadata.id);
-                let from_count = assoc_store.find_from(env, mem.metadata.id).map_or(0, |v| v.len());
-                let to_count = assoc_store.find_to(env, mem.metadata.id).map_or(0, |v| v.len());
+                let from_count = assoc_store
+                    .find_from(env, mem.metadata.id)
+                    .map_or(0, |v| v.len());
+                let to_count = assoc_store
+                    .find_to(env, mem.metadata.id)
+                    .map_or(0, |v| v.len());
                 let stage = AlchemicalPhaseBridge::classify(
                     &mem,
                     rep,
@@ -1283,12 +1322,20 @@ mod tests {
         // At t = S (10 days), R should equal 0.90
         let at_s = start + Duration::days(10);
         let r_at_s = item.retrievability(at_s);
-        assert!((r_at_s - 0.90).abs() < 0.01, "Expected ~0.90 at t=S, got {}", r_at_s);
+        assert!(
+            (r_at_s - 0.90).abs() < 0.01,
+            "Expected ~0.90 at t=S, got {}",
+            r_at_s
+        );
 
         // At t = 20 days, R should be 0.90^2 = 0.81
         let at_2s = start + Duration::days(20);
         let r_at_2s = item.retrievability(at_2s);
-        assert!((r_at_2s - 0.81).abs() < 0.02, "Expected ~0.81 at t=2S, got {}", r_at_2s);
+        assert!(
+            (r_at_2s - 0.81).abs() < 0.02,
+            "Expected ~0.81 at t=2S, got {}",
+            r_at_2s
+        );
     }
 
     #[test]
@@ -1343,27 +1390,39 @@ mod tests {
         reinforcer.record_coactivation_batch(&[id1, id2], 0.8, now);
         assert_eq!(reinforcer.pending_pairs(), 1);
 
-        let report1 = reinforcer.consolidate_synapses(&store, &assoc, &config, now).unwrap();
+        let report1 = reinforcer
+            .consolidate_synapses(&store, &assoc, &config, now)
+            .unwrap();
         assert_eq!(report1.associations_created, 0);
 
         // 2nd coactivation reaches threshold 2
         reinforcer.record_coactivation_batch(&[id1, id2], 0.9, now);
-        let report2 = reinforcer.consolidate_synapses(&store, &assoc, &config, now).unwrap();
+        let report2 = reinforcer
+            .consolidate_synapses(&store, &assoc, &config, now)
+            .unwrap();
         assert_eq!(report2.associations_created, 1);
 
         // Verify association exists in store
         let pair = HebbianReinforcer::canonical_pair(id1, id2);
-        let stored = assoc.get(store.env(), pair.0, pair.1).unwrap().expect("association must exist");
+        let stored = assoc
+            .get(store.env(), pair.0, pair.1)
+            .unwrap()
+            .expect("association must exist");
         assert!(stored.weight > 0.0);
 
         // Further coactivation reinforces existing association
         reinforcer.record_coactivation_batch(&[id1, id2], 1.0, now);
         reinforcer.record_coactivation_batch(&[id1, id2], 1.0, now);
-        let report3 = reinforcer.consolidate_synapses(&store, &assoc, &config, now).unwrap();
+        let report3 = reinforcer
+            .consolidate_synapses(&store, &assoc, &config, now)
+            .unwrap();
         assert_eq!(report3.associations_reinforced, 1);
 
         let updated = assoc.get(store.env(), pair.0, pair.1).unwrap().unwrap();
-        assert!(updated.weight > stored.weight, "Weight should increase via Hebbian plasticity");
+        assert!(
+            updated.weight > stored.weight,
+            "Weight should increase via Hebbian plasticity"
+        );
     }
 
     #[test]
@@ -1401,7 +1460,8 @@ mod tests {
         let reps = vec![None, None];
         let citta = CittaVector::neutral();
 
-        let gist = GistDistiller::distill_cluster(&cluster, &reps, &citta).expect("gist distillation must succeed");
+        let gist = GistDistiller::distill_cluster(&cluster, &reps, &citta)
+            .expect("gist distillation must succeed");
         assert_eq!(gist.source_memory_ids.len(), 2);
         assert!(!gist.salient_keywords.is_empty());
         assert!(gist.abstract_summary.contains("[Gist Distillation]"));

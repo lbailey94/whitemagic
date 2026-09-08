@@ -796,7 +796,9 @@ impl DreamCycle {
         // Autonomous Smarana: Hebbian synaptic consolidation & association formation
         let mut smarana_synapses = 0;
         if let Some(ref mut smarana) = self.smarana {
-            if let Ok(report) = smarana.run_consolidation_step(ctx.store, ctx.associations, chrono::Utc::now()) {
+            if let Ok(report) =
+                smarana.run_consolidation_step(ctx.store, ctx.associations, chrono::Utc::now())
+            {
                 smarana_synapses = report.associations_reinforced + report.associations_created;
             }
         }
@@ -1323,7 +1325,8 @@ impl DreamCycle {
 
         // D6 Novelty Gate: initialize with existing non-telemetry hypotheses in Research galaxy
         let existing_research = ctx.store.scan(Galaxy::Research, 10_000).unwrap_or_default();
-        let mut novelty_gate = crate::novelty::NoveltyGate::from_existing_hypotheses(&existing_research);
+        let mut novelty_gate =
+            crate::novelty::NoveltyGate::from_existing_hypotheses(&existing_research);
 
         for (_galaxy, mems) in &galaxy_mems {
             for mem in mems {
@@ -1373,8 +1376,9 @@ impl DreamCycle {
                             };
 
                             // D6 Novelty Gate: reject predicate duplicates & near-duplicates
-                            if let crate::novelty::NoveltyVerdict::Accepted { predicate_hash, .. } =
-                                novelty_gate.evaluate(&hyp_content, false)
+                            if let crate::novelty::NoveltyVerdict::Accepted {
+                                predicate_hash, ..
+                            } = novelty_gate.evaluate(&hyp_content, false)
                             {
                                 let mut hyp = Memory::new(Galaxy::Research, hyp_content);
                                 hyp.metadata.memory_type = MemoryType::Hypothesis;
@@ -1403,8 +1407,9 @@ impl DreamCycle {
                             );
 
                             // D6 Novelty Gate: reject predicate duplicates & near-duplicates
-                            if let crate::novelty::NoveltyVerdict::Accepted { predicate_hash, .. } =
-                                novelty_gate.evaluate(&candidate_text, false)
+                            if let crate::novelty::NoveltyVerdict::Accepted {
+                                predicate_hash, ..
+                            } = novelty_gate.evaluate(&candidate_text, false)
                             {
                                 let mut hyp = Memory::new(Galaxy::Research, candidate_text);
                                 hyp.metadata.memory_type = MemoryType::Hypothesis;
@@ -1472,7 +1477,9 @@ impl DreamCycle {
             }
 
             if let Some(ref mut smarana) = self.smarana {
-                if let Ok(s_report) = smarana.run_decay_step(ctx.store, ctx.associations, galaxy, now) {
+                if let Ok(s_report) =
+                    smarana.run_decay_step(ctx.store, ctx.associations, galaxy, now)
+                {
                     smarana_decayed += s_report.decayed;
                 }
             }

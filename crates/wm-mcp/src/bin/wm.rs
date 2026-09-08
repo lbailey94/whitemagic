@@ -826,7 +826,10 @@ fn main() -> anyhow::Result<()> {
                 println!("Bugfix commits:         {}", stats.bugfix_commits);
                 println!("Feature commits:        {}", stats.feature_commits);
                 println!("Tracked files:          {}", stats.total_files_tracked);
-                println!("Average commit age:     {:.1} days", stats.avg_commit_age_days);
+                println!(
+                    "Average commit age:     {:.1} days",
+                    stats.avg_commit_age_days
+                );
             } else {
                 let patterns = wm_tools::expansion::geneseed::mine_geneseed_patterns(
                     &repo,
@@ -2956,14 +2959,29 @@ fn run_doctor(
                 if let Some(corrs) = v.get("correlations").and_then(serde_json::Value::as_array) {
                     println!("[OK]   Computed correlations across {} pairs:", corrs.len());
                     for c in corrs {
-                        let vx = c.get("variable_x").and_then(serde_json::Value::as_str).unwrap_or("x");
-                        let vy = c.get("variable_y").and_then(serde_json::Value::as_str).unwrap_or("y");
-                        let r = c.get("pearson_r").and_then(serde_json::Value::as_f64).unwrap_or(0.0);
-                        let strength = c.get("strength").and_then(serde_json::Value::as_str).unwrap_or("");
+                        let vx = c
+                            .get("variable_x")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("x");
+                        let vy = c
+                            .get("variable_y")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("y");
+                        let r = c
+                            .get("pearson_r")
+                            .and_then(serde_json::Value::as_f64)
+                            .unwrap_or(0.0);
+                        let strength = c
+                            .get("strength")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or("");
                         println!("       {vx:<16} vs {vy:<16}: r = {r:+.3} ({strength})");
                     }
                 }
-                if let Some(insights) = v.get("workflow_guidance").and_then(serde_json::Value::as_array) {
+                if let Some(insights) = v
+                    .get("workflow_guidance")
+                    .and_then(serde_json::Value::as_array)
+                {
                     for insight in insights {
                         if let Some(s) = insight.as_str() {
                             println!("       [GUIDE] {s}");

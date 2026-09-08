@@ -913,7 +913,10 @@ mod tests {
         );
         let terms = vec!["photosynthesis".to_string(), "chlorophyll".to_string()];
         publish_pattern_detected(Some(&bus), "plants", &terms, 2);
-        assert_eq!(seen.lock().unwrap().as_slice(), &[EventType::PatternDetected]);
+        assert_eq!(
+            seen.lock().unwrap().as_slice(),
+            &[EventType::PatternDetected]
+        );
 
         // Empty terms and a missing bus emit nothing.
         publish_pattern_detected(Some(&bus), "plants", &[], 2);

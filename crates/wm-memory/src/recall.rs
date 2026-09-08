@@ -1015,7 +1015,11 @@ impl RecallEngine {
 
     /// Resolve a memory id across the memory galaxies (S9 cross-galaxy traversal).
     fn find_memory_anywhere(&self, id: Uuid) -> Option<crate::memory::Memory> {
-        self.store.find_across_galaxies(id).ok().flatten().map(|(_, m)| m)
+        self.store
+            .find_across_galaxies(id)
+            .ok()
+            .flatten()
+            .map(|(_, m)| m)
     }
 
     /// Promote a memory on recall hit: calls `Memory::recall()` to apply Hebbian
@@ -2420,7 +2424,6 @@ mod tests {
 
         // Memory A: solo node
         let mem_a = Memory::new(Galaxy::Codex, "alpha query topic node".into());
-        let _id_a = mem_a.metadata.id;
         engine.store_with_embedding(Galaxy::Codex, &mem_a).unwrap();
 
         // Memory B: connected to C
@@ -2433,7 +2436,12 @@ mod tests {
         let id_c = mem_c.metadata.id;
         engine.store.put(Galaxy::Research, &mem_c).unwrap();
 
-        let edge = crate::associations::Association::new(id_b, id_c, crate::associations::LinkType::Related, 0.8);
+        let edge = crate::associations::Association::new(
+            id_b,
+            id_c,
+            crate::associations::LinkType::Related,
+            0.8,
+        );
         assoc_store.put(env, &edge).unwrap();
 
         // Search with association_rerank = false (default)
@@ -2446,8 +2454,16 @@ mod tests {
         assert!(!results_rerank.is_empty());
 
         // Memory B should receive the association boost
-        let score_b_default = results_default.iter().find(|r| r.memory_id == id_b).unwrap().score;
-        let score_b_rerank = results_rerank.iter().find(|r| r.memory_id == id_b).unwrap().score;
+        let score_b_default = results_default
+            .iter()
+            .find(|r| r.memory_id == id_b)
+            .unwrap()
+            .score;
+        let score_b_rerank = results_rerank
+            .iter()
+            .find(|r| r.memory_id == id_b)
+            .unwrap()
+            .score;
         assert!(score_b_rerank > score_b_default);
     }
 }

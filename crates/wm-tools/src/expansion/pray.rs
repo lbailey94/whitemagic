@@ -17,7 +17,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Instant;
 use wm_core::{Context, CoreError, EffectRow, Gana, Resource, Tool, ToolStats};
@@ -76,13 +76,27 @@ impl HongmenRank {
     #[must_use]
     pub const fn role_description(self) -> &'static str {
         match self {
-            Self::MountainMaster => "Supreme Architecture: Master guidance and holistic ledger direction.",
-            Self::IncenseMaster => "Frontline Pioneer: Traversal of unknown directories, codebases, and perimeters.",
-            Self::WhitePaperFan => "Sage Calculation: Transmutation of commits, logs, and turns into golden Geneseeds.",
-            Self::RedPole => "Martial Discipline: Whole-store Dharma governance, Landlock defense, and trust auditing.",
-            Self::StrawSandal => "Spatial Logistics: Manifold rebalancing, 5D coordinates, and inter-lodge travel.",
-            Self::Brethren => "Swarm Execution: Massively parallel Tokio and Rayon work-stealing soldiers.",
-            Self::Infiltrator => "Anomaly Sentry: Detection of corrupted memories, stale states, and rule breaches.",
+            Self::MountainMaster => {
+                "Supreme Architecture: Master guidance and holistic ledger direction."
+            }
+            Self::IncenseMaster => {
+                "Frontline Pioneer: Traversal of unknown directories, codebases, and perimeters."
+            }
+            Self::WhitePaperFan => {
+                "Sage Calculation: Transmutation of commits, logs, and turns into golden Geneseeds."
+            }
+            Self::RedPole => {
+                "Martial Discipline: Whole-store Dharma governance, Landlock defense, and trust auditing."
+            }
+            Self::StrawSandal => {
+                "Spatial Logistics: Manifold rebalancing, 5D coordinates, and inter-lodge travel."
+            }
+            Self::Brethren => {
+                "Swarm Execution: Massively parallel Tokio and Rayon work-stealing soldiers."
+            }
+            Self::Infiltrator => {
+                "Anomaly Sentry: Detection of corrupted memories, stale states, and rule breaches."
+            }
         }
     }
 }
@@ -98,7 +112,11 @@ pub struct WhiteLotusLodge {
 
 impl WhiteLotusLodge {
     #[must_use]
-    pub fn new(name: impl Into<String>, chinese_name: impl Into<String>, active_galaxies: usize) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        chinese_name: impl Into<String>,
+        active_galaxies: usize,
+    ) -> Self {
         Self {
             name: name.into(),
             chinese_name: chinese_name.into(),
@@ -171,23 +189,37 @@ impl Tool for PrayMetaTool {
     }
 
     async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        let action = args.get("action").and_then(Value::as_str).unwrap_or("status");
+        let action = args
+            .get("action")
+            .and_then(Value::as_str)
+            .unwrap_or("status");
         let params = args.get("params").cloned().unwrap_or_else(|| json!({}));
         let start = Instant::now();
 
         match action.to_ascii_lowercase().as_str() {
             "scout" | "vanguard" => {
                 let captain = CaptainDeployTool::new(self.store.clone());
-                let target_path = params.get("target_path").and_then(Value::as_str).unwrap_or(".");
+                let target_path = params
+                    .get("target_path")
+                    .and_then(Value::as_str)
+                    .unwrap_or(".");
                 let query = params.get("query").and_then(Value::as_str).unwrap_or("");
-                let army_size = params.get("army_size").and_then(Value::as_u64).unwrap_or(25_000);
+                let army_size = params
+                    .get("army_size")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(25_000);
 
-                let res = captain.call(ctx, json!({
-                    "role": "vanguard",
-                    "target_path": target_path,
-                    "query": query,
-                    "army_size": army_size
-                })).await?;
+                let res = captain
+                    .call(
+                        ctx,
+                        json!({
+                            "role": "vanguard",
+                            "target_path": target_path,
+                            "query": query,
+                            "army_size": army_size
+                        }),
+                    )
+                    .await?;
 
                 Ok(json!({
                     "pray_action": "scout",
@@ -198,12 +230,20 @@ impl Tool for PrayMetaTool {
             }
             "audit" | "sentry" => {
                 let captain = CaptainDeployTool::new(self.store.clone());
-                let army_size = params.get("army_size").and_then(Value::as_u64).unwrap_or(50_000);
+                let army_size = params
+                    .get("army_size")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(50_000);
 
-                let res = captain.call(ctx, json!({
-                    "role": "sentry",
-                    "army_size": army_size
-                })).await?;
+                let res = captain
+                    .call(
+                        ctx,
+                        json!({
+                            "role": "sentry",
+                            "army_size": army_size
+                        }),
+                    )
+                    .await?;
 
                 Ok(json!({
                     "pray_action": "audit",
@@ -214,12 +254,20 @@ impl Tool for PrayMetaTool {
             }
             "distill" | "alchemy" => {
                 let captain = CaptainDeployTool::new(self.store.clone());
-                let army_size = params.get("army_size").and_then(Value::as_u64).unwrap_or(50_000);
+                let army_size = params
+                    .get("army_size")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(50_000);
 
-                let res = captain.call(ctx, json!({
-                    "role": "alchemist",
-                    "army_size": army_size
-                })).await?;
+                let res = captain
+                    .call(
+                        ctx,
+                        json!({
+                            "role": "alchemist",
+                            "army_size": army_size
+                        }),
+                    )
+                    .await?;
 
                 Ok(json!({
                     "pray_action": "distill",
@@ -232,8 +280,14 @@ impl Tool for PrayMetaTool {
                 let rebalance = HologramRebalanceTool::new(self.store.clone());
                 // Preserve the child's dry-run default: routing through PRAY
                 // must never flip a read into a bulk write.
-                let apply = params.get("apply").and_then(Value::as_bool).unwrap_or(false);
-                let galaxy = params.get("galaxy").and_then(Value::as_str).unwrap_or("all");
+                let apply = params
+                    .get("apply")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                let galaxy = params
+                    .get("galaxy")
+                    .and_then(Value::as_str)
+                    .unwrap_or("all");
 
                 let mut child_args = json!({
                     "galaxy": galaxy,
@@ -255,13 +309,21 @@ impl Tool for PrayMetaTool {
                 let query_tool = HologramQueryTool::new(self.store.clone());
                 let query_str = params.get("query").and_then(Value::as_str).unwrap_or("");
                 let k = params.get("k").and_then(Value::as_u64).unwrap_or(10);
-                let galaxy = params.get("galaxy").and_then(Value::as_str).unwrap_or("all");
+                let galaxy = params
+                    .get("galaxy")
+                    .and_then(Value::as_str)
+                    .unwrap_or("all");
 
-                let res = query_tool.call(ctx, json!({
-                    "query": query_str,
-                    "galaxy": galaxy,
-                    "k": k
-                })).await?;
+                let res = query_tool
+                    .call(
+                        ctx,
+                        json!({
+                            "query": query_str,
+                            "galaxy": galaxy,
+                            "k": k
+                        }),
+                    )
+                    .await?;
 
                 Ok(json!({
                     "pray_action": "hologram_query",
@@ -288,8 +350,14 @@ impl Tool for PrayMetaTool {
                 if let Some(associations) = &self.associations {
                     rotate_tool = rotate_tool.with_associations(associations.clone());
                 }
-                let dry_run = params.get("dry_run").and_then(Value::as_bool).unwrap_or(true);
-                let galaxy = params.get("galaxy").and_then(Value::as_str).unwrap_or("all");
+                let dry_run = params
+                    .get("dry_run")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(true);
+                let galaxy = params
+                    .get("galaxy")
+                    .and_then(Value::as_str)
+                    .unwrap_or("all");
 
                 // Forward caller bounds instead of dropping them: a wrapper
                 // must not silently widen scope.
@@ -322,18 +390,29 @@ impl Tool for PrayMetaTool {
                     HongmenRank::Infiltrator,
                 ];
 
-                let hierarchy_info = ranks.iter().map(|r| {
-                    json!({
-                        "code": r.code(),
-                        "title": r.chinese_title(),
-                        "doctrine": r.role_description()
+                let hierarchy_info = ranks
+                    .iter()
+                    .map(|r| {
+                        json!({
+                            "code": r.code(),
+                            "title": r.chinese_title(),
+                            "doctrine": r.role_description()
+                        })
                     })
-                }).collect::<Vec<_>>();
+                    .collect::<Vec<_>>();
 
                 let lodges = [
                     WhiteLotusLodge::new("Lodge of Heaven & Earth", "天地堂 (Primary Codex)", 14),
-                    WhiteLotusLodge::new("Lodge of Pure Water", "清水堂 (Consolidation & Dreams)", 4),
-                    WhiteLotusLodge::new("Lodge of the Iron Mountain", "鐵山堂 (Dharma Governance)", 3),
+                    WhiteLotusLodge::new(
+                        "Lodge of Pure Water",
+                        "清水堂 (Consolidation & Dreams)",
+                        4,
+                    ),
+                    WhiteLotusLodge::new(
+                        "Lodge of the Iron Mountain",
+                        "鐵山堂 (Dharma Governance)",
+                        3,
+                    ),
                 ];
 
                 Ok(json!({
@@ -378,7 +457,10 @@ mod tests {
         let pray = PrayMetaTool::new(Arc::new(store));
         let mut ctx = Context::default();
 
-        let res = pray.call(&mut ctx, json!({ "action": "hierarchy" })).await.unwrap();
+        let res = pray
+            .call(&mut ctx, json!({ "action": "hierarchy" }))
+            .await
+            .unwrap();
         assert_eq!(res["pray_action"], "hierarchy_status");
         let ranks = res["hongmen_ranks"].as_array().unwrap();
         assert_eq!(ranks.len(), 7);
@@ -397,7 +479,10 @@ mod tests {
         let pray = PrayMetaTool::new(store);
         let mut ctx = Context::default();
 
-        let res = pray.call(&mut ctx, json!({ "action": "audit" })).await.unwrap();
+        let res = pray
+            .call(&mut ctx, json!({ "action": "audit" }))
+            .await
+            .unwrap();
         assert_eq!(res["pray_action"], "audit");
         assert_eq!(res["hongmen_officer"], "紅棍 (Hung Kwan / Red Pole 426)");
     }
@@ -407,7 +492,10 @@ mod tests {
         let (_tmp, store) = open_store();
         let store = Arc::new(store);
 
-        let m = Memory::new(Galaxy::Codex, "Logic algorithm compute binary structure".into());
+        let m = Memory::new(
+            Galaxy::Codex,
+            "Logic algorithm compute binary structure".into(),
+        );
         let before = format!("{:?}", m.metadata.coord5d);
         store.put(Galaxy::Codex, &m).unwrap();
 
@@ -436,8 +524,10 @@ mod tests {
         let store = Arc::new(store);
 
         for i in 0..3 {
-            let mut mem =
-                Memory::new(Galaxy::Codex, format!("{{\"turn_type\": \"ping{i}\"}}").into());
+            let mut mem = Memory::new(
+                Galaxy::Codex,
+                format!("{{\"turn_type\": \"ping{i}\"}}").into(),
+            );
             mem.metadata.tags = vec!["telemetry".into()];
             store.put(Galaxy::Codex, &mem).unwrap();
         }
