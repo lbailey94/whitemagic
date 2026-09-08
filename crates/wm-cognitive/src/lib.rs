@@ -23,9 +23,9 @@ pub mod pattern_bridge;
 pub mod pattern_dream_bridge;
 pub mod redteam_manifest;
 pub mod retention;
+pub mod smarana;
 pub mod spiral;
 pub mod strategy;
-pub mod smarana;
 pub mod wu_xing;
 
 // ── Merged modules ──────────────────────────────────────────────────
@@ -79,9 +79,9 @@ pub use retention::{
 };
 pub use smarana::{
     AlchemicalDistribution, AlchemicalPhaseBridge, AlchemicalStage, AutonomousSmarana,
-    CoActivationRecord, GistDistiller, GistVector, HebbianConsolidationReport, HebbianReinforcer,
-    ProbeKind, ProbeResult, RepetitionItem, ReviewOutcome, SmaranaConfig, SmaranaProbe,
-    SpacedRepetitionTracker, SynapticPruneReport, EBBINGHAUS_DECAY_CONSTANT,
+    CoActivationRecord, EBBINGHAUS_DECAY_CONSTANT, GistDistiller, GistVector,
+    HebbianConsolidationReport, HebbianReinforcer, ProbeKind, ProbeResult, RepetitionItem,
+    ReviewOutcome, SmaranaConfig, SmaranaProbe, SpacedRepetitionTracker, SynapticPruneReport,
 };
 pub use spiral::{
     CycleSpiralData, EscalationCallback, SemanticConfig, SpiralDirection, SpiralReport,

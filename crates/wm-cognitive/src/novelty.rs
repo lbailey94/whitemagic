@@ -13,10 +13,10 @@ use wm_memory::memory::content_hash;
 
 /// Stop words excluded during predicate semantic distance calculation.
 const PREDICATE_STOP_WORDS: &[&str] = &[
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "to", "of", "in", "for",
-    "on", "with", "at", "by", "from", "as", "into", "through", "and", "or",
-    "if", "it", "its", "this", "that", "these", "those", "may", "can", "will",
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had",
+    "do", "does", "did", "to", "of", "in", "for", "on", "with", "at", "by", "from", "as", "into",
+    "through", "and", "or", "if", "it", "its", "this", "that", "these", "those", "may", "can",
+    "will",
 ];
 
 /// The result of evaluating a candidate hypothesis through the D6 Novelty Gate.
@@ -135,10 +135,7 @@ pub fn extract_predicate_keywords(predicate: &str) -> HashSet<String> {
 /// Compute Jaccard semantic distance (0.0 to 1.0) between two keyword sets.
 /// Distance = 1.0 - Jaccard Similarity.
 #[must_use]
-pub fn predicate_semantic_distance<S>(
-    a: &HashSet<String, S>,
-    b: &HashSet<String, S>,
-) -> f32
+pub fn predicate_semantic_distance<S>(a: &HashSet<String, S>, b: &HashSet<String, S>) -> f32
 where
     S: std::hash::BuildHasher,
 {
@@ -246,7 +243,8 @@ impl NoveltyGate {
 
         // Passed novelty gate: record and accept
         self.seen_hashes.insert(hash.clone());
-        self.known_predicates.push((predicate.clone(), candidate_kws));
+        self.known_predicates
+            .push((predicate.clone(), candidate_kws));
 
         NoveltyVerdict::Accepted {
             predicate,
@@ -270,7 +268,10 @@ mod tests {
         assert_eq!(pred2, "hub memory confirmed as cross-cutting pattern");
 
         // The predicates match exactly despite different memory contents!
-        assert_eq!(compute_predicate_hash(&pred1), compute_predicate_hash(&pred2));
+        assert_eq!(
+            compute_predicate_hash(&pred1),
+            compute_predicate_hash(&pred2)
+        );
     }
 
     #[test]
@@ -303,7 +304,9 @@ mod tests {
         let content = "Hypothesis: Some genuinely novel insight that would otherwise pass";
         let verdict = gate.evaluate(content, true);
         assert!(!verdict.is_accepted());
-        assert!(matches!(verdict, NoveltyVerdict::Rejected { ref reason } if reason.contains("excluded by class")));
+        assert!(
+            matches!(verdict, NoveltyVerdict::Rejected { ref reason } if reason.contains("excluded by class"))
+        );
     }
 
     #[test]
@@ -321,7 +324,9 @@ mod tests {
             false,
         );
         assert!(!verdict2.is_accepted());
-        assert!(matches!(verdict2, NoveltyVerdict::Rejected { ref reason } if reason.contains("near-duplicate")));
+        assert!(
+            matches!(verdict2, NoveltyVerdict::Rejected { ref reason } if reason.contains("near-duplicate"))
+        );
 
         // Truly novel claim
         let verdict3 = gate.evaluate(

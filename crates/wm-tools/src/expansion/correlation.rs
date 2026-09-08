@@ -378,7 +378,10 @@ impl Tool for KaizenCorrelateTool {
 
             if xs.len() >= 2 {
                 let r = compute_pearson(&xs, &ys);
-                let label = args.get("label").and_then(Value::as_str).unwrap_or("custom_pairs");
+                let label = args
+                    .get("label")
+                    .and_then(Value::as_str)
+                    .unwrap_or("custom_pairs");
                 correlations.push(json!({
                     "variable_x": "x",
                     "variable_y": "y",

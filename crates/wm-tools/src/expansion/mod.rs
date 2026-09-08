@@ -36,13 +36,13 @@ pub mod agents;
 pub mod anomaly;
 pub mod archaeology;
 pub mod army;
-pub mod bagua;
-pub mod captains;
 pub mod association;
 pub mod autonomous;
+pub mod bagua;
 pub mod bayesian_tools;
 pub mod bicameral;
 pub mod boundary;
+pub mod captains;
 pub mod claims_tools;
 pub mod code;
 pub mod common;
@@ -99,16 +99,16 @@ pub use agents::{
 pub use anomaly::{AnomalyDetectTool, StateRevertTool, StateSnapshotTool};
 pub use archaeology::{ArchaeologySearchTool, LearningPatternTool, LearningSuggestTool};
 pub use army::{ArmyDeployTool, GalacticColdRotateTool, GalacticTriageTool};
-pub use bagua::BaguaDispatchTool;
-pub use captains::{CaptainDeployTool, HologramQueryTool, HologramRebalanceTool};
 pub use association::{MemoryAssociateMineTool, MemoryCorroborateTool, MemoryRelateTool};
 pub use autonomous::{
     ConsolidationCompressTool, ConsolidationConnectTool, EmergenceScanTool, RetentionPruneTool,
     SensorimotorScanTool, SpiralReportTool,
 };
+pub use bagua::BaguaDispatchTool;
 pub use bayesian_tools::{McOptimizeTool, McSurrogateTool};
 pub use bicameral::{BicameralReasonTool, BicameralStatusTool};
 pub use boundary::{AntiLoopCheckTool, BoundaryEnforceTool};
+pub use captains::{CaptainDeployTool, HologramQueryTool, HologramRebalanceTool};
 pub use claims_tools::{ClaimsTool, register_claims};
 pub use consciousness::{
     ApotheosisCheckTool, CittaHistoryTool, CittaReflectTool, CittaStatusTool,
@@ -219,8 +219,7 @@ fn pray_meta_tool(
     search: Option<Arc<SearchEngine>>,
     associations: Arc<AssociationStore>,
 ) -> Arc<PrayMetaTool> {
-    let mut tool =
-        PrayMetaTool::new(store.clone()).with_associations(associations.clone());
+    let mut tool = PrayMetaTool::new(store.clone()).with_associations(associations.clone());
     if let Some(search) = search {
         tool = tool.with_search(search);
     }

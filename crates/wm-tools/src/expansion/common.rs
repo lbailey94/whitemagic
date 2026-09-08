@@ -66,15 +66,8 @@ pub const fn model_visible(mem: &Memory) -> bool {
 /// Default contexts (no compartment) are unaffected; unknown compartments
 /// fail closed via `Context::can_access_galaxy`.
 #[must_use]
-pub fn content_visible(
-    ctx: &wm_core::Context,
-    galaxy: wm_core::Galaxy,
-    mem: &Memory,
-) -> bool {
-    mcp_visible(mem)
-        && model_visible(mem)
-        && validity_visible(mem)
-        && ctx.can_access_galaxy(galaxy)
+pub fn content_visible(ctx: &wm_core::Context, galaxy: wm_core::Galaxy, mem: &Memory) -> bool {
+    mcp_visible(mem) && model_visible(mem) && validity_visible(mem) && ctx.can_access_galaxy(galaxy)
 }
 
 /// Validity visibility (V8 Slice B, D1+D2): the third visibility predicate

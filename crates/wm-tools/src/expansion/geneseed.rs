@@ -9,14 +9,14 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
 use wm_core::{Context, CoreError, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
+use wm_memory::MemoryStore;
 use wm_memory::memory::{Memory, Tier};
 use wm_memory::typology::MemoryClass;
-use wm_memory::MemoryStore;
 
 use super::common::parse_galaxy;
 
@@ -428,10 +428,7 @@ impl Tool for GeneseedMineTool {
     }
 
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        let repo_path_str = args
-            .get("repo_path")
-            .and_then(Value::as_str)
-            .unwrap_or(".");
+        let repo_path_str = args.get("repo_path").and_then(Value::as_str).unwrap_or(".");
         let min_confidence = args
             .get("min_confidence")
             .and_then(Value::as_f64)
@@ -511,10 +508,7 @@ impl Tool for GeneseedStatsTool {
     }
 
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        let repo_path_str = args
-            .get("repo_path")
-            .and_then(Value::as_str)
-            .unwrap_or(".");
+        let repo_path_str = args.get("repo_path").and_then(Value::as_str).unwrap_or(".");
         let repo_path = Path::new(repo_path_str);
         let stats = get_geneseed_stats(repo_path)?;
 
@@ -606,6 +600,11 @@ mod tests {
         assert_eq!(mems.len(), 1);
         assert!(mems[0].content.contains("Geneseed Pattern"));
         assert_eq!(mems[0].metadata.class, Some(MemoryClass::Knowledge));
-        assert!(mems[0].metadata.tags.contains(&"geneseed:pattern".to_string()));
+        assert!(
+            mems[0]
+                .metadata
+                .tags
+                .contains(&"geneseed:pattern".to_string())
+        );
     }
 }

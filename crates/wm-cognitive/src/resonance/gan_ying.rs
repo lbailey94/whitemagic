@@ -29,8 +29,8 @@
 use std::collections::VecDeque;
 use std::hash::Hasher as _;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use ahash::{AHashMap, AHashSet, AHasher};
@@ -483,9 +483,12 @@ impl GanYingResonanceEngine {
                 Galaxy::Journals,
                 Galaxy::Universal,
             ],
-            CognitiveContext::Introspection => {
-                [Galaxy::Citta, Galaxy::Aria, Galaxy::Dreams, Galaxy::Journals]
-            }
+            CognitiveContext::Introspection => [
+                Galaxy::Citta,
+                Galaxy::Aria,
+                Galaxy::Dreams,
+                Galaxy::Journals,
+            ],
             _ => [
                 Galaxy::Codex,
                 Galaxy::Research,
@@ -503,7 +506,10 @@ impl GanYingResonanceEngine {
 
         for mem in raw_candidates.iter().take(5) {
             if mem.metadata.importance >= 0.6 {
-                if let Ok(act) = self.spreading.spread(mem.metadata.id, associations, store.env()) {
+                if let Ok(act) = self
+                    .spreading
+                    .spread(mem.metadata.id, associations, store.env())
+                {
                     for (target_id, weight) in act.activations {
                         let entry = seed_activations.entry(target_id).or_insert(0.0);
                         *entry = entry.max(weight);
@@ -529,7 +535,10 @@ impl GanYingResonanceEngine {
             };
 
             let thalamic_weight = self.thalamic_gate.galaxy_weight(mem.metadata.galaxy);
-            let spreading_score = seed_activations.get(&mem.metadata.id).copied().unwrap_or(0.0);
+            let spreading_score = seed_activations
+                .get(&mem.metadata.id)
+                .copied()
+                .unwrap_or(0.0);
 
             let citta_alignment = match mem.metadata.galaxy {
                 Galaxy::Dreams | Galaxy::Aria => snapshot.citta_curiosity,
@@ -1066,9 +1075,7 @@ impl AutonomousGanYing {
 
         let count_resonated = filtered_candidates.len();
 
-        let l1_count = filtered_candidates
-            .len()
-            .min(L1ConsciousFringe::CAPACITY);
+        let l1_count = filtered_candidates.len().min(L1ConsciousFringe::CAPACITY);
         let l2_count = filtered_candidates.len().saturating_sub(l1_count);
 
         if let Ok(mut buffer_guard) = self.buffer.write() {
@@ -1196,7 +1203,10 @@ mod tests {
         let elapsed_ns = start.elapsed().as_nanos();
         let avg_latency_ns = (elapsed_ns / iterations) as u64;
 
-        println!("Observed L1 buffer hit latency (average over 1,000 queries): {} ns", avg_latency_ns);
+        println!(
+            "Observed L1 buffer hit latency (average over 1,000 queries): {} ns",
+            avg_latency_ns
+        );
 
         #[cfg(not(debug_assertions))]
         assert!(

@@ -14,12 +14,14 @@ use async_trait::async_trait;
 use chrono::Utc;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 
-use wm_core::{Context, Coordinate5D, CoreError, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
+use wm_core::{
+    Context, Coordinate5D, CoreError, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats,
+};
 use wm_memory::{Memory, MemoryStore, SemanticEncoder};
 
 use super::common::{content_visible, parse_galaxy};
@@ -53,10 +55,18 @@ impl CaptainRole {
     #[must_use]
     pub const fn doctrine(&self) -> &'static str {
         match self {
-            Self::Vanguard => "Swift as the Wind: Rapid multi-threaded traversal and reconnaissance.",
-            Self::Sentry => "Silent as the Forest: Immutability, boundary checks, and Dharma audit.",
-            Self::Alchemist => "Fierce as Fire: Transmutation of commits and turns into golden insight.",
-            Self::Cartographer => "Steadfast as the Mountain: Structuring multidimensional semantic space.",
+            Self::Vanguard => {
+                "Swift as the Wind: Rapid multi-threaded traversal and reconnaissance."
+            }
+            Self::Sentry => {
+                "Silent as the Forest: Immutability, boundary checks, and Dharma audit."
+            }
+            Self::Alchemist => {
+                "Fierce as Fire: Transmutation of commits and turns into golden insight."
+            }
+            Self::Cartographer => {
+                "Steadfast as the Mountain: Structuring multidimensional semantic space."
+            }
         }
     }
 
@@ -141,13 +151,24 @@ impl Tool for CaptainDeployTool {
     }
 
     async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        let role_str = args.get("role").and_then(Value::as_str).unwrap_or("cartographer");
+        let role_str = args
+            .get("role")
+            .and_then(Value::as_str)
+            .unwrap_or("cartographer");
         let role = CaptainRole::parse_role(role_str).ok_or_else(|| {
-            CoreError::InvalidArgs(format!("Unknown captain role: {role_str}. Valid: vanguard, sentry, alchemist, cartographer"))
+            CoreError::InvalidArgs(format!(
+                "Unknown captain role: {role_str}. Valid: vanguard, sentry, alchemist, cartographer"
+            ))
         })?;
 
-        let objective = args.get("objective").and_then(Value::as_str).unwrap_or("mission_execution");
-        let soldier_count = args.get("army_size").and_then(Value::as_u64).unwrap_or(10_000) as usize;
+        let objective = args
+            .get("objective")
+            .and_then(Value::as_str)
+            .unwrap_or("mission_execution");
+        let soldier_count = args
+            .get("army_size")
+            .and_then(Value::as_u64)
+            .unwrap_or(10_000) as usize;
         let apply = args.get("apply").and_then(Value::as_bool).unwrap_or(false);
         let start = Instant::now();
 
@@ -164,7 +185,8 @@ impl Tool for CaptainDeployTool {
                     Galaxy::memory_galaxies().to_vec()
                 };
 
-                let dispersion_report = run_dimensional_dispersion(&self.store, &galaxies, apply, soldier_count)?;
+                let dispersion_report =
+                    run_dimensional_dispersion(&self.store, &galaxies, apply, soldier_count)?;
                 let duration_ms = start.elapsed().as_millis() as u64;
 
                 Ok(json!({
@@ -179,7 +201,10 @@ impl Tool for CaptainDeployTool {
                 }))
             }
             CaptainRole::Vanguard => {
-                let target_path_str = args.get("target_path").and_then(Value::as_str).unwrap_or(".");
+                let target_path_str = args
+                    .get("target_path")
+                    .and_then(Value::as_str)
+                    .unwrap_or(".");
                 let query = args.get("query").and_then(Value::as_str).unwrap_or("");
                 let root = PathBuf::from(target_path_str);
 
@@ -423,16 +448,27 @@ impl Tool for HologramQueryTool {
     async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query_str = args.get("query").and_then(Value::as_str).unwrap_or("");
         if query_str.is_empty() {
-            return Err(CoreError::InvalidArgs("Missing required argument: query".into()));
+            return Err(CoreError::InvalidArgs(
+                "Missing required argument: query".into(),
+            ));
         }
 
         let galaxy_str = args.get("galaxy").and_then(Value::as_str);
         let k = args.get("k").and_then(Value::as_u64).unwrap_or(10) as usize;
-        let semantic_only = args.get("semantic_only").and_then(Value::as_bool).unwrap_or(false);
+        let semantic_only = args
+            .get("semantic_only")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         #[allow(clippy::cast_possible_truncation)]
-        let min_importance = args.get("min_importance").and_then(Value::as_f64).unwrap_or(0.0) as f32;
+        let min_importance = args
+            .get("min_importance")
+            .and_then(Value::as_f64)
+            .unwrap_or(0.0) as f32;
         #[allow(clippy::cast_possible_truncation)]
-        let target_w = args.get("target_w").and_then(Value::as_f64).map(|v| v as f32);
+        let target_w = args
+            .get("target_w")
+            .and_then(Value::as_f64)
+            .map(|v| v as f32);
 
         let galaxies: Vec<Galaxy> = if let Some(g_str) = galaxy_str {
             if g_str == "all" {
@@ -472,9 +508,7 @@ impl Tool for HologramQueryTool {
                         // non-current, or compartment-forbidden records never
                         // become candidates, so they cannot leak through
                         // previews, tags, or coordinates.
-                        if m.metadata.importance >= min_importance
-                            && content_visible(ctx, g, &m)
-                        {
+                        if m.metadata.importance >= min_importance && content_visible(ctx, g, &m) {
                             candidate_memories.push((g, m));
                         }
                     }
@@ -501,26 +535,30 @@ impl Tool for HologramQueryTool {
 
         scored.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
 
-        let top_k = scored.into_iter().take(k).map(|(dist, g, m)| {
-            let similarity = 1.0 / (1.0 + dist);
-            json!({
-                "id": m.metadata.id.to_string(),
-                "galaxy": g.db_name(),
-                "distance_5d": (dist * 10_000.0).round() / 10_000.0,
-                "similarity": (similarity * 10_000.0).round() / 10_000.0,
-                "coord5d": {
-                    "x": m.metadata.coord5d.x,
-                    "y": m.metadata.coord5d.y,
-                    "z": m.metadata.coord5d.z,
-                    "w": m.metadata.coord5d.w,
-                    "v": m.metadata.coord5d.v,
-                },
-                "importance": m.metadata.importance,
-                "created_at": m.metadata.created_at.to_rfc3339(),
-                "tags": m.metadata.tags,
-                "content_preview": m.content.chars().take(160).collect::<String>()
+        let top_k = scored
+            .into_iter()
+            .take(k)
+            .map(|(dist, g, m)| {
+                let similarity = 1.0 / (1.0 + dist);
+                json!({
+                    "id": m.metadata.id.to_string(),
+                    "galaxy": g.db_name(),
+                    "distance_5d": (dist * 10_000.0).round() / 10_000.0,
+                    "similarity": (similarity * 10_000.0).round() / 10_000.0,
+                    "coord5d": {
+                        "x": m.metadata.coord5d.x,
+                        "y": m.metadata.coord5d.y,
+                        "z": m.metadata.coord5d.z,
+                        "w": m.metadata.coord5d.w,
+                        "v": m.metadata.coord5d.v,
+                    },
+                    "importance": m.metadata.importance,
+                    "created_at": m.metadata.created_at.to_rfc3339(),
+                    "tags": m.metadata.tags,
+                    "content_preview": m.content.chars().take(160).collect::<String>()
+                })
             })
-        }).collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         let duration_ms = start.elapsed().as_millis() as u64;
 
@@ -601,11 +639,16 @@ fn run_dimensional_dispersion(
             .into_par_iter()
             .map(|mut mem| {
                 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-                let age_days = (now - mem.metadata.created_at).num_seconds().max(0) as f64 / 86400.0;
+                let age_days =
+                    (now - mem.metadata.created_at).num_seconds().max(0) as f64 / 86400.0;
                 #[allow(clippy::cast_possible_truncation)]
                 let temporal_weight = (1.0 / (1.0 + age_days / 30.0)).clamp(0.05, 1.0) as f32;
                 #[allow(clippy::cast_possible_truncation)]
-                let consciousness = f64::midpoint(f64::from(mem.metadata.importance), f64::from(mem.metadata.neuro_score)).clamp(0.1, 1.0) as f32;
+                let consciousness = f64::midpoint(
+                    f64::from(mem.metadata.importance),
+                    f64::from(mem.metadata.neuro_score),
+                )
+                .clamp(0.1, 1.0) as f32;
 
                 let scores = encoder.encode(&mem.content);
 
@@ -694,7 +737,11 @@ fn collect_files_recursive(dir: &Path, files: &mut Vec<PathBuf>, max: usize) {
             let path = entry.path();
             if path.is_dir() {
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                if !name.starts_with('.') && name != "target" && name != "node_modules" && name != "dist" {
+                if !name.starts_with('.')
+                    && name != "target"
+                    && name != "node_modules"
+                    && name != "dist"
+                {
                     collect_files_recursive(&path, files, max);
                 }
             } else if path.is_file() {
@@ -720,20 +767,32 @@ mod tests {
         let store = Arc::new(store);
 
         // Put memories with default 0.5 coordinates
-        let m1 = Memory::new(Galaxy::Codex, "Logic algorithm compute binary structure".into());
-        let m2 = Memory::new(Galaxy::Codex, "Love empathy emotion heartfelt poetry".into());
+        let m1 = Memory::new(
+            Galaxy::Codex,
+            "Logic algorithm compute binary structure".into(),
+        );
+        let m2 = Memory::new(
+            Galaxy::Codex,
+            "Love empathy emotion heartfelt poetry".into(),
+        );
         store.put(Galaxy::Codex, &m1).unwrap();
         store.put(Galaxy::Codex, &m2).unwrap();
 
         let captain_tool = CaptainDeployTool::new(store.clone());
         let mut ctx = Context::default();
 
-        let res = captain_tool.call(&mut ctx, json!({
-            "role": "cartographer",
-            "objective": "holographic_spatial_rebalance",
-            "target_galaxy": "codex",
-            "apply": true
-        })).await.unwrap();
+        let res = captain_tool
+            .call(
+                &mut ctx,
+                json!({
+                    "role": "cartographer",
+                    "objective": "holographic_spatial_rebalance",
+                    "target_galaxy": "codex",
+                    "apply": true
+                }),
+            )
+            .await
+            .unwrap();
 
         assert_eq!(res["status"], "completed");
         assert_eq!(res["captain_role"], "cartographer");
@@ -751,33 +810,53 @@ mod tests {
         let (_tmp, store) = open_store();
         let store = Arc::new(store);
 
-        let m1 = Memory::new(Galaxy::Codex, "Logic algorithm compute binary structure".into());
-        let m2 = Memory::new(Galaxy::Codex, "Love empathy emotion heartfelt poetry".into());
+        let m1 = Memory::new(
+            Galaxy::Codex,
+            "Logic algorithm compute binary structure".into(),
+        );
+        let m2 = Memory::new(
+            Galaxy::Codex,
+            "Love empathy emotion heartfelt poetry".into(),
+        );
         store.put(Galaxy::Codex, &m1).unwrap();
         store.put(Galaxy::Codex, &m2).unwrap();
 
         // Rebalance first
         let rebalance_tool = HologramRebalanceTool::new(store.clone());
         let mut ctx = Context::default();
-        rebalance_tool.call(&mut ctx, json!({
-            "galaxy": "codex",
-            "apply": true
-        })).await.unwrap();
+        rebalance_tool
+            .call(
+                &mut ctx,
+                json!({
+                    "galaxy": "codex",
+                    "apply": true
+                }),
+            )
+            .await
+            .unwrap();
 
         // Query for binary compute
         let query_tool = HologramQueryTool::new(store.clone());
-        let res = query_tool.call(&mut ctx, json!({
-            "query": "binary compute algorithms",
-            "galaxy": "codex",
-            "k": 2
-        })).await.unwrap();
+        let res = query_tool
+            .call(
+                &mut ctx,
+                json!({
+                    "query": "binary compute algorithms",
+                    "galaxy": "codex",
+                    "k": 2
+                }),
+            )
+            .await
+            .unwrap();
 
         assert_eq!(res["status"], "completed");
         let results = res["results"].as_array().unwrap();
         assert_eq!(results.len(), 2);
         // The top match must be m1
         assert_eq!(results[0]["id"], m1.metadata.id.to_string());
-        assert!(results[0]["similarity"].as_f64().unwrap() > results[1]["similarity"].as_f64().unwrap());
+        assert!(
+            results[0]["similarity"].as_f64().unwrap() > results[1]["similarity"].as_f64().unwrap()
+        );
     }
 
     #[tokio::test]
@@ -791,13 +870,11 @@ mod tests {
         let public_id = public.metadata.id;
         store.put(Galaxy::Codex, &public).unwrap();
 
-        let mut private =
-            Memory::new(Galaxy::Codex, "shared resonance content".into());
+        let mut private = Memory::new(Galaxy::Codex, "shared resonance content".into());
         private.metadata.is_private = true;
         store.put(Galaxy::Codex, &private).unwrap();
 
-        let mut excluded =
-            Memory::new(Galaxy::Codex, "shared resonance content".into());
+        let mut excluded = Memory::new(Galaxy::Codex, "shared resonance content".into());
         excluded.metadata.model_exclude = true;
         store.put(Galaxy::Codex, &excluded).unwrap();
 
