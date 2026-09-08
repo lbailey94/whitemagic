@@ -1,0 +1,94 @@
+{
+  "protocol": "wm-source-groups-v1",
+  "status": "development_cases_not_held_out",
+  "dataset": {
+    "path": "benchmarks/data/memorastrict/bench_seed1.json",
+    "sha256": "81c20ee75dbf6bf989f16d47d35171336b2787f32f6a964652b2d6415ed902d3"
+  },
+  "cases": {
+    "T3_bookshelf": {
+      "groups": [
+        {
+          "group_id": "entity_link",
+          "alternatives": [
+            {
+              "session_id": "session_004",
+              "turn_index": 21,
+              "span": {"start": 0, "end": 31},
+              "text": "I bought a bookshelf from IKEA.",
+              "text_sha256": "a3dcc8ca462fb31bae60c94fc8a3a4419b0163a8b717c2508c1bc3399fa7ec78"
+            }
+          ]
+        },
+        {
+          "group_id": "answer_value",
+          "alternatives": [
+            {
+              "session_id": "session_011",
+              "turn_index": 27,
+              "span": {"start": 0, "end": 45},
+              "text": "It took me 4 hours to assemble the bookshelf.",
+              "text_sha256": "8d555a5c74af0c8c781947ce78051f033e9e4d94c15eb38cdbf93b71ca34ce8f"
+            }
+          ]
+        }
+      ]
+    },
+    "T3_desk": {
+      "groups": [
+        {
+          "group_id": "entity_link",
+          "alternatives": [
+            {
+              "session_id": "session_008",
+              "turn_index": 36,
+              "span": {"start": 0, "end": 29},
+              "text": "I bought a desk from Wayfair.",
+              "text_sha256": "9bdd9abf5e35e1a9a41dc130b685e21fe5247bd6d9e69a49cf6431588eb90dc4"
+            }
+          ]
+        },
+        {
+          "group_id": "answer_value",
+          "alternatives": [
+            {
+              "session_id": "session_015",
+              "turn_index": 25,
+              "span": {"start": 0, "end": 44},
+              "text": "It took me 3 hours to put together the desk.",
+              "text_sha256": "29b2db9d08d677e1f8edc7d7f42af90593dff9aed997a2b278f952b7f9bddd71"
+            }
+          ]
+        }
+      ]
+    },
+    "T3_wardrobe": {
+      "groups": [
+        {
+          "group_id": "entity_link",
+          "alternatives": [
+            {
+              "session_id": "session_008",
+              "turn_index": 37,
+              "span": {"start": 0, "end": 32},
+              "text": "I bought a wardrobe from Target.",
+              "text_sha256": "f36b15cb3f831dd26c3bbbd2b9f8435811e4610f07307d7c96e8e0c916830398"
+            }
+          ]
+        },
+        {
+          "group_id": "answer_value",
+          "alternatives": [
+            {
+              "session_id": "session_014",
+              "turn_index": 33,
+              "span": {"start": 0, "end": 44},
+              "text": "It took me 2 hours to assemble the wardrobe.",
+              "text_sha256": "d87cb9a745d2154382eac8fb26fd795dd2c012567459ca9d269c65c839f246e9"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

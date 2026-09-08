@@ -144,4 +144,8 @@ wm-leases.json
 /scripts/*
 !/scripts/install.sh
 !/scripts/curated_smoke_test.py
-
+!/scripts/longmemeval_bench.py
+!/scripts/memorastrict_bench.py
+!/scripts/eval_protocol.py
+!/scripts/tests/
+!/scripts/tests/test_eval_protocol.py
