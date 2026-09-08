@@ -6,6 +6,10 @@ WhiteMagic gives an AI coding agent durable project memory over MCP: record
 important context, find it after restart, and carry useful decisions into the
 next session — without sending your memory store to any hosted service.
 
+**You are an agent reading this repo?** Start with
+[skill.md](skill.md) (five-minute operational onboarding) and
+[llms.txt](llms.txt) (machine-readable index).
+
 ```json
 {
   "mcpServers": {
