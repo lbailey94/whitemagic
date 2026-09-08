@@ -224,17 +224,15 @@ impl WriteGate {
         let content = args
             .get("content")
             .and_then(|v| v.as_str())
-            .map(str::to_string)
-            .unwrap_or_else(|| existing.content.clone());
-        let tags: Vec<String> = args
-            .get("tags")
-            .and_then(|v| v.as_array())
-            .map(|a| {
+            .map_or_else(|| existing.content.clone(), str::to_string);
+        let tags: Vec<String> = args.get("tags").and_then(|v| v.as_array()).map_or_else(
+            || existing.metadata.tags.clone(),
+            |a| {
                 a.iter()
                     .filter_map(|v| v.as_str().map(String::from))
                     .collect()
-            })
-            .unwrap_or_else(|| existing.metadata.tags.clone());
+            },
+        );
 
         let class = existing
             .metadata
@@ -246,7 +244,7 @@ impl WriteGate {
 
         let requested = args
             .get("importance")
-            .and_then(|v| v.as_f64())
+            .and_then(serde_json::Value::as_f64)
             .map_or(existing.metadata.importance, |v| v as f32);
         let policy = typology::apply_class_policy(class, requested);
 
