@@ -7,6 +7,7 @@
 
 pub mod circuit_breaker;
 pub mod composition;
+pub mod flight;
 pub mod pipeline;
 pub mod rate_limiter;
 pub mod registry;
@@ -15,6 +16,7 @@ pub mod write_gate;
 
 pub use circuit_breaker::{BreakerConfig, BreakerState, CircuitBreaker, CircuitBreakerRegistry};
 pub use composition::{CompositionConfig, CompositionPattern, CompositionTracker};
+pub use flight::{FlightEntry, FlightRecorder};
 pub use pipeline::DispatchPipeline;
 pub use rate_limiter::{RateLimiter, RateLimiterConfig, SlidingWindow};
 pub use registry::{ToolRegistry, ToolRegistryBuilder};

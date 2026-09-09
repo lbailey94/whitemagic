@@ -130,6 +130,10 @@ pub struct DispatchPipeline {
     /// Optional write-audit journal — append-only record of declared vs
     /// actual store mutations per dispatch.
     write_audit: Option<Arc<wm_governance::WriteAuditJournal>>,
+    /// Optional flight recorder (Q35b) — opt-in JSONL payload capture for
+    /// replay. Captures at the same point as `args_digest` so sidecar args
+    /// always hash to the journal digest (the replay identity gate).
+    flight_recorder: Option<Arc<crate::flight::FlightRecorder>>,
     /// The firebreak — forbidden-command guardrail (P1.4) + bulk-scope law
     /// (P1.6). Armed by default on every construction path; see
     /// [`wm_governance::Firebreak`].
@@ -161,6 +165,7 @@ impl DispatchPipeline {
             resource_rules: None,
             write_gate: None,
             write_audit: None,
+            flight_recorder: None,
             // The firebreak arms by default: every construction path (server,
             // daemon, CLI, tests) inherits the veto + scope law unless it is
             // explicitly disarmed with `with_firebreak_option(None)` or the
@@ -243,6 +248,18 @@ impl DispatchPipeline {
     #[must_use]
     pub fn with_write_audit(mut self, journal: Arc<wm_governance::WriteAuditJournal>) -> Self {
         self.write_audit = Some(journal);
+        self
+    }
+
+    /// Attach a flight recorder (Q35b replay capture). OFF by default.
+    /// Capture point matches `args_digest` (post-gate, pre-call) so the
+    /// sidecar is always digest-aligned with the journal.
+    #[must_use]
+    pub fn with_flight_recorder(
+        mut self,
+        recorder: Option<Arc<crate::flight::FlightRecorder>>,
+    ) -> Self {
+        self.flight_recorder = recorder;
         self
     }
 
@@ -637,6 +654,16 @@ impl DispatchPipeline {
         // answer "what went in" — replay verification without storing
         // untrusted payloads verbatim in the audit trail.
         let args_digest = wm_governance::args_digest(tool.name(), &args);
+        // Flight capture at the SAME point (post-gate, pre-call): the
+        // sidecar args must hash to the journal digest, or replay's
+        // identity gate is meaningless. Recorded regardless of outcome —
+        // the journal does the same, and failed dispatches are part of
+        // the session being reproduced.
+        if let Some(ref flight) = self.flight_recorder {
+            if let Err(e) = flight.record(tool.name(), &args) {
+                tracing::warn!(error = %e, "Flight recorder capture failed (replay will refuse)");
+            }
+        }
         let write_audit_baseline = self
             .write_audit
             .as_ref()
