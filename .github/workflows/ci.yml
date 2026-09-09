@@ -115,7 +115,11 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@latest
-      - run: cargo nextest run --all-targets --profile ci
+      # --lib/--bins/--tests: benches excluded — nextest runs harness=false
+      # criterion binaries in full benchmark mode (minutes per bench),
+      # unlike plain cargo test's fast test-mode; benches are covered by
+      # the Benchmarks workflow + bench-compile check instead.
+      - run: cargo nextest run --lib --bins --tests --profile ci
 
   bench-compile:
     timeout-minutes: 25
