@@ -15,7 +15,7 @@ ARG WM_TARGET=musl
 # package reference in npm/whitemagic-mcp/server.json).
 LABEL io.modelcontextprotocol.server.name="io.github.lbailey94/whitemagic-mcp" \
       org.opencontainers.image.title="WhiteMagic MCP server" \
-      org.opencontainers.image.version="9.0.0" \
+      org.opencontainers.image.version="9.1.0" \
       org.opencontainers.image.url="https://whitemagic.dev" \
       org.opencontainers.image.source="https://github.com/lbailey94/whitemagic"
 
@@ -32,4 +32,7 @@ RUN apk add --no-cache curl coreutils \
 
 WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/wm"]
-CMD ["--version"]
+# Default to the MCP stdio server so `docker run -i <image>` speaks MCP
+# directly (registry introspection, Glama checks, MCP clients). Use
+# `docker run --rm <image> --version` for the version.
+CMD ["serve"]
