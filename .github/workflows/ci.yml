@@ -63,7 +63,7 @@ jobs:
       fail-fast: false
       matrix:
         features:
-          - "wm-mcp/python"
+          - "whitemagic/python"
           - "wm-memory/lancedb"
           - "wm-memory/onnx"
     steps:

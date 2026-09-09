@@ -26,6 +26,7 @@ rust-version = "1.85"
 license = "MIT"
 authors = ["WhiteMagic Project"]
 repository = "https://github.com/lbailey94/whitemagic"
+homepage = "https://whitemagic.dev"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
@@ -99,21 +100,21 @@ landlock = "0.4"
 async-trait = "0.1"
 
 # Internal crates
-wm-core = { path = "crates/wm-core" }
-wm-conformal = { path = "crates/wm-conformal" }
-wm-memory = { path = "crates/wm-memory" }
-wm-dispatch = { path = "crates/wm-dispatch" }
-wm-cognitive = { path = "crates/wm-cognitive" }
-wm-governance = { path = "crates/wm-governance" }
-wm-polyglot = { path = "crates/wm-polyglot" }
-wm-substrate = { path = "crates/wm-substrate" }
-wm-tools = { path = "crates/wm-tools" }
-wm-mcp = { path = "crates/wm-mcp" }
-wm-workspace = { path = "crates/wm-workspace" }
-wm-selfmodel = { path = "crates/wm-selfmodel" }
-wm-bicameral = { path = "crates/wm-bicameral" }
-wm-sangha = { path = "crates/wm-sangha" }
-wm-simulation = { path = "crates/wm-simulation" }
+wm-core = { version = "9.0.0", path = "crates/wm-core" }
+wm-conformal = { version = "9.0.0", path = "crates/wm-conformal" }
+wm-memory = { version = "9.0.0", path = "crates/wm-memory" }
+wm-dispatch = { version = "9.0.0", path = "crates/wm-dispatch" }
+wm-cognitive = { version = "9.0.0", path = "crates/wm-cognitive" }
+wm-governance = { version = "9.0.0", path = "crates/wm-governance" }
+wm-polyglot = { version = "9.0.0", path = "crates/wm-polyglot" }
+wm-substrate = { version = "9.0.0", path = "crates/wm-substrate" }
+wm-tools = { version = "9.0.0", path = "crates/wm-tools" }
+wm-mcp = { version = "9.0.0", package = "whitemagic", path = "crates/wm-mcp" }
+wm-workspace = { version = "9.0.0", path = "crates/wm-workspace" }
+wm-selfmodel = { version = "9.0.0", path = "crates/wm-selfmodel" }
+wm-bicameral = { version = "9.0.0", path = "crates/wm-bicameral" }
+wm-sangha = { version = "9.0.0", path = "crates/wm-sangha" }
+wm-simulation = { version = "9.0.0", path = "crates/wm-simulation" }
 
 [profile.release]
 opt-level = 3

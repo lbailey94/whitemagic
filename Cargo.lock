@@ -7707,6 +7707,46 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 
 [[package]]
+name = "whitemagic"
+version = "9.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "clap",
+ "hmac",
+ "landlock",
+ "pyo3",
+ "rmp-serde",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.20",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "ureq",
+ "uuid",
+ "wm-bicameral",
+ "wm-cognitive",
+ "wm-conformal",
+ "wm-core",
+ "wm-dispatch",
+ "wm-governance",
+ "wm-memory",
+ "wm-polyglot",
+ "wm-sangha",
+ "wm-selfmodel",
+ "wm-simulation",
+ "wm-substrate",
+ "wm-tools",
+ "wm-workspace",
+]
+
+[[package]]
 name = "wide"
 version = "0.7.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8042,46 +8082,6 @@ dependencies = [
  "wm-core",
  "wm-memory",
  "wm-substrate",
-]
-
-[[package]]
-name = "wm-mcp"
-version = "9.0.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "clap",
- "hmac",
- "landlock",
- "pyo3",
- "rmp-serde",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.20",
- "tokio",
- "toml",
- "tracing",
- "tracing-subscriber",
- "ureq",
- "uuid",
- "wm-bicameral",
- "wm-cognitive",
- "wm-conformal",
- "wm-core",
- "wm-dispatch",
- "wm-governance",
- "wm-memory",
- "wm-polyglot",
- "wm-sangha",
- "wm-selfmodel",
- "wm-simulation",
- "wm-substrate",
- "wm-tools",
- "wm-workspace",
 ]
 
 [[package]]
