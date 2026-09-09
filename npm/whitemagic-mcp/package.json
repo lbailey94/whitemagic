@@ -1,0 +1,33 @@
+{
+  "name": "whitemagic-mcp",
+  "version": "9.0.0",
+  "description": "WhiteMagic MCP server — local-first memory and session continuity for AI coding agents. Installs and runs the wm binary; no telemetry, no cloud.",
+  "license": "MIT",
+  "bin": {
+    "whitemagic-mcp": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "agent-memory",
+    "ai-agents",
+    "local-first",
+    "whitemagic",
+    "session-continuity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lbailey94/whitemagic.git",
+    "directory": "npm/whitemagic-mcp"
+  },
+  "homepage": "https://whitemagic.dev",
+  "bugs": "https://github.com/lbailey94/whitemagic/issues"
+}
