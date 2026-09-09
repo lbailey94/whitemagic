@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.lbailey94/whitemagic-mcp",
+  "description": "Local-first memory and session continuity for AI coding agents over MCP. No cloud, no telemetry.",
+  "websiteURL": "https://whitemagic.dev",
+  "repository": {
+    "url": "https://github.com/lbailey94/whitemagic",
+    "source": "github",
+    "subfolder": "npm/whitemagic-mcp"
+  },
+  "version": "9.0.0",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "docker.io/lbailey94/whitemagic:9",
+      "version": "9.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
