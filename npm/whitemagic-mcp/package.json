@@ -29,5 +29,6 @@
     "directory": "npm/whitemagic-mcp"
   },
   "homepage": "https://whitemagic.dev",
-  "bugs": "https://github.com/lbailey94/whitemagic/issues"
+  "bugs": "https://github.com/lbailey94/whitemagic/issues",
+  "mcpName": "io.github.lbailey94/whitemagic-mcp"
 }

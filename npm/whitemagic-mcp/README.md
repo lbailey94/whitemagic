@@ -48,3 +48,5 @@ https://github.com/lbailey94/whitemagic#install
 Your memory store lives on your machine. `wm` does not phone home; this
 installer contacts GitHub releases only to download the binary and its
 checksum. See [PRIVACY_POLICY.md](https://github.com/lbailey94/whitemagic/blob/main/PRIVACY_POLICY.md).
+
+mcp-name: io.github.lbailey94/whitemagic-mcp
