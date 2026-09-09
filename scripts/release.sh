@@ -119,8 +119,17 @@ else
     case "$f" in *.sha256) continue ;; esac
     sha256sum "$f" | awk '{print $1}' > "$f.sha256"
   done
-  gh release create "v$VERSION" --title "WhiteMagic v$VERSION" --generate-notes
-  gh release upload "v$VERSION" release-assets/wm-* --clobber
+  # The repo's release.yml workflow auto-creates the release from the tag and
+  # builds all 5 binaries (linux gnu+musl, macos x2, windows). Only create
+  # here if the workflow hasn't (draft/manual runs); upload extra assets if
+  # the operator dropped mac/win builds in release-assets/.
+  if gh release view "v$VERSION" >/dev/null 2>&1; then
+    echo "release v$VERSION already exists (release.yml) — uploading extras only"
+    ls release-assets/wm-* >/dev/null 2>&1 && gh release upload "v$VERSION" release-assets/wm-* --clobber
+  else
+    gh release create "v$VERSION" --title "WhiteMagic v$VERSION" --generate-notes
+    gh release upload "v$VERSION" release-assets/wm-* --clobber
+  fi
   echo "release v$VERSION published with $(ls release-assets/wm-* | grep -vc sha256) binaries"
 fi
 
