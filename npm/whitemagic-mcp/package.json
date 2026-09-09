@@ -1,6 +1,6 @@
 {
   "name": "whitemagic-mcp",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "description": "WhiteMagic MCP server — local-first memory and session continuity for AI coding agents. Installs and runs the wm binary; no telemetry, no cloud.",
   "license": "MIT",
   "bin": {
