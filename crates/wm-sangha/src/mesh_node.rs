@@ -925,6 +925,7 @@ mod tests {
     /// one per counting test, since a test's zombie nodes keep
     /// beaconing after it returns.
     const TEST_GROUP_A: &str = "224.0.0.71";
+    #[cfg(not(target_os = "windows"))]
     const TEST_GROUP_B: &str = "224.0.0.72";
     #[cfg(not(target_os = "windows"))]
     const TEST_GROUP_C: &str = "224.0.0.73";
