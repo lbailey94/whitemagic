@@ -70,6 +70,7 @@ fn record_write_audit(
     declared_writes: bool,
     args_memory_id: Option<&str>,
     args_content_hash: Option<&str>,
+    args_digest: Option<String>,
     output: &serde_json::Value,
     success: bool,
     confirm_gated: Option<bool>,
@@ -93,6 +94,7 @@ fn record_write_audit(
             reported_writes,
             success,
             confirmed,
+            args_digest,
         ),
         None => journal.record_since(
             store_write_baseline,
@@ -103,6 +105,7 @@ fn record_write_audit(
             declared_writes,
             reported_writes,
             success,
+            args_digest,
         ),
     };
     if let Err(e) = result {
@@ -629,6 +632,11 @@ impl DispatchPipeline {
         // this dispatch's window.
         let args_memory_id = first_str(&args, &["id", "memory_id", "memory"]);
         let args_content_hash = first_str(&args, &["content_hash", "hash", "sha256"]);
+        // Q35b flight-recorder: digest the dispatch input (route identity +
+        // arg keys + value hashes, no raw values) so journal entries can
+        // answer "what went in" — replay verification without storing
+        // untrusted payloads verbatim in the audit trail.
+        let args_digest = wm_governance::args_digest(tool.name(), &args);
         let write_audit_baseline = self
             .write_audit
             .as_ref()
@@ -731,6 +739,7 @@ impl DispatchPipeline {
                     declared_writes,
                     args_memory_id.as_deref(),
                     args_content_hash.as_deref(),
+                    Some(args_digest),
                     output,
                     true,
                     confirm_gated,
@@ -758,6 +767,7 @@ impl DispatchPipeline {
                     declared_writes,
                     args_memory_id.as_deref(),
                     args_content_hash.as_deref(),
+                    Some(args_digest),
                     &serde_json::Value::Null,
                     false,
                     confirm_gated,

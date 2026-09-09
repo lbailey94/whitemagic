@@ -38,6 +38,114 @@ use crate::expansion::common::{
     schema, str_array_prop, str_prop,
 };
 
+// ── Q34 glyph wire format (sub-experiment 2) ─────────────────────────
+//
+// Draft live-surface codebook (measured 2026-09-09 on 10 real payload
+// shapes: 33.0% byte savings, 10/10 lossless — Q34_GLYPH_PORT_SPEC.md).
+// Wire shape: {"r": <route code>, "a": {<arg code>: value}}.
+// Unknown codes pass through unchanged (both directions), so partial
+// books never corrupt — the prat_compressor.py passthrough contract.
+// Gated by WM_GLYPH=1 at the meta-tool seam; default OFF, knob-off-by-
+// default house rule. Q09 prompt-injection review still blocks WIRE use
+// (glyph bytes crossing trust boundaries); decode-side only for now.
+
+const GLYPH_ROUTES: &[(&str, &str)] = &[
+    ("memory.search", "Ms"),
+    ("memory.create", "Mc"),
+    ("memory.read", "Mr"),
+    ("memory.hybrid_recall", "Mh"),
+    ("memory.list", "Ml"),
+    ("session.record", "Sr"),
+    ("session.continuity", "Sc"),
+    ("session.checkpoint", "Sk"),
+    ("dharma.escalate", "De"),
+    ("dharma.review_queue", "Dq"),
+    ("dharma.resolve_review", "Dr"),
+    ("dharma.rules", "Du"),
+    ("graph.walk", "Gw"),
+    ("citta.status", "Cs"),
+    ("dream.status", "Ds"),
+    ("smarana.status", "Sm"),
+    ("tools.list", "Tl"),
+    ("agent.list", "Al"),
+    ("karma.report", "Kr"),
+];
+
+const GLYPH_ARGS: &[(&str, &str)] = &[
+    ("route", "r"),
+    ("args", "a"),
+    ("query", "q"),
+    ("limit", "n"),
+    ("content", "c"),
+    ("id", "i"),
+    ("tags", "t"),
+    ("title", "h"),
+    ("session_id", "s"),
+    ("role", "o"),
+    ("turn_type", "y"),
+    ("importance", "p"),
+    ("tool", "T"),
+    ("action", "N"),
+    ("purpose", "u"),
+    ("decision", "d"),
+    ("score", "e"),
+    ("depth", "D"),
+    ("scope", "S"),
+    ("name", "m"),
+    ("arguments", "g"),
+];
+
+/// `WM_GLYPH=1` enables glyph-wire decoding on the meta-tool seam.
+#[must_use]
+pub fn glyph_mode_from_env() -> bool {
+    std::env::var("WM_GLYPH").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+}
+
+fn glyph_lookup<'a>(book: &'a [(&'a str, &'a str)], from: &str) -> Option<&'a str> {
+    book.iter().find(|(k, _)| *k == from).map(|(_, code)| *code)
+}
+
+fn glyph_reverse<'a>(book: &'a [(&'a str, &'a str)], code: &str) -> Option<&'a str> {
+    book.iter().find(|(_, v)| *v == code).map(|(k, _)| *k)
+}
+
+/// Decode one glyph object {"r": code, "a": {code: v}} into
+/// {"route": name, "args": {name: v}}. Unknown keys pass through.
+/// Non-glyph input returns None (caller keeps the raw args).
+#[must_use]
+pub fn decode_glyph(args: &Value) -> Option<Value> {
+    let obj = args.as_object()?;
+    let rcode = obj.get("r")?.as_str()?;
+    let route = glyph_reverse(GLYPH_ROUTES, rcode)?;
+    let mut out = serde_json::Map::new();
+    out.insert("route".into(), Value::String(route.to_string()));
+    let a = obj.get("a").cloned().unwrap_or_else(|| json!({}));
+    if let Some(aobj) = a.as_object() {
+        let mut decoded = serde_json::Map::new();
+        for (k, v) in aobj {
+            let name = glyph_reverse(GLYPH_ARGS, k).unwrap_or(k);
+            decoded.insert(name.to_string(), v.clone());
+        }
+        out.insert("args".into(), Value::Object(decoded));
+    }
+    Some(Value::Object(out))
+}
+
+/// Encode {route, args} into glyph form — measurement/debug helper
+/// (mirror of the wire decode; used by the bench and tests).
+#[must_use]
+pub fn encode_glyph(route: &str, args: &Value) -> Value {
+    let code = glyph_lookup(GLYPH_ROUTES, route).unwrap_or(route);
+    let mut a = serde_json::Map::new();
+    if let Some(obj) = args.as_object() {
+        for (k, v) in obj {
+            let kc = glyph_lookup(GLYPH_ARGS, k).unwrap_or(k);
+            a.insert(kc.to_string(), v.clone());
+        }
+    }
+    json!({ "r": code, "a": Value::Object(a) })
+}
+
 /// Minimum confidence for NLU routing to dispatch. Below this, the router
 /// abstains and returns an error suggesting explicit routing instead of
 /// dispatching to the wrong tool. Only applies to `thought=` (NLU) routing,
@@ -3178,8 +3286,28 @@ impl Tool for WmMetaTool {
     }
     async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let thought = args.get("thought").and_then(|v| v.as_str()).unwrap_or("");
-        let route = args.get("route").and_then(|v| v.as_str());
-        let passthrough_args = args.get("args").cloned().unwrap_or(Value::Null);
+        // Q34 glyph wire: {"r": code, "a": {code: v}} decodes into
+        // {route, args} BEFORE routing when WM_GLYPH=1. Decode-side only;
+        // Q09 review still gates encoding across trust boundaries.
+        // Owned String so the decoded temporary can drop immediately.
+        let (route, passthrough_args) = if glyph_mode_from_env() {
+            match decode_glyph(&args) {
+                Some(Value::Object(map)) => (
+                    map.get("route").and_then(Value::as_str).map(String::from),
+                    map.get("args").cloned().unwrap_or(Value::Null),
+                ),
+                _ => (
+                    args.get("route").and_then(Value::as_str).map(String::from),
+                    args.get("args").cloned().unwrap_or(Value::Null),
+                ),
+            }
+        } else {
+            (
+                args.get("route").and_then(Value::as_str).map(String::from),
+                args.get("args").cloned().unwrap_or(Value::Null),
+            )
+        };
+        let route = route.as_deref();
 
         if thought.is_empty() && route.is_none() {
             // Echo the keys we DID receive: when a client drops the routing
@@ -5564,5 +5692,50 @@ mod tests {
         let (tool, conf) = WmMetaTool::classify("oats disagreement nlu router");
         assert_eq!(tool, "nlu.shadow_report");
         assert!(conf > 0.0);
+    }
+
+    // ── Q34 glyph wire (decode seam) ─────────────────────────────────
+
+    #[test]
+    fn glyph_roundtrip_known_codes() {
+        let raw = json!({"route": "memory.search", "args": {"query": "x", "limit": 3}});
+        let encoded = encode_glyph("memory.search", &json!({"query": "x", "limit": 3}));
+        assert_eq!(encoded["r"], "Ms");
+        assert_eq!(encoded["a"]["q"], "x");
+        assert_eq!(encoded["a"]["n"], 3);
+        let decoded = decode_glyph(&encoded).expect("glyph input must decode");
+        assert_eq!(decoded["route"], raw["route"]);
+        assert_eq!(decoded["args"]["query"], "x");
+        assert_eq!(decoded["args"]["limit"], 3);
+    }
+
+    #[test]
+    fn glyph_unknown_codes_pass_through() {
+        let weird = json!({"r": "not-a-code", "a": {"zzz": 1}});
+        assert!(decode_glyph(&weird).is_none(), "unknown route code refuses");
+        let partial = json!({"r": "Ms", "a": {"zzz": 1}});
+        let decoded = decode_glyph(&partial).expect("known route decodes");
+        assert_eq!(decoded["args"]["zzz"], 1, "unknown arg code passes through");
+        assert_eq!(decode_glyph(&json!({"thought": "hi"})), None);
+    }
+
+    #[test]
+    fn glyph_book_covers_measured_routes() {
+        // The book must cover the routes the 33% measurement was run on.
+        for route in [
+            "memory.search",
+            "memory.create",
+            "session.record",
+            "session.continuity",
+            "dharma.escalate",
+            "graph.walk",
+            "tools.list",
+            "citta.status",
+        ] {
+            assert!(
+                glyph_lookup(GLYPH_ROUTES, route).is_some(),
+                "missing {route}"
+            );
+        }
     }
 }
