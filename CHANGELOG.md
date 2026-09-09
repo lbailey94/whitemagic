@@ -5,6 +5,13 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.0] — 2026-09-09
+
+### Distribution and install hardening
+- `install.sh`: self-wires shell profile PATH so the first command after install just works, and creates `~/.profile` when no shell profile exists (minimal containers).
+- One-command release fan-out: `scripts/release.sh` drives tag → CI → binaries → crates.io → npm → Docker → official MCP registry with 429-aware publish loops.
+- v9.1.0 shipped on every channel: GitHub release with 5 binaries (linux gnu+musl, macOS x86_64/aarch64, windows), 15 crates published in a single ordered pass (zero rate-limit stalls), npm `whitemagic-mcp@9.1.0`, Docker tags `9.1.0`/`9`/`latest`, official MCP registry listing.
+
 ## [Unreleased]
 
 ### Visibility boundaries on content-returning paths
