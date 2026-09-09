@@ -297,15 +297,14 @@ impl Gateway {
 
     /// Proxy a pinned route to one backing scope. The gateway-level
     /// arguments are `{route, scope?, args}`; the backing receives
-    /// `{route, args}` with the scope stripped from the inner args. The
-    /// backing envelope passes through untouched except for the `scope`
-    /// label (the stable-envelope rule); a read-only refusal keeps its
-    /// hint.
+    /// `{route, args}` with the routing scope (top level) consumed by
+    /// `resolve_pinned`. Inner `args` pass through untouched — a tool's
+    /// own `args.scope` (e.g. the code.claim lease scope) is tool
+    /// payload, not routing, and must reach the backing intact. The
+    /// backing envelope passes through except for the `scope` label
+    /// (the stable-envelope rule); a read-only refusal keeps its hint.
     fn proxy(&self, scope_name: &str, route: &str, arguments: &Value) -> Result<Value, String> {
-        let mut inner = arguments.get("args").cloned().unwrap_or_else(|| json!({}));
-        if let Some(obj) = inner.as_object_mut() {
-            obj.remove("scope");
-        }
+        let inner = arguments.get("args").cloned().unwrap_or_else(|| json!({}));
         let backing_args = json!({"route": route, "args": inner});
         self.proxy_raw(scope_name, &backing_args)
     }
@@ -768,10 +767,11 @@ pub fn parse_federate_spec(spec: &str) -> anyhow::Result<Vec<ScopeSpec>> {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::sync::Arc;
     use std::sync::Mutex as StdMutex;
 
     struct MockBacking {
-        calls: StdMutex<Vec<(String, Value)>>,
+        calls: Arc<StdMutex<Vec<(String, Value)>>>,
         envelopes: HashMap<String, Value>,
         disclosures: HashMap<String, ScopeDisclosure>,
     }
@@ -779,7 +779,7 @@ mod tests {
     impl MockBacking {
         fn new() -> Self {
             Self {
-                calls: StdMutex::new(Vec::new()),
+                calls: Arc::new(StdMutex::new(Vec::new())),
                 envelopes: HashMap::new(),
                 disclosures: HashMap::new(),
             }
@@ -954,6 +954,61 @@ mod tests {
         let envelope: Value = serde_json::from_str(text).unwrap();
         assert_eq!(envelope["status"], "error");
         assert_eq!(envelope["error_code"], "no_scope");
+    }
+
+    // Q03 regression (2026-09-08): the gateway stripped `scope` from the
+    // INNER args before every pinned forward, destroying tool-legitimate
+    // scope payloads (code.claim's lease scope) — direct backend accepted
+    // the identical claim while the gateway failed with "Missing required
+    // argument: 'scope'". Inner args are tool payload; only the TOP-LEVEL
+    // routing scope selects the backing.
+    #[test]
+    fn pinned_proxy_preserves_inner_args_scope() {
+        let mock = MockBacking::new().with_envelope("dev", json!({"status": "success"}));
+        let calls = mock.calls.clone();
+        let gw = gateway_with(mock, &[spec("dev"), spec("vault")], Some("dev"));
+        let response = gw.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"code.claim","args":{"scope":"crates/wm-mcp/src/gateway.rs","intent":"test intent","owner_session":"test-session","ttl_secs":120}}}}"#,
+        );
+        let parsed: Value = serde_json::from_str(&response).unwrap();
+        let text = parsed["result"]["content"][0]["text"].as_str().unwrap();
+        let envelope: Value = serde_json::from_str(text).unwrap();
+        assert_eq!(
+            envelope["status"], "success",
+            "forward must succeed: {envelope}"
+        );
+        let calls = calls.lock().unwrap();
+        let (scope, forwarded) = calls.last().expect("backing must have been called");
+        assert_eq!(scope, "dev", "top-level routing absent → home scope");
+        let inner = &forwarded["args"];
+        assert_eq!(
+            inner["scope"], "crates/wm-mcp/src/gateway.rs",
+            "inner args.scope is tool payload — must reach the backing intact"
+        );
+        assert_eq!(inner["owner_session"], "test-session");
+        assert_eq!(inner["intent"], "test intent");
+    }
+
+    #[test]
+    fn inner_args_scope_is_not_routing() {
+        // An inner args.scope naming another scope must NOT re-route and
+        // must NOT be consumed: it rides to the home backing untouched.
+        let mock = MockBacking::new().with_envelope("dev", json!({"status": "success"}));
+        let calls = mock.calls.clone();
+        let gw = gateway_with(mock, &[spec("dev"), spec("vault")], Some("dev"));
+        let response = gw.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"code.check","args":{"scope":"vault"}}}}"#,
+        );
+        let parsed: Value = serde_json::from_str(&response).unwrap();
+        let text = parsed["result"]["content"][0]["text"].as_str().unwrap();
+        serde_json::from_str::<Value>(text).unwrap();
+        let calls = calls.lock().unwrap();
+        let (scope, forwarded) = calls.last().expect("backing must have been called");
+        assert_eq!(
+            scope, "dev",
+            "routing scope comes from the top level / home, not inner args"
+        );
+        assert_eq!(forwarded["args"]["scope"], "vault");
     }
 
     #[test]
