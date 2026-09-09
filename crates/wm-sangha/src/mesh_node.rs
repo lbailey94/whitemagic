@@ -926,7 +926,9 @@ mod tests {
     /// beaconing after it returns.
     const TEST_GROUP_A: &str = "224.0.0.71";
     const TEST_GROUP_B: &str = "224.0.0.72";
+    #[cfg(not(target_os = "windows"))]
     const TEST_GROUP_C: &str = "224.0.0.73";
+    #[cfg(not(target_os = "windows"))]
     const TEST_GROUP_D: &str = "224.0.0.74";
 
     #[test]
