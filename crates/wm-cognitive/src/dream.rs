@@ -483,7 +483,7 @@ impl DreamCycle {
     }
 
     /// Get a mutable reference to the Autonomous Smarana engine, if attached.
-    pub fn smarana_mut(&mut self) -> Option<&mut crate::smarana::AutonomousSmarana> {
+    pub const fn smarana_mut(&mut self) -> Option<&mut crate::smarana::AutonomousSmarana> {
         self.smarana.as_mut()
     }
 
@@ -1486,7 +1486,7 @@ impl DreamCycle {
         }
 
         let smarana_note = if smarana_decayed > 0 {
-            format!(", {} Ebbinghaus-decayed via Smarana", smarana_decayed)
+            format!(", {smarana_decayed} Ebbinghaus-decayed via Smarana")
         } else {
             String::new()
         };

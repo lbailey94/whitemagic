@@ -553,13 +553,12 @@ mod tests {
     #[test]
     fn test_read_all_chapters() {
         for i in 1..=30 {
-            let uri = format!("grimoire://chapter/{:02}", i);
+            let uri = format!("grimoire://chapter/{i:02}");
             let content = read_resource(&uri);
-            assert!(content.is_some(), "Failed to read resource {}", uri);
+            assert!(content.is_some(), "Failed to read resource {uri}");
             let text = content.unwrap();
             assert!(
-                text.contains(&format!("Chapter {:02}", i))
-                    || text.contains(&format!("Chapter {}", i))
+                text.contains(&format!("Chapter {i:02}")) || text.contains(&format!("Chapter {i}"))
             );
         }
     }

@@ -1,6 +1,19 @@
 //! Autonomous Smarana — Continuous Spaced-Repetition, Hebbian Synaptic
 //! Consolidation, and Gist Distillation (WhiteMagic v9.2).
 //!
+// Deterministic scoring module: every float expression below is part of a
+// ranking or retention computation whose ordering depends on IEEE-754
+// rounding. `mul_add`, `midpoint`, and `ln_1p` reassociations change that
+// rounding and with it the ranking, so the deliberate allow class
+// documented for the deterministic scorer (AGENTS.md; wm-memory
+// corroboration_boost) is extended module-wide here instead of rewriting
+// the math.
+#![allow(
+    clippy::suboptimal_flops,
+    clippy::imprecise_flops,
+    clippy::manual_midpoint
+)]
+
 //! # Architecture & Cognitive Foundations
 //!
 //! **Smarana** (Sanskrit: *स्मरण*, "memory, mindfulness, recollection") is the
@@ -127,6 +140,8 @@ impl Default for SmaranaConfig {
 // ── Spaced Repetition (DSR Model) ─────────────────────────────────────────
 
 /// Outcome of a spaced-repetition testing event.
+// f32 fields make Eq unsound here; PartialEq is the correct contract.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ReviewOutcome {
     /// Memory ID evaluated.
@@ -152,6 +167,8 @@ pub struct ReviewOutcome {
 }
 
 /// A tracked memory item within the continuous spaced-repetition registry.
+// f32 fields make Eq unsound here; PartialEq is the correct contract.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RepetitionItem {
     /// Memory UUID.
@@ -411,6 +428,7 @@ impl HebbianReinforcer {
     }
 
     /// Canonical ordering for unordered pairs of UUIDs.
+    #[must_use]
     pub const fn canonical_pair(u: Uuid, v: Uuid) -> (Uuid, Uuid) {
         if u.as_u128() <= v.as_u128() {
             (u, v)
@@ -597,7 +615,7 @@ impl AlchemicalStage {
 }
 
 /// Distribution of memories across the 4 alchemical stages.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AlchemicalDistribution {
     /// Nigredo count
     pub decay: usize,
@@ -719,8 +737,8 @@ impl GistDistiller {
 
         // 2. Extract 16D Citta Imprint
         let mut citta_imprint = [0.5f32; 16];
-        for i in 0..16 {
-            citta_imprint[i] = citta.get(i);
+        for (i, slot) in citta_imprint.iter_mut().enumerate() {
+            *slot = citta.get(i);
         }
 
         // 3. Extract Salient Keywords (term frequency across cluster)
@@ -748,7 +766,7 @@ impl GistDistiller {
         }
 
         let mut sorted_words: Vec<(String, usize)> = word_counts.into_iter().collect();
-        sorted_words.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted_words.sort_by_key(|&(_, count)| std::cmp::Reverse(count));
         let salient_keywords: Vec<String> =
             sorted_words.into_iter().take(6).map(|(w, _)| w).collect();
 
@@ -775,16 +793,16 @@ impl GistDistiller {
         }
 
         // 5. Synthesize Abstract Summary
+        let concept_list = salient_keywords.join(", ");
         let summary_body = if core_predicates.is_empty() {
             format!(
-                "Distilled cluster of {} memories around concepts: {}",
+                "Distilled cluster of {} memories around concepts: {concept_list}",
                 memories.len(),
-                salient_keywords.join(", ")
             )
         } else {
             core_predicates.join(". ")
         };
-        let abstract_summary = format!("[Gist Distillation]: {}", summary_body);
+        let abstract_summary = format!("[Gist Distillation]: {summary_body}");
 
         // 6. Compute Stability (Gist stability exceeds constituent episodic items)
         let max_constituent_stability = reps
@@ -828,7 +846,7 @@ impl GistDistiller {
             "alchemical:citrinitas".to_string(),
         ];
         for kw in &gist.salient_keywords {
-            mem.metadata.tags.push(format!("kw:{}", kw));
+            mem.metadata.tags.push(format!("kw:{kw}"));
         }
         mem
     }
@@ -1324,8 +1342,7 @@ mod tests {
         let r_at_s = item.retrievability(at_s);
         assert!(
             (r_at_s - 0.90).abs() < 0.01,
-            "Expected ~0.90 at t=S, got {}",
-            r_at_s
+            "Expected ~0.90 at t=S, got {r_at_s}",
         );
 
         // At t = 20 days, R should be 0.90^2 = 0.81
@@ -1333,8 +1350,7 @@ mod tests {
         let r_at_2s = item.retrievability(at_2s);
         assert!(
             (r_at_2s - 0.81).abs() < 0.02,
-            "Expected ~0.81 at t=2S, got {}",
-            r_at_2s
+            "Expected ~0.81 at t=2S, got {r_at_2s}",
         );
     }
 

@@ -2390,6 +2390,11 @@ mod tests {
         assert_eq!(retrieved.content, "Cross-galaxy research memo");
 
         // Non-existent id returns None
-        assert!(store.find_across_galaxies(uuid::Uuid::new_v4()).unwrap().is_none());
+        assert!(
+            store
+                .find_across_galaxies(uuid::Uuid::new_v4())
+                .unwrap()
+                .is_none()
+        );
     }
 }

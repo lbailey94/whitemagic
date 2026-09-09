@@ -1,4 +1,5 @@
 //! Polymorphic Resonant Adaptive Yoga (PRAY) & Hongmen / White Lotus Hierarchy.
+//!
 //! Formerly PRAT (Polymorphic Resonant Adaptive Tools), renamed in v9.2.
 //! Yoga (Skt. √yuj, "to yoke, join"): that which ties together — one serve
 //! folding a thousand or more tools and systems into a single entrypoint.
@@ -524,10 +525,7 @@ mod tests {
         let store = Arc::new(store);
 
         for i in 0..3 {
-            let mut mem = Memory::new(
-                Galaxy::Codex,
-                format!("{{\"turn_type\": \"ping{i}\"}}").into(),
-            );
+            let mut mem = Memory::new(Galaxy::Codex, format!("{{\"turn_type\": \"ping{i}\"}}"));
             mem.metadata.tags = vec!["telemetry".into()];
             store.put(Galaxy::Codex, &mem).unwrap();
         }

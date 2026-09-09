@@ -219,7 +219,7 @@ fn pray_meta_tool(
     search: Option<Arc<SearchEngine>>,
     associations: Arc<AssociationStore>,
 ) -> Arc<PrayMetaTool> {
-    let mut tool = PrayMetaTool::new(store.clone()).with_associations(associations.clone());
+    let mut tool = PrayMetaTool::new(store.clone()).with_associations(associations);
     if let Some(search) = search {
         tool = tool.with_search(search);
     }
@@ -233,8 +233,7 @@ fn cold_rotate_tool(
     search: Option<Arc<SearchEngine>>,
     associations: Arc<AssociationStore>,
 ) -> Arc<GalacticColdRotateTool> {
-    let mut tool =
-        GalacticColdRotateTool::new(store.clone()).with_associations(associations.clone());
+    let mut tool = GalacticColdRotateTool::new(store.clone()).with_associations(associations);
     if let Some(search) = search {
         tool = tool.with_search(search);
     }

@@ -1155,7 +1155,7 @@ mod tests {
         let store = Arc::new(store);
 
         let add_noise = |content: String| {
-            let mut mem = Memory::new(Galaxy::Codex, content.into());
+            let mut mem = Memory::new(Galaxy::Codex, content);
             mem.metadata.tags = vec!["telemetry".into()];
             store.put(Galaxy::Codex, &mem).unwrap();
         };
@@ -1191,7 +1191,7 @@ mod tests {
 
         let mut parts: Vec<_> = std::fs::read_dir(cold_dir.path())
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .map(|e| e.path())
             .filter(|p| p.extension().is_some_and(|x| x == "jsonl"))
             .collect();
