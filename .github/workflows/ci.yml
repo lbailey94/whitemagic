@@ -86,7 +86,9 @@ jobs:
       - run: cargo test --all-targets
 
   test-windows:
-    timeout-minutes: 45
+    # 45m was three consecutive timeouts (Sep 8-9); 90m leaves headroom for
+    # a cold rust-cache rebuild on the Windows runner.
+    timeout-minutes: 90
     name: Tests (Windows)
     runs-on: windows-latest
     env:

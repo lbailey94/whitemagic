@@ -974,6 +974,14 @@ mod tests {
         assert_eq!(slot.get().expect("node").peer_id(), "slot-node");
     }
 
+    // The four fleet tests below spawn real TCP servers + UDP multicast
+    // beacons (224.0.0.69) and wait on cross-process propagation. GitHub's
+    // Windows runners never deliver the multicast (runner firewall/veth
+    // interface), so the propagation awaits never fire: three consecutive
+    // CI runs hung here to the 45-min job timeout (Sep 8-9, evidence in
+    // run 34303664225 logs). Unix runs the full suite; a Windows-native
+    // transport-test lane is tracked in the v9.2 work queue.
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn join_binds_identity_both_ways_and_chat_flows() {
         // Exact-count assert below → own group (zombie + LAN isolation).
@@ -1033,6 +1041,7 @@ mod tests {
         assert_eq!(inbox["messages"][0]["content"], "hello from a");
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn join_dials_fresh_and_leaves_no_ghost_entries() {
         // Membership asserts, not exact counts: on one host, every
@@ -1088,6 +1097,7 @@ mod tests {
         assert_eq!(status["agent_present"], true, "{status}");
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn agent_presence_transitions_propagate_to_peers() {
         // The fleet-night topology, asserted live: node up + agent active
@@ -1163,6 +1173,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn chat_to_offline_peer_queues_and_delivers_on_rejoin() {
         // The S3 acceptance: send to an offline peer → queued (agent_asleep,
