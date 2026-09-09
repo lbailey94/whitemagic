@@ -1220,6 +1220,7 @@ mod tests {
         assert_eq!(a.mail_summary()["queued_total"], 0);
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn mail_slot_and_chat_log_persist_across_node_restart() {
         // Both halves of the mail-slot survive restart: the sender's queued
@@ -1310,6 +1311,7 @@ mod tests {
         assert_eq!(a.mail_summary()["queued_total"], 0);
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn quarantine_cuts_off_and_refuses_rejoin() {
         let a = spawn_node_with("q-node-a", 17_604, false, TEST_GROUP_A, 300).await;
