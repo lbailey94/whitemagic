@@ -56,6 +56,7 @@ pub mod drive;
 pub mod firewall;
 pub mod galaxy;
 pub mod geneseed;
+pub mod glyph;
 pub mod graph;
 pub mod homeostasis;
 pub mod imagination;
@@ -555,6 +556,10 @@ pub fn register_expansion(
             .register(Arc::new(DharmaReviewQueueTool::new(queue.clone())))
             .register(Arc::new(DharmaResolveReviewTool::new(queue.clone())));
     }
+
+    // Glyph wire tools (2) — pure translators; trust gate stays on the
+    // meta-tool decode seam (WM_GLYPH=1).
+    reg = crate::expansion::glyph::register_glyph(&reg);
 
     // Sandbox tools (2) — set_limits, limits
     reg = crate::expansion::sandbox::register_sandbox(&reg, resource_rules);

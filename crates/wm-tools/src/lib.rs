@@ -49,7 +49,7 @@ use crate::expansion::common::{
 // default house rule. Q09 prompt-injection review still blocks WIRE use
 // (glyph bytes crossing trust boundaries); decode-side only for now.
 
-const GLYPH_ROUTES: &[(&str, &str)] = &[
+pub(crate) const GLYPH_ROUTES: &[(&str, &str)] = &[
     ("memory.search", "Ms"),
     ("memory.create", "Mc"),
     ("memory.read", "Mr"),
@@ -71,7 +71,7 @@ const GLYPH_ROUTES: &[(&str, &str)] = &[
     ("karma.report", "Kr"),
 ];
 
-const GLYPH_ARGS: &[(&str, &str)] = &[
+pub(crate) const GLYPH_ARGS: &[(&str, &str)] = &[
     ("route", "r"),
     ("args", "a"),
     ("query", "q"),
@@ -101,11 +101,11 @@ pub fn glyph_mode_from_env() -> bool {
     std::env::var("WM_GLYPH").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
 }
 
-fn glyph_lookup<'a>(book: &'a [(&'a str, &'a str)], from: &str) -> Option<&'a str> {
+pub(crate) fn glyph_lookup<'a>(book: &'a [(&'a str, &'a str)], from: &str) -> Option<&'a str> {
     book.iter().find(|(k, _)| *k == from).map(|(_, code)| *code)
 }
 
-fn glyph_reverse<'a>(book: &'a [(&'a str, &'a str)], code: &str) -> Option<&'a str> {
+pub(crate) fn glyph_reverse<'a>(book: &'a [(&'a str, &'a str)], code: &str) -> Option<&'a str> {
     book.iter().find(|(_, v)| *v == code).map(|(k, _)| *k)
 }
 
