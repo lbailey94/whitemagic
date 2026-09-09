@@ -859,8 +859,7 @@ fn sha256_hex(data: &[u8]) -> String {
                 .wrapping_add(w[i - 7])
                 .wrapping_add(s1);
         }
-        let (mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut hh) =
-            (h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]);
+        let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut hh] = h;
         for i in 0..64 {
             let s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
             let ch = (e & f) ^ ((!e) & g);
@@ -891,9 +890,9 @@ fn sha256_hex(data: &[u8]) -> String {
         h[7] = h[7].wrapping_add(hh);
     }
     let mut out = String::with_capacity(64);
-    h.iter().for_each(|x| {
+    for x in &h {
         let _ = write!(out, "{x:08x}");
-    });
+    }
     out
 }
 
