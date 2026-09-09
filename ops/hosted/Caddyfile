@@ -1,0 +1,33 @@
+# mcp.whitemagic.dev — the hosted lane (TLS, auth, metering)
+# Proxy chain: client -> Caddy (TLS) -> authd sidecar (keys + caps) -> wm (readonly SSE)
+
+mcp.whitemagic.dev {
+	encode zstd gzip
+
+	# Liveness — unauthenticated, cheap, for uptime checks
+	handle /health {
+		respond "ok\n" 200
+	}
+
+	# Smithery static server card (no auth, public metadata)
+	handle /.well-known/mcp/server-card.json {
+		root * /var/www/mcp-card
+		file_server
+		header Content-Type application/json
+	}
+
+	# MCP streamable endpoint: auth first, then the wm SSE server
+	handle /mcp {
+		reverse_proxy 127.0.0.1:18790
+	}
+
+	# Everything else: 404 (surface discipline — no stray paths)
+	handle {
+		respond 404
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+	}
+}

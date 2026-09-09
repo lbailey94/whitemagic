@@ -1,0 +1,22 @@
+[Unit]
+Description=WhiteMagic hosted recall (read-only SSE)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=whitemagic
+Group=whitemagic
+ExecStart=/home/whitemagic/.local/bin/wm serve --transport sse --bind 127.0.0.1:18789 --readonly --rate-limit 600 --max-requests 100000
+Restart=on-failure
+RestartSec=5
+# Hardening: the wm binary does its own Landlock sandboxing; systemd adds a second ring
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/home/whitemagic/.local/share/whitemagic
+PrivateTmp=yes
+MemoryMax=2G
+CPUQuota=200%
+
+[Install]
+WantedBy=multi-user.target
