@@ -178,7 +178,9 @@ if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
     if [ "$path_fixed" = "1" ]; then
         echo "PATH wired into your shell profile — open a new terminal, or run now:"
     else
-        echo "NOTE: ${INSTALL_DIR} is not in your PATH and no shell profile was found."
-        echo "Add it with: export PATH=\"${INSTALL_DIR}:\$PATH\""
+        # No profile file existed (minimal containers/boxes) — create ~/.profile,
+        # which POSIX login shells read.
+        printf '# Added by the WhiteMagic installer\n%s\n' "$path_line" > "$HOME/.profile"
+        echo "PATH wired into ~/.profile (created) — open a new terminal, or run now:"
     fi
 fi
