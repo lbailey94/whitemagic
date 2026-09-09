@@ -11,6 +11,14 @@ ARG WM_VERSION=v9
 ARG WM_ARCH=x86_64
 ARG WM_TARGET=musl
 
+# Required by the official MCP registry (ownership proof for the OCI
+# package reference in npm/whitemagic-mcp/server.json).
+LABEL io.modelcontextprotocol.server.name="io.github.lbailey94/whitemagic-mcp" \
+      org.opencontainers.image.title="WhiteMagic MCP server" \
+      org.opencontainers.image.version="9.0.0" \
+      org.opencontainers.image.url="https://whitemagic.dev" \
+      org.opencontainers.image.source="https://github.com/lbailey94/whitemagic"
+
 RUN apk add --no-cache curl coreutils \
  && curl -fsSL \
       "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/wm-linux-${WM_ARCH}-${WM_TARGET}" \
