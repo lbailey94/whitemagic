@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
@@ -316,8 +317,15 @@ class FailureFixtures(unittest.TestCase):
     def test_pre_output_setup_failure_receipt(self):
         with tempfile.TemporaryDirectory() as tmp:
             output=Path(tmp)/"out.json"; dataset=Path(tmp)/"data.json"; dataset.write_text("[]")
-            run=subprocess.run([sys.executable,str(SCRIPTS/"longmemeval_bench.py"),"--binary","/definitely/missing/wm","--dataset",str(dataset),"--output",str(output)],capture_output=True,text=True)
-            self.assertNotEqual(run.returncode,0)
+            argv = [
+                "longmemeval_bench.py", "--binary", "/injected/missing/wm",
+                "--dataset", str(dataset), "--output", str(output),
+            ]
+            with mock.patch.object(sys, "argv", argv), mock.patch.object(
+                longmem, "find_binary", side_effect=FileNotFoundError("injected setup failure")
+            ):
+                with self.assertRaises(FileNotFoundError):
+                    longmem.main()
             receipt=json.loads(Path(str(output)+".failure.json").read_text())
             self.assertFalse(receipt["valid_execution"]); self.assertEqual(receipt["receipt_type"],"pre_output_failure")
 
