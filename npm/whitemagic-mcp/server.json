@@ -11,6 +11,14 @@
   "version": "9.0.0",
   "packages": [
     {
+      "registryType": "npm",
+      "identifier": "whitemagic-mcp",
+      "version": "9.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    },
+    {
       "registryType": "oci",
       "identifier": "docker.io/lbailey94/whitemagic:9",
       "transport": {
