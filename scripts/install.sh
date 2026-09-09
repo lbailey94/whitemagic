@@ -164,6 +164,21 @@ echo "Health check:"
 echo "  wm doctor"
 echo ""
 if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
-    echo "NOTE: ${INSTALL_DIR} is not in your PATH."
-    echo "Add it with: export PATH=\"${INSTALL_DIR}:\$PATH\""
+    # Self-wire the shell profile so `wm` works in new terminals — a fresh
+    # stranger should never see "wm: not found" right after installing.
+    path_line="export PATH=\"${INSTALL_DIR}:\$PATH\""
+    path_fixed=0
+    for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
+        [ -f "$rc" ] || continue
+        if ! grep -qs "${INSTALL_DIR}" "$rc"; then
+            printf '\n# Added by the WhiteMagic installer\n%s\n' "$path_line" >> "$rc"
+            path_fixed=1
+        fi
+    done
+    if [ "$path_fixed" = "1" ]; then
+        echo "PATH wired into your shell profile — open a new terminal, or run now:"
+    else
+        echo "NOTE: ${INSTALL_DIR} is not in your PATH and no shell profile was found."
+        echo "Add it with: export PATH=\"${INSTALL_DIR}:\$PATH\""
+    fi
 fi
