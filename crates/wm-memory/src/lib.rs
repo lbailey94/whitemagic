@@ -9,6 +9,7 @@
 
 pub mod associations;
 pub mod attestation;
+mod codec;
 pub mod conversational;
 pub mod credentials;
 pub mod embedder;

@@ -195,6 +195,24 @@ pub fn rebuild_index(
     search: &SearchEngine,
     galaxy_filter: &[String],
 ) -> Result<IndexRebuildReport> {
+    // Decode every selected source before queuing any index deletion. Keep
+    // these snapshots for the write phase, so no second tolerant scan can
+    // silently drop records. Callers must still quiesce concurrent writers.
+    let mut snapshots = Vec::new();
+    for galaxy in Galaxy::memory_galaxies() {
+        if galaxy_filter.is_empty() || galaxy_filter.iter().any(|g| g == galaxy.db_name()) {
+            snapshots.push((galaxy, store.scan_all_strict(galaxy)?));
+        }
+    }
+    if galaxy_filter.iter().any(|name| {
+        !Galaxy::memory_galaxies()
+            .iter()
+            .any(|g| g.db_name() == name)
+    }) {
+        return Err(CoreError::Memory(
+            "reindex filter must name a memory galaxy".into(),
+        ));
+    }
     let mut report = IndexRebuildReport::default();
     {
         let mut writer = search.writer()?;
@@ -217,11 +235,7 @@ pub fn rebuild_index(
             }
         }
 
-        for galaxy in Galaxy::all() {
-            if !galaxy_filter.is_empty() && !galaxy_filter.iter().any(|g| g == galaxy.db_name()) {
-                continue;
-            }
-            let memories = store.scan_all(galaxy)?;
+        for (galaxy, memories) in snapshots {
             let mut stats = GalaxyRebuildStats {
                 galaxy: galaxy.db_name().to_string(),
                 ..GalaxyRebuildStats::default()
@@ -530,7 +544,7 @@ mod tests {
         let report = rebuild_index(&store, &search, &[]).unwrap();
         assert_eq!(report.indexed, 3);
         assert_eq!(report.scanned, 3);
-        assert_eq!(report.galaxies.len(), Galaxy::COUNT);
+        assert_eq!(report.galaxies.len(), Galaxy::memory_galaxies().len());
 
         let ghost = search.search("ghost", 10).unwrap();
         assert!(ghost.is_empty(), "stale index entry must be purged");
@@ -538,6 +552,28 @@ mod tests {
         let rust = search.search("rust memory one", 10).unwrap();
         assert_eq!(rust.len(), 1);
         assert_eq!(rust[0].content, "rust memory one");
+    }
+
+    #[test]
+    fn rebuild_refuses_undecodable_sources_before_touching_index() {
+        let (_tmp, store, search) = setup();
+        put_and_index(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "preserved searchable evidence",
+        );
+        let id = uuid::Uuid::new_v4();
+        store
+            .put_raw(Galaxy::Sessions, id.as_bytes(), b"invalid messagepack")
+            .unwrap();
+        let before = search.count_docs_in_galaxy("codex").unwrap();
+        assert!(rebuild_index(&store, &search, &[]).is_err());
+        // Committing afterward also proves no deletion was left pending.
+        let mut writer = search.writer().unwrap();
+        search.commit(&mut writer).unwrap();
+        assert_eq!(search.count_docs_in_galaxy("codex").unwrap(), before);
+        assert_eq!(search.search("preserved", 10).unwrap().len(), 1);
     }
 
     #[test]

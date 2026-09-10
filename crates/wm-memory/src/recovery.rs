@@ -211,7 +211,7 @@ fn check_galaxy_integrity(store: &MemoryStore, galaxy: Galaxy) -> Result<GalaxyI
 
     for (key, val) in cursor.iter() {
         total += 1;
-        match rmp_serde::from_slice::<Memory>(val) {
+        match crate::codec::decode(val) {
             Ok(_) => valid += 1,
             Err(_) => {
                 corrupted_keys.push(hex_encode(key));
@@ -311,7 +311,7 @@ fn collect_and_quarantine(
     let mut corrupted_keys = Vec::new();
 
     for (key, val) in cursor.iter() {
-        match rmp_serde::from_slice::<Memory>(val) {
+        match crate::codec::decode(val) {
             Ok(_) => {}
             Err(e) => {
                 corrupted_keys.push(hex_encode(key));
@@ -348,7 +348,7 @@ fn rebuild_galaxy_indexes(store: &MemoryStore, galaxy: Galaxy) -> Result<usize> 
             .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
         let mut mems = Vec::new();
         for (_key, val) in cursor.iter() {
-            if let Ok(mem) = rmp_serde::from_slice::<Memory>(val) {
+            if let Ok(mem) = crate::codec::decode(val) {
                 mems.push(mem);
             }
         }

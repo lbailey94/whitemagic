@@ -458,7 +458,7 @@ impl MemoryStore {
 
         let db = self.galaxy_db(galaxy)?;
         let key = memory.metadata.id.as_bytes();
-        let val = rmp_serde::to_vec(memory)
+        let val = rmp_serde::to_vec_named(memory)
             .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
 
         let mut tx = self
@@ -473,7 +473,7 @@ impl MemoryStore {
         let existing = tx
             .get(db, key)
             .ok()
-            .and_then(|bytes| rmp_serde::from_slice::<Memory>(bytes).ok());
+            .and_then(|bytes| crate::codec::decode(bytes).ok());
 
         match tx.put(db, key, &val, lmdb::WriteFlags::default()) {
             Ok(()) => {}
@@ -511,7 +511,7 @@ impl MemoryStore {
         let result = tx.get(db, key);
         match result {
             Ok(bytes) => {
-                let memory: Memory = rmp_serde::from_slice(bytes)
+                let memory: Memory = crate::codec::decode(bytes)
                     .map_err(|e| CoreError::Memory(format!("deserialize failed: {e}")))?;
                 tx.commit()
                     .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
@@ -557,7 +557,7 @@ impl MemoryStore {
         if exists {
             // Read memory to get index values for cleanup
             if let Ok(bytes) = tx.get(db, key) {
-                if let Ok(memory) = rmp_serde::from_slice::<Memory>(bytes) {
+                if let Ok(memory) = crate::codec::decode(bytes) {
                     let _ = self.index_dbs.remove(&mut tx, galaxy, &memory);
                 }
             }
@@ -589,7 +589,7 @@ impl MemoryStore {
             if memories.len() >= limit {
                 break;
             }
-            match rmp_serde::from_slice::<Memory>(val) {
+            match crate::codec::decode(val) {
                 Ok(memory) => memories.push(memory),
                 Err(e) => {
                     tracing::warn!(
@@ -611,6 +611,17 @@ impl MemoryStore {
     /// Used by maintenance tooling (e.g. index rebuild). The full galaxy is
     /// materialized in memory — prefer [`Self::scan`] for bounded reads.
     pub fn scan_all(&self, galaxy: Galaxy) -> Result<Vec<Memory>> {
+        self.scan_all_impl(galaxy, false)
+    }
+
+    /// Maintenance scan that refuses to omit an undecodable source record.
+    /// Use before replacing derived indexes; a tolerant scan is not a complete
+    /// authoritative snapshot when any record fails decoding.
+    pub fn scan_all_strict(&self, galaxy: Galaxy) -> Result<Vec<Memory>> {
+        self.scan_all_impl(galaxy, true)
+    }
+
+    fn scan_all_impl(&self, galaxy: Galaxy, strict: bool) -> Result<Vec<Memory>> {
         let db = self.galaxy_db(galaxy)?;
         let tx = self
             .env
@@ -623,9 +634,15 @@ impl MemoryStore {
 
         let mut memories = Vec::new();
         for (i, (_key, val)) in cursor.iter().enumerate() {
-            match rmp_serde::from_slice::<Memory>(val) {
+            match crate::codec::decode(val) {
                 Ok(memory) => memories.push(memory),
                 Err(e) => {
+                    if strict {
+                        return Err(CoreError::Memory(format!(
+                            "refusing incomplete scan of {}: record {i} cannot be decoded: {e}",
+                            galaxy.db_name()
+                        )));
+                    }
                     tracing::warn!(
                         "Skipping corrupted entry at index {i} in galaxy {:?}: {e}",
                         galaxy
@@ -676,7 +693,7 @@ impl MemoryStore {
         let keys_to_delete: Vec<(Vec<u8>, Memory)> = cursor
             .iter()
             .filter_map(|(key, val)| {
-                if let Ok(memory) = rmp_serde::from_slice::<Memory>(val) {
+                if let Ok(memory) = crate::codec::decode(val) {
                     Some((key.to_vec(), memory))
                 } else {
                     None
@@ -717,7 +734,7 @@ impl MemoryStore {
         let mut count = 0usize;
         for memory in memories {
             let key = memory.metadata.id.as_bytes();
-            let val = rmp_serde::to_vec(memory)
+            let val = rmp_serde::to_vec_named(memory)
                 .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
             match tx.put(db, key, &val, WriteFlags::default()) {
                 Ok(()) => {}
@@ -898,7 +915,7 @@ impl MemoryStore {
 
         for memory in memories {
             let key = memory.metadata.id.as_bytes();
-            let val = rmp_serde::to_vec(memory)
+            let val = rmp_serde::to_vec_named(memory)
                 .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
             tx.put(db, key, &val, WriteFlags::default())
                 .map_err(|e| CoreError::Memory(format!("LMDB put_batch failed: {e}")))?;
@@ -979,7 +996,7 @@ impl MemoryStore {
                 break;
             }
             if let Ok(bytes) = tx.get(db, id.as_bytes()) {
-                if let Ok(mem) = rmp_serde::from_slice::<Memory>(bytes) {
+                if let Ok(mem) = crate::codec::decode(bytes) {
                     results.push(mem);
                 }
             }
@@ -1011,7 +1028,7 @@ impl MemoryStore {
                 break;
             }
             if let Ok(bytes) = tx.get(db, id.as_bytes()) {
-                if let Ok(mem) = rmp_serde::from_slice::<Memory>(bytes) {
+                if let Ok(mem) = crate::codec::decode(bytes) {
                     results.push(mem);
                 }
             }
@@ -1043,7 +1060,7 @@ impl MemoryStore {
                 break;
             }
             if let Ok(bytes) = tx.get(db, id.as_bytes()) {
-                if let Ok(mem) = rmp_serde::from_slice::<Memory>(bytes) {
+                if let Ok(mem) = crate::codec::decode(bytes) {
                     results.push(mem);
                 }
             }
@@ -2390,6 +2407,11 @@ mod tests {
         assert_eq!(retrieved.content, "Cross-galaxy research memo");
 
         // Non-existent id returns None
-        assert!(store.find_across_galaxies(uuid::Uuid::new_v4()).unwrap().is_none());
+        assert!(
+            store
+                .find_across_galaxies(uuid::Uuid::new_v4())
+                .unwrap()
+                .is_none()
+        );
     }
 }
