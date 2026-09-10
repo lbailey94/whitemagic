@@ -43,6 +43,8 @@ pub mod bayesian_tools;
 pub mod bicameral;
 pub mod boundary;
 pub mod bounty_connector;
+pub mod bounty_evidence;
+pub mod bounty_ledger;
 pub mod captains;
 pub mod claims_tools;
 pub mod code;
@@ -67,6 +69,7 @@ pub mod memory_ops;
 pub mod mesh_tools;
 pub mod network;
 pub mod nlu_tools;
+pub mod oss_bounty;
 pub mod patterns;
 pub mod pipeline;
 pub mod pray;
@@ -76,6 +79,8 @@ pub mod resonance;
 pub mod rsi;
 pub mod sandbox;
 pub mod sangha_tools;
+pub mod security_breaker;
+pub mod security_probe;
 pub mod self_play;
 pub mod selfmodel;
 pub mod sensorimotor_tools;
@@ -572,7 +577,49 @@ pub fn register_expansion(
     }
 
     // Violet security tools (5) — engagement tokens + model signing (PLAN_F F-1/F-2)
-    reg = crate::expansion::violet::register_violet(&reg);
+    // Keys persist under <store>/violet/ (0600) so issuer identity survives restarts.
+    reg = crate::expansion::violet::register_violet_persistent(&reg, &store.path().join("violet"));
+
+    // Security circuit breaker (4) — runtime tool-call anomaly monitor
+    reg = crate::expansion::security_breaker::register_security_breaker(&reg);
+
+    // Security probe planning (3) — authorized-testing technique plans + triage
+    reg = crate::expansion::security_probe::register_security_probe(&reg);
+
+    // Bounty connector (2) — bounty.scan, bounty.import; static-JSON fixture
+    // platform is opt-in via WM_BOUNTY_STATIC_JSON (real adapters are follow-ups).
+    let board_path = store.path().join("bounty_board.json");
+    match crate::expansion::bounty_connector::BountyBoard::open(board_path) {
+        Ok(board) => {
+            let mut connector =
+                crate::expansion::bounty_connector::BountyConnector::new(Arc::new(board));
+            if let Ok(fixture) = std::env::var("WM_BOUNTY_STATIC_JSON") {
+                connector = connector.with_platform(Arc::new(
+                    crate::expansion::bounty_connector::StaticJsonPlatform::new(
+                        "static",
+                        std::path::PathBuf::from(fixture),
+                    ),
+                ));
+            }
+            reg = crate::expansion::bounty_connector::register_bounty(&reg, Arc::new(connector));
+        }
+        Err(e) => tracing::warn!("bounty board unavailable: {e}"),
+    }
+
+    // Bounty ledger (4) — submission tracking + compounding stats
+    reg = crate::expansion::bounty_ledger::register_bounty_ledger(
+        &reg,
+        store.path().join("bounty_ledger.jsonl"),
+    );
+
+    // Bounty evidence packager (2) — structured packs + preflight
+    reg = crate::expansion::bounty_evidence::register_bounty_evidence(
+        &reg,
+        store.path().join("evidence"),
+    );
+
+    // OSS bounty scanner (2) — GitHub bounty issues via gh (read-only)
+    reg = crate::expansion::oss_bounty::register_oss_bounty(&reg);
 
     reg
 }

@@ -8200,6 +8200,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "criterion",
+ "getrandom 0.4.3",
  "proptest",
  "rayon",
  "serde",
