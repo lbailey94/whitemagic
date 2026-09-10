@@ -25,6 +25,7 @@ tracing = { workspace = true }
 smallvec = { workspace = true }
 sha2 = "0.10"
 hmac = "0.12"
+ed25519-dalek = "3.0.0"
 async-trait = "0.1"
 
 [dev-dependencies]

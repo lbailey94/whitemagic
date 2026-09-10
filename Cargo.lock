@@ -8036,6 +8036,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "criterion",
+ "ed25519-dalek",
  "hmac",
  "proptest",
  "serde",

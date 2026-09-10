@@ -14,6 +14,72 @@ use sha2::{Digest, Sha256};
 
 type HmacSha256 = Hmac<Sha256>;
 
+/// Prefix marking an Ed25519 signature (PLAN_F F-2). Bare hex remains HMAC.
+pub const ED25519_SIG_PREFIX: &str = "ed25519:";
+
+/// Sign a payload with an Ed25519 signing key, returning `ed25519:<hex>`.
+///
+/// Asymmetric counterpart to [`sign_hmac`]: validators only need the
+/// issuer's public key, so a compromised registry key cannot forge.
+#[must_use]
+pub fn sign_ed25519(payload: &str, signing_key: &ed25519_dalek::SigningKey) -> String {
+    use ed25519_dalek::Signer;
+    let sig = signing_key.sign(payload.as_bytes());
+    format!("{ED25519_SIG_PREFIX}{}", encode_hex(&sig.to_bytes()))
+}
+
+/// Verify an `ed25519:<hex>` signature over a payload with a public key.
+#[must_use]
+pub fn verify_ed25519(
+    payload: &str,
+    signature: &str,
+    verifying_key: &ed25519_dalek::VerifyingKey,
+) -> bool {
+    use ed25519_dalek::Verifier;
+    let Some(hex) = signature.strip_prefix(ED25519_SIG_PREFIX) else {
+        return false;
+    };
+    let Some(bytes) = decode_hex(hex) else {
+        return false;
+    };
+    let Ok(bytes): Result<[u8; 64], _> = bytes.try_into() else {
+        return false;
+    };
+    let sig = ed25519_dalek::Signature::from_bytes(&bytes);
+    verifying_key.verify(payload.as_bytes(), &sig).is_ok()
+}
+
+fn encode_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut acc, b| {
+        let _ = write!(acc, "{b:02x}");
+        acc
+    })
+}
+
+fn decode_hex(hex: &str) -> Option<Vec<u8>> {
+    if hex.len() % 2 != 0 {
+        return None;
+    }
+    let bytes = hex.as_bytes();
+    let mut out = Vec::with_capacity(hex.len() / 2);
+    for chunk in bytes.chunks_exact(2) {
+        let hi = hex_val(chunk[0])?;
+        let lo = hex_val(chunk[1])?;
+        out.push((hi << 4) | lo);
+    }
+    Some(out)
+}
+
+const fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
+}
+
 /// Compute an HMAC-SHA256 signature (hex-encoded) over a payload with a key.
 ///
 /// Returns `None` when the key is invalid (e.g. empty) — callers should
@@ -173,6 +239,36 @@ impl ToolManifest {
     #[must_use]
     pub fn verify_signature(&self, key: &[u8]) -> bool {
         verify_hmac(&self.signing_payload(), &self.signature, key)
+    }
+
+    /// Signature scheme inferred from the stored signature.
+    ///
+    /// `"ed25519"` for `ed25519:<hex>`, `"hmac-sha256"` for bare hex,
+    /// `"none"` when unsigned.
+    #[must_use]
+    pub fn signature_scheme(&self) -> &'static str {
+        if self.signature.starts_with(ED25519_SIG_PREFIX) {
+            "ed25519"
+        } else if self.signature.is_empty() {
+            "none"
+        } else {
+            "hmac-sha256"
+        }
+    }
+
+    /// Sign the manifest with an Ed25519 key (PLAN_F F-2).
+    ///
+    /// Returns a new manifest with an `ed25519:<hex>` signature.
+    #[must_use]
+    pub fn sign_ed25519(mut self, signing_key: &ed25519_dalek::SigningKey) -> Self {
+        self.signature = sign_ed25519(&self.signing_payload(), signing_key);
+        self
+    }
+
+    /// Verify an Ed25519-signed manifest against a public key.
+    #[must_use]
+    pub fn verify_signature_ed25519(&self, verifying_key: &ed25519_dalek::VerifyingKey) -> bool {
+        verify_ed25519(&self.signing_payload(), &self.signature, verifying_key)
     }
 
     /// Whether this manifest declares a specific capability.
@@ -677,5 +773,59 @@ mod tests {
             })
             .with_capabilities(vec!["filesystem_write".into()]);
         assert!(scope.is_tool_allowed(&manifest));
+    }
+
+    // ── Ed25519 path (PLAN_F F-2) ────────────────────────────────────
+
+    fn ed25519_key() -> ed25519_dalek::SigningKey {
+        ed25519_dalek::SigningKey::from_bytes(&[7u8; 32])
+    }
+
+    #[test]
+    fn manifest_sign_and_verify_ed25519() {
+        let key = ed25519_key();
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        assert!(manifest.verify_signature_ed25519(&key.verifying_key()));
+        assert_eq!(manifest.signature_scheme(), "ed25519");
+    }
+
+    #[test]
+    fn manifest_ed25519_tamper_detected() {
+        let key = ed25519_key();
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        let tampered = ToolManifest {
+            description: "Tampered".into(),
+            ..manifest
+        };
+        assert!(!tampered.verify_signature_ed25519(&key.verifying_key()));
+    }
+
+    #[test]
+    fn manifest_ed25519_wrong_key_fails() {
+        let key = ed25519_key();
+        let other = ed25519_dalek::SigningKey::from_bytes(&[9u8; 32]);
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        assert!(!manifest.verify_signature_ed25519(&other.verifying_key()));
+    }
+
+    #[test]
+    fn manifest_ed25519_signature_not_valid_as_hmac() {
+        let key = ed25519_key();
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        assert!(!manifest.verify_signature(TEST_KEY));
+    }
+
+    #[test]
+    fn manifest_hmac_signature_scheme_unchanged() {
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign(TEST_KEY);
+        assert_eq!(manifest.signature_scheme(), "hmac-sha256");
+        assert!(manifest.verify_signature(TEST_KEY));
+        assert!(!manifest.verify_signature_ed25519(&ed25519_key().verifying_key()));
+    }
+
+    #[test]
+    fn unsigned_manifest_scheme_none() {
+        let manifest = make_manifest("memory.search", "whitemagic-core");
+        assert_eq!(manifest.signature_scheme(), "none");
     }
 }

@@ -33,6 +33,10 @@ pub struct ValidatorConfig {
     pub require_signature: bool,
     /// HMAC secret key for signing/verifying provenance.
     pub signing_key: Vec<u8>,
+    /// Optional Ed25519 signing key (PLAN_F F-2). When set, it takes
+    /// precedence over the HMAC key: signatures become `ed25519:<hex>`
+    /// and verification uses the matching public key.
+    pub ed25519_signing_key: Option<ed25519_dalek::SigningKey>,
     /// Allowed sources for each galaxy (empty = allow all).
     pub source_allowlist: ahash::AHashMap<Galaxy, Vec<String>>,
 }
@@ -46,6 +50,7 @@ impl Default for ValidatorConfig {
             check_injection: true,
             require_signature: false,
             signing_key: Vec::new(),
+            ed25519_signing_key: None,
             source_allowlist: ahash::AHashMap::new(),
         }
     }
@@ -62,6 +67,7 @@ impl ValidatorConfig {
             check_injection: true,
             require_signature: true,
             signing_key: Vec::new(),
+            ed25519_signing_key: None,
             source_allowlist: ahash::AHashMap::new(),
         }
     }
@@ -70,6 +76,13 @@ impl ValidatorConfig {
     #[must_use]
     pub fn with_signing_key(mut self, key: Vec<u8>) -> Self {
         self.signing_key = key;
+        self
+    }
+
+    /// Set an Ed25519 signing key (preferred over HMAC when present).
+    #[must_use]
+    pub fn with_ed25519_signing_key(mut self, key: ed25519_dalek::SigningKey) -> Self {
+        self.ed25519_signing_key = Some(key);
         self
     }
 
@@ -255,35 +268,37 @@ impl MemoryValidator {
         ValidationVerdict::Allow
     }
 
-    /// Sign a memory's provenance with HMAC-SHA256.
+    /// Sign a memory's provenance.
     ///
-    /// Computes an HMAC over the memory's content hash, source, agent_id,
-    /// and version. The signature is returned as a hex string and should
-    /// be stored alongside the memory (e.g., in a tag or metadata field).
+    /// Uses Ed25519 (`ed25519:<hex>`) when an Ed25519 key is configured,
+    /// otherwise HMAC-SHA256 (bare hex). The signature is returned as a
+    /// string and should be stored alongside the memory (e.g. in a tag).
     pub fn sign(&self, memory: &Memory) -> Result<String> {
+        let payload = format_provenance_payload(memory);
+
+        if let Some(key) = &self.config.ed25519_signing_key {
+            return Ok(wm_core::attestation::sign_ed25519(&payload, key));
+        }
+
         if self.config.signing_key.is_empty() {
             return Err(CoreError::Memory("signing key not configured".into()));
         }
 
         let mut mac = HmacSha256::new_from_slice(&self.config.signing_key)
             .map_err(|e| CoreError::Memory(format!("HMAC key error: {e}")))?;
-
-        let payload = format_provenance_payload(memory);
         mac.update(payload.as_bytes());
         Ok(format!("{:x}", mac.finalize().into_bytes()))
     }
 
     /// Verify a memory's provenance signature.
     ///
-    /// Checks the HMAC signature against the memory's current content.
-    /// Returns false if the signature is missing or doesn't match.
+    /// Dispatches on the signature scheme: `ed25519:<hex>` verifies against
+    /// the configured Ed25519 public key; bare hex verifies as HMAC-SHA256
+    /// with a constant-time comparison. Returns false if the signature is
+    /// missing, malformed, or doesn't match.
     #[must_use]
     pub fn verify_signature(&self, memory: &Memory) -> bool {
-        if self.config.signing_key.is_empty() {
-            return false;
-        }
-
-        // Look for signature in tags (format: "sig:<hex>")
+        // Look for signature in tags (format: "sig:<hex>" or "sig:ed25519:<hex>")
         let sig = memory
             .metadata
             .tags
@@ -292,17 +307,29 @@ impl MemoryValidator {
 
         let Some(sig) = sig else { return false };
 
+        let payload = format_provenance_payload(memory);
+
+        if sig.starts_with(wm_core::attestation::ED25519_SIG_PREFIX) {
+            let Some(key) = &self.config.ed25519_signing_key else {
+                return false;
+            };
+            return wm_core::attestation::verify_ed25519(&payload, &sig, &key.verifying_key());
+        }
+
+        if self.config.signing_key.is_empty() {
+            return false;
+        }
+
         let Ok(mut mac) = HmacSha256::new_from_slice(&self.config.signing_key) else {
             return false;
         };
-
-        let payload = format_provenance_payload(memory);
         mac.update(payload.as_bytes());
 
-        let expected = format!("{:x}", mac.finalize().into_bytes());
-        // Constant-time comparison would be ideal, but hmac::Mac doesn't expose it directly
-        // The signature is not a secret — it's a tamper detection mechanism
-        expected == sig
+        // Constant-time comparison via the MAC's own verifier.
+        match decode_hex(&sig) {
+            Some(bytes) => mac.verify_slice(&bytes).is_ok(),
+            None => false,
+        }
     }
 
     /// Sign a memory and return a new copy with the signature tag attached.
@@ -332,6 +359,30 @@ fn format_provenance_payload(memory: &Memory) -> String {
         memory.metadata.version,
         content_hash(&memory.content),
     )
+}
+
+/// Decode hex into bytes for the constant-time HMAC verify path.
+fn decode_hex(hex: &str) -> Option<Vec<u8>> {
+    if hex.len() % 2 != 0 {
+        return None;
+    }
+    let bytes = hex.as_bytes();
+    let mut out = Vec::with_capacity(hex.len() / 2);
+    for chunk in bytes.chunks_exact(2) {
+        let hi = hex_val(chunk[0])?;
+        let lo = hex_val(chunk[1])?;
+        out.push((hi << 4) | lo);
+    }
+    Some(out)
+}
+
+const fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
 }
 
 /// Detect prompt injection patterns in content.
@@ -472,6 +523,52 @@ mod tests {
         assert!(
             !validator.verify_signature(&signed),
             "Tampered memory should fail verification"
+        );
+    }
+
+    #[test]
+    fn provenance_ed25519_sign_and_verify() {
+        let key = ed25519_dalek::SigningKey::from_bytes(&[7u8; 32]);
+        let config = ValidatorConfig::default().with_ed25519_signing_key(key);
+        let validator = MemoryValidator::new(config);
+
+        let mem = make_memory("user", 1.0, "Ed25519-signed content");
+        let signed = validator.sign_memory(mem).unwrap();
+        assert!(validator.verify_signature(&signed));
+        assert!(
+            signed
+                .metadata
+                .tags
+                .iter()
+                .any(|t| t.starts_with("sig:ed25519:")),
+            "signature tag should use the ed25519 scheme prefix"
+        );
+    }
+
+    #[test]
+    fn provenance_ed25519_tamper_detected() {
+        let key = ed25519_dalek::SigningKey::from_bytes(&[7u8; 32]);
+        let config = ValidatorConfig::default().with_ed25519_signing_key(key);
+        let validator = MemoryValidator::new(config);
+
+        let mem = make_memory("user", 1.0, "Original content");
+        let mut signed = validator.sign_memory(mem).unwrap();
+        signed.content = "Tampered content".to_string();
+        assert!(!validator.verify_signature(&signed));
+    }
+
+    #[test]
+    fn provenance_ed25519_signature_rejected_without_key() {
+        let key = ed25519_dalek::SigningKey::from_bytes(&[7u8; 32]);
+        let signer = MemoryValidator::new(ValidatorConfig::default().with_ed25519_signing_key(key));
+        let verifier = MemoryValidator::new(ValidatorConfig::default());
+
+        let signed = signer
+            .sign_memory(make_memory("user", 1.0, "Signed content"))
+            .unwrap();
+        assert!(
+            !verifier.verify_signature(&signed),
+            "a verifier without the Ed25519 key must not accept the signature"
         );
     }
 
