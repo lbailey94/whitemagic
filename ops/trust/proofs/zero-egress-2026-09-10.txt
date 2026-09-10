@@ -1,0 +1,7 @@
+# Zero-egress proof artifact — generated 2026-09-10T00:47:25Z
+# Generator: ops/trust/zero_egress_test.sh (Q37) · Binary: wm 9.1.0 · unshare -rn, lo DOWN
+
+[proof] namespace: 1 interface(s): lo (DOWN) — no egress path exists
+[proof] create OK (id c8c6aa86…), recall OK — full product loop with zero network
+[proof] PASS: WhiteMagic works with no network. Zero egress is a test result, not a claim.
+zero_egress_test: PASS (2026-09-10T00:47:31Z, wm=wm 9.1.0)
