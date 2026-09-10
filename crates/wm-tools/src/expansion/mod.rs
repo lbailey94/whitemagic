@@ -87,6 +87,7 @@ pub mod tasks;
 pub mod tools_mgmt;
 pub mod transaction;
 pub mod v4;
+pub mod violet;
 pub mod web;
 
 // Re-export all tool structs for registration
@@ -569,6 +570,9 @@ pub fn register_expansion(
     if let Some(cg) = code_graph {
         reg = crate::expansion::code::register_code(&reg, cg.clone());
     }
+
+    // Violet security tools (5) — engagement tokens + model signing (PLAN_F F-1/F-2)
+    reg = crate::expansion::violet::register_violet(&reg);
 
     reg
 }

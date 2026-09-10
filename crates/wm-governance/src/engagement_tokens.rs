@@ -309,6 +309,48 @@ impl EngagementIssuer {
     }
 }
 
+/// Verify a token against an explicit issuer public key (stateless path).
+///
+/// Same checks as [`EngagementIssuer::validate`] — signature →
+/// revocation flag → expiry → ROE-hash match — for validators that do
+/// not hold the issuer keypair (peers, MCP tools). The issuer's
+/// out-of-band revocation set is not visible here; only the token's own
+/// `revoked` flag is.
+///
+/// # Errors
+///
+/// [`EngagementTokenError::MalformedSignature`] when the signature field
+/// is not 128 hex chars.
+pub fn verify_token_with_key(
+    token: &EngagementToken,
+    rules_of_engagement_hash: &str,
+    issuer_public_key_hex: &str,
+    now: i64,
+) -> Result<TokenVerdict, EngagementTokenError> {
+    if !is_hex_str(&token.signature, 128) {
+        return Err(EngagementTokenError::MalformedSignature);
+    }
+    if !crate::network_profile::verify_signature(
+        issuer_public_key_hex,
+        canonical_payload(token).as_bytes(),
+        &token.signature,
+    ) {
+        return Ok(TokenVerdict::BadSignature);
+    }
+    if token.revoked {
+        return Ok(TokenVerdict::Revoked);
+    }
+    if token.expires_at.is_some_and(|expires_at| now > expires_at) {
+        return Ok(TokenVerdict::Expired);
+    }
+    let expected = token.rules_of_engagement_hash.to_ascii_lowercase();
+    let actual = rules_of_engagement_hash.trim().to_ascii_lowercase();
+    if expected != actual {
+        return Ok(TokenVerdict::RulesOfEngagementMismatch { expected, actual });
+    }
+    Ok(TokenVerdict::Valid)
+}
+
 impl Default for EngagementIssuer {
     fn default() -> Self {
         Self::new()
@@ -558,5 +600,47 @@ mod tests {
         // `revoked` and `signature` never leak into the payload.
         assert!(!p1.contains("revoked"));
         assert!(!p1.contains("signature"));
+    }
+
+    #[test]
+    fn verify_token_with_key_roundtrip() {
+        let mut issuer = EngagementIssuer::new();
+        let roe_hash = sha256_hex("rules of engagement text");
+        let token = issuer.issue("agent-7", EngagementScope::Poc, &roe_hash, Some(3600));
+        let pk = issuer.signer_public_key_hex();
+        let now = token.issued_at + 10;
+
+        assert_eq!(
+            verify_token_with_key(&token, &roe_hash, &pk, now).unwrap(),
+            TokenVerdict::Valid
+        );
+
+        // Tamper with a signed field → bad signature.
+        let mut tampered = token.clone();
+        tampered.issued_to = "agent-8".into();
+        assert_eq!(
+            verify_token_with_key(&tampered, &roe_hash, &pk, now).unwrap(),
+            TokenVerdict::BadSignature
+        );
+
+        // Wrong ROE hash → mismatch (signature still valid).
+        assert!(matches!(
+            verify_token_with_key(&token, "other", &pk, now).unwrap(),
+            TokenVerdict::RulesOfEngagementMismatch { .. }
+        ));
+
+        // Expired.
+        assert_eq!(
+            verify_token_with_key(&token, &roe_hash, &pk, token.issued_at + 7200).unwrap(),
+            TokenVerdict::Expired
+        );
+
+        // Malformed signature.
+        let mut malformed = token;
+        malformed.signature = "zz".into();
+        assert!(matches!(
+            verify_token_with_key(&malformed, &roe_hash, &pk, now),
+            Err(EngagementTokenError::MalformedSignature)
+        ));
     }
 }
