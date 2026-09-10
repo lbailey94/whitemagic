@@ -52,7 +52,7 @@ fn q34_dense_bench_measurement() {
         // Design contract (matches in-file suite): decode is APPROXIMATE —
         // keyword containment, not byte equality. Record both.
         let lossless = dec == *fx;
-        lossless_n += lossless as usize;
+        lossless_n += usize::from(lossless);
         let kept = fx
             .split_whitespace()
             .filter(|w| w.len() > 4 && dec.to_lowercase().contains(&w.to_lowercase()))
@@ -72,7 +72,11 @@ fn q34_dense_bench_measurement() {
     let dt = t0.elapsed();
     // Disabled arm must be byte-identical passthrough (the promotion baseline).
     for (i, fx) in FIXTURES.iter().enumerate() {
-        assert_eq!(disabled.encode(fx), *fx, "disabled arm must passthrough (fixture {i})");
+        assert_eq!(
+            disabled.encode(fx),
+            *fx,
+            "disabled arm must passthrough (fixture {i})"
+        );
     }
     let total_ratio = tot_enc as f64 / tot_orig as f64;
     println!(
@@ -81,10 +85,10 @@ fn q34_dense_bench_measurement() {
     );
     // Hint-off arm.
     let (mut h_orig, mut h_enc, mut h_lossless) = (0usize, 0usize, 0usize);
-    for fx in FIXTURES.iter() {
+    for fx in &FIXTURES {
         let enc = no_hint.encode(fx);
         let dec = no_hint.decode(&enc);
-        h_lossless += (dec == **fx) as usize;
+        h_lossless += usize::from(dec == **fx);
         h_orig += fx.len();
         h_enc += enc.len();
     }

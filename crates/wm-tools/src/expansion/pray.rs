@@ -525,10 +525,7 @@ mod tests {
         let store = Arc::new(store);
 
         for i in 0..3 {
-            let mut mem = Memory::new(
-                Galaxy::Codex,
-                format!("{{\"turn_type\": \"ping{i}\"}}").into(),
-            );
+            let mut mem = Memory::new(Galaxy::Codex, format!("{{\"turn_type\": \"ping{i}\"}}"));
             mem.metadata.tags = vec!["telemetry".into()];
             store.put(Galaxy::Codex, &mem).unwrap();
         }

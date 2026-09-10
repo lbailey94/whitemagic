@@ -766,7 +766,7 @@ impl GistDistiller {
         }
 
         let mut sorted_words: Vec<(String, usize)> = word_counts.into_iter().collect();
-        sorted_words.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted_words.sort_by_key(|&(_, count)| std::cmp::Reverse(count));
         let salient_keywords: Vec<String> =
             sorted_words.into_iter().take(6).map(|(w, _)| w).collect();
 
@@ -797,7 +797,7 @@ impl GistDistiller {
         let summary_body = if core_predicates.is_empty() {
             format!(
                 "Distilled cluster of {} memories around concepts: {concept_list}",
-                memories.len()
+                memories.len(),
             )
         } else {
             core_predicates.join(". ")
@@ -1342,8 +1342,7 @@ mod tests {
         let r_at_s = item.retrievability(at_s);
         assert!(
             (r_at_s - 0.90).abs() < 0.01,
-            "Expected ~0.90 at t=S, got {}",
-            r_at_s
+            "Expected ~0.90 at t=S, got {r_at_s}",
         );
 
         // At t = 20 days, R should be 0.90^2 = 0.81
@@ -1351,8 +1350,7 @@ mod tests {
         let r_at_2s = item.retrievability(at_2s);
         assert!(
             (r_at_2s - 0.81).abs() < 0.02,
-            "Expected ~0.81 at t=2S, got {}",
-            r_at_2s
+            "Expected ~0.81 at t=2S, got {r_at_2s}",
         );
     }
 

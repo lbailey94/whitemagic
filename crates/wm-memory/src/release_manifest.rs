@@ -21,14 +21,16 @@
 use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 
-/// Domain prefix for every signed release payload. Cross-protocol
-/// confusion is impossible by construction: a release signature can never
-/// verify as a record attestation or mesh payload or vice versa, even
-/// though the key material is shared by lineage.
+/// Domain prefix for every signed release payload.
+///
+/// Cross-protocol confusion is impossible by construction: a release
+/// signature can never verify as a record attestation or mesh payload or
+/// vice versa, even though the key material is shared by lineage.
 pub const RELEASE_MANIFEST_DOMAIN: &str = "wm-release-manifest/v1";
 
-/// Key-lineage value for manifests signed with today's convention: the
-/// mesh key hex-decoded, exactly like record attestations. The
+/// Key-lineage value for manifests signed with today's convention.
+///
+/// The mesh key hex-decoded, exactly like record attestations. The
 /// `wm/release-signing/v1` HKDF subkey replaces this string once S9
 /// rules the derivation — verifiers match on the recorded value.
 pub const KEY_LINEAGE_MESH_ERA: &str = "wm-record-attestation/v1-era (WM_MESH_KEY hex-decoded)";
@@ -119,6 +121,7 @@ pub fn release_payload(m: &ReleaseManifest) -> String {
 }
 
 /// Sign a manifest with a 32-byte secret key (hex, node key lineage).
+///
 /// Returns the manifest with `public_key_hex` + `signature_hex` filled,
 /// or `None` on bad key material. Pure function — CI-secret handling
 /// lives at the call site (release job), never here.

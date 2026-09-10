@@ -111,7 +111,6 @@ mod tests {
 
     fn tmp_path(tag: &str) -> PathBuf {
         let dir = tempfile::tempdir().unwrap();
-        let p = dir.path().join(format!("{tag}.jsonl"));
         // Leak the tempdir for the test lifetime via Box::leak pattern:
         // simpler — write into std::env::temp_dir with a unique suffix.
         drop(dir);

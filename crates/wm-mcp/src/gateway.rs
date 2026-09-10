@@ -1035,8 +1035,12 @@ mod tests {
             envelope["status"], "success",
             "forward must succeed: {envelope}"
         );
-        let calls = calls.lock().unwrap();
-        let (scope, forwarded) = calls.last().expect("backing must have been called");
+        let (scope, forwarded) = calls
+            .lock()
+            .unwrap()
+            .last()
+            .expect("backing must have been called")
+            .clone();
         assert_eq!(scope, "dev", "top-level routing absent → home scope");
         let inner = &forwarded["args"];
         assert_eq!(
@@ -1060,8 +1064,12 @@ mod tests {
         let parsed: Value = serde_json::from_str(&response).unwrap();
         let text = parsed["result"]["content"][0]["text"].as_str().unwrap();
         serde_json::from_str::<Value>(text).unwrap();
-        let calls = calls.lock().unwrap();
-        let (scope, forwarded) = calls.last().expect("backing must have been called");
+        let (scope, forwarded) = calls
+            .lock()
+            .unwrap()
+            .last()
+            .expect("backing must have been called")
+            .clone();
         assert_eq!(
             scope, "dev",
             "routing scope comes from the top level / home, not inner args"

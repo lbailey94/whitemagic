@@ -335,4 +335,4 @@ async fn replay_refuses_identity_mismatch() {
 }
 
 #[allow(unused)]
-fn type_witness(e: &FlightEntry) {}
+const fn type_witness(e: &FlightEntry) {}

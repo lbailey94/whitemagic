@@ -1218,8 +1218,7 @@ mod tests {
         let avg_latency_ns = (elapsed_ns / iterations) as u64;
 
         println!(
-            "Observed L1 buffer hit latency (average over 1,000 queries): {} ns",
-            avg_latency_ns
+            "Observed L1 buffer hit latency (average over 1,000 queries): {avg_latency_ns} ns",
         );
 
         #[cfg(not(debug_assertions))]

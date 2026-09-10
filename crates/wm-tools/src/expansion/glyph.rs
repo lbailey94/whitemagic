@@ -141,7 +141,6 @@ pub fn register_glyph(registry: &wm_dispatch::ToolRegistry) -> wm_dispatch::Tool
 
 #[cfg(test)]
 mod glyph_tests {
-    use super::*;
 
     #[test]
     fn book_tables_cover_measured_routes() {
