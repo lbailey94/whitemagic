@@ -47,6 +47,17 @@ pub struct ActorIdentity {
     pub user: Option<String>,
     /// Mandala compartment the dispatch ran under (when declared).
     pub compartment: Option<String>,
+    /// OBO `act` shape (P-OBO-1, 2026-09-10): server-asserted label of the
+    /// agent doing the acting, distinct from the subject acted for.
+    /// `None` = direct action, no delegation. Never populated from client
+    /// claims — only from server-established context.
+    pub act: Option<String>,
+    /// OBO `sub` shape: server-side label of the subject acted on behalf
+    /// of. Attribution, never authentication. `None` = no delegation.
+    pub on_behalf_of: Option<String>,
+    /// Ordered delegation hops, outermost first (nested-`act` chain shape).
+    /// Empty = no chain. Server-asserted only.
+    pub delegation_chain: Vec<String>,
 }
 
 impl ActorIdentity {
@@ -57,7 +68,27 @@ impl ActorIdentity {
             session: ctx.session_id.map(|id| id.to_string()),
             user: ctx.user_id.clone(),
             compartment: ctx.compartment.clone(),
+            act: None,
+            on_behalf_of: None,
+            delegation_chain: Vec::new(),
         }
+    }
+
+    /// Attach a server-asserted delegation triple (OBO shape). Callers must
+    /// only supply values the server itself established — never client
+    /// claims. The journal records them so an entry answers "which agent,
+    /// acting for whom, through which chain".
+    #[must_use]
+    pub fn with_delegation(
+        mut self,
+        act: impl Into<String>,
+        on_behalf_of: impl Into<String>,
+        chain: Vec<String>,
+    ) -> Self {
+        self.act = Some(act.into());
+        self.on_behalf_of = Some(on_behalf_of.into());
+        self.delegation_chain = chain;
+        self
     }
 }
 
@@ -94,6 +125,18 @@ pub struct WriteAuditEntry {
     /// Mandala compartment the dispatch ran under (when declared).
     #[serde(default)]
     pub actor_compartment: Option<String>,
+    /// OBO `act` shape: server-asserted acting-agent label (P-OBO-1).
+    /// `None` = direct action, no delegation. Legacy entries predate this
+    /// field (serde default keeps them deserializable).
+    #[serde(default)]
+    pub actor_act: Option<String>,
+    /// OBO `sub` shape: subject acted on behalf of. Attribution, never
+    /// authentication.
+    #[serde(default)]
+    pub actor_on_behalf_of: Option<String>,
+    /// Ordered delegation hops, outermost first. Empty = no chain.
+    #[serde(default)]
+    pub delegation_chain: Vec<String>,
     /// Whether the tool's `EffectRow` declared writes.
     pub declared_writes: bool,
     /// Write count reported by the tool's output (`writes` array).
@@ -332,6 +375,9 @@ impl WriteAuditJournal {
             actor_session: actor.session,
             actor_user: actor.user,
             actor_compartment: actor.compartment,
+            actor_act: actor.act,
+            actor_on_behalf_of: actor.on_behalf_of,
+            delegation_chain: actor.delegation_chain,
             declared_writes,
             reported_writes,
             store_write_delta,
@@ -620,6 +666,9 @@ mod tests {
             session: Some("4e3ece8c-4e59-4486-8f07-91945337e361".to_string()),
             user: Some("lucas".to_string()),
             compartment: Some("production".to_string()),
+            act: None,
+            on_behalf_of: None,
+            delegation_chain: Vec::new(),
         };
         let entry = journal
             .record(
@@ -665,6 +714,44 @@ mod tests {
         assert_eq!(entry.actor_session, None);
         assert_eq!(entry.actor_user, None);
         assert_eq!(entry.actor_compartment, None);
+        // Pre-P-OBO-1 entries predate the delegation triple too.
+        assert_eq!(entry.actor_act, None);
+        assert_eq!(entry.actor_on_behalf_of, None);
+        assert!(entry.delegation_chain.is_empty());
+    }
+
+    #[test]
+    fn from_context_carries_no_delegation_by_default() {
+        // Direct dispatches must not fabricate a delegation triple: absent
+        // server-established delegation, the journal records a direct action.
+        let ctx = wm_core::Context::new(wm_core::BrainWave::Gamma);
+        let actor = ActorIdentity::from_context(&ctx);
+        assert_eq!(actor.act, None);
+        assert_eq!(actor.on_behalf_of, None);
+        assert!(actor.delegation_chain.is_empty());
+    }
+
+    #[test]
+    fn delegation_triple_survives_journal_roundtrip() {
+        let store = make_store();
+        let journal = WriteAuditJournal::with_flush_threshold(store, 0).unwrap();
+
+        let actor = ActorIdentity::default().with_delegation(
+            "hr-agent",
+            "alice",
+            vec!["hr-agent".to_string(), "payroll-svc".to_string()],
+        );
+        let entry = journal
+            .record("memory.search", actor, None, None, false, 0, true)
+            .unwrap();
+
+        assert_eq!(entry.actor_act.as_deref(), Some("hr-agent"));
+        assert_eq!(entry.actor_on_behalf_of.as_deref(), Some("alice"));
+        assert_eq!(entry.delegation_chain, vec!["hr-agent", "payroll-svc"]);
+
+        let entries = journal.scan_entries().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0], entry, "delegation survives the LMDB roundtrip");
     }
 
     #[test]

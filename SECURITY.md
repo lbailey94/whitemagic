@@ -70,3 +70,36 @@ WhiteMagic v5 is a trusted local single-user process. Its security model:
 Important: `_meta.user_id` from an MCP client is not an authenticated
 identity. Do not deploy the MCP server as a multi-tenant authorization
 boundary.
+
+## Host Identity and Delegation Stance (2026-09-10)
+
+Context: Glama MCP-security series (MCP Dev Summit Mumbai 2026) —
+host-as-identity-blind-spot (2026-07-25), confused-deputy HR demo
+(2026-07-02), execution sandboxing (2026-06-30). Tracked as
+`rsi:proposal:active` P-OBO-1 / P-DEPUTY-2.
+
+- **Single-user local process.** WhiteMagic has no OAuth / OBO token
+  issuance or validation, no SPIFFE workload identity, and no per-user
+  scoping. The mesh node key (`WM_MESH_KEY` Ed25519, signed heartbeats)
+  names a *device/node*, never a user. See
+  `docs/S9_SECURITY_BRIEF_2026-09-10.md` for mesh-identity gaps and the
+  pending key-separation ruling.
+- **Server enforces, callers assert.** Human approval (`confirm: true`)
+  is not authorization: every destructive dispatch is re-checked
+  server-side (Dharma/Yama gates, firebreak veto + bulk-scope law,
+  compartment checks). Routing scope (gateway top-level `scope=`) and
+  tool-payload scope (inner `args.scope`, e.g. `code.claim` lease scope)
+  are separate namespaces — inner scope never re-routes (Q03 regression
+  `pinned_proxy_preserves_inner_args_scope`).
+- **Audit carries both ends where known.** Write-audit journal entries
+  record the dispatch actor from server-side context plus optional
+  OBO-shaped delegation fields (`actor_act`, `actor_on_behalf_of`,
+  `delegation_chain` — opaque, server-asserted, absent by default).
+  Client-supplied identity claims are never trusted for authorization.
+- **Four-A's self-check** (per deployment, answer honestly):
+  Administer — can you name/suspend/deprovision every node holding
+  credentials? Authenticate — short-lived node keys with rotation, or
+  standing keys? Authorize — least-privilege profiles per store,
+  destructive surface enumerated? Audit — can you replay who did what,
+  through which agent, last Tuesday, from the karma chain + journal
+  alone? Any "not really" is a known gap, not a silent assumption.

@@ -196,8 +196,44 @@ pub struct ProfileContract {
     pub destructive_tools: Vec<String>,
     /// RFC 3339 timestamp of the check (`wm_core::time`).
     pub verified_at: String,
+    /// Package version of the binary that computed the contract.
+    /// `None` = pre-P-PROV-5 contract (serde default keeps them readable).
+    #[serde(default)]
+    pub binary_version: Option<String>,
+    /// Surface pin (P-PROV-5, 2026-09-10, rug-pull tripwire): hex SHA-256
+    /// over the sorted registered tool names (see [`surface_hash`]). Any
+    /// tool added, removed, or renamed changes the pin; `wm doctor`
+    /// discloses it so a reviewed release surface can be pinned externally.
+    /// `None` = pre-P-PROV-5 contract.
+    #[serde(default)]
+    pub surface_hash: Option<String>,
     /// `true` iff the registered surface is exactly the declared one.
     pub ok: bool,
+}
+
+/// Compute the surface pin: hex SHA-256 over sorted tool names.
+///
+/// Order-insensitive, content-sensitive — the same surface always pins
+/// identically regardless of registration order.
+#[must_use]
+pub fn surface_hash(registered: &[&str]) -> String {
+    use sha2::{Digest, Sha256};
+    use std::fmt::Write as _;
+    let mut names: Vec<&str> = registered.to_vec();
+    names.sort_unstable();
+    let mut h = Sha256::new();
+    for n in names {
+        h.update(n.as_bytes());
+        h.update(b"\n");
+    }
+    // Byte-wise hex (sha2 0.11's digest output has no LowerHex impl).
+    h.finalize().iter().fold(
+        String::with_capacity(sha2::Sha256::output_size() * 2),
+        |mut out, b| {
+            let _ = write!(out, "{b:02x}");
+            out
+        },
+    )
 }
 
 /// Compute the profile contract for a server start.
@@ -244,6 +280,8 @@ pub fn profile_contract(
         unexpected_tools,
         destructive_tools,
         verified_at: wm_core::time::now_rfc3339(),
+        binary_version: Some(env!("CARGO_PKG_VERSION").to_string()),
+        surface_hash: Some(surface_hash(&registered)),
         ok,
     }
 }
@@ -508,6 +546,72 @@ mod tests {
         assert_eq!(c.expected_count, 2);
         assert_eq!(c.registered_count, 2);
         assert!(c.dead_prefixes.is_empty());
+    }
+
+    // P-PROV-5 (2026-09-10, rug-pull tripwire): the surface pin must be
+    // order-insensitive (registration order is not surface content) and
+    // content-sensitive (any add/remove/rename repins).
+    #[test]
+    fn surface_hash_is_order_insensitive_but_content_sensitive() {
+        let a = surface_hash(&["memory.create", "session.start", "gnosis"]);
+        let b = surface_hash(&["gnosis", "memory.create", "session.start"]);
+        assert_eq!(a, b, "registration order must not move the pin");
+        assert_eq!(a.len(), 64, "hex SHA-256 shape");
+        assert_ne!(
+            a,
+            surface_hash(&["memory.create", "session.start"]),
+            "removal must repin"
+        );
+        assert_ne!(
+            a,
+            surface_hash(&["memory.create", "session.start", "gnosis", "sneaky.tool"]),
+            "addition must repin"
+        );
+        assert_ne!(
+            a,
+            surface_hash(&["memory.create", "session.start", "gnosis2"]),
+            "rename must repin"
+        );
+    }
+
+    #[test]
+    fn contract_carries_binary_identity_and_surface_pin() {
+        let full = minimal_registry(&[]);
+        let filtered = contract_registry(&full.all());
+        let c = profile_contract(&full, &filtered, &PROFILE_MINIMAL);
+        assert!(c.ok);
+        assert_eq!(
+            c.binary_version.as_deref(),
+            Some(env!("CARGO_PKG_VERSION")),
+            "contract must name the binary that produced it"
+        );
+        let names: Vec<&str> = filtered.all_ref().iter().map(|t| t.name()).collect();
+        assert_eq!(
+            c.surface_hash.as_deref(),
+            Some(surface_hash(&names).as_str()),
+            "pin must cover exactly the registered surface"
+        );
+    }
+
+    #[test]
+    fn legacy_contract_without_pin_fields_deserializes() {
+        // Pre-P-PROV-5 contracts have neither pin field; serde defaults
+        // must admit them (store roots hold live history).
+        let legacy = serde_json::json!({
+            "profile": "curated",
+            "prefixes": ["memory"],
+            "expected_count": 1,
+            "registered_count": 1,
+            "dead_prefixes": [],
+            "unexpected_tools": [],
+            "destructive_tools": [],
+            "verified_at": "2026-08-29T00:00:00Z",
+            "ok": true,
+        });
+        let c: ProfileContract = serde_json::from_value(legacy).unwrap();
+        assert!(c.ok);
+        assert_eq!(c.binary_version, None);
+        assert_eq!(c.surface_hash, None);
     }
 
     #[test]

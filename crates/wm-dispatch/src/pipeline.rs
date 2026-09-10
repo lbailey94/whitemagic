@@ -1545,6 +1545,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn pipeline_asserted_user_id_confers_no_authority() {
+        // P-DEPUTY-2 (2026-09-10, Glama confused-deputy series): the
+        // client-asserted `_meta.user_id` label is attribution only — it
+        // must never widen compartment authority. A sandbox dispatch
+        // labeled as any privileged user is still a sandbox dispatch.
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        ctx.compartment = Some("sandbox".into());
+        ctx.user_id = Some("ceo".into());
+        let tool = TestTool::new(
+            "write_tool",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                ..Default::default()
+            },
+        );
+
+        let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
+        assert!(result.is_err());
+        match result {
+            Err(CoreError::Governance(msg)) => {
+                assert!(msg.contains("sandbox"));
+                assert!(msg.contains("codex"));
+            }
+            other => panic!("Expected Governance error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
     async fn pipeline_compartment_sandbox_blocks_read_from_karma() {
         let pipeline = DispatchPipeline::with_defaults();
         let mut ctx = Context::new(BrainWave::Gamma);

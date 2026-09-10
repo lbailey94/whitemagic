@@ -990,6 +990,30 @@ mod tests {
         assert_eq!(envelope["error_code"], "no_scope");
     }
 
+    // P-DEPUTY-2 (2026-09-10, Glama confused-deputy series): an inner
+    // `args.scope` is tool payload, never routing. A pinned write carrying
+    // only an inner scope — no top-level scope, no home — must still fail
+    // closed with `no_scope`, never route to the named store.
+    #[test]
+    fn inner_args_scope_does_not_satisfy_routing() {
+        let mock =
+            MockBacking::new().with_envelope("dev", json!({"status": "success", "results": []}));
+        let calls = mock.calls.clone();
+        let gw = gateway_with(mock, &[spec("dev"), spec("vault")], None);
+        let response = gw.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"content":"x","scope":"dev"}}}}"#,
+        );
+        let parsed: Value = serde_json::from_str(&response).unwrap();
+        let text = parsed["result"]["content"][0]["text"].as_str().unwrap();
+        let envelope: Value = serde_json::from_str(text).unwrap();
+        assert_eq!(envelope["status"], "error");
+        assert_eq!(envelope["error_code"], "no_scope");
+        assert!(
+            calls.lock().unwrap().is_empty(),
+            "fail-closed must not touch any backing"
+        );
+    }
+
     // Q03 regression (2026-09-08): the gateway stripped `scope` from the
     // INNER args before every pinned forward, destroying tool-legitimate
     // scope payloads (code.claim's lease scope) — direct backend accepted

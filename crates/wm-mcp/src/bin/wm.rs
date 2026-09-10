@@ -2624,6 +2624,28 @@ fn run_doctor(
                     "[OK]   Profile contract: {} surface, {} tools (verified {})",
                     c.profile, c.registered_count, c.verified_at
                 );
+                // P-PROV-5 surface pin: disclose what binary produced this
+                // surface and its pin so a reviewed release can be pinned
+                // externally (rug-pull tripwire — any surface change repins).
+                if let Some(pin) = c.surface_hash.as_deref() {
+                    println!(
+                        "       Surface pin: {} ({} tools, built {})",
+                        &pin[..pin.len().min(16)],
+                        c.registered_count,
+                        c.binary_version.as_deref().unwrap_or("unknown binary")
+                    );
+                }
+                // Binary/store skew notice (informational, not a violation):
+                // the last server start on this store ran a different build
+                // than this doctor binary, so the surface may have changed
+                // under you — check the pin against the reviewed release.
+                if c.binary_version.as_deref() != Some(env!("CARGO_PKG_VERSION")) {
+                    println!(
+                        "[INFO] Profile contract was written by build {} (doctor is {}) — surface may differ; compare pins",
+                        c.binary_version.as_deref().unwrap_or("unknown"),
+                        env!("CARGO_PKG_VERSION")
+                    );
+                }
                 if !c.destructive_tools.is_empty() {
                     println!(
                         "       Destructive on surface (confirm-gated): {}",
