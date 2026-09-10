@@ -245,6 +245,7 @@ pub struct EconomicFirewall {
     min_recipient_trust: f64,
     fail_closed: bool,
     maintenance: bool,
+    bus: Option<Arc<crate::security_events::SecurityEventBus>>,
 }
 
 impl Default for EconomicFirewall {
@@ -278,7 +279,14 @@ impl EconomicFirewall {
             min_recipient_trust,
             fail_closed: env_flag("WM_FIREWALL_FAIL_CLOSED"),
             maintenance: env_flag("WM_FIREWALL_MAINTENANCE"),
+            bus: None,
         }
+    }
+
+    /// Publish denials onto a [`SecurityEventBus`](crate::security_events::SecurityEventBus)
+    /// so the pattern-immunity loop can learn from them (Q2 loop closure).
+    pub fn set_event_bus(&mut self, bus: Arc<crate::security_events::SecurityEventBus>) {
+        self.bus = Some(bus);
     }
 
     /// Operator maintenance bypass: approve everything, log as bypass.
@@ -586,6 +594,21 @@ impl EconomicFirewall {
             detail: detail.to_owned(),
         };
         self.append_jsonl("security_events.jsonl", &event);
+        if let Some(bus) = &self.bus {
+            let event_type = match verdict.verdict_reason {
+                VerdictReason::PolicyDenied if detail == "rate limit" => {
+                    crate::security_events::SecurityEventType::RateLimited
+                }
+                VerdictReason::MaintenanceBypass => return,
+                _ => crate::security_events::SecurityEventType::EconomicDenied,
+            };
+            bus.publish(
+                &crate::security_events::SecurityEvent::new(event_type, "economic_firewall")
+                    .with_tool(&request.tool_name)
+                    .with_agent(&request.agent_id)
+                    .with_detail(format!("{detail}: {}", verdict.reason)),
+            );
+        }
     }
 
     fn append_jsonl(&self, file: &str, value: &impl serde::Serialize) {

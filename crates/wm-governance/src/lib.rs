@@ -23,6 +23,7 @@ pub mod pattern_immunity;
 pub mod policy;
 pub mod resource_rules;
 pub mod security_events;
+pub mod trust_stack;
 pub mod write_audit;
 
 pub use acs::{AcsAction, AcsCheckpoint, AcsComplianceReport, AcsExport, AcsRule};
@@ -70,4 +71,5 @@ pub use security_events::{
     BusStats, RING_CAPACITY, SecurityEvent as BusSecurityEvent, SecurityEventBus,
     SecurityEventType, Severity,
 };
+pub use trust_stack::TrustStack;
 pub use write_audit::{ActorIdentity, WriteAuditEntry, WriteAuditJournal, args_digest};
