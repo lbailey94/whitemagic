@@ -796,9 +796,8 @@ impl GistDistiller {
         let concept_list = salient_keywords.join(", ");
         let summary_body = if core_predicates.is_empty() {
             format!(
-                "Distilled cluster of {} memories around concepts: {}",
-                memories.len(),
-                salient_keywords.join(", ")
+                "Distilled cluster of {} memories around concepts: {concept_list}",
+                memories.len()
             )
         } else {
             core_predicates.join(". ")
