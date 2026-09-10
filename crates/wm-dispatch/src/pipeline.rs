@@ -6,9 +6,10 @@
 //! 3. Resource rules — write/spawn/network budgets, novelty, human review
 //! 4. Rate limit — sliding window per-tool + global
 //! 5. Circuit breaker — fault tolerance, fast-fail on repeated errors
-//! 6. Tool call — execute the tool (optionally bounded by a dispatch timeout)
-//! 6b. Secret-scan sampling — warn-only credential-shape scan of success
-//!    outputs (deterministic 1-in-N, content never logged; P-PROV-5/B(c))
+//! 6. Tool call — execute the tool (optionally bounded by a dispatch timeout).
+//!    Secret-scan sampling (6b) runs right after a successful call: warn-only
+//!    credential-shape scan, deterministic 1-in-N, content never logged
+//!    (P-PROV-5/B(c)).
 //! 7. Karma record + write-audit journal — declared vs actual effects
 //!    (confirm-gated dispatches record the confirm — the delete-confirm audit)
 //! 8. Stats — success/failure and latency tracking
@@ -135,6 +136,10 @@ pub struct DispatchPipeline {
     /// Optional secret scanner (P-PROV-5/B(c)) — warn-only credential-shape
     /// sampling over successful dispatch outputs. `None` disables.
     secret_scan: Option<crate::secret_scan::SharedSampler>,
+    /// Optional scoped-thread sandbox executor (P-SANDBOX-3, Landlock v1) —
+    /// `StoreScoped` tools run confined on a fresh thread. `None` = the
+    /// declared flag is inert (v0 whole-process ruleset may still apply).
+    sandbox_exec: Option<Arc<crate::sandbox_exec::ScopedSandboxExecutor>>,
     /// Optional flight recorder (Q35b) — opt-in JSONL payload capture for
     /// replay. Captures at the same point as `args_digest` so sidecar args
     /// always hash to the journal digest (the replay identity gate).
@@ -176,6 +181,10 @@ impl DispatchPipeline {
             // Warn-only at a deterministic 1-in-N cadence — it observes,
             // never blocks. Override with `with_secret_scan_option`.
             secret_scan: Some(Arc::new(crate::secret_scan::SecretSampler::from_env())),
+            // The per-tool sandbox executor is attached explicitly by the
+            // deployment (wm-mcp injects the Landlock callback when
+            // WM_LANDLOCK_V1=1); without it, StoreScoped marks are inert.
+            sandbox_exec: None,
             // The firebreak arms by default: every construction path (server,
             // daemon, CLI, tests) inherits the veto + scope law unless it is
             // explicitly disarmed with `with_firebreak_option(None)` or the
@@ -288,6 +297,24 @@ impl DispatchPipeline {
     #[must_use]
     pub fn secret_scan(&self) -> Option<&crate::secret_scan::SecretSampler> {
         self.secret_scan.as_deref()
+    }
+
+    /// Attach the scoped-thread sandbox executor (P-SANDBOX-3). When
+    /// attached, tools declaring `Sandbox::StoreScoped` run on a confined
+    /// fresh thread; everything else keeps the ambient path.
+    #[must_use]
+    pub fn with_sandbox_executor(
+        mut self,
+        executor: Option<Arc<crate::sandbox_exec::ScopedSandboxExecutor>>,
+    ) -> Self {
+        self.sandbox_exec = executor;
+        self
+    }
+
+    /// The sandbox executor attached to this pipeline (if any).
+    #[must_use]
+    pub fn sandbox_executor(&self) -> Option<&crate::sandbox_exec::ScopedSandboxExecutor> {
+        self.sandbox_exec.as_deref()
     }
 
     /// Attach a firebreak with an explicit arm state (tests, special
@@ -695,7 +722,14 @@ impl DispatchPipeline {
             .write_audit
             .as_ref()
             .map_or(0, |j| j.dispatch_baseline());
-        let result = if let Some(timeout) = self.dispatch_timeout {
+        // P-SANDBOX-3 (Landlock v1): a `StoreScoped` tool with an executor
+        // attached runs on a confined scoped thread (synchronous — see
+        // `sandbox_exec` for why, and for the timeout-parity v1 gap).
+        let result = if crate::sandbox_exec::ScopedSandboxExecutor::handles(tool)
+            && let Some(executor) = self.sandbox_exec.as_deref()
+        {
+            executor.run(tool, ctx, args)
+        } else if let Some(timeout) = self.dispatch_timeout {
             if let Ok(res) = tokio::time::timeout(timeout, tool.call(ctx, args)).await {
                 res
             } else {
@@ -906,7 +940,7 @@ impl Default for DispatchPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wm_core::{BrainWave, EffectRow, Gana, ToolStats};
+    use wm_core::{BrainWave, EffectRow, Gana, Sandbox, ToolStats};
     use wm_governance::{ResourceRulesConfig, WriteAuditJournal};
 
     struct TestTool {
@@ -1608,6 +1642,67 @@ mod tests {
             }
             other => panic!("Expected Governance error, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn pipeline_routes_store_scoped_tools_through_executor() {
+        // P-SANDBOX-3 (Landlock v1): `StoreScoped` marks route through the
+        // executor when one is attached; plain tools keep the ambient path.
+        use crate::sandbox_exec::ScopedSandboxExecutor;
+        use std::sync::atomic::{AtomicU64, Ordering};
+        let calls = Arc::new(AtomicU64::new(0));
+        let counter = Arc::clone(&calls);
+        let executor = Arc::new(ScopedSandboxExecutor::new(move || {
+            counter.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }));
+        let pipeline =
+            DispatchPipeline::with_defaults().with_sandbox_executor(Some(Arc::clone(&executor)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        let scoped = TestTool::new(
+            "scoped_tool",
+            EffectRow {
+                sandbox: Sandbox::StoreScoped,
+                ..Default::default()
+            },
+        );
+        assert!(
+            pipeline
+                .dispatch(&scoped, &mut ctx, Args::default())
+                .await
+                .is_ok()
+        );
+        assert_eq!(calls.load(Ordering::SeqCst), 1, "scoped tool must confine");
+
+        let plain = TestTool::new("plain_tool", EffectRow::pure());
+        assert!(
+            pipeline
+                .dispatch(&plain, &mut ctx, Args::default())
+                .await
+                .is_ok()
+        );
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            1,
+            "plain tools must not ride the sandbox path"
+        );
+        assert_eq!(executor.stats(), (1, 0, 0));
+
+        // A scoped tool with no executor attached is inert (v0 behavior).
+        let bare = DispatchPipeline::with_defaults();
+        let scoped2 = TestTool::new(
+            "scoped_tool",
+            EffectRow {
+                sandbox: Sandbox::StoreScoped,
+                ..Default::default()
+            },
+        );
+        assert!(
+            bare.dispatch(&scoped2, &mut ctx, Args::default())
+                .await
+                .is_ok()
+        );
     }
 
     #[tokio::test]

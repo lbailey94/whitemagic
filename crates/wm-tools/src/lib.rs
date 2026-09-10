@@ -338,6 +338,10 @@ impl MemoryCreateTool {
                 // stream is refused by the pipeline's runtime Satya check.
                 writes: fresh_write_galaxies(),
                 invokes: vec![Capability::MemoryWrite],
+                // Landlock v1 first batch (P-SANDBOX-3): the body touches
+                // only paths beneath the store root (LMDB + Tantivy +
+                // episodic + attestation DBIs).
+                sandbox: wm_core::Sandbox::StoreScoped,
                 ..Default::default()
             },
             attestation_key: node_attestation_key(),
@@ -599,6 +603,8 @@ impl MemoryBatchCreateTool {
             effects: EffectRow {
                 writes: fresh_write_galaxies(),
                 invokes: vec![Capability::MemoryWrite],
+                // Landlock v1 first batch (P-SANDBOX-3): store-root-only body.
+                sandbox: wm_core::Sandbox::StoreScoped,
                 ..Default::default()
             },
             attestation_key: node_attestation_key(),
@@ -1257,6 +1263,8 @@ impl MemoryDeleteTool {
                 reads: memory_galaxy_reads(),
                 invokes: vec![Capability::MemoryWrite],
                 destructive: true,
+                // Landlock v1 first batch (P-SANDBOX-3): store-root-only body.
+                sandbox: wm_core::Sandbox::StoreScoped,
                 ..Default::default()
             },
         }

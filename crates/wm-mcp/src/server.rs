@@ -1046,6 +1046,35 @@ impl McpServer {
         // confirmation, dharma gate, rate limit, circuit breaker, karma, stats).
         // Bound tool execution with WM_DISPATCH_TIMEOUT_MS (default 300s) so a
         // hung tool can't wedge the stdio loop or block graceful shutdown.
+        //
+        // P-SANDBOX-3 (Landlock v1): with WM_LANDLOCK_V1=1, tools marked
+        // `Sandbox::StoreScoped` run on a fresh scoped thread whose
+        // write-class FS rights are confined to the store root. The
+        // callback is the same tested ruleset as v0, applied thread-locally
+        // (the executor's fresh thread is the unit; v0's whole-process
+        // path is untouched and independent). Confinement failures are
+        // loud-degrade: the call runs unconfined, a WARN names the reason,
+        // and the executor counts it — availability stays up, drift never
+        // silent (same doctrine as the v0 report).
+        let sandbox_exec = if wm_dispatch::sandbox_exec::v1_requested() {
+            let root = store_path.to_path_buf();
+            Some(std::sync::Arc::new(
+                wm_dispatch::sandbox_exec::ScopedSandboxExecutor::new(move || {
+                    let report = crate::landlock_sandbox::restrict_to_store_root_thread(&root);
+                    if report.outcome.is_enforcing() {
+                        Ok(())
+                    } else {
+                        Err(format!(
+                            "landlock {}: {}",
+                            report.outcome.as_str(),
+                            report.detail
+                        ))
+                    }
+                }),
+            ))
+        } else {
+            None
+        };
         let pipeline = Arc::new(
             DispatchPipeline::new(
                 std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
@@ -1070,6 +1099,7 @@ impl McpServer {
             )))
             // Read-only mode must not append journal entries either.
             .with_write_audit_option(if readonly { None } else { Some(write_audit) })
+            .with_sandbox_executor(sandbox_exec)
             .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env()),
         );
 

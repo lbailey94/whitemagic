@@ -281,6 +281,8 @@ impl MemoryUpdateTool {
             effects: EffectRow {
                 writes: super::common::memory_galaxy_writes(),
                 reads: super::common::memory_galaxy_reads(),
+                // Landlock v1 first batch (P-SANDBOX-3): store-root-only body.
+                sandbox: wm_core::Sandbox::StoreScoped,
                 ..Default::default()
             },
         }

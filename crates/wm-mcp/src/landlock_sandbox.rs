@@ -360,6 +360,102 @@ mod imp {
 mod tests {
     use super::*;
 
+    /// P-SANDBOX-3 acceptance (Landlock v1): the scoped-thread executor's
+    /// worker applies the thread-local ruleset via the SAME callback shape
+    /// `wm serve` injects, and the confinement actually bites on that
+    /// thread — store-root writes succeed, an outside-root write fails.
+    /// On a degraded kernel both writes succeed and the executor reports
+    /// the run as unconfined (loud-degrade, honest either way).
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn scoped_executor_confines_its_worker_thread() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use wm_core::{Args, BrainWave, Context, EffectRow, Gana, Output, Tool, ToolStats};
+
+        struct WriteProbeTool {
+            effects: EffectRow,
+            stats: ToolStats,
+            inside: std::path::PathBuf,
+            outside: std::path::PathBuf,
+            inside_ok: std::sync::Arc<AtomicBool>,
+            outside_ok: std::sync::Arc<AtomicBool>,
+        }
+
+        #[async_trait::async_trait]
+        impl Tool for WriteProbeTool {
+            fn name(&self) -> &str {
+                "write_probe"
+            }
+            fn gana(&self) -> Gana {
+                Gana::Heart
+            }
+            fn effects(&self) -> &EffectRow {
+                &self.effects
+            }
+            async fn call(&self, _ctx: &mut Context, _args: Args) -> wm_core::Result<Output> {
+                self.inside_ok.store(
+                    std::fs::write(&self.inside, b"ok").is_ok(),
+                    Ordering::SeqCst,
+                );
+                self.outside_ok.store(
+                    std::fs::write(&self.outside, b"no").is_ok(),
+                    Ordering::SeqCst,
+                );
+                Ok(serde_json::json!({"probe": true}))
+            }
+            fn stats(&self) -> &ToolStats {
+                &self.stats
+            }
+        }
+
+        let store = tempfile::tempdir().expect("store tempdir");
+        let outside = tempfile::tempdir().expect("outside tempdir");
+        let root = store.path().to_path_buf();
+        let executor = wm_dispatch::sandbox_exec::ScopedSandboxExecutor::new(move || {
+            let report = restrict_to_store_root_thread(&root);
+            if report.outcome.is_enforcing() {
+                Ok(())
+            } else {
+                Err(format!("{}: {}", report.outcome.as_str(), report.detail))
+            }
+        });
+        let inside_ok = std::sync::Arc::new(AtomicBool::new(false));
+        let outside_ok = std::sync::Arc::new(AtomicBool::new(false));
+        let tool = WriteProbeTool {
+            effects: EffectRow {
+                sandbox: wm_core::Sandbox::StoreScoped,
+                ..Default::default()
+            },
+            stats: ToolStats::default(),
+            inside: store.path().join("inside.txt"),
+            outside: outside.path().join("outside.txt"),
+            inside_ok: std::sync::Arc::clone(&inside_ok),
+            outside_ok: std::sync::Arc::clone(&outside_ok),
+        };
+        let mut ctx = Context::new(BrainWave::Gamma);
+        executor
+            .run(&tool, &mut ctx, serde_json::json!({}))
+            .expect("probe dispatch");
+
+        let (runs, degraded, failures) = executor.stats();
+        assert_eq!((runs, failures), (1, 0));
+        assert!(
+            inside_ok.load(Ordering::SeqCst),
+            "store-root write must succeed on the confined worker"
+        );
+        if degraded == 0 {
+            assert!(
+                !outside_ok.load(Ordering::SeqCst),
+                "outside-root write must fail when the worker was confined"
+            );
+        } else {
+            assert!(
+                outside_ok.load(Ordering::SeqCst),
+                "degraded kernel: worker ran unconfined (loud-degrade)"
+            );
+        }
+    }
+
     #[test]
     fn flag_parse_is_strict() {
         assert!(!parse_flag(None));

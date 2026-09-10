@@ -34,7 +34,7 @@ pub struct SecretSampler {
 impl SecretSampler {
     /// Build with an explicit cadence (`0` disables).
     #[must_use]
-    pub fn new(every: u64) -> Self {
+    pub const fn new(every: u64) -> Self {
         Self {
             every,
             seen: AtomicU64::new(0),
@@ -94,10 +94,11 @@ impl SecretSampler {
     }
 }
 
-/// Parse a cadence value: explicit numbers honored (`0` disables),
-/// missing/garbage falls back to [`DEFAULT_SAMPLE_EVERY`]. Split out so
-/// tests never mutate process-global env (Rust 2024 `set_var` is unsafe
-/// and the crates forbid it).
+/// Parse a cadence value.
+///
+/// Explicit numbers honored (`0` disables), missing/garbage falls back to
+/// [`DEFAULT_SAMPLE_EVERY`]. Split out so tests never mutate process-global
+/// env (Rust 2024 `set_var` is unsafe and the crates forbid it).
 #[must_use]
 pub fn parse_every(value: Option<&str>) -> u64 {
     value
