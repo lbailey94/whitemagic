@@ -1555,6 +1555,68 @@ mod tests {
     }
 
     #[test]
+    fn rejected_append_batch_preserves_prior_state_after_reopen() {
+        // Exercise the real NO_OVERWRITE transaction with a disposable LMDB
+        // directory.  The new record is queued before the duplicate so this
+        // proves the transaction aborts rather than leaving an early write.
+        let tmp = tempdir().unwrap();
+        let original = sample_record(1, "acknowledged original record");
+        let rejected_new = sample_record(2, "must not survive rejected batch");
+        {
+            let store = MemoryStore::open_default(tmp.path()).unwrap();
+            store.episodic().append(&original).unwrap();
+            let error = store
+                .episodic()
+                .append_batch(&[rejected_new.clone(), original.clone()])
+                .unwrap_err();
+            assert!(error.to_string().contains("already exists"));
+            assert_eq!(
+                store.episodic().get(original.id).unwrap(),
+                Some(original.clone())
+            );
+            assert_eq!(store.episodic().get(rejected_new.id).unwrap(), None);
+        }
+
+        let reopened = MemoryStore::open_default(tmp.path()).unwrap();
+        assert_eq!(
+            reopened.episodic().get(original.id).unwrap(),
+            Some(original)
+        );
+        assert_eq!(reopened.episodic().get(rejected_new.id).unwrap(), None);
+    }
+
+    #[test]
+    fn lost_episodic_sidecar_rebuilds_from_raw_records_after_reopen() {
+        // This models loss of a *derived* sidecar only.  It deliberately does
+        // not model an LMDB/process crash or make a filesystem-durability
+        // claim; the authoritative raw records remain in the same temporary
+        // store and the next process rebuilds the projection from them.
+        let tmp = tempdir().unwrap();
+        let record = sample_record(1, "sidecar recovery preserves searchable evidence");
+        {
+            let store = MemoryStore::open_default(tmp.path()).unwrap();
+            let episodic = store.episodic();
+            episodic.append(&record).unwrap();
+            assert!(!episodic.sidecar_is_empty().unwrap());
+
+            let mut tx = store.env().begin_rw_txn().unwrap();
+            tx.clear_db(episodic.term_db).unwrap();
+            tx.commit().unwrap();
+            assert!(episodic.sidecar_is_empty().unwrap());
+        }
+
+        let reopened = MemoryStore::open_default(tmp.path()).unwrap();
+        let episodic = reopened.episodic();
+        assert_eq!(episodic.get(record.id).unwrap(), Some(record.clone()));
+        assert!(!episodic.sidecar_is_empty().unwrap());
+        let hits = episodic
+            .search("sidecar searchable evidence", 10, false)
+            .unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].record.id, record.id);
+    }
+
+    #[test]
     fn append_explicit_batch_redacts_and_skips_private() {
         let tmp = tempdir().unwrap();
         let store = MemoryStore::open_default(tmp.path()).unwrap();
