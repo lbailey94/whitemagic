@@ -317,6 +317,156 @@ mod tests {
     use std::net::TcpListener;
     use std::sync::mpsc;
     use std::thread;
+    use std::time::{Duration, Instant};
+
+    /// Hardened one-request loopback fixture (Q04 Terra batch fix, applied on
+    /// her behalf from checkpoint c6f50bc1): nonblocking accept with a
+    /// deadline, bounded stream timeouts, explicit EOF handling, bounded
+    /// request size, clear Content-Length diagnostics, and prompt completion
+    /// on every failure mode so no test can hang waiting on the fake server.
+    type RequestResult = Result<Vec<u8>, String>;
+    const FIXTURE_MAX_REQUEST: usize = 64 * 1024;
+
+    fn run_fake_completion_server(
+        listener: &TcpListener,
+        request_tx: &mpsc::Sender<RequestResult>,
+    ) {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        listener
+            .set_nonblocking(true)
+            .expect("set listener nonblocking");
+        let mut stream = loop {
+            if Instant::now() > deadline {
+                let _ =
+                    request_tx.send(Err("accept deadline exceeded: no client connected".into()));
+                return;
+            }
+            match listener.accept() {
+                Ok((stream, _)) => break stream,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Err(e) => {
+                    let _ = request_tx.send(Err(format!("accept failed: {e}")));
+                    return;
+                }
+            }
+        };
+        stream
+            .set_read_timeout(Some(Duration::from_millis(500)))
+            .expect("set read timeout");
+        stream
+            .set_write_timeout(Some(Duration::from_millis(500)))
+            .expect("set write timeout");
+
+        let mut received = Vec::new();
+        let mut buffer = [0_u8; 1024];
+        let header_end = loop {
+            if received.len() > FIXTURE_MAX_REQUEST {
+                let _ = request_tx.send(Err("request exceeds the fixture size bound".into()));
+                return;
+            }
+            match stream.read(&mut buffer) {
+                Ok(0) => {
+                    let _ = request_tx.send(Err(
+                        "incomplete request: EOF before headers were complete".into(),
+                    ));
+                    return;
+                }
+                Ok(count) => received.extend_from_slice(&buffer[..count]),
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut =>
+                {
+                    let _ =
+                        request_tx.send(Err("incomplete headers: read deadline exceeded".into()));
+                    return;
+                }
+                Err(e) => {
+                    let _ = request_tx.send(Err(format!("header read failed: {e}")));
+                    return;
+                }
+            }
+            if let Some(end) = received.windows(4).position(|w| w == b"\r\n\r\n") {
+                break end + 4;
+            }
+        };
+        let headers = String::from_utf8_lossy(&received[..header_end]).to_string();
+        let content_length = match headers.lines().find_map(|line| {
+            line.split_once(':').and_then(|(name, value)| {
+                name.eq_ignore_ascii_case("content-length")
+                    .then(|| value.trim().to_string())
+            })
+        }) {
+            None => {
+                let _ = request_tx.send(Err("request has no Content-Length header".into()));
+                return;
+            }
+            Some(value) => {
+                let Ok(n) = value.parse::<usize>() else {
+                    let _ =
+                        request_tx.send(Err(format!("malformed Content-Length header: {value:?}")));
+                    return;
+                };
+                n
+            }
+        };
+        if header_end.saturating_add(content_length) > FIXTURE_MAX_REQUEST {
+            let _ = request_tx.send(Err("Content-Length exceeds the fixture size bound".into()));
+            return;
+        }
+        while received.len() < header_end + content_length {
+            match stream.read(&mut buffer) {
+                Ok(0) => {
+                    let _ = request_tx.send(Err(
+                        "incomplete request: EOF before the body was complete".into(),
+                    ));
+                    return;
+                }
+                Ok(count) => received.extend_from_slice(&buffer[..count]),
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::WouldBlock
+                        || e.kind() == std::io::ErrorKind::TimedOut =>
+                {
+                    let _ = request_tx.send(Err("incomplete body: read deadline exceeded".into()));
+                    return;
+                }
+                Err(e) => {
+                    let _ = request_tx.send(Err(format!("body read failed: {e}")));
+                    return;
+                }
+            }
+        }
+        if request_tx.send(Ok(received)).is_err() {
+            return; // test side already gone — nothing to report to
+        }
+        let body = r#"{"choices":[{"message":{"role":"assistant","content":"{\"conclusion\":\"loopback result\",\"confidence\":0.75,\"stance\":\"agree\",\"key_points\":[\"contract observed\"]}"}}]}"#;
+        let _ = write!(
+            stream,
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+    }
+
+    fn start_fake_server() -> (
+        std::net::SocketAddr,
+        mpsc::Receiver<RequestResult>,
+        thread::JoinHandle<()>,
+    ) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let (request_tx, request_rx) = mpsc::channel();
+        let server = thread::spawn(move || run_fake_completion_server(&listener, &request_tx));
+        (address, request_rx, server)
+    }
+
+    fn expect_request(request_rx: &mpsc::Receiver<RequestResult>) -> Vec<u8> {
+        request_rx
+            .recv_timeout(Duration::from_secs(10))
+            .expect("fixture server did not finish in time")
+            .expect("fixture server reported a transport error")
+    }
 
     #[test]
     fn llama_config_defaults() {
@@ -403,46 +553,7 @@ mod tests {
         // A one-request loopback server is a fake transport, not a model. It
         // makes the HTTP boundary observable without invoking a provider or
         // local inference runtime.
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let address = listener.local_addr().unwrap();
-        let (request_tx, request_rx) = mpsc::channel();
-        let server = thread::spawn(move || {
-            let (mut stream, _) = listener.accept().unwrap();
-            let mut received = Vec::new();
-            let mut buffer = [0_u8; 1024];
-            let header_end = loop {
-                let count = stream.read(&mut buffer).unwrap();
-                received.extend_from_slice(&buffer[..count]);
-                if let Some(end) = received.windows(4).position(|w| w == b"\r\n\r\n") {
-                    break end + 4;
-                }
-            };
-            let headers = String::from_utf8_lossy(&received[..header_end]);
-            let content_length = headers
-                .lines()
-                .find_map(|line| {
-                    line.split_once(':').and_then(|(name, value)| {
-                        name.eq_ignore_ascii_case("content-length")
-                            .then(|| value.trim())
-                    })
-                })
-                .unwrap()
-                .parse::<usize>()
-                .unwrap();
-            while received.len() < header_end + content_length {
-                let count = stream.read(&mut buffer).unwrap();
-                received.extend_from_slice(&buffer[..count]);
-            }
-            request_tx.send(received).unwrap();
-            let body = r#"{"choices":[{"message":{"role":"assistant","content":"{\"conclusion\":\"loopback result\",\"confidence\":0.75,\"stance\":\"agree\",\"key_points\":[\"contract observed\"]}"}}]}"#;
-            write!(
-                stream,
-                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                body.len(),
-                body
-            )
-            .unwrap();
-        });
+        let (address, request_rx, server) = start_fake_server();
 
         let config = LlamaConfig {
             endpoint: format!("http://{address}/v1/chat/completions"),
@@ -455,7 +566,7 @@ mod tests {
         let input = HemisphereInput::new("loopback transport topic")
             .with_evidence(vec!["synthetic evidence".into()]);
         let output = hemisphere.analyze(&input);
-        let received = request_rx.recv().unwrap();
+        let received = expect_request(&request_rx);
         server.join().unwrap();
 
         let header_end = received.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4;
@@ -486,6 +597,47 @@ mod tests {
         assert_eq!(output.conclusion, "loopback result");
         assert_eq!(output.stance, Stance::Agree);
         assert!((output.confidence - 0.75).abs() < 0.01);
+    }
+
+    #[test]
+    fn llama_fixture_completes_promptly_without_a_client() {
+        // The hardened fixture must time out its accept instead of hanging a
+        // test forever when the client never connects (Q04 failure-mode fix).
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let (request_tx, request_rx) = mpsc::channel();
+        let server = thread::spawn(move || run_fake_completion_server(&listener, &request_tx));
+        let outcome = request_rx
+            .recv_timeout(Duration::from_secs(10))
+            .expect("fixture did not finish within the test bound");
+        assert!(
+            outcome.unwrap_err().contains("accept deadline exceeded"),
+            "expected the accept-deadline diagnostic"
+        );
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn llama_fixture_reports_truncated_request_as_eof() {
+        // A client that opens the socket but sends only partial headers must
+        // produce an explicit EOF diagnostic, not an infinite read loop.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let (request_tx, request_rx) = mpsc::channel();
+        let server = thread::spawn(move || run_fake_completion_server(&listener, &request_tx));
+        let mut partial = std::net::TcpStream::connect(address).unwrap();
+        partial
+            .write_all(b"POST /v1/chat/completions HTTP/1.1\r\nContent-Ty")
+            .unwrap();
+        // Drop without finishing the request: the fixture observes EOF.
+        drop(partial);
+        let outcome = request_rx
+            .recv_timeout(Duration::from_secs(10))
+            .expect("fixture did not finish within the test bound");
+        assert!(
+            outcome.unwrap_err().contains("EOF"),
+            "expected the incomplete-request EOF diagnostic"
+        );
+        server.join().unwrap();
     }
 
     #[test]
