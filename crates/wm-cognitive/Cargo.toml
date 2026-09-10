@@ -28,6 +28,7 @@ uuid = { workspace = true }
 lmdb = "0.8"
 toml = { workspace = true }
 ahash = { workspace = true }
+regex = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

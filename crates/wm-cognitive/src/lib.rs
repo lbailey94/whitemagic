@@ -23,6 +23,7 @@ pub mod pattern_bridge;
 pub mod pattern_dream_bridge;
 pub mod redteam_manifest;
 pub mod retention;
+pub mod session_miner;
 pub mod smarana;
 pub mod spiral;
 pub mod strategy;
@@ -77,6 +78,7 @@ pub use pattern_dream_bridge::{BridgeSummary, DreamSynthesis, PatternDreamBridge
 pub use retention::{
     RetentionConfig, RetentionEngine, RetentionSignal, RetentionVerdict, SweepReport,
 };
+pub use session_miner::{InsightKind, MinedInsight, SessionMiner};
 pub use smarana::{
     AlchemicalDistribution, AlchemicalPhaseBridge, AlchemicalStage, AutonomousSmarana,
     CoActivationRecord, EBBINGHAUS_DECAY_CONSTANT, GistDistiller, GistVector,
