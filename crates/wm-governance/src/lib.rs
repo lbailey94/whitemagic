@@ -7,6 +7,9 @@
 #![forbid(unsafe_code)]
 
 pub mod acs;
+pub mod canary_tokens;
+pub mod decoy_shell;
+pub mod deobfuscator;
 pub mod dharma_gate;
 pub mod economic_firewall;
 pub mod engagement_tokens;
@@ -23,6 +26,15 @@ pub mod security_events;
 pub mod write_audit;
 
 pub use acs::{AcsAction, AcsCheckpoint, AcsComplianceReport, AcsExport, AcsRule};
+pub use canary_tokens::{
+    CanaryHit, CanaryId, CanaryRegistry, CanaryStats, CanaryStatus, CanaryToken, CanaryType,
+    DECOY_TAG, aws_key_id_checksum_valid, fake_api_key, fake_aws_key_id, fake_credential,
+    fake_memory_entry, fake_path, fake_private_key_block,
+};
+pub use decoy_shell::{DecoyEnvironment, InteractionEntry, InteractionLog, NOTHING_REAL_MARKER};
+pub use deobfuscator::{
+    DeobfuscationError, DeobfuscationLayer, LayerFinding, ScanReport, decode_layers, scan,
+};
 pub use dharma_gate::{ActionVerdict, DharmaGate, Homeostasis};
 pub use economic_firewall::{
     DharmaSignOff, ECONOMIC_TOOLS, EconomicFirewall, NoDharmaSignOff, NoRecipientTrust,
