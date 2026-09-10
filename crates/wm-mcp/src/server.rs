@@ -1894,7 +1894,7 @@ impl McpServer {
                 "boundary_registry_including_meta":self.registry.len(),"wm_routable_names":routed,
                 "mcp_entrypoints":entrypoints.as_array().map(Vec::len)},
             "definitions":{"full_pre_profile":"runtime registrations before profile filtering",
-                "profile_pre_meta":"profile-filtered registrations before meta-tool layering; gnosis is replaced, four names added",
+                "profile_pre_meta":"profile-filtered registrations before meta-tool layering; gnosis is replaced if present or added if absent; tools.list, tools.usage_report, nlu.shadow_report and wm are added",
                 "boundary_registry_including_meta":"final server registry including wm",
                 "wm_routable_names":"final registry excluding the outer wm wrapper; includes discovery helpers and compatibility names",
                 "aliases":"memory.hybrid_recall shares memory.search implementation; profile alias prat resolves to pray; wrappers and subcommands are not counted as separate registered routes",
