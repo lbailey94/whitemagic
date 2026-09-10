@@ -9,13 +9,17 @@
 pub mod acs;
 pub mod dharma_gate;
 pub mod economic_firewall;
+pub mod engagement_tokens;
 pub mod escalation;
 pub mod firebreak;
 pub mod gratitude_ledger;
 pub mod karma_ledger;
+pub mod model_signing;
 pub mod network_profile;
+pub mod pattern_immunity;
 pub mod policy;
 pub mod resource_rules;
+pub mod security_events;
 pub mod write_audit;
 
 pub use acs::{AcsAction, AcsCheckpoint, AcsComplianceReport, AcsExport, AcsRule};
@@ -24,6 +28,9 @@ pub use economic_firewall::{
     DharmaSignOff, ECONOMIC_TOOLS, EconomicFirewall, NoDharmaSignOff, NoRecipientTrust,
     RecipientTrustSource, SecurityEvent, TransactionPolicy, TransactionRequest, TransactionVerdict,
     VerdictReason, is_economic_tool,
+};
+pub use engagement_tokens::{
+    EngagementIssuer, EngagementScope, EngagementToken, EngagementTokenError, TokenVerdict,
 };
 pub use escalation::{EscalationQueue, ReviewItem, ReviewStatus};
 pub use firebreak::{
@@ -34,13 +41,21 @@ pub use gratitude_ledger::{
     SupporterTier, tier_for,
 };
 pub use karma_ledger::{ChainVerificationResult, Guna, KarmaEntry, KarmaLedger, MerkleCheckpoint};
+pub use model_signing::{
+    ModelSignature, ModelSigner, ModelVerdict, verify_model, verify_model_hash,
+};
 pub use network_profile::{
     AgentIdentity, AgentKeypair, NetworkStateProfile, ReputationEvent, ReputationRecord,
     WeightedVote, verify_signature,
 };
+pub use pattern_immunity::{PATTERN_THRESHOLD, PatternImmunity, ThreatPattern};
 pub use policy::{
     DharmaPolicy, OwaspAgentic, OwaspComplianceReport, PolicyCheckResult, PolicyEngine, PolicyRule,
     PolicyUpdateError,
 };
 pub use resource_rules::{BudgetUsage, ResourceRules, ResourceRulesConfig, ResourceVerdict};
+pub use security_events::{
+    BusStats, RING_CAPACITY, SecurityEvent as BusSecurityEvent, SecurityEventBus,
+    SecurityEventType, Severity,
+};
 pub use write_audit::{ActorIdentity, WriteAuditEntry, WriteAuditJournal, args_digest};
