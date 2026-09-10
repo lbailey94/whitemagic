@@ -1,0 +1,6 @@
+[Unit]
+Description=WhiteMagic monthly trust receipts (Q40 — seal tally, anchor chain check, timestamp confirmations)
+
+[Service]
+Type=oneshot
+ExecStart=%h/Desktop/WHITEMAGIC/WMv9/ops/trust/monthly_receipts.sh

@@ -1,0 +1,9 @@
+[Unit]
+Description=Monthly WhiteMagic trust receipts (1st of month, 04:15, catch-up after sleep)
+
+[Timer]
+OnCalendar=*-*-01 04:15:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
