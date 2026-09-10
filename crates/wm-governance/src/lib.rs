@@ -11,7 +11,9 @@ pub mod dharma_gate;
 pub mod economic_firewall;
 pub mod escalation;
 pub mod firebreak;
+pub mod gratitude_ledger;
 pub mod karma_ledger;
+pub mod network_profile;
 pub mod policy;
 pub mod resource_rules;
 pub mod write_audit;
@@ -27,7 +29,15 @@ pub use escalation::{EscalationQueue, ReviewItem, ReviewStatus};
 pub use firebreak::{
     Firebreak, FirebreakOutcome, FirebreakStats, SCOPE_REGISTRY, ScopeRule, VetoClass, VetoFinding,
 };
+pub use gratitude_ledger::{
+    Digest, GENESIS_GRATITUDE, GratitudeEntry, GratitudeLedger, GratitudeVerification,
+    SupporterTier, tier_for,
+};
 pub use karma_ledger::{ChainVerificationResult, Guna, KarmaEntry, KarmaLedger, MerkleCheckpoint};
+pub use network_profile::{
+    AgentIdentity, AgentKeypair, NetworkStateProfile, ReputationEvent, ReputationRecord,
+    WeightedVote, verify_signature,
+};
 pub use policy::{
     DharmaPolicy, OwaspAgentic, OwaspComplianceReport, PolicyCheckResult, PolicyEngine, PolicyRule,
     PolicyUpdateError,

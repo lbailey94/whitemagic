@@ -24,6 +24,8 @@ regex = { workspace = true }
 sha2 = "0.10"
 lmdb = "0.8"
 wm-substrate = { workspace = true }
+ed25519-dalek = { version = "3.0.0", features = ["rand_core"] }
+getrandom = { version = "0.4", features = ["sys_rng"] }
 
 [dev-dependencies]
 proptest = { workspace = true }

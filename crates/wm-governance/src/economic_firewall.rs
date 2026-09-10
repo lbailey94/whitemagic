@@ -12,8 +12,8 @@
 //!   3. rate limit (transactions per rolling 60s)
 //!   4. recipient blocklist
 //!   5. recipient allowlist (if non-empty)
-//!   5b. recipient trust score (injectable; unknown = pass-through)
-//!   6. Dharma ethical sign-off (injectable; unavailable → fail-closed or
+//!   6. recipient trust score (injectable; unknown = pass-through)
+//!   7. Dharma ethical sign-off (injectable; unavailable → fail-closed or
 //!      permissive per `WM_FIREWALL_FAIL_CLOSED`)
 //!
 //! Env knobs (read per call, parity with the original):
@@ -323,10 +323,10 @@ impl EconomicFirewall {
         if let Ok(dir) = std::env::var("WM_ECONOMY_DIR") {
             return PathBuf::from(dir);
         }
-        std::env::var("HOME")
-            .map(PathBuf::from)
-            .map(|home| home.join(".local/share/whitemagic/economy"))
-            .unwrap_or_else(|_| PathBuf::from(".whitemagic-economy"))
+        std::env::var("HOME").map_or_else(
+            |_| PathBuf::from(".whitemagic-economy"),
+            |home| PathBuf::from(home).join(".local/share/whitemagic/economy"),
+        )
     }
 
     fn policy_for(&self, inner: &Inner, agent_id: &str) -> TransactionPolicy {
@@ -344,6 +344,11 @@ impl EconomicFirewall {
     }
 
     /// Run all checks and return a verdict.
+    ///
+    /// The lock guard intentionally spans the full check chain: the checks
+    /// plus the spend record are one atomic decision (dropping between checks
+    /// would let concurrent requests race past a just-satisfied limit).
+    #[allow(clippy::significant_drop_tightening)]
     ///
     /// # Panics
     /// Panics only if the internal mutex is poisoned by another thread
@@ -402,7 +407,7 @@ impl EconomicFirewall {
         let today = Self::day_key(now);
         let spent_entry = daily_spent.entry(request.agent_id.clone()).or_default();
         if spent_entry.day != today {
-            spent_entry.day = today.clone();
+            spent_entry.day.clone_from(&today);
             spent_entry.amount = 0.0;
         }
         let spent = spent_entry.amount;
@@ -779,7 +784,7 @@ mod tests {
     #[test]
     fn recipient_trust_blocks_low_scores_passes_unknown() {
         let dir = tempfile::tempdir().expect("tmpdir");
-        let mut fw = EconomicFirewall::new(
+        let fw = EconomicFirewall::new(
             dir.path().to_path_buf(),
             Arc::new(FixedTrust(0.1)),
             Arc::new(FixedDharma(true)),
@@ -799,7 +804,7 @@ mod tests {
     #[test]
     fn dharma_denial_and_fail_closed() {
         let dir = tempfile::tempdir().expect("tmpdir");
-        let mut fw = EconomicFirewall::new(
+        let fw = EconomicFirewall::new(
             dir.path().to_path_buf(),
             Arc::new(NoRecipientTrust),
             Arc::new(FixedDharma(false)),
