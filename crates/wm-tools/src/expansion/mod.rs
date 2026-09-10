@@ -42,6 +42,7 @@ pub mod bagua;
 pub mod bayesian_tools;
 pub mod bicameral;
 pub mod boundary;
+pub mod bounty_connector;
 pub mod captains;
 pub mod claims_tools;
 pub mod code;
