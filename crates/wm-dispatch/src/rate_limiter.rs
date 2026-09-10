@@ -522,9 +522,14 @@ mod tests {
     use proptest::prelude::*;
 
     #[test]
-    fn try_acquire_empty_string() {
-        let limiter = RateLimiter::new(100_000, 10_000, 1_000);
-        let _ = limiter.try_acquire("");
+    fn empty_tool_name_is_limited_in_its_own_bucket() {
+        // An empty name is not a bypass: it must use a stable per-tool bucket
+        // and must not consume the different named tool's allowance.
+        let limiter = RateLimiter::new(100_000, 2, 0);
+        assert!(limiter.try_acquire("").is_ok());
+        assert!(limiter.try_acquire("").is_ok());
+        assert!(limiter.try_acquire("").is_err());
+        assert!(limiter.try_acquire("other_tool").is_ok());
     }
 
     #[test]

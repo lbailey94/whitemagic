@@ -313,6 +313,10 @@ fn fallback_left_output(reason: &str, input: &HemisphereInput) -> HemisphereOutp
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+    use std::thread;
 
     #[test]
     fn llama_config_defaults() {
@@ -392,6 +396,96 @@ mod tests {
         let output = hemisphere.analyze(&input);
         assert_eq!(output.source, HemisphereSource::Left);
         assert!(!output.conclusion.is_empty());
+    }
+
+    #[test]
+    fn llama_analyze_uses_configured_loopback_chat_contract() {
+        // A one-request loopback server is a fake transport, not a model. It
+        // makes the HTTP boundary observable without invoking a provider or
+        // local inference runtime.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let (request_tx, request_rx) = mpsc::channel();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut received = Vec::new();
+            let mut buffer = [0_u8; 1024];
+            let header_end = loop {
+                let count = stream.read(&mut buffer).unwrap();
+                received.extend_from_slice(&buffer[..count]);
+                if let Some(end) = received.windows(4).position(|w| w == b"\r\n\r\n") {
+                    break end + 4;
+                }
+            };
+            let headers = String::from_utf8_lossy(&received[..header_end]);
+            let content_length = headers
+                .lines()
+                .find_map(|line| {
+                    line.split_once(':').and_then(|(name, value)| {
+                        name.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim())
+                    })
+                })
+                .unwrap()
+                .parse::<usize>()
+                .unwrap();
+            while received.len() < header_end + content_length {
+                let count = stream.read(&mut buffer).unwrap();
+                received.extend_from_slice(&buffer[..count]);
+            }
+            request_tx.send(received).unwrap();
+            let body = r#"{"choices":[{"message":{"role":"assistant","content":"{\"conclusion\":\"loopback result\",\"confidence\":0.75,\"stance\":\"agree\",\"key_points\":[\"contract observed\"]}"}}]}"#;
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            )
+            .unwrap();
+        });
+
+        let config = LlamaConfig {
+            endpoint: format!("http://{address}/v1/chat/completions"),
+            model: "synthetic-local-model".into(),
+            temperature: 0.35,
+            timeout: Duration::from_secs(2),
+            max_tokens: 77,
+        };
+        let hemisphere = LlamaLeftHemisphere::new(config);
+        let input = HemisphereInput::new("loopback transport topic")
+            .with_evidence(vec!["synthetic evidence".into()]);
+        let output = hemisphere.analyze(&input);
+        let received = request_rx.recv().unwrap();
+        server.join().unwrap();
+
+        let header_end = received.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4;
+        let request = String::from_utf8(received).unwrap();
+        assert!(request.starts_with("POST /v1/chat/completions HTTP/1.1\r\n"));
+        assert!(request[..header_end].lines().any(|line| {
+            line.split_once(':').is_some_and(|(name, value)| {
+                name.eq_ignore_ascii_case("content-type")
+                    && value.trim().eq_ignore_ascii_case("application/json")
+            })
+        }));
+        let payload: serde_json::Value = serde_json::from_str(&request[header_end..]).unwrap();
+        assert_eq!(payload["model"], "synthetic-local-model");
+        assert_eq!(payload["max_tokens"], 77);
+        assert_eq!(payload["temperature"], 0.35);
+        assert!(
+            payload["messages"][1]["content"]
+                .as_str()
+                .unwrap()
+                .contains("loopback transport topic")
+        );
+        assert!(
+            payload["messages"][1]["content"]
+                .as_str()
+                .unwrap()
+                .contains("synthetic evidence")
+        );
+        assert_eq!(output.conclusion, "loopback result");
+        assert_eq!(output.stance, Stance::Agree);
+        assert!((output.confidence - 0.75).abs() < 0.01);
     }
 
     #[test]

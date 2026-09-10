@@ -437,9 +437,14 @@ mod tests {
 
         // Prompt with sensitive keywords
         let decision = gate.classify("What is my SSN 123-45-6789 and password hunter2?");
-        if decision.sensitive {
-            assert_ne!(decision.tier, InferenceTier::Cloud);
-        }
+        assert!(
+            decision.sensitive,
+            "fixture must exercise the sensitive route"
+        );
+        assert_eq!(decision.tier, InferenceTier::LocalLarge);
+        assert!(decision.run_right);
+        assert_eq!(decision.max_rounds, 3);
+        assert!(decision.reason.contains("local-only"));
     }
 
     #[test]
