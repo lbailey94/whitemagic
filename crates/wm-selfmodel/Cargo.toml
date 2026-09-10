@@ -5,6 +5,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Self-model and capability ledger for WhiteMagic agent introspection."
+repository.workspace = true
+homepage.workspace = true
+keywords = ["mcp", "memory", "ai-agents", "local-first"]
+
 
 [lints]
 workspace = true

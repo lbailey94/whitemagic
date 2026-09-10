@@ -1,4 +1,5 @@
 //! Polymorphic Resonant Adaptive Yoga (PRAY) & Hongmen / White Lotus Hierarchy.
+//!
 //! Formerly PRAT (Polymorphic Resonant Adaptive Tools), renamed in v9.2.
 //! Yoga (Skt. √yuj, "to yoke, join"): that which ties together — one serve
 //! folding a thousand or more tools and systems into a single entrypoint.

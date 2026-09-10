@@ -1,0 +1,34 @@
+{
+  "serverInfo": {
+    "name": "WhiteMagic Hosted Recall",
+    "version": "9.1.0"
+  },
+  "authentication": {
+    "schemes": [
+      {
+        "type": "bearer",
+        "description": "Free eval key (50 recalls/day). Request via whitemagic.dev/contact or the beta program."
+      },
+      {
+        "type": "x402",
+        "description": "Pay-per-recall in USDC (phase 2). No account needed — the endpoint answers HTTP 402 with payment requirements.",
+        "status": "planned"
+      }
+    ]
+  },
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://mcp.whitemagic.dev/mcp"
+  },
+  "policy": {
+    "readOnly": true,
+    "corpus": "curated public content only — personal memory never leaves local installations",
+    "rateLimit": "50 recalls/day free tier; 600 rpm hard ceiling",
+    "governance": "Dharma gates + Landlock sandbox + per-request audit lines"
+  }
+}

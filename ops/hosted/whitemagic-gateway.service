@@ -1,0 +1,21 @@
+[Unit]
+Description=WhiteMagic hosted gateway (auth + daily caps, x402 seam)
+After=network-online.target whitemagic-hosted.service
+Wants=whitemagic-hosted.service
+
+[Service]
+User=whitemagic
+Group=whitemagic
+ExecStart=/usr/bin/python3 /etc/whitemagic-hosted/authd.py --listen 127.0.0.1:18790 --upstream http://127.0.0.1:18789 --state /var/lib/whitemagic-hosted
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadOnlyPaths=/etc/whitemagic-hosted
+ReadWritePaths=/var/lib/whitemagic-hosted
+PrivateTmp=yes
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

@@ -5,6 +5,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Cognitive evaluation, pattern detection, and memory-science harnesses for WhiteMagic."
+repository.workspace = true
+homepage.workspace = true
+keywords = ["mcp", "memory", "ai-agents", "local-first"]
+
 
 [lints]
 workspace = true

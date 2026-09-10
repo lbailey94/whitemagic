@@ -7714,6 +7714,46 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a28ac98ddc8b9274cb41bb4d9d4d5c425b6020c50c46f25559911905610b4a88"
 
 [[package]]
+name = "whitemagic"
+version = "9.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "clap",
+ "hmac",
+ "landlock",
+ "pyo3",
+ "rmp-serde",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.20",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "ureq",
+ "uuid",
+ "wm-bicameral",
+ "wm-cognitive",
+ "wm-conformal",
+ "wm-core",
+ "wm-dispatch",
+ "wm-governance",
+ "wm-memory",
+ "wm-polyglot",
+ "wm-sangha",
+ "wm-selfmodel",
+ "wm-simulation",
+ "wm-substrate",
+ "wm-tools",
+ "wm-workspace",
+]
+
+[[package]]
 name = "wide"
 version = "0.7.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7932,7 +7972,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wm-bicameral"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "ahash",
  "chrono",
@@ -7952,7 +7992,7 @@ dependencies = [
 
 [[package]]
 name = "wm-cognitive"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "ahash",
  "chrono",
@@ -7980,7 +8020,7 @@ dependencies = [
 
 [[package]]
 name = "wm-conformal"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "proptest",
  "serde",
@@ -7990,7 +8030,7 @@ dependencies = [
 
 [[package]]
 name = "wm-core"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -8009,7 +8049,7 @@ dependencies = [
 
 [[package]]
 name = "wm-dispatch"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -8032,7 +8072,7 @@ dependencies = [
 
 [[package]]
 name = "wm-governance"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "ahash",
  "chrono",
@@ -8055,48 +8095,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "wm-mcp"
-version = "9.0.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "clap",
- "hmac",
- "landlock",
- "pyo3",
- "rmp-serde",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.20",
- "tokio",
- "toml",
- "tracing",
- "tracing-subscriber",
- "ureq",
- "uuid",
- "wm-bicameral",
- "wm-cognitive",
- "wm-conformal",
- "wm-core",
- "wm-dispatch",
- "wm-governance",
- "wm-memory",
- "wm-polyglot",
- "wm-sangha",
- "wm-selfmodel",
- "wm-simulation",
- "wm-substrate",
- "wm-tools",
- "wm-workspace",
-]
-
-[[package]]
 name = "wm-memory"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "ahash",
  "arrow",
@@ -8130,7 +8130,7 @@ dependencies = [
 
 [[package]]
 name = "wm-polyglot"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "async-trait",
  "jlrs",
@@ -8146,7 +8146,7 @@ dependencies = [
 
 [[package]]
 name = "wm-sangha"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "chrono",
  "ed25519-dalek",
@@ -8161,7 +8161,7 @@ dependencies = [
 
 [[package]]
 name = "wm-selfmodel"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "chrono",
  "serde",
@@ -8171,7 +8171,7 @@ dependencies = [
 
 [[package]]
 name = "wm-simulation"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "chrono",
  "serde",
@@ -8182,7 +8182,7 @@ dependencies = [
 
 [[package]]
 name = "wm-substrate"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "chrono",
  "serde",
@@ -8193,7 +8193,7 @@ dependencies = [
 
 [[package]]
 name = "wm-tools"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "ahash",
  "async-trait",
@@ -8226,7 +8226,7 @@ dependencies = [
 
 [[package]]
 name = "wm-workspace"
-version = "9.0.0"
+version = "9.1.0"
 dependencies = [
  "serde",
  "serde_json",

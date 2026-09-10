@@ -420,6 +420,11 @@ mod tests {
         assert!(chat_err.to_string().contains("--mesh"), "{chat_err}");
     }
 
+    // Spawns a live two-node mesh with UDP multicast beacons; Windows
+    // runners never deliver multicast (same CI-evidenced hang as the
+    // wm-sangha fleet tests, run 34303664225). Unix-only until a
+    // Windows-native transport-test lane exists.
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn mesh_tools_drive_a_live_two_node_mesh() {
         use wm_sangha::MeshKeyPair;

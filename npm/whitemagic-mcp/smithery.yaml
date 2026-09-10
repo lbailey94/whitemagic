@@ -1,0 +1,26 @@
+# Smithery server definition — https://smithery.ai/docs
+# WhiteMagic: local-first memory and session continuity for AI agents.
+# The npm launcher installs the checksum-verified static wm binary from
+# GitHub releases and runs it over stdio MCP (curated profile by default).
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      profile:
+        type: string
+        enum: [curated, full, minimal]
+        default: curated
+        description: Tool surface profile (curated is the product surface).
+      readonly:
+        type: boolean
+        default: false
+        description: Open the index read-only (no writes).
+  commandFunction: |-
+    (config) => {
+      const args = ["-y", "whitemagic-mcp@latest", "serve"];
+      if (config && config.profile) args.push("--profile", config.profile);
+      if (config && config.readonly) args.push("--readonly");
+      return { command: "npx", args };
+    }

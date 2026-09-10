@@ -1,0 +1,55 @@
+# WhiteMagic
+
+> Local-first memory and session continuity for coding agents, over MCP. Rust, MIT, no telemetry, no cloud service. Records what matters, finds it after restart, and carries decisions into the next session — on your machine.
+
+WhiteMagic gives an AI coding agent durable project memory: explicit MCP routes, lexical search without an external model, session record/replay, cross-session continuity, backup/verify/restore, and Linux Landlock containment. Trusted, local, single-user operation. Truthful degradation when optional models are unavailable.
+
+## Install
+
+One-line installer (resolves the latest release, verifies the checksum):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+```
+
+Or download the binary from the [latest release](https://github.com/lbailey94/whitemagic/releases), verify with `sha256sum -c`, and move it to `~/.local/bin/wm`.
+
+## Connect an MCP client
+
+```json
+{
+  "mcpServers": {
+    "whitemagic": {
+      "command": "wm",
+      "args": ["serve", "--profile", "curated"]
+    }
+  }
+}
+```
+
+The server speaks stdio JSON-RPC and exposes a single `wm` meta-tool; explicit routing is the dependable contract.
+
+## Verify
+
+```bash
+wm --version   # wm 9.0.0
+wm doctor      # environment health check
+```
+
+## Agent onboarding
+
+- [skill.md](https://github.com/lbailey94/whitemagic/blob/main/skill.md) — operational quickstart for agents: install, verify, wire MCP, first memory, session continuity.
+- [SECURITY.md](https://github.com/lbailey94/whitemagic/blob/main/SECURITY.md) — security posture, reporting policy.
+- [PRIVACY_POLICY.md](https://github.com/lbailey94/whitemagic/blob/main/PRIVACY_POLICY.md) — no telemetry; your store never leaves the device.
+- [docs/](https://github.com/lbailey94/whitemagic/tree/main/docs) — architecture and operations documentation.
+- [CHANGELOG.md](https://github.com/lbailey94/whitemagic/blob/main/CHANGELOG.md) — release history.
+
+## Discovery surfaces
+
+- Agent manifest: https://whitemagic.dev/ai-agent.json
+- LLM context index: https://whitemagic.dev/llms.txt (full: https://whitemagic.dev/llms-full.txt)
+- A2A agent card: https://whitemagic.dev/.well-known/agent.json
+
+## License
+
+MIT. Author: Lucas Bailey (WhiteMagic Labs).

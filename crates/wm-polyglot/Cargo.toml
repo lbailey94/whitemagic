@@ -5,6 +5,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Polyglot pattern-analysis bridges for the WhiteMagic memory system."
+repository.workspace = true
+homepage.workspace = true
+keywords = ["mcp", "memory", "ai-agents", "local-first"]
+
 
 [lints.rust]
 # Polyglot FFI boundary requires unsafe

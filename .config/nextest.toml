@@ -1,0 +1,6 @@
+# Per-test hard timeout for the Windows CI profile: a hung test is
+# killed at slow-timeout x terminate-after (3 min) and reported by
+# name, instead of burning the whole job (evidence: runs 34303664225,
+# 34312871405, 34318342534 — 45m/90m timeouts on Windows-only hangs).
+[profile.ci]
+slow-timeout = { period = "60s", terminate-after = 3 }

@@ -1,0 +1,38 @@
+# WhiteMagic v9 — packages the RELEASED binary, does not compile.
+# Tiny build: fetch the static musl build + checksum from the GitHub
+# release, verify, install. See docs/DOCKER_HUB_RUNBOOK.md.
+#
+#   docker build --build-arg WM_VERSION=v9 -t whitemagic:9 .
+#   docker run --rm whitemagic:9 --version
+ARG ALPINE_VERSION=3.21
+FROM alpine:${ALPINE_VERSION}
+
+ARG WM_VERSION=v9
+ARG WM_ARCH=x86_64
+ARG WM_TARGET=musl
+
+# Required by the official MCP registry (ownership proof for the OCI
+# package reference in npm/whitemagic-mcp/server.json).
+LABEL io.modelcontextprotocol.server.name="io.github.lbailey94/whitemagic-mcp" \
+      org.opencontainers.image.title="WhiteMagic MCP server" \
+      org.opencontainers.image.version="9.1.0" \
+      org.opencontainers.image.url="https://whitemagic.dev" \
+      org.opencontainers.image.source="https://github.com/lbailey94/whitemagic"
+
+RUN apk add --no-cache curl coreutils \
+ && curl -fsSL \
+      "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/wm-linux-${WM_ARCH}-${WM_TARGET}" \
+      -o "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" \
+ && curl -fsSL \
+      "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/wm-linux-${WM_ARCH}-${WM_TARGET}.sha256" \
+      -o "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}.sha256" \
+ && (cd /tmp && sha256sum -c "wm-linux-${WM_ARCH}-${WM_TARGET}.sha256") \
+ && install -m 0755 "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" /usr/local/bin/wm \
+ && rm -f "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}.sha256"
+
+WORKDIR /workspace
+ENTRYPOINT ["/usr/local/bin/wm"]
+# Default to the MCP stdio server so `docker run -i <image>` speaks MCP
+# directly (registry introspection, Glama checks, MCP clients). Use
+# `docker run --rm <image> --version` for the version.
+CMD ["serve"]

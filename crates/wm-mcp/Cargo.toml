@@ -1,10 +1,15 @@
 [package]
-name = "wm-mcp"
+name = "whitemagic"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "WhiteMagic MCP server and `wm` CLI: local-first memory and session continuity for AI coding agents."
+repository.workspace = true
+homepage.workspace = true
+keywords = ["mcp", "memory", "ai-agents", "local-first"]
+
 
 [lints]
 workspace = true

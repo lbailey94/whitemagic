@@ -1,0 +1,10 @@
+{
+  "keys": [
+    {
+      "token": "REPLACE_WITH_ISSUED_TOKEN",
+      "name": "beta-001",
+      "daily_cap": 50,
+      "note": "free eval tier — see AGENTIC_ECONOMY_PLAN_V1 pricing shape"
+    }
+  ]
+}

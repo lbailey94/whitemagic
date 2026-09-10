@@ -39,7 +39,7 @@ build-julia:
     cargo build --release --features wm-polyglot/julia
 
 build-python:
-    cargo build --release --features wm-mcp/python
+    cargo build --release --features whitemagic/python
 
 build-lancedb:
     cargo build --release --features wm-memory/lancedb

@@ -5,10 +5,14 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Simulation and replay harnesses for WhiteMagic evaluation and bounty workloads."
 repository.workspace = true
+homepage.workspace = true
+keywords = ["mcp", "memory", "ai-agents", "local-first"]
+
 
 [dependencies]
-wm-core = { path = "../wm-core" }
+wm-core = { version = "9.0.0", path = "../wm-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

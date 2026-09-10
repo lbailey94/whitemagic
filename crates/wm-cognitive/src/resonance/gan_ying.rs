@@ -10,7 +10,19 @@
 //! - git branch, HEAD commit, and dirty state,
 //! - temporal & circadian harmonic cues (time of day, idle duration, brain-wave mode),
 //! - recent tool access patterns and Citta consciousness state,
+//!
 //! continuously propagate sympathetic vibrations across all 14 memory galaxies.
+//!
+// Resonance scoring module: the raw-resonance and weight expressions below
+// are ranking computations whose ordering depends on IEEE-754 rounding.
+// `mul_add` reassociation changes that rounding and with it the ranking,
+// so the deliberate allow class documented for the deterministic scorer
+// (AGENTS.md; wm-memory corroboration_boost) is extended module-wide here.
+#![allow(
+    clippy::suboptimal_flops,
+    clippy::imprecise_flops,
+    clippy::manual_midpoint
+)]
 //!
 //! The most resonant memories are proactively pre-warmed into an ultra-low latency,
 //! in-memory L1/L2 Pre-Conscious Working Buffer:
@@ -425,7 +437,7 @@ impl GanYingResonanceEngine {
     fn extract_ambient_tokens(snapshot: &AmbientSnapshot) -> AHashSet<String> {
         let mut tokens = AHashSet::new();
 
-        for comp in snapshot.working_dir.iter() {
+        for comp in &snapshot.working_dir {
             if let Some(s) = comp.to_str() {
                 let clean = s.trim().to_lowercase();
                 if clean.len() >= 3 && clean != "home" && clean != "desktop" {
@@ -679,11 +691,11 @@ impl L1ConsciousFringe {
 
         for &token_hash in query_tokens {
             if let Some(&mask) = self.token_bitmasks.get(&token_hash) {
-                if !has_match {
+                if has_match {
+                    composite_mask |= mask;
+                } else {
                     composite_mask = mask;
                     has_match = true;
-                } else {
-                    composite_mask |= mask;
                 }
             }
         }
@@ -1008,7 +1020,9 @@ impl AutonomousGanYing {
             observer: AmbientContextObserver::new(),
             resonance_engine: GanYingResonanceEngine::default(),
             buffer: Arc::new(std::sync::RwLock::new(PreConsciousBuffer::new(l2_cap))),
-            last_sweep: Instant::now() - Duration::from_secs(400),
+            last_sweep: Instant::now()
+                .checked_sub(Duration::from_secs(400))
+                .unwrap_or_else(Instant::now),
             last_fingerprint: 0,
             sweeps_completed: 0,
         }
@@ -1088,7 +1102,7 @@ impl AutonomousGanYing {
         }
         let mut top_galaxies: Vec<String> = galaxy_counts
             .into_iter()
-            .map(|(g, count)| format!("{:?}:{}", g, count))
+            .map(|(g, count)| format!("{g:?}:{count}"))
             .collect();
         top_galaxies.sort();
 
@@ -1218,8 +1232,7 @@ mod tests {
         #[cfg(debug_assertions)]
         assert!(
             avg_latency_ns < 25_000,
-            "L1 hit in unoptimized debug build must be under 25µs (< 25,000 ns). Observed: {} ns",
-            avg_latency_ns
+            "L1 hit in unoptimized debug build must be under 25µs (< 25,000 ns). Observed: {avg_latency_ns} ns",
         );
     }
 

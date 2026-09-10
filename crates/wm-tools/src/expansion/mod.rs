@@ -43,6 +43,7 @@ pub mod bayesian_tools;
 pub mod bicameral;
 pub mod boundary;
 pub mod bounty_connector;
+pub mod glyph;
 pub mod captains;
 pub mod claims_tools;
 pub mod code;
@@ -57,7 +58,6 @@ pub mod drive;
 pub mod firewall;
 pub mod galaxy;
 pub mod geneseed;
-pub mod glyph;
 pub mod graph;
 pub mod homeostasis;
 pub mod imagination;
@@ -221,7 +221,7 @@ fn pray_meta_tool(
     search: Option<Arc<SearchEngine>>,
     associations: Arc<AssociationStore>,
 ) -> Arc<PrayMetaTool> {
-    let mut tool = PrayMetaTool::new(store.clone()).with_associations(associations.clone());
+    let mut tool = PrayMetaTool::new(store.clone()).with_associations(associations);
     if let Some(search) = search {
         tool = tool.with_search(search);
     }
@@ -235,8 +235,7 @@ fn cold_rotate_tool(
     search: Option<Arc<SearchEngine>>,
     associations: Arc<AssociationStore>,
 ) -> Arc<GalacticColdRotateTool> {
-    let mut tool =
-        GalacticColdRotateTool::new(store.clone()).with_associations(associations.clone());
+    let mut tool = GalacticColdRotateTool::new(store.clone()).with_associations(associations);
     if let Some(search) = search {
         tool = tool.with_search(search);
     }
@@ -557,10 +556,6 @@ pub fn register_expansion(
             .register(Arc::new(DharmaReviewQueueTool::new(queue.clone())))
             .register(Arc::new(DharmaResolveReviewTool::new(queue.clone())));
     }
-
-    // Glyph wire tools (2) — pure translators; trust gate stays on the
-    // meta-tool decode seam (WM_GLYPH=1).
-    reg = crate::expansion::glyph::register_glyph(&reg);
 
     // Sandbox tools (2) — set_limits, limits
     reg = crate::expansion::sandbox::register_sandbox(&reg, resource_rules);
