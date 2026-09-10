@@ -5,6 +5,47 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.1] — 2026-09-10 (the 44-commit verified batch + release-cadence groundwork)
+
+### Operational trust stack (Q36–Q40)
+- Nightly trust manifest stamped by OpenTimestamps + RFC-3161 (Q36/Q40); monthly receipts generator + timer; `morning_check.sh` one-command grading of the nightly run.
+- Q37 zero-egress proof wired into CI; Q38 cosign + CycloneDX SBOM on release (this tag is its first real end-to-end run).
+- First non-empty external anchor stamp lands 2026-09-11 03:30 UTC.
+
+### Daemon stability: incremental index-drift heal
+- Root-caused and fixed the ACC daemon watchdog crash-loop: healing now applies `+N` deltas incrementally instead of 58k full rebuilds (`1d1b09d`).
+
+### Governance ports (waves 2–4)
+- `EconomicFirewall` (Python TransactionFirewall port + economic Dharma profile), `NetworkStateProfile` + `GratitudeLedger`, bounty auto-connector.
+- Wave 3 violet/security ports: `SecurityEventBus`, `PatternImmunity`, engagement tokens, model signing.
+- Wave 4: blue-team deception set (canary tokens, decoy shell, deobfuscator); session miner (`PatternMiner` port, DEFERRED_OBJECTIVES L5).
+
+### Capability & provenance hardening (P-PROV-5 / Glama gap slices A–C)
+- Slice A: on-behalf-of delegation triple (`act`/`on_behalf_of`/`delegation_chain`) on `ActorIdentity` + `WriteAuditEntry`; profile-contract surface pin (sorted tool-name SHA-256 rug-pull tripwire) + `binary_version`; host-identity/delegation stance in SECURITY.md; confused-deputy gateway tests.
+- Slice B: signed `ReleaseManifest` (artifacts + binary identity + surface pin, Ed25519 on node-key lineage, `wm-release-manifest/v1` domain separation, S9-HKDF upgrade path); warn-only 1-in-N secret-shape sampling of success outputs (`WM_SECRET_SCAN_EVERY`, default 100, 0=off; kinds+sizes logged, content never).
+- Slice C: Landlock v1 `ScopedSandboxExecutor` — StoreScoped tools run on a fresh confined thread (thread-local ruleset injection, strict `WM_LANDLOCK_V1=1`, loud degrade, panic containment); first StoreScoped taxonomy batch (`memory.create/batch_create/update/delete`).
+- TrustStack: one-call wiring of the economic governance loop (`6055146`).
+
+### Gateway & compatibility truthfulness (Q03–Q05)
+- Inner `args.scope` preserved through the pinned gateway proxy (Q03); Q03 manifest accepted, live gateway deployment documented.
+- Compatibility routes made truthful; capability audit batch recorded (Q04); version-support and archive-count wording reconciled (Q05); Q06 preservation fixtures.
+
+### Glyph & flight recorder groundwork (Q34/Q35b)
+- `glyph.encode`/`decode` routes (`WM_GLYPH`-gated wire format) + dense-encoding bench fixture; flight recorder: args digest, twin-run replay acceptance, replay-from-sidecar (layer 2).
+
+### Crypto-erasure design (Q39)
+- One-design draft: RK → identity subkeys + galaxy DEKs, erasure receipts via the anchor stack; root-key ruling = hybrid C (OS keyring default, passphrase opt-in per store); Q10 implementation IS Q39 slices A–B (no second key hierarchy).
+
+### Evaluation
+- Grouped-source T3 validation run; constrained heritage pilot harness + pinned llama.cpp synthetic adapter + Ollama native-tools qualification; deterministic evaluation-setup failures.
+
+### CI hardening
+- Gates greened: fmt, clippy (incl. new-toolchain lints in `write_gate`), Windows e2e gating + nextest per-test hard timeouts, mesh fleet tests gated for Windows; publish-ready crate metadata, version-pinned internal deps.
+- Merge hygiene: post-merge clippy/fmt reconciliation to `-D warnings`-clean across the workspace.
+
+### Release cadence
+- `docs/RELEASE_CADENCE.md`: two-clocks model (kaizen improvement clock vs scheduled release snapshot), freeze protocol via `code.claim`, calibration note for coordination writes under load (P-AHIMSA-6).
+
 ## [9.1.0] — 2026-09-09
 
 ### Distribution and install hardening
@@ -12,9 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - One-command release fan-out: `scripts/release.sh` drives tag → CI → binaries → crates.io → npm → Docker → official MCP registry with 429-aware publish loops.
 - v9.1.0 shipped on every channel: GitHub release with 5 binaries (linux gnu+musl, macOS x86_64/aarch64, windows), 15 crates published in a single ordered pass (zero rate-limit stalls), npm `whitemagic-mcp@9.1.0`, Docker tags `9.1.0`/`9`/`latest`, official MCP registry listing.
 
-## [Unreleased]
-
-### Visibility boundaries on content-returning paths
+### Visibility boundaries on content-returning paths (shipped in 9.1.0; recorded retroactively)
 - New `content_visible` gate (`mcp_visible` + `model_visible` + `validity_visible` + compartment access), enforced where hologram query builds candidates and where the Alchemist emits insight previews. Private, model-excluded, and compartment-forbidden records can no longer leak through ids, tags, previews, or coordinates on captain / hologram / PRAY / Bagua paths (which share these implementations).
 - Aggregate counts are unchanged; only content-bearing outputs are filtered.
 
