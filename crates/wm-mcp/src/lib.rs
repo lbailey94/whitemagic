@@ -18,6 +18,7 @@ pub mod gateway;
 pub mod ingest;
 pub mod input_validation;
 pub mod landlock_sandbox;
+pub mod manifest;
 pub mod migrate;
 pub mod network_audit;
 pub mod opencode;

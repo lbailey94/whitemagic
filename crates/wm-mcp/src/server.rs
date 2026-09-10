@@ -159,6 +159,7 @@ pub struct McpServer {
     /// Active tool surface profile name — reported in `tools/list` so
     /// discovery reflects the profile instead of the full archive.
     profile_name: &'static str,
+    full_capability_routes: Vec<Value>,
 
     /// Profile contract from this server's start (surface-drift check:
     /// the registered surface must be exactly the declared one). `None`
@@ -559,6 +560,7 @@ impl McpServer {
             friction_autolog: std::env::var("WM_FRICTION_AUTOLOG")
                 .is_ok_and(|v| v == "1" || v == "true"),
             profile_name: "full",
+            full_capability_routes: Vec::new(),
             profile_contract: None,
             landlock: None,
             store_path: None,
@@ -1156,6 +1158,7 @@ impl McpServer {
         server.mesh_slot = mesh_slot;
 
         server.profile_contract = Some(contract);
+        server.full_capability_routes = crate::manifest::registered_routes(&full_registry);
 
         // Disclose the memory scope up front (initialize + tools/list) so an
         // agent knows which store and project it is bound to before its first
@@ -1743,6 +1746,16 @@ impl McpServer {
             ("GET", "/healthz") => {
                 write_http_response(&mut stream, 200, "text/plain", b"ok\n").await?;
             }
+            ("GET", "/manifest") => {
+                let payload = self.capability_manifest();
+                write_http_response(
+                    &mut stream,
+                    200,
+                    "application/json",
+                    payload.to_string().as_bytes(),
+                )
+                .await?;
+            }
             ("GET", "/status") => {
                 // Liveness-plus: mode/scope disclosure + the Phase 3 write
                 // budget, so an agent (or a cron) can answer "is this store
@@ -1802,6 +1815,8 @@ impl McpServer {
             });
         json!({
             "status": "ok",
+            "build": crate::manifest::build_info(),
+            "capability_manifest_method": "capabilities/manifest",
             "readonly": self.readonly,
             "profile": self.profile_name,
             "profile_contract": self.profile_contract.as_ref().map_or(
@@ -1832,6 +1847,58 @@ impl McpServer {
                 "health_score": hv.health_score(),
             },
             "write_budget": write_budget,
+        })
+    }
+
+    /// Runtime-derived registration/profile disclosure. Request-specific authorization
+    /// and functional usefulness are intentionally not inferred from registration.
+    #[must_use]
+    pub fn capability_manifest(&self) -> Value {
+        let mut routes = crate::manifest::registered_routes(&self.registry);
+        let brain_wave = self.eco_mode.current();
+        for route in &mut routes {
+            let tool = self.registry.get(route["name"].as_str().unwrap()).unwrap();
+            route["blocked_by_readonly"] =
+                json!(self.readonly && !tool.effects().writes.is_empty());
+            route["allowed_by_brain_wave"] = json!(tool.effects().is_available_in(brain_wave));
+            route["request_authorization"] = json!(
+                "evaluated per request; registration is not permission or demonstrated usefulness"
+            );
+        }
+        let profiles: Vec<_> = [
+            &wm_tools::profiles::PROFILE_FULL, &wm_tools::profiles::PROFILE_CURATED,
+            &wm_tools::profiles::PROFILE_MINIMAL, &wm_tools::profiles::PROFILE_PRAY,
+        ].iter().map(|p| {
+            let names: Vec<_> = self.full_capability_routes.iter().filter_map(|r| r["name"].as_str())
+                .filter(|n| p.prefixes.contains(&"*") || wm_tools::profiles::matches_prefixes(n, p.prefixes)).collect();
+            json!({"profile":p.name,"prefixes":p.prefixes,"pre_meta_routes":names,"count":names.len()})
+        }).collect();
+        let entrypoints = self
+            .handle_tools_list()
+            .ok()
+            .and_then(|v| v.get("tools").cloned())
+            .unwrap_or(json!([]));
+        let routed = routes.iter().filter(|r| r["name"] != "wm").count();
+        json!({
+            "schema":"wm-capability-manifest-v1", "kind":"store", "build":crate::manifest::build_info(),
+            "configuration":{"profile":self.profile_name,"readonly":self.readonly,"project":self.project,
+                "store_path":self.store_path,"brain_wave":format!("{brain_wave:?}"),"landlock":self.landlock,
+                "request_limit":self.request_budget.limit(),"rate_limit_per_window":self.rate_window.limit(),
+                "disclosure_policy":"allowlisted effective fields only; no credentials, arbitrary environment or model URLs"},
+            "profile_contract":self.profile_contract, "profiles":profiles,
+            "profile_aliases":{"prat":"pray"}, "routes":routes,
+            "full_pre_profile_routes":self.full_capability_routes,
+            "mcp_entrypoints":entrypoints,
+            "counts":{"full_pre_profile":self.full_capability_routes.len(),
+                "profile_pre_meta":self.profile_contract.as_ref().map(|c| c.registered_count),
+                "boundary_registry_including_meta":self.registry.len(),"wm_routable_names":routed,
+                "mcp_entrypoints":entrypoints.as_array().map(Vec::len)},
+            "definitions":{"full_pre_profile":"runtime registrations before profile filtering",
+                "profile_pre_meta":"profile-filtered registrations before meta-tool layering; gnosis is replaced, four names added",
+                "boundary_registry_including_meta":"final server registry including wm",
+                "wm_routable_names":"final registry excluding the outer wm wrapper; includes discovery helpers and compatibility names",
+                "aliases":"memory.hybrid_recall shares memory.search implementation; profile alias prat resolves to pray; wrappers and subcommands are not counted as separate registered routes",
+                "availability":"readonly and brain-wave observations only; backend/model readiness and per-request gates can still prevent execution"}
         })
     }
 
@@ -2634,6 +2701,7 @@ impl McpServer {
         let result = match req.method.as_str() {
             "initialize" => self.handle_initialize(),
             "tools/list" => self.handle_tools_list(),
+            "capabilities/manifest" => Ok(self.capability_manifest()),
             "tools/call" => self.handle_tools_call(&req.params).await,
             "resources/list" => self.handle_resources_list(),
             "resources/read" => self.handle_resources_read(&req.params),
@@ -5367,6 +5435,79 @@ mod tests {
         assert!(
             review["total_friction_entries"].as_u64().unwrap() >= 1,
             "inner wm failure should be friction-logged, got: {review}"
+        );
+    }
+
+    #[tokio::test]
+    async fn q03_manifest_matches_actual_boundary_and_profile_registries() {
+        for profile in [
+            &wm_tools::profiles::PROFILE_FULL,
+            &wm_tools::profiles::PROFILE_CURATED,
+            &wm_tools::profiles::PROFILE_MINIMAL,
+            &wm_tools::profiles::PROFILE_PRAY,
+        ] {
+            let tmp = tempfile::tempdir().unwrap();
+            let server =
+                McpServer::with_defaults_mode_profile(&test_store_path(&tmp), false, profile)
+                    .unwrap();
+            let m = server.capability_manifest();
+            let routes = m["routes"].as_array().unwrap();
+            assert_eq!(routes.len(), server.registry.len());
+            assert_eq!(
+                m["counts"]["boundary_registry_including_meta"],
+                routes.len()
+            );
+            assert_eq!(m["counts"]["wm_routable_names"], routes.len() - 1);
+            let listed = server.handle_tools_list().unwrap();
+            assert_eq!(m["mcp_entrypoints"], listed["tools"]);
+            let names: std::collections::BTreeSet<_> =
+                routes.iter().map(|r| r["name"].as_str().unwrap()).collect();
+            assert_eq!(names.len(), routes.len(), "no duplicate registration names");
+            let profile_count = m["profile_contract"]["registered_count"].as_u64().unwrap();
+            assert_eq!(m["counts"]["profile_pre_meta"], profile_count);
+            if profile.name == "full" {
+                let alias = routes
+                    .iter()
+                    .find(|r| r["name"] == "memory.hybrid_recall")
+                    .unwrap();
+                assert_eq!(alias["canonical_route"], "memory.search");
+            }
+            if profile.name == "minimal" {
+                assert!(!names.contains("code.claim"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn q03_manifest_readonly_blocks_writes_without_hiding_registration() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = test_store_path(&tmp);
+        drop(
+            McpServer::with_defaults_mode_profile(
+                &path,
+                false,
+                &wm_tools::profiles::PROFILE_MINIMAL,
+            )
+            .unwrap(),
+        );
+        let server = McpServer::with_defaults_mode_profile(
+            &path,
+            true,
+            &wm_tools::profiles::PROFILE_MINIMAL,
+        )
+        .unwrap();
+        let m = server.capability_manifest();
+        let routes = m["routes"].as_array().unwrap();
+        assert_eq!(
+            routes
+                .iter()
+                .find(|r| r["name"] == "memory.create")
+                .unwrap()["blocked_by_readonly"],
+            true
+        );
+        assert_eq!(
+            routes.iter().find(|r| r["name"] == "memory.read").unwrap()["blocked_by_readonly"],
+            false
         );
     }
 

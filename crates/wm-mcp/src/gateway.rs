@@ -54,6 +54,8 @@ pub struct ScopeDisclosure {
     pub project: Option<String>,
     pub store_path: Option<String>,
     pub tool_count: Option<u64>,
+    #[serde(default)]
+    pub build: Option<Value>,
     pub error: Option<String>,
 }
 
@@ -158,6 +160,7 @@ impl BackingClient for HttpBacking {
                         .and_then(Value::as_str)
                         .map(String::from);
                     disclosure.tool_count = status.get("tool_count").and_then(Value::as_u64);
+                    disclosure.build = status.get("build").cloned();
                 }
             }
             Err(e) => {
@@ -479,6 +482,7 @@ impl Gateway {
             })),
             "notifications/initialized" => return String::new(),
             "ping" => Ok(json!({})),
+            "capabilities/manifest" => Ok(self.capability_manifest()),
             "tools/list" => Ok(json!({"tools": [self.wm_tool()]})),
             "tools/call" => {
                 let name = params.get("name").and_then(Value::as_str).unwrap_or("");
@@ -567,7 +571,26 @@ impl Gateway {
     #[must_use]
     pub fn status_payload(&self) -> Value {
         let contract = self.contract();
-        serde_json::to_value(&contract).unwrap_or(Value::Null)
+        let mut value = serde_json::to_value(&contract).unwrap_or(Value::Null);
+        crate::manifest::redact_federation(&mut value);
+        value["disclosure_timing"] =
+            json!("backend observations captured at gateway startup; not a fresh health probe");
+        value["build"] = crate::manifest::build_info();
+        value["capability_manifest_method"] = json!("capabilities/manifest");
+        value
+    }
+
+    /// Gateway and backing identities stay separate; a gateway rebuild does not
+    /// deploy its backing stores. Their disclosures may be older or unavailable.
+    #[must_use]
+    pub fn capability_manifest(&self) -> Value {
+        json!({"schema":"wm-capability-manifest-v1","kind":"gateway",
+            "build":crate::manifest::build_info(),"mcp_entrypoints":[self.wm_tool()],
+            "counts":{"mcp_entrypoints":1,"local_store_routes":0},
+            "federation":self.status_payload(),
+            "definitions":{"backend_counts":"backend self-reports, not deduplicated gateway registrations",
+                "availability":"per-scope reachability/profile/readonly; not authorization or successful execution",
+                "build":"gateway running executable only; backing build identity must be inspected separately"}})
     }
 
     /// Stdio transport: one JSON-RPC request per line.
@@ -662,6 +685,16 @@ async fn serve_connection(
     match (verb.as_str(), path.as_str()) {
         ("GET", "/healthz") => {
             write_response(stream, 200, "text/plain", b"ok\n").await?;
+        }
+        ("GET", "/manifest") => {
+            let payload = gateway.capability_manifest();
+            write_response(
+                stream,
+                200,
+                "application/json",
+                payload.to_string().as_bytes(),
+            )
+            .await?;
         }
         ("GET", "/status") => {
             let payload = gateway.status_payload();
@@ -832,6 +865,7 @@ mod tests {
                 project: None,
                 store_path: None,
                 tool_count: Some(54),
+                build: None,
                 error: None,
             }
         }

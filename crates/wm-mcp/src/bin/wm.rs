@@ -18,6 +18,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Print this executable build provenance without opening a store
+    BuildInfo,
+    /// Read a running HTTP server capability manifest without opening its store
+    Manifest {
+        /// Explicit server base URL (e.g. http://127.0.0.1:18795)
+        #[arg(long)]
+        endpoint: String,
+    },
     /// Run the MCP server (JSON-RPC over stdio or HTTP/SSE)
     Serve {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
@@ -567,6 +575,18 @@ fn main() -> anyhow::Result<()> {
     wm_config.export_to_env();
 
     match cli.command {
+        Commands::BuildInfo => println!(
+            "{}",
+            serde_json::to_string_pretty(&wm_mcp::manifest::build_info())?
+        ),
+        Commands::Manifest { endpoint } => {
+            let body = ureq::get(format!("{}/manifest", endpoint.trim_end_matches('/')))
+                .call()?
+                .body_mut()
+                .read_to_string()?;
+            let value: serde_json::Value = serde_json::from_str(&body)?;
+            println!("{}", serde_json::to_string_pretty(&value)?);
+        }
         Commands::Serve {
             store,
             max_requests,

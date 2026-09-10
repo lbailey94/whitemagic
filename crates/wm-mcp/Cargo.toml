@@ -68,3 +68,7 @@ crate-type = ["rlib", "cdylib"]
 [[bin]]
 name = "wm"
 path = "src/bin/wm.rs"
+
+[build-dependencies]
+serde_json = { workspace = true }
+sha2 = "0.10"
