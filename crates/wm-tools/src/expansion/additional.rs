@@ -89,7 +89,8 @@ impl Tool for MemoryTagsTool {
             .iter()
             .flat_map(|m| m.metadata.tags.iter().cloned())
             .collect();
-        let tag_list: Vec<String> = tags.into_iter().collect();
+        let mut tag_list: Vec<String> = tags.into_iter().collect();
+        tag_list.sort_unstable();
         Ok(
             json!({ "status": "success", "galaxy": galaxy_name(galaxy), "unique_tags": tag_list.len(), "tags": tag_list }),
         )
@@ -411,5 +412,59 @@ impl Tool for MemoryNearbyTool {
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wm_memory::Memory;
+
+    fn open_store() -> (tempfile::TempDir, Arc<MemoryStore>) {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
+        (tmp, store)
+    }
+
+    #[tokio::test]
+    async fn memory_tags_returns_unique_sorted_tags() {
+        let (_tmp, store) = open_store();
+        for tags in [["zeta", "alpha"], ["beta", "alpha"]] {
+            let mut memory = Memory::new(Galaxy::Codex, "invented tag fixture".into());
+            memory.metadata.tags = tags.into_iter().map(String::from).collect();
+            store.put(Galaxy::Codex, &memory).unwrap();
+        }
+        let result = MemoryTagsTool::new(store)
+            .call(&mut Context::default(), json!({"galaxy": "codex"}))
+            .await
+            .unwrap();
+        assert_eq!(result["unique_tags"], 3);
+        assert_eq!(result["tags"], json!(["alpha", "beta", "zeta"]));
+    }
+
+    #[tokio::test]
+    async fn citta_coherence_reflects_context_without_claiming_global_state() {
+        let mut context = Context {
+            citta_coherence: 0.29,
+            citta_valence: -0.2,
+            ..Context::default()
+        };
+        let result = CittaCoherenceTool::new()
+            .call(&mut context, json!({}))
+            .await
+            .unwrap();
+        assert!((result["coherence"].as_f64().unwrap() - 0.29).abs() < 1e-6);
+        assert_eq!(result["can_write"], false);
+        assert!((result["write_threshold"].as_f64().unwrap() - 0.3).abs() < 1e-6);
+    }
+
+    #[tokio::test]
+    async fn dharma_profiles_reports_static_descriptive_catalog() {
+        let result = DharmaProfilesTool::new()
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
+        assert_eq!(result["profiles"].as_array().unwrap().len(), 4);
+        assert_eq!(result["profiles"][0]["name"], "default");
     }
 }

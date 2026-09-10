@@ -362,8 +362,17 @@ impl Tool for StateRevertTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "label": super::common::str_prop("State snapshot label to compare"),
+                "snapshot_id": super::common::str_prop("Exact state snapshot UUID to compare"),
+            }),
+            &[],
+        )
+    }
     fn description(&self) -> &str {
-        "Read a previous state snapshot for system comparison"
+        "Legacy name: compare a previous state snapshot with current counts; never mutates state"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let label = args.get("label").and_then(|v| v.as_str());
@@ -408,6 +417,10 @@ impl Tool for StateRevertTool {
 
                 Ok(json!({
                     "status": "success",
+                    "operation": "comparison_only",
+                    "state_mutated": false,
+                    "deprecated_route_name": true,
+                    "replacement": "No replacement route is registered; use this legacy route only for read-only comparison",
                     "snapshot_id": m.metadata.id,
                     "snapshot": state,
                     "current_total_memories": current_total,
@@ -553,6 +566,9 @@ mod tests {
             .unwrap();
         let obj = result.as_object().unwrap();
         assert_eq!(obj["status"], "success");
+        assert_eq!(obj["operation"], "comparison_only");
+        assert_eq!(obj["state_mutated"], false);
+        assert_eq!(obj["deprecated_route_name"], true);
         assert!(obj["snapshot"].is_object());
         let delta = obj["delta"].as_i64().unwrap();
         assert!(delta > 0, "Current should have more memories than snapshot");
