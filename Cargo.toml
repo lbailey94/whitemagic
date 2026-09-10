@@ -128,6 +128,14 @@ debug = 1
 codegen-units = 16
 incremental = true
 
+# Disk-churn guard (2026-09-10): dependency debuginfo is the bulk of
+# `target/` growth (deps dwarf workspace crates at ~10x on this tree).
+# Dependencies are not the code under debugger — strip their debuginfo in
+# dev; workspace members keep `debug = 1` (line tables). `"*"` matches
+# non-workspace members only (Cargo reference: Profile Overrides).
+[profile.dev.package."*"]
+debug = false
+
 [profile.test]
 inherits = "dev"
 opt-level = 0
