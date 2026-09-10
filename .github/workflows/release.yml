@@ -10,6 +10,7 @@ env:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build:
@@ -89,9 +90,29 @@ jobs:
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}.sha256
           if-no-files-found: error
 
+  sbom:
+    name: SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-cyclonedx
+        run: cargo install --locked cargo-cyclonedx
+      - name: Generate SBOMs for the workspace
+        run: cargo cyclonedx --all --format json
+      - name: Collect SBOMs
+        run: |
+          mkdir -p sbom
+          find . -name '*.cdx.json' -not -path './target/*' -exec cp {} sbom/ \;
+          ls -la sbom/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/
+          if-no-files-found: error
+
   publish:
     name: Publish GitHub Release
-    needs: build
+    needs: [build, sbom]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -99,6 +120,16 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Sign release artifacts (keyless, Sigstore)
+        run: |
+          for f in artifacts/wm-*; do
+            case "$f" in *.sha256|*.bundle|*.cdx.json) continue ;; esac
+            echo "signing $f"
+            cosign sign-blob --yes "$f" --bundle "$f.bundle"
+          done
 
       - name: Create release
         uses: softprops/action-gh-release@v2
