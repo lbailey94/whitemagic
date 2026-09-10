@@ -15,6 +15,7 @@ wm-core = { path = "../crates/wm-core" }
 wm-tools = { path = "../crates/wm-tools" }
 wm-governance = { path = "../crates/wm-governance" }
 wm-dispatch = { path = "../crates/wm-dispatch" }
+wm-sangha = { path = "../crates/wm-sangha" }
 
 [[bin]]
 name = "nlu_classify"
@@ -47,3 +48,7 @@ path = "fuzz_targets/tool_params.rs"
 [[bin]]
 name = "web_parsers"
 path = "fuzz_targets/web_parsers.rs"
+
+[[bin]]
+name = "sangha_frame"
+path = "fuzz_targets/sangha_frame.rs"

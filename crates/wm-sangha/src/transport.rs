@@ -80,6 +80,9 @@ pub const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
 pub struct TransportConfig {
     /// Bind address for TCP server (e.g., "0.0.0.0:7369").
     pub bind_addr: String,
+    /// Bind address for UDP multicast discovery (host:port). Kept separate
+    /// from `bind_addr` so tests can bind an ephemeral loopback port.
+    pub udp_bind_addr: String,
     /// UDP multicast group for discovery.
     pub multicast_group: String,
     /// Heartbeat interval in seconds.
@@ -92,6 +95,7 @@ impl Default for TransportConfig {
     fn default() -> Self {
         Self {
             bind_addr: format!("0.0.0.0:{DEFAULT_PORT}"),
+            udp_bind_addr: format!("0.0.0.0:{DEFAULT_PORT}"),
             multicast_group: MULTICAST_GROUP.to_string(),
             heartbeat_interval_sec: DEFAULT_HEARTBEAT_INTERVAL_SEC,
             max_connections: 64,
@@ -915,7 +919,10 @@ async fn run_discovery_beacon(state: Arc<SanghaState>, config: &TransportConfig)
 /// When a beacon is received, the peer is added to the local discovery registry.
 pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfig) -> Result<()> {
     // Use socket2 to create a socket that joins the multicast group
-    let bind_addr: std::net::SocketAddr = format!("0.0.0.0:{DEFAULT_PORT}").parse().unwrap();
+    let bind_addr: std::net::SocketAddr = config
+        .udp_bind_addr
+        .parse()
+        .map_err(|e| wm_core::CoreError::Internal(format!("udp bind parse: {e}")))?;
     let socket2_socket = socket2::Socket::new(
         socket2::Domain::IPV4,
         socket2::Type::DGRAM,
@@ -1782,6 +1789,93 @@ mod containment_tests {
         assert_eq!(
             report.rejected, 0,
             "no forged message may land in the community board"
+        );
+    }
+
+    // ── UDP discovery (PLAN_F F-4) ────────────────────────────────────
+    //
+    // Live adversarial beacon tests. Discovery ingests addresses, not
+    // identities — signature binding happens at join (covered by the TCP
+    // containment tests above). These tests exercise the UDP receive path:
+    // garbage is dropped without crashing, valid announces are discovered,
+    // and self-beacons are never registered.
+
+    async fn spawn_beacon_listener(peer_id: &str, udp_port: u16) -> Arc<SanghaState> {
+        let keypair = MeshKeyPair::from_seed(peer_id.as_bytes());
+        let state = Arc::new(SanghaState::with_keypair(peer_id, "127.0.0.1:1", keypair));
+        let config = TransportConfig {
+            udp_bind_addr: format!("127.0.0.1:{udp_port}"),
+            ..TransportConfig::default()
+        };
+        tokio::spawn({
+            let s = state.clone();
+            async move {
+                let _ = listen_for_beacons(s, &config).await;
+            }
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        state
+    }
+
+    async fn wait_for_peer(state: &SanghaState, peer_id: &str, timeout_ms: u64) -> bool {
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_millis(timeout_ms);
+        loop {
+            if state.peers.lock().await.get(peer_id).is_some() {
+                return true;
+            }
+            if tokio::time::Instant::now() >= deadline {
+                return false;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn udp_beacon_ingests_valid_and_ignores_garbage() {
+        let port = 17_410;
+        let state = spawn_beacon_listener("beacon-target", port).await;
+        let sender = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let dest = format!("127.0.0.1:{port}");
+
+        // Garbage frame: must be ignored (no panic, no discovery).
+        sender
+            .send_to(b"\x00\xff\xde\xadnot-json", &dest)
+            .await
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(80)).await;
+        assert!(
+            state.peers.lock().await.get("peer-x").is_none(),
+            "garbage must not register a peer"
+        );
+
+        // Valid signed announcement: discovered.
+        let keypair = MeshKeyPair::from_seed(b"peer-x");
+        let mut announce = PeerAnnounce::new("peer-x", "127.0.0.1:9999");
+        announce.sign(&keypair);
+        sender.send_to(&announce.to_bytes(), &dest).await.unwrap();
+        assert!(
+            wait_for_peer(&state, "peer-x", 1_500).await,
+            "valid beacon must be discovered"
+        );
+    }
+
+    #[tokio::test]
+    async fn udp_self_beacon_is_ignored() {
+        let port = 17_411;
+        let state = spawn_beacon_listener("self-node", port).await;
+        let sender = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+
+        let mut announce = PeerAnnounce::new("self-node", "127.0.0.1:1");
+        announce.sign(&MeshKeyPair::from_seed(b"self-node"));
+        sender
+            .send_to(&announce.to_bytes(), format!("127.0.0.1:{port}"))
+            .await
+            .unwrap();
+
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        assert!(
+            state.peers.lock().await.get("self-node").is_none(),
+            "a node must never register itself via multicast loopback"
         );
     }
 }

@@ -83,7 +83,11 @@ audit:
 # Fuzz smoke: replay committed corpus seeds for every target (from fuzz/)
 fuzz:
     cargo fuzz build --fuzz-dir fuzz
-    @for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers; do \
+    @for target in nlu_classify dharma_evaluate rate_limiter json_rpc_parse effect_row tool_params security_validation web_parsers sangha_frame; do \
         echo "--- $$target ---"; \
         cargo fuzz run --fuzz-dir fuzz "$$target" -- -runs=1000; \
     done
+
+# Sangha mesh transport tests: live TCP adversarial containment + UDP discovery
+test-transport:
+    cargo test -p wm-sangha --all-targets
