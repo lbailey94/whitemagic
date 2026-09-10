@@ -28,6 +28,7 @@ pub mod recall;
 pub mod recall_conformal;
 pub mod recovery;
 pub mod reindex;
+pub mod release_manifest;
 pub mod revision;
 pub mod search;
 pub mod semantic;
@@ -74,6 +75,10 @@ pub use reindex::{
     ConsistencyReport, ContentRepairReport, DriftClassification, GalaxyConsistency,
     GalaxyContentRepairStats, GalaxyDriftClass, GalaxyRebuildStats, IndexRebuildReport,
     check_consistency, classify_drift, heal_index_drift, rebuild_index, repair_content,
+};
+pub use release_manifest::{
+    KEY_LINEAGE_MESH_ERA, RELEASE_MANIFEST_DOMAIN, ReleaseArtifact, ReleaseManifest,
+    release_payload, sign_release, verify_release,
 };
 pub use revision::{MemoryRevision, RevisionActor, RevisionChainReport};
 pub use search::{

@@ -11,6 +11,7 @@ pub mod flight;
 pub mod pipeline;
 pub mod rate_limiter;
 pub mod registry;
+pub mod secret_scan;
 pub mod speculative;
 pub mod write_gate;
 

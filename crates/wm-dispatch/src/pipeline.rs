@@ -7,6 +7,8 @@
 //! 4. Rate limit — sliding window per-tool + global
 //! 5. Circuit breaker — fault tolerance, fast-fail on repeated errors
 //! 6. Tool call — execute the tool (optionally bounded by a dispatch timeout)
+//! 6b. Secret-scan sampling — warn-only credential-shape scan of success
+//!    outputs (deterministic 1-in-N, content never logged; P-PROV-5/B(c))
 //! 7. Karma record + write-audit journal — declared vs actual effects
 //!    (confirm-gated dispatches record the confirm — the delete-confirm audit)
 //! 8. Stats — success/failure and latency tracking
@@ -130,6 +132,9 @@ pub struct DispatchPipeline {
     /// Optional write-audit journal — append-only record of declared vs
     /// actual store mutations per dispatch.
     write_audit: Option<Arc<wm_governance::WriteAuditJournal>>,
+    /// Optional secret scanner (P-PROV-5/B(c)) — warn-only credential-shape
+    /// sampling over successful dispatch outputs. `None` disables.
+    secret_scan: Option<crate::secret_scan::SharedSampler>,
     /// Optional flight recorder (Q35b) — opt-in JSONL payload capture for
     /// replay. Captures at the same point as `args_digest` so sidecar args
     /// always hash to the journal digest (the replay identity gate).
@@ -166,6 +171,11 @@ impl DispatchPipeline {
             write_gate: None,
             write_audit: None,
             flight_recorder: None,
+            // The secret scanner is on by default like the firebreak: a
+            // tripwire you must remember to attach is not a tripwire.
+            // Warn-only at a deterministic 1-in-N cadence — it observes,
+            // never blocks. Override with `with_secret_scan_option`.
+            secret_scan: Some(Arc::new(crate::secret_scan::SecretSampler::from_env())),
             // The firebreak arms by default: every construction path (server,
             // daemon, CLI, tests) inherits the veto + scope law unless it is
             // explicitly disarmed with `with_firebreak_option(None)` or the
@@ -261,6 +271,23 @@ impl DispatchPipeline {
     ) -> Self {
         self.flight_recorder = recorder;
         self
+    }
+
+    /// Replace the default secret scanner — `None` disables output
+    /// sampling entirely for this pipeline (tests, special constructions).
+    #[must_use]
+    pub fn with_secret_scan_option(
+        mut self,
+        scanner: Option<crate::secret_scan::SharedSampler>,
+    ) -> Self {
+        self.secret_scan = scanner;
+        self
+    }
+
+    /// The secret scanner attached to this pipeline (if any).
+    #[must_use]
+    pub fn secret_scan(&self) -> Option<&crate::secret_scan::SecretSampler> {
+        self.secret_scan.as_deref()
     }
 
     /// Attach a firebreak with an explicit arm state (tests, special
@@ -688,6 +715,16 @@ impl DispatchPipeline {
             tool.call(ctx, args).await
         };
         let elapsed = start.elapsed();
+
+        // 6b. Secret-scan sampling (P-PROV-5/B(c)) — warn-only
+        // credential-shape scan over successful outputs. Deterministic
+        // 1-in-N inside the sampler; content never logged, dispatch never
+        // blocked. Failures are not scanned (v0 scope).
+        if let Some(ref scanner) = self.secret_scan {
+            if let Ok(ref output) = result {
+                scanner.scan(tool.name(), output);
+            }
+        }
 
         // Attach a non-blocking novelty flag so it reaches the response.
         let result = match (result, novelty_flag) {
@@ -1571,6 +1608,34 @@ mod tests {
             }
             other => panic!("Expected Governance error, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn pipeline_secret_scan_warns_without_blocking() {
+        // P-PROV-5/B(c): the output sampler observes but never governs.
+        // A credential-shaped successful output dispatches fine and
+        // records exactly one hit on the attached sampler.
+        use crate::secret_scan::SecretSampler;
+        let sampler = Arc::new(SecretSampler::new(1));
+        let pipeline =
+            DispatchPipeline::with_defaults().with_secret_scan_option(Some(Arc::clone(&sampler)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new("key_tool", EffectRow::pure())
+            .with_output(serde_json::json!({"data": "key=AKIAIOSFODNN7EXAMPLE"}));
+        let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
+        assert!(result.is_ok(), "warn-only scan must never block");
+        assert_eq!(sampler.stats(), (1, 1, 1));
+
+        // Clean outputs scan without hits.
+        let clean = TestTool::new("clean_tool", EffectRow::pure())
+            .with_output(serde_json::json!({"results": []}));
+        assert!(
+            pipeline
+                .dispatch(&clean, &mut ctx, Args::default())
+                .await
+                .is_ok()
+        );
+        assert_eq!(sampler.stats(), (2, 2, 1));
     }
 
     #[tokio::test]
