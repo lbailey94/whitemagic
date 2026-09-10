@@ -209,6 +209,23 @@ manifest = {
     "utc_date": day,
     "stores": {},
 }
+
+# 2026-09-10 Q36 follow-up: fold the site prescience ledger (81-row public
+# register, whitemagic-site/public/api/prescience.json) into the manifest so
+# its state is covered by the dual-authority stamps every night — closes the
+# "prescience-ledger timestamps not covered by the anchor" gap by nightly
+# digest inclusion (chain-level coverage; per-row attestations remain future work).
+_prescience = os.path.expanduser("~/Desktop/WHITEMAGIC/whitemagic-site/public/api/prescience.json")
+manifest["site"] = {}
+if os.path.isfile(_prescience):
+    manifest["site"]["prescience_ledger"] = {
+        "path": "~" + _prescience[len(os.path.expanduser("~")):],
+        "sha256": sha256_file(_prescience),
+        "bytes": os.path.getsize(_prescience),
+        "mtime_utc": __import__("datetime").datetime.utcfromtimestamp(os.path.getmtime(_prescience)).isoformat() + "Z",
+    }
+else:
+    manifest["site"]["prescience_ledger"] = {"error": "file missing"}
 for log_path in sorted(glob.glob(os.path.join(anchors_dir, "*", "anchors.jsonl"))):
     store = os.path.basename(os.path.dirname(log_path))
     rec = tail_record(log_path)
