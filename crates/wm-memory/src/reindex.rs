@@ -31,6 +31,10 @@ pub struct GalaxyRebuildStats {
     pub indexed: usize,
     /// Memories skipped (failed content sanitization).
     pub skipped: usize,
+    /// Index documents deleted — LMDB rows that no longer exist (orphans
+    /// from failed deletes or interrupted runs). Nonzero only on the
+    /// incremental heal path; a full rebuild deletes by galaxy instead.
+    pub deleted: usize,
 }
 
 /// Report of a full index rebuild.
@@ -42,6 +46,8 @@ pub struct IndexRebuildReport {
     pub indexed: usize,
     /// Memories skipped because content failed sanitization.
     pub skipped: usize,
+    /// Index documents deleted as orphans (incremental heal only).
+    pub deleted: usize,
     /// Per-galaxy breakdown.
     pub galaxies: Vec<GalaxyRebuildStats>,
 }
@@ -284,14 +290,25 @@ fn index_memory(
     Ok(Some(()))
 }
 
-/// Heal index drift by rebuilding only the galaxies with a **healable**
-/// gap (see [`classify_drift`]).
+/// Heal index drift by indexing only what the index is actually missing.
 ///
 /// Whole-galaxy drift is systematic, not exceptional: session tools, dream
 /// consolidation, and research cycles write to LMDB without a search engine,
 /// and best-effort indexing failures are swallowed at the tool layer. Call
 /// this on writable server startup (and periodically in the daemon) so search
 /// stays complete without manual `wm reindex` runs.
+///
+/// Incremental by design (2026-09-10, daemon crash-loop fix): the previous
+/// implementation delegated to [`rebuild_index`], deleting and re-indexing
+/// every document of every drifted galaxy. On the live store that meant
+/// ~58k docs (~5 min) per 5-minute checkpoint cycle, synchronously inside
+/// the daemon's watchdogged main loop — the 120s watchdog killed the heal
+/// mid-run every cycle, the index never caught up, and the daemon
+/// crash-looped forever (35 failures in two days). The incremental path
+/// diffs indexed IDs against LMDB IDs and touches only the difference, so
+/// a steady-state cycle indexes a handful of docs in well under a second.
+/// Full rebuilds stay available via [`rebuild_index`] for manual
+/// `wm reindex` runs and the server-shutdown path.
 ///
 /// Returns `Ok(None)` when nothing is healable — either the index matches
 /// LMDB, or the only gap is the documented sanitization-skip reserve
@@ -316,7 +333,58 @@ pub fn heal_index_drift(
     if drifted.is_empty() {
         return Ok(None);
     }
-    rebuild_index(store, search, &drifted).map(Some)
+
+    let mut report = IndexRebuildReport::default();
+    let mut writer = search.writer()?;
+    for name in &drifted {
+        let Some(galaxy) = Galaxy::from_db_name(name) else {
+            return Err(CoreError::Memory(format!(
+                "drift classification named a non-memory galaxy: {name}"
+            )));
+        };
+        let mut stats = GalaxyRebuildStats {
+            galaxy: name.clone(),
+            ..GalaxyRebuildStats::default()
+        };
+
+        let indexed_ids = search.indexed_ids_in_galaxy(name)?;
+        let mut lmdb_ids: std::collections::HashSet<String> =
+            std::collections::HashSet::with_capacity(indexed_ids.len());
+        for mem in store.scan_all(galaxy)? {
+            let id = mem.metadata.id.to_string();
+            lmdb_ids.insert(id.clone());
+            if !indexed_ids.contains(&id) {
+                stats.scanned += 1;
+                if index_memory(search, &mut writer, galaxy, &mem)?.is_some() {
+                    stats.indexed += 1;
+                } else {
+                    // Gate-failing content: counted as the documented
+                    // skip-reserve, never indexed. `classify_drift` moves it
+                    // out of the healable gap on the next pass, so this is
+                    // not churn.
+                    stats.skipped += 1;
+                }
+            }
+        }
+        // Orphans: indexed docs whose LMDB twin is gone (failed delete,
+        // interrupted run). Remove them so counts converge.
+        for id in &indexed_ids {
+            if !lmdb_ids.contains(id) {
+                search.delete_document(&mut writer, id)?;
+                stats.deleted += 1;
+            }
+        }
+
+        report.scanned += stats.scanned;
+        report.indexed += stats.indexed;
+        report.skipped += stats.skipped;
+        report.deleted += stats.deleted;
+        report.galaxies.push(stats);
+    }
+
+    search.commit(&mut writer)?;
+    drop(writer);
+    Ok(Some(report))
 }
 
 // ── Content repair ─────────────────────────────────────────────────────
@@ -840,11 +908,115 @@ mod tests {
             )
             .unwrap();
         let healed = heal_index_drift(&store, &search).unwrap();
-        assert!(healed.is_some(), "healable drift must trigger a rebuild");
-        // Rebuild re-adds both indexable docs (clean + missing); the \0 doc is
-        // re-skipped — that is the whole point of the classification.
-        assert_eq!(healed.unwrap().indexed, 2);
+        assert!(healed.is_some(), "healable drift must trigger a heal");
+        // Incremental heal touches only the delta: the already-indexed clean
+        // doc is left alone, the missing doc is added, the \0 doc is in the
+        // id diff, gets attempted, fails the gate and is counted skipped —
+        // that is the whole point of the classification.
+        let healed = healed.unwrap();
+        assert_eq!(healed.indexed, 1);
+        assert_eq!(healed.skipped, 1);
+        assert_eq!(healed.deleted, 0);
         drop(tmp);
+    }
+
+    #[test]
+    fn heal_indexes_only_the_missing_delta() {
+        let (_tmp, store, search) = setup();
+        // Two memories written straight to LMDB (the session-tool pattern).
+        let a = Memory::new(Galaxy::Sessions, "alpha missing doc".into());
+        let b = Memory::new(Galaxy::Sessions, "beta missing doc".into());
+        store.put(Galaxy::Sessions, &a).unwrap();
+        store.put(Galaxy::Sessions, &b).unwrap();
+
+        // Heal once: both are missing, both get indexed.
+        let report = heal_index_drift(&store, &search).unwrap().unwrap();
+        assert_eq!(report.indexed, 2);
+        assert_eq!(report.deleted, 0);
+        assert_eq!(
+            search
+                .search_in_galaxy("alpha", Some(Galaxy::Sessions), 10)
+                .unwrap()
+                .len(),
+            1
+        );
+
+        // One more LMDB-only write; the heal must index exactly the new one.
+        store
+            .put(
+                Galaxy::Sessions,
+                &Memory::new(Galaxy::Sessions, "gamma missing doc".into()),
+            )
+            .unwrap();
+        let report = heal_index_drift(&store, &search).unwrap().unwrap();
+        assert_eq!(report.indexed, 1, "only the delta is indexed");
+        assert_eq!(
+            search
+                .search_in_galaxy("gamma", Some(Galaxy::Sessions), 10)
+                .unwrap()
+                .len(),
+            1
+        );
+        // Prior docs still present exactly once.
+        assert_eq!(
+            search
+                .search_in_galaxy("alpha", Some(Galaxy::Sessions), 10)
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn heal_deletes_orphan_index_docs() {
+        let (_tmp, store, search) = setup();
+        put_and_index(&store, &search, Galaxy::Codex, "legit doc");
+        // Index an entry whose LMDB row is then removed outright (the
+        // failed-delete / interrupted-run shape). NOTE: `store.delete` keeps
+        // the key as a validity-state row, which count-based classification
+        // deliberately ignores (a rebuild would re-index that row anyway);
+        // only a raw key removal makes the index doc a true orphan.
+        let orphan = Memory::new(Galaxy::Codex, "orphan doc".into());
+        let orphan_id = orphan.metadata.id;
+        store.put(Galaxy::Codex, &orphan).unwrap();
+        {
+            let mut writer = search.writer().unwrap();
+            search
+                .add_document(
+                    &mut writer,
+                    &orphan_id.to_string(),
+                    "codex",
+                    "orphan doc",
+                    &orphan.metadata.tags,
+                    orphan.metadata.created_at.timestamp(),
+                )
+                .unwrap();
+            search.commit(&mut writer).unwrap();
+        }
+        store
+            .delete_raw(Galaxy::Codex, orphan_id.as_bytes())
+            .unwrap();
+        assert_eq!(search.count_docs_in_galaxy("codex").unwrap(), 2);
+
+        let report = heal_index_drift(&store, &search).unwrap().unwrap();
+        assert_eq!(report.deleted, 1, "the orphan must be deleted");
+        assert_eq!(report.indexed, 0);
+        assert_eq!(search.count_docs_in_galaxy("codex").unwrap(), 1);
+        // `search()` uses the delayed-reload reader (OnCommitWithDelay) —
+        // count/enum reload eagerly, the text-search path does not by design.
+        // Poll briefly instead of forcing a reload into the hot path.
+        let mut gone = false;
+        for _ in 0..40 {
+            // "orphan" alone: an OR query with "doc" would match the legit
+            // doc too (single-term coverage floor).
+            if search.search("orphan", 10).unwrap().is_empty() {
+                gone = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        assert!(gone, "orphan doc must be gone from search");
+        assert!(heal_index_drift(&store, &search).unwrap().is_none());
     }
 
     #[test]

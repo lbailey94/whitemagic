@@ -755,11 +755,28 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             // hide new memories from search until the next restart.
             if let Some(engine) = server.search_engine() {
                 match wm_memory::reindex::heal_index_drift(server.store(), engine) {
-                    Ok(Some(report)) => tracing::info!(
-                        galaxies = report.galaxies.len(),
-                        indexed = report.indexed,
-                        "Periodic index-drift heal rebuilt drifted galaxies"
-                    ),
+                    Ok(Some(report)) => {
+                        // Name the drifted galaxies: a bare count hid the
+                        // crash-loop root cause for two days (same two
+                        // galaxies re-healed every cycle).
+                        let detail = report
+                            .galaxies
+                            .iter()
+                            .map(|g| {
+                                format!(
+                                    "{}: +{} indexed, {} skipped, {} orphans deleted",
+                                    g.galaxy, g.indexed, g.skipped, g.deleted
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                            .join("; ");
+                        tracing::info!(
+                            galaxies = report.galaxies.len(),
+                            indexed = report.indexed,
+                            deleted = report.deleted,
+                            "Periodic index-drift heal (incremental) {detail}"
+                        );
+                    }
                     Ok(None) => {}
                     Err(e) => tracing::warn!(
                         error = %e,

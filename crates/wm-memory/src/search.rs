@@ -470,6 +470,12 @@ impl SearchEngine {
     /// LMDB memory counts. Returns 0 if the index is empty or the galaxy
     /// has no documents.
     pub fn count_docs_in_galaxy(&self, galaxy: &str) -> Result<usize> {
+        // Deterministic view: the OnCommitWithDelay background reloader can
+        // lag a just-finished commit; drift classification must never run
+        // against a stale reader (it would under-count and skip the heal).
+        self.reader
+            .reload()
+            .map_err(|e| CoreError::Memory(format!("Tantivy reader reload: {e}")))?;
         let searcher = self.reader.searcher();
         let term = tantivy::Term::from_field_text(self.field_galaxy, galaxy);
         let query = tantivy::query::TermQuery::new(term, tantivy::schema::IndexRecordOption::Basic);
@@ -477,6 +483,38 @@ impl SearchEngine {
             .search(&query, &tantivy::collector::Count)
             .map_err(|e| CoreError::Memory(format!("Tantivy count_docs: {e}")))?;
         Ok(count)
+    }
+
+    /// Enumerate the memory IDs currently indexed for one galaxy.
+    ///
+    /// Used by the incremental drift heal to diff the index against LMDB
+    /// without rebuilding whole galaxies. Bounded by the galaxy's own
+    /// document count (a term query on the non-tokenized `galaxy` field, so
+    /// the cost is one term seek + one stored-field fetch per hit).
+    pub fn indexed_ids_in_galaxy(&self, galaxy: &str) -> Result<std::collections::HashSet<String>> {
+        // Deterministic view: the OnCommitWithDelay background reloader can
+        // lag a just-finished commit, and the drift heal must never diff
+        // against a stale reader (it would re-index what it already did).
+        self.reader
+            .reload()
+            .map_err(|e| CoreError::Memory(format!("Tantivy reader reload: {e}")))?;
+        let searcher = self.reader.searcher();
+        let term = tantivy::Term::from_field_text(self.field_galaxy, galaxy);
+        let query = tantivy::query::TermQuery::new(term, tantivy::schema::IndexRecordOption::Basic);
+        let count = self.count_docs_in_galaxy(galaxy)?;
+        let hits: std::collections::HashSet<tantivy::DocAddress> = searcher
+            .search(&query, &tantivy::collector::DocSetCollector)
+            .map_err(|e| CoreError::Memory(format!("Tantivy indexed_ids: {e}")))?;
+        let mut out = std::collections::HashSet::with_capacity(count);
+        for addr in hits {
+            let doc: TantivyDocument = searcher
+                .doc(addr)
+                .map_err(|e| CoreError::Memory(format!("Tantivy get doc: {e}")))?;
+            if let Some(id) = doc.get_first(self.field_id).and_then(|v| v.as_str()) {
+                out.insert(id.to_string());
+            }
+        }
+        Ok(out)
     }
 
     /// True when the engine was opened read-only (no tantivy writer).

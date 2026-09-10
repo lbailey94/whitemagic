@@ -1953,11 +1953,25 @@ impl McpServer {
         if !self.readonly {
             if let Some(engine) = self.search_engine() {
                 match wm_memory::reindex::heal_index_drift(&self.store, engine) {
-                    Ok(Some(report)) => tracing::warn!(
-                        galaxies = report.galaxies.len(),
-                        indexed = report.indexed,
-                        "Index-drift heal on shutdown rebuilt drifted galaxies"
-                    ),
+                    Ok(Some(report)) => {
+                        let detail = report
+                            .galaxies
+                            .iter()
+                            .map(|g| {
+                                format!(
+                                    "{}: +{} indexed, {} skipped, {} orphans deleted",
+                                    g.galaxy, g.indexed, g.skipped, g.deleted
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                            .join("; ");
+                        tracing::warn!(
+                            galaxies = report.galaxies.len(),
+                            indexed = report.indexed,
+                            deleted = report.deleted,
+                            "Index-drift heal on shutdown (incremental) {detail}"
+                        );
+                    }
                     Ok(None) => {}
                     Err(e) => tracing::warn!(
                         error = %e,
