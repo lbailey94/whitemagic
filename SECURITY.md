@@ -1,5 +1,13 @@
 # Security Policy
 
+> NOTE (2026-09-10, Q05 — support window under review): the table below is the
+> existing policy statement; its current applicability is unverified in this
+> pass and the maintainer's support-window decision is explicitly unresolved.
+> Observed package/runtime versions are separate facts: the Q03 accepted gateway
+> reports package 9.0.0 (see `docs/V9_3_Q03_ACCEPTANCE.md`), and v9 is the
+> latest public release line. A newer package version does not establish the
+> maintenance policy of an older release.
+
 ## Supported Versions
 
 | Version | Supported          |
@@ -37,7 +45,10 @@ WhiteMagic v5 is a trusted local single-user process. Its security model:
 - **Local-first by default**: all data stays in the local LMDB store; no
   telemetry is sent anywhere.
 - **Curated tool surface**: the release profile exposes the memory/session
-  workflow; the 229-tool archive surface is opt-in.
+  workflow; the tool archive surface is opt-in (registered total 237 at the
+  v5.8.0 release gate, 2026-08-20 — a dated figure, not today's exposure;
+  current-build exposure is profile-selected per the Q03 generated manifest,
+  with per-tool dispositions under Q04 audit).
 - **Destructive confirmation**: 9 destructive tools require an explicit
   `route=` match plus `confirm: true` and are structurally unreachable via
   natural-language routing.
