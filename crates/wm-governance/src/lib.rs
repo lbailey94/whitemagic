@@ -8,6 +8,7 @@
 
 pub mod acs;
 pub mod dharma_gate;
+pub mod economic_firewall;
 pub mod escalation;
 pub mod firebreak;
 pub mod karma_ledger;
@@ -17,6 +18,11 @@ pub mod write_audit;
 
 pub use acs::{AcsAction, AcsCheckpoint, AcsComplianceReport, AcsExport, AcsRule};
 pub use dharma_gate::{ActionVerdict, DharmaGate, Homeostasis};
+pub use economic_firewall::{
+    DharmaSignOff, ECONOMIC_TOOLS, EconomicFirewall, NoDharmaSignOff, NoRecipientTrust,
+    RecipientTrustSource, SecurityEvent, TransactionPolicy, TransactionRequest, TransactionVerdict,
+    VerdictReason, is_economic_tool,
+};
 pub use escalation::{EscalationQueue, ReviewItem, ReviewStatus};
 pub use firebreak::{
     Firebreak, FirebreakOutcome, FirebreakStats, SCOPE_REGISTRY, ScopeRule, VetoClass, VetoFinding,
