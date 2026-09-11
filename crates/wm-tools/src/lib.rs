@@ -69,6 +69,20 @@ pub(crate) const GLYPH_ROUTES: &[(&str, &str)] = &[
     ("tools.list", "Tl"),
     ("agent.list", "Al"),
     ("karma.report", "Kr"),
+    // Logographic ideograms (single-token hyperlanguage for local LLM inference)
+    ("memory.search", "忆"),
+    ("memory.search", "索"),
+    ("memory.create", "录"),
+    ("memory.create", "存"),
+    ("memory.read", "读"),
+    ("memory.hybrid_recall", "回"),
+    ("session.continuity", "续"),
+    ("session.checkpoint", "契"),
+    ("session.record", "记"),
+    ("citta.status", "心"),
+    ("dharma.rules", "律"),
+    ("karma.report", "业"),
+    ("tools.list", "具"),
 ];
 
 pub(crate) const GLYPH_ARGS: &[(&str, &str)] = &[
@@ -93,6 +107,14 @@ pub(crate) const GLYPH_ARGS: &[(&str, &str)] = &[
     ("scope", "S"),
     ("name", "m"),
     ("arguments", "g"),
+    // Logographic argument keys
+    ("query", "问"),
+    ("query", "寻"),
+    ("limit", "数"),
+    ("content", "文"),
+    ("tags", "标"),
+    ("scope", "界"),
+    ("id", "号"),
 ];
 
 /// `WM_GLYPH=1` enables glyph-wire decoding on the meta-tool seam.
@@ -5745,5 +5767,35 @@ mod tests {
                 "missing {route}"
             );
         }
+    }
+
+    #[test]
+    fn glyph_logographic_ideograms_decode_losslessly() {
+        // Test single-token logographic Chinese ideograms
+        let search_call = json!({
+            "r": "忆",
+            "a": {
+                "问": "auth failure",
+                "数": 5
+            }
+        });
+        let decoded = decode_glyph(&search_call).expect("logographic search decodes");
+        assert_eq!(decoded["route"], "memory.search");
+        assert_eq!(decoded["args"]["query"], "auth failure");
+        assert_eq!(decoded["args"]["limit"], 5);
+
+        let checkpoint_call = json!({
+            "r": "契",
+            "a": {
+                "文": "v9.3 milestone reached"
+            }
+        });
+        let decoded_cp = decode_glyph(&checkpoint_call).expect("checkpoint decodes");
+        assert_eq!(decoded_cp["route"], "session.checkpoint");
+        assert_eq!(decoded_cp["args"]["content"], "v9.3 milestone reached");
+
+        let status_call = json!({"r": "心", "a": {}});
+        let decoded_st = decode_glyph(&status_call).expect("citta status decodes");
+        assert_eq!(decoded_st["route"], "citta.status");
     }
 }
