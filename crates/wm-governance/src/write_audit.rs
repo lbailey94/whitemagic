@@ -514,6 +514,30 @@ impl WriteAuditJournal {
         entries.drain(..start);
         Ok(entries)
     }
+
+    /// Entries belonging to a specific monotonic operation ID (U6 crash barrier).
+    pub fn entries_by_operation_id(&self, op_id: &str) -> Result<Vec<WriteAuditEntry>> {
+        Ok(self
+            .scan_entries()?
+            .into_iter()
+            .filter(|e| e.operation_id.as_deref() == Some(op_id))
+            .collect())
+    }
+
+    /// Scan operations that started but contain failed or unconfirmed dispatches.
+    /// Identifies uncommitted or aborted multi-step operation IDs for crash recovery.
+    pub fn scan_uncommitted_operations(&self) -> Result<Vec<String>> {
+        let entries = self.scan_entries()?;
+        let mut failed_or_unconfirmed = std::collections::BTreeSet::new();
+        for entry in &entries {
+            if let Some(op_id) = &entry.operation_id {
+                if !entry.success || entry.confirmed == Some(false) {
+                    failed_or_unconfirmed.insert(op_id.clone());
+                }
+            }
+        }
+        Ok(failed_or_unconfirmed.into_iter().collect())
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -589,6 +613,41 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].operation_id.as_deref(), Some(op_id));
         assert_eq!(entries[0], entry);
+    }
+
+    #[test]
+    fn operation_id_recovery_and_uncommitted_scan() {
+        let store = make_store();
+        let journal = WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap();
+
+        let op1 = "01ARZ3NDEKTSV4RRFFQ69G5FA1";
+        let op2 = "01ARZ3NDEKTSV4RRFFQ69G5FA2";
+
+        // Successful dispatch under op1
+        let actor1 = ActorIdentity::default().with_operation_id(op1);
+        journal
+            .record("memory.create", actor1.clone(), None, None, true, 1, true)
+            .unwrap();
+
+        // Failed dispatch under op2
+        let actor2 = ActorIdentity::default().with_operation_id(op2);
+        journal
+            .record("memory.update", actor2.clone(), None, None, true, 0, false)
+            .unwrap();
+
+        // Check entries_by_operation_id
+        let op1_entries = journal.entries_by_operation_id(op1).unwrap();
+        assert_eq!(op1_entries.len(), 1);
+        assert_eq!(op1_entries[0].tool, "memory.create");
+
+        let op2_entries = journal.entries_by_operation_id(op2).unwrap();
+        assert_eq!(op2_entries.len(), 1);
+        assert_eq!(op2_entries[0].tool, "memory.update");
+        assert!(!op2_entries[0].success);
+
+        // Check scan_uncommitted_operations
+        let uncommitted = journal.scan_uncommitted_operations().unwrap();
+        assert_eq!(uncommitted, vec![op2.to_string()]);
     }
 
     #[test]
