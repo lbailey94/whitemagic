@@ -233,6 +233,14 @@ pub struct DaemonConfig {
     /// Interval between watchdog audits of uncommitted crash-barrier operations (seconds, 0 = disabled).
     #[serde(default = "default_watchdog_audit_interval")]
     pub watchdog_audit_interval_secs: u64,
+
+    /// Interval between SymbioSync subconscious consolidation cycles (seconds, 0 = disabled).
+    #[serde(default = "default_symbiosync_interval")]
+    pub symbiosync_interval_secs: u64,
+
+    /// Interval between non-destructive Phagic cold-storage sweeps (seconds, 0 = disabled).
+    #[serde(default = "default_phagic_interval")]
+    pub phagic_interval_secs: u64,
 }
 
 impl Default for DaemonConfig {
@@ -252,8 +260,18 @@ impl Default for DaemonConfig {
             gan_ying_interval_secs: 300,
             citta_interval_secs: 60,
             watchdog_audit_interval_secs: 30,
+            symbiosync_interval_secs: 60,
+            phagic_interval_secs: 600,
         }
     }
+}
+
+const fn default_symbiosync_interval() -> u64 {
+    60
+}
+
+const fn default_phagic_interval() -> u64 {
+    600
 }
 
 const fn default_citta_interval() -> u64 {
@@ -471,6 +489,8 @@ impl WmConfig {
             gan_ying_interval: Duration::from_secs(self.daemon.gan_ying_interval_secs),
             citta_interval: Duration::from_secs(self.daemon.citta_interval_secs),
             watchdog_audit_interval: Duration::from_secs(self.daemon.watchdog_audit_interval_secs),
+            symbiosync_interval: Duration::from_secs(self.daemon.symbiosync_interval_secs),
+            phagic_interval: Duration::from_secs(self.daemon.phagic_interval_secs),
         }
     }
 
@@ -735,6 +755,8 @@ llama_endpoint = "http://localhost:8080"
                 gan_ying_interval_secs: 150,
                 citta_interval_secs: 60,
                 watchdog_audit_interval_secs: 30,
+                symbiosync_interval_secs: 45,
+                phagic_interval_secs: 300,
             },
             ..Default::default()
         };
@@ -744,6 +766,8 @@ llama_endpoint = "http://localhost:8080"
         assert_eq!(d.gan_ying_interval, Duration::from_secs(150));
         assert_eq!(d.citta_interval, Duration::from_secs(60));
         assert_eq!(d.watchdog_audit_interval, Duration::from_secs(30));
+        assert_eq!(d.symbiosync_interval, Duration::from_secs(45));
+        assert_eq!(d.phagic_interval, Duration::from_secs(300));
         assert_eq!(d.brain_wave_interval, Duration::from_secs(15));
         assert_eq!(d.homeostasis_interval, Duration::from_secs(30));
         assert_eq!(d.min_health_score, 0.5);

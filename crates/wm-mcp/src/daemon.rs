@@ -101,6 +101,10 @@ pub struct DaemonConfig {
     pub citta_interval: Duration,
     /// Interval between watchdog audits of uncommitted crash-barrier operations (0 = disabled).
     pub watchdog_audit_interval: Duration,
+    /// Interval between SymbioSync subconscious consolidation cycles (0 = disabled).
+    pub symbiosync_interval: Duration,
+    /// Interval between non-destructive Phagic cold-storage sweeps (0 = disabled).
+    pub phagic_interval: Duration,
 }
 
 impl Default for DaemonConfig {
@@ -120,6 +124,8 @@ impl Default for DaemonConfig {
             gan_ying_interval: Duration::from_secs(300), // 5 minutes
             citta_interval: Duration::from_secs(60), // 1 minute
             watchdog_audit_interval: Duration::from_secs(30), // 30 seconds
+            symbiosync_interval: Duration::from_secs(60), // 1 minute
+            phagic_interval: Duration::from_secs(600), // 10 minutes
         }
     }
 }
@@ -175,6 +181,16 @@ pub struct DaemonStats {
     pub copilot_diagnostics: u64,
     /// Total uncommitted operations audited and remediated.
     pub uncommitted_ops_audited: u64,
+    /// Total SymbioSync consolidation cycles completed.
+    pub symbiosync_cycles: u64,
+    /// Total thoughts consolidated into permanent memory by SymbioSync.
+    pub symbiosync_thoughts_consolidated: u64,
+    /// Total non-destructive Phagic cold-storage sweeps completed.
+    pub phagic_sweeps: u64,
+    /// Total memories gently migrated into cold storage.
+    pub phagic_memories_migrated: u64,
+    /// Total thematic digest nodes synthesized in the hot active tier.
+    pub phagic_thematic_nodes: u64,
 }
 
 /// Whether an event type denotes a failure, for nervous-system health
@@ -238,6 +254,11 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     let mut last_gan_ying = std::time::Instant::now();
     let mut last_citta = std::time::Instant::now();
     let mut last_watchdog_audit = std::time::Instant::now();
+    let mut last_symbiosync = std::time::Instant::now();
+    let mut last_phagic = std::time::Instant::now();
+    let mut symbiosync = wm_cognitive::SymbioSync::default();
+    let mut resonance_chamber = wm_cognitive::ResonanceChamber::with_default_config("daemon_chamber");
+    let phagic_coordinator = wm_cognitive::PhagicCognitiveCoordinator::default();
     let mut citta_coordinator = CittaCoordinator::with_og_engines();
     let mut alchemical_coordinator = AlchemicalRoundCoordinator::new();
     let mut garden_engine = GardenResonanceEngine::new();
@@ -330,6 +351,12 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     }
     if config.watchdog_audit_interval > Duration::from_secs(0) {
         println!("  Watchdog audit:  {:?} (copilot active)", config.watchdog_audit_interval);
+    }
+    if config.symbiosync_interval > Duration::from_secs(0) {
+        println!("  SymbioSync:      {:?} (somatic subconscious consolidation)", config.symbiosync_interval);
+    }
+    if config.phagic_interval > Duration::from_secs(0) {
+        println!("  Phagic cold tier:{:?} (zero-loss lossless outer rim)", config.phagic_interval);
     }
     if config.research_interval > Duration::from_secs(0) {
         println!("  Research interval: {:?}", config.research_interval);
@@ -713,6 +740,90 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             last_watchdog_audit = now;
         }
 
+        // SymbioSync: Subconscious Dream-Cycle Consolidation with Somatic Embodiment
+        if config.symbiosync_interval > Duration::from_secs(0)
+            && now.duration_since(last_symbiosync) >= config.symbiosync_interval
+        {
+            let hw = wm_cognitive::HardwareMonitor::sample();
+            if let Some(res) = resilient("symbiosync_cycle", || {
+                symbiosync.step(&mut resonance_chamber, &hw, Some(&store))
+            }) {
+                match res {
+                    Ok(report) => {
+                        stats.symbiosync_cycles += 1;
+                        stats.symbiosync_thoughts_consolidated += report.memories_merged.len() as u64;
+                        if !report.yielded && (!report.patterns_aligned.is_empty() || !report.memories_merged.is_empty()) {
+                            tracing::info!(
+                                cycle_id = %report.cycle_id,
+                                aligned = report.patterns_aligned.len(),
+                                merged = report.memories_merged.len(),
+                                duration_ms = report.duration_ms,
+                                "SymbioSync consolidated subconscious patterns"
+                            );
+                            println!(
+                                "[symbiosync] Subconscious consolidation: {} patterns aligned, {} memories crystallized into galaxies in {}ms",
+                                report.patterns_aligned.len(),
+                                report.memories_merged.len(),
+                                report.duration_ms
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(error = %e, "SymbioSync consolidation error");
+                    }
+                }
+            }
+            last_symbiosync = now;
+        }
+
+        // Non-Destructive Phagic Digestive Cold-Storage Sweep (the project's sacred rule: Zero Loss)
+        if config.phagic_interval > Duration::from_secs(0)
+            && now.duration_since(last_phagic) >= config.phagic_interval
+        {
+            let hw = wm_cognitive::HardwareMonitor::sample();
+            if !hw.regime.should_throttle() {
+                let search_ref = server.search_engine().map(|s| s.as_ref());
+                if let Some(res) = resilient("phagic_digest_sweep", || {
+                    phagic_coordinator.run_digest_sweep(&store, search_ref)
+                }) {
+                    match res {
+                        Ok(reports) => {
+                            stats.phagic_sweeps += 1;
+                            let mut migrated_total = 0;
+                            let mut nodes_total = 0;
+                            for r in &reports {
+                                migrated_total += r.memories_digested;
+                                if r.digest_memory_id.is_some() {
+                                    nodes_total += 1;
+                                }
+                            }
+                            stats.phagic_memories_migrated += migrated_total as u64;
+                            stats.phagic_thematic_nodes += nodes_total as u64;
+
+                            if migrated_total > 0 || nodes_total > 0 {
+                                tracing::info!(
+                                    galaxies = reports.len(),
+                                    migrated = migrated_total,
+                                    nodes = nodes_total,
+                                    "Phagic non-destructive cold-storage sweep completed"
+                                );
+                                println!(
+                                    "[phagic] Non-destructive digestion: {} outer-rim memories migrated to cold tier, {} thematic nodes synthesized",
+                                    migrated_total, nodes_total
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!(error = %e, "Phagic digestion sweep error");
+                        }
+                    }
+                }
+            } else {
+                tracing::debug!("Phagic digestion postponed due to thermal throttling");
+            }
+            last_phagic = now;
+        }
+
         // RSI Phase 4: Code generation cycle
         if config.codegen_interval > Duration::from_secs(0)
             && now.duration_since(last_codegen) >= config.codegen_interval
@@ -1061,6 +1172,15 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         println!("  Copilot diags:    {}", stats.copilot_diagnostics);
         println!("  Ops remediated:   {}", stats.uncommitted_ops_audited);
     }
+    if stats.symbiosync_cycles > 0 {
+        println!("  SymbioSync cycles:{}", stats.symbiosync_cycles);
+        println!("  Thoughts merged:  {}", stats.symbiosync_thoughts_consolidated);
+    }
+    if stats.phagic_sweeps > 0 {
+        println!("  Phagic sweeps:    {}", stats.phagic_sweeps);
+        println!("  Cold migrated:    {}", stats.phagic_memories_migrated);
+        println!("  Thematic nodes:   {}", stats.phagic_thematic_nodes);
+    }
 
     if hung.load(Ordering::SeqCst) {
         anyhow::bail!("daemon watchdog triggered — main loop stalled; restart for recovery")
@@ -1094,6 +1214,8 @@ mod tests {
         assert_eq!(config.watchdog_timeout, Duration::from_secs(60));
         assert_eq!(config.citta_interval, Duration::from_secs(60));
         assert_eq!(config.watchdog_audit_interval, Duration::from_secs(30));
+        assert_eq!(config.symbiosync_interval, Duration::from_secs(60));
+        assert_eq!(config.phagic_interval, Duration::from_secs(600));
     }
 
     #[test]
@@ -1113,12 +1235,16 @@ mod tests {
             gan_ying_interval: Duration::from_secs(150),
             citta_interval: Duration::from_secs(45),
             watchdog_audit_interval: Duration::from_secs(15),
+            symbiosync_interval: Duration::from_secs(45),
+            phagic_interval: Duration::from_secs(300),
         };
         assert_eq!(config.cycle_interval, Duration::from_secs(60));
         assert_eq!(config.dream_interval, Duration::from_secs(120));
         assert_eq!(config.gan_ying_interval, Duration::from_secs(150));
         assert_eq!(config.citta_interval, Duration::from_secs(45));
         assert_eq!(config.watchdog_audit_interval, Duration::from_secs(15));
+        assert_eq!(config.symbiosync_interval, Duration::from_secs(45));
+        assert_eq!(config.phagic_interval, Duration::from_secs(300));
         assert_eq!(config.codegen_interval, Duration::from_secs(1800));
         assert!(config.codegen_auto_apply);
         assert_eq!(config.research_interval, Duration::from_secs(600));
@@ -1158,5 +1284,10 @@ mod tests {
         assert_eq!(stats.selfplay_cycles, 0);
         assert_eq!(stats.selfplay_samples, 0);
         assert_eq!(stats.selfplay_adapter_updates, 0);
+        assert_eq!(stats.symbiosync_cycles, 0);
+        assert_eq!(stats.symbiosync_thoughts_consolidated, 0);
+        assert_eq!(stats.phagic_sweeps, 0);
+        assert_eq!(stats.phagic_memories_migrated, 0);
+        assert_eq!(stats.phagic_thematic_nodes, 0);
     }
 }
