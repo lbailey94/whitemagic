@@ -28,8 +28,14 @@ set -u
 WM="$HOME/.local/bin/wm"
 BASE="$HOME/Desktop/WHITEMAGIC/data/WMdata/projects"
 KEEP=7
-EXTERNAL_DISK="/media/lucas/SD_CARD1"
-EXTERNAL="$EXTERNAL_DISK/whitemagic-backups"
+EXTERNAL_DISK=""
+for d in "/media/lucas/4198-16FD" "/media/lucas/SD_CARD1"; do
+  if mountpoint -q "$d" 2>/dev/null; then
+    EXTERNAL_DISK="$d"
+    break
+  fi
+done
+EXTERNAL="${EXTERNAL_DISK:+$EXTERNAL_DISK/whitemagic-backups}"
 LEGACY="$HOME/whitemagic-backups"
 LOG="$LEGACY/backup.log"
 
@@ -42,12 +48,12 @@ fi
 
 # Target: the SD card when mounted, the legacy NVMe path with a loud WARN
 # when it is not. Never skip the backup; never fall back silently.
-if mountpoint -q "$EXTERNAL_DISK" 2>/dev/null; then
+if [ -n "$EXTERNAL_DISK" ]; then
   BACKUP_ROOT="$EXTERNAL"
   mkdir -p "$BACKUP_ROOT"
 else
   BACKUP_ROOT="$LEGACY"
-  echo "$(date -Is) WARN backup disk $EXTERNAL_DISK not mounted — falling back to NVMe ($LEGACY). NVMe wear continues until the card is remounted." >>"$LOG"
+  echo "$(date -Is) WARN backup disk not mounted — falling back to NVMe ($LEGACY). NVMe wear continues until the card is remounted." >>"$LOG"
 fi
 SEALS="$BACKUP_ROOT/seals"
 mkdir -p "$SEALS"

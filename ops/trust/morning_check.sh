@@ -6,14 +6,20 @@
 # expected until attested creates accumulate (disclosed, not hidden).
 set -u
 
-BACKUP_DISK="/media/lucas/SD_CARD1"
-EXTERNAL="$BACKUP_DISK/whitemagic-backups"
+BACKUP_DISK=""
+for d in "/media/lucas/4198-16FD" "/media/lucas/SD_CARD1"; do
+  if mountpoint -q "$d" 2>/dev/null; then
+    BACKUP_DISK="$d"
+    break
+  fi
+done
+EXTERNAL="${BACKUP_DISK:+$BACKUP_DISK/whitemagic-backups}"
 LEGACY="$HOME/whitemagic-backups"
 LOG="$LEGACY/backup.log"
 OTS_BIN="$HOME/.local/ots-venv/bin/ots"
 WRITABLE_UNITS="wmv5 neon site planning"
 
-if mountpoint -q "$BACKUP_DISK" 2>/dev/null; then
+if [ -n "$BACKUP_DISK" ]; then
   BACKUP_ROOT="$EXTERNAL"
 else
   BACKUP_ROOT="$LEGACY"
