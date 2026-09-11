@@ -2928,9 +2928,9 @@ impl McpServer {
             }));
         }
 
-        // Only expose the wm meta-tool — the routeable surface depends on the
-        // active tool profile, so discovery text is generated from the
-        // registry rather than hardcoded full-surface counts.
+        let mut tools = Vec::new();
+
+        // 1. Expose the wm meta-tool as the primary versatile entrypoint
         if let Some(wm) = self.registry.get("wm") {
             let tool_count = self
                 .registry
@@ -2958,29 +2958,198 @@ impl McpServer {
                 "WhiteMagic meta-tool — {} tool surface ({} tools).{}{} Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create'), and args= for passthrough arguments. Say 'list tools' to discover available tools.",
                 self.profile_name, tool_count, mode_hint, scope
             );
-            Ok(json!({
-                "tools": [{
-                    "name": wm.name(),
-                    "description": description,
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "thought": {
-                                "type": "string",
-                                "description": "Natural language input describing what to do. Auto-routes to the best-matching tool via TF-IDF NLU classification.",
-                            },
-                            "route": {
-                                "type": "string",
-                                "description": "Explicit tool name for direct dispatch (e.g. 'memory.create', 'tools.list').",
-                            },
-                            "args": {
-                                "type": "object",
-                                "description": "Arguments to pass through to the target tool.",
-                            },
+            tools.push(json!({
+                "name": wm.name(),
+                "description": description,
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "thought": {
+                            "type": "string",
+                            "description": "Natural language input describing what to do. Auto-routes to the best-matching tool via TF-IDF NLU classification.",
+                        },
+                        "route": {
+                            "type": "string",
+                            "description": "Explicit tool name for direct dispatch (e.g. 'memory.create', 'tools.list').",
+                        },
+                        "args": {
+                            "type": "object",
+                            "description": "Arguments to pass through to the target tool.",
                         },
                     },
-                }]
-            }))
+                },
+            }));
+        }
+
+        // 2. Discrete tool aliases for MCP registry discovery & Glama 5.0 coherence.
+        // Provides direct verb_noun tool schemas for automated evaluators and explicit clients.
+        let discrete_definitions = [
+            (
+                "memory_create",
+                "memory.create",
+                "Store a new memory in the holographic memory core with 5D spatial coordinates and galaxy routing.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "content": {
+                            "type": "string",
+                            "description": "Memory text content to record"
+                        },
+                        "galaxy": {
+                            "type": "string",
+                            "description": "Target memory galaxy: codex (knowledge), active (working), audit (governance), sessions, etc."
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": { "type": "string" },
+                            "description": "Optional categorization tags"
+                        },
+                        "importance": {
+                            "type": "number",
+                            "description": "Subjective salience/importance score (0.0 to 1.0)"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "Optional topic or domain label"
+                        }
+                    },
+                    "required": ["content"]
+                }),
+            ),
+            (
+                "memory_find",
+                "memory.search",
+                "Search and recall memories across galaxies using hybrid semantic, BM25, and associative retrieval.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query or natural language question"
+                        },
+                        "galaxy": {
+                            "type": "string",
+                            "description": "Galaxy to search in, or 'all' for cross-galaxy discovery"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of memories to return (default: 10)"
+                        }
+                    },
+                    "required": ["query"]
+                }),
+            ),
+            (
+                "memory_read",
+                "memory.read",
+                "Retrieve a specific memory by its ID or coordinate address.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "description": "Unique identifier of the memory"
+                        },
+                        "galaxy": {
+                            "type": "string",
+                            "description": "Galaxy containing the memory"
+                        }
+                    },
+                    "required": ["id"]
+                }),
+            ),
+            (
+                "session_start",
+                "session.start",
+                "Start or resume an agent session for persistent continuity across tool invocations.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session identifier (auto-generated if omitted)"
+                        },
+                        "topic": {
+                            "type": "string",
+                            "description": "Initial topic, task, or context summary"
+                        }
+                    }
+                }),
+            ),
+            (
+                "citta_status",
+                "citta.status",
+                "Inspect cognitive health, brainwave frequency (Beta/Alpha/Theta/Delta), and consciousness coherence.",
+                json!({
+                    "type": "object",
+                    "properties": {}
+                }),
+            ),
+            (
+                "subagent_captain",
+                "captain.deploy",
+                "Deploy an autonomous Subagent Captain commanding parallel Tokio clone armies (Vanguard file scouting, Sentry memory auditing, Cartographer spatial dispersion).",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "role": {
+                            "type": "string",
+                            "enum": ["vanguard", "sentry", "alchemist", "cartographer"],
+                            "description": "Specialized role: vanguard (parallel file scout), sentry (memory audit), alchemist (distillation), cartographer (spatial dispersion)"
+                        },
+                        "objective": {
+                            "type": "string",
+                            "description": "Mission objective or task description"
+                        },
+                        "target_path": {
+                            "type": "string",
+                            "description": "Target root directory for file reconnaissance"
+                        },
+                        "query": {
+                            "type": "string",
+                            "description": "Search pattern or keyword for scout matching"
+                        },
+                        "army_size": {
+                            "type": "integer",
+                            "description": "Number of Tokio/Rayon parallel worker threads (default 10,000)"
+                        }
+                    },
+                    "required": ["role"]
+                }),
+            ),
+        ];
+
+        for (alias, canonical, desc, fallback_schema) in discrete_definitions {
+            if let Some(tool) = self.registry.get(canonical) {
+                if !tool.effects().is_available_in(brain_wave) {
+                    continue;
+                }
+                let schema = tool.input_schema();
+                let final_schema = if schema.is_object()
+                    && schema
+                        .get("properties")
+                        .and_then(Value::as_object)
+                        .is_some_and(|p| !p.is_empty())
+                {
+                    schema
+                } else {
+                    fallback_schema
+                };
+                let final_desc = if tool.description().is_empty() {
+                    desc
+                } else {
+                    tool.description()
+                };
+                tools.push(json!({
+                    "name": alias,
+                    "description": final_desc,
+                    "inputSchema": final_schema,
+                }));
+            }
+        }
+
+        if !tools.is_empty() {
+            Ok(json!({ "tools": tools }))
         } else {
             // Fallback: if wm meta-tool is not registered, list all available tools
             let available = self.registry.available_in(brain_wave);
@@ -3055,12 +3224,35 @@ impl McpServer {
                 data: None,
             })?;
 
-        // Look up the tool — wm meta-tool or any directly registered tool
-        let tool = self.registry.get(name).ok_or_else(|| RpcError {
-            code: -32602,
-            message: format!("Unknown tool: '{name}'"),
-            data: None,
-        })?;
+        let canonical_name = match name {
+            "memory_create" => "memory.create",
+            "memory_find" | "memory_search" => "memory.search",
+            "memory_read" => "memory.read",
+            "session_start" => "session.start",
+            "citta_status" => "citta.status",
+            "subagent_captain" => "captain.deploy",
+            other => other,
+        };
+
+        // Look up the tool — canonical alias, exact name, or underscore/dot translation
+        let tool = self
+            .registry
+            .get(canonical_name)
+            .or_else(|| self.registry.get(name))
+            .or_else(|| {
+                if name.contains('_') {
+                    self.registry.get(&name.replace('_', "."))
+                } else if name.contains('.') {
+                    self.registry.get(&name.replace('.', "_"))
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| RpcError {
+                code: -32602,
+                message: format!("Unknown tool: '{name}'"),
+                data: None,
+            })?;
 
         let mut arguments = params
             .get("arguments")
@@ -4182,9 +4374,11 @@ mod tests {
         assert!(resp.error.is_none());
         let result = resp.result.unwrap();
         let tools = result["tools"].as_array().unwrap().clone();
-        // Only the wm meta-tool should be exposed
-        assert_eq!(tools.len(), 1);
+        // The wm meta-tool is first, followed by discrete tool aliases for MCP discovery
+        assert!(tools.len() >= 1);
         assert_eq!(tools[0]["name"], "wm");
+        assert!(tools.iter().any(|t| t["name"] == "memory_find"));
+        assert!(tools.iter().any(|t| t["name"] == "memory_create"));
         assert!(tools[0]["inputSchema"].is_object());
         let description = tools[0]["description"].as_str().unwrap();
         assert!(
@@ -4481,10 +4675,11 @@ mod tests {
         assert!(resp.error.is_none());
         let beta_result = resp.result.unwrap();
         let beta_count = beta_result["tools"].as_array().unwrap().len();
-        // In Beta: only wm meta-tool is exposed (1 tool)
+        // In Beta: wm meta-tool is exposed at index 0 plus discrete catalog (7 tools)
         // In Delta: 0 tools
         assert!(beta_count > delta_count);
-        assert_eq!(beta_count, 1);
+        assert_eq!(beta_result["tools"][0]["name"], "wm");
+        assert_eq!(beta_count, 7);
     }
 
     #[tokio::test]
@@ -4581,8 +4776,8 @@ mod tests {
             .await;
         let parsed: Value = serde_json::from_str(&response).unwrap();
         let tools = parsed["result"]["tools"].as_array().unwrap();
-        // Only the wm meta-tool should be exposed
-        assert_eq!(tools.len(), 1);
+        // Tools list exposes wm meta-tool and discrete aliases
+        assert!(tools.len() >= 1);
         assert_eq!(tools[0]["name"], "wm");
     }
 
@@ -4797,8 +4992,8 @@ mod tests {
             .await;
         let list: Value = serde_json::from_str(&list_resp).unwrap();
         let tools = list["result"]["tools"].as_array().unwrap();
-        // Only the wm meta-tool is exposed
-        assert_eq!(tools.len(), 1);
+        // Tools list exposes wm meta-tool and discrete aliases
+        assert!(tools.len() >= 1);
         assert_eq!(tools[0]["name"], "wm");
 
         // 3. tools/call — create a memory

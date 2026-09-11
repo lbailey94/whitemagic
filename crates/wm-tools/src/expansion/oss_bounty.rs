@@ -170,7 +170,7 @@ impl OssBountyScanTool {
         Self {
             stats: ToolStats::default(),
             effects: EffectRow {
-                reads: vec![Resource::Network],
+                reads: vec![Resource::Network, Resource::Process],
                 spawns: true,
                 ..Default::default()
             },
@@ -255,6 +255,7 @@ impl OssBountyStatusTool {
         Self {
             stats: ToolStats::default(),
             effects: EffectRow {
+                reads: vec![Resource::Process],
                 spawns: true,
                 ..Default::default()
             },

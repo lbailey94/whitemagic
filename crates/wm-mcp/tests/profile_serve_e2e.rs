@@ -121,16 +121,15 @@ impl ServeProcess {
         let tools = resp["result"]["tools"]
             .as_array()
             .unwrap_or_else(|| panic!("tools/list returned no tools array: {resp}"));
-        assert_eq!(
-            tools.len(),
-            1,
-            "serve must expose exactly the wm tool: {resp}"
+        assert!(
+            !tools.is_empty(),
+            "tools/list must return at least the wm tool: {resp}"
         );
-        assert_eq!(
-            tools[0]["name"], "wm",
-            "the single exposed tool must be wm: {resp}"
-        );
-        tools[0]["description"]
+        let wm_tool = tools
+            .iter()
+            .find(|t| t["name"] == "wm")
+            .unwrap_or_else(|| panic!("wm tool missing from tools/list: {resp}"));
+        wm_tool["description"]
             .as_str()
             .unwrap_or_else(|| panic!("wm tool description missing: {resp}"))
             .to_string()
