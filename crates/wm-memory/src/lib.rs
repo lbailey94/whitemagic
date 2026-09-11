@@ -10,6 +10,7 @@
 pub mod associations;
 pub mod attestation;
 mod codec;
+pub mod cold_storage;
 pub mod consistency;
 pub mod conversational;
 pub mod credentials;
@@ -43,6 +44,11 @@ pub use attestation::{
     ATTESTATION_DOMAIN, ATTESTATION_KEY_ENV, ATTESTATIONS_DB, AttestationReport, RecordAttestation,
     anchor_leaf_input, attestation_key, attestation_payload, attestation_prefix, merkle_root_hex,
     sha256_hex, sign_attestation, verify_attestation,
+};
+pub use cold_storage::{
+    calculate_outer_rim_distance, compress_memory, decompress_memory, ColdQuery, ColdRecord,
+    ColdRecordSummary, CompressionCodec, OuterRimFactors, PhagicConfig, PhagicDigestReport,
+    PhagicDigester,
 };
 pub use consistency::{
     CoherenceReceipt, CoherenceSnapshot, ConflictReport, ConsistencyError, CrossMemoryConsistency,

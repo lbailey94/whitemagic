@@ -37,6 +37,7 @@ hmac = "0.12"
 # store dependency).
 ed25519-dalek = "3.0.0"
 ureq = { workspace = true }
+flate2 = "1.0"
 
 # Optional ONNX Runtime local embedder (fastembed-rs)
 fastembed = { version = "5", optional = true }

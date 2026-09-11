@@ -452,6 +452,8 @@ pub struct DreamCycle {
     distill_fingerprints: HashMap<String, u64>,
     /// Optional Autonomous Smarana engine for continuous spaced-repetition & Hebbian consolidation
     smarana: Option<crate::smarana::AutonomousSmarana>,
+    /// Optional Phagic Cognitive Coordinator for outer-rim migration to cold-storage
+    phagic: Option<crate::phagic::PhagicCognitiveCoordinator>,
 }
 
 impl DreamCycle {
@@ -466,7 +468,26 @@ impl DreamCycle {
             learned: None,
             distill_fingerprints: HashMap::new(),
             smarana: None,
+            phagic: None,
         }
+    }
+
+    /// Attach a Phagic Cognitive Coordinator for non-destructive outer-rim cold storage.
+    #[must_use]
+    pub fn with_phagic(mut self, phagic: crate::phagic::PhagicCognitiveCoordinator) -> Self {
+        self.phagic = Some(phagic);
+        self
+    }
+
+    /// Get a reference to the Phagic Cognitive Coordinator, if attached.
+    #[must_use]
+    pub const fn phagic(&self) -> Option<&crate::phagic::PhagicCognitiveCoordinator> {
+        self.phagic.as_ref()
+    }
+
+    /// Get a mutable reference to the Phagic Cognitive Coordinator, if attached.
+    pub fn phagic_mut(&mut self) -> Option<&mut crate::phagic::PhagicCognitiveCoordinator> {
+        self.phagic.as_mut()
     }
 
     /// Attach an Autonomous Smarana engine for spaced-repetition & Hebbian consolidation.
@@ -1449,12 +1470,14 @@ impl DreamCycle {
         )
     }
 
-    /// Decay — apply mindful forgetting via `RetentionEngine` and Autonomous Smarana.
+    /// Decay — apply mindful forgetting via `RetentionEngine`, Autonomous Smarana, and Phagic Cold-Storage.
     fn phase_decay(&mut self, ctx: &DreamContext) -> (usize, usize, usize, bool, String) {
         let engine = RetentionEngine::default_config();
         let mut total_processed = 0;
         let mut total_decayed = 0;
         let mut smarana_decayed = 0;
+        let mut phagic_migrated = 0;
+        let mut phagic_synthesized = 0;
         let now = chrono::Utc::now();
 
         for galaxy in Galaxy::all() {
@@ -1483,6 +1506,15 @@ impl DreamCycle {
                     smarana_decayed += s_report.decayed;
                 }
             }
+
+            if let Some(ref phagic) = self.phagic {
+                if let Ok(p_report) = phagic.digest_galaxy(ctx.store, None, galaxy) {
+                    phagic_migrated += p_report.memories_digested;
+                    if p_report.digest_memory_id.is_some() {
+                        phagic_synthesized += 1;
+                    }
+                }
+            }
         }
 
         let smarana_note = if smarana_decayed > 0 {
@@ -1491,13 +1523,19 @@ impl DreamCycle {
             String::new()
         };
 
+        let phagic_note = if phagic_migrated > 0 {
+            format!(", {phagic_migrated} outer-rim memories migrated to cold-storage ({phagic_synthesized} thematic nodes synthesized)")
+        } else {
+            String::new()
+        };
+
         (
             total_processed,
-            total_decayed + smarana_decayed,
-            0,
+            total_decayed + smarana_decayed + phagic_migrated,
+            phagic_synthesized,
             true,
             format!(
-                "decay processed {total_processed} memories, decayed {total_decayed} (never deleted){smarana_note}"
+                "decay processed {total_processed} memories, decayed {total_decayed} (never deleted){smarana_note}{phagic_note}"
             ),
         )
     }
@@ -2573,5 +2611,56 @@ mod tests {
         let result = cycle.run(&ctx);
         assert!(result.success);
         assert!(cycle.smarana().unwrap().last_composite_score > 0.0);
+    }
+
+    #[test]
+    fn dream_cycle_with_phagic_digestion() {
+        let (_tmp, store, assoc) = test_ctx();
+        let galaxy = Galaxy::Codex;
+        let now = chrono::Utc::now();
+
+        // Seed outer-rim memories
+        let past = now - chrono::Duration::days(200);
+        let mut old1 = Memory::new(galaxy, "Ancient forgotten tome on astral navigation".to_string()).with_importance(0.01);
+        old1.metadata.created_at = past;
+        old1.metadata.accessed_at = past;
+        old1.metadata.access_count = 0;
+        let id1 = old1.metadata.id;
+        store.put(galaxy, &old1).unwrap();
+
+        let mut old2 = Memory::new(galaxy, "Ancient forgotten treatise on star charts".to_string()).with_importance(0.01);
+        old2.metadata.created_at = past;
+        old2.metadata.accessed_at = past;
+        old2.metadata.access_count = 0;
+        let id2 = old2.metadata.id;
+        store.put(galaxy, &old2).unwrap();
+
+        let ctx = DreamContext::new(&store, &assoc);
+        let coord = crate::phagic::PhagicCognitiveCoordinator::default();
+        let mut cycle = DreamCycle::new().with_phagic(coord);
+        assert!(cycle.phagic().is_some());
+
+        let result = cycle.run(&ctx);
+        assert!(result.success);
+
+        // Verify cold storage now holds the 2 memories
+        assert_eq!(store.count_cold(Some(galaxy)).unwrap(), 2);
+
+        // Hot tier active memories should no longer contain raw old1/old2 directly
+        assert!(store.get(galaxy, id1).unwrap().is_none());
+        assert!(store.get(galaxy, id2).unwrap().is_none());
+
+        // But store.find_anywhere transparently finds them and reports them as cold!
+        let (found_galaxy, found_mem, is_cold) = store.find_anywhere(id1).unwrap().expect("found in cold tier");
+        assert_eq!(found_galaxy, galaxy);
+        assert_eq!(found_mem.content, "Ancient forgotten tome on astral navigation");
+        assert!(is_cold);
+
+        // And thawing via coordinator restores it back to active hot tier
+        let thawed = cycle.phagic().unwrap().thaw_memory(&store, None, id1).unwrap();
+        assert_eq!(thawed.metadata.id, id1);
+        assert_eq!(thawed.content, "Ancient forgotten tome on astral navigation");
+        assert!(store.get(galaxy, id1).unwrap().is_some());
+        assert_eq!(store.count_cold(Some(galaxy)).unwrap(), 1);
     }
 }

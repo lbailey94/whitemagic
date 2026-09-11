@@ -515,7 +515,9 @@ impl McpServer {
             pipeline,
             eco_mode,
             citta: CittaHeartbeat::new(),
-            dream: DreamCycle::new().with_smarana(wm_cognitive::AutonomousSmarana::default()),
+            dream: DreamCycle::new()
+                .with_smarana(wm_cognitive::AutonomousSmarana::default())
+                .with_phagic(wm_cognitive::PhagicCognitiveCoordinator::default()),
             store,
             associations,
             substrate,
@@ -1489,10 +1491,11 @@ impl McpServer {
             }
         }
 
-        // Attach LearnedDreamCycle and AutonomousSmarana for adaptive consolidation
+        // Attach LearnedDreamCycle, AutonomousSmarana, and PhagicCognitiveCoordinator for adaptive consolidation
         server.dream = DreamCycle::new()
             .with_learned(wm_core::LearnedDreamCycle::new())
-            .with_smarana(wm_cognitive::AutonomousSmarana::default());
+            .with_smarana(wm_cognitive::AutonomousSmarana::default())
+            .with_phagic(wm_cognitive::PhagicCognitiveCoordinator::default());
 
         // Initialize imagination engine for dream cycle + Research cycle
         server.init_imagination();

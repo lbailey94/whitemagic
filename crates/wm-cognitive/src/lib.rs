@@ -25,12 +25,15 @@ pub mod neural;
 pub mod novelty;
 pub mod pattern_bridge;
 pub mod pattern_dream_bridge;
+pub mod phagic;
 pub mod redteam_manifest;
+pub mod resonance_chamber;
 pub mod retention;
 pub mod session_miner;
 pub mod smarana;
 pub mod spiral;
 pub mod strategy;
+pub mod symbiosync;
 pub mod wu_xing;
 
 // ── Merged modules ──────────────────────────────────────────────────
@@ -92,6 +95,7 @@ pub use pattern_bridge::{
     PatternEnrichedScenario, StrategyPrior, SurpriseAssessment,
 };
 pub use pattern_dream_bridge::{BridgeSummary, DreamSynthesis, PatternDreamBridge, QueuedPattern};
+pub use phagic::{PhagicCognitiveCoordinator, PhagicHealthSnapshot};
 pub use retention::{
     RetentionConfig, RetentionEngine, RetentionSignal, RetentionVerdict, SweepReport,
 };
@@ -144,3 +148,14 @@ pub use autonomic::{
     AutonomicConfig, AutonomicLayer, BitMambaDaemon, SalienceProcessor, SalienceSignal,
     SignalMetadata, SignalType,
 };
+
+// ── Resonance Chamber & SymbioSync re-exports ───────────────────────
+pub use resonance_chamber::{
+    ChamberError, ChamberStats, ChamberThought, EpochAdvancementReport, HarmonicMergeCandidate,
+    HarmonicProfile, ResonanceChamber, ResonanceChamberConfig, TemporalSignature,
+};
+pub use symbiosync::{
+    AlignedPattern, SomaticThrottleReason, SomaticThresholds, SomaticVerdict, SymbioSync,
+    SymbioSyncConfig, SymbioSyncReport, SymbioSyncStats,
+};
+

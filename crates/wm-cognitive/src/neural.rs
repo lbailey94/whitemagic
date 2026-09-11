@@ -1477,7 +1477,7 @@ mod tests {
         let weights = gate.compute_weights();
         assert_eq!(
             weights.len(),
-            10,
+            Galaxy::memory_galaxies().len(),
             "should return weights for all memory galaxies"
         );
         assert!(weights[&Galaxy::Research] > weights[&Galaxy::Dreams]);

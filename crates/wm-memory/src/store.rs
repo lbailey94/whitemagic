@@ -187,6 +187,8 @@ pub struct MemoryStore {
     /// record per created memory, keyed `att:{galaxy}:{memory_id}`.
     /// See [`crate::attestation`].
     attestations_db: Database,
+    /// Dedicated database for compressed cold-stored memories.
+    pub(crate) cold_storage_db: Database,
     /// Warm term-posting cache shared by episodic search views.
     episodic_term_cache: std::sync::Arc<RwLock<HashMap<String, Vec<uuid::Uuid>>>>,
     /// Optional embedder for episodic vector reranking.
@@ -220,7 +222,7 @@ impl MemoryStore {
 
         let env = Environment::new()
             .set_map_size(map_size)
-            .set_max_dbs(32)
+            .set_max_dbs(64)
             .open(&path)
             .map_err(|e| CoreError::Memory(format!("LMDB open failed: {e}")))?;
 
@@ -278,6 +280,11 @@ impl MemoryStore {
             .map_err(|e| {
                 CoreError::Memory(format!("LMDB create_db failed for attestations: {e}"))
             })?;
+        let cold_storage_db = env
+            .create_db(Some("cold_storage"), DatabaseFlags::default())
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB create_db failed for cold_storage: {e}"))
+            })?;
         Ok(Self {
             path,
             env,
@@ -290,6 +297,7 @@ impl MemoryStore {
             embedding_cache_db,
             revisions_db,
             attestations_db,
+            cold_storage_db,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
@@ -361,6 +369,7 @@ impl MemoryStore {
         let embedding_cache_db = open_named("embedding_cache")?;
         let revisions_db = open_named("revisions")?;
         let attestations_db = open_named(crate::attestation::ATTESTATIONS_DB)?;
+        let cold_storage_db = open_named("cold_storage")?;
 
         Ok(Self {
             path,
@@ -374,6 +383,7 @@ impl MemoryStore {
             embedding_cache_db,
             revisions_db,
             attestations_db,
+            cold_storage_db,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
@@ -1617,6 +1627,237 @@ impl MemoryStore {
             }
         }
         Ok(out)
+    }
+
+    // ── Non-Destructive Phagic Cold-Storage (the project's sacred rule) ───────
+
+    /// Store a compressed cold record in the cold_storage DBI.
+    pub fn put_cold_record(&self, record: &crate::cold_storage::ColdRecord) -> Result<()> {
+        let key = record.id.as_bytes();
+        let val = rmp_serde::to_vec_named(record)
+            .map_err(|e| CoreError::Memory(format!("Cold record serialization failed: {e}")))?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        tx.put(self.cold_storage_db, key, &val, WriteFlags::default())
+            .map_err(|e| CoreError::Memory(format!("LMDB put cold_storage failed: {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    /// Retrieve a compressed cold record by memory id.
+    pub fn get_cold_record(&self, id: MemoryId) -> Result<Option<crate::cold_storage::ColdRecord>> {
+        let key = id.as_bytes();
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        match tx.get(self.cold_storage_db, key) {
+            Ok(bytes) => {
+                let record: crate::cold_storage::ColdRecord = rmp_serde::from_slice(bytes)
+                    .map_err(|e| CoreError::Memory(format!("Cold record deserialization failed: {e}")))?;
+                Ok(Some(record))
+            }
+            Err(lmdb::Error::NotFound) => Ok(None),
+            Err(e) => Err(CoreError::Memory(format!("LMDB get cold_storage failed: {e}"))),
+        }
+    }
+
+    /// Delete a cold record from the cold storage DBI (used when thawing back to hot).
+    pub fn delete_cold_record(&self, id: MemoryId) -> Result<bool> {
+        let key = id.as_bytes();
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        let deleted = match tx.del(self.cold_storage_db, key, None) {
+            Ok(()) => true,
+            Err(lmdb::Error::NotFound) => false,
+            Err(e) => return Err(CoreError::Memory(format!("LMDB del cold_storage failed: {e}"))),
+        };
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        if deleted {
+            self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        }
+        Ok(deleted)
+    }
+
+    /// Count cold records in the cold storage database, optionally filtered by galaxy.
+    pub fn count_cold(&self, galaxy: Option<Galaxy>) -> Result<usize> {
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let mut cursor = tx
+            .open_ro_cursor(self.cold_storage_db)
+            .map_err(|e| CoreError::Memory(format!("LMDB open_ro_cursor failed: {e}")))?;
+        let mut count = 0;
+        for (_key, val) in cursor.iter() {
+            if let Some(target_g) = galaxy {
+                let record: crate::cold_storage::ColdRecord = rmp_serde::from_slice(val)
+                    .map_err(|e| CoreError::Memory(format!("Cold record deserialization failed: {e}")))?;
+                if record.galaxy == target_g {
+                    count += 1;
+                }
+            } else {
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
+
+    /// List cold records (summaries) with optional galaxy filter and limit.
+    pub fn list_cold_records(
+        &self,
+        galaxy: Option<Galaxy>,
+        limit: usize,
+    ) -> Result<Vec<crate::cold_storage::ColdRecordSummary>> {
+        let query = crate::cold_storage::ColdQuery {
+            galaxy,
+            limit: if limit == 0 { 100 } else { limit },
+            ..Default::default()
+        };
+        self.query_cold_records(&query)
+    }
+
+    /// Query cold records matching a `ColdQuery` filter.
+    pub fn query_cold_records(
+        &self,
+        query: &crate::cold_storage::ColdQuery,
+    ) -> Result<Vec<crate::cold_storage::ColdRecordSummary>> {
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let mut cursor = tx
+            .open_ro_cursor(self.cold_storage_db)
+            .map_err(|e| CoreError::Memory(format!("LMDB open_ro_cursor failed: {e}")))?;
+        let mut results = Vec::new();
+        let limit = if query.limit == 0 { usize::MAX } else { query.limit };
+
+        for (_key, val) in cursor.iter() {
+            let record: crate::cold_storage::ColdRecord = rmp_serde::from_slice(val)
+                .map_err(|e| CoreError::Memory(format!("Cold record deserialization failed: {e}")))?;
+            let summary = record.summary();
+            if query.matches(&summary) {
+                results.push(summary);
+                if results.len() >= limit {
+                    break;
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    /// Freeze an active hot memory into the compressed cold archive.
+    ///
+    /// Non-destructive: preserves complete metadata, vector clocks, content, embeddings,
+    /// and provenance. The memory transitions to `Tier::Archival`, is stored in `cold_storage_db`,
+    /// is deindexed from Tantivy (if `search` provided), and is removed from the active hot galaxy.
+    pub fn freeze_to_cold(
+        &self,
+        search: Option<&crate::SearchEngine>,
+        memory_id: MemoryId,
+        distance: f32,
+        factors: crate::cold_storage::OuterRimFactors,
+        digest_id: Option<MemoryId>,
+        notes: Option<String>,
+        codec: crate::cold_storage::CompressionCodec,
+    ) -> Result<crate::cold_storage::ColdRecord> {
+        let (galaxy, mut mem) = self
+            .find_across_galaxies(memory_id)?
+            .ok_or_else(|| CoreError::NotFound(format!("Memory {memory_id} not found in hot store")))?;
+
+        // Transition tier to Archival
+        if mem.metadata.tier != crate::memory::Tier::Archival {
+            let _ = mem.transition_tier(crate::memory::Tier::Archival);
+        }
+
+        let record = crate::cold_storage::ColdRecord::new(
+            &mem,
+            distance,
+            factors,
+            digest_id,
+            notes,
+            codec,
+        )?;
+
+        // Store into cold archive
+        self.put_cold_record(&record)?;
+
+        // Remove from active hot galaxy
+        self.delete(galaxy, memory_id)?;
+
+        // Deindex from Tantivy search engine if provided
+        if let Some(engine) = search {
+            if let Ok(mut writer_guard) = engine.writer() {
+                let _ = engine.delete_document(&mut writer_guard, &memory_id.to_string());
+                let _ = engine.commit(&mut writer_guard);
+            }
+        }
+
+        Ok(record)
+    }
+
+    /// Thaw a memory from compressed cold storage back into the hot active tier.
+    ///
+    /// Zero data loss: restores the original memory with all fields, transitions tier
+    /// back to `Tier::Episodic`, bumps access/recall count, updates `accessed_at`,
+    /// stores into the hot galaxy, and reindexes into Tantivy search (if provided).
+    pub fn thaw_from_cold(
+        &self,
+        search: Option<&crate::SearchEngine>,
+        memory_id: MemoryId,
+    ) -> Result<Memory> {
+        let record = self
+            .get_cold_record(memory_id)?
+            .ok_or_else(|| CoreError::NotFound(format!("Memory {memory_id} not found in cold storage")))?;
+
+        let mut mem = record.decompress()?;
+
+        // Transition tier back to Episodic (warm serving)
+        let _ = mem.transition_tier(crate::memory::Tier::Episodic);
+        mem.metadata.accessed_at = chrono::Utc::now();
+        mem.metadata.access_count += 1;
+        mem.metadata.recall_count += 1;
+        if !mem.metadata.tags.iter().any(|t| t == "thawed:phagic") {
+            mem.metadata.tags.push("thawed:phagic".to_string());
+        }
+
+        // Put back into active hot galaxy
+        self.put(record.galaxy, &mem)?;
+
+        // Reindex in Tantivy if provided
+        if let Some(engine) = search {
+            if let Ok(mut writer_guard) = engine.writer() {
+                let _ = engine.index_memory(&mut writer_guard, &mem);
+                let _ = engine.commit(&mut writer_guard);
+            }
+        }
+
+        // Remove from cold archive
+        self.delete_cold_record(memory_id)?;
+
+        Ok(mem)
+    }
+
+    /// Find a memory anywhere: in the active hot galaxies, or decompressed from cold storage.
+    ///
+    /// Returns `(galaxy, memory, is_cold)`.
+    pub fn find_anywhere(&self, id: MemoryId) -> Result<Option<(Galaxy, Memory, bool)>> {
+        if let Some((galaxy, mem)) = self.find_across_galaxies(id)? {
+            return Ok(Some((galaxy, mem, false)));
+        }
+        if let Some(cold_record) = self.get_cold_record(id)? {
+            let galaxy = cold_record.galaxy;
+            let mem = cold_record.decompress()?;
+            return Ok(Some((galaxy, mem, true)));
+        }
+        Ok(None)
     }
 }
 

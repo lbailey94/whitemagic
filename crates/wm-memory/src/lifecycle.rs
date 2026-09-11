@@ -201,6 +201,50 @@ impl Lifecycle {
 
         Ok((consol_results, forget_results))
     }
+
+    /// Run non-destructive phagic digestion on a galaxy.
+    ///
+    /// the project's sacred rule: Phagic systems must NEVER delete anything.
+    /// Irrelevant or distant outer-rim memories are gently migrated into compressed
+    /// cold storage, synthesizing distilled thematic nodes in the active hot tier.
+    pub fn phagic_digest(
+        &self,
+        store: &MemoryStore,
+        galaxy: Galaxy,
+    ) -> Result<crate::cold_storage::PhagicDigestReport> {
+        let digester = crate::cold_storage::PhagicDigester::default_config();
+        digester.digest_galaxy(store, None, galaxy)
+    }
+
+    /// Run a full non-destructive lifecycle pass: consolidate hot memories, then gently
+    /// migrate outer-rim memories into cold storage across all galaxies.
+    pub fn run_full_cycle_phagic(
+        &self,
+        store: &MemoryStore,
+    ) -> Result<(Vec<ConsolidationResult>, Vec<crate::cold_storage::PhagicDigestReport>)> {
+        let mut consol_results = Vec::new();
+        let mut phagic_results = Vec::new();
+
+        for galaxy in wm_core::Galaxy::all() {
+            // Skip system galaxies
+            match galaxy {
+                Galaxy::Substrate
+                | Galaxy::Dharma
+                | Galaxy::Karma
+                | Galaxy::Embeddings
+                | Galaxy::Associations => continue,
+                _ => {}
+            }
+            let count = store.count(galaxy).unwrap_or(0);
+            if count == 0 {
+                continue;
+            }
+            consol_results.push(self.consolidate(store, galaxy)?);
+            phagic_results.push(self.phagic_digest(store, galaxy)?);
+        }
+
+        Ok((consol_results, phagic_results))
+    }
 }
 
 #[cfg(test)]
@@ -318,5 +362,30 @@ mod tests {
 
         assert_eq!(result.forgotten, 0);
         assert!(store.get(galaxy, id).unwrap().is_some());
+    }
+
+    #[test]
+    fn phagic_lifecycle_non_destructive_preservation() {
+        let store = test_store();
+        let galaxy = Galaxy::Codex;
+        let now = Utc::now();
+
+        let mut mem = Memory::new(galaxy, "Outer-rim lifecycle candidate".into())
+            .with_importance(0.02)
+            .with_tags(vec!["obsolete".into()]);
+        mem.metadata.accessed_at = now - chrono::Duration::days(160);
+        let id = mem.metadata.id;
+        store.put(galaxy, &mem).unwrap();
+
+        let lifecycle = Lifecycle::default_config();
+        let report = lifecycle.phagic_digest(&store, galaxy).unwrap();
+
+        assert_eq!(report.memories_digested, 1);
+        // Original memory is not in hot store...
+        assert!(store.get(galaxy, id).unwrap().is_none());
+        // ...but preserved in cold storage (the project's sacred rule: NEVER delete)
+        let cold = store.get_cold_record(id).unwrap();
+        assert!(cold.is_some());
+        assert_eq!(cold.unwrap().id, id);
     }
 }

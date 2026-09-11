@@ -595,6 +595,22 @@ impl SearchEngine {
         }
     }
 
+    /// Index a complete `Memory` entry.
+    pub fn index_memory(
+        &self,
+        writer: &mut Option<IndexWriter>,
+        mem: &crate::memory::Memory,
+    ) -> Result<()> {
+        self.add_document(
+            writer,
+            &mem.metadata.id.to_string(),
+            mem.metadata.galaxy.db_name(),
+            &mem.content,
+            &mem.metadata.tags,
+            mem.metadata.created_at.timestamp(),
+        )
+    }
+
     /// Delete documents by memory ID.
     pub fn delete_document(&self, writer: &mut Option<IndexWriter>, memory_id: &str) -> Result<()> {
         let writer = writer.as_mut().ok_or_else(|| {

@@ -8107,6 +8107,7 @@ dependencies = [
  "criterion",
  "ed25519-dalek",
  "fastembed",
+ "flate2",
  "futures",
  "hmac",
  "lancedb",
