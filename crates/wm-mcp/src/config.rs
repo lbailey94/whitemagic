@@ -225,6 +225,14 @@ pub struct DaemonConfig {
     /// Interval between Autonomous Gan Ying resonance sweeps (seconds).
     #[serde(default = "default_gan_ying_interval")]
     pub gan_ying_interval_secs: u64,
+
+    /// Interval between Citta 4-phase cognitive heartbeat cycles (seconds, 0 = disabled).
+    #[serde(default = "default_citta_interval")]
+    pub citta_interval_secs: u64,
+
+    /// Interval between watchdog audits of uncommitted crash-barrier operations (seconds, 0 = disabled).
+    #[serde(default = "default_watchdog_audit_interval")]
+    pub watchdog_audit_interval_secs: u64,
 }
 
 impl Default for DaemonConfig {
@@ -242,8 +250,18 @@ impl Default for DaemonConfig {
             watchdog_timeout_secs: 60,
             checkpoint_interval_secs: 300,
             gan_ying_interval_secs: 300,
+            citta_interval_secs: 60,
+            watchdog_audit_interval_secs: 30,
         }
     }
+}
+
+const fn default_citta_interval() -> u64 {
+    60
+}
+
+const fn default_watchdog_audit_interval() -> u64 {
+    30
 }
 
 const fn default_gan_ying_interval() -> u64 {
@@ -451,6 +469,8 @@ impl WmConfig {
             watchdog_timeout: Duration::from_secs(self.daemon.watchdog_timeout_secs),
             checkpoint_interval: Duration::from_secs(self.daemon.checkpoint_interval_secs),
             gan_ying_interval: Duration::from_secs(self.daemon.gan_ying_interval_secs),
+            citta_interval: Duration::from_secs(self.daemon.citta_interval_secs),
+            watchdog_audit_interval: Duration::from_secs(self.daemon.watchdog_audit_interval_secs),
         }
     }
 
@@ -713,6 +733,8 @@ llama_endpoint = "http://localhost:8080"
                 watchdog_timeout_secs: 120,
                 checkpoint_interval_secs: 180,
                 gan_ying_interval_secs: 150,
+                citta_interval_secs: 60,
+                watchdog_audit_interval_secs: 30,
             },
             ..Default::default()
         };
@@ -720,6 +742,8 @@ llama_endpoint = "http://localhost:8080"
         assert_eq!(d.cycle_interval, Duration::from_secs(120));
         assert_eq!(d.dream_interval, Duration::from_secs(240));
         assert_eq!(d.gan_ying_interval, Duration::from_secs(150));
+        assert_eq!(d.citta_interval, Duration::from_secs(60));
+        assert_eq!(d.watchdog_audit_interval, Duration::from_secs(30));
         assert_eq!(d.brain_wave_interval, Duration::from_secs(15));
         assert_eq!(d.homeostasis_interval, Duration::from_secs(30));
         assert_eq!(d.min_health_score, 0.5);

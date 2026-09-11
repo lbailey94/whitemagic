@@ -13,10 +13,12 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use wm_bicameral::{
-    ExactMatchVerifier, LoRAAdapterManager, ScenarioEngine, ScenarioEvaluator, SelfPlayConfig,
-    SelfPlayLoop, TaskProposer, TaskSolver, world_model_from_env,
+    CopilotClient, ExactMatchVerifier, LoRAAdapterManager, ScenarioEngine, ScenarioEvaluator,
+    SelfPlayConfig, SelfPlayLoop, TaskProposer, TaskSolver, world_model_from_env,
 };
-use wm_cognitive::{AutonomousCycleRunner, CycleContext, CycleStatus, CycleType};
+use wm_cognitive::{
+    AutonomousCycleRunner, CittaContext, CittaCoordinator, CycleContext, CycleStatus, CycleType,
+};
 
 use crate::McpServer;
 
@@ -94,6 +96,10 @@ pub struct DaemonConfig {
     pub checkpoint_interval: Duration,
     /// Interval between Autonomous Gan Ying resonance sweeps and pre-conscious buffer warming.
     pub gan_ying_interval: Duration,
+    /// Interval between 4-phase Citta cognitive heartbeat cycles (0 = disabled).
+    pub citta_interval: Duration,
+    /// Interval between watchdog audits of uncommitted crash-barrier operations (0 = disabled).
+    pub watchdog_audit_interval: Duration,
 }
 
 impl Default for DaemonConfig {
@@ -111,6 +117,8 @@ impl Default for DaemonConfig {
             watchdog_timeout: Duration::from_secs(60), // 1 minute without a tick = stalled
             checkpoint_interval: Duration::from_secs(300), // 5 minutes
             gan_ying_interval: Duration::from_secs(300), // 5 minutes
+            citta_interval: Duration::from_secs(60), // 1 minute
+            watchdog_audit_interval: Duration::from_secs(30), // 30 seconds
         }
     }
 }
@@ -156,6 +164,12 @@ pub struct DaemonStats {
     pub synchronicities_found: u64,
     /// Total strong (3+ subsystem) coincidences detected.
     pub strong_synchronicities: u64,
+    /// Total Citta 4-phase cognitive cycles completed.
+    pub citta_cycles: u64,
+    /// Total Copilot automated diagnostic syntheses generated.
+    pub copilot_diagnostics: u64,
+    /// Total uncommitted operations audited and remediated.
+    pub uncommitted_ops_audited: u64,
 }
 
 /// Whether an event type denotes a failure, for nervous-system health
@@ -217,6 +231,10 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     let mut last_selfplay = std::time::Instant::now();
     let mut last_checkpoint = std::time::Instant::now();
     let mut last_gan_ying = std::time::Instant::now();
+    let mut last_citta = std::time::Instant::now();
+    let mut last_watchdog_audit = std::time::Instant::now();
+    let mut citta_coordinator = CittaCoordinator::with_og_engines();
+    let copilot_client = CopilotClient::from_env();
     let mut gan_ying = wm_cognitive::AutonomousGanYing::new(wm_cognitive::GanYingConfig {
         sweep_interval: config.gan_ying_interval,
         ..Default::default()
@@ -300,6 +318,12 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     println!("  Gan Ying pulse:  {:?}", config.gan_ying_interval);
     println!("  Brain-wave tick: {:?}", config.brain_wave_interval);
     println!("  Min health:      {:.2}", config.min_health_score);
+    if config.citta_interval > Duration::from_secs(0) {
+        println!("  Citta cycle:     {:?} (4-phase)", config.citta_interval);
+    }
+    if config.watchdog_audit_interval > Duration::from_secs(0) {
+        println!("  Watchdog audit:  {:?} (copilot active)", config.watchdog_audit_interval);
+    }
     if config.research_interval > Duration::from_secs(0) {
         println!("  Research interval: {:?}", config.research_interval);
     }
@@ -509,6 +533,116 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             }
 
             last_cycle = now;
+        }
+
+        // Citta 4-Phase Cognitive Heartbeat Cycle
+        if config.citta_interval > Duration::from_secs(0)
+            && now.duration_since(last_citta) >= config.citta_interval
+        {
+            let health = server.dharma_gate().homeostasis().health_score();
+            let coherence = server.citta().vector.coherence();
+            let uncommitted = server
+                .pipeline()
+                .write_audit()
+                .and_then(|j| j.scan_uncommitted_operations().ok())
+                .unwrap_or_default();
+
+            let citta_ctx = CittaContext::new(&store)
+                .with_associations(&associations)
+                .with_health_score(health)
+                .with_coherence(coherence)
+                .with_uncommitted_ops(uncommitted);
+
+            if let Some(report) = resilient("citta_cycle", || citta_coordinator.run_cycle(&citta_ctx)) {
+                stats.citta_cycles += 1;
+                tracing::info!(
+                    cycle_id = report.cycle_id,
+                    composite = report.composite_score,
+                    duration_us = report.total_duration_us,
+                    "Citta 4-phase cognitive cycle completed"
+                );
+                println!(
+                    "[citta {}] 4-phase cycle: score {:.2} (P:{} C:{} A:{} R:{}) in {}ms",
+                    report.cycle_id,
+                    report.composite_score,
+                    report.perception.len(),
+                    report.contemplation.len(),
+                    report.action.len(),
+                    report.reflection.len(),
+                    report.total_duration_us / 1000
+                );
+            }
+            last_citta = now;
+        }
+
+        // Watchdog & Friction Diagnostic: check for uncommitted operations
+        if config.watchdog_audit_interval > Duration::from_secs(0)
+            && now.duration_since(last_watchdog_audit) >= config.watchdog_audit_interval
+        {
+            let uncommitted = server
+                .pipeline()
+                .write_audit()
+                .and_then(|j| j.scan_uncommitted_operations().ok())
+                .unwrap_or_default();
+
+            if !uncommitted.is_empty() {
+                stats.uncommitted_ops_audited += uncommitted.len() as u64;
+                stats.copilot_diagnostics += 1;
+
+                tracing::warn!(
+                    count = uncommitted.len(),
+                    ops = ?uncommitted,
+                    "Watchdog audit: uncommitted operations detected — invoking copilot diagnostic synthesis"
+                );
+
+                let diagnostic = copilot_client.synthesize_diagnostic(&uncommitted, &[]);
+                tracing::info!(
+                    source = %diagnostic.source,
+                    severity = %diagnostic.severity,
+                    diagnosis = %diagnostic.diagnosis,
+                    action = %diagnostic.recommended_action,
+                    "Copilot diagnostic synthesis completed"
+                );
+
+                println!(
+                    "[watchdog copilot] {} uncommitted ops: [{}] (source: {}). Action: {}",
+                    uncommitted.len(),
+                    uncommitted.join(", "),
+                    diagnostic.source,
+                    diagnostic.recommended_action
+                );
+
+                // Persist the diagnostic report into Codex so it surfaces to agents
+                let content = format!(
+                    "## Watchdog Copilot Diagnostic Report\n\n\
+                     **Severity:** {}\n\
+                     **Source:** {}\n\
+                     **Uncommitted Operations:** {:?}\n\n\
+                     ### Diagnosis\n{}\n\n\
+                     ### Recommended Action\n{}",
+                    diagnostic.severity,
+                    diagnostic.source,
+                    diagnostic.uncommitted_ops,
+                    diagnostic.diagnosis,
+                    diagnostic.recommended_action
+                );
+                let mut memory = wm_memory::Memory::new(wm_core::Galaxy::Codex, content);
+                let op_summary = uncommitted.join(",");
+                memory.metadata.tags = vec![
+                    "rsi:proposal".to_string(),
+                    "rsi:proposal:active".to_string(),
+                    "crash_barrier:diagnostic".to_string(),
+                    "copilot:synthesis".to_string(),
+                    format!("rsi:severity:{}", diagnostic.severity),
+                    format!("crash_barrier:ops:{op_summary}"),
+                ];
+                memory.metadata.source = "watchdog_copilot".to_string();
+                memory.metadata.importance = 0.9;
+                if let Err(e) = store.put(wm_core::Galaxy::Codex, &memory) {
+                    tracing::warn!("Failed to persist watchdog copilot diagnostic: {e}");
+                }
+            }
+            last_watchdog_audit = now;
         }
 
         // RSI Phase 4: Code generation cycle
@@ -850,6 +984,13 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         println!("  Coincidences:     {}", stats.synchronicities_found);
         println!("  Strong syncs:     {}", stats.strong_synchronicities);
     }
+    if stats.citta_cycles > 0 {
+        println!("  Citta cycles:     {}", stats.citta_cycles);
+    }
+    if stats.copilot_diagnostics > 0 {
+        println!("  Copilot diags:    {}", stats.copilot_diagnostics);
+        println!("  Ops remediated:   {}", stats.uncommitted_ops_audited);
+    }
 
     if hung.load(Ordering::SeqCst) {
         anyhow::bail!("daemon watchdog triggered — main loop stalled; restart for recovery")
@@ -881,6 +1022,8 @@ mod tests {
         assert_eq!(config.brain_wave_interval, Duration::from_secs(30));
         assert!((config.min_health_score - 0.3).abs() < 0.01);
         assert_eq!(config.watchdog_timeout, Duration::from_secs(60));
+        assert_eq!(config.citta_interval, Duration::from_secs(60));
+        assert_eq!(config.watchdog_audit_interval, Duration::from_secs(30));
     }
 
     #[test]
@@ -898,10 +1041,14 @@ mod tests {
             watchdog_timeout: Duration::from_secs(120),
             checkpoint_interval: Duration::from_secs(180),
             gan_ying_interval: Duration::from_secs(150),
+            citta_interval: Duration::from_secs(45),
+            watchdog_audit_interval: Duration::from_secs(15),
         };
         assert_eq!(config.cycle_interval, Duration::from_secs(60));
         assert_eq!(config.dream_interval, Duration::from_secs(120));
         assert_eq!(config.gan_ying_interval, Duration::from_secs(150));
+        assert_eq!(config.citta_interval, Duration::from_secs(45));
+        assert_eq!(config.watchdog_audit_interval, Duration::from_secs(15));
         assert_eq!(config.codegen_interval, Duration::from_secs(1800));
         assert!(config.codegen_auto_apply);
         assert_eq!(config.research_interval, Duration::from_secs(600));

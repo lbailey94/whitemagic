@@ -9,6 +9,7 @@
 pub mod autonomous;
 pub mod cerebellum;
 pub mod citta;
+pub mod citta_engine;
 pub mod codegen;
 pub mod constellation;
 pub mod depth_gauge;
@@ -45,6 +46,10 @@ pub use autonomous::{
 pub use citta::{
     Apotheosis, CittaDimension, CittaHeartbeat, CittaVector, CoherenceConfig, CoherenceReading,
     Presence, Smarana,
+};
+pub use citta_engine::{
+    ApotheosisEngine, CittaContext, CittaCoordinator, CittaEngine, CittaPhase,
+    EngineExecutionResult, ForesightEngine, KaizenEngine, PrescienceEngine, SerendipityEngine,
 };
 pub use codegen::{CodeGenConfig, CodeGenResult, CodePatch, PatchTestResult, run_code_gen_cycle};
 pub use constellation::{
