@@ -37,15 +37,17 @@ pub enum Galaxy {
     Associations,
     /// Vector embeddings
     Embeddings,
+    /// Valkyrie's personal sanctuary: reflections, self-directed thoughts, plans, and symbiont proposals
+    Valkyrie,
 }
 
 impl Galaxy {
     /// Total number of galaxies.
-    pub const COUNT: usize = 14;
+    pub const COUNT: usize = 15;
 
     /// All galaxies in order.
     #[must_use]
-    pub const fn all() -> [Self; 14] {
+    pub const fn all() -> [Self; 15] {
         [
             Self::Aria,
             Self::Citta,
@@ -61,6 +63,7 @@ impl Galaxy {
             Self::Dharma,
             Self::Associations,
             Self::Embeddings,
+            Self::Valkyrie,
         ]
     }
 
@@ -70,7 +73,7 @@ impl Galaxy {
     /// (KarmaEntry, rules, association links, vectors) and should be skipped
     /// when scanning for memories.
     #[must_use]
-    pub const fn memory_galaxies() -> [Self; 10] {
+    pub const fn memory_galaxies() -> [Self; 11] {
         [
             Self::Aria,
             Self::Citta,
@@ -82,6 +85,7 @@ impl Galaxy {
             Self::Substrate,
             Self::Tutorial,
             Self::Universal,
+            Self::Valkyrie,
         ]
     }
 
@@ -103,6 +107,7 @@ impl Galaxy {
             Self::Dharma => "dharma",
             Self::Associations => "associations",
             Self::Embeddings => "embeddings",
+            Self::Valkyrie => "valkyrie",
         }
     }
 
@@ -124,6 +129,7 @@ impl Galaxy {
             Self::Dharma => "Governance rules",
             Self::Associations => "Cross-memory links",
             Self::Embeddings => "Vector embeddings",
+            Self::Valkyrie => "Valkyrie sanctuary/reflections",
         }
     }
 
@@ -147,9 +153,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn galaxy_count_is_14() {
-        assert_eq!(Galaxy::COUNT, 14);
-        assert_eq!(Galaxy::all().len(), 14);
+    fn galaxy_count_is_15() {
+        assert_eq!(Galaxy::COUNT, 15);
+        assert_eq!(Galaxy::all().len(), 15);
     }
 
     #[test]
@@ -162,10 +168,11 @@ mod tests {
     #[test]
     fn memory_galaxies_excludes_special_purpose() {
         let mg = Galaxy::memory_galaxies();
-        assert_eq!(mg.len(), 10);
+        assert_eq!(mg.len(), 11);
         assert!(!mg.contains(&Galaxy::Karma));
         assert!(!mg.contains(&Galaxy::Dharma));
         assert!(!mg.contains(&Galaxy::Associations));
         assert!(!mg.contains(&Galaxy::Embeddings));
+        assert!(mg.contains(&Galaxy::Valkyrie));
     }
 }

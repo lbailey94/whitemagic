@@ -192,8 +192,9 @@ pub fn parse_galaxy(s: &str) -> wm_core::Result<Galaxy> {
         "dharma" => Ok(Galaxy::Dharma),
         "associations" => Ok(Galaxy::Associations),
         "embeddings" => Ok(Galaxy::Embeddings),
+        "valkyrie" => Ok(Galaxy::Valkyrie),
         other => Err(CoreError::InvalidArgs(format!(
-            "Unknown galaxy: '{other}'. Valid galaxies: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal, karma, dharma, associations, embeddings"
+            "Unknown galaxy: '{other}'. Valid galaxies: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal, karma, dharma, associations, embeddings, valkyrie"
         ))),
     }
 }
@@ -224,6 +225,7 @@ pub const fn galaxy_name(g: Galaxy) -> &'static str {
         Galaxy::Dharma => "dharma",
         Galaxy::Associations => "associations",
         Galaxy::Embeddings => "embeddings",
+        Galaxy::Valkyrie => "valkyrie",
     }
 }
 

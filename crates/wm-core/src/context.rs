@@ -139,6 +139,7 @@ impl Context {
                     | Galaxy::Substrate
                     | Galaxy::Tutorial
                     | Galaxy::Universal
+                    | Galaxy::Valkyrie
             ),
             // Unknown compartment values fail closed — no galaxy access.
             Some(_) => false,

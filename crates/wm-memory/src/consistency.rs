@@ -52,6 +52,7 @@ impl VectorClock {
             Galaxy::Dharma => 11,
             Galaxy::Associations => 12,
             Galaxy::Embeddings => 13,
+            Galaxy::Valkyrie => 14,
         }
     }
 

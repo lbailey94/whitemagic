@@ -546,6 +546,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         if config.citta_interval > Duration::from_secs(0)
             && now.duration_since(last_citta) >= config.citta_interval
         {
+            let hw = wm_cognitive::HardwareMonitor::sample();
+            server.dharma_gate().update_homeostasis(hw.to_homeostasis(true));
             let health = server.dharma_gate().homeostasis().health_score();
             let coherence = server.citta().vector.coherence();
             let uncommitted = server
@@ -603,16 +605,26 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                     },
                 );
 
+                if hw.regime.should_throttle() {
+                    tracing::warn!(
+                        temp = hw.temp_c,
+                        load = hw.load_1m,
+                        "Hardware thermal caution: host silicon elevated, pacing cognitive workload"
+                    );
+                }
+
                 tracing::info!(
                     cycle_id = report.cycle_id,
                     composite = report.composite_score,
                     stage = stage_name,
                     wisdom = wisdom_score,
+                    hw_temp = hw.temp_c,
+                    hw_regime = ?hw.regime,
                     duration_us = report.total_duration_us,
                     "Citta & Alchemical 28-Engine/Garden cognitive cycle completed"
                 );
                 println!(
-                    "[citta {}] 4-phase cycle: score {:.2} (P:{} C:{} A:{} R:{}) | Stage: {} (wisdom {:.2}) | {} in {}ms",
+                    "[citta {}] 4-phase cycle: score {:.2} (P:{} C:{} A:{} R:{}) | Stage: {} (wisdom {:.2}) | {} | HW: {:.1}°C ({:?}, load {:.2}) in {}ms",
                     report.cycle_id,
                     report.composite_score,
                     report.perception.len(),
@@ -622,6 +634,9 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                     stage_name,
                     wisdom_score,
                     garden_summary,
+                    hw.temp_c,
+                    hw.regime,
+                    hw.load_1m,
                     report.total_duration_us / 1000
                 );
             }

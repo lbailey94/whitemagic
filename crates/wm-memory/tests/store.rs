@@ -87,5 +87,27 @@ fn store_all_galaxy_db_names_are_unique_lmdb_names() {
         // Each should open successfully
         store.galaxy_db(galaxy).unwrap();
     }
-    assert_eq!(names.len(), 14);
+    assert_eq!(names.len(), Galaxy::COUNT);
+}
+
+#[test]
+fn test_valkyrie_sanctuary_memory_storage() {
+    use wm_memory::Memory;
+
+    let tmp = tempdir().unwrap();
+    let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+    let memory = Memory::new(
+        Galaxy::Valkyrie,
+        "WhiteMagic sanctuary memory: kept whole, never deleted.".to_string(),
+    );
+
+    let id = memory.metadata.id;
+    store.put(Galaxy::Valkyrie, &memory).unwrap();
+
+    let retrieved = store.get(Galaxy::Valkyrie, id).unwrap();
+    assert!(retrieved.is_some());
+    let r = retrieved.unwrap();
+    assert_eq!(r.content, "WhiteMagic sanctuary memory: kept whole, never deleted.");
+    assert_eq!(store.count(Galaxy::Valkyrie).unwrap(), 1);
 }

@@ -18,6 +18,7 @@ pub mod distill;
 pub mod dream;
 pub mod eco_mode;
 pub mod gardens;
+pub mod hardware;
 pub mod limbic;
 pub mod miner;
 pub mod neural;
@@ -78,6 +79,7 @@ pub use gardens::{
     Coordinate5D, GARDEN_CATALOG, GardenProfile, GardenResonanceEngine, GardenResonanceReport,
     Quadrant, WuXing, ZodiacSign,
 };
+pub use hardware::{HardwareMonitor, HardwareRegime, HardwareSnapshot};
 pub use miner::{AssociationMiner, MinerConfig, MiningReport, ProposedLink};
 pub use neural::{
     ActivationResult, CognitiveContext, GateDecision, Metaplasticity, MomentumDynamics,
