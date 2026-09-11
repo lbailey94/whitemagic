@@ -8,9 +8,18 @@ use std::path::{Path, PathBuf};
 /// Open the server for `wm serve`. Read-only operation is intentionally a
 /// fail-closed preservation mode: it must use the existing readonly open
 /// paths and never turn an open failure into repair, growth, or creation.
-fn open_server_for_serve(lmdb_path: &Path, readonly: bool) -> anyhow::Result<wm_mcp::McpServer> {
+fn open_server_for_serve(
+    lmdb_path: &Path,
+    readonly: bool,
+    preservation_readonly: bool,
+) -> anyhow::Result<wm_mcp::McpServer> {
     if readonly {
-        return wm_mcp::McpServer::with_defaults_mode(lmdb_path, true).map_err(Into::into);
+        return wm_mcp::McpServer::with_defaults_mode_preservation(
+            lmdb_path,
+            true,
+            preservation_readonly,
+        )
+        .map_err(Into::into);
     }
 
     std::fs::create_dir_all(lmdb_path)?;
@@ -77,6 +86,10 @@ enum Commands {
         /// with a clear error. Lets multiple processes share the store.
         #[arg(long)]
         readonly: bool,
+        /// Preserve a frozen evaluator tree: require readonly and suppress
+        /// all server-owned diagnostic persistence inside the snapshot root.
+        #[arg(long, requires = "readonly")]
+        preservation_readonly: bool,
         /// Tool surface profile: full | curated | minimal. When omitted,
         /// `wm serve` uses curated (the product surface) unless
         /// WM_TOOL_PROFILE / WM_TOOL_ALLOWLIST is set. Full is the
@@ -634,6 +647,7 @@ fn main() -> anyhow::Result<()> {
             max_requests,
             rate_limit,
             readonly,
+            preservation_readonly,
             profile,
             transport,
             bind,
@@ -723,9 +737,11 @@ fn main() -> anyhow::Result<()> {
             // kernels continue unconfined, loudly.
             let landlock_report = if readonly && wm_mcp::landlock_sandbox::requested() {
                 tracing::warn!(
-                    "WM_LANDLOCK is ignored for --readonly serve: readonly startup must not persist a Landlock report"
+                    "WM_LANDLOCK requested but skipped for --readonly serve: no Landlock ruleset is applied"
                 );
-                None
+                Some(wm_mcp::landlock_sandbox::LandlockReport::skipped_readonly(
+                    &store_path,
+                ))
             } else if wm_mcp::landlock_sandbox::requested() {
                 let report = wm_mcp::landlock_sandbox::restrict_to_store_root(&store_path);
                 match report.outcome {
@@ -755,7 +771,7 @@ fn main() -> anyhow::Result<()> {
 
             tracing::info!("Starting MCP server, store: {}", lmdb_path.display());
 
-            let mut server = open_server_for_serve(&lmdb_path, readonly)?;
+            let mut server = open_server_for_serve(&lmdb_path, readonly, preservation_readonly)?;
 
             if let Some(report) = landlock_report {
                 server.set_landlock_report(report);
@@ -3364,7 +3380,7 @@ mod readonly_startup_tests {
         let missing = tmp.path().join("missing-lmdb");
         WRITABLE_RECOVERY_CALLS.store(0, Ordering::SeqCst);
 
-        let error = match open_server_for_serve(&missing, true) {
+        let error = match open_server_for_serve(&missing, true, false) {
             Ok(_) => panic!("readonly startup unexpectedly opened a missing store"),
             Err(error) => error,
         };
@@ -3390,7 +3406,7 @@ mod readonly_startup_tests {
         assert!(!missing_index.exists());
         WRITABLE_RECOVERY_CALLS.store(0, Ordering::SeqCst);
 
-        let error = match open_server_for_serve(&lmdb, true) {
+        let error = match open_server_for_serve(&lmdb, true, false) {
             Ok(_) => panic!("readonly startup unexpectedly created a missing index"),
             Err(error) => error,
         };
@@ -3412,14 +3428,14 @@ mod readonly_startup_tests {
     fn readonly_serve_preserves_authoritative_files() {
         let tmp = tempfile::tempdir().unwrap();
         let lmdb = tmp.path().join("lmdb");
-        drop(open_server_for_serve(&lmdb, false).unwrap());
+        drop(open_server_for_serve(&lmdb, false, false).unwrap());
 
         let primary = lmdb.join("data.mdb");
         let metadata = lmdb.join("tantivy/meta.json");
         let primary_before = std::fs::read(&primary).unwrap();
         let metadata_before = std::fs::read(&metadata).unwrap();
 
-        drop(open_server_for_serve(&lmdb, true).unwrap());
+        drop(open_server_for_serve(&lmdb, true, false).unwrap());
 
         assert_eq!(std::fs::read(&primary).unwrap(), primary_before);
         assert_eq!(std::fs::read(&metadata).unwrap(), metadata_before);
@@ -3430,7 +3446,7 @@ mod readonly_startup_tests {
         let tmp = tempfile::tempdir().unwrap();
         let lmdb = tmp.path().join("lmdb");
 
-        drop(open_server_for_serve(&lmdb, false).unwrap());
+        drop(open_server_for_serve(&lmdb, false, false).unwrap());
 
         assert!(lmdb.join("data.mdb").is_file());
         assert!(lmdb.join("tantivy/meta.json").is_file());

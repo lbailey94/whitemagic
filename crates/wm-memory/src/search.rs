@@ -337,17 +337,29 @@ impl SearchEngine {
     fn open_index(path: &Path, schema: &Schema, writable: bool) -> Result<(Index, bool)> {
         let directory = tantivy::directory::MmapDirectory::open(path)
             .map_err(|e| CoreError::Memory(format!("Tantivy open directory: {e}")))?;
+        if !writable {
+            // `open_or_create` initializes an index in an existing but empty
+            // directory. A preservation open must only accept an already
+            // materialized index, never create its metadata or segments.
+            let index = Index::open(directory).map_err(|e| {
+                CoreError::Memory(format!(
+                    "Tantivy readonly open-existing at {}: {e}",
+                    path.display()
+                ))
+            })?;
+            if index.schema() != *schema {
+                return Err(CoreError::Memory(format!(
+                    "Tantivy index at {} was created with an incompatible schema by an \
+                     older version. Run 'wm reindex' (or start 'wm serve' without \
+                     --readonly) to migrate and rebuild it from the canonical store.",
+                    path.display()
+                )));
+            }
+            return Ok((index, false));
+        }
         match Index::open_or_create(directory, schema.clone()) {
             Ok(index) => Ok((index, false)),
             Err(tantivy::error::TantivyError::SchemaError(_)) => {
-                if !writable {
-                    return Err(CoreError::Memory(format!(
-                        "Tantivy index at {} was created with an incompatible schema by an \
-                         older version. Run 'wm reindex' (or start 'wm serve' without \
-                         --readonly) to migrate and rebuild it from the canonical store.",
-                        path.display()
-                    )));
-                }
                 let ts = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .map_or(0, |d| d.as_millis());
@@ -1096,6 +1108,23 @@ mod tests {
             .filter(|e| e.file_name().to_string_lossy().contains("schema-mismatch"))
             .collect();
         assert!(siblings.is_empty(), "read-only open must not migrate");
+    }
+
+    #[test]
+    fn open_readonly_rejects_existing_empty_directory_without_creating_files() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("tantivy");
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let err = match SearchEngine::open_readonly(&dir) {
+            Ok(_) => panic!("readonly open unexpectedly initialized an empty index"),
+            Err(err) => err,
+        };
+        assert!(format!("{err}").contains("readonly open-existing"));
+        assert!(
+            std::fs::read_dir(&dir).unwrap().next().is_none(),
+            "readonly open must not materialize Tantivy metadata or segments"
+        );
     }
 
     #[test]

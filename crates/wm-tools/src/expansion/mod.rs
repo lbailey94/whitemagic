@@ -250,6 +250,18 @@ fn cold_rotate_tool(
 }
 
 /// Register all expansion tools into a registry.
+///
+/// Registry persistence is an explicit construction input so evaluator
+/// preservation never depends on mutable process-global state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RegistryPersistenceMode {
+    /// Ordinary writable and readonly servers retain stable Violet identity.
+    #[default]
+    Normal,
+    /// Frozen evaluators use process-local Violet identity and write no keys.
+    EvaluatorPreservation,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn register_expansion(
     registry: &wm_dispatch::ToolRegistry,
@@ -271,6 +283,7 @@ pub fn register_expansion(
     dharma_gate: Option<&Arc<wm_governance::DharmaGate>>,
     firewall: Option<&Arc<crate::expansion::firewall::TxFirewall>>,
     code_graph: Option<&Arc<std::sync::Mutex<crate::expansion::code::CodeGraph>>>,
+    registry_persistence: RegistryPersistenceMode,
 ) -> wm_dispatch::ToolRegistry {
     let reg = registry
         // Memory ops (7)
@@ -577,9 +590,17 @@ pub fn register_expansion(
         reg = crate::expansion::code::register_code(&reg, cg.clone());
     }
 
-    // Violet security tools (5) — engagement tokens + model signing (PLAN_F F-1/F-2)
-    // Keys persist under <store>/violet/ (0600) so issuer identity survives restarts.
-    reg = crate::expansion::violet::register_violet_persistent(&reg, &store.path().join("violet"));
+    // Violet security tools (5) — ordinary construction retains stable
+    // identities; evaluator preservation keeps the same route topology with
+    // fresh process-local keys and no filesystem fallback.
+    reg = match registry_persistence {
+        RegistryPersistenceMode::Normal => {
+            crate::expansion::violet::register_violet_persistent(&reg, &store.path().join("violet"))
+        }
+        RegistryPersistenceMode::EvaluatorPreservation => {
+            crate::expansion::violet::register_violet(&reg)
+        }
+    };
 
     // Security circuit breaker (4) — runtime tool-call anomaly monitor
     reg = crate::expansion::security_breaker::register_security_breaker(&reg);

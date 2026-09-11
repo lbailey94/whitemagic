@@ -150,6 +150,9 @@ pub struct McpServer {
     /// every tool that declares writes, and telemetry/mutable-state writes
     /// are suppressed.
     readonly: bool,
+    /// Stronger than ordinary readonly: preserve the complete containing
+    /// tree for an evaluator snapshot, including diagnostics sidecars.
+    preservation_readonly: bool,
     /// Friction auto-log gate (`WM_FRICTION_AUTOLOG=1` opt-in, default
     /// off) — when off, dispatch telemetry is still computed and FAILURE
     /// friction is still recorded (doctrine, not noise), but no
@@ -557,6 +560,7 @@ impl McpServer {
             escalation_queue: None,
             tx_firewall: None,
             readonly: false,
+            preservation_readonly: false,
             friction_autolog: std::env::var("WM_FRICTION_AUTOLOG")
                 .is_ok_and(|v| v == "1" || v == "true"),
             profile_name: "full",
@@ -576,6 +580,15 @@ impl McpServer {
     #[must_use]
     pub const fn with_readonly(mut self, readonly: bool) -> Self {
         self.readonly = readonly;
+        self
+    }
+
+    /// Enable the evaluator preservation boundary. This is intentionally
+    /// distinct from ordinary readonly deployments, which retain sidecar
+    /// failure telemetry for local operational forensics.
+    #[must_use]
+    pub const fn with_preservation_readonly(mut self, enabled: bool) -> Self {
+        self.preservation_readonly = enabled;
         self
     }
 
@@ -680,6 +693,22 @@ impl McpServer {
         Self::with_defaults_mode_profile(store_path, readonly, profile)
     }
 
+    /// Construct a server with the optional stronger evaluator preservation
+    /// boundary. It is valid only for readonly construction.
+    pub fn with_defaults_mode_preservation(
+        store_path: &std::path::Path,
+        readonly: bool,
+        preservation_readonly: bool,
+    ) -> anyhow::Result<Self> {
+        let profile = Self::tool_profile_from_env();
+        Self::with_defaults_mode_profile_preservation(
+            store_path,
+            readonly,
+            profile,
+            preservation_readonly,
+        )
+    }
+
     /// `with_defaults_mode` plus an explicit tool surface profile.
     ///
     /// The full registry is built first (governance internals need their
@@ -691,6 +720,21 @@ impl McpServer {
         readonly: bool,
         profile: &wm_tools::profiles::ToolProfile,
     ) -> anyhow::Result<Self> {
+        Self::with_defaults_mode_profile_preservation(store_path, readonly, profile, false)
+    }
+
+    /// `with_defaults_mode_profile` with an explicit evaluator preservation
+    /// boundary. The boundary suppresses persisted diagnostics but leaves the
+    /// in-memory event bus available to the server.
+    pub fn with_defaults_mode_profile_preservation(
+        store_path: &std::path::Path,
+        readonly: bool,
+        profile: &wm_tools::profiles::ToolProfile,
+        preservation_readonly: bool,
+    ) -> anyhow::Result<Self> {
+        if preservation_readonly && !readonly {
+            anyhow::bail!("preservation readonly mode requires readonly startup");
+        }
         let store = std::sync::Arc::new(if readonly {
             MemoryStore::open_readonly(store_path)?
         } else {
@@ -868,7 +912,9 @@ impl McpServer {
         // N16: Gan Ying Bus — created early so it can be shared with sensorimotor tools
         // via register_all.
         let mut gy_bus = GanYingBus::default();
-        gy_bus.enable_persistence(store_path.join("resonance_events.jsonl"));
+        if !preservation_readonly {
+            gy_bus.enable_persistence(store_path.join("resonance_events.jsonl"));
+        }
         let gan_ying_bus = Arc::new(std::sync::Mutex::new(gy_bus));
 
         // Load adaptive aliases from episodic_aliases.json if it exists.
@@ -951,6 +997,11 @@ impl McpServer {
         let code_graph = Arc::new(std::sync::Mutex::new(
             wm_tools::expansion::code::CodeGraph::new(),
         ));
+        let registry_persistence = if preservation_readonly {
+            wm_tools::expansion::RegistryPersistenceMode::EvaluatorPreservation
+        } else {
+            wm_tools::expansion::RegistryPersistenceMode::Normal
+        };
         let registry = wm_tools::register_all(
             &registry,
             &store,
@@ -973,6 +1024,7 @@ impl McpServer {
             Some(&escalation_queue),
             Some(&firewall),
             Some(&code_graph),
+            registry_persistence,
         );
         let registry = wm_tools::expansion::v4::register_v4(
             &registry,
@@ -1196,6 +1248,7 @@ impl McpServer {
             shadow_stats,
         )
         .with_readonly(readonly)
+        .with_preservation_readonly(preservation_readonly)
         .with_profile_name(profile.name);
 
         // The tools and the server share this slot (created above).
@@ -2876,6 +2929,16 @@ impl McpServer {
 
     /// Append one dispatch-failure record to the read-only sidecar.
     fn append_friction_ro(&self, telemetry: &DispatchTelemetry) {
+        if self.preservation_readonly {
+            // The operator owns the external trace for the frozen evaluator;
+            // write an explicit process diagnostic without changing its root.
+            tracing::warn!(
+                tool = %telemetry.tool,
+                error = ?telemetry.error,
+                "readonly preservation mode suppressed friction sidecar; use the run-owned trace"
+            );
+            return;
+        }
         let Some(path) = self.friction_ro_path() else {
             return;
         };
@@ -4129,6 +4192,47 @@ mod tests {
         drop(SearchEngine::open(index).unwrap());
     }
 
+    /// Snapshot the complete synthetic fixture tree. `lmdb/lock.mdb` is the
+    /// one explicitly characterized reader-lock exception; no other path is
+    /// omitted, including empty directories and derived-index artifacts.
+    fn snapshot_preservation_tree(
+        root: &std::path::Path,
+    ) -> std::collections::BTreeMap<std::path::PathBuf, (bool, u64, String)> {
+        fn visit(
+            root: &std::path::Path,
+            current: &std::path::Path,
+            out: &mut std::collections::BTreeMap<std::path::PathBuf, (bool, u64, String)>,
+        ) {
+            for entry in std::fs::read_dir(current).unwrap() {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                let relative = path.strip_prefix(root).unwrap().to_path_buf();
+                if relative == std::path::Path::new("lmdb/lock.mdb") {
+                    continue;
+                }
+                let metadata = entry.metadata().unwrap();
+                if metadata.is_dir() {
+                    out.insert(relative, (true, 0, String::new()));
+                    visit(root, &path, out);
+                } else {
+                    use sha2::{Digest as _, Sha256};
+                    let contents = std::fs::read(&path).unwrap();
+                    out.insert(
+                        relative,
+                        (
+                            false,
+                            metadata.len(),
+                            format!("{:x}", Sha256::digest(contents)),
+                        ),
+                    );
+                }
+            }
+        }
+        let mut snapshot = std::collections::BTreeMap::new();
+        visit(root, root, &mut snapshot);
+        snapshot
+    }
+
     fn test_server() -> McpServer {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
@@ -4242,6 +4346,7 @@ mod tests {
             None,
             None,
             None,
+            wm_tools::expansion::RegistryPersistenceMode::Normal,
         );
         let registry = wm_tools::expansion::v4::register_v4(
             &registry,
@@ -6024,6 +6129,135 @@ mod tests {
                 "read-only mode must reject {route}, got: {result}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn preservation_readonly_lifecycle_leaves_complete_fixture_tree_unchanged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = test_store_path(&tmp);
+        initialize_readonly_store(&store);
+        let root = store.parent().unwrap();
+        let before = snapshot_preservation_tree(root);
+        let mut server = McpServer::with_defaults_mode_profile_preservation(
+            &store,
+            true,
+            &wm_tools::profiles::PROFILE_CURATED,
+            true,
+        )
+        .unwrap();
+        let initialized = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+        assert!(serde_json::from_str::<Value>(&initialized).unwrap()["error"].is_null());
+        assert_eq!(server.status_payload()["readonly"], true);
+        let read = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.list","args":{"galaxy":"codex","limit":1}}}}"#)
+            .await;
+        let read: Value = serde_json::from_str(&read).unwrap();
+        assert!(read["error"].is_null(), "permitted read failed: {read}");
+        let rejected = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"wm","arguments":{"route":"memory.create","args":{"galaxy":"codex","content":"synthetic refusal"}}}}"#)
+            .await;
+        let rejected: Value = serde_json::from_str(&rejected).unwrap();
+        let result: Value =
+            serde_json::from_str(rejected["result"]["content"][0]["text"].as_str().unwrap())
+                .unwrap();
+        assert_eq!(result["status"], "error", "write must be refused: {result}");
+        server.shutdown();
+        assert_eq!(
+            snapshot_preservation_tree(root),
+            before,
+            "preservation lifecycle changed the fixture tree"
+        );
+        for forbidden in [
+            "lmdb/resonance_events.jsonl",
+            "friction_ro.jsonl",
+            "landlock_state.json",
+            "profile_contract.json",
+        ] {
+            assert!(
+                !root.join(forbidden).exists(),
+                "forbidden artifact: {forbidden}"
+            );
+        }
+    }
+
+    #[test]
+    fn registry_persistence_mode_is_constructor_local_and_preserves_topology() {
+        fn route_names(server: &McpServer) -> Vec<String> {
+            let mut names: Vec<_> = server
+                .registry
+                .all_ref()
+                .iter()
+                .map(|tool| tool.name().to_string())
+                .collect();
+            names.sort();
+            names
+        }
+
+        fn stable_contract(server: &McpServer) -> Value {
+            let mut value = serde_json::to_value(&server.profile_contract).unwrap();
+            value
+                .as_object_mut()
+                .expect("profile contract")
+                .remove("verified_at");
+            value
+        }
+
+        let preserved_a = tempfile::tempdir().unwrap();
+        let preserved_a_store = test_store_path(&preserved_a);
+        initialize_readonly_store(&preserved_a_store);
+        let preserved_a_server = McpServer::with_defaults_mode_profile_preservation(
+            &preserved_a_store,
+            true,
+            &wm_tools::profiles::PROFILE_CURATED,
+            true,
+        )
+        .unwrap();
+        assert!(!preserved_a_store.join("violet").exists());
+
+        let normal = tempfile::tempdir().unwrap();
+        let normal_store = test_store_path(&normal);
+        initialize_readonly_store(&normal_store);
+        let normal_server = McpServer::with_defaults_mode_profile(
+            &normal_store,
+            true,
+            &wm_tools::profiles::PROFILE_CURATED,
+        )
+        .unwrap();
+        assert!(normal_store.join("violet/violet_issuer.key").is_file());
+        assert!(normal_store.join("violet/violet_signer.key").is_file());
+
+        // Construct preservation mode again after Normal. A process-global
+        // selector would make this order-dependent; the typed input cannot.
+        let preserved_b = tempfile::tempdir().unwrap();
+        let preserved_b_store = test_store_path(&preserved_b);
+        initialize_readonly_store(&preserved_b_store);
+        let preserved_b_server = McpServer::with_defaults_mode_profile_preservation(
+            &preserved_b_store,
+            true,
+            &wm_tools::profiles::PROFILE_CURATED,
+            true,
+        )
+        .unwrap();
+        assert!(!preserved_b_store.join("violet").exists());
+
+        assert_eq!(
+            route_names(&preserved_a_server),
+            route_names(&normal_server)
+        );
+        assert_eq!(
+            route_names(&preserved_b_server),
+            route_names(&normal_server)
+        );
+        assert_eq!(
+            stable_contract(&preserved_a_server),
+            stable_contract(&normal_server)
+        );
+        assert_eq!(
+            stable_contract(&preserved_b_server),
+            stable_contract(&normal_server)
+        );
     }
 
     #[tokio::test]

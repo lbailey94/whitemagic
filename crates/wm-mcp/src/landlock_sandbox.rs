@@ -15,10 +15,10 @@
 //! seam, not a rewrite.
 //!
 //! Reporting follows the profile-contract doctrine: the outcome is logged,
-//! served via `/status`, and persisted to `<store-root>/landlock_state.json`
-//! (atomic rename) where `wm doctor` grades it read-only. The confined
-//! process can always write its own store root, so persistence never fights
-//! the sandbox.
+//! served via `/status`, and (for writable servers only) persisted to
+//! `<store-root>/landlock_state.json` (atomic rename) where `wm doctor`
+//! grades it read-only. Readonly preservation servers keep their status only
+//! in memory so the snapshot is never changed.
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -42,6 +42,9 @@ pub enum LandlockOutcome {
     Failed,
     /// `WM_LANDLOCK` was not set — the feature is off by default.
     Off,
+    /// Requested for readonly preservation, but deliberately not applied
+    /// because the v0 report persistence would modify the frozen store.
+    SkippedReadonly,
 }
 
 impl LandlockOutcome {
@@ -54,6 +57,7 @@ impl LandlockOutcome {
             Self::PlatformUnsupported => "platform_unsupported",
             Self::Failed => "failed",
             Self::Off => "off",
+            Self::SkippedReadonly => "requested_but_skipped_readonly",
         }
     }
 
@@ -85,6 +89,19 @@ impl LandlockReport {
             enabled: false,
             outcome: LandlockOutcome::Off,
             detail: "WM_LANDLOCK not set — no ruleset applied".to_string(),
+            store_root: store_root.display().to_string(),
+            requested_at: wm_core::time::now_rfc3339(),
+        }
+    }
+
+    /// Current-process status for a requested readonly preservation server.
+    /// No ruleset was applied and this report must not be persisted.
+    #[must_use]
+    pub fn skipped_readonly(store_root: &Path) -> Self {
+        Self {
+            enabled: true,
+            outcome: LandlockOutcome::SkippedReadonly,
+            detail: "WM_LANDLOCK requested but skipped for readonly preservation; no Landlock ruleset was applied".to_string(),
             store_root: store_root.display().to_string(),
             requested_at: wm_core::time::now_rfc3339(),
         }
@@ -474,6 +491,16 @@ mod tests {
         assert!(!report.enabled);
         assert_eq!(report.outcome, LandlockOutcome::Off);
         assert!(!report.outcome.is_enforcing());
+    }
+
+    #[test]
+    fn skipped_readonly_report_is_requested_but_not_enforcing() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let report = LandlockReport::skipped_readonly(tmp.path());
+        assert!(report.enabled);
+        assert_eq!(report.outcome, LandlockOutcome::SkippedReadonly);
+        assert!(!report.outcome.is_enforcing());
+        assert!(report.detail.contains("no Landlock ruleset was applied"));
     }
 
     #[test]

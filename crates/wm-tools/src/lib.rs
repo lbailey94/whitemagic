@@ -3550,6 +3550,7 @@ pub fn register_all(
     escalation_queue: Option<&Arc<std::sync::Mutex<wm_governance::EscalationQueue>>>,
     firewall: Option<&Arc<expansion::firewall::TxFirewall>>,
     code_graph: Option<&Arc<std::sync::Mutex<expansion::code::CodeGraph>>>,
+    registry_persistence: expansion::RegistryPersistenceMode,
 ) -> ToolRegistry {
     let mut reg = registry
         .register(Arc::new(MemoryCreateTool::new(
@@ -3618,6 +3619,7 @@ pub fn register_all(
             dharma.as_ref(),
             firewall,
             code_graph,
+            registry_persistence,
         );
     } else {
         reg = expansion::register_expansion(
@@ -3640,6 +3642,7 @@ pub fn register_all(
             dharma.as_ref(),
             firewall,
             code_graph,
+            registry_persistence,
         );
     }
     if let Some(k) = karma {
@@ -3852,6 +3855,7 @@ mod tests {
             None,
             None,
             None,
+            expansion::RegistryPersistenceMode::Normal,
         )
     }
 
@@ -4739,6 +4743,7 @@ mod tests {
             None,
             None,
             None,
+            expansion::RegistryPersistenceMode::Normal,
         );
         let registry = register_meta_tools(
             &registry,
