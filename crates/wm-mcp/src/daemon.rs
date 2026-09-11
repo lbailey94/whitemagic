@@ -17,7 +17,8 @@ use wm_bicameral::{
     SelfPlayConfig, SelfPlayLoop, TaskProposer, TaskSolver, world_model_from_env,
 };
 use wm_cognitive::{
-    AutonomousCycleRunner, CittaContext, CittaCoordinator, CycleContext, CycleStatus, CycleType,
+    AlchemicalRoundCoordinator, AutonomousCycleRunner, CittaContext, CittaCoordinator,
+    CycleContext, CycleStatus, CycleType, GardenResonanceEngine,
 };
 
 use crate::McpServer;
@@ -166,6 +167,10 @@ pub struct DaemonStats {
     pub strong_synchronicities: u64,
     /// Total Citta 4-phase cognitive cycles completed.
     pub citta_cycles: u64,
+    /// Total Alchemical Transmutation Rounds completed.
+    pub alchemical_rounds: u64,
+    /// Total Garden resonance cascades computed.
+    pub garden_resonance_sweeps: u64,
     /// Total Copilot automated diagnostic syntheses generated.
     pub copilot_diagnostics: u64,
     /// Total uncommitted operations audited and remediated.
@@ -234,6 +239,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     let mut last_citta = std::time::Instant::now();
     let mut last_watchdog_audit = std::time::Instant::now();
     let mut citta_coordinator = CittaCoordinator::with_og_engines();
+    let mut alchemical_coordinator = AlchemicalRoundCoordinator::new();
+    let mut garden_engine = GardenResonanceEngine::new();
     let copilot_client = CopilotClient::from_env();
     let mut gan_ying = wm_cognitive::AutonomousGanYing::new(wm_cognitive::GanYingConfig {
         sweep_interval: config.gan_ying_interval,
@@ -319,7 +326,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     println!("  Brain-wave tick: {:?}", config.brain_wave_interval);
     println!("  Min health:      {:.2}", config.min_health_score);
     if config.citta_interval > Duration::from_secs(0) {
-        println!("  Citta cycle:     {:?} (4-phase)", config.citta_interval);
+        println!("  Citta cycle:     {:?} (4-phase / 28 engines / 28 gardens)", config.citta_interval);
     }
     if config.watchdog_audit_interval > Duration::from_secs(0) {
         println!("  Watchdog audit:  {:?} (copilot active)", config.watchdog_audit_interval);
@@ -535,7 +542,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             last_cycle = now;
         }
 
-        // Citta 4-Phase Cognitive Heartbeat Cycle
+        // Citta 4-Phase Cognitive Heartbeat Cycle & 28-Garden / 28-Engine Alchemical Transmutation
         if config.citta_interval > Duration::from_secs(0)
             && now.duration_since(last_citta) >= config.citta_interval
         {
@@ -553,22 +560,68 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 .with_coherence(coherence)
                 .with_uncommitted_ops(uncommitted);
 
-            if let Some(report) = resilient("citta_cycle", || citta_coordinator.run_cycle(&citta_ctx)) {
+            let citta_report = resilient("citta_cycle", || citta_coordinator.run_cycle(&citta_ctx));
+            let alchemical_report = resilient("alchemical_round", || alchemical_coordinator.execute_alchemical_round(&citta_ctx));
+            let garden_report = resilient("garden_resonance", || {
+                if !citta_ctx.uncommitted_ops.is_empty() {
+                    garden_engine.stimulate_by_keywords(&["friction", "uncommitted", "audit"], 0.6);
+                }
+                garden_engine.stimulate_by_keywords(&["citta", "consciousness", "memory", "hologram"], 0.4);
+                garden_engine.generate_report()
+            });
+
+            if let Some(report) = citta_report {
                 stats.citta_cycles += 1;
+                let (stage_name, wisdom_score) = alchemical_report.as_ref().map_or(("Transmuting", 0.0), |r| {
+                    stats.alchemical_rounds += 1;
+                    (
+                        match r.active_stage {
+                            wm_cognitive::AlchemicalRoundStage::Nigredo => "Nigredo (Decay)",
+                            wm_cognitive::AlchemicalRoundStage::Albedo => "Albedo (Purification)",
+                            wm_cognitive::AlchemicalRoundStage::Citrinitas => "Citrinitas (Transmutation)",
+                            wm_cognitive::AlchemicalRoundStage::Rubedo => "Rubedo (Crystallization)",
+                        },
+                        r.transmuted_wisdom_score,
+                    )
+                });
+
+                let garden_summary = garden_report.as_ref().map_or_else(
+                    || "Gardens: inactive".to_string(),
+                    |gr| {
+                        stats.garden_resonance_sweeps += 1;
+                        format!(
+                            "Gardens: {} active (peak: {} [{:.2}], centroid: [{:.2}, {:.2}, {:.2}, {:.2}, {:.2}])",
+                            gr.active_gardens_count,
+                            gr.dominant_garden,
+                            gr.dominant_activation,
+                            gr.centroid.x,
+                            gr.centroid.y,
+                            gr.centroid.z,
+                            gr.centroid.w,
+                            gr.centroid.v
+                        )
+                    },
+                );
+
                 tracing::info!(
                     cycle_id = report.cycle_id,
                     composite = report.composite_score,
+                    stage = stage_name,
+                    wisdom = wisdom_score,
                     duration_us = report.total_duration_us,
-                    "Citta 4-phase cognitive cycle completed"
+                    "Citta & Alchemical 28-Engine/Garden cognitive cycle completed"
                 );
                 println!(
-                    "[citta {}] 4-phase cycle: score {:.2} (P:{} C:{} A:{} R:{}) in {}ms",
+                    "[citta {}] 4-phase cycle: score {:.2} (P:{} C:{} A:{} R:{}) | Stage: {} (wisdom {:.2}) | {} in {}ms",
                     report.cycle_id,
                     report.composite_score,
                     report.perception.len(),
                     report.contemplation.len(),
                     report.action.len(),
                     report.reflection.len(),
+                    stage_name,
+                    wisdom_score,
+                    garden_summary,
                     report.total_duration_us / 1000
                 );
             }
@@ -986,6 +1039,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     }
     if stats.citta_cycles > 0 {
         println!("  Citta cycles:     {}", stats.citta_cycles);
+        println!("  Alchemical rounds:{}", stats.alchemical_rounds);
+        println!("  Garden sweeps:    {}", stats.garden_resonance_sweeps);
     }
     if stats.copilot_diagnostics > 0 {
         println!("  Copilot diags:    {}", stats.copilot_diagnostics);

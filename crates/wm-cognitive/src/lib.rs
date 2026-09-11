@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 // ── Consciousness modules (from wm-consciousness) ───────────────────
+pub mod alchemical_round;
 pub mod autonomous;
 pub mod cerebellum;
 pub mod citta;
@@ -16,6 +17,7 @@ pub mod depth_gauge;
 pub mod distill;
 pub mod dream;
 pub mod eco_mode;
+pub mod gardens;
 pub mod limbic;
 pub mod miner;
 pub mod neural;
@@ -38,6 +40,10 @@ pub mod resonance;
 pub mod timescale;
 
 // ── Consciousness re-exports ────────────────────────────────────────
+pub use alchemical_round::{
+    AlchemicalRoundCoordinator, AlchemicalRoundReport, AlchemicalRoundStage,
+    AlchemicalTransmutationStage, ENGINE_CATALOG, EngineProfile,
+};
 pub use autonomous::{
     AutonomousCycleRunner, CompressionProposal, ConnectionProposal, CycleConfig, CycleContext,
     CycleResult, CycleStatus, CycleType, EmergencePattern, ImprovementProposal, PruneCandidate,
@@ -68,6 +74,10 @@ pub use dream::{
     YamaDecision,
 };
 pub use eco_mode::{EcoModeController, EcoModeMetrics, SubsystemFlags};
+pub use gardens::{
+    Coordinate5D, GARDEN_CATALOG, GardenProfile, GardenResonanceEngine, GardenResonanceReport,
+    Quadrant, WuXing, ZodiacSign,
+};
 pub use miner::{AssociationMiner, MinerConfig, MiningReport, ProposedLink};
 pub use neural::{
     ActivationResult, CognitiveContext, GateDecision, Metaplasticity, MomentumDynamics,
