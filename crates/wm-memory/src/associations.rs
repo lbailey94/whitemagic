@@ -216,6 +216,18 @@ impl AssociationStore {
         Ok(Self { db })
     }
 
+    /// Open an existing association database without creating it. Read-only
+    /// server startup uses this path so a missing database is a visible
+    /// preservation failure rather than an implicit schema mutation.
+    pub fn open_readonly(env: &Environment) -> Result<Self> {
+        let db = env
+            .open_db(Some(Galaxy::Associations.db_name()))
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB open association database read-only: {e}"))
+            })?;
+        Ok(Self { db })
+    }
+
     /// Create or update an association.
     pub fn put(&self, env: &Environment, assoc: &Association) -> Result<()> {
         let key = assoc.encode_key();

@@ -3,7 +3,9 @@
 //! Each galaxy is an LMDB named database (sub-DB within the same file).
 //! Reads are zero-copy (mmap'd). Writes are batched.
 
-use lmdb::{Cursor, Database, DatabaseFlags, Environment, Transaction, WriteFlags};
+use lmdb::{
+    Cursor, Database, DatabaseFlags, Environment, EnvironmentFlags, Transaction, WriteFlags,
+};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -320,6 +322,64 @@ impl MemoryStore {
             .filter(|&v| v > 0)
             .unwrap_or(platform_default);
         Self::open(path, size)
+    }
+
+    /// Open an existing LMDB store without creating a directory, database, or
+    /// writable LMDB environment. This is the preservation boundary used by
+    /// read-only evaluator servers: an incomplete or incompatible store must
+    /// fail closed for the caller to investigate, never be initialized or
+    /// repaired in place.
+    pub fn open_readonly(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref().to_path_buf();
+        if !path.is_dir() {
+            return Err(CoreError::Memory(format!(
+                "Read-only LMDB store directory does not exist: {}",
+                path.display()
+            )));
+        }
+        if !path.join("data.mdb").is_file() {
+            return Err(CoreError::Memory(format!(
+                "Read-only LMDB store is missing data.mdb: {}",
+                path.display()
+            )));
+        }
+
+        let env = Environment::new()
+            .set_max_dbs(32)
+            .set_flags(EnvironmentFlags::READ_ONLY)
+            .open(&path)
+            .map_err(|e| CoreError::Memory(format!("Read-only LMDB open failed: {e}")))?;
+
+        let index_dbs = IndexDbs::open(&env)?;
+        let open_named = |name: &str| {
+            env.open_db(Some(name)).map_err(|e| {
+                CoreError::Memory(format!("Read-only LMDB missing database {name}: {e}"))
+            })
+        };
+        let episodic_db = open_named("episodic_records")?;
+        let episodic_terms_v2_db = open_named("episodic_terms_v2")?;
+        let embedding_cache_db = open_named("embedding_cache")?;
+        let revisions_db = open_named("revisions")?;
+        let attestations_db = open_named(crate::attestation::ATTESTATIONS_DB)?;
+
+        Ok(Self {
+            path,
+            env,
+            index_dbs,
+            semantic_encoder: SemanticEncoder::new(),
+            max_entries_per_galaxy: None,
+            mutation_count: AtomicU64::new(0),
+            episodic_db,
+            episodic_terms_v2_db,
+            embedding_cache_db,
+            revisions_db,
+            attestations_db,
+            episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
+            episodic_embedder: std::sync::OnceLock::new(),
+            episodic_sidecar_ensured: std::sync::OnceLock::new(),
+            episodic_aliases: std::sync::OnceLock::new(),
+            episodic_enrichment: std::sync::OnceLock::new(),
+        })
     }
 
     /// Set a per-galaxy entry limit for DoS prevention.

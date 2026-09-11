@@ -691,17 +691,27 @@ impl McpServer {
         readonly: bool,
         profile: &wm_tools::profiles::ToolProfile,
     ) -> anyhow::Result<Self> {
-        let store = std::sync::Arc::new(MemoryStore::open_default(store_path)?);
+        let store = std::sync::Arc::new(if readonly {
+            MemoryStore::open_readonly(store_path)?
+        } else {
+            MemoryStore::open_default(store_path)?
+        });
 
         // Open Tantivy search index alongside LMDB. If the on-disk index was
         // written with an incompatible schema by an older version, a writable
         // open moves it aside and creates a fresh index — rebuild it from the
         // canonical LMDB store so the upgrade is seamless.
         let search_path = store_path.join("tantivy");
-        std::fs::create_dir_all(&search_path)?;
         let search = std::sync::Arc::new(if readonly {
+            if !search_path.is_dir() {
+                anyhow::bail!(
+                    "Read-only Tantivy index directory does not exist: {}",
+                    search_path.display()
+                );
+            }
             SearchEngine::open_readonly(&search_path)?
         } else {
+            std::fs::create_dir_all(&search_path)?;
             let engine = SearchEngine::open(&search_path)?;
             if engine.schema_migrated() {
                 tracing::warn!(
@@ -755,7 +765,11 @@ impl McpServer {
         let hv = substrate.sample();
         dharma_gate.update_homeostasis(hv.into());
 
-        let associations = Arc::new(AssociationStore::open(store.env())?);
+        let associations = Arc::new(if readonly {
+            AssociationStore::open_readonly(store.env())?
+        } else {
+            AssociationStore::open(store.env())?
+        });
         let spiral_tracker =
             Arc::new(std::sync::Mutex::new(wm_cognitive::SpiralTracker::default()));
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
@@ -3809,6 +3823,16 @@ mod tests {
         dir
     }
 
+    /// Build only the existing LMDB and Tantivy artifacts required by a
+    /// read-only open. This intentionally avoids the writable server
+    /// constructor so readonly tests can prove it creates no profile receipt.
+    fn initialize_readonly_store(store: &std::path::Path) {
+        drop(MemoryStore::open_default(store).unwrap());
+        let index = store.join("tantivy");
+        std::fs::create_dir_all(&index).unwrap();
+        drop(SearchEngine::open(index).unwrap());
+    }
+
     fn test_server() -> McpServer {
         let tmp = tempfile::tempdir().unwrap();
         let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
@@ -5648,6 +5672,7 @@ mod tests {
     async fn profile_contract_on_readonly_server_persists_nothing() {
         let tmp = tempfile::tempdir().unwrap();
         let store = test_store_path(&tmp);
+        initialize_readonly_store(&store);
         let server = McpServer::with_defaults_mode_profile(
             &store,
             true,
@@ -5667,7 +5692,9 @@ mod tests {
     #[tokio::test]
     async fn readonly_mode_blocks_all_mutations() {
         let tmp = tempfile::tempdir().unwrap();
-        let mut server = McpServer::with_defaults_mode(&test_store_path(&tmp), true).unwrap();
+        let store = test_store_path(&tmp);
+        initialize_readonly_store(&store);
+        let mut server = McpServer::with_defaults_mode(&store, true).unwrap();
 
         let _ = server
             .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)

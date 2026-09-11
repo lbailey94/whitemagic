@@ -3,7 +3,43 @@
 //! Entry point for the `WhiteMagic` v5 CLI tool.
 
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// Open the server for `wm serve`. Read-only operation is intentionally a
+/// fail-closed preservation mode: it must use the existing readonly open
+/// paths and never turn an open failure into repair, growth, or creation.
+fn open_server_for_serve(lmdb_path: &Path, readonly: bool) -> anyhow::Result<wm_mcp::McpServer> {
+    if readonly {
+        return wm_mcp::McpServer::with_defaults_mode(lmdb_path, true).map_err(Into::into);
+    }
+
+    std::fs::create_dir_all(lmdb_path)?;
+    match wm_mcp::McpServer::with_defaults_mode(lmdb_path, false) {
+        Ok(server) => Ok(server),
+        Err(e) => {
+            tracing::warn!(
+                "Normal open failed ({e}). Attempting recovery with AutoRepairAndGrow..."
+            );
+            recover_writable_store(lmdb_path)?;
+            Ok(wm_mcp::McpServer::with_defaults_mode(lmdb_path, false)?)
+        }
+    }
+}
+
+fn recover_writable_store(lmdb_path: &Path) -> anyhow::Result<()> {
+    #[cfg(test)]
+    WRITABLE_RECOVERY_CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let _recovered_store = wm_memory::open_with_recovery(
+        lmdb_path,
+        1024 * 1024 * 1024,
+        wm_memory::RecoveryStrategy::AutoRepairAndGrow,
+    )?;
+    Ok(())
+}
+
+#[cfg(test)]
+static WRITABLE_RECOVERY_CALLS: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
 
 #[derive(Parser)]
 #[command(name = "wm", version = env!("CARGO_PKG_VERSION"), about = "WhiteMagic — local-first memory and session continuity for coding agents")]
@@ -672,7 +708,6 @@ fn main() -> anyhow::Result<()> {
             }
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
-            std::fs::create_dir_all(&lmdb_path)?;
 
             // Landlock v0 (Phase 5): whole-process FS confinement, opt-in via
             // WM_LANDLOCK=1. Write-class rights are confined to the store
@@ -680,7 +715,12 @@ fn main() -> anyhow::Result<()> {
             // the tokio runtime spawns — workers inherit the spawning
             // thread's restriction. Every outcome is non-fatal: unsupported
             // kernels continue unconfined, loudly.
-            let landlock_report = if wm_mcp::landlock_sandbox::requested() {
+            let landlock_report = if readonly && wm_mcp::landlock_sandbox::requested() {
+                tracing::warn!(
+                    "WM_LANDLOCK is ignored for --readonly serve: readonly startup must not persist a Landlock report"
+                );
+                None
+            } else if wm_mcp::landlock_sandbox::requested() {
                 let report = wm_mcp::landlock_sandbox::restrict_to_store_root(&store_path);
                 match report.outcome {
                     wm_mcp::landlock_sandbox::LandlockOutcome::Enforced => tracing::info!(
@@ -709,22 +749,7 @@ fn main() -> anyhow::Result<()> {
 
             tracing::info!("Starting MCP server, store: {}", lmdb_path.display());
 
-            let mut server = match wm_mcp::McpServer::with_defaults_mode(&lmdb_path, readonly) {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::warn!(
-                        "Normal open failed ({e}). Attempting recovery with AutoRepairAndGrow..."
-                    );
-                    // Try recovery: open store with auto-repair + map size growth
-                    let _recovered_store = wm_memory::open_with_recovery(
-                        &lmdb_path,
-                        1024 * 1024 * 1024,
-                        wm_memory::RecoveryStrategy::AutoRepairAndGrow,
-                    )?;
-                    // Now retry server creation
-                    wm_mcp::McpServer::with_defaults_mode(&lmdb_path, readonly)?
-                }
-            };
+            let mut server = open_server_for_serve(&lmdb_path, readonly)?;
 
             if let Some(report) = landlock_report {
                 server.set_landlock_report(report);
@@ -3312,4 +3337,88 @@ fn run_brain_wave(store: Option<PathBuf>) {
     println!("Citta coherence: {:.3}", citta.vector.coherence());
     println!("Citta valence:   {:.3}", citta.vector.valence());
     println!("Heartbeats:      {}", citta.heartbeats());
+}
+
+#[cfg(test)]
+mod readonly_startup_tests {
+    use super::*;
+    use std::sync::atomic::Ordering;
+
+    #[test]
+    fn readonly_serve_missing_store_fails_without_creation_or_recovery() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = tmp.path().join("missing-lmdb");
+        WRITABLE_RECOVERY_CALLS.store(0, Ordering::SeqCst);
+
+        let error = match open_server_for_serve(&missing, true) {
+            Ok(_) => panic!("readonly startup unexpectedly opened a missing store"),
+            Err(error) => error,
+        };
+
+        assert!(
+            error.to_string().contains("does not exist"),
+            "unexpected error: {error:#}"
+        );
+        assert!(!missing.exists(), "readonly startup created {missing:?}");
+        assert_eq!(
+            WRITABLE_RECOVERY_CALLS.load(Ordering::SeqCst),
+            0,
+            "readonly open failure must not enter writable recovery"
+        );
+    }
+
+    #[test]
+    fn readonly_serve_missing_index_fails_without_creation_or_recovery() {
+        let tmp = tempfile::tempdir().unwrap();
+        let lmdb = tmp.path().join("lmdb");
+        drop(wm_memory::MemoryStore::open_default(&lmdb).unwrap());
+        let missing_index = lmdb.join("tantivy");
+        assert!(!missing_index.exists());
+        WRITABLE_RECOVERY_CALLS.store(0, Ordering::SeqCst);
+
+        let error = match open_server_for_serve(&lmdb, true) {
+            Ok(_) => panic!("readonly startup unexpectedly created a missing index"),
+            Err(error) => error,
+        };
+
+        assert!(
+            error
+                .to_string()
+                .contains("Tantivy index directory does not exist"),
+            "unexpected error: {error:#}"
+        );
+        assert!(
+            !missing_index.exists(),
+            "readonly startup created missing index directory {missing_index:?}"
+        );
+        assert_eq!(WRITABLE_RECOVERY_CALLS.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn readonly_serve_preserves_authoritative_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let lmdb = tmp.path().join("lmdb");
+        drop(open_server_for_serve(&lmdb, false).unwrap());
+
+        let primary = lmdb.join("data.mdb");
+        let metadata = lmdb.join("tantivy/meta.json");
+        let primary_before = std::fs::read(&primary).unwrap();
+        let metadata_before = std::fs::read(&metadata).unwrap();
+
+        drop(open_server_for_serve(&lmdb, true).unwrap());
+
+        assert_eq!(std::fs::read(&primary).unwrap(), primary_before);
+        assert_eq!(std::fs::read(&metadata).unwrap(), metadata_before);
+    }
+
+    #[test]
+    fn writable_serve_still_creates_a_new_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        let lmdb = tmp.path().join("lmdb");
+
+        drop(open_server_for_serve(&lmdb, false).unwrap());
+
+        assert!(lmdb.join("data.mdb").is_file());
+        assert!(lmdb.join("tantivy/meta.json").is_file());
+    }
 }
