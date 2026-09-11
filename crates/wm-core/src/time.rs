@@ -51,6 +51,13 @@ pub fn now_rfc3339() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
+/// Generate a monotonic, time-ordered operation ID (UUIDv7 format) for
+/// end-to-end multi-step write sequence correlation and crash barrier detection (U6).
+#[must_use]
+pub fn new_operation_id() -> String {
+    uuid::Uuid::now_v7().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,5 +89,17 @@ mod tests {
         assert!(ts.ends_with('Z'), "got: {ts}");
         assert_eq!(ts.len(), 20, "second-precision Z format, got: {ts}");
         assert!(chrono::DateTime::parse_from_rfc3339(&ts).is_ok());
+    }
+
+    #[test]
+    fn operation_id_is_valid_time_ordered_uuid() {
+        let id1 = new_operation_id();
+        let id2 = new_operation_id();
+        assert_ne!(id1, id2);
+        let parsed1 = uuid::Uuid::parse_str(&id1).expect("valid uuid");
+        let parsed2 = uuid::Uuid::parse_str(&id2).expect("valid uuid");
+        assert_eq!(parsed1.get_version(), Some(uuid::Version::SortRand));
+        assert_eq!(parsed2.get_version(), Some(uuid::Version::SortRand));
+        assert!(id1 <= id2, "monotonic time order");
     }
 }

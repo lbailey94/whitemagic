@@ -79,7 +79,7 @@ smallvec = "1"
 # Time
 chrono = { version = "0.4", features = ["serde"] }
 # IDs
-uuid = { version = "1", features = ["v4", "v5", "serde"] }
+uuid = { version = "1", features = ["v4", "v5", "v7", "serde"] }
 # CLI
 clap = { version = "4", features = ["derive"] }
 # Testing

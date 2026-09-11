@@ -47,6 +47,8 @@ pub struct ActorIdentity {
     pub user: Option<String>,
     /// Mandala compartment the dispatch ran under (when declared).
     pub compartment: Option<String>,
+    /// Monotonic operation ID grouping multi-step write sequences (U6).
+    pub operation_id: Option<String>,
     /// OBO `act` shape (P-OBO-1, 2026-09-10): server-asserted label of the
     /// agent doing the acting, distinct from the subject acted for.
     /// `None` = direct action, no delegation. Never populated from client
@@ -68,10 +70,18 @@ impl ActorIdentity {
             session: ctx.session_id.map(|id| id.to_string()),
             user: ctx.user_id.clone(),
             compartment: ctx.compartment.clone(),
+            operation_id: ctx.operation_id.clone(),
             act: None,
             on_behalf_of: None,
             delegation_chain: Vec::new(),
         }
+    }
+
+    /// Attach a monotonic operation ID (U6).
+    #[must_use]
+    pub fn with_operation_id(mut self, op_id: impl Into<String>) -> Self {
+        self.operation_id = Some(op_id.into());
+        self
     }
 
     /// Attach a server-asserted delegation triple (OBO shape). Callers must
@@ -162,6 +172,11 @@ pub struct WriteAuditEntry {
     /// (legacy entries; serde default keeps them deserializable).
     #[serde(default)]
     pub args_digest: Option<String>,
+    /// Monotonic operation ID grouping multi-step write sequences (U6).
+    /// Enables detection of incomplete operations across multi-tool dispatches.
+    /// `None` = single uncoordinated dispatch or legacy entry.
+    #[serde(default)]
+    pub operation_id: Option<String>,
 }
 
 impl WriteAuditEntry {
@@ -384,6 +399,7 @@ impl WriteAuditJournal {
             success,
             confirmed,
             args_digest,
+            operation_id: actor.operation_id,
         };
 
         let key = [KEY_PREFIX, &id.to_be_bytes()].concat();
@@ -542,6 +558,37 @@ mod tests {
         let entries = journal.scan_entries().unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0], entry);
+        assert_eq!(entries[0].operation_id, None);
+    }
+
+    #[test]
+    fn operation_id_propagates_and_roundtrips_through_journal() {
+        let store = make_store();
+        let journal = WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap();
+
+        let op_id = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+        let ctx = wm_core::Context::default().with_operation_id(op_id);
+        let actor = ActorIdentity::from_context(&ctx);
+        assert_eq!(actor.operation_id.as_deref(), Some(op_id));
+
+        let entry = journal
+            .record(
+                "memory.create",
+                actor,
+                None,
+                None,
+                true,
+                1,
+                true,
+            )
+            .unwrap();
+
+        assert_eq!(entry.operation_id.as_deref(), Some(op_id));
+
+        let entries = journal.scan_entries().unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].operation_id.as_deref(), Some(op_id));
+        assert_eq!(entries[0], entry);
     }
 
     #[test]
@@ -666,6 +713,7 @@ mod tests {
             session: Some("4e3ece8c-4e59-4486-8f07-91945337e361".to_string()),
             user: Some("lucas".to_string()),
             compartment: Some("production".to_string()),
+            operation_id: None,
             act: None,
             on_behalf_of: None,
             delegation_chain: Vec::new(),

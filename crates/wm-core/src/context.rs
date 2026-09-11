@@ -50,6 +50,9 @@ pub struct Context {
     /// Read-only server mode — the dispatch pipeline refuses any tool that
     /// declares writes while this is set.
     pub readonly: bool,
+    /// Operation ID (monotonic time-ordered ID) grouping multi-step write
+    /// sequences (U6). Enables crash detection across multi-tool dispatches.
+    pub operation_id: Option<String>,
 }
 
 impl Context {
@@ -76,7 +79,15 @@ impl Context {
             drive_conservative_weight: 0.3,
             last_gana: None,
             readonly: false,
+            operation_id: None,
         }
+    }
+
+    /// Set the operation ID for this context (U6).
+    #[must_use]
+    pub fn with_operation_id(mut self, op_id: impl Into<String>) -> Self {
+        self.operation_id = Some(op_id.into());
+        self
     }
 
     /// Get the current brain-wave state.
@@ -225,5 +236,17 @@ mod tests {
                 "unknown compartment must not write {g:?}"
             );
         }
+    }
+
+    #[test]
+    fn operation_id_propagates_and_defaults_none() {
+        let ctx = Context::default();
+        assert_eq!(ctx.operation_id, None);
+
+        let ctx_with_op = ctx.with_operation_id("01H7XYZ0000000000000000000");
+        assert_eq!(
+            ctx_with_op.operation_id.as_deref(),
+            Some("01H7XYZ0000000000000000000")
+        );
     }
 }
