@@ -2763,6 +2763,8 @@ impl McpServer {
             "tools/call" => self.handle_tools_call(&req.params).await,
             "resources/list" => self.handle_resources_list(),
             "resources/read" => self.handle_resources_read(&req.params),
+            "prompts/list" => self.handle_prompts_list(),
+            "prompts/get" => self.handle_prompts_get(&req.params),
             // MCP liveness check — the spec requires an empty result response
             // even though ping carries no id. Clients like opencode stall the
             // connection when this goes unanswered.
@@ -2851,6 +2853,7 @@ impl McpServer {
             "capabilities": {
                 "tools": {},
                 "resources": {},
+                "prompts": {},
             },
             "instructions": instructions,
         }))
@@ -3210,6 +3213,107 @@ impl McpServer {
                 message: format!("Resource not found: {uri}"),
                 data: None,
             })
+        }
+    }
+
+    /// Handle `prompts/list` — returns available prompt templates (MCP 2024-11-05).
+    fn handle_prompts_list(&self) -> Result<Value, RpcError> {
+        Ok(json!({
+            "prompts": [
+                {
+                    "name": "session_continuity",
+                    "description": "Recall project context, key decisions, and where the previous session left off before starting work.",
+                    "arguments": [
+                        {
+                            "name": "scope",
+                            "description": "Optional topic or subsystem to focus continuity recall on (e.g. auth, memory, ci).",
+                            "required": false
+                        }
+                    ]
+                },
+                {
+                    "name": "memory_debug",
+                    "description": "Ground an error or bug investigation in WhiteMagic episodic memory to retrieve prior solutions and test cases.",
+                    "arguments": [
+                        {
+                            "name": "error_or_topic",
+                            "description": "Error message, stack trace snippet, or topic to search past solutions for.",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "name": "dharma_governance_audit",
+                    "description": "Review current system governance posture against Ahimsa principles, Landlock boundaries, and recent write audit entries.",
+                    "arguments": []
+                }
+            ]
+        }))
+    }
+
+    /// Handle `prompts/get` — renders a prompt template with client-supplied arguments.
+    fn handle_prompts_get(&self, params: &Value) -> Result<Value, RpcError> {
+        let name = params
+            .get("name")
+            .and_then(Value::as_str)
+            .ok_or_else(|| RpcError {
+                code: -32602,
+                message: "Missing 'name' in params".into(),
+                data: None,
+            })?;
+
+        let args = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
+
+        match name {
+            "session_continuity" => {
+                let scope = args.get("scope").and_then(Value::as_str).unwrap_or("general");
+                Ok(json!({
+                    "description": "Session continuity recall prompt",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": {
+                                "type": "text",
+                                "text": format!("Please recall session continuity for scope '{scope}'. Call session_start or wm(route=\"session.continuity\") to check where we left off, what decisions were recorded in WhiteMagic memory, and what open tasks or active branches need immediate attention.")
+                            }
+                        }
+                    ]
+                }))
+            }
+            "memory_debug" => {
+                let err = args.get("error_or_topic").and_then(Value::as_str).unwrap_or("error");
+                Ok(json!({
+                    "description": "Memory-grounded debug investigation prompt",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": {
+                                "type": "text",
+                                "text": format!("Investigate this failure grounded in WhiteMagic memory: '{err}'. Call memory_find or wm(route=\"memory.search\") to check prior occurrences, test cases, and solutions before modifying code.")
+                            }
+                        }
+                    ]
+                }))
+            }
+            "dharma_governance_audit" => {
+                Ok(json!({
+                    "description": "Dharma governance posture audit prompt",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": {
+                                "type": "text",
+                                "text": "Perform a Dharma governance audit: call citta_status or wm(route=\"citta.status\") to check homeostasis health, review recent write audit journal entries, and ensure all system actions adhere to declared effect rows."
+                            }
+                        }
+                    ]
+                }))
+            }
+            _ => Err(RpcError {
+                code: -32602,
+                message: format!("Unknown prompt: {name}"),
+                data: None,
+            }),
         }
     }
 
@@ -6820,5 +6924,56 @@ mod tests {
             BoundedLine::TooLarge => {}
             _ => panic!("expected TooLarge"),
         }
+    }
+
+    #[tokio::test]
+    async fn prompts_list_and_get_e2e() {
+        let mut server = test_server();
+        // 1. Check initialize advertises prompts capability
+        let init_req = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(1)),
+            method: "initialize".into(),
+            params: json!({}),
+        };
+        let init_resp = server.handle(&init_req).await;
+        assert!(init_resp.error.is_none());
+        let caps = init_resp.result.unwrap()["capabilities"].clone();
+        assert!(caps["prompts"].is_object());
+
+        // 2. List prompts
+        let list_req = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(2)),
+            method: "prompts/list".into(),
+            params: json!({}),
+        };
+        let list_resp = server.handle(&list_req).await;
+        assert!(list_resp.error.is_none());
+        let prompts = list_resp.result.unwrap()["prompts"].as_array().unwrap().clone();
+        assert!(prompts.len() >= 3);
+        let names: Vec<&str> = prompts.iter().map(|p| p["name"].as_str().unwrap()).collect();
+        assert!(names.contains(&"session_continuity"));
+        assert!(names.contains(&"memory_debug"));
+        assert!(names.contains(&"dharma_governance_audit"));
+
+        // 3. Get specific prompt with arguments
+        let get_req = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(3)),
+            method: "prompts/get".into(),
+            params: json!({
+                "name": "session_continuity",
+                "arguments": {"scope": "mcp"}
+            }),
+        };
+        let get_resp = server.handle(&get_req).await;
+        assert!(get_resp.error.is_none());
+        let res = get_resp.result.unwrap();
+        let msgs = res["messages"].as_array().unwrap();
+        assert_eq!(msgs.len(), 1);
+        let text = msgs[0]["content"]["text"].as_str().unwrap();
+        assert!(text.contains("scope 'mcp'"));
+        assert!(text.contains("session.continuity"));
     }
 }
