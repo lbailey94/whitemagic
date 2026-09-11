@@ -10,6 +10,7 @@
 pub mod associations;
 pub mod attestation;
 mod codec;
+pub mod consistency;
 pub mod conversational;
 pub mod credentials;
 pub mod embedder;
@@ -42,6 +43,10 @@ pub use attestation::{
     ATTESTATION_DOMAIN, ATTESTATION_KEY_ENV, ATTESTATIONS_DB, AttestationReport, RecordAttestation,
     anchor_leaf_input, attestation_key, attestation_payload, attestation_prefix, merkle_root_hex,
     sha256_hex, sign_attestation, verify_attestation,
+};
+pub use consistency::{
+    CoherenceReceipt, CoherenceSnapshot, ConflictReport, ConsistencyError, CrossMemoryConsistency,
+    CrossMemoryConsistencyManager, Resolution, VectorClock, WriteOp,
 };
 pub use conversational::{
     ConversationalConfig, ConversationalResult, ConversationalSearch, QueryClassification,

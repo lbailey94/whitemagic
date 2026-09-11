@@ -12,6 +12,11 @@ pub mod expansion;
 pub mod nlu;
 pub mod profiles;
 
+pub use expansion::lkep::{
+    LkepError, LkepExecTool, decode_lkep, parse_lkep_expression, primary_arg_for_route,
+    resolve_arg, resolve_route,
+};
+
 use async_trait::async_trait;
 
 use std::sync::Arc;
@@ -3316,20 +3321,25 @@ impl Tool for WmMetaTool {
     }
     async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let thought = args.get("thought").and_then(|v| v.as_str()).unwrap_or("");
-        // Q34 glyph wire: {"r": code, "a": {code: v}} decodes into
+        // Q34 glyph wire + LKEP: {"r": code, "a": {code: v}}, logographic
+        // expressions (忆(问=...)), or root ideogram maps decode into
         // {route, args} BEFORE routing when WM_GLYPH=1. Decode-side only;
         // Q09 review still gates encoding across trust boundaries.
         // Owned String so the decoded temporary can drop immediately.
         let (route, passthrough_args) = if glyph_mode_from_env() {
-            match decode_glyph(&args) {
-                Some(Value::Object(map)) => (
+            if let Some((r, a)) = decode_lkep(&args) {
+                (Some(r), a)
+            } else if let Some(Value::Object(map)) = decode_glyph(&args) {
+                (
                     map.get("route").and_then(Value::as_str).map(String::from),
                     map.get("args").cloned().unwrap_or(Value::Null),
-                ),
-                _ => (
-                    args.get("route").and_then(Value::as_str).map(String::from),
-                    args.get("args").cloned().unwrap_or(Value::Null),
-                ),
+                )
+            } else {
+                let r = args.get("route").and_then(Value::as_str).map(|s| {
+                    resolve_route(s).unwrap_or(s).to_string()
+                });
+                let a = args.get("args").cloned().unwrap_or(Value::Null);
+                (r, a)
             }
         } else {
             (
@@ -5798,4 +5808,29 @@ mod tests {
         let decoded_st = decode_glyph(&status_call).expect("citta status decodes");
         assert_eq!(decoded_st["route"], "citta.status");
     }
+
+    #[test]
+    fn lkep_expression_decodes_and_normalizes() {
+        // String expressions
+        let (route, args) = decode_lkep(&json!("忆(问=\"deadlock\", 数=3)")).expect("LKEP string decodes");
+        assert_eq!(route, "memory.search");
+        assert_eq!(args["query"], "deadlock");
+        assert_eq!(args["limit"], 3);
+
+        // Positional shorthand
+        let (route2, args2) = decode_lkep(&json!("忆: memory corruption")).expect("colon syntax decodes");
+        assert_eq!(route2, "memory.search");
+        assert_eq!(args2["query"], "memory corruption");
+
+        // Bare route
+        let (route3, args3) = decode_lkep(&json!("律")).expect("bare route decodes");
+        assert_eq!(route3, "dharma.rules");
+        assert_eq!(args3, json!({}));
+
+        // Root ideogram map
+        let (route4, args4) = decode_lkep(&json!({"忆": "fast lookup"})).expect("root ideogram decodes");
+        assert_eq!(route4, "memory.search");
+        assert_eq!(args4["query"], "fast lookup");
+    }
 }
+

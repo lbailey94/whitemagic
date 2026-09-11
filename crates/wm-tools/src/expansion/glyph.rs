@@ -130,13 +130,14 @@ impl Tool for GlyphDecodeTool {
     }
 }
 
-/// Register the glyph tools (2) — pure translators, no gating: the
+/// Register the glyph & LKEP tools (3) — pure translators, no gating: the
 /// trust gate lives on the meta-tool's decode seam (WM_GLYPH=1).
 #[must_use]
 pub fn register_glyph(registry: &wm_dispatch::ToolRegistry) -> wm_dispatch::ToolRegistry {
     registry
         .register(std::sync::Arc::new(GlyphEncodeTool::new()))
         .register(std::sync::Arc::new(GlyphDecodeTool::new()))
+        .register(std::sync::Arc::new(super::lkep::LkepExecTool::new()))
 }
 
 #[cfg(test)]
