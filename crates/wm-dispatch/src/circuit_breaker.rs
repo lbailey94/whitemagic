@@ -49,6 +49,73 @@ impl Default for BreakerConfig {
     }
 }
 
+impl BreakerConfig {
+    /// Parse configuration from the environment:
+    /// `WM_BREAKER_THRESHOLD` (u32), `WM_BREAKER_WINDOW_MS` (u64),
+    /// `WM_BREAKER_COOLDOWN_MS` (u64). Unset or invalid fields keep the
+    /// default (invalid values warn, never fail startup), so the
+    /// no-variables path is byte-identical to [`BreakerConfig::default`].
+    #[must_use]
+    pub fn from_env() -> Self {
+        Self::from_opt(
+            std::env::var("WM_BREAKER_THRESHOLD").ok().as_deref(),
+            std::env::var("WM_BREAKER_WINDOW_MS").ok().as_deref(),
+            std::env::var("WM_BREAKER_COOLDOWN_MS").ok().as_deref(),
+        )
+    }
+
+    /// Testable core of [`BreakerConfig::from_env`] — no environment reads.
+    #[must_use]
+    fn from_opt(
+        threshold: Option<&str>,
+        window_ms: Option<&str>,
+        cooldown_ms: Option<&str>,
+    ) -> Self {
+        let default = Self::default();
+        Self {
+            failure_threshold: parse_env(
+                "WM_BREAKER_THRESHOLD",
+                threshold,
+                default.failure_threshold,
+            ),
+            window: Duration::from_millis(parse_env(
+                "WM_BREAKER_WINDOW_MS",
+                window_ms,
+                default.window.as_millis() as u64,
+            )),
+            cooldown: Duration::from_millis(parse_env(
+                "WM_BREAKER_COOLDOWN_MS",
+                cooldown_ms,
+                default.cooldown.as_millis() as u64,
+            )),
+        }
+    }
+}
+
+/// Parse one env value, falling back to `default` on absence or parse error
+/// (warn-only: a typo must not take the fleet down).
+fn parse_env<T>(key: &str, raw: Option<&str>, default: T) -> T
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Debug,
+{
+    match raw {
+        None => default,
+        Some(value) => match value.parse::<T>() {
+            Ok(parsed) => parsed,
+            Err(error) => {
+                tracing::warn!(
+                    variable = key,
+                    value = value,
+                    error = ?error,
+                    "circuit-breaker env value invalid — using default"
+                );
+                default
+            }
+        },
+    }
+}
+
 /// A circuit breaker for a single tool.
 pub struct CircuitBreaker {
     tool_name: String,
@@ -57,6 +124,13 @@ pub struct CircuitBreaker {
     failure_timestamps: Vec<Instant>,
     opened_at: Instant,
     total_trips: u64,
+    /// Half-open single-probe guard: true while one probe call is out.
+    /// Prevents a burst of concurrent callers from all "probing" a
+    /// recovering tool (module doc promises a single probe).
+    probe_in_flight: bool,
+    /// When the in-flight probe started; a probe older than `cooldown` is
+    /// treated as dead (caller never recorded) so the breaker cannot wedge.
+    probe_started_at: Instant,
 }
 
 impl CircuitBreaker {
@@ -69,6 +143,8 @@ impl CircuitBreaker {
             failure_timestamps: Vec::new(),
             opened_at: Instant::now(),
             total_trips: 0,
+            probe_in_flight: false,
+            probe_started_at: Instant::now(),
         }
     }
 
@@ -102,16 +178,33 @@ impl CircuitBreaker {
                 let elapsed = Instant::now().saturating_duration_since(self.opened_at);
                 if elapsed >= self.config.cooldown {
                     self.state = BreakerState::HalfOpen;
+                    // This caller becomes the single probe.
+                    self.probe_in_flight = true;
+                    self.probe_started_at = Instant::now();
                     tracing::info!(
                         tool = %self.tool_name,
                         "Circuit breaker: OPEN → HALF_OPEN (cooldown elapsed)"
                     );
-                    false // Allow one probe call
+                    false // Allow the probe call
                 } else {
                     true
                 }
             }
-            BreakerState::HalfOpen => false, // Allow one call through
+            BreakerState::HalfOpen => {
+                // Exactly one probe at a time. A probe older than the
+                // cooldown is presumed dead (its caller never recorded)
+                // and may be replaced.
+                let probe_stale = self.probe_in_flight
+                    && Instant::now().saturating_duration_since(self.probe_started_at)
+                        >= self.config.cooldown;
+                if self.probe_in_flight && !probe_stale {
+                    true // A probe is already out — fast-fail the rest
+                } else {
+                    self.probe_in_flight = true;
+                    self.probe_started_at = Instant::now();
+                    false
+                }
+            }
         }
     }
 
@@ -120,6 +213,7 @@ impl CircuitBreaker {
         if self.state == BreakerState::HalfOpen {
             self.state = BreakerState::Closed;
             self.failure_timestamps.clear();
+            self.probe_in_flight = false;
             tracing::info!(
                 tool = %self.tool_name,
                 "Circuit breaker: HALF_OPEN → CLOSED (probe succeeded)"
@@ -134,11 +228,15 @@ impl CircuitBreaker {
         let now = Instant::now();
 
         if self.state == BreakerState::HalfOpen {
-            // Probe failed → reopen
+            // Probe failed → reopen (a fresh trip: the tool tried to
+            // recover and failed, so the trip count must reflect it).
             self.state = BreakerState::Open;
             self.opened_at = now;
+            self.probe_in_flight = false;
+            self.total_trips += 1;
             tracing::warn!(
                 tool = %self.tool_name,
+                trip_count = self.total_trips,
                 "Circuit breaker: HALF_OPEN → OPEN (probe failed)"
             );
             return;
@@ -154,6 +252,7 @@ impl CircuitBreaker {
         if self.failure_timestamps.len() >= self.config.failure_threshold as usize {
             self.state = BreakerState::Open;
             self.opened_at = now;
+            self.probe_in_flight = false;
             self.total_trips += 1;
             tracing::warn!(
                 tool = %self.tool_name,
@@ -169,6 +268,7 @@ impl CircuitBreaker {
     pub fn reset(&mut self) {
         self.state = BreakerState::Closed;
         self.failure_timestamps.clear();
+        self.probe_in_flight = false;
         self.total_trips = 0;
     }
 
@@ -260,6 +360,43 @@ impl CircuitBreakerRegistry {
         } else {
             0
         }
+    }
+
+    /// Create a registry from `WM_BREAKER_*` env configuration
+    /// (defaults when unset — see [`BreakerConfig::from_env`]).
+    #[must_use]
+    pub fn from_env() -> Self {
+        Self::new(BreakerConfig::from_env())
+    }
+
+    /// Read-only operator snapshot for `/status`: open + half-open tool
+    /// names and non-zero trip counts. Closed tools with zero trips are
+    /// omitted; no mutation, safe to call on any request path.
+    #[must_use]
+    pub fn snapshot(&self) -> serde_json::Value {
+        let Ok(guard) = self.breakers.read() else {
+            return serde_json::json!({"error": "breaker registry lock poisoned"});
+        };
+        let mut open = Vec::new();
+        let mut half_open = Vec::new();
+        let mut trips = serde_json::Map::new();
+        for (name, breaker) in guard.iter() {
+            match breaker.state() {
+                BreakerState::Open => open.push(name.clone()),
+                BreakerState::HalfOpen => half_open.push(name.clone()),
+                BreakerState::Closed => {}
+            }
+            if breaker.total_trips() > 0 {
+                trips.insert(name.clone(), serde_json::json!(breaker.total_trips()));
+            }
+        }
+        open.sort();
+        half_open.sort();
+        serde_json::json!({
+            "open": open,
+            "half_open": half_open,
+            "trips": trips,
+        })
     }
 }
 
@@ -433,5 +570,99 @@ mod tests {
         // Should not panic
         b.record_failure();
         assert_eq!(b.state(), BreakerState::Open);
+    }
+
+    #[test]
+    fn half_open_admits_single_probe() {
+        let config = BreakerConfig {
+            failure_threshold: 1,
+            window: Duration::from_secs(10),
+            cooldown: Duration::from_millis(20),
+        };
+        let mut b = CircuitBreaker::new("test_tool", config);
+        b.record_failure();
+        assert!(b.is_open());
+
+        thread::sleep(Duration::from_millis(30));
+        assert!(!b.is_open(), "first caller after cooldown is the probe");
+        assert!(
+            b.is_open(),
+            "concurrent callers must fast-fail while the probe is out"
+        );
+
+        b.record_success();
+        assert_eq!(b.state(), BreakerState::Closed);
+        assert!(!b.is_open());
+    }
+
+    #[test]
+    fn half_open_failure_counts_new_trip() {
+        let config = BreakerConfig {
+            failure_threshold: 1,
+            window: Duration::from_secs(10),
+            cooldown: Duration::from_millis(20),
+        };
+        let mut b = CircuitBreaker::new("test_tool", config);
+        b.record_failure();
+        assert_eq!(b.total_trips(), 1);
+
+        thread::sleep(Duration::from_millis(30));
+        assert!(!b.is_open()); // probe admitted
+        b.record_failure(); // probe failed
+
+        assert_eq!(b.state(), BreakerState::Open);
+        assert_eq!(b.total_trips(), 2, "half-open re-open is a fresh trip");
+    }
+
+    #[test]
+    fn stale_probe_does_not_wedge_half_open() {
+        let config = BreakerConfig {
+            failure_threshold: 1,
+            window: Duration::from_secs(10),
+            cooldown: Duration::from_millis(20),
+        };
+        let mut b = CircuitBreaker::new("test_tool", config);
+        b.record_failure();
+
+        thread::sleep(Duration::from_millis(30));
+        assert!(!b.is_open()); // probe #1 admitted, never records
+
+        thread::sleep(Duration::from_millis(30));
+        assert!(
+            !b.is_open(),
+            "a dead probe older than cooldown must be replaceable, not wedged"
+        );
+        assert_eq!(b.state(), BreakerState::HalfOpen);
+    }
+
+    #[test]
+    fn config_from_opt_parses_and_defaults_invalid_values() {
+        let parsed = BreakerConfig::from_opt(Some("3"), Some("2500"), Some("100"));
+        assert_eq!(parsed.failure_threshold, 3);
+        assert_eq!(parsed.window, Duration::from_millis(2500));
+        assert_eq!(parsed.cooldown, Duration::from_millis(100));
+
+        let defaults = BreakerConfig::from_opt(None, Some("not-a-number"), None);
+        assert_eq!(defaults.failure_threshold, 5);
+        assert_eq!(defaults.window, Duration::from_secs(10));
+        assert_eq!(defaults.cooldown, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn snapshot_reports_open_and_trips() {
+        let registry = CircuitBreakerRegistry::new(BreakerConfig {
+            failure_threshold: 1,
+            window: Duration::from_secs(10),
+            cooldown: Duration::from_secs(30),
+        });
+        registry.record_failure("tool_a");
+        let snap = registry.snapshot();
+        assert_eq!(snap["open"], serde_json::json!(["tool_a"]));
+        assert_eq!(snap["half_open"], serde_json::json!([]));
+        assert_eq!(snap["trips"]["tool_a"], 1);
+        assert_eq!(
+            registry.snapshot()["open"].as_array().map(Vec::len),
+            Some(1)
+        );
     }
 }

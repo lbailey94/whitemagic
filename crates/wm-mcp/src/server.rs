@@ -74,6 +74,9 @@ pub struct McpServer {
     citta: CittaHeartbeat,
     dream: DreamCycle,
     store: Arc<MemoryStore>,
+    /// Embedder disclosure computed at init (backend, namespace, dim) for
+    /// `/status`; live vector/cache counts are added in `status_payload`.
+    embedder_status: serde_json::Value,
     associations: Arc<AssociationStore>,
     substrate: Arc<SubstrateMonitor>,
     dharma_gate: Arc<DharmaGate>,
@@ -519,6 +522,7 @@ impl McpServer {
                 .with_smarana(wm_cognitive::AutonomousSmarana::default())
                 .with_phagic(wm_cognitive::PhagicCognitiveCoordinator::default()),
             store,
+            embedder_status: serde_json::Value::Null,
             associations,
             substrate,
             dharma_gate,
@@ -945,7 +949,7 @@ impl McpServer {
         store.set_episodic_enrichment(wm_memory::enrichment::VocabularyEnrichment::with_defaults());
 
         let registry = ToolRegistry::new();
-        let recall_engine = {
+        let (recall_engine, embedder_status) = {
             let embedder: Arc<dyn Embedder> = create_embedder().into();
             // When WM_EPISODIC_RERANK_ONLY is set, use a stub embedder for
             // RecallEngine (fast ingest) but set the real embedder only for
@@ -953,6 +957,15 @@ impl McpServer {
             // during ingest while still enabling vector reranking at search time.
             let episodic_rerank_only =
                 std::env::var("WM_EPISODIC_RERANK_ONLY").is_ok_and(|v| v == "1" || v == "true");
+            // Init-time embedder disclosure for /status (live counts are
+            // added in status_payload). Captured before the embedder moves
+            // into the RecallEngine.
+            let embedder_status = serde_json::json!({
+                "backend": embedder.backend_name(),
+                "namespace": embedder.cache_namespace(),
+                "dim": embedder.dimension(),
+                "episodic_rerank_only": episodic_rerank_only,
+            });
 
             if episodic_rerank_only && embedder.is_available() && embedder.backend_name() != "stub"
             {
@@ -966,7 +979,7 @@ impl McpServer {
                     stub,
                     RecallConfig::from_env(),
                 )?;
-                Arc::new(recall)
+                (Arc::new(recall), embedder_status)
             } else {
                 // Normal mode: share the embedder between RecallEngine and episodic
                 if embedder.is_available() && embedder.backend_name() != "stub" {
@@ -979,7 +992,7 @@ impl McpServer {
                     embedder,
                     RecallConfig::from_env(),
                 )?;
-                Arc::new(recall)
+                (Arc::new(recall), embedder_status)
             }
         };
         // If the embedder is a stub, hybrid search would produce garbage
@@ -1148,7 +1161,7 @@ impl McpServer {
                 std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
                     &wm_dispatch::RateLimiterConfig::from_env(),
                 )),
-                std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
+                std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::from_env()),
                 dharma_gate.clone(),
                 // Read-only mode must not record karma entries (LMDB writes).
                 if readonly {
@@ -1255,6 +1268,7 @@ impl McpServer {
 
         // The tools and the server share this slot (created above).
         server.mesh_slot = mesh_slot;
+        server.embedder_status = embedder_status;
 
         server.profile_contract = Some(contract);
         server.full_capability_routes = crate::manifest::registered_routes(&full_registry);
@@ -1947,6 +1961,16 @@ impl McpServer {
                 "health_score": hv.health_score(),
             },
             "write_budget": write_budget,
+            // Circuit-breaker operator snapshot (read-only): open/half-open
+            // tools + non-zero trip counts. Env-tunable via WM_BREAKER_*.
+            "breaker": self.pipeline.circuit_breakers().snapshot(),
+            // Embedder honesty (init-time config + live store counts) so
+            // fleet rollout/verification needs no store-locking CLI calls.
+            "embedder": {
+                "configured": self.embedder_status.clone(),
+                "vectors": self.store.count(wm_core::Galaxy::Embeddings).unwrap_or(0),
+                "cache": self.store.embedding_cache_count().unwrap_or(0),
+            },
         })
     }
 
