@@ -225,6 +225,26 @@ impl HttpEmbedder {
     }
 }
 
+/// Conservative character budget per HTTP-embedder input.
+///
+/// The served model family (bge-small) has a 512-token window; dense text
+/// can tokenize at ~2 chars/token, so 1024 chars stays inside the window
+/// without a client-side tokenizer. Only the embedding input is truncated —
+/// stored content and the BM25 index keep the full text.
+const HTTP_EMBED_MAX_CHARS: usize = 1024;
+
+/// Truncate an embedding input to the character budget on a UTF-8 boundary.
+fn truncate_for_embedding(text: &str) -> &str {
+    if text.len() <= HTTP_EMBED_MAX_CHARS {
+        return text;
+    }
+    let mut end = HTTP_EMBED_MAX_CHARS;
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    &text[..end]
+}
+
 impl Embedder for HttpEmbedder {
     fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
         if texts.is_empty() {
@@ -233,10 +253,26 @@ impl Embedder for HttpEmbedder {
 
         let url = self.embeddings_url();
 
+        // Oversized inputs are rejected by the server (HTTP 400, live-caught
+        // 2026-09-12: a 2033-char memory failed memory.reembed). Truncate to
+        // the model window instead of failing the whole batch.
+        let prepared: Vec<&str> = texts.iter().map(|t| truncate_for_embedding(t)).collect();
+        let truncated = texts
+            .iter()
+            .filter(|t| t.len() > HTTP_EMBED_MAX_CHARS)
+            .count();
+        if truncated > 0 {
+            tracing::debug!(
+                truncated,
+                budget_chars = HTTP_EMBED_MAX_CHARS,
+                "http embedder truncated oversized input(s) to the model window"
+            );
+        }
+
         // OpenAI-compatible embeddings request
         let request = EmbeddingsRequest {
             model: &self.config.model,
-            input: texts,
+            input: &prepared,
         };
 
         let response = self
@@ -968,6 +1004,22 @@ mod tests {
         assert_eq!(base, "http:http://localhost:8080:bge-small:384");
         assert_ne!(base, make("nomic", 384).cache_namespace());
         assert_ne!(base, make("bge-small", 768).cache_namespace());
+    }
+
+    #[test]
+    fn truncate_for_embedding_respects_budget_and_utf8_boundaries() {
+        let short = "short text";
+        assert_eq!(truncate_for_embedding(short), short);
+
+        let ascii = "a".repeat(HTTP_EMBED_MAX_CHARS + 500);
+        assert_eq!(truncate_for_embedding(&ascii).len(), HTTP_EMBED_MAX_CHARS);
+
+        // 4-byte chars: the cut must land on a char boundary, never panic.
+        let multibyte = "🦀".repeat(HTTP_EMBED_MAX_CHARS);
+        let truncated = truncate_for_embedding(&multibyte);
+        assert!(truncated.len() <= HTTP_EMBED_MAX_CHARS);
+        assert!(truncated.chars().all(|c| c == '🦀'));
+        assert!(multibyte.starts_with(truncated));
     }
 
     // --- create_embedder tests ---
