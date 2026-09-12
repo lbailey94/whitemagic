@@ -60,8 +60,8 @@ pub use gratitude_ledger::{
     SupporterTier, tier_for,
 };
 pub use hermit_crab::{
-    AccessVerdict, HermitError, HermitProtection, HermitState, MediationTicket,
-    MemoryOperation, ThreatSignals, TransitionRecord,
+    AccessVerdict, HermitError, HermitProtection, HermitState, MediationTicket, MemoryOperation,
+    ThreatSignals, TransitionRecord,
 };
 pub use karma_ledger::{ChainVerificationResult, Guna, KarmaEntry, KarmaLedger, MerkleCheckpoint};
 pub use model_signing::{

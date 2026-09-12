@@ -9,13 +9,11 @@
 
 #![forbid(unsafe_code)]
 
-use std::sync::{Arc, RwLock};
 use async_trait::async_trait;
 use serde_json::{Value, json};
+use std::sync::{Arc, RwLock};
 
-use wm_cognitive::{
-    CouncilProposal, ProposalCategory, ZodiacCouncil,
-};
+use wm_cognitive::{CouncilProposal, ProposalCategory, ZodiacCouncil};
 use wm_core::{Context, CoreError, EffectRow, Gana, Resource, Tool, ToolStats};
 use wm_governance::HermitProtection;
 
@@ -62,18 +60,24 @@ impl Tool for HermitStatusTool {
 
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let guard = self.hermit.read().map_err(|e| {
-            CoreError::Tool(format!("Failed to acquire read lock on hermit protection: {e}"))
+            CoreError::Tool(format!(
+                "Failed to acquire read lock on hermit protection: {e}"
+            ))
         })?;
 
-        let history_summary: Vec<_> = guard.history().iter().map(|h| {
-            json!({
-                "from": h.from.label(),
-                "to": h.to.label(),
-                "reason": h.reason,
-                "triggered_by": h.triggered_by,
-                "timestamp": h.timestamp,
+        let history_summary: Vec<_> = guard
+            .history()
+            .iter()
+            .map(|h| {
+                json!({
+                    "from": h.from.label(),
+                    "to": h.to.label(),
+                    "reason": h.reason,
+                    "triggered_by": h.triggered_by,
+                    "timestamp": h.timestamp,
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(json!({
             "status": "success",
@@ -152,7 +156,9 @@ impl Tool for HermitWithdrawTool {
         let now = chrono::Utc::now().timestamp();
 
         let mut guard = self.hermit.write().map_err(|e| {
-            CoreError::Tool(format!("Failed to acquire write lock on hermit protection: {e}"))
+            CoreError::Tool(format!(
+                "Failed to acquire write lock on hermit protection: {e}"
+            ))
         })?;
 
         guard.withdraw(reason, triggered_by, now);
@@ -224,24 +230,27 @@ impl Tool for HermitMediateTool {
         let now = chrono::Utc::now().timestamp();
 
         let mut guard = self.hermit.write().map_err(|e| {
-            CoreError::Tool(format!("Failed to acquire write lock on hermit protection: {e}"))
+            CoreError::Tool(format!(
+                "Failed to acquire write lock on hermit protection: {e}"
+            ))
         })?;
 
-        let (ticket_id, requested_by, exp, created_at) = match guard.request_mediation(caller, explanation, now) {
-            Ok(ticket) => (
-                ticket.ticket_id.clone(),
-                ticket.requested_by.clone(),
-                ticket.explanation.clone(),
-                ticket.created_at,
-            ),
-            Err(err) => {
-                return Ok(json!({
-                    "status": "error",
-                    "message": err.to_string(),
-                    "current_state": guard.state().label(),
-                }));
-            }
-        };
+        let (ticket_id, requested_by, exp, created_at) =
+            match guard.request_mediation(caller, explanation, now) {
+                Ok(ticket) => (
+                    ticket.ticket_id.clone(),
+                    ticket.requested_by.clone(),
+                    ticket.explanation.clone(),
+                    ticket.created_at,
+                ),
+                Err(err) => {
+                    return Ok(json!({
+                        "status": "error",
+                        "message": err.to_string(),
+                        "current_state": guard.state().label(),
+                    }));
+                }
+            };
 
         Ok(json!({
             "status": "success",
@@ -317,7 +326,9 @@ impl Tool for HermitResolveTool {
         let now = chrono::Utc::now().timestamp();
 
         let mut guard = self.hermit.write().map_err(|e| {
-            CoreError::Tool(format!("Failed to acquire write lock on hermit protection: {e}"))
+            CoreError::Tool(format!(
+                "Failed to acquire write lock on hermit protection: {e}"
+            ))
         })?;
 
         match guard.resolve_mediation(ticket_id, approved, resolver, now) {
@@ -459,17 +470,21 @@ impl Tool for CouncilDeliberateTool {
 
         let consensus = self.council.deliberate(&proposal);
 
-        let verdicts_json: Vec<_> = consensus.verdicts.iter().map(|v| {
-            json!({
-                "sentinel": v.sentinel_name,
-                "stance": format!("{:?}", v.stance),
-                "confidence": v.confidence,
-                "weight": v.weight,
-                "hard_veto": v.hard_veto,
-                "rationale": v.rationale,
-                "stipulations": v.stipulations,
+        let verdicts_json: Vec<_> = consensus
+            .verdicts
+            .iter()
+            .map(|v| {
+                json!({
+                    "sentinel": v.sentinel_name,
+                    "stance": format!("{:?}", v.stance),
+                    "confidence": v.confidence,
+                    "weight": v.weight,
+                    "hard_veto": v.hard_veto,
+                    "rationale": v.rationale,
+                    "stipulations": v.stipulations,
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(json!({
             "status": "success",

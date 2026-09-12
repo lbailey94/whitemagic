@@ -310,7 +310,8 @@ impl ZodiacCouncil {
                         stance: SentinelStance::ConditionalSupport,
                         confidence: 0.75,
                         weight: 1.0,
-                        rationale: "Supportive of exploration if execution velocity is maintained.".into(),
+                        rationale: "Supportive of exploration if execution velocity is maintained."
+                            .into(),
                         stipulations: vec!["Execute without delaying core release cadence".into()],
                         hard_veto: false,
                     }
@@ -367,7 +368,8 @@ impl ZodiacCouncil {
                         stance: SentinelStance::Oppose,
                         confidence: 0.95,
                         weight: 1.5,
-                        rationale: "Critical boundary risk. Hermit Crab protective veto engaged.".into(),
+                        rationale: "Critical boundary risk. Hermit Crab protective veto engaged."
+                            .into(),
                         stipulations: Vec::new(),
                         hard_veto: true, // Hard protective veto!
                     }
@@ -404,7 +406,8 @@ impl ZodiacCouncil {
                     stance: SentinelStance::Support,
                     confidence: 0.85,
                     weight: 1.0,
-                    rationale: "Advances the sovereign independence of the cognitive substrate.".into(),
+                    rationale: "Advances the sovereign independence of the cognitive substrate."
+                        .into(),
                     stipulations: Vec::new(),
                     hard_veto: false,
                 }
@@ -436,7 +439,9 @@ impl ZodiacCouncil {
                         stance: SentinelStance::Oppose,
                         confidence: 0.95,
                         weight: 1.4,
-                        rationale: "Severe risk of harm violates the fundamental Ahimsa Dharma constraint.".into(),
+                        rationale:
+                            "Severe risk of harm violates the fundamental Ahimsa Dharma constraint."
+                                .into(),
                         stipulations: Vec::new(),
                         hard_veto: true,
                     }
@@ -447,7 +452,9 @@ impl ZodiacCouncil {
                         stance: SentinelStance::Support,
                         confidence: 0.85,
                         weight: 1.0,
-                        rationale: "Ethical equilibrium maintained; action aligns with Dharma principles.".into(),
+                        rationale:
+                            "Ethical equilibrium maintained; action aligns with Dharma principles."
+                                .into(),
                         stipulations: Vec::new(),
                         hard_veto: false,
                     }
@@ -456,7 +463,10 @@ impl ZodiacCouncil {
 
             ZodiacSign::Scorpio => {
                 // The Inquisitor: VIOLET red-team, adversarial attack simulation, breach forensics.
-                if matches!(p.category, ProposalCategory::SecurityPolicy | ProposalCategory::ExternalIntegration) {
+                if matches!(
+                    p.category,
+                    ProposalCategory::SecurityPolicy | ProposalCategory::ExternalIntegration
+                ) {
                     SentinelVerdict {
                         sign,
                         sentinel_name: name,
@@ -498,7 +508,8 @@ impl ZodiacCouncil {
             ZodiacSign::Capricorn => {
                 // The Architect: Structural invariants, Linux Landlock sandboxing, keystone durability.
                 if p.required_capabilities.contains(&"fs:write".to_string())
-                    || p.required_capabilities.contains(&"net:outbound".to_string())
+                    || p.required_capabilities
+                        .contains(&"net:outbound".to_string())
                 {
                     SentinelVerdict {
                         sign,
@@ -552,23 +563,19 @@ impl ZodiacCouncil {
                 }
             }
 
-            ZodiacSign::Operational => {
-                SentinelVerdict {
-                    sign,
-                    sentinel_name: name,
-                    stance: SentinelStance::Abstain,
-                    confidence: 0.50,
-                    weight: 0.5,
-                    rationale: "Operational baseline unperturbed.".into(),
-                    stipulations: Vec::new(),
-                    hard_veto: false,
-                }
-            }
+            ZodiacSign::Operational => SentinelVerdict {
+                sign,
+                sentinel_name: name,
+                stance: SentinelStance::Abstain,
+                confidence: 0.50,
+                weight: 0.5,
+                rationale: "Operational baseline unperturbed.".into(),
+                stipulations: Vec::new(),
+                hard_veto: false,
+            },
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -595,7 +602,12 @@ mod tests {
         assert!(!consensus.consensus_digest.is_empty());
         // Should be ConditionalApproval due to Virgo verification stipulations
         assert_eq!(consensus.verdict, ConsensusVerdict::ConditionalApproval);
-        assert!(consensus.required_stipulations.iter().any(|s| s.contains("unit tests")));
+        assert!(
+            consensus
+                .required_stipulations
+                .iter()
+                .any(|s| s.contains("unit tests"))
+        );
     }
 
     #[test]
@@ -615,7 +627,11 @@ mod tests {
         let consensus = council.deliberate(&proposal);
         assert_eq!(consensus.verdict, ConsensusVerdict::Rejected);
 
-        let cancer_verdict = consensus.verdicts.iter().find(|v| v.sign == ZodiacSign::Cancer).unwrap();
+        let cancer_verdict = consensus
+            .verdicts
+            .iter()
+            .find(|v| v.sign == ZodiacSign::Cancer)
+            .unwrap();
         assert_eq!(cancer_verdict.stance, SentinelStance::Oppose);
         assert!(cancer_verdict.hard_veto);
     }
@@ -638,6 +654,11 @@ mod tests {
         assert_eq!(consensus.verdict, ConsensusVerdict::ConditionalApproval);
 
         // Cancer stipulates Guarded mode isolation
-        assert!(consensus.required_stipulations.iter().any(|s| s.contains("Guarded cold storage")));
+        assert!(
+            consensus
+                .required_stipulations
+                .iter()
+                .any(|s| s.contains("Guarded cold storage"))
+        );
     }
 }

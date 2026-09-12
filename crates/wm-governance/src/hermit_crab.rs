@@ -109,9 +109,7 @@ pub enum AccessVerdict {
         cold_storage_isolated: bool,
     },
     /// Operation is blocked by current defense posture.
-    Denied {
-        reason: String,
-    },
+    Denied { reason: String },
 }
 
 /// Audit record of an individual state transition.
@@ -232,14 +230,20 @@ impl HermitProtection {
         if score >= self.threat_threshold_withdraw {
             self.record_transition(
                 HermitState::Withdrawn,
-                &format!("Threat score {score:.2} exceeded withdraw threshold {}", self.threat_threshold_withdraw),
+                &format!(
+                    "Threat score {score:.2} exceeded withdraw threshold {}",
+                    self.threat_threshold_withdraw
+                ),
                 "auto_assessment",
                 now,
             );
         } else if score >= self.threat_threshold_guard && self.state == HermitState::Open {
             self.record_transition(
                 HermitState::Guarded,
-                &format!("Threat score {score:.2} exceeded guard threshold {}", self.threat_threshold_guard),
+                &format!(
+                    "Threat score {score:.2} exceeded guard threshold {}",
+                    self.threat_threshold_guard
+                ),
                 "auto_assessment",
                 now,
             );
@@ -275,7 +279,10 @@ impl HermitProtection {
         regression_passed: bool,
         now: i64,
     ) -> Result<HermitState, HermitError> {
-        let active = self.active_seal_session.take().ok_or(HermitError::SealNotActive)?;
+        let active = self
+            .active_seal_session
+            .take()
+            .ok_or(HermitError::SealNotActive)?;
         if active != session_id {
             // Restore active before returning error
             self.active_seal_session = Some(active);
@@ -354,9 +361,10 @@ impl HermitProtection {
             });
         }
 
-        let active = self.active_mediation.as_ref().ok_or_else(|| {
-            HermitError::TicketNotFound(ticket_id.to_string())
-        })?;
+        let active = self
+            .active_mediation
+            .as_ref()
+            .ok_or_else(|| HermitError::TicketNotFound(ticket_id.to_string()))?;
 
         if active.ticket_id != ticket_id {
             return Err(HermitError::TicketNotFound(ticket_id.to_string()));
@@ -409,7 +417,8 @@ impl HermitProtection {
                 },
                 MemoryOperation::Write | MemoryOperation::Delete | MemoryOperation::Adapt => {
                     AccessVerdict::Denied {
-                        reason: "Memory mutations strictly blocked while Hermit Crab is Withdrawn".to_string(),
+                        reason: "Memory mutations strictly blocked while Hermit Crab is Withdrawn"
+                            .to_string(),
                     }
                 }
                 MemoryOperation::Recall => AccessVerdict::Denied {
@@ -422,7 +431,8 @@ impl HermitProtection {
                     cold_storage_isolated: true,
                 },
                 _ => AccessVerdict::Denied {
-                    reason: "Memory mutations and searches locked pending mediation resolution".to_string(),
+                    reason: "Memory mutations and searches locked pending mediation resolution"
+                        .to_string(),
                 },
             },
         }
@@ -437,7 +447,10 @@ mod tests {
     fn hermit_initial_state_is_open() {
         let hermit = HermitProtection::new();
         assert_eq!(hermit.state(), HermitState::Open);
-        assert_eq!(hermit.check_access(MemoryOperation::Write), AccessVerdict::Allowed);
+        assert_eq!(
+            hermit.check_access(MemoryOperation::Write),
+            AccessVerdict::Allowed
+        );
     }
 
     #[test]
@@ -454,8 +467,8 @@ mod tests {
 
         // Severe threat -> Withdrawn
         let severe = ThreatSignals {
-            unauthorized_access: 0.9, // 0.27
-            coercion_detected: true,  // 0.25
+            unauthorized_access: 0.9,  // 0.27
+            coercion_detected: true,   // 0.25
             repeated_violations: true, // 0.20 => 0.72 >= 0.70
             ..Default::default()
         };
@@ -504,14 +517,23 @@ mod tests {
         assert_eq!(hermit.state(), HermitState::Withdrawn);
 
         // Cannot resolve without active ticket
-        assert!(hermit.resolve_mediation("med_fake", true, "arbiter", 4010).is_err());
+        assert!(
+            hermit
+                .resolve_mediation("med_fake", true, "arbiter", 4010)
+                .is_err()
+        );
 
         // Request mediation
-        let ticket = hermit.request_mediation("operator", "Lockdown was a false alarm", 4020).unwrap().clone();
+        let ticket = hermit
+            .request_mediation("operator", "Lockdown was a false alarm", 4020)
+            .unwrap()
+            .clone();
         assert_eq!(hermit.state(), HermitState::Mediating);
 
         // Approved -> restores Open
-        let state = hermit.resolve_mediation(&ticket.ticket_id, true, "arbiter_root", 4030).unwrap();
+        let state = hermit
+            .resolve_mediation(&ticket.ticket_id, true, "arbiter_root", 4030)
+            .unwrap();
         assert_eq!(state, HermitState::Open);
     }
 }
