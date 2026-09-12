@@ -8,6 +8,7 @@
 
 pub mod acs;
 pub mod canary_tokens;
+pub mod capabilities;
 pub mod decoy_shell;
 pub mod deobfuscator;
 pub mod dharma_gate;
@@ -16,6 +17,7 @@ pub mod engagement_tokens;
 pub mod escalation;
 pub mod firebreak;
 pub mod gratitude_ledger;
+pub mod hermit_crab;
 pub mod karma_ledger;
 pub mod model_signing;
 pub mod network_profile;
@@ -31,6 +33,10 @@ pub use canary_tokens::{
     CanaryHit, CanaryId, CanaryRegistry, CanaryStats, CanaryStatus, CanaryToken, CanaryType,
     DECOY_TAG, aws_key_id_checksum_valid, fake_api_key, fake_aws_key_id, fake_credential,
     fake_memory_entry, fake_path, fake_private_key_block,
+};
+pub use capabilities::{
+    Capability, CapabilityError, CapabilityGrant, CapabilitySet,
+    assert_engagement_token_capabilities, capabilities_for_engagement,
 };
 pub use decoy_shell::{DecoyEnvironment, InteractionEntry, InteractionLog, NOTHING_REAL_MARKER};
 pub use deobfuscator::{
@@ -52,6 +58,10 @@ pub use firebreak::{
 pub use gratitude_ledger::{
     Digest, GENESIS_GRATITUDE, GratitudeEntry, GratitudeLedger, GratitudeVerification,
     SupporterTier, tier_for,
+};
+pub use hermit_crab::{
+    AccessVerdict, HermitError, HermitProtection, HermitState, MediationTicket,
+    MemoryOperation, ThreatSignals, TransitionRecord,
 };
 pub use karma_ledger::{ChainVerificationResult, Guna, KarmaEntry, KarmaLedger, MerkleCheckpoint};
 pub use model_signing::{

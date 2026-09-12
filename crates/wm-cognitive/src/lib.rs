@@ -40,6 +40,7 @@ pub mod spiral;
 pub mod strategy;
 pub mod symbiosync;
 pub mod wu_xing;
+pub mod zodiac_council;
 
 // ── Merged modules ──────────────────────────────────────────────────
 pub mod autonomic;
@@ -118,6 +119,10 @@ pub use spiral::{
 pub use strategy::{MemoryCluster, StrategyConfig, StrategySynthesizer, SynthesisReport};
 pub use wu_xing::{
     BalanceAssessment, CycleEntry, Element, ElementalState, SituationAnalysis, WuXingEngine,
+};
+pub use zodiac_council::{
+    ConsensusVerdict, CouncilConsensus, CouncilProposal, ProposalCategory, SentinelStance,
+    SentinelVerdict, ZodiacCouncil,
 };
 
 // ── Reflex re-exports (from wm-reflex) ──────────────────────────────
