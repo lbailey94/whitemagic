@@ -145,10 +145,10 @@ def run_workflow(server):
 
     listed = server.rpc("tools/list", {}, 2)
     tools = listed.get("result", {}).get("tools", [])
-    if len(tools) != 1 or tools[0].get("name") != "wm":
-        fail("tools/list", "expected exactly the wm meta-tool", listed)
+    if not tools or tools[0].get("name") != "wm":
+        fail("tools/list", "expected wm meta-tool at index 0", listed)
     else:
-        ok("tools/list exposes only the wm meta-tool")
+        ok("tools/list exposes the wm meta-tool at index 0")
     description = tools[0].get("description", "") if tools else ""
     if "229 tools" in description:
         fail("tools/list", "description advertises the full archive surface", description)

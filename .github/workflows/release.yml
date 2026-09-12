@@ -49,6 +49,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Ensure target installed
+        run: rustup target add ${{ matrix.target }}
+
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }} --bin wm
 
