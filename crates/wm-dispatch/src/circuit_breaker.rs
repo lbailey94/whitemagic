@@ -353,6 +353,20 @@ impl CircuitBreakerRegistry {
         }
     }
 
+    /// Reset every tracked breaker (operator recovery). Returns how many
+    /// breakers were reset.
+    pub fn reset_all(&self) -> usize {
+        if let Ok(mut guard) = self.breakers.write() {
+            let count = guard.len();
+            for breaker in guard.values_mut() {
+                breaker.reset();
+            }
+            count
+        } else {
+            0
+        }
+    }
+
     /// Get total trip count for a tool.
     pub fn total_trips(&self, tool_name: &str) -> u64 {
         if let Ok(guard) = self.breakers.read() {

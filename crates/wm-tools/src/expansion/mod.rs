@@ -45,6 +45,7 @@ pub mod boundary;
 pub mod bounty_connector;
 pub mod bounty_evidence;
 pub mod bounty_ledger;
+pub mod breaker_tools;
 pub mod captains;
 pub mod claims_tools;
 pub mod code;
@@ -649,7 +650,9 @@ pub fn register_expansion(
     reg = crate::expansion::oss_bounty::register_oss_bounty(&reg);
 
     // Governance & Hermit defense tools (5) — hermit.status, hermit.withdraw, hermit.mediate, hermit.resolve, council.deliberate
-    let hermit = Arc::new(std::sync::RwLock::new(wm_governance::HermitProtection::new()));
+    let hermit = Arc::new(std::sync::RwLock::new(
+        wm_governance::HermitProtection::new(),
+    ));
     reg = crate::expansion::governance_tools::register_governance_tools(&reg, hermit);
 
     reg

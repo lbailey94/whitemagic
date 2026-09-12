@@ -1017,6 +1017,8 @@ impl McpServer {
         } else {
             wm_tools::expansion::RegistryPersistenceMode::Normal
         };
+        // One registry shared by the dispatch pipeline and the breaker tools.
+        let circuit_breakers = Arc::new(wm_dispatch::CircuitBreakerRegistry::from_env());
         let registry = wm_tools::register_all(
             &registry,
             &store,
@@ -1040,6 +1042,7 @@ impl McpServer {
             Some(&firewall),
             Some(&code_graph),
             registry_persistence,
+            circuit_breakers.clone(),
         );
         let registry = wm_tools::expansion::v4::register_v4(
             &registry,
@@ -1161,7 +1164,7 @@ impl McpServer {
                 std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
                     &wm_dispatch::RateLimiterConfig::from_env(),
                 )),
-                std::sync::Arc::new(wm_dispatch::CircuitBreakerRegistry::from_env()),
+                circuit_breakers,
                 dharma_gate.clone(),
                 // Read-only mode must not record karma entries (LMDB writes).
                 if readonly {
@@ -4358,6 +4361,7 @@ mod tests {
         let test_search = search.clone();
         let test_transaction_state: wm_tools::expansion::TransactionState =
             Arc::new(std::sync::Mutex::new(None));
+        let circuit_breakers = Arc::new(wm_dispatch::CircuitBreakerRegistry::default());
         let registry = wm_tools::register_all(
             &registry,
             &store,
@@ -4381,6 +4385,7 @@ mod tests {
             None,
             None,
             wm_tools::expansion::RegistryPersistenceMode::Normal,
+            circuit_breakers.clone(),
         );
         let registry = wm_tools::expansion::v4::register_v4(
             &registry,
@@ -4458,7 +4463,7 @@ mod tests {
         let pipeline = Arc::new(
             DispatchPipeline::new(
                 Arc::new(wm_dispatch::RateLimiter::default()),
-                Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
+                circuit_breakers,
                 dharma_gate.clone(),
                 Some(karma_ledger.clone()),
             )

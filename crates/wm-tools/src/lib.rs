@@ -3552,6 +3552,7 @@ pub fn register_all(
     firewall: Option<&Arc<expansion::firewall::TxFirewall>>,
     code_graph: Option<&Arc<std::sync::Mutex<expansion::code::CodeGraph>>>,
     registry_persistence: expansion::RegistryPersistenceMode,
+    circuit_breakers: Arc<wm_dispatch::CircuitBreakerRegistry>,
 ) -> ToolRegistry {
     let mut reg = registry
         .register(Arc::new(MemoryCreateTool::new(
@@ -3584,6 +3585,10 @@ pub fn register_all(
         .register(Arc::new(GnosisTool::new(store.clone())))
         // Vector backfill for stub-era memories (dry-run default; bounded).
         .register(Arc::new(expansion::MemoryReembedTool::new(recall.clone())));
+
+    // Circuit-breaker operator surface (status read-only, reset confirm-gated)
+    // shares the dispatch pipeline's registry.
+    let mut reg = expansion::breaker_tools::register_breakers(&reg, circuit_breakers);
 
     if let Some(conv) = conversational {
         reg = reg.register(Arc::new(MemoryChatTool::new(conv)));
@@ -3859,6 +3864,7 @@ mod tests {
             None,
             None,
             expansion::RegistryPersistenceMode::Normal,
+            Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
         )
     }
 
@@ -4747,6 +4753,7 @@ mod tests {
             None,
             None,
             expansion::RegistryPersistenceMode::Normal,
+            Arc::new(wm_dispatch::CircuitBreakerRegistry::default()),
         );
         let registry = register_meta_tools(
             &registry,
