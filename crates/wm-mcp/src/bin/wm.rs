@@ -2988,36 +2988,59 @@ fn run_doctor(
     //      deterministic machinery, and the measured gap is what
     //      route-honesty exists to surface (LongMemEval-S 50q, S8
     //      protocol 2026-09-01: episodic 0.86 R@1 vs BM25 fallback 0.64).
+    //      The probe is real (fixed 2026-09-12): the configured embedder
+    //      is constructed and asked for one vector — env presence alone is
+    //      not a claim, and a dead endpoint used to still print [OK].
     println!();
-    let embedder_env = std::env::var("WM_EMBEDDER_BACKEND")
-        .ok()
-        .map(|backend| format!("onnx backend {backend}"))
-        .or_else(|| {
-            std::env::var("WM_EMBEDDER_ENDPOINT")
-                .ok()
-                .map(|endpoint| format!("endpoint {endpoint}"))
-        });
-    if let Some(description) = embedder_env {
-        println!(
-            "[OK]   Recall route: hybrid fusion (real embedder per this invocation's env: {description}) — memory.search runs BM25+vector fusion"
-        );
-    } else {
-        let episodic_count = server.store_arc().episodic().record_count().unwrap_or(0);
-        let cache_count = server.store_arc().embedding_cache_count().unwrap_or(0);
-        let cache_note = if cache_count > 0 {
-            format!(", embedding cache: {cache_count} vectors")
+    {
+        let embedder = wm_memory::create_embedder();
+        let backend = embedder.backend_name();
+        if backend == "stub" {
+            let episodic_count = server.store_arc().episodic().record_count().unwrap_or(0);
+            let cache_count = server.store_arc().embedding_cache_count().unwrap_or(0);
+            let cache_note = if cache_count > 0 {
+                format!(", embedding cache: {cache_count} vectors")
+            } else {
+                String::new()
+            };
+            if episodic_count > 0 {
+                println!(
+                    "[OK]   Recall route: episodic deterministic default (stub embedder, {episodic_count} episodic records mirror the memory lane{cache_note}) — measured R@1 0.86 (LongMemEval-S 50q, S8 protocol 2026-09-01)"
+                );
+            } else {
+                println!(
+                    "[WARN] Recall route: BM25 full-text fallback (stub embedder, episodic lane empty) — measured R@1 0.64 vs 0.86 on the episodic route (LongMemEval-S 50q, S8 protocol 2026-09-01); memory writes populate the episodic mirror, which upgrades the default route"
+                );
+                issues += 1;
+            }
         } else {
-            String::new()
-        };
-        if episodic_count > 0 {
-            println!(
-                "[OK]   Recall route: episodic deterministic default (stub embedder, {episodic_count} episodic records mirror the memory lane{cache_note}) — measured R@1 0.86 (LongMemEval-S 50q, S8 protocol 2026-09-01)"
-            );
-        } else {
-            println!(
-                "[WARN] Recall route: BM25 full-text fallback (stub embedder, episodic lane empty) — measured R@1 0.64 vs 0.86 on the episodic route (LongMemEval-S 50q, S8 protocol 2026-09-01); memory writes populate the episodic mirror, which upgrades the default route"
-            );
-            issues += 1;
+            let started = std::time::Instant::now();
+            match embedder.embed("wm doctor recall-route probe") {
+                Ok(vector) => {
+                    let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+                    let vectors = server
+                        .store_arc()
+                        .count(wm_core::Galaxy::Embeddings)
+                        .unwrap_or(0);
+                    let cache_count = server.store_arc().embedding_cache_count().unwrap_or(0);
+                    println!(
+                        "[OK]   Recall route: hybrid fusion — backend '{backend}' ({}, dim {}) answered a real probe in {elapsed_ms:.0} ms; stored vectors: {vectors}, content-hash cache: {cache_count}",
+                        embedder.cache_namespace(),
+                        vector.len(),
+                    );
+                    if vectors == 0 {
+                        println!(
+                            "[INFO]         no per-memory vectors on this store yet — hybrid results fall back to the episodic lane until writes or memory.reembed populate them"
+                        );
+                    }
+                }
+                Err(error) => {
+                    println!(
+                        "[WARN] Recall route: embedder backend '{backend}' is configured but the probe failed: {error} — hybrid will fall back to the episodic lane"
+                    );
+                    issues += 1;
+                }
+            }
         }
     }
 
