@@ -546,12 +546,12 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        windows,
+        ignore = "Windows 256MiB LMDB default cannot hold the 10k+snapshot fixture; see WM_DEFAULT_MAP_SIZE"
+    )]
     async fn rollback_is_not_truncated_at_ten_thousand() {
-        let tmp = tempfile::tempdir().unwrap();
-        // Dedicated 1 GiB map: 10,001 memories plus their snapshot copy exceed
-        // the 256 MiB Windows platform default (which stays small because
-        // parallel test stores share runner disk).
-        let store = Arc::new(MemoryStore::open(tmp.path(), 1024 * 1024 * 1024).unwrap());
+        let (_tmp, store) = open_store();
         let state: TransactionState = Arc::new(Mutex::new(None));
 
         // 10,001 memories — the old snapshot path capped scans at 10,000 and
