@@ -514,6 +514,8 @@ pub struct IngestReport {
     pub files_unchanged: usize,
     pub files_ingested: usize,
     pub chunks_written: usize,
+    /// Files whose content had credential-shaped spans redacted (--redact).
+    pub redactions: usize,
     pub skipped: Vec<(String, String)>,
     pub errors: Vec<(String, String)>,
 }
@@ -522,11 +524,12 @@ impl IngestReport {
     #[must_use]
     pub fn summary_line(&self) -> String {
         format!(
-            "found={} unchanged={} ingested={} chunks={} skipped={} errors={}",
+            "found={} unchanged={} ingested={} chunks={} redactions={} skipped={} errors={}",
             self.files_found,
             self.files_unchanged,
             self.files_ingested,
             self.chunks_written,
+            self.redactions,
             self.skipped.len(),
             self.errors.len()
         )
@@ -896,6 +899,8 @@ pub fn run_ingest(
     dry_run: bool,
     limit: usize,
     galaxy_override: Option<&str>,
+    redact: bool,
+    wait_secs: u64,
 ) -> anyhow::Result<IngestReport> {
     let limit = if limit == 0 { usize::MAX } else { limit };
     println!("=== WhiteMagic Knowledge Ingest ===");
@@ -926,6 +931,10 @@ pub fn run_ingest(
     let (store, search) = if dry_run {
         (None, None)
     } else {
+        // A live serve on the same store holds the Tantivy writer lock and
+        // long-lived LMDB handles; opening for write then blocks silently.
+        // Fail fast with names instead (bounded wait via --wait).
+        crate::store_busy::ensure_store_available(store_path, wait_secs)?;
         // Store layout convention (matching wm serve / doctor / migrate):
         // LMDB at <store>/lmdb, Tantivy at <store>/lmdb/tantivy, JSON state
         // (including this ledger) at <store> root.
@@ -990,14 +999,26 @@ pub fn run_ingest(
             }
         };
         let sha = sha256_hex(&bytes);
-        let text = String::from_utf8_lossy(&bytes);
+        let raw_text = String::from_utf8_lossy(&bytes);
 
-        if contains_private_key(&text) {
-            report
-                .skipped
-                .push((rel.clone(), "credential-bearing content".into()));
-            continue;
-        }
+        // Default posture: credential-bearing files are skipped (the store
+        // must never hold credentials). `--redact` trades the skip for span
+        // redaction so history is preserved without the secret.
+        let text: String = if redact {
+            let (scrubbed, kinds) = wm_memory::redact_credential_content(&raw_text);
+            if !kinds.is_empty() {
+                report.redactions += 1;
+            }
+            scrubbed
+        } else {
+            if contains_private_key(&raw_text) {
+                report
+                    .skipped
+                    .push((rel.clone(), "credential-bearing content".into()));
+                continue;
+            }
+            raw_text.into_owned()
+        };
 
         if let Some(prev) = ledger.entries.get(&rel) {
             if prev.sha256 == sha {
@@ -1504,14 +1525,14 @@ mod tests {
         write_tree(root);
         let store_path = tmp.path().join("store");
 
-        let first = run_ingest(root, &store_path, false, 0, None).unwrap();
+        let first = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
         assert_eq!(first.files_found, 3, "md + jsonl + txt (env excluded)");
         assert_eq!(first.files_ingested, 3);
         assert!(first.chunks_written >= 3);
         assert!(first.skipped.iter().any(|(p, _)| p.contains(".env")));
 
         // Second run: everything unchanged → no-op.
-        let second = run_ingest(root, &store_path, false, 0, None).unwrap();
+        let second = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
         assert_eq!(second.files_unchanged, 3);
         assert_eq!(second.files_ingested, 0);
         assert_eq!(second.chunks_written, 0);
@@ -1538,13 +1559,13 @@ mod tests {
         fs::write(&f, "# One\n\nFirst version paragraph of some length here.").unwrap();
         let store_path = tmp.path().join("store");
 
-        let first = run_ingest(root, &store_path, false, 0, None).unwrap();
+        let first = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
         assert_eq!(first.chunks_written, 1);
 
         // New version: two long sections → two chunks (different id set).
         let long = "A long second section here. ".repeat(200);
         fs::write(&f, format!("# One\n\nRevised version.\n\n# Two\n\n{long}")).unwrap();
-        let second = run_ingest(root, &store_path, false, 0, None).unwrap();
+        let second = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
         assert_eq!(second.files_ingested, 1);
         assert_eq!(second.chunks_written, 2);
 
@@ -1565,8 +1586,52 @@ mod tests {
 
         // Dry-run must not create a store.
         let dry_store = tmp.path().join("never-created");
-        let report = run_ingest(root, &dry_store, true, 0, None).unwrap();
+        let report = run_ingest(root, &dry_store, true, 0, None, false, 0).unwrap();
         assert!(report.files_ingested >= 1);
         assert!(!dry_store.exists(), "dry run must not create the store");
+    }
+
+    #[test]
+    fn redact_flag_swaps_credential_skip_for_scrubbed_ingest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root).unwrap();
+        fs::write(
+            root.join("notes.md"),
+            "# Notes\n\ntoken sk-proj0123456789abcdefghijklmnopqrstuv\n\n\
+             -----BEGIN RSA PRIVATE KEY-----\nMIIEowSECRET\n-----END RSA PRIVATE KEY-----\n",
+        )
+        .unwrap();
+        let store_path = tmp.path().join("store");
+
+        // Default posture: credential-bearing content is skipped.
+        let strict = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
+        assert_eq!(strict.files_ingested, 0);
+        assert!(
+            strict
+                .skipped
+                .iter()
+                .any(|(_, reason)| reason == "credential-bearing content")
+        );
+
+        // --redact: ingested with secrets replaced by markers.
+        let scrubbed = run_ingest(root, &store_path, false, 0, None, true, 0).unwrap();
+        assert_eq!(scrubbed.files_ingested, 1);
+        assert_eq!(scrubbed.redactions, 1);
+
+        let store = MemoryStore::open_default(store_path.join("lmdb")).unwrap();
+        let all = store.scan_all(Galaxy::Research).unwrap();
+        let joined: String = all
+            .iter()
+            .map(|m| m.content.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(joined.contains("[REDACTED:private_key_pem]"));
+        assert!(joined.contains("[REDACTED:openai_style_key]"));
+        assert!(
+            !joined.contains("MIIEowSECRET")
+                && !joined.contains("sk-proj0123456789abcdefghijklmnopqrstuv"),
+            "no secret material may reach the store"
+        );
     }
 }

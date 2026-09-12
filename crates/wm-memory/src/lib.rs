@@ -46,9 +46,9 @@ pub use attestation::{
     sha256_hex, sign_attestation, verify_attestation,
 };
 pub use cold_storage::{
-    calculate_outer_rim_distance, compress_memory, decompress_memory, ColdQuery, ColdRecord,
-    ColdRecordSummary, CompressionCodec, OuterRimFactors, PhagicConfig, PhagicDigestReport,
-    PhagicDigester,
+    ColdQuery, ColdRecord, ColdRecordSummary, CompressionCodec, OuterRimFactors, PhagicConfig,
+    PhagicDigestReport, PhagicDigester, calculate_outer_rim_distance, compress_memory,
+    decompress_memory,
 };
 pub use consistency::{
     CoherenceReceipt, CoherenceSnapshot, ConflictReport, ConsistencyError, CrossMemoryConsistency,
@@ -58,7 +58,9 @@ pub use conversational::{
     ConversationalConfig, ConversationalResult, ConversationalSearch, QueryClassification,
     SearchMetrics,
 };
-pub use credentials::{ADVICE as CREDENTIAL_ADVICE, credential_shaped_content};
+pub use credentials::{
+    ADVICE as CREDENTIAL_ADVICE, credential_shaped_content, redact_credential_content,
+};
 #[cfg(feature = "onnx")]
 pub use embedder::OrtEmbedder;
 pub use embedder::{Embedder, EmbedderConfig, HttpEmbedder, StubEmbedder, create_embedder};

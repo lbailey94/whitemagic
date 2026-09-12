@@ -25,6 +25,7 @@ pub mod opencode;
 pub mod resources;
 pub mod seal;
 pub mod server;
+pub mod store_busy;
 pub mod trust_admin;
 
 #[cfg(test)]

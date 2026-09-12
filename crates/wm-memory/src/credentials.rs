@@ -121,19 +121,188 @@ fn assignment_shaped(content: &str) -> bool {
             if delim == ':' || delim == '=' {
                 let value = rest[1..].trim_start();
                 let value = value.strip_prefix(['"', '\'']).unwrap_or(value);
-                let run: usize = value
-                    .chars()
-                    .take_while(|c| !c.is_whitespace() && *c != '"' && *c != '\'')
-                    .map(char::len_utf8)
-                    .sum();
-                if run >= 16 {
-                    return true;
+                // Redaction markers must never re-trigger detection, or the
+                // scrubber loops on its own output.
+                if !value.starts_with("[REDACTED:") {
+                    let run: usize = value
+                        .chars()
+                        .take_while(|c| !c.is_whitespace() && *c != '"' && *c != '\'')
+                        .map(char::len_utf8)
+                        .sum();
+                    if run >= 16 {
+                        return true;
+                    }
                 }
             }
             from = abs;
         }
     }
     false
+}
+
+/// Redact credential-shaped spans, replacing them with `[REDACTED:<kind>]`.
+///
+/// Detection is [`credential_shaped_content`]; when nothing fires the text is
+/// returned unchanged. Redaction is span-oriented (PEM blocks, prefixed
+/// tokens, assignment values) and deliberately over-redacts rather than
+/// under-redacts. Returns the redacted text and the kinds that fired, using
+/// the same labels as detection.
+#[must_use]
+pub fn redact_credential_content(content: &str) -> (String, Vec<&'static str>) {
+    let kinds = credential_shaped_content(content);
+    if kinds.is_empty() {
+        return (content.to_string(), kinds);
+    }
+
+    let mut out = content.to_string();
+
+    if kinds.contains(&"private_key_pem") {
+        while let Some((start, end)) = pem_block_span(&out) {
+            out.replace_range(start..end, "[REDACTED:private_key_pem]");
+        }
+    }
+
+    if kinds.contains(&"credential_assignment") {
+        while let Some((start, end)) = assignment_value_span(&out) {
+            out.replace_range(start..end, "[REDACTED:credential_assignment]");
+        }
+    }
+
+    type TokenSpec = (&'static str, &'static str, usize, fn(char) -> bool);
+    let token_specs: &[TokenSpec] = &[
+        ("aws_access_key_id", "AKIA", 16, |c: char| {
+            c.is_ascii_uppercase() || c.is_ascii_digit()
+        }),
+        ("github_token", "ghp_", 30, |c: char| {
+            c.is_ascii_alphanumeric() || c == '_'
+        }),
+        ("github_token", "gho_", 30, |c: char| {
+            c.is_ascii_alphanumeric() || c == '_'
+        }),
+        ("github_token", "github_pat_", 20, |c: char| {
+            c.is_ascii_alphanumeric() || c == '_'
+        }),
+        ("openai_style_key", "sk-", 20, |c: char| {
+            c.is_ascii_alphanumeric() || c == '_' || c == '-'
+        }),
+        ("slack_token", "xoxb-", 10, |c: char| {
+            c.is_ascii_alphanumeric() || c == '-'
+        }),
+        ("slack_token", "xoxp-", 10, |c: char| {
+            c.is_ascii_alphanumeric() || c == '-'
+        }),
+        ("slack_token", "xoxa-", 10, |c: char| {
+            c.is_ascii_alphanumeric() || c == '-'
+        }),
+        ("slack_token", "xoxr-", 10, |c: char| {
+            c.is_ascii_alphanumeric() || c == '-'
+        }),
+        ("slack_token", "xoxs-", 10, |c: char| {
+            c.is_ascii_alphanumeric() || c == '-'
+        }),
+        ("jwt", "eyJ", 8, |c: char| {
+            c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.'
+        }),
+    ];
+    for (kind, prefix, min_len, charset) in token_specs {
+        while let Some((start, end)) = prefixed_token_span(&out, prefix, *min_len, *charset) {
+            out.replace_range(start..end, &format!("[REDACTED:{kind}]"));
+        }
+    }
+
+    (out, kinds)
+}
+
+/// Span of the first PEM private-key block (including its BEGIN/END markers).
+fn pem_block_span(text: &str) -> Option<(usize, usize)> {
+    let begin = text.find("-----BEGIN")?;
+    let key_at = text[begin..].find("PRIVATE KEY-----")? + begin;
+    let end_at = text[key_at..].find("-----END")? + key_at;
+    let marker_at = text[end_at..].find("PRIVATE KEY-----")? + end_at;
+    Some((begin, marker_at + "PRIVATE KEY-----".len()))
+}
+
+/// Span of the first assignment *value* (the 16+ char secret, not the key).
+fn assignment_value_span(text: &str) -> Option<(usize, usize)> {
+    const KEYS: &[&str] = &[
+        "password",
+        "passwd",
+        "api_key",
+        "api-key",
+        "apikey",
+        "secret",
+        "access_token",
+    ];
+    for key in KEYS {
+        let mut from = 0usize;
+        while let Some(pos) = find_ascii_case_insensitive(text, key, from) {
+            let after = pos + key.len();
+            let rest = &text[after..];
+            let ws = rest.len() - rest.trim_start().len();
+            let delim_pos = after + ws;
+            let delim = text[delim_pos..].chars().next();
+            if matches!(delim, Some(':' | '=')) {
+                let tail = &text[delim_pos + 1..];
+                let vws = tail.len() - tail.trim_start().len();
+                let mut vstart = delim_pos + 1 + vws;
+                if let Some(quote) = text[vstart..].chars().next() {
+                    if quote == '"' || quote == '\'' {
+                        vstart += quote.len_utf8();
+                    }
+                }
+                let mut bytes = 0usize;
+                for c in text[vstart..].chars() {
+                    if c.is_whitespace() || c == '"' || c == '\'' {
+                        break;
+                    }
+                    bytes += c.len_utf8();
+                }
+                if bytes >= 16 && !text[vstart..].starts_with("[REDACTED:") {
+                    return Some((vstart, vstart + bytes));
+                }
+            }
+            from = after;
+        }
+    }
+    None
+}
+
+/// Span of the first `prefix` + charset run of at least `min_len` characters.
+fn prefixed_token_span(
+    text: &str,
+    prefix: &str,
+    min_len: usize,
+    charset: fn(char) -> bool,
+) -> Option<(usize, usize)> {
+    let mut from = 0usize;
+    while let Some(pos) = text[from..].find(prefix) {
+        let start = from + pos;
+        let value_start = start + prefix.len();
+        let mut bytes = 0usize;
+        let mut count = 0usize;
+        for c in text[value_start..].chars() {
+            if !charset(c) {
+                break;
+            }
+            bytes += c.len_utf8();
+            count += 1;
+        }
+        if count >= min_len {
+            return Some((start, value_start + bytes));
+        }
+        from = value_start;
+    }
+    None
+}
+
+/// ASCII-case-insensitive substring search starting at `from`.
+fn find_ascii_case_insensitive(haystack: &str, needle: &str, from: usize) -> Option<usize> {
+    let h = haystack.as_bytes();
+    let n = needle.as_bytes();
+    if n.is_empty() || from >= h.len() || n.len() > h.len() - from {
+        return None;
+    }
+    (from..=h.len() - n.len()).find(|&i| h[i..i + n.len()].eq_ignore_ascii_case(n))
 }
 
 #[cfg(test)]
@@ -195,5 +364,49 @@ mod tests {
     fn dedupes_kinds() {
         let both = "AKIAIOSFODNN7EXAMPLE and AKIAIOSFODNN7EXAMPLE again";
         assert_eq!(credential_shaped_content(both), vec!["aws_access_key_id"]);
+    }
+
+    #[test]
+    fn redacts_private_key_blocks() {
+        let pem = "before\n-----BEGIN RSA PRIVATE KEY-----\nMIIEowSECRET\n-----END RSA PRIVATE KEY-----\nafter";
+        let (redacted, kinds) = redact_credential_content(pem);
+        assert!(kinds.contains(&"private_key_pem"));
+        assert!(!redacted.contains("MIIEowSECRET"), "key body must be gone");
+        assert!(!redacted.contains("BEGIN RSA PRIVATE KEY"));
+        assert_eq!(redacted, "before\n[REDACTED:private_key_pem]\nafter");
+    }
+
+    #[test]
+    fn redacts_assignment_values_and_tokens() {
+        let text = "db password=correct-horse-battery-staple and key sk-proj0123456789abcdefghijklmnopqrstuv";
+        let (redacted, _) = redact_credential_content(text);
+        assert!(redacted.contains("password=[REDACTED:credential_assignment]"));
+        assert!(!redacted.contains("correct-horse-battery-staple"));
+        assert!(!redacted.contains("sk-proj0123456789abcdefghijklmnopqrstuv"));
+        assert!(redacted.contains("[REDACTED:openai_style_key]"));
+
+        let aws = "id AKIAIOSFODNN7EXAMPLE here";
+        let (redacted, _) = redact_credential_content(aws);
+        assert_eq!(redacted, "id [REDACTED:aws_access_key_id] here");
+    }
+
+    #[test]
+    fn clean_content_passes_through_unchanged() {
+        let text = "remember that the password policy requires rotation";
+        let (redacted, kinds) = redact_credential_content(text);
+        assert!(kinds.is_empty());
+        assert_eq!(redacted, text);
+    }
+
+    #[test]
+    fn redaction_is_idempotent() {
+        let text = "key sk-proj0123456789abcdefghijklmnopqrstuv end";
+        let (once, _) = redact_credential_content(text);
+        let (twice, kinds) = redact_credential_content(&once);
+        assert_eq!(once, twice);
+        assert!(
+            kinds.is_empty(),
+            "redacted marker must read clean: {kinds:?}"
+        );
     }
 }

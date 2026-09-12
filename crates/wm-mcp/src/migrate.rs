@@ -467,6 +467,7 @@ pub fn run_migration(
     store_path: &Path,
     dry_run: bool,
     galaxy_filter: Option<&str>,
+    wait_secs: u64,
 ) -> Result<()> {
     println!("=== WhiteMagic Migration Tool ===");
     println!();
@@ -500,6 +501,11 @@ pub fn run_migration(
         println!("  - {} ({})", galaxy_name, db.display());
     }
     println!();
+
+    // A live serve on the same store holds the Tantivy writer lock; opening
+    // for write then blocks silently (observed: 18 minutes, no output).
+    // Fail fast with names instead (bounded wait via --wait).
+    crate::store_busy::ensure_store_available(store_path, wait_secs)?;
 
     // Open v5 store — use 4GB map size for migration (v26 data can be large)
     // Write to lmdb/ subdirectory for consistency with wm serve/doctor
@@ -1212,7 +1218,7 @@ mod tests {
         drop(conn);
 
         let store_dir = TempDir::new().unwrap();
-        run_migration(None, Some(&db_path), store_dir.path(), false, None).unwrap();
+        run_migration(None, Some(&db_path), store_dir.path(), false, None, 0).unwrap();
 
         let lmdb_path = store_dir.path().join("lmdb");
         let store = wm_memory::MemoryStore::open(&lmdb_path, 1024 * 1024).unwrap();
@@ -1235,7 +1241,7 @@ mod tests {
         drop(conn);
 
         let store_dir = TempDir::new().unwrap();
-        run_migration(None, Some(&db_path), store_dir.path(), true, None).unwrap();
+        run_migration(None, Some(&db_path), store_dir.path(), true, None, 0).unwrap();
 
         let lmdb_path = store_dir.path().join("lmdb");
         let store = wm_memory::MemoryStore::open(&lmdb_path, 1024 * 1024).unwrap();
@@ -1270,7 +1276,15 @@ mod tests {
         drop(conn);
 
         let store_dir = TempDir::new().unwrap();
-        run_migration(None, Some(&db_path), store_dir.path(), false, Some("codex")).unwrap();
+        run_migration(
+            None,
+            Some(&db_path),
+            store_dir.path(),
+            false,
+            Some("codex"),
+            0,
+        )
+        .unwrap();
 
         let lmdb_path = store_dir.path().join("lmdb");
         let store = wm_memory::MemoryStore::open(&lmdb_path, 1024 * 1024).unwrap();
@@ -1285,7 +1299,7 @@ mod tests {
     #[test]
     fn run_migration_no_dbs_specified_errors() {
         let tmp = TempDir::new().unwrap();
-        let result = run_migration(None, None, tmp.path(), false, None);
+        let result = run_migration(None, None, tmp.path(), false, None, 0);
         assert!(result.is_err());
     }
 
@@ -1329,7 +1343,7 @@ mod tests {
         drop(conn2);
 
         let store_dir = TempDir::new().unwrap();
-        run_migration(Some(&galaxies_dir), None, store_dir.path(), false, None).unwrap();
+        run_migration(Some(&galaxies_dir), None, store_dir.path(), false, None, 0).unwrap();
 
         let lmdb_path = store_dir.path().join("lmdb");
         let store = wm_memory::MemoryStore::open(&lmdb_path, 1024 * 1024).unwrap();

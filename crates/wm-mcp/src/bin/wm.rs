@@ -251,6 +251,9 @@ enum Commands {
         /// Only migrate memories from this galaxy name (e.g. "codex")
         #[arg(long)]
         galaxy: Option<String>,
+        /// Wait up to N seconds for a busy store (live serve) before failing
+        #[arg(long, default_value_t = 0)]
+        wait: u64,
     },
     /// Ingest documents and session transcripts into a knowledge store
     ///
@@ -276,6 +279,13 @@ enum Commands {
         /// research for documents)
         #[arg(long)]
         galaxy: Option<String>,
+        /// Redact credential-shaped content (PEM keys, prefixed tokens,
+        /// assignment values) and ingest it instead of skipping the file
+        #[arg(long)]
+        redact: bool,
+        /// Wait up to N seconds for a busy store (live serve) before failing
+        #[arg(long, default_value_t = 0)]
+        wait: u64,
     },
     /// Bridge opencode session data into whitemagic (digest or export)
     ///
@@ -1156,6 +1166,7 @@ fn main() -> anyhow::Result<()> {
             store,
             dry_run,
             galaxy,
+            wait,
         } => {
             let store_path = store.unwrap_or_else(default_store_path);
             wm_mcp::migrate::run_migration(
@@ -1164,6 +1175,7 @@ fn main() -> anyhow::Result<()> {
                 &store_path,
                 dry_run,
                 galaxy.as_deref(),
+                wait,
             )?;
         }
         Commands::Ingest {
@@ -1172,9 +1184,19 @@ fn main() -> anyhow::Result<()> {
             dry_run,
             limit,
             galaxy,
+            redact,
+            wait,
         } => {
             let store_path = store.unwrap_or_else(default_store_path);
-            wm_mcp::ingest::run_ingest(&source, &store_path, dry_run, limit, galaxy.as_deref())?;
+            wm_mcp::ingest::run_ingest(
+                &source,
+                &store_path,
+                dry_run,
+                limit,
+                galaxy.as_deref(),
+                redact,
+                wait,
+            )?;
         }
         Commands::Opencode { command } => match command {
             OpencodeCommands::Digest { db, since, json } => {

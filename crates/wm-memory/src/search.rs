@@ -710,9 +710,7 @@ impl SearchEngine {
         let query_parser =
             QueryParser::for_index(&self.index, vec![self.field_content, self.field_tags]);
 
-        let parsed = query_parser
-            .parse_query(&sanitized)
-            .map_err(|e| CoreError::Memory(format!("Tantivy parse_query: {e}")))?;
+        let parsed = parse_query_with_fallback(&query_parser, &sanitized);
 
         let collector = TopDocs::with_limit(opts.limit).order_by_score();
 
@@ -823,6 +821,21 @@ impl SearchEngine {
     }
 }
 
+/// Parse a sanitized query, falling back to lenient parsing when the strict
+/// parser rejects it.
+///
+/// [`sanitize_tantivy_query`] neutralizes known syntax, but the parser can
+/// still reject input it does not anticipate (for example a term whose
+/// quoting produces a dangling escape). Lenient parsing turns unparseable
+/// fragments into match-nothing clauses, so a malformed query degrades to a
+/// partial search instead of failing the request.
+fn parse_query_with_fallback(parser: &QueryParser, query: &str) -> Box<dyn tantivy::query::Query> {
+    match parser.parse_query(query) {
+        Ok(parsed) => parsed,
+        Err(_) => parser.parse_query_lenient(query).0,
+    }
+}
+
 /// Sanitize a user-provided query string for Tantivy's query parser.
 ///
 /// Tantivy's query parser supports special syntax that could be abused:
@@ -851,8 +864,10 @@ pub fn sanitize_tantivy_query(input: &str) -> String {
         .filter(|term| term.chars().any(char::is_alphanumeric))
         .map(|term| {
             if term_needs_quoting(term) {
-                // Escape any embedded double quotes
-                let escaped = term.replace('"', "\\\"");
+                // Escape backslashes first, then embedded double quotes. A
+                // trailing backslash would otherwise escape the closing quote
+                // and produce an unterminated phrase (a parse error).
+                let escaped = term.replace('\\', "\\\\").replace('"', "\\\"");
                 format!("\"{escaped}\"")
             } else {
                 term.to_string()
@@ -1357,6 +1372,32 @@ mod tests {
             result.contains("\\\""),
             "embedded quotes should be escaped: {result}"
         );
+    }
+
+    #[test]
+    fn sanitize_escapes_trailing_backslash_token() {
+        // A term ending in a backslash used to become "abc\" — the dangling
+        // escape swallowed the closing quote and failed the query parser.
+        let result = sanitize_tantivy_query("C:\\Users\\temp\\");
+        assert_eq!(
+            result, "\"C:\\\\Users\\\\temp\\\\\"",
+            "backslashes must be doubled inside quoted terms"
+        );
+    }
+
+    #[test]
+    fn lenient_fallback_never_fails_on_malformed_input() {
+        let (_tmp, engine) = open_engine();
+        let parser =
+            QueryParser::for_index(&engine.index, vec![engine.field_content, engine.field_tags]);
+        let searcher = engine.reader.searcher();
+        let collector = TopDocs::with_limit(1).order_by_score();
+        for malformed in ["\"unterminated", "field:(\"", "\\", "AND NOT OR"] {
+            let parsed = parse_query_with_fallback(&parser, malformed);
+            searcher
+                .search(&parsed, &collector)
+                .unwrap_or_else(|e| panic!("lenient query {malformed:?} must execute: {e}"));
+        }
     }
 
     #[test]
