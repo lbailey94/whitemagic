@@ -190,7 +190,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd npm/whitemagic-mcp
-          npm publish --access public
+          VERSION="${GITHUB_REF_NAME#v}"
+          if npm view "whitemagic-mcp@${VERSION}" version >/dev/null 2>&1; then
+            echo "npm ${VERSION} already published - skipping"
+          else
+            npm publish --access public
+          fi
 
       - name: Publish Docker Hub (skips without secrets)
         env:
@@ -211,4 +216,10 @@ jobs:
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz -C /tmp mcp-publisher
           cd npm/whitemagic-mcp
           /tmp/mcp-publisher login github-oidc
-          /tmp/mcp-publisher publish server.json
+          set +e
+          out=$(/tmp/mcp-publisher publish server.json 2>&1)
+          rc=$?
+          echo "$out"
+          if [ $rc -ne 0 ]; then
+            echo "$out" | grep -qiE "already|exists|conflict|409" && echo "already published - skipping" || exit 1
+          fi
