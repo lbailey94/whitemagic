@@ -149,3 +149,29 @@ wm-leases.json
 !/scripts/eval_protocol.py
 !/scripts/tests/
 !/scripts/tests/test_eval_protocol.py
+
+# ── Private / companion + internal evidence (purged from public history
+#    2026-09-12 via git-filter-repo; kept locally for development only) ──
+/docs/V9_*.md
+/docs/Q*_*.md
+/docs/2026-*.md
+/docs/RELEASE_CADENCE.md
+/docs/ROADMAP_V9_1.md
+/docs/S9_*.md
+/docs/VOICE_TONE_GUIDE.md
+/docs/WEB_RESEARCH_BACKENDS.md
+/docs/MEMORY_TYPOLOGY_V8.md
+/docs/BULK_OPERATIONS.md
+/docs/INGEST_COEXISTENCE.md
+/docs/PRICING_ETHICS.md
+/docs/VALKYRIE_LORA_RECIPE.md
+/docs/lineage/
+/crates/wm-memory/examples/
+/benchmarks/results/
+/benchmarks/validation/
+/benchmarks/smoke/
+/docs/CAPABILITY_LEDGER.md
+/docs/GAP_LEDGER.md
+/scripts/tests/q07_*.py
+/scripts/tests/q11_*.py
+/scripts/tests/test_heritage_pilot_*.py

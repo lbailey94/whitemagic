@@ -214,9 +214,9 @@ fn wait_for<T>(what: &str, secs: u64, mut f: impl FnMut() -> Option<T>) -> T {
 
 // Unix-gated: both e2e tests wedge on Windows CI runners (UDP multicast
 // discovery never completes, rpc() hits its 30s timeout — 2026-09-02 reds
-// on f550abe, classified pre-existing by inspiron-prime board 41). Root
+// on f550abe, classified pre-existing during earlier review). Root
 // cause is Windows multicast support, tracked with the WM_MESH_MULTICAST_GROUP
-// work on the alpha.8.x train (mac-stranger board 31 §B2); until then these
+// work on the alpha.8.x train; until then these
 // run on Linux/macOS only rather than block Windows CI on an env difference.
 #[cfg(unix)]
 #[test]

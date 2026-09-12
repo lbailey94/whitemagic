@@ -4,7 +4,7 @@
  * releases, with checksum verification. `npx whitemagic-mcp serve` is
  * the MCP entrypoint. No dependencies; Node 18+ global fetch.
  *
- * Version contract: package major tracks the release tag (9.0.0 → v9).
+ * Version contract: package version tracks the release tag (9.1.2 -> v9.1.2).
  * Override the tag with WHITEMAGIC_RELEASE (e.g. "v9").
  */
 import { createHash } from "node:crypto";
@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-const TAG = process.env.WHITEMAGIC_RELEASE ?? `v${pkg.version.split(".")[0]}`;
+const TAG = process.env.WHITEMAGIC_RELEASE ?? `v${pkg.version}`;
 const REPO = "lbailey94/whitemagic";
 const BASE = `https://github.com/${REPO}/releases/download/${TAG}`;
 
