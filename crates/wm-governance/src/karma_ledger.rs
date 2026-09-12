@@ -60,7 +60,7 @@ pub struct KarmaEntry {
     pub debt_delta: f32,
     /// Hash of the previous entry (chain link).
     pub parent_hash: String,
-    /// SHA-256 hash of this entry's payload.
+    /// SHA-256 chain hash: `sha256(parent_hash + tool + payload_digest + timestamp)`.
     pub payload_hash: String,
     /// Guna classification.
     pub guna: Guna,
@@ -69,6 +69,14 @@ pub struct KarmaEntry {
     /// Whether this entry is tombstoned (logically deleted but chain-preserving).
     #[serde(default)]
     pub tombstone: bool,
+    /// Whether the tool declared it would write. `None` on entries recorded
+    /// before deep verification persisted raw inputs (PLAN_F F-3).
+    #[serde(default)]
+    pub declared_writes: Option<bool>,
+    /// Writes actually performed. `None` on legacy entries and on synthetic
+    /// friction entries, whose payload format does not carry it.
+    #[serde(default)]
+    pub actual_writes: Option<u32>,
 }
 
 /// Default auto-flush threshold: flush when this many entries are pending.
@@ -166,6 +174,19 @@ pub struct ChainVerificationResult {
     pub chain_head: String,
     /// The last published Merkle root (if any).
     pub last_merkle_root: Option<String>,
+}
+
+/// Deep chain verification result — verdict plus recomputation coverage.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeepVerificationResult {
+    /// Linkage + payload-recomputation verdict.
+    pub chain: ChainVerificationResult,
+    /// Entries whose chain hash was fully recomputed from stored fields.
+    pub entries_deep_verified: usize,
+    /// Entries recorded before raw payload inputs were persisted.
+    pub legacy_entries: usize,
+    /// True only when every entry was fully recomputed.
+    pub fully_deep: bool,
 }
 
 /// A Merkle root checkpoint — a cryptographic summary of the entire chain
@@ -301,6 +322,8 @@ impl KarmaLedger {
             guna,
             total_debt: new_total,
             tombstone: false,
+            declared_writes: Some(declared_writes),
+            actual_writes: Some(actual_writes),
         };
 
         // Serialize entry for pending buffer
@@ -449,6 +472,8 @@ impl KarmaLedger {
             guna: Guna::Rajasic,
             total_debt: new_total,
             tombstone: false,
+            declared_writes: None,
+            actual_writes: None,
         };
 
         let key = id.to_be_bytes().to_vec();
@@ -504,6 +529,8 @@ impl KarmaLedger {
             guna: Guna::Sattvic,
             total_debt: new_total,
             tombstone: false,
+            declared_writes: None,
+            actual_writes: None,
         };
 
         let key = id.to_be_bytes().to_vec();
@@ -711,80 +738,141 @@ impl KarmaLedger {
     /// Walks all entries from genesis to head, checking:
     /// 1. First entry's parent_hash equals GENESIS_BINDU
     /// 2. Each entry's parent_hash equals the previous entry's payload_hash
-    /// 3. Each entry's payload_hash can be recomputed from its fields
+    /// 3. Each entry's chain hash recomputes from its stored fields — deep
+    ///    verification that catches in-place rewrites preserving linkage
     ///
-    /// Returns a detailed verification result.
+    /// Legacy entries (recorded before raw payload inputs were persisted)
+    /// are checked for linkage only; see [`Self::verify_integrity_deep`] for
+    /// coverage disclosure.
     pub fn verify_integrity(&self) -> Result<ChainVerificationResult> {
+        Ok(self.verify_chain_walk()?.0)
+    }
+
+    /// Deep verification with coverage disclosure (PLAN_F F-3).
+    ///
+    /// Returns the chain verdict plus how many entries were fully recomputed
+    /// from stored fields and how many predate deep verification. A valid
+    /// verdict with `fully_deep == false` means "no tamper detected in the
+    /// coverage we have" — not "every entry was recomputed".
+    pub fn verify_integrity_deep(&self) -> Result<DeepVerificationResult> {
+        let (chain, entries_deep_verified, legacy_entries) = self.verify_chain_walk()?;
+        Ok(DeepVerificationResult {
+            fully_deep: legacy_entries == 0,
+            chain,
+            entries_deep_verified,
+            legacy_entries,
+        })
+    }
+
+    /// Shared chain walk — returns the verdict plus deep/legacy coverage counts.
+    fn verify_chain_walk(&self) -> Result<(ChainVerificationResult, usize, usize)> {
         self.flush()?;
         let entries = self.scan_all_entries()?;
         let chain_head = self.chain_head();
         let last_merkle_root = self.get_merkle_root()?.map(|c| c.root);
+        let mut deep = 0usize;
+        let mut legacy = 0usize;
 
         if entries.is_empty() {
-            return Ok(ChainVerificationResult {
-                valid: chain_head == GENESIS_BINDU,
-                entries_verified: 0,
-                broken_at: None,
-                violation: if chain_head == GENESIS_BINDU {
-                    None
-                } else {
-                    Some(format!("Chain head is {chain_head} but no entries exist"))
+            return Ok((
+                ChainVerificationResult {
+                    valid: chain_head == GENESIS_BINDU,
+                    entries_verified: 0,
+                    broken_at: None,
+                    violation: if chain_head == GENESIS_BINDU {
+                        None
+                    } else {
+                        Some(format!("Chain head is {chain_head} but no entries exist"))
+                    },
+                    chain_head,
+                    last_merkle_root,
                 },
-                chain_head,
-                last_merkle_root,
-            });
+                deep,
+                legacy,
+            ));
         }
 
         // Check genesis link
         if entries[0].parent_hash != GENESIS_BINDU {
-            return Ok(ChainVerificationResult {
-                valid: false,
-                entries_verified: 0,
-                broken_at: Some(entries[0].id),
-                violation: Some(format!(
-                    "First entry {} parent_hash is not GENESIS_BINDU (got {})",
-                    entries[0].id, entries[0].parent_hash
-                )),
-                chain_head,
-                last_merkle_root,
-            });
+            return Ok((
+                failed_chain(
+                    &entries[0],
+                    0,
+                    format!(
+                        "First entry {} parent_hash is not GENESIS_BINDU (got {})",
+                        entries[0].id, entries[0].parent_hash
+                    ),
+                    chain_head,
+                    last_merkle_root,
+                ),
+                deep,
+                legacy,
+            ));
         }
 
-        // Walk the chain
+        // Walk the chain, recomputing each entry's chain hash from stored
+        // fields where the raw inputs exist.
         for i in 0..entries.len() {
             let entry = &entries[i];
 
-            // Verify chain hash is well-formed (non-empty, not genesis)
-            let recomputed = recompute_chain_hash(entry);
-            if recomputed.is_empty() || recomputed == GENESIS_BINDU {
-                return Ok(ChainVerificationResult {
-                    valid: false,
-                    entries_verified: i,
-                    broken_at: Some(entry.id),
-                    violation: Some(format!(
-                        "Entry {} has invalid payload_hash: {}",
-                        entry.id, entry.payload_hash
-                    )),
-                    chain_head,
-                    last_merkle_root,
-                });
+            if entry.payload_hash.is_empty() || entry.payload_hash == GENESIS_BINDU {
+                return Ok((
+                    failed_chain(
+                        entry,
+                        i,
+                        format!(
+                            "Entry {} has invalid payload_hash: {}",
+                            entry.id, entry.payload_hash
+                        ),
+                        chain_head,
+                        last_merkle_root,
+                    ),
+                    deep,
+                    legacy,
+                ));
+            }
+
+            match recompute_chain_hash(entry) {
+                Some(recomputed) => {
+                    deep += 1;
+                    if recomputed != entry.payload_hash {
+                        return Ok((
+                            failed_chain(
+                                entry,
+                                i,
+                                format!(
+                                    "Entry {} payload_hash {} does not match recomputation from stored fields ({recomputed})",
+                                    entry.id, entry.payload_hash
+                                ),
+                                chain_head,
+                                last_merkle_root,
+                            ),
+                            deep,
+                            legacy,
+                        ));
+                    }
+                }
+                None => legacy += 1,
             }
 
             // Check chain linkage (except for genesis which we already checked)
             if i > 0 {
                 let prev = &entries[i - 1];
                 if entry.parent_hash != prev.payload_hash {
-                    return Ok(ChainVerificationResult {
-                        valid: false,
-                        entries_verified: i,
-                        broken_at: Some(entry.id),
-                        violation: Some(format!(
-                            "Entry {} parent_hash {} does not match entry {} payload_hash {}",
-                            entry.id, entry.parent_hash, prev.id, prev.payload_hash
-                        )),
-                        chain_head,
-                        last_merkle_root,
-                    });
+                    return Ok((
+                        failed_chain(
+                            entry,
+                            i,
+                            format!(
+                                "Entry {} parent_hash {} does not match entry {} payload_hash {}",
+                                entry.id, entry.parent_hash, prev.id, prev.payload_hash
+                            ),
+                            chain_head,
+                            last_merkle_root,
+                        ),
+                        deep,
+                        legacy,
+                    ));
                 }
             }
         }
@@ -792,28 +880,35 @@ impl KarmaLedger {
         // Verify chain head matches last entry's payload_hash
         if let Some(last) = entries.last() {
             if last.payload_hash != chain_head {
-                return Ok(ChainVerificationResult {
-                    valid: false,
-                    entries_verified: entries.len(),
-                    broken_at: Some(last.id),
-                    violation: Some(format!(
-                        "Chain head {} does not match last entry payload_hash {}",
-                        chain_head, last.payload_hash
-                    )),
-                    chain_head,
-                    last_merkle_root,
-                });
+                return Ok((
+                    failed_chain(
+                        last,
+                        entries.len(),
+                        format!(
+                            "Chain head {chain_head} does not match last entry payload_hash {}",
+                            last.payload_hash
+                        ),
+                        chain_head,
+                        last_merkle_root,
+                    ),
+                    deep,
+                    legacy,
+                ));
             }
         }
 
-        Ok(ChainVerificationResult {
-            valid: true,
-            entries_verified: entries.len(),
-            broken_at: None,
-            violation: None,
-            chain_head,
-            last_merkle_root,
-        })
+        Ok((
+            ChainVerificationResult {
+                valid: true,
+                entries_verified: entries.len(),
+                broken_at: None,
+                violation: None,
+                chain_head,
+                last_merkle_root,
+            },
+            deep,
+            legacy,
+        ))
     }
 
     /// Compute a Merkle root from all (non-tombstoned) entries.
@@ -943,19 +1038,75 @@ fn sha256_hex(input: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-/// Recompute the chain hash for an entry to verify it hasn't been tampered.
+/// Build a failed chain-verification result for a specific entry.
+const fn failed_chain(
+    entry: &KarmaEntry,
+    entries_verified: usize,
+    violation: String,
+    chain_head: String,
+    last_merkle_root: Option<String>,
+) -> ChainVerificationResult {
+    ChainVerificationResult {
+        valid: false,
+        entries_verified,
+        broken_at: Some(entry.id),
+        violation: Some(violation),
+        chain_head,
+        last_merkle_root,
+    }
+}
+
+/// Recompute an entry's payload digest from its stored fields.
 ///
-/// The chain hash is `sha256(parent_hash + tool + payload_hash + timestamp)`.
-/// Note: the intermediate `payload_hash` (from raw fields) is not stored,
-/// so we verify the chain linkage (parent → child) rather than full payload
-/// recomputation. This detects any insertion, deletion, or modification
-/// that breaks the chain links.
-fn recompute_chain_hash(entry: &KarmaEntry) -> String {
-    // The entry's payload_hash field IS the chain hash.
-    // We can verify it by checking that parent_hash links correctly.
-    // Full recomputation requires declared_writes/actual_writes (not stored).
-    // Chain linkage verification is sufficient for tamper detection.
-    entry.payload_hash.clone()
+/// Returns `None` for legacy entries that predate raw-input persistence
+/// (`declared_writes`/`actual_writes`) — they can only be linkage-verified.
+/// Synthetic friction entries (`__rsi__` tool prefix) use their own payload
+/// format and are always recomputable.
+fn recompute_payload_digest(entry: &KarmaEntry) -> Option<String> {
+    if let Some(rest) = entry.tool.strip_prefix("__rsi__") {
+        let kind = if entry.success {
+            "friction_resolved"
+        } else {
+            "friction_signal"
+        };
+        return Some(sha256_hex(&format!(
+            "__rsi__{rest}:{kind}:{}",
+            entry.timestamp
+        )));
+    }
+    let declared = entry.declared_writes?;
+    let actual = entry.actual_writes?;
+    Some(sha256_hex(&format!(
+        "{}:{}:{}:{}:{}:{}:{}",
+        entry.tool,
+        declared,
+        actual,
+        entry.success,
+        entry.mismatch,
+        entry.debt_delta,
+        entry.timestamp
+    )))
+}
+
+/// Recompute an entry's chain hash from stored fields (PLAN_F F-3).
+///
+/// Chain hash = `sha256(parent_hash + tool + payload_digest + timestamp)`;
+/// friction entries use the `__rsi__` domain separator. `None` for legacy
+/// entries whose raw payload inputs were never persisted.
+fn recompute_chain_hash(entry: &KarmaEntry) -> Option<String> {
+    let digest = recompute_payload_digest(entry)?;
+    let chain_input = if entry.tool.starts_with("__rsi__") {
+        format!(
+            "{}{}{}{}",
+            entry.parent_hash, "__rsi__", digest, entry.timestamp
+        )
+    } else {
+        format!(
+            "{}{}{}{}",
+            entry.parent_hash, entry.tool, digest, entry.timestamp
+        )
+    };
+    Some(sha256_hex(&chain_input))
 }
 
 #[cfg(test)]
@@ -1561,5 +1712,128 @@ mod tests {
         );
         let entries = ledger2.scan_entries().unwrap();
         assert_eq!(entries.len(), 2);
+    }
+
+    // ── Deep verification (PLAN_F F-3) ───────────────────────────────
+
+    #[test]
+    fn deep_verify_reports_full_coverage_on_new_entries() {
+        let store = Arc::new(make_store());
+        let ledger = KarmaLedger::new(store).unwrap();
+        for i in 0..5 {
+            ledger.record(&format!("tool_{i}"), false, 0, true).unwrap();
+        }
+
+        let report = ledger.verify_integrity_deep().unwrap();
+        assert!(report.chain.valid);
+        assert_eq!(report.entries_deep_verified, 5);
+        assert_eq!(report.legacy_entries, 0);
+        assert!(report.fully_deep);
+    }
+
+    #[test]
+    fn deep_verify_detects_field_rewrite_that_preserves_linkage() {
+        let store = Arc::new(make_store());
+        let ledger = KarmaLedger::new(store.clone()).unwrap();
+        for i in 0..4 {
+            ledger.record(&format!("tool_{i}"), false, 0, true).unwrap();
+        }
+        ledger.flush().unwrap();
+
+        // Rewrite a middle entry's raw input — chain links untouched.
+        let entries = ledger.scan_all_entries().unwrap();
+        let mut tampered = entries[1].clone();
+        tampered.actual_writes = Some(7);
+        store
+            .put_raw(
+                Galaxy::Karma,
+                &tampered.id.to_be_bytes(),
+                &serde_json::to_vec(&tampered).unwrap(),
+            )
+            .unwrap();
+
+        // A linkage-only walk is blind to this rewrite...
+        let after = ledger.scan_all_entries().unwrap();
+        assert_eq!(after[1].parent_hash, after[0].payload_hash);
+        assert_eq!(after[2].parent_hash, after[1].payload_hash);
+        assert_eq!(ledger.chain_head(), after.last().unwrap().payload_hash);
+
+        // ...deep verification recomputes and catches it.
+        let report = ledger.verify_integrity_deep().unwrap();
+        assert!(!report.chain.valid);
+        assert_eq!(report.chain.broken_at, Some(entries[1].id));
+        assert!(
+            report
+                .chain
+                .violation
+                .as_deref()
+                .unwrap()
+                .contains("recomputation"),
+            "violation should name the recomputation mismatch: {:?}",
+            report.chain.violation
+        );
+    }
+
+    #[test]
+    fn deep_verify_reports_legacy_entries_without_raw_inputs() {
+        let store = Arc::new(make_store());
+        let ledger = KarmaLedger::new(store.clone()).unwrap();
+        ledger.record("tool_old", false, 0, false).unwrap();
+        ledger.flush().unwrap();
+
+        // Simulate a pre-F-3 entry: strip the new raw-input fields.
+        let entry = ledger.scan_all_entries().unwrap().remove(0);
+        let mut json = serde_json::to_value(&entry).unwrap();
+        let obj = json.as_object_mut().unwrap();
+        obj.remove("declared_writes");
+        obj.remove("actual_writes");
+        store
+            .put_raw(
+                Galaxy::Karma,
+                &entry.id.to_be_bytes(),
+                &serde_json::to_vec(&json).unwrap(),
+            )
+            .unwrap();
+
+        let report = ledger.verify_integrity_deep().unwrap();
+        assert!(report.chain.valid, "legacy entry must not read as tampered");
+        assert_eq!(report.entries_deep_verified, 0);
+        assert_eq!(report.legacy_entries, 1);
+        assert!(!report.fully_deep);
+    }
+
+    #[test]
+    fn deep_verify_covers_friction_entries() {
+        let store = Arc::new(make_store());
+        let ledger = KarmaLedger::new(store).unwrap();
+        ledger.record_friction_signal("tool_x").unwrap();
+        ledger.record_friction_resolved("tool_x").unwrap();
+
+        let report = ledger.verify_integrity_deep().unwrap();
+        assert!(report.chain.valid, "{:?}", report.chain.violation);
+        assert_eq!(report.entries_deep_verified, 2);
+        assert!(report.fully_deep);
+    }
+
+    #[test]
+    fn deep_verify_detects_rsi_payload_rewrite() {
+        let store = Arc::new(make_store());
+        let ledger = KarmaLedger::new(store.clone()).unwrap();
+        ledger.record_friction_signal("tool_y").unwrap();
+        ledger.flush().unwrap();
+
+        let entry = ledger.scan_all_entries().unwrap().remove(0);
+        let mut tampered = entry.clone();
+        tampered.success = true;
+        store
+            .put_raw(
+                Galaxy::Karma,
+                &entry.id.to_be_bytes(),
+                &serde_json::to_vec(&tampered).unwrap(),
+            )
+            .unwrap();
+
+        let report = ledger.verify_integrity_deep().unwrap();
+        assert!(!report.chain.valid, "RSI rewrite must be caught");
     }
 }

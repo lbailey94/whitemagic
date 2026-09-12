@@ -210,13 +210,31 @@ impl Tool for KarmaVerifyChainTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Verify karma chain integrity — checks every link hash and the chain head (tamper detection)"
+        "Verify karma chain integrity — linkage plus payload-hash recomputation from stored fields (deep=true by default; legacy entries are reported)"
     }
-    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let deep = args.get("deep").and_then(Value::as_bool).unwrap_or(true);
+        if deep {
+            let report = self.ledger.verify_integrity_deep()?;
+            return Ok(json!({
+                "status": if report.chain.valid { "success" } else { "error" },
+                "valid": report.chain.valid,
+                "deep": true,
+                "entries_verified": report.chain.entries_verified,
+                "entries_deep_verified": report.entries_deep_verified,
+                "legacy_entries": report.legacy_entries,
+                "fully_deep": report.fully_deep,
+                "broken_at": report.chain.broken_at,
+                "violation": report.chain.violation,
+                "chain_head": report.chain.chain_head,
+                "last_merkle_root": report.chain.last_merkle_root,
+            }));
+        }
         let result = self.ledger.verify_integrity()?;
         Ok(json!({
             "status": if result.valid { "success" } else { "error" },
             "valid": result.valid,
+            "deep": false,
             "entries_verified": result.entries_verified,
             "broken_at": result.broken_at,
             "violation": result.violation,

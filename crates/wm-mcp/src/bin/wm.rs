@@ -2534,10 +2534,40 @@ fn run_doctor(
     let all_tools = registry.all();
     println!("[OK]   Tool registry: {} tools registered", all_tools.len());
 
-    // 9. Karma chain integrity
+    // 9. Karma chain integrity — deep verification (recomputes payload hashes)
     let karma_path = lmdb_path.join("data.mdb");
     if karma_path.exists() {
-        println!("[OK]   Karma chain: LMDB data file present");
+        match server.karma_ledger() {
+            Some(ledger) => match ledger.verify_integrity_deep() {
+                Ok(report) if report.chain.valid => {
+                    println!(
+                        "[OK]   Karma chain: {} entries deep-verified, {} legacy (linkage-only){}",
+                        report.entries_deep_verified,
+                        report.legacy_entries,
+                        if report.fully_deep {
+                            ""
+                        } else {
+                            " — historical entries predate deep verification"
+                        }
+                    );
+                }
+                Ok(report) => {
+                    println!(
+                        "[FAIL] Karma chain: tamper detected at entry {:?} — {}",
+                        report.chain.broken_at,
+                        report
+                            .chain
+                            .violation
+                            .as_deref()
+                            .unwrap_or("unknown violation")
+                    );
+                }
+                Err(e) => {
+                    println!("[WARN] Karma chain: deep verification could not run: {e}");
+                }
+            },
+            None => println!("[WARN] Karma chain: ledger not enabled in this server"),
+        }
     }
 
     // 10. Conformal calibration health
