@@ -7,7 +7,7 @@
 ARG ALPINE_VERSION=3.21
 FROM alpine:${ALPINE_VERSION}
 
-ARG WM_VERSION=v9.1.2
+ARG WM_VERSION=v9.1.3
 ARG WM_ARCH=x86_64
 ARG WM_TARGET=musl
 
@@ -15,7 +15,7 @@ ARG WM_TARGET=musl
 # package reference in npm/whitemagic-mcp/server.json).
 LABEL io.modelcontextprotocol.server.name="io.github.lbailey94/whitemagic-mcp" \
       org.opencontainers.image.title="WhiteMagic MCP server" \
-      org.opencontainers.image.version="9.1.2" \
+      org.opencontainers.image.version="9.1.3" \
       org.opencontainers.image.url="https://whitemagic.dev" \
       org.opencontainers.image.source="https://github.com/lbailey94/whitemagic"
 

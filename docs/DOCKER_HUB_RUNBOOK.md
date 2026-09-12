@@ -17,7 +17,7 @@ the image build:
 
 ```bash
 docker build --build-arg WM_VERSION=v9 -t lbailey94/whitemagic:9 . 
-docker run --rm lbailey94/whitemagic:9 --version   # wm 9.1.2
+docker run --rm lbailey94/whitemagic:9 --version   # wm 9.1.3
 ```
 
 - Uses `wm-linux-x86_64-musl` (fully static) + its `.sha256` from the

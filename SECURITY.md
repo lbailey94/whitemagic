@@ -1,7 +1,7 @@
 # Security Policy
 
-> NOTE (2026-09-11, updated after the 9.1.2 deploy): the fleet and gateway
-> now run package 9.1.2 (the pinned 9.0.0 gateway runtime was removed); v9 is
+> NOTE (2026-09-12, updated after the 9.1.3 deploy): the fleet and gateway
+> now run package 9.1.3 (the pinned 9.0.0 gateway runtime was removed); v9 is
 > the latest public release line. The maintainer's support-window decision
 > remains open; the table below is the current working policy statement.
 

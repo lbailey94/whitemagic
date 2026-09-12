@@ -4,7 +4,7 @@
  * releases, with checksum verification. `npx whitemagic-mcp serve` is
  * the MCP entrypoint. No dependencies; Node 18+ global fetch.
  *
- * Version contract: package version tracks the release tag (9.1.2 -> v9.1.2).
+ * Version contract: package version tracks the release tag (9.1.3 -> v9.1.3).
  * Override the tag with WHITEMAGIC_RELEASE (e.g. "v9").
  */
 import { createHash } from "node:crypto";

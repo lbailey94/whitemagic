@@ -5,6 +5,20 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.3] — 2026-09-12 (persistent local embeddings, recall honesty, breaker ops, Ahimsa fix)
+
+### Embeddings & recall (live fleet)
+- Persistent local embedder: `wm-embed-server.service` (llama.cpp + bge-small-en-v1.5 Q8, model on disk, loopback) wired via `WM_EMBEDDER_*`; warm query embed ≈ 20 ms, fully offline, no volatile cache. Rolled out query-side to wmv9/planning/neon/site/heritage.
+- Restart persistence fixed: `hybrid_search` rehydrates the in-memory vector index from the Embeddings galaxy on first use; live proof — a BM25-invisible canary returned `source=hybrid` after a forced restart (cold query 70 ms).
+- New `memory.reembed` (dry-run default, bounded, cached/batched via `WM_REEMBED_BATCH`, skips empty content, refuses the stub embedder): backfilled wmv9 (1,026 vectors), planning (18), neon (1,727), site (2). Heritage deferred with a runbook.
+- HTTP embedder hardening: cache namespace carries model+dim; oversized inputs truncate to the model window (fixes HTTP 400 on long memories).
+- Degradation honesty: `memory.search`/`hybrid_recall` probe the embedder when hybrid yields nothing, fall through to the episodic lane on failure, and disclose `hybrid_degraded: <reason>`.
+
+### Governance & operations
+- Ahimsa fix: destruction is declared (`EffectRow::destructive`), not inferred from Filesystem writes — additive writes (lease ledgers, audit logs) are no longer blocked under stress; Process/Network/spawn remain destructive-by-class. Live: `code.claim`/`code.release` succeed under Delta strict mode.
+- `breaker.status` (read-only) and `breaker.reset` (confirm-gated, non-destructive) operator surface; `WM_BREAKER_THRESHOLD/WINDOW_MS/COOLDOWN_MS` envs; half-open admits exactly one probe (stale-probe recovery included).
+- `/status` discloses `breaker` and `embedder` (backend/namespace/dim + live vector/cache counts); `wm doctor` probes the configured embedder for real instead of grading env presence.
+
 ## [9.1.2] — 2026-09-11 (memory hardening, redaction retrofit, wmv9 rename)
 
 ### Memory system hardening (session 8b52f642)

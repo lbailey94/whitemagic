@@ -10,7 +10,7 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
-wm --version   # expect: wm 9.1.2
+wm --version   # expect: wm 9.1.3
 wm doctor      # environment health check — run this first if anything misbehaves
 ```
 

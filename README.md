@@ -68,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/i
 Verify the installation:
 
 ```bash
-wm --version   # wm 9.1.2
+wm --version   # wm 9.1.3
 wm doctor      # environment health check
 ```
 
