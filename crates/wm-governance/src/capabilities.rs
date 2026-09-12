@@ -252,10 +252,7 @@ impl<const N: usize> From<[Capability; N]> for CapabilitySet {
 pub enum CapabilityError {
     /// Required capabilities are missing from the grant.
     #[error("Missing capabilities: required [{required}], but granted [{granted}]")]
-    MissingCapabilities {
-        required: String,
-        granted: String,
-    },
+    MissingCapabilities { required: String, granted: String },
     /// The authorization token or grant has expired.
     #[error("Capability grant expired at unix epoch {expired_at}, current time {now}")]
     GrantExpired { expired_at: i64, now: i64 },
@@ -404,10 +401,9 @@ pub fn capabilities_for_engagement(scope: &EngagementScope) -> CapabilitySet {
             Capability::ModelInvoke,
         ]),
         EngagementScope::Redteam => CapabilitySet::REDTEAM_DIAGNOSTIC,
-        EngagementScope::Demo => CapabilitySet::from([
-            Capability::MemoryRead,
-            Capability::ModelInvoke,
-        ]),
+        EngagementScope::Demo => {
+            CapabilitySet::from([Capability::MemoryRead, Capability::ModelInvoke])
+        }
         EngagementScope::Custom(_) => CapabilitySet::READ_ONLY,
     }
 }
@@ -497,17 +493,38 @@ mod tests {
 
     #[test]
     fn capability_grant_assertion_expiry() {
-        let grant = CapabilityGrant::new("cpg_01", "agent_alpha", CapabilitySet::ALL, 1000, Some(2000));
-        assert!(grant.assert(CapabilitySet::READ_ONLY, 1500, None, None).is_ok());
+        let grant = CapabilityGrant::new(
+            "cpg_01",
+            "agent_alpha",
+            CapabilitySet::ALL,
+            1000,
+            Some(2000),
+        );
+        assert!(
+            grant
+                .assert(CapabilitySet::READ_ONLY, 1500, None, None)
+                .is_ok()
+        );
 
-        let err = grant.assert(CapabilitySet::READ_ONLY, 2000, None, None).unwrap_err();
-        assert_eq!(err, CapabilityError::GrantExpired { expired_at: 2000, now: 2000 });
+        let err = grant
+            .assert(CapabilitySet::READ_ONLY, 2000, None, None)
+            .unwrap_err();
+        assert_eq!(
+            err,
+            CapabilityError::GrantExpired {
+                expired_at: 2000,
+                now: 2000
+            }
+        );
     }
 
     #[test]
     fn capability_grant_assertion_missing_privilege() {
-        let grant = CapabilityGrant::new("cpg_02", "agent_beta", CapabilitySet::READ_ONLY, 1000, None);
-        let err = grant.assert(CapabilitySet::from(Capability::FsWrite), 1500, None, None).unwrap_err();
+        let grant =
+            CapabilityGrant::new("cpg_02", "agent_beta", CapabilitySet::READ_ONLY, 1000, None);
+        let err = grant
+            .assert(CapabilitySet::from(Capability::FsWrite), 1500, None, None)
+            .unwrap_err();
         match err {
             CapabilityError::MissingCapabilities { required, .. } => {
                 assert!(required.contains("fs:write"));
@@ -521,8 +538,24 @@ mod tests {
         let grant = CapabilityGrant::new("cpg_03", "agent_gamma", CapabilitySet::ALL, 1000, None)
             .with_allowed_path("/safe/dir");
 
-        assert!(grant.assert(CapabilitySet::from(Capability::FsRead), 1500, Some("/safe/dir/file.txt"), None).is_ok());
-        let err = grant.assert(CapabilitySet::from(Capability::FsRead), 1500, Some("/etc/shadow"), None).unwrap_err();
+        assert!(
+            grant
+                .assert(
+                    CapabilitySet::from(Capability::FsRead),
+                    1500,
+                    Some("/safe/dir/file.txt"),
+                    None
+                )
+                .is_ok()
+        );
+        let err = grant
+            .assert(
+                CapabilitySet::from(Capability::FsRead),
+                1500,
+                Some("/etc/shadow"),
+                None,
+            )
+            .unwrap_err();
         assert!(matches!(err, CapabilityError::PathDisallowed { .. }));
     }
 
@@ -531,8 +564,24 @@ mod tests {
         let grant = CapabilityGrant::new("cpg_04", "agent_delta", CapabilitySet::ALL, 1000, None)
             .with_allowed_host("api.whitemagic.dev");
 
-        assert!(grant.assert(CapabilitySet::from(Capability::NetOutbound), 1500, None, Some("api.whitemagic.dev")).is_ok());
-        let err = grant.assert(CapabilitySet::from(Capability::NetOutbound), 1500, None, Some("evil.com")).unwrap_err();
+        assert!(
+            grant
+                .assert(
+                    CapabilitySet::from(Capability::NetOutbound),
+                    1500,
+                    None,
+                    Some("api.whitemagic.dev")
+                )
+                .is_ok()
+        );
+        let err = grant
+            .assert(
+                CapabilitySet::from(Capability::NetOutbound),
+                1500,
+                None,
+                Some("evil.com"),
+            )
+            .unwrap_err();
         assert!(matches!(err, CapabilityError::HostDisallowed { .. }));
     }
 
@@ -551,12 +600,31 @@ mod tests {
         };
 
         // Poc grants FsRead, MemoryRead, MemoryWrite, ModelInvoke
-        assert!(assert_engagement_token_capabilities(&token, CapabilitySet::from(Capability::FsRead), 2000).is_ok());
-        assert!(assert_engagement_token_capabilities(&token, CapabilitySet::from(Capability::NetOutbound), 2000).is_err());
+        assert!(
+            assert_engagement_token_capabilities(
+                &token,
+                CapabilitySet::from(Capability::FsRead),
+                2000
+            )
+            .is_ok()
+        );
+        assert!(
+            assert_engagement_token_capabilities(
+                &token,
+                CapabilitySet::from(Capability::NetOutbound),
+                2000
+            )
+            .is_err()
+        );
 
         // Revocation blocks
         token.revoked = true;
-        let err = assert_engagement_token_capabilities(&token, CapabilitySet::from(Capability::FsRead), 2000).unwrap_err();
-        assert_eq!(err, CapabilityError::TokenRevoked { token_id: token.id.clone() });
+        let err = assert_engagement_token_capabilities(
+            &token,
+            CapabilitySet::from(Capability::FsRead),
+            2000,
+        )
+        .unwrap_err();
+        assert_eq!(err, CapabilityError::TokenRevoked { token_id: token.id });
     }
 }
