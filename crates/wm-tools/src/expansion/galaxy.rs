@@ -1262,10 +1262,10 @@ mod tests {
         let tool = GalaxyTaxonomyTool::new(store);
         let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
-        assert_eq!(result["total_galaxies"], 14);
-        assert_eq!(result["memory_galaxies"], 10);
+        assert_eq!(result["total_galaxies"], 15);
+        assert_eq!(result["memory_galaxies"], 11);
         let galaxies = result["galaxies"].as_array().unwrap();
-        assert_eq!(galaxies.len(), 14);
+        assert_eq!(galaxies.len(), 15);
     }
 
     #[tokio::test]
@@ -1304,7 +1304,7 @@ mod tests {
         let result = tool.call(&mut Context::default(), json!({})).await.unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["all_healthy"], true);
-        assert_eq!(result["galaxies_checked"], 10);
+        assert_eq!(result["galaxies_checked"], 11);
     }
 
     #[tokio::test]

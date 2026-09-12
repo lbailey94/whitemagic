@@ -37,12 +37,10 @@ pub fn resolve_route(code: &str) -> Option<&'static str> {
         }
     }
     // 2. Check if it's already a canonical route name
-    for &(canonical, _) in crate::GLYPH_ROUTES {
-        if canonical == trimmed {
-            return Some(canonical);
-        }
-    }
-    None
+    crate::GLYPH_ROUTES
+        .iter()
+        .find(|&&(canonical, _)| canonical == trimmed)
+        .map(|&(canonical, _)| canonical)
 }
 
 /// Fast arg key resolver: maps ASCII arg codes ("q"), single-character ideograms ("问"),
@@ -57,12 +55,10 @@ pub fn resolve_arg(code: &str) -> Option<&'static str> {
         }
     }
     // 2. Check if it's already a canonical arg name
-    for &(canonical, _) in crate::GLYPH_ARGS {
-        if canonical == trimmed {
-            return Some(canonical);
-        }
-    }
-    None
+    crate::GLYPH_ARGS
+        .iter()
+        .find(|&&(canonical, _)| canonical == trimmed)
+        .map(|&(canonical, _)| canonical)
 }
 
 /// Returns the primary default argument for a canonical route, used for positional shorthand.

@@ -814,8 +814,10 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             && now.duration_since(last_phagic) >= config.phagic_interval
         {
             let hw = wm_cognitive::HardwareMonitor::sample();
-            if !hw.regime.should_throttle() {
-                let search_ref = server.search_engine().map(|s| s.as_ref());
+            if hw.regime.should_throttle() {
+                tracing::debug!("Phagic digestion postponed due to thermal throttling");
+            } else {
+                let search_ref = server.search_engine().map(std::convert::AsRef::as_ref);
                 if let Some(res) = resilient("phagic_digest_sweep", || {
                     phagic_coordinator.run_digest_sweep(&store, search_ref)
                 }) {
@@ -841,8 +843,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                                     "Phagic non-destructive cold-storage sweep completed"
                                 );
                                 println!(
-                                    "[phagic] Non-destructive digestion: {} outer-rim memories migrated to cold tier, {} thematic nodes synthesized",
-                                    migrated_total, nodes_total
+                                    "[phagic] Non-destructive digestion: {migrated_total} outer-rim memories migrated to cold tier, {nodes_total} thematic nodes synthesized"
                                 );
                             }
                         }
@@ -851,8 +852,6 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                         }
                     }
                 }
-            } else {
-                tracing::debug!("Phagic digestion postponed due to thermal throttling");
             }
             last_phagic = now;
         }

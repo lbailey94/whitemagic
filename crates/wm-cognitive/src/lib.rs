@@ -4,6 +4,11 @@
 //! into a single crate to reduce cross-crate dependency friction for cognitive changes.
 
 #![forbid(unsafe_code)]
+// Scoring math deliberately uses `a * b + c` instead of `mul_add` so float
+// rounding stays stable across platforms and runs (the same deliberate
+// `suboptimal_flops` class documented in AGENTS.md for deterministic scorers).
+// Do not "fix" these calls to mul_add without re-baselining golden scores.
+#![allow(clippy::suboptimal_flops)]
 
 // ── Consciousness modules (from wm-consciousness) ───────────────────
 pub mod alchemical_round;

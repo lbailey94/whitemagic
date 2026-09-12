@@ -474,7 +474,7 @@ impl DreamCycle {
 
     /// Attach a Phagic Cognitive Coordinator for non-destructive outer-rim cold storage.
     #[must_use]
-    pub fn with_phagic(mut self, phagic: crate::phagic::PhagicCognitiveCoordinator) -> Self {
+    pub const fn with_phagic(mut self, phagic: crate::phagic::PhagicCognitiveCoordinator) -> Self {
         self.phagic = Some(phagic);
         self
     }
@@ -486,7 +486,7 @@ impl DreamCycle {
     }
 
     /// Get a mutable reference to the Phagic Cognitive Coordinator, if attached.
-    pub fn phagic_mut(&mut self) -> Option<&mut crate::phagic::PhagicCognitiveCoordinator> {
+    pub const fn phagic_mut(&mut self) -> Option<&mut crate::phagic::PhagicCognitiveCoordinator> {
         self.phagic.as_mut()
     }
 

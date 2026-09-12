@@ -3217,9 +3217,7 @@ impl McpServer {
             }
         }
 
-        if !tools.is_empty() {
-            Ok(json!({ "tools": tools }))
-        } else {
+        if tools.is_empty() {
             // Fallback: if wm meta-tool is not registered, list all available tools
             let available = self.registry.available_in(brain_wave);
             let tools: Vec<Value> = available
@@ -3240,6 +3238,8 @@ impl McpServer {
                     })
                 })
                 .collect();
+            Ok(json!({ "tools": tools }))
+        } else {
             Ok(json!({ "tools": tools }))
         }
     }
@@ -4594,7 +4594,7 @@ mod tests {
         let result = resp.result.unwrap();
         let tools = result["tools"].as_array().unwrap().clone();
         // The wm meta-tool is first, followed by discrete tool aliases for MCP discovery
-        assert!(tools.len() >= 1);
+        assert!(!tools.is_empty());
         assert_eq!(tools[0]["name"], "wm");
         assert!(tools.iter().any(|t| t["name"] == "memory_find"));
         assert!(tools.iter().any(|t| t["name"] == "memory_create"));
@@ -4996,7 +4996,7 @@ mod tests {
         let parsed: Value = serde_json::from_str(&response).unwrap();
         let tools = parsed["result"]["tools"].as_array().unwrap();
         // Tools list exposes wm meta-tool and discrete aliases
-        assert!(tools.len() >= 1);
+        assert!(!tools.is_empty());
         assert_eq!(tools[0]["name"], "wm");
     }
 
@@ -5212,7 +5212,7 @@ mod tests {
         let list: Value = serde_json::from_str(&list_resp).unwrap();
         let tools = list["result"]["tools"].as_array().unwrap();
         // Tools list exposes wm meta-tool and discrete aliases
-        assert!(tools.len() >= 1);
+        assert!(!tools.is_empty());
         assert_eq!(tools[0]["name"], "wm");
 
         // 3. tools/call — create a memory

@@ -18,8 +18,7 @@ fn open_server_for_serve(
             lmdb_path,
             true,
             preservation_readonly,
-        )
-        .map_err(Into::into);
+        );
     }
 
     std::fs::create_dir_all(lmdb_path)?;

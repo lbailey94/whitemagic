@@ -588,7 +588,7 @@ mod tests {
     #[test]
     fn operation_id_propagates_and_roundtrips_through_journal() {
         let store = make_store();
-        let journal = WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap();
+        let journal = WriteAuditJournal::with_flush_threshold(store, 0).unwrap();
 
         let op_id = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
         let ctx = wm_core::Context::default().with_operation_id(op_id);
@@ -610,7 +610,7 @@ mod tests {
     #[test]
     fn operation_id_recovery_and_uncommitted_scan() {
         let store = make_store();
-        let journal = WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap();
+        let journal = WriteAuditJournal::with_flush_threshold(store, 0).unwrap();
 
         let op1 = "01ARZ3NDEKTSV4RRFFQ69G5FA1";
         let op2 = "01ARZ3NDEKTSV4RRFFQ69G5FA2";
@@ -618,13 +618,13 @@ mod tests {
         // Successful dispatch under op1
         let actor1 = ActorIdentity::default().with_operation_id(op1);
         journal
-            .record("memory.create", actor1.clone(), None, None, true, 1, true)
+            .record("memory.create", actor1, None, None, true, 1, true)
             .unwrap();
 
         // Failed dispatch under op2
         let actor2 = ActorIdentity::default().with_operation_id(op2);
         journal
-            .record("memory.update", actor2.clone(), None, None, true, 0, false)
+            .record("memory.update", actor2, None, None, true, 0, false)
             .unwrap();
 
         // Check entries_by_operation_id

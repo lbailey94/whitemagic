@@ -68,7 +68,7 @@ impl CittaPhase {
 
     /// Transition to the next phase in the cyclic loop.
     #[must_use]
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Perception => Self::Contemplation,
             Self::Contemplation => Self::Action,
@@ -99,7 +99,7 @@ pub struct CittaContext<'a> {
 impl<'a> CittaContext<'a> {
     /// Create a new context with default baseline metrics.
     #[must_use]
-    pub fn new(store: &'a MemoryStore) -> Self {
+    pub const fn new(store: &'a MemoryStore) -> Self {
         Self {
             store,
             associations: None,
@@ -112,21 +112,21 @@ impl<'a> CittaContext<'a> {
 
     /// Attach association store.
     #[must_use]
-    pub fn with_associations(mut self, assoc: &'a AssociationStore) -> Self {
+    pub const fn with_associations(mut self, assoc: &'a AssociationStore) -> Self {
         self.associations = Some(assoc);
         self
     }
 
     /// Attach system health score.
     #[must_use]
-    pub fn with_health_score(mut self, health: f32) -> Self {
+    pub const fn with_health_score(mut self, health: f32) -> Self {
         self.health_score = health.clamp(0.0, 1.0);
         self
     }
 
     /// Attach coherence score.
     #[must_use]
-    pub fn with_coherence(mut self, coherence: f32) -> Self {
+    pub const fn with_coherence(mut self, coherence: f32) -> Self {
         self.coherence = coherence.clamp(0.0, 1.0);
         self
     }
@@ -344,8 +344,7 @@ impl CittaEngine for PrescienceEngine {
         }
 
         findings.push(format!(
-            "Trajectory forecast: {} total memories tracked across 5 galaxies",
-            total_memories
+            "Trajectory forecast: {total_memories} total memories tracked across 5 galaxies"
         ));
 
         // Predictive stability score based on coherence and health
@@ -403,8 +402,7 @@ impl CittaEngine for SerendipityEngine {
         let links_discovered = ctx.store.count(Galaxy::Associations).unwrap_or(0);
         if links_discovered > 0 {
             findings.push(format!(
-                "Serendipity: {} cross-galaxy synaptic associations mapped",
-                links_discovered
+                "Serendipity: {links_discovered} cross-galaxy synaptic associations mapped"
             ));
         } else {
             findings.push("Serendipity: Operating in latent mode (store-level heuristics)".into());
@@ -457,22 +455,21 @@ impl CittaEngine for ForesightEngine {
     fn execute(&self, phase: CittaPhase, ctx: &CittaContext) -> EngineExecutionResult {
         let t0 = Instant::now();
         let mut findings = Vec::new();
-        let mut safe = true;
 
         // Verify uncommitted crash barrier operations
-        if !ctx.uncommitted_ops.is_empty() {
+        let has_uncommitted = !ctx.uncommitted_ops.is_empty();
+        if has_uncommitted {
             findings.push(format!(
                 "Action barrier alert: {} uncommitted operations must be quarantined",
                 ctx.uncommitted_ops.len()
             ));
-            safe = false;
         }
 
         // Ahimsa invariant check
-        if ctx.health_score < 0.3 {
+        let health_critical = ctx.health_score < 0.3;
+        if health_critical {
             findings
                 .push("Ahimsa safety gate: action throttled due to critically low health".into());
-            safe = false;
         } else {
             findings.push(
                 "Pre-execution simulation: Ahimsa non-violence & Landlock invariants verified"
@@ -480,6 +477,7 @@ impl CittaEngine for ForesightEngine {
             );
         }
 
+        let safe = !has_uncommitted && !health_critical;
         let score = if safe { 1.0 } else { 0.2 };
         let metadata = serde_json::json!({
             "action_cleared": safe,
@@ -529,13 +527,11 @@ impl CittaEngine for ApotheosisEngine {
 
         if is_improving {
             findings.push(format!(
-                "Apotheosis ascending: composite score {:.3} above baseline",
-                composite
+                "Apotheosis ascending: composite score {composite:.3} above baseline"
             ));
         } else {
             findings.push(format!(
-                "Apotheosis stagnant: composite score {:.3} requires adaptation",
-                composite
+                "Apotheosis stagnant: composite score {composite:.3} requires adaptation"
             ));
         }
 

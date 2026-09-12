@@ -33,10 +33,10 @@ pub type AlchemicalTransmutationStage = AlchemicalRoundStage;
 impl From<AlchemicalRoundStage> for crate::smarana::AlchemicalStage {
     fn from(stage: AlchemicalRoundStage) -> Self {
         match stage {
-            AlchemicalRoundStage::Nigredo => crate::smarana::AlchemicalStage::Decay,
-            AlchemicalRoundStage::Albedo => crate::smarana::AlchemicalStage::Sublimation,
-            AlchemicalRoundStage::Citrinitas => crate::smarana::AlchemicalStage::Compression,
-            AlchemicalRoundStage::Rubedo => crate::smarana::AlchemicalStage::Crystallization,
+            AlchemicalRoundStage::Nigredo => Self::Decay,
+            AlchemicalRoundStage::Albedo => Self::Sublimation,
+            AlchemicalRoundStage::Citrinitas => Self::Compression,
+            AlchemicalRoundStage::Rubedo => Self::Crystallization,
         }
     }
 }

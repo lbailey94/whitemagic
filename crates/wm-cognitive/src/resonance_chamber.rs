@@ -45,7 +45,7 @@ pub enum ChamberError {
 }
 
 /// Temporal signature tracking the epoch and TTL constraints of a scratchpad thought.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TemporalSignature {
     /// Exact UTC timestamp when the thought entered the chamber.
     pub created_at: DateTime<Utc>,
@@ -99,12 +99,12 @@ impl TemporalSignature {
     }
 
     /// Reinforce the temporal signature, refreshing the `last_resonated_at` anchor.
-    pub fn touch(&mut self, now: DateTime<Utc>) {
+    pub const fn touch(&mut self, now: DateTime<Utc>) {
         self.last_resonated_at = now;
     }
 
     /// Extend the TTL duration by a bonus increment.
-    pub fn extend_ttl(&mut self, bonus: Duration) {
+    pub const fn extend_ttl(&mut self, bonus: Duration) {
         self.ttl = self.ttl.saturating_add(bonus);
     }
 }
@@ -139,7 +139,7 @@ impl Default for HarmonicProfile {
 impl HarmonicProfile {
     /// Construct a new harmonic profile.
     #[must_use]
-    pub fn new(coherence: f32, resonance: f32, valence: f32, salience: Salience) -> Self {
+    pub const fn new(coherence: f32, resonance: f32, valence: f32, salience: Salience) -> Self {
         Self {
             coherence: coherence.clamp(0.0, 1.0),
             resonance: resonance.clamp(0.0, 1.0),
@@ -235,14 +235,14 @@ impl ChamberThought {
 
     /// Builder: attach custom TTL.
     #[must_use]
-    pub fn with_ttl(mut self, ttl: Duration) -> Self {
+    pub const fn with_ttl(mut self, ttl: Duration) -> Self {
         self.temporal.ttl = ttl;
         self
     }
 
     /// Builder: attach epoch bounds.
     #[must_use]
-    pub fn with_epoch_bounds(mut self, origin: u64, max_epochs: u64) -> Self {
+    pub const fn with_epoch_bounds(mut self, origin: u64, max_epochs: u64) -> Self {
         self.temporal.epoch_origin = origin;
         self.temporal.max_epochs = max_epochs;
         self
@@ -264,7 +264,7 @@ impl ChamberThought {
 
     /// Builder: attach custom salience.
     #[must_use]
-    pub fn with_salience(mut self, salience: Salience) -> Self {
+    pub const fn with_salience(mut self, salience: Salience) -> Self {
         self.harmonics.salience = salience;
         self
     }
@@ -316,7 +316,7 @@ impl ChamberThought {
         };
         mem.metadata.tier = Tier::Working;
         mem.metadata.emotional_valence = self.harmonics.valence;
-        mem.metadata.source = self.source.clone();
+        mem.metadata.source.clone_from(&self.source);
         mem.metadata.coord5d = Coordinate5D::encode_with_context(&self.content, 0.6, importance);
 
         mem
@@ -427,6 +427,9 @@ pub struct ResonanceChamber {
     stats: ChamberStats,
 }
 
+// Deliberate compact Debug: prints identity + live cardinalities, not the
+// full thought/key maps (which would flood logs at chamber scale).
+#[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for ResonanceChamber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResonanceChamber")
@@ -470,7 +473,7 @@ impl ResonanceChamber {
 
     /// Chamber configuration reference.
     #[must_use]
-    pub fn config(&self) -> &ResonanceChamberConfig {
+    pub const fn config(&self) -> &ResonanceChamberConfig {
         &self.config
     }
 

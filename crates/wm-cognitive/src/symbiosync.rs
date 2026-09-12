@@ -120,13 +120,13 @@ pub enum SomaticVerdict {
 impl SomaticVerdict {
     /// Whether execution is allowed to proceed.
     #[must_use]
-    pub fn is_optimal(&self) -> bool {
+    pub const fn is_optimal(&self) -> bool {
         matches!(self, Self::Optimal)
     }
 
     /// Whether consolidation was throttled.
     #[must_use]
-    pub fn is_throttled(&self) -> bool {
+    pub const fn is_throttled(&self) -> bool {
         matches!(self, Self::Throttled(_))
     }
 }
@@ -255,13 +255,13 @@ impl SymbioSync {
 
     /// Engine configuration reference.
     #[must_use]
-    pub fn config(&self) -> &SymbioSyncConfig {
+    pub const fn config(&self) -> &SymbioSyncConfig {
         &self.config
     }
 
     /// Cumulative telemetry statistics.
     #[must_use]
-    pub fn stats(&self) -> &SymbioSyncStats {
+    pub const fn stats(&self) -> &SymbioSyncStats {
         &self.stats
     }
 

@@ -148,6 +148,7 @@ impl CopilotClient {
     ///
     /// If the local copilot is running, it queries the model with a structured prompt.
     /// If unreachable, it cleanly degrades to an analytical rule-based diagnostic.
+    #[must_use]
     pub fn synthesize_diagnostic(
         &self,
         uncommitted_ops: &[String],
@@ -172,12 +173,11 @@ impl CopilotClient {
                  You are the WhiteMagic Diagnostic Copilot. Analyze the following system anomalies and provide a concise diagnosis and recommended action.\n\
                  <|im_end|>\n\
                  <|im_start|>user\n\
-                 Uncommitted Crash-Barrier Operations: {:?}\n\
-                 Recent Frictions: {:?}\n\n\
+                 Uncommitted Crash-Barrier Operations: {uncommitted_ops:?}\n\
+                 Recent Frictions: {recent_frictions:?}\n\n\
                  Provide diagnosis and recommended remediation:\n\
                  <|im_end|>\n\
-                 <|im_start|>assistant\n",
-                uncommitted_ops, recent_frictions
+                 <|im_start|>assistant\n"
             );
 
             if let Ok(analysis) = self.complete(&prompt, self.config.max_tokens) {
@@ -193,23 +193,23 @@ impl CopilotClient {
         }
 
         // Rule-based graceful fallback
-        let diagnosis = if !uncommitted_ops.is_empty() {
+        let diagnosis = if uncommitted_ops.is_empty() {
+            format!(
+                "System friction recorded: {} events. No uncommitted operations.",
+                recent_frictions.len()
+            )
+        } else {
             format!(
                 "Detected {} uncommitted or unconfirmed multi-step operation(s): [{}]. Indicates aborted pipeline or crash barrier recovery point.",
                 uncommitted_ops.len(),
                 uncommitted_ops.join(", ")
             )
-        } else {
-            format!(
-                "System friction recorded: {} events. No uncommitted operations.",
-                recent_frictions.len()
-            )
         };
 
-        let action = if !uncommitted_ops.is_empty() {
-            "Review write audit journal; discard or reconcile incomplete mutations."
-        } else {
+        let action = if uncommitted_ops.is_empty() {
             "Monitor next cycle; investigate recurring errors if frequency escalates."
+        } else {
+            "Review write audit journal; discard or reconcile incomplete mutations."
         };
 
         DiagnosticReport {

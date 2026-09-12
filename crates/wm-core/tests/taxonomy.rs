@@ -1,4 +1,4 @@
-//! Integration tests for the core taxonomy: Gana (28), Galaxy (14),
+//! Integration tests for the core taxonomy: Gana (28), Galaxy (15),
 //! and `HolographicCoords` (6D).
 //!
 //! These tests verify structural invariants that must hold for the
@@ -104,12 +104,12 @@ proptest! {
     }
 }
 
-// ── Galaxy: 14 Memory Galaxies ────────────────────────────────────────
+// ── Galaxy: 15 Memory Galaxies (Valkyrie added 2026-09-11) ────────────
 
 #[test]
-fn galaxy_has_exactly_14_variants() {
-    assert_eq!(Galaxy::COUNT, 14);
-    assert_eq!(Galaxy::all().len(), 14);
+fn galaxy_has_exactly_15_variants() {
+    assert_eq!(Galaxy::COUNT, 15);
+    assert_eq!(Galaxy::all().len(), 15);
 }
 
 #[test]
@@ -246,7 +246,7 @@ proptest! {
     /// Encode/decode roundtrip for arbitrary valid coordinates.
     #[test]
     fn coords_roundtrip(
-        galaxy in 0u8..14,
+        galaxy in 0u8..15,
         sector in 0u16..,
         radial in 0.0f32..1.0,
         angular in 0.0f32..std::f32::consts::TAU,
@@ -269,7 +269,7 @@ proptest! {
     /// Distance to self is always zero.
     #[test]
     fn coords_distance_self_zero(
-        galaxy in 0u8..14,
+        galaxy in 0u8..15,
         sector in 0u16..,
         radial in 0.0f32..1.0,
         angular in 0.0f32..std::f32::consts::TAU,
@@ -285,7 +285,7 @@ proptest! {
     /// Distance is symmetric.
     #[test]
     fn coords_distance_symmetric(
-        a_galaxy in 0u8..14, b_galaxy in 0u8..14,
+        a_galaxy in 0u8..15, b_galaxy in 0u8..15,
         a_sector in 0u16.., b_sector in 0u16..,
         a_radial in 0.0f32..1.0, b_radial in 0.0f32..1.0,
         a_angular in 0.0f32..std::f32::consts::TAU, b_angular in 0.0f32..std::f32::consts::TAU,

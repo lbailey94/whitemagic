@@ -171,7 +171,7 @@ impl HardwareMonitor {
             }
         }
 
-        pkg_temp.or_else(|| if max_temp > 0.0 { Some(max_temp) } else { None })
+        pkg_temp.or(if max_temp > 0.0 { Some(max_temp) } else { None })
     }
 
     /// Read 1m and 5m load averages from `/proc/loadavg`.
@@ -243,10 +243,10 @@ mod tests {
 
     #[test]
     fn test_regime_classification() {
-        assert_eq!(HardwareRegime::Cool.should_throttle(), false);
-        assert_eq!(HardwareRegime::Warm.should_throttle(), false);
-        assert_eq!(HardwareRegime::Hot.should_throttle(), true);
-        assert_eq!(HardwareRegime::Critical.should_throttle(), true);
+        assert!(!HardwareRegime::Cool.should_throttle());
+        assert!(!HardwareRegime::Warm.should_throttle());
+        assert!(HardwareRegime::Hot.should_throttle());
+        assert!(HardwareRegime::Critical.should_throttle());
     }
 
     #[test]
@@ -263,7 +263,7 @@ mod tests {
         let h = snap.to_homeostasis(true);
         assert_eq!(h.cpu_load, 0.5);
         assert_eq!(h.memory_pressure, 0.5);
-        assert_eq!(h.active, true);
+        assert!(h.active);
         assert!(!h.is_stressed());
     }
 }
