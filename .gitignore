@@ -147,6 +147,7 @@ wm-leases.json
 !/scripts/longmemeval_bench.py
 !/scripts/memorastrict_bench.py
 !/scripts/eval_protocol.py
+!/scripts/public_surface_check.sh
 !/scripts/tests/
 !/scripts/tests/test_eval_protocol.py
 
