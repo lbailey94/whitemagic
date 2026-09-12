@@ -815,12 +815,16 @@ impl RecallEngine {
         }
 
         // Batch the apply: persistent-cache hits resolve first, misses ride
-        // the embedder's batch API (32 texts per call keeps the HTTP body
-        // and llama.cpp micro-batches sane; heritage-scale stores make the
-        // per-text path ~26 min, batching cuts that materially). A batch
+        // the embedder's batch API. Chunk size defaults to 32 (sane for the
+        // llama.cpp HTTP server); `WM_REEMBED_BATCH` (1-64) tunes it per unit
+        // — long-transcript stores need small chunks to stay inside the
+        // embedder's request timeout (heritage lesson, 2026-09-12). A batch
         // failure degrades to per-item embedding so one bad input cannot
         // sink its chunk.
-        let chunk_size = self.embedder.preferred_max_batch_texts().clamp(1, 32);
+        let chunk_size = std::env::var("WM_REEMBED_BATCH")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .map_or(32, |size| size.clamp(1, 64));
         for chunk in candidates.chunks(chunk_size) {
             let keys: Vec<String> = chunk
                 .iter()
