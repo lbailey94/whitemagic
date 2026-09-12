@@ -2,6 +2,10 @@
 //! must keep working normally (all its writes live under the store root),
 //! disclose the report through the persisted state file, and leave the
 //! flag-off path byte-for-byte unchanged.
+//!
+//! Linux-only: Landlock is a Linux LSM; other platforms report
+//! `platform_unsupported` and this test's expectations do not apply.
+#![cfg(target_os = "linux")]
 
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};

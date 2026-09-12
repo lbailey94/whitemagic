@@ -119,7 +119,10 @@ jobs:
       # criterion binaries in full benchmark mode (minutes per bench),
       # unlike plain cargo test's fast test-mode; benches are covered by
       # the Benchmarks workflow + bench-compile check instead.
-      - run: cargo nextest run --lib --bins --tests --profile ci
+      # --no-fail-fast: report every failing test in one run instead of
+      # stopping at the first (one platform-specific failure used to hide
+      # the rest of the matrix).
+      - run: cargo nextest run --lib --bins --tests --profile ci --no-fail-fast
 
   bench-compile:
     timeout-minutes: 25
