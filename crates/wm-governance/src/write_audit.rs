@@ -596,15 +596,7 @@ mod tests {
         assert_eq!(actor.operation_id.as_deref(), Some(op_id));
 
         let entry = journal
-            .record(
-                "memory.create",
-                actor,
-                None,
-                None,
-                true,
-                1,
-                true,
-            )
+            .record("memory.create", actor, None, None, true, 1, true)
             .unwrap();
 
         assert_eq!(entry.operation_id.as_deref(), Some(op_id));

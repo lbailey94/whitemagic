@@ -45,8 +45,7 @@ impl CopilotConfig {
             .or_else(|_| std::env::var("WM_LLAMA_ENDPOINT"))
             .unwrap_or_else(|_| "http://127.0.0.1:18898".into());
 
-        let model = std::env::var("WM_COPILOT_MODEL")
-            .unwrap_or_else(|_| "local-copilot".into());
+        let model = std::env::var("WM_COPILOT_MODEL").unwrap_or_else(|_| "local-copilot".into());
 
         let timeout_secs = std::env::var("WM_COPILOT_TIMEOUT_SECS")
             .ok()

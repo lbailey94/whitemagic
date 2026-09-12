@@ -155,7 +155,6 @@ pub use resonance_chamber::{
     HarmonicProfile, ResonanceChamber, ResonanceChamberConfig, TemporalSignature,
 };
 pub use symbiosync::{
-    AlignedPattern, SomaticThrottleReason, SomaticThresholds, SomaticVerdict, SymbioSync,
+    AlignedPattern, SomaticThresholds, SomaticThrottleReason, SomaticVerdict, SymbioSync,
     SymbioSyncConfig, SymbioSyncReport, SymbioSyncStats,
 };
-

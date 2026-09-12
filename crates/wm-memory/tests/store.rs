@@ -108,6 +108,9 @@ fn test_valkyrie_sanctuary_memory_storage() {
     let retrieved = store.get(Galaxy::Valkyrie, id).unwrap();
     assert!(retrieved.is_some());
     let r = retrieved.unwrap();
-    assert_eq!(r.content, "WhiteMagic sanctuary memory: kept whole, never deleted.");
+    assert_eq!(
+        r.content,
+        "WhiteMagic sanctuary memory: kept whole, never deleted."
+    );
     assert_eq!(store.count(Galaxy::Valkyrie).unwrap(), 1);
 }

@@ -1524,7 +1524,9 @@ impl DreamCycle {
         };
 
         let phagic_note = if phagic_migrated > 0 {
-            format!(", {phagic_migrated} outer-rim memories migrated to cold-storage ({phagic_synthesized} thematic nodes synthesized)")
+            format!(
+                ", {phagic_migrated} outer-rim memories migrated to cold-storage ({phagic_synthesized} thematic nodes synthesized)"
+            )
         } else {
             String::new()
         };
@@ -2621,14 +2623,22 @@ mod tests {
 
         // Seed outer-rim memories
         let past = now - chrono::Duration::days(200);
-        let mut old1 = Memory::new(galaxy, "Ancient forgotten tome on astral navigation".to_string()).with_importance(0.01);
+        let mut old1 = Memory::new(
+            galaxy,
+            "Ancient forgotten tome on astral navigation".to_string(),
+        )
+        .with_importance(0.01);
         old1.metadata.created_at = past;
         old1.metadata.accessed_at = past;
         old1.metadata.access_count = 0;
         let id1 = old1.metadata.id;
         store.put(galaxy, &old1).unwrap();
 
-        let mut old2 = Memory::new(galaxy, "Ancient forgotten treatise on star charts".to_string()).with_importance(0.01);
+        let mut old2 = Memory::new(
+            galaxy,
+            "Ancient forgotten treatise on star charts".to_string(),
+        )
+        .with_importance(0.01);
         old2.metadata.created_at = past;
         old2.metadata.accessed_at = past;
         old2.metadata.access_count = 0;
@@ -2651,15 +2661,28 @@ mod tests {
         assert!(store.get(galaxy, id2).unwrap().is_none());
 
         // But store.find_anywhere transparently finds them and reports them as cold!
-        let (found_galaxy, found_mem, is_cold) = store.find_anywhere(id1).unwrap().expect("found in cold tier");
+        let (found_galaxy, found_mem, is_cold) = store
+            .find_anywhere(id1)
+            .unwrap()
+            .expect("found in cold tier");
         assert_eq!(found_galaxy, galaxy);
-        assert_eq!(found_mem.content, "Ancient forgotten tome on astral navigation");
+        assert_eq!(
+            found_mem.content,
+            "Ancient forgotten tome on astral navigation"
+        );
         assert!(is_cold);
 
         // And thawing via coordinator restores it back to active hot tier
-        let thawed = cycle.phagic().unwrap().thaw_memory(&store, None, id1).unwrap();
+        let thawed = cycle
+            .phagic()
+            .unwrap()
+            .thaw_memory(&store, None, id1)
+            .unwrap();
         assert_eq!(thawed.metadata.id, id1);
-        assert_eq!(thawed.content, "Ancient forgotten tome on astral navigation");
+        assert_eq!(
+            thawed.content,
+            "Ancient forgotten tome on astral navigation"
+        );
         assert!(store.get(galaxy, id1).unwrap().is_some());
         assert_eq!(store.count_cold(Some(galaxy)).unwrap(), 1);
     }

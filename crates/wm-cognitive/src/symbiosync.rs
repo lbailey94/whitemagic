@@ -64,40 +64,45 @@ impl Default for SomaticThresholds {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SomaticThrottleReason {
     /// CPU core/package temperature exceeded safe threshold.
-    ThermalHot {
-        temp_c: f32,
-        threshold: f32,
-    },
+    ThermalHot { temp_c: f32, threshold: f32 },
     /// System load average indicates foreground user activity.
-    HighLoad {
-        load_1m: f32,
-        threshold: f32,
-    },
+    HighLoad { load_1m: f32, threshold: f32 },
     /// Memory pressure is too elevated for background consolidation.
-    HighMemoryPressure {
-        pressure: f32,
-        threshold: f32,
-    },
+    HighMemoryPressure { pressure: f32, threshold: f32 },
     /// Hardware regime explicitly requires throttling (Hot or Critical).
-    RegimeDistress {
-        regime: HardwareRegime,
-    },
+    RegimeDistress { regime: HardwareRegime },
 }
 
 impl std::fmt::Display for SomaticThrottleReason {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ThermalHot { temp_c, threshold } => {
-                write!(f, "CPU thermal threshold exceeded ({temp_c:.1}°C >= {threshold:.1}°C)")
+                write!(
+                    f,
+                    "CPU thermal threshold exceeded ({temp_c:.1}°C >= {threshold:.1}°C)"
+                )
             }
             Self::HighLoad { load_1m, threshold } => {
-                write!(f, "system load average too high ({load_1m:.2} >= {threshold:.2})")
+                write!(
+                    f,
+                    "system load average too high ({load_1m:.2} >= {threshold:.2})"
+                )
             }
-            Self::HighMemoryPressure { pressure, threshold } => {
-                write!(f, "memory pressure elevated ({pressure:.2} >= {threshold:.2})")
+            Self::HighMemoryPressure {
+                pressure,
+                threshold,
+            } => {
+                write!(
+                    f,
+                    "memory pressure elevated ({pressure:.2} >= {threshold:.2})"
+                )
             }
             Self::RegimeDistress { regime } => {
-                write!(f, "hardware regime indicates distress: {}", regime.description())
+                write!(
+                    f,
+                    "hardware regime indicates distress: {}",
+                    regime.description()
+                )
             }
         }
     }
@@ -294,7 +299,11 @@ impl SymbioSync {
         }
 
         // 4. Hardware Regime Classification
-        if !self.config.somatic.allowed_regimes.contains(&snapshot.regime)
+        if !self
+            .config
+            .somatic
+            .allowed_regimes
+            .contains(&snapshot.regime)
             || snapshot.regime.should_throttle()
         {
             return SomaticVerdict::Throttled(SomaticThrottleReason::RegimeDistress {
@@ -439,7 +448,8 @@ impl SymbioSync {
         // Index thoughts by informative tags (skipping generic boilerplate tags)
         for thought in chamber.active_thoughts() {
             for tag in &thought.tags {
-                if tag != "scratchpad" && tag != "resonance_chamber" && !tag.starts_with("source:") {
+                if tag != "scratchpad" && tag != "resonance_chamber" && !tag.starts_with("source:")
+                {
                     tag_to_thought_ids
                         .entry(tag.clone())
                         .or_default()
@@ -458,7 +468,9 @@ impl SymbioSync {
 
                 for id in &ids {
                     if let Some(thought) = chamber.get_mut(id) {
-                        thought.harmonics.reinforce(self.config.pattern_resonance_boost);
+                        thought
+                            .harmonics
+                            .reinforce(self.config.pattern_resonance_boost);
                         sum_score += thought.effective_harmonic_score();
                         contributing.push(*id);
                         reinforced_set.insert(*id);
@@ -491,9 +503,9 @@ impl SymbioSync {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::resonance_chamber::ChamberThought;
     use std::time::Duration;
     use wm_core::Galaxy;
-    use crate::resonance_chamber::ChamberThought;
 
     #[test]
     fn test_somatic_throttling_yields_when_cpu_is_hot() {
@@ -526,8 +538,14 @@ mod tests {
             .step(&mut chamber, &hot_snapshot, None)
             .expect("step should execute safely");
 
-        assert!(report.yielded, "dream cycle must yield when CPU is hot (>= 75°C)");
-        assert!(report.memories_merged.is_empty(), "no memories should be merged when throttled");
+        assert!(
+            report.yielded,
+            "dream cycle must yield when CPU is hot (>= 75°C)"
+        );
+        assert!(
+            report.memories_merged.is_empty(),
+            "no memories should be merged when throttled"
+        );
         assert_eq!(symbio.stats().cycles_throttled, 1);
 
         match report.somatic_verdict {
@@ -570,7 +588,10 @@ mod tests {
             .step(&mut chamber, &high_load_snapshot, None)
             .expect("step should execute safely");
 
-        assert!(report.yielded, "dream cycle must yield when load is high (>= 4.0)");
+        assert!(
+            report.yielded,
+            "dream cycle must yield when load is high (>= 4.0)"
+        );
         assert!(report.memories_merged.is_empty());
         assert_eq!(symbio.stats().cycles_throttled, 1);
 
@@ -614,12 +635,7 @@ mod tests {
 
         // Low resonance thought that should NOT merge
         let low_id = chamber
-            .deposit_thought(
-                "scratch.noise",
-                "Unfinished tangent",
-                0.35,
-                Galaxy::Codex,
-            )
+            .deposit_thought("scratch.noise", "Unfinished tangent", 0.35, Galaxy::Codex)
             .unwrap();
 
         // Nominal cool snapshot (< 65°C, load 0.50)
@@ -629,9 +645,16 @@ mod tests {
             .step(&mut chamber, &cool_snapshot, None)
             .expect("step should succeed");
 
-        assert!(!report.yielded, "dream cycle should not yield during cool idle state");
+        assert!(
+            !report.yielded,
+            "dream cycle should not yield during cool idle state"
+        );
         assert_eq!(report.somatic_verdict, SomaticVerdict::Optimal);
-        assert_eq!(report.memories_merged.len(), 2, "must consolidate both high-resonance thoughts");
+        assert_eq!(
+            report.memories_merged.len(),
+            2,
+            "must consolidate both high-resonance thoughts"
+        );
 
         // Verify target galaxies
         assert!(report.target_galaxies.contains(&Galaxy::Valkyrie));
@@ -642,7 +665,10 @@ mod tests {
             .iter()
             .find(|m| m.metadata.galaxy == Galaxy::Valkyrie)
             .unwrap();
-        assert_eq!(valk_mem.metadata.title.as_deref(), Some("valkyrie.symbiosis"));
+        assert_eq!(
+            valk_mem.metadata.title.as_deref(),
+            Some("valkyrie.symbiosis")
+        );
         assert!(valk_mem.metadata.importance >= 0.70);
 
         let dream_mem = report
@@ -650,7 +676,10 @@ mod tests {
             .iter()
             .find(|m| m.metadata.galaxy == Galaxy::Dreams)
             .unwrap();
-        assert_eq!(dream_mem.metadata.title.as_deref(), Some("dream.unconscious_alignment"));
+        assert_eq!(
+            dream_mem.metadata.title.as_deref(),
+            Some("dream.unconscious_alignment")
+        );
 
         // Verify low thought remains unmerged in chamber
         let low_thought = chamber.get(&low_id).unwrap();
@@ -693,8 +722,14 @@ mod tests {
         let post_score1 = chamber.get(&id1).unwrap().effective_harmonic_score();
         let post_score2 = chamber.get(&id2).unwrap().effective_harmonic_score();
 
-        assert!(post_score1 > initial_score1, "pattern alignment must reinforce thought 1");
-        assert!(post_score2 > initial_score2, "pattern alignment must reinforce thought 2");
+        assert!(
+            post_score1 > initial_score1,
+            "pattern alignment must reinforce thought 1"
+        );
+        assert!(
+            post_score2 > initial_score2,
+            "pattern alignment must reinforce thought 2"
+        );
     }
 
     #[test]
@@ -708,7 +743,9 @@ mod tests {
             },
         );
 
-        chamber.deposit_simple("quick.idea", "Fleeting inspiration", 0.60).unwrap();
+        chamber
+            .deposit_simple("quick.idea", "Fleeting inspiration", 0.60)
+            .unwrap();
         assert_eq!(chamber.len(), 1);
 
         // Sleep to let TTL elapse
@@ -717,7 +754,14 @@ mod tests {
         let cool = HardwareSnapshot::nominal();
         let report = symbio.step(&mut chamber, &cool, None).unwrap();
 
-        assert_eq!(report.thoughts_expired, 1, "stale thought must be expired and reported");
-        assert_eq!(chamber.len(), 0, "chamber must be clean after dream cycle sweep");
+        assert_eq!(
+            report.thoughts_expired, 1,
+            "stale thought must be expired and reported"
+        );
+        assert_eq!(
+            chamber.len(),
+            0,
+            "chamber must be clean after dream cycle sweep"
+        );
     }
 }

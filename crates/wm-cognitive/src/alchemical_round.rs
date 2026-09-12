@@ -6,9 +6,9 @@
 
 #![forbid(unsafe_code)]
 
+use crate::citta_engine::{CittaContext, CittaPhase};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
-use crate::citta_engine::{CittaContext, CittaPhase};
 
 /// The Four Classical Alchemical Stages of Cognitive Transmutation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -90,7 +90,11 @@ pub static ENGINE_CATALOG: &[EngineProfile] = &[
         name: "KaizenEngine",
         stage: AlchemicalStage::Nigredo,
         purpose: "Continuous friction detection, write audit journal failure scans, and bottleneck discovery",
-        input_streams: &["write_audit_journal", "friction_log", "uncommitted_barriers"],
+        input_streams: &[
+            "write_audit_journal",
+            "friction_log",
+            "uncommitted_barriers",
+        ],
         output_products: &["kaizen_report", "remediation_proposals"],
     },
     EngineProfile {
@@ -141,7 +145,6 @@ pub static ENGINE_CATALOG: &[EngineProfile] = &[
         input_streams: &["raw_text_stream"],
         output_products: &["extracted_entities", "named_tokens"],
     },
-
     // ── Phase 2: Albedo (Metal / West / Contemplation) ─────────────────────
     EngineProfile {
         slot: 7,
@@ -199,7 +202,6 @@ pub static ENGINE_CATALOG: &[EngineProfile] = &[
         input_streams: &["workspace_source_files"],
         output_products: &["symbol_graph", "call_hierarchy"],
     },
-
     // ── Phase 3: Citrinitas (Wood / East / Action) ─────────────────────────
     EngineProfile {
         slot: 14,
@@ -257,7 +259,6 @@ pub static ENGINE_CATALOG: &[EngineProfile] = &[
         input_streams: &["research_topic", "source_materials"],
         output_products: &["research_dossier", "resolved_queries"],
     },
-
     // ── Phase 4: Rubedo (Fire / South / Reflection) ─────────────────────────
     EngineProfile {
         slot: 21,
@@ -384,7 +385,8 @@ impl AlchemicalRoundCoordinator {
 
         // Transmuted wisdom score combines coherence, health, and low friction penalty
         let friction_penalty = (frictions as f32 * 0.05).min(0.5);
-        let wisdom_score = ((ctx.health_score * 0.5 + ctx.coherence * 0.5) - friction_penalty).clamp(0.0, 1.0);
+        let wisdom_score =
+            ((ctx.health_score * 0.5 + ctx.coherence * 0.5) - friction_penalty).clamp(0.0, 1.0);
 
         // Advance the master alchemical wheel
         self.current_stage = self.current_stage.next();
@@ -420,12 +422,19 @@ mod tests {
             AlchemicalStage::Rubedo,
         ] {
             let engines = AlchemicalRoundCoordinator::engines_for_stage(stage);
-            assert_eq!(engines.len(), 7, "Stage {stage:?} must have exactly 7 engines");
+            assert_eq!(
+                engines.len(),
+                7,
+                "Stage {stage:?} must have exactly 7 engines"
+            );
         }
 
         // Verify all 28 slots are unique and contiguous
         for slot in 0..28 {
-            assert!(AlchemicalRoundCoordinator::get_profile(slot).is_some(), "Missing slot {slot}");
+            assert!(
+                AlchemicalRoundCoordinator::get_profile(slot).is_some(),
+                "Missing slot {slot}"
+            );
         }
     }
 

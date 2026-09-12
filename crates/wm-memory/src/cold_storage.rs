@@ -17,9 +17,9 @@
 //! - **Thawing (Warm Restoration)**: Zero data loss — any cold-stored memory can be queried
 //!   directly or thawed back into the hot active tier with full fidelity.
 
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 use wm_core::{CoreError, Galaxy, Result};
 
@@ -141,13 +141,14 @@ pub fn calculate_outer_rim_distance(
 
     // 2. Access frequency: hyperbolic decay over combined access + recall reads
     let reads = (mem.metadata.access_count + mem.metadata.recall_count) as f32;
-    let access_factor = (1.0 / (1.0 + 0.5 * reads)).clamp(0.0, 1.0);
+    let access_factor = (1.0 / 0.5f32.mul_add(reads, 1.0)).clamp(0.0, 1.0);
 
     // 3. Harmonic resonance: inverse of neuro_score
     let resonance_factor = (1.0 - mem.metadata.neuro_score.clamp(0.0, 1.0)).clamp(0.0, 1.0);
 
     // 4. Emotional valence / salience: |valence| * weight
-    let salience = (mem.metadata.emotional_valence.abs() * mem.metadata.emotional_weight).clamp(0.0, 1.0);
+    let salience =
+        (mem.metadata.emotional_valence.abs() * mem.metadata.emotional_weight).clamp(0.0, 1.0);
     let emotional_factor = (1.0 - salience).clamp(0.0, 1.0);
 
     // 5. Importance: inverse of semantic importance
@@ -161,11 +162,18 @@ pub fn calculate_outer_rim_distance(
         + config.weight_importance;
 
     let distance = if sum_weights > 0.0 {
-        let raw = config.weight_age * age_factor
-            + config.weight_access * access_factor
-            + config.weight_resonance * resonance_factor
-            + config.weight_emotional * emotional_factor
-            + config.weight_importance * importance_factor;
+        let raw = config.weight_importance.mul_add(
+            importance_factor,
+            config.weight_emotional.mul_add(
+                emotional_factor,
+                config.weight_resonance.mul_add(
+                    resonance_factor,
+                    config
+                        .weight_access
+                        .mul_add(access_factor, config.weight_age * age_factor),
+                ),
+            ),
+        );
         (raw / sum_weights).clamp(0.0, 1.0)
     } else {
         0.5
@@ -417,7 +425,7 @@ impl ColdQuery {
 
     /// Filter by galaxy.
     #[must_use]
-    pub fn with_galaxy(mut self, galaxy: Galaxy) -> Self {
+    pub const fn with_galaxy(mut self, galaxy: Galaxy) -> Self {
         self.galaxy = Some(galaxy);
         self
     }
@@ -631,12 +639,9 @@ impl PhagicDigester {
         let avg_distance = total_distance / cluster.len() as f32;
 
         let mut top_tags: Vec<(String, usize)> = tag_counts.into_iter().collect();
-        top_tags.sort_by(|a, b| b.1.cmp(&a.1));
-        let prominent_tags: Vec<String> = top_tags
-            .into_iter()
-            .take(6)
-            .map(|(tag, _)| tag)
-            .collect();
+        top_tags.sort_by_key(|a| std::cmp::Reverse(a.1));
+        let prominent_tags: Vec<String> =
+            top_tags.into_iter().take(6).map(|(tag, _)| tag).collect();
 
         // 1. Synthesize thematic digest memory for active hot tier
         let mut digest_content = format!(
@@ -658,24 +663,34 @@ impl PhagicDigester {
             min_time.format("%Y-%m-%d %H:%M:%S UTC"),
             max_time.format("%Y-%m-%d %H:%M:%S UTC"),
             avg_distance,
-            if prominent_tags.is_empty() { "none".to_string() } else { prominent_tags.join(", ") },
+            if prominent_tags.is_empty() {
+                "none".to_string()
+            } else {
+                prominent_tags.join(", ")
+            },
             cluster.len(),
             galaxy.db_name(),
         );
 
+        use std::fmt::Write as _;
         for (mem, factors) in cluster {
             let snippet = create_snippet(&mem.content);
-            digest_content.push_str(&format!(
-                "- **[Memory `{}`]** (Distance: {:.2}): {}\n",
-                mem.metadata.id, factors.distance, snippet
-            ));
+            let _ = writeln!(
+                digest_content,
+                "- **[Memory `{}`]** (Distance: {:.2}): {snippet}",
+                mem.metadata.id, factors.distance
+            );
         }
 
         let mut digest_tags = prominent_tags;
         digest_tags.push("phagic:digest".to_string());
         digest_tags.push(format!("phagic:cluster:{cluster_id}"));
 
-        let digest_title = format!("Phagic Digest: {} ({} items)", galaxy.db_name(), cluster.len());
+        let digest_title = format!(
+            "Phagic Digest: {} ({} items)",
+            galaxy.db_name(),
+            cluster.len()
+        );
         let mut digest_mem = Memory::new(galaxy, digest_content)
             .with_tags(digest_tags)
             .with_importance(0.65)
@@ -710,10 +725,7 @@ impl PhagicDigester {
         let mut total_cold_bytes = 0;
 
         for (mem, factors) in cluster {
-            let notes = format!(
-                "Digested in phagic cluster {} (digest_id: {})",
-                cluster_id, digest_id
-            );
+            let notes = format!("Digested in phagic cluster {cluster_id} (digest_id: {digest_id})");
             let cold_rec = store.freeze_to_cold(
                 search,
                 mem.metadata.id,
@@ -970,7 +982,10 @@ mod tests {
         let thawed = store.thaw_from_cold(None, id).unwrap();
         assert_eq!(thawed.metadata.id, id);
         assert_eq!(thawed.content, content);
-        assert_eq!(thawed.metadata.tags, vec!["architecture", "v9", "thawed:phagic"]);
+        assert_eq!(
+            thawed.metadata.tags,
+            vec!["architecture", "v9", "thawed:phagic"]
+        );
         assert_eq!(thawed.metadata.tier, Tier::Episodic);
 
         // Hot store now contains it again
@@ -1024,7 +1039,12 @@ mod tests {
         let digest_mem = store.get(galaxy, digest_id).unwrap().unwrap();
         assert_eq!(digest_mem.metadata.tier, Tier::Semantic);
         assert!(digest_mem.content.contains("Phagic Thematic Digest"));
-        assert!(digest_mem.metadata.tags.contains(&"phagic:digest".to_string()));
+        assert!(
+            digest_mem
+                .metadata
+                .tags
+                .contains(&"phagic:digest".to_string())
+        );
 
         // Thaw one of the cold memories back to hot
         let thawed = digester.thaw(&store, None, ids[0]).unwrap();

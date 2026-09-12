@@ -11,8 +11,8 @@
 //! active tier while preserving the full original memories with bit-level
 //! fidelity in cold storage.
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use wm_core::{Galaxy, Result};
 use wm_memory::cold_storage::{
     ColdQuery, OuterRimFactors, PhagicConfig, PhagicDigestReport, PhagicDigester,

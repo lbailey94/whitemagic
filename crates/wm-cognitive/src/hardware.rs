@@ -159,7 +159,9 @@ impl HardwareMonitor {
                             }
 
                             if let Ok(zone_type) = std::fs::read_to_string(&type_file) {
-                                if zone_type.contains("x86_pkg_temp") || zone_type.contains("Package") {
+                                if zone_type.contains("x86_pkg_temp")
+                                    || zone_type.contains("Package")
+                                {
                                     pkg_temp = Some(c);
                                 }
                             }
@@ -225,30 +227,26 @@ mod tests {
     fn test_hardware_sampling_produces_plausible_values() {
         let snap = HardwareMonitor::sample();
         // Plausible range checks on any real or mock Linux system
-        assert!(snap.temp_c > 0.0 && snap.temp_c < 120.0, "Plausible temp: {}", snap.temp_c);
+        assert!(
+            snap.temp_c > 0.0 && snap.temp_c < 120.0,
+            "Plausible temp: {}",
+            snap.temp_c
+        );
         assert!(snap.load_1m >= 0.0, "Non-negative load: {}", snap.load_1m);
-        assert!(snap.mem_total_mb > 0, "Total RAM > 0: {}", snap.mem_total_mb);
+        assert!(
+            snap.mem_total_mb > 0,
+            "Total RAM > 0: {}",
+            snap.mem_total_mb
+        );
         assert!(snap.mem_pressure >= 0.0 && snap.mem_pressure <= 1.0);
     }
 
     #[test]
     fn test_regime_classification() {
-        assert_eq!(
-            HardwareRegime::Cool.should_throttle(),
-            false
-        );
-        assert_eq!(
-            HardwareRegime::Warm.should_throttle(),
-            false
-        );
-        assert_eq!(
-            HardwareRegime::Hot.should_throttle(),
-            true
-        );
-        assert_eq!(
-            HardwareRegime::Critical.should_throttle(),
-            true
-        );
+        assert_eq!(HardwareRegime::Cool.should_throttle(), false);
+        assert_eq!(HardwareRegime::Warm.should_throttle(), false);
+        assert_eq!(HardwareRegime::Hot.should_throttle(), true);
+        assert_eq!(HardwareRegime::Critical.should_throttle(), true);
     }
 
     #[test]

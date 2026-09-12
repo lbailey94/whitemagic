@@ -1658,11 +1658,15 @@ impl MemoryStore {
         match tx.get(self.cold_storage_db, key) {
             Ok(bytes) => {
                 let record: crate::cold_storage::ColdRecord = rmp_serde::from_slice(bytes)
-                    .map_err(|e| CoreError::Memory(format!("Cold record deserialization failed: {e}")))?;
+                    .map_err(|e| {
+                        CoreError::Memory(format!("Cold record deserialization failed: {e}"))
+                    })?;
                 Ok(Some(record))
             }
             Err(lmdb::Error::NotFound) => Ok(None),
-            Err(e) => Err(CoreError::Memory(format!("LMDB get cold_storage failed: {e}"))),
+            Err(e) => Err(CoreError::Memory(format!(
+                "LMDB get cold_storage failed: {e}"
+            ))),
         }
     }
 
@@ -1676,7 +1680,11 @@ impl MemoryStore {
         let deleted = match tx.del(self.cold_storage_db, key, None) {
             Ok(()) => true,
             Err(lmdb::Error::NotFound) => false,
-            Err(e) => return Err(CoreError::Memory(format!("LMDB del cold_storage failed: {e}"))),
+            Err(e) => {
+                return Err(CoreError::Memory(format!(
+                    "LMDB del cold_storage failed: {e}"
+                )));
+            }
         };
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
@@ -1698,8 +1706,10 @@ impl MemoryStore {
         let mut count = 0;
         for (_key, val) in cursor.iter() {
             if let Some(target_g) = galaxy {
-                let record: crate::cold_storage::ColdRecord = rmp_serde::from_slice(val)
-                    .map_err(|e| CoreError::Memory(format!("Cold record deserialization failed: {e}")))?;
+                let record: crate::cold_storage::ColdRecord =
+                    rmp_serde::from_slice(val).map_err(|e| {
+                        CoreError::Memory(format!("Cold record deserialization failed: {e}"))
+                    })?;
                 if record.galaxy == target_g {
                     count += 1;
                 }
@@ -1737,11 +1747,17 @@ impl MemoryStore {
             .open_ro_cursor(self.cold_storage_db)
             .map_err(|e| CoreError::Memory(format!("LMDB open_ro_cursor failed: {e}")))?;
         let mut results = Vec::new();
-        let limit = if query.limit == 0 { usize::MAX } else { query.limit };
+        let limit = if query.limit == 0 {
+            usize::MAX
+        } else {
+            query.limit
+        };
 
         for (_key, val) in cursor.iter() {
-            let record: crate::cold_storage::ColdRecord = rmp_serde::from_slice(val)
-                .map_err(|e| CoreError::Memory(format!("Cold record deserialization failed: {e}")))?;
+            let record: crate::cold_storage::ColdRecord =
+                rmp_serde::from_slice(val).map_err(|e| {
+                    CoreError::Memory(format!("Cold record deserialization failed: {e}"))
+                })?;
             let summary = record.summary();
             if query.matches(&summary) {
                 results.push(summary);
@@ -1768,23 +1784,17 @@ impl MemoryStore {
         notes: Option<String>,
         codec: crate::cold_storage::CompressionCodec,
     ) -> Result<crate::cold_storage::ColdRecord> {
-        let (galaxy, mut mem) = self
-            .find_across_galaxies(memory_id)?
-            .ok_or_else(|| CoreError::NotFound(format!("Memory {memory_id} not found in hot store")))?;
+        let (galaxy, mut mem) = self.find_across_galaxies(memory_id)?.ok_or_else(|| {
+            CoreError::NotFound(format!("Memory {memory_id} not found in hot store"))
+        })?;
 
         // Transition tier to Archival
         if mem.metadata.tier != crate::memory::Tier::Archival {
             let _ = mem.transition_tier(crate::memory::Tier::Archival);
         }
 
-        let record = crate::cold_storage::ColdRecord::new(
-            &mem,
-            distance,
-            factors,
-            digest_id,
-            notes,
-            codec,
-        )?;
+        let record =
+            crate::cold_storage::ColdRecord::new(&mem, distance, factors, digest_id, notes, codec)?;
 
         // Store into cold archive
         self.put_cold_record(&record)?;
@@ -1813,9 +1823,9 @@ impl MemoryStore {
         search: Option<&crate::SearchEngine>,
         memory_id: MemoryId,
     ) -> Result<Memory> {
-        let record = self
-            .get_cold_record(memory_id)?
-            .ok_or_else(|| CoreError::NotFound(format!("Memory {memory_id} not found in cold storage")))?;
+        let record = self.get_cold_record(memory_id)?.ok_or_else(|| {
+            CoreError::NotFound(format!("Memory {memory_id} not found in cold storage"))
+        })?;
 
         let mut mem = record.decompress()?;
 

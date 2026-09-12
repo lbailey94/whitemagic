@@ -155,7 +155,8 @@ impl HarmonicProfile {
     /// salience composite (20%), modulated by a saturating reinforcement multiplier.
     #[must_use]
     pub fn composite_score(&self) -> f32 {
-        let base = (self.coherence * 0.50) + (self.resonance * 0.30) + (self.salience.composite() * 0.20);
+        let base =
+            (self.coherence * 0.50) + (self.resonance * 0.30) + (self.salience.composite() * 0.20);
         let reinforcement_bonus = 1.0 + (0.05 * (self.reinforcement_count.min(6) as f32));
         (base * reinforcement_bonus).clamp(0.0, 1.0)
     }
@@ -204,7 +205,12 @@ pub struct ChamberThought {
 impl ChamberThought {
     /// Create a new chamber thought with default temporal bounds and harmonics.
     #[must_use]
-    pub fn new(key: impl Into<String>, content: impl Into<String>, target_galaxy: Galaxy, coherence: f32) -> Self {
+    pub fn new(
+        key: impl Into<String>,
+        content: impl Into<String>,
+        target_galaxy: Galaxy,
+        coherence: f32,
+    ) -> Self {
         let key_str = key.into();
         let content_str = content.into();
         Self {
@@ -289,8 +295,8 @@ impl ChamberThought {
     #[must_use]
     pub fn to_memory(&self) -> Memory {
         let importance = self.effective_harmonic_score();
-        let mut mem = Memory::new(self.target_galaxy, self.content.clone())
-            .with_importance(importance);
+        let mut mem =
+            Memory::new(self.target_galaxy, self.content.clone()).with_importance(importance);
 
         let mut tags = self.tags.clone();
         if !tags.contains(&"synthesized".to_string()) {
@@ -428,7 +434,10 @@ impl std::fmt::Debug for ResonanceChamber {
             .field("current_epoch", &self.current_epoch)
             .field("active_count", &self.thoughts.len())
             .field("max_capacity", &self.config.max_capacity)
-            .field("harmonic_merge_threshold", &self.config.harmonic_merge_threshold)
+            .field(
+                "harmonic_merge_threshold",
+                &self.config.harmonic_merge_threshold,
+            )
             .finish()
     }
 }
@@ -556,7 +565,12 @@ impl ResonanceChamber {
     }
 
     /// Deposit a thought targeting the default galaxy ([`Galaxy::Valkyrie`]).
-    pub fn deposit_simple(&mut self, key: &str, content: &str, coherence: f32) -> Result<Uuid, ChamberError> {
+    pub fn deposit_simple(
+        &mut self,
+        key: &str,
+        content: &str,
+        coherence: f32,
+    ) -> Result<Uuid, ChamberError> {
         self.deposit_thought(key, content, coherence, self.config.default_target_galaxy)
     }
 
@@ -580,7 +594,9 @@ impl ResonanceChamber {
     /// Sympathetically reinforce an existing thought, boosting its coherence and refreshing its TTL.
     pub fn reinforce(&mut self, id: &Uuid, boost: f32) -> Result<f32, ChamberError> {
         let now = Utc::now();
-        let thought = self.thoughts.get_mut(id)
+        let thought = self
+            .thoughts
+            .get_mut(id)
             .ok_or_else(|| ChamberError::ThoughtNotFound(*id, self.name.clone()))?;
 
         if thought.is_stale(now, self.current_epoch) {
@@ -613,7 +629,11 @@ impl ResonanceChamber {
         let avg_score = if self.thoughts.is_empty() {
             0.0
         } else {
-            let sum: f32 = self.thoughts.values().map(ChamberThought::effective_harmonic_score).sum();
+            let sum: f32 = self
+                .thoughts
+                .values()
+                .map(ChamberThought::effective_harmonic_score)
+                .sum();
             sum / (self.thoughts.len() as f32)
         };
 
@@ -657,7 +677,8 @@ impl ResonanceChamber {
         let threshold = self.config.harmonic_merge_threshold;
         let now = Utc::now();
 
-        self.thoughts.values()
+        self.thoughts
+            .values()
             .filter(|t| !t.synthesized && !t.is_stale(now, self.current_epoch))
             .filter_map(|t| {
                 let score = t.effective_harmonic_score();
@@ -725,7 +746,11 @@ impl ResonanceChamber {
         if self.thoughts.is_empty() {
             return 0.0;
         }
-        let sum: f32 = self.thoughts.values().map(ChamberThought::effective_harmonic_score).sum();
+        let sum: f32 = self
+            .thoughts
+            .values()
+            .map(ChamberThought::effective_harmonic_score)
+            .sum();
         sum / (self.thoughts.len() as f32)
     }
 
@@ -768,9 +793,17 @@ mod tests {
 
         let now = Utc::now();
         let purged = chamber.purge_stale(now);
-        assert_eq!(purged.len(), 1, "stale thought must auto-expire on TTL lapse");
+        assert_eq!(
+            purged.len(),
+            1,
+            "stale thought must auto-expire on TTL lapse"
+        );
         assert_eq!(purged[0].id, id);
-        assert_eq!(chamber.len(), 0, "chamber must be empty after purging stale thoughts");
+        assert_eq!(
+            chamber.len(),
+            0,
+            "chamber must be empty after purging stale thoughts"
+        );
         assert!(chamber.get(&id).is_none());
     }
 
@@ -800,7 +833,11 @@ mod tests {
         // Advance 2nd epoch -> reaches max_epoch_survival (2) and auto-expires
         let r2 = chamber.advance_epoch();
         assert_eq!(r2.epoch, 2);
-        assert_eq!(r2.expired_ids.len(), 1, "thought must auto-expire after 2 epochs");
+        assert_eq!(
+            r2.expired_ids.len(),
+            1,
+            "thought must auto-expire after 2 epochs"
+        );
         assert_eq!(r2.expired_ids[0], id);
         assert_eq!(chamber.len(), 0);
     }
@@ -817,12 +854,7 @@ mod tests {
 
         // 1. Thought below threshold (coherence 0.50 -> harmonic score ~0.49)
         let low_id = chamber
-            .deposit_thought(
-                "low.res",
-                "Uncertain fragment",
-                0.50,
-                Galaxy::Codex,
-            )
+            .deposit_thought("low.res", "Uncertain fragment", 0.50, Galaxy::Codex)
             .unwrap();
 
         // 2. High-resonance Valkyrie thought (coherence 0.95 -> harmonic score > 0.85)
@@ -849,18 +881,31 @@ mod tests {
         let candidates = chamber.extract_harmonized();
 
         // Only high-coherence thoughts should be extracted
-        assert_eq!(candidates.len(), 2, "only high resonance thoughts qualify for harmonic merge");
+        assert_eq!(
+            candidates.len(),
+            2,
+            "only high resonance thoughts qualify for harmonic merge"
+        );
 
         let valk_candidate = candidates.iter().find(|c| c.thought_id == valk_id).unwrap();
         assert_eq!(valk_candidate.target_galaxy, Galaxy::Valkyrie);
         assert_eq!(valk_candidate.memory.metadata.galaxy, Galaxy::Valkyrie);
-        assert_eq!(valk_candidate.memory.metadata.memory_type, MemoryType::Pattern);
+        assert_eq!(
+            valk_candidate.memory.metadata.memory_type,
+            MemoryType::Pattern
+        );
         assert!(valk_candidate.harmonic_score >= 0.75);
 
-        let dream_candidate = candidates.iter().find(|c| c.thought_id == dream_id).unwrap();
+        let dream_candidate = candidates
+            .iter()
+            .find(|c| c.thought_id == dream_id)
+            .unwrap();
         assert_eq!(dream_candidate.target_galaxy, Galaxy::Dreams);
         assert_eq!(dream_candidate.memory.metadata.galaxy, Galaxy::Dreams);
-        assert_eq!(dream_candidate.memory.metadata.memory_type, MemoryType::Hypothesis);
+        assert_eq!(
+            dream_candidate.memory.metadata.memory_type,
+            MemoryType::Hypothesis
+        );
         assert!(dream_candidate.harmonic_score >= 0.75);
 
         // Low resonance thought was not merged
@@ -881,13 +926,20 @@ mod tests {
         );
 
         let id_low = chamber.deposit_simple("t1", "Low coherence", 0.20).unwrap();
-        let _id_med = chamber.deposit_simple("t2", "Medium coherence", 0.60).unwrap();
+        let _id_med = chamber
+            .deposit_simple("t2", "Medium coherence", 0.60)
+            .unwrap();
         assert_eq!(chamber.len(), 2);
 
         // Adding 3rd should evict t1 (lowest coherence 0.20)
-        let id_high = chamber.deposit_simple("t3", "High coherence", 0.95).unwrap();
+        let id_high = chamber
+            .deposit_simple("t3", "High coherence", 0.95)
+            .unwrap();
         assert_eq!(chamber.len(), 2);
-        assert!(chamber.get(&id_low).is_none(), "lowest resonance thought must be evicted on overflow");
+        assert!(
+            chamber.get(&id_low).is_none(),
+            "lowest resonance thought must be evicted on overflow"
+        );
         assert!(chamber.get(&id_high).is_some());
     }
 
@@ -898,7 +950,10 @@ mod tests {
         let initial_score = chamber.get(&id).unwrap().effective_harmonic_score();
 
         let boosted_score = chamber.reinforce(&id, 0.40).unwrap();
-        assert!(boosted_score > initial_score, "reinforcement must increase harmonic score");
+        assert!(
+            boosted_score > initial_score,
+            "reinforcement must increase harmonic score"
+        );
         assert_eq!(chamber.get(&id).unwrap().harmonics.reinforcement_count, 1);
     }
 }

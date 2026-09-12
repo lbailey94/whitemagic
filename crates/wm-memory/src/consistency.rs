@@ -5,6 +5,7 @@
 //! multi-galaxy LMDB memory shards (Codex, Karma, Citta, Aria, Dreams, etc.).
 
 #![forbid(unsafe_code)]
+#![allow(clippy::result_large_err)]
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, VecDeque};
@@ -63,12 +64,12 @@ impl VectorClock {
     }
 
     /// Set clock value for a specific galaxy.
-    pub fn set(&mut self, galaxy: Galaxy, val: u64) {
+    pub const fn set(&mut self, galaxy: Galaxy, val: u64) {
         self.clocks[Self::galaxy_index(galaxy)] = val;
     }
 
     /// Increment and return the new clock value for a specific galaxy.
-    pub fn tick(&mut self, galaxy: Galaxy) -> u64 {
+    pub const fn tick(&mut self, galaxy: Galaxy) -> u64 {
         let idx = Self::galaxy_index(galaxy);
         self.clocks[idx] = self.clocks[idx].saturating_add(1);
         self.clocks[idx]
@@ -100,6 +101,7 @@ impl VectorClock {
 
     /// Returns `true` if `self` and `other` are causally concurrent (neither precedes the other).
     #[must_use]
+    #[allow(clippy::suspicious_operation_groupings)]
     pub fn is_concurrent(&self, other: &Self) -> bool {
         !self.happened_before(other) && !other.happened_before(self) && self != other
     }
@@ -115,7 +117,7 @@ impl VectorClock {
     }
 }
 
-/// A cross-galaxy write mutation operation submitted for consistency verification.
+/// A cross-memory write mutation operation submitted for consistency verification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WriteOp {
     /// Multi-step crash barrier correlation ID (e.g. from U6 WriteAuditJournal).
@@ -138,6 +140,7 @@ pub struct WriteOp {
 
 /// Errors raised by the Cross-Memory Consistency Layer.
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant, clippy::result_large_err)]
 pub enum ConsistencyError {
     #[error("Causal violation on {galaxy:?}: required clock {required} > active clock {actual}")]
     CausalViolation {
@@ -209,10 +212,18 @@ pub trait CrossMemoryConsistency {
     fn record_write(&mut self, op: &WriteOp) -> Result<CoherenceReceipt, ConsistencyError>;
 
     /// Check if reading from `galaxy` satisfies the caller's required vector clock.
-    fn verify_causal_read(&self, galaxy: Galaxy, required_clock: &VectorClock) -> Result<(), ConsistencyError>;
+    fn verify_causal_read(
+        &self,
+        galaxy: Galaxy,
+        required_clock: &VectorClock,
+    ) -> Result<(), ConsistencyError>;
 
     /// Resolve a concurrent mutation conflict.
-    fn resolve_conflict(&mut self, conflict: &ConflictReport, strategy: Resolution) -> CoherenceReceipt;
+    fn resolve_conflict(
+        &mut self,
+        conflict: &ConflictReport,
+        strategy: Resolution,
+    ) -> CoherenceReceipt;
 
     /// Retrieve the current point-in-time coherence snapshot.
     fn snapshot(&self) -> CoherenceSnapshot;
@@ -251,7 +262,7 @@ impl CrossMemoryConsistencyManager {
 
     /// Configure whether Dharma governance authorization is strictly enforced.
     #[must_use]
-    pub fn with_dharma_enforcement(mut self, enforce: bool) -> Self {
+    pub const fn with_dharma_enforcement(mut self, enforce: bool) -> Self {
         self.enforce_dharma = enforce;
         self
     }
@@ -331,7 +342,11 @@ impl CrossMemoryConsistency for CrossMemoryConsistencyManager {
         Ok(receipt)
     }
 
-    fn verify_causal_read(&self, galaxy: Galaxy, required_clock: &VectorClock) -> Result<(), ConsistencyError> {
+    fn verify_causal_read(
+        &self,
+        galaxy: Galaxy,
+        required_clock: &VectorClock,
+    ) -> Result<(), ConsistencyError> {
         let actual = self.global_clock.get(galaxy);
         let required = required_clock.get(galaxy);
 
@@ -345,7 +360,11 @@ impl CrossMemoryConsistency for CrossMemoryConsistencyManager {
         Ok(())
     }
 
-    fn resolve_conflict(&mut self, conflict: &ConflictReport, strategy: Resolution) -> CoherenceReceipt {
+    fn resolve_conflict(
+        &mut self,
+        conflict: &ConflictReport,
+        strategy: Resolution,
+    ) -> CoherenceReceipt {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs());
@@ -437,7 +456,9 @@ mod tests {
 
         // Verify causal read: requires Codex >= 5 -> CausalViolation
         req_clock.set(Galaxy::Codex, 5);
-        let err = cm.verify_causal_read(Galaxy::Codex, &req_clock).unwrap_err();
+        let err = cm
+            .verify_causal_read(Galaxy::Codex, &req_clock)
+            .unwrap_err();
         assert_eq!(
             err,
             ConsistencyError::CausalViolation {

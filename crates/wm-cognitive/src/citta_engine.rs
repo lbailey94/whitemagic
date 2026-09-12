@@ -12,8 +12,8 @@
 
 #![forbid(unsafe_code)]
 
-use std::time::Instant;
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 use wm_core::Galaxy;
 use wm_memory::{AssociationStore, MemoryStore};
 
@@ -328,7 +328,13 @@ impl CittaEngine for PrescienceEngine {
         let mut counts = serde_json::Map::new();
 
         // Sample memory volume across active galaxies
-        let galaxies = [Galaxy::Codex, Galaxy::Karma, Galaxy::Citta, Galaxy::Aria, Galaxy::Dreams];
+        let galaxies = [
+            Galaxy::Codex,
+            Galaxy::Karma,
+            Galaxy::Citta,
+            Galaxy::Aria,
+            Galaxy::Dreams,
+        ];
         let mut total_memories = 0usize;
         for g in galaxies {
             if let Ok(count) = ctx.store.count(g) {
@@ -464,10 +470,14 @@ impl CittaEngine for ForesightEngine {
 
         // Ahimsa invariant check
         if ctx.health_score < 0.3 {
-            findings.push("Ahimsa safety gate: action throttled due to critically low health".into());
+            findings
+                .push("Ahimsa safety gate: action throttled due to critically low health".into());
             safe = false;
         } else {
-            findings.push("Pre-execution simulation: Ahimsa non-violence & Landlock invariants verified".into());
+            findings.push(
+                "Pre-execution simulation: Ahimsa non-violence & Landlock invariants verified"
+                    .into(),
+            );
         }
 
         let score = if safe { 1.0 } else { 0.2 };
@@ -629,7 +639,11 @@ impl CittaCoordinator {
         let mut scored_count = 0usize;
 
         // Phase 1: Perception
-        for engine in self.engines.iter().filter(|e| e.phase() == CittaPhase::Perception) {
+        for engine in self
+            .engines
+            .iter()
+            .filter(|e| e.phase() == CittaPhase::Perception)
+        {
             let res = engine.execute(CittaPhase::Perception, ctx);
             total_score += res.score;
             scored_count += 1;
@@ -637,7 +651,11 @@ impl CittaCoordinator {
         }
 
         // Phase 2: Contemplation
-        for engine in self.engines.iter().filter(|e| e.phase() == CittaPhase::Contemplation) {
+        for engine in self
+            .engines
+            .iter()
+            .filter(|e| e.phase() == CittaPhase::Contemplation)
+        {
             let res = engine.execute(CittaPhase::Contemplation, ctx);
             total_score += res.score;
             scored_count += 1;
@@ -645,7 +663,11 @@ impl CittaCoordinator {
         }
 
         // Phase 3: Action
-        for engine in self.engines.iter().filter(|e| e.phase() == CittaPhase::Action) {
+        for engine in self
+            .engines
+            .iter()
+            .filter(|e| e.phase() == CittaPhase::Action)
+        {
             let res = engine.execute(CittaPhase::Action, ctx);
             total_score += res.score;
             scored_count += 1;
@@ -653,7 +675,11 @@ impl CittaCoordinator {
         }
 
         // Phase 4: Reflection
-        for engine in self.engines.iter().filter(|e| e.phase() == CittaPhase::Reflection) {
+        for engine in self
+            .engines
+            .iter()
+            .filter(|e| e.phase() == CittaPhase::Reflection)
+        {
             let res = engine.execute(CittaPhase::Reflection, ctx);
             total_score += res.score;
             scored_count += 1;
@@ -726,8 +752,7 @@ mod tests {
     fn test_kaizen_uncommitted_alert() {
         let store = make_store();
         let engine = KaizenEngine::new();
-        let ctx = CittaContext::new(&store)
-            .with_uncommitted_ops(vec!["op-9912".to_string()]);
+        let ctx = CittaContext::new(&store).with_uncommitted_ops(vec!["op-9912".to_string()]);
 
         let res = engine.execute(CittaPhase::Perception, &ctx);
         assert!(res.findings.iter().any(|f| f.contains("op-9912")));

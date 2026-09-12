@@ -168,7 +168,10 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.2, 0.0, 0.4, 0.3, 0.8),
         resonance_partners: &["adventure", "wonder", "creation"],
         dampening_partners: &["patience", "stillness"],
-        keywords: &["courage", "pipeline", "cascade", "skill", "forge", "warp", "build", "begin", "start", "explore"],
+        keywords: &[
+            "courage", "pipeline", "cascade", "skill", "forge", "warp", "build", "begin", "start",
+            "explore",
+        ],
     },
     GardenProfile {
         slot: 1,
@@ -184,7 +187,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(-0.4, 0.4, 0.8, 0.3, 0.7),
         resonance_partners: &["wisdom", "sanctuary", "patience"],
         dampening_partners: &["courage", "play"],
-        keywords: &["stillness", "mesh", "broker", "p2p", "sync", "messaging", "distributed", "remember", "stable", "calm", "pause"],
+        keywords: &[
+            "stillness",
+            "mesh",
+            "broker",
+            "p2p",
+            "sync",
+            "messaging",
+            "distributed",
+            "remember",
+            "stable",
+            "calm",
+            "pause",
+        ],
     },
     GardenProfile {
         slot: 2,
@@ -200,7 +215,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.3, 0.0, 0.5, 0.3, 0.9),
         resonance_partners: &["sanctuary", "love", "gratitude"],
         dampening_partners: &["grief"],
-        keywords: &["healing", "health", "foundation", "root", "integrity", "diagnosis", "manifest", "heal", "fix", "repair", "restore"],
+        keywords: &[
+            "healing",
+            "health",
+            "foundation",
+            "root",
+            "integrity",
+            "diagnosis",
+            "manifest",
+            "heal",
+            "fix",
+            "repair",
+            "restore",
+        ],
     },
     GardenProfile {
         slot: 3,
@@ -216,7 +243,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.3, 0.0, 0.0, 0.3, 0.7),
         resonance_partners: &["protection", "stillness", "healing"],
         dampening_partners: &["adventure"],
-        keywords: &["sanctuary", "agent", "registry", "handoff", "war-room", "swarm", "coordination", "safe", "home", "refuge", "protect"],
+        keywords: &[
+            "sanctuary",
+            "agent",
+            "registry",
+            "handoff",
+            "war-room",
+            "swarm",
+            "coordination",
+            "safe",
+            "home",
+            "refuge",
+            "protect",
+        ],
     },
     GardenProfile {
         slot: 4,
@@ -232,7 +271,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.6, 0.1, 0.1, 0.3, 0.8),
         resonance_partners: &["connection", "sangha", "healing"],
         dampening_partners: &["truth", "protection"],
-        keywords: &["love", "security", "red-team", "blue-team", "firewall", "anomaly", "immune", "care", "connect", "heart", "compassion"],
+        keywords: &[
+            "love",
+            "security",
+            "red-team",
+            "blue-team",
+            "firewall",
+            "anomaly",
+            "immune",
+            "care",
+            "connect",
+            "heart",
+            "compassion",
+        ],
     },
     GardenProfile {
         slot: 5,
@@ -248,7 +299,20 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.5, 0.4, 0.5, 0.2, 0.7),
         resonance_partners: &["awe", "play", "adventure"],
         dampening_partners: &["practice", "truth"],
-        keywords: &["wonder", "scan", "fuzz", "probe", "strata", "poc", "vulnerability", "fast", "accelerate", "push", "discover", "marvel"],
+        keywords: &[
+            "wonder",
+            "scan",
+            "fuzz",
+            "probe",
+            "strata",
+            "poc",
+            "vulnerability",
+            "fast",
+            "accelerate",
+            "push",
+            "discover",
+            "marvel",
+        ],
     },
     GardenProfile {
         slot: 6,
@@ -264,9 +328,11 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(-0.1, 0.5, -0.2, 0.35, 0.9),
         resonance_partners: &["dharma", "reverence", "truth"],
         dampening_partners: &["humor", "play"],
-        keywords: &["wisdom", "search", "recall", "vector", "rerank", "fts5", "hnsw", "discern", "filter", "separate", "judge"],
+        keywords: &[
+            "wisdom", "search", "recall", "vector", "rerank", "fts5", "hnsw", "discern", "filter",
+            "separate", "judge",
+        ],
     },
-
     // ── Quadrant II: South (Vermilion Bird — Fire / Summer) ──────────────────
     GardenProfile {
         slot: 7,
@@ -282,7 +348,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(-0.3, 0.6, 0.0, 0.4, 1.0),
         resonance_partners: &["truth", "wisdom", "reverence"],
         dampening_partners: &["humor"],
-        keywords: &["dharma", "cognitive", "mode", "homeostasis", "neuro", "gating", "governance", "guide", "strategy", "govern", "ethics"],
+        keywords: &[
+            "dharma",
+            "cognitive",
+            "mode",
+            "homeostasis",
+            "neuro",
+            "gating",
+            "governance",
+            "guide",
+            "strategy",
+            "govern",
+            "ethics",
+        ],
     },
     GardenProfile {
         slot: 8,
@@ -298,7 +376,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(-0.1, 0.2, 0.3, 0.25, 0.6),
         resonance_partners: &["stillness", "practice", "wisdom"],
         dampening_partners: &["courage", "wonder"],
-        keywords: &["patience", "learning", "mining", "archaeology", "pattern", "kaizen", "continual", "wait", "patient", "endure", "persist"],
+        keywords: &[
+            "patience",
+            "learning",
+            "mining",
+            "archaeology",
+            "pattern",
+            "kaizen",
+            "continual",
+            "wait",
+            "patient",
+            "endure",
+            "persist",
+        ],
     },
     GardenProfile {
         slot: 9,
@@ -314,7 +404,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.5, 0.2, 0.1, 0.35, 0.8),
         resonance_partners: &["sangha", "love", "joy"],
         dampening_partners: &["stillness"],
-        keywords: &["connection", "economy", "bounty", "payment", "token", "ilp", "gratitude", "nurture", "relationship", "bond", "community"],
+        keywords: &[
+            "connection",
+            "economy",
+            "bounty",
+            "payment",
+            "token",
+            "ilp",
+            "gratitude",
+            "nurture",
+            "relationship",
+            "bond",
+            "community",
+        ],
     },
     GardenProfile {
         slot: 10,
@@ -330,7 +432,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.0, 0.5, 0.0, 0.2, 0.6),
         resonance_partners: &["wonder", "transformation", "awe"],
         dampening_partners: &["truth"],
-        keywords: &["mystery", "galaxy", "lifecycle", "backup", "merge", "lineage", "snapshot", "void", "empty", "optimize", "unknown"],
+        keywords: &[
+            "mystery",
+            "galaxy",
+            "lifecycle",
+            "backup",
+            "merge",
+            "lineage",
+            "snapshot",
+            "void",
+            "empty",
+            "optimize",
+            "unknown",
+        ],
     },
     GardenProfile {
         slot: 11,
@@ -346,7 +460,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(-0.3, -0.1, 0.1, 0.35, 0.8),
         resonance_partners: &["sanctuary", "truth", "dharma"],
         dampening_partners: &["play"],
-        keywords: &["protection", "inference", "llama", "bitnet", "edge", "embedding", "model", "shelter", "guard", "shield", "defend"],
+        keywords: &[
+            "protection",
+            "inference",
+            "llama",
+            "bitnet",
+            "edge",
+            "embedding",
+            "model",
+            "shelter",
+            "guard",
+            "shield",
+            "defend",
+        ],
     },
     GardenProfile {
         slot: 12,
@@ -362,7 +488,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.0, 0.3, 0.6, 0.35, 0.9),
         resonance_partners: &["creation", "mystery", "courage"],
         dampening_partners: &["stillness"],
-        keywords: &["transformation", "memory", "storage", "crud", "lifecycle", "consolidation", "archive", "change", "transition", "evolve"],
+        keywords: &[
+            "transformation",
+            "memory",
+            "storage",
+            "crud",
+            "lifecycle",
+            "consolidation",
+            "archive",
+            "change",
+            "transition",
+            "evolve",
+        ],
     },
     GardenProfile {
         slot: 13,
@@ -378,9 +515,11 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(-0.5, 0.3, 0.0, 0.35, 1.0),
         resonance_partners: &["dharma", "wisdom", "protection"],
         dampening_partners: &["mystery", "humor"],
-        keywords: &["truth", "access", "hermit", "sandbox", "lock", "dharma", "consent", "boundary", "limit", "alert", "verify"],
+        keywords: &[
+            "truth", "access", "hermit", "sandbox", "lock", "dharma", "consent", "boundary",
+            "limit", "alert", "verify",
+        ],
     },
-
     // ── Quadrant III: West (White Tiger — Metal / Autumn) ───────────────────
     GardenProfile {
         slot: 14,
@@ -396,7 +535,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.7, 0.6, -0.1, 0.3, 0.7),
         resonance_partners: &["wonder", "reverence", "beauty"],
         dampening_partners: &["practice"],
-        keywords: &["awe", "session", "state", "scratchpad", "working-memory", "recording", "balance", "equilibrium", "stand", "marvel"],
+        keywords: &[
+            "awe",
+            "session",
+            "state",
+            "scratchpad",
+            "working-memory",
+            "recording",
+            "balance",
+            "equilibrium",
+            "stand",
+            "marvel",
+        ],
     },
     GardenProfile {
         slot: 15,
@@ -412,7 +562,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.5, 0.1, -0.2, 0.25, 0.7),
         resonance_partners: &["connection", "love", "joy"],
         dampening_partners: &["grief"],
-        keywords: &["gratitude", "simulation", "monte-carlo", "foresight", "ensemble", "optimization", "thank", "grateful", "harvest", "abundance"],
+        keywords: &[
+            "gratitude",
+            "simulation",
+            "monte-carlo",
+            "foresight",
+            "ensemble",
+            "optimization",
+            "thank",
+            "grateful",
+            "harvest",
+            "abundance",
+        ],
     },
     GardenProfile {
         slot: 16,
@@ -428,7 +589,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.1, 0.2, 0.7, 0.35, 0.9),
         resonance_partners: &["courage", "transformation", "play"],
         dampening_partners: &["stillness"],
-        keywords: &["creation", "ingestion", "web", "browser", "extraction", "research", "fetch", "create", "make", "build", "digest"],
+        keywords: &[
+            "creation",
+            "ingestion",
+            "web",
+            "browser",
+            "extraction",
+            "research",
+            "fetch",
+            "create",
+            "make",
+            "build",
+            "digest",
+        ],
     },
     GardenProfile {
         slot: 17,
@@ -444,7 +617,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.3, -0.2, 0.1, 0.5, 1.0),
         resonance_partners: &["stillness", "practice", "truth"],
         dampening_partners: &["adventure"],
-        keywords: &["presence", "code", "graph", "knowledge", "wiki", "codegenome", "focus", "present", "attention", "detail", "here"],
+        keywords: &[
+            "presence",
+            "code",
+            "graph",
+            "knowledge",
+            "wiki",
+            "codegenome",
+            "focus",
+            "present",
+            "attention",
+            "detail",
+            "here",
+        ],
     },
     GardenProfile {
         slot: 18,
@@ -460,7 +645,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.6, -0.2, 0.3, 0.15, 0.6),
         resonance_partners: &["humor", "joy", "wonder"],
         dampening_partners: &["dharma", "protection"],
-        keywords: &["play", "association", "emergence", "novelty", "serendipity", "cluster", "fun", "game", "capture", "explore"],
+        keywords: &[
+            "play",
+            "association",
+            "emergence",
+            "novelty",
+            "serendipity",
+            "cluster",
+            "fun",
+            "game",
+            "capture",
+            "explore",
+        ],
     },
     GardenProfile {
         slot: 19,
@@ -476,7 +672,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(-0.2, -0.3, 0.4, 0.3, 0.8),
         resonance_partners: &["patience", "presence", "courage"],
         dampening_partners: &["play"],
-        keywords: &["practice", "dispatch", "routing", "benchmark", "hexagram", "task", "train", "discipline", "precise", "skill"],
+        keywords: &[
+            "practice",
+            "dispatch",
+            "routing",
+            "benchmark",
+            "hexagram",
+            "task",
+            "train",
+            "discipline",
+            "precise",
+            "skill",
+        ],
     },
     GardenProfile {
         slot: 20,
@@ -492,9 +699,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.3, 0.5, -0.2, 0.35, 0.8),
         resonance_partners: &["wisdom", "awe", "dharma"],
         dampening_partners: &["humor"],
-        keywords: &["reverence", "reasoning", "wisdom", "council", "critique", "grimoire", "art-of-war", "sacred", "honor", "respect"],
+        keywords: &[
+            "reverence",
+            "reasoning",
+            "wisdom",
+            "council",
+            "critique",
+            "grimoire",
+            "art-of-war",
+            "sacred",
+            "honor",
+            "respect",
+        ],
     },
-
     // ── Quadrant IV: North (Black Tortoise — Water / Winter) ─────────────────
     GardenProfile {
         slot: 21,
@@ -510,7 +727,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.8, -0.1, -0.4, 0.25, 0.7),
         resonance_partners: &["healing", "stillness", "compassion"],
         dampening_partners: &["joy", "play"],
-        keywords: &["grief", "consciousness", "coherence", "citta", "frequency", "guna", "vitality", "loss", "mourn", "remember", "honor"],
+        keywords: &[
+            "grief",
+            "consciousness",
+            "coherence",
+            "citta",
+            "frequency",
+            "guna",
+            "vitality",
+            "loss",
+            "mourn",
+            "remember",
+            "honor",
+        ],
     },
     GardenProfile {
         slot: 22,
@@ -526,7 +755,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.6, -0.2, 0.0, 0.15, 0.6),
         resonance_partners: &["play", "joy", "connection"],
         dampening_partners: &["dharma", "reverence"],
-        keywords: &["humor", "karma", "lineage", "ledger", "effects", "audit", "replay", "laugh", "flexible", "resilient", "bend"],
+        keywords: &[
+            "humor",
+            "karma",
+            "lineage",
+            "ledger",
+            "effects",
+            "audit",
+            "replay",
+            "laugh",
+            "flexible",
+            "resilient",
+            "bend",
+        ],
     },
     GardenProfile {
         slot: 23,
@@ -542,7 +783,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.2, 0.1, 0.2, 0.25, 0.7),
         resonance_partners: &["sangha", "truth", "courage"],
         dampening_partners: &["stillness"],
-        keywords: &["voice", "dream", "play", "contest", "watcher", "capability", "fool-guard", "speak", "express", "illuminate", "shine"],
+        keywords: &[
+            "voice",
+            "dream",
+            "play",
+            "contest",
+            "watcher",
+            "capability",
+            "fool-guard",
+            "speak",
+            "express",
+            "illuminate",
+            "shine",
+        ],
     },
     GardenProfile {
         slot: 24,
@@ -558,7 +811,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.4, 0.3, 0.0, 0.35, 0.8),
         resonance_partners: &["connection", "love", "voice"],
         dampening_partners: &["sanctuary"],
-        keywords: &["sangha", "governance", "voting", "network-state", "ethics", "harmony", "community", "together", "collective", "network"],
+        keywords: &[
+            "sangha",
+            "governance",
+            "voting",
+            "network-state",
+            "ethics",
+            "harmony",
+            "community",
+            "together",
+            "collective",
+            "network",
+        ],
     },
     GardenProfile {
         slot: 25,
@@ -574,7 +838,19 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.4, 0.2, 0.0, 0.2, 0.7),
         resonance_partners: &["awe", "joy", "wonder"],
         dampening_partners: &["practice"],
-        keywords: &["beauty", "acceleration", "simd", "polyglot", "quantum", "zodiac", "topological", "aesthetic", "fly", "expand", "soar"],
+        keywords: &[
+            "beauty",
+            "acceleration",
+            "simd",
+            "polyglot",
+            "quantum",
+            "zodiac",
+            "topological",
+            "aesthetic",
+            "fly",
+            "expand",
+            "soar",
+        ],
     },
     GardenProfile {
         slot: 26,
@@ -590,7 +866,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.3, 0.0, 0.2, 0.25, 0.8),
         resonance_partners: &["play", "humor", "connection", "creation"],
         dampening_partners: &["grief"],
-        keywords: &["joy", "commerce", "marketplace", "oms", "narrative", "resources", "happy", "celebrate", "abundant", "overflow"],
+        keywords: &[
+            "joy",
+            "commerce",
+            "marketplace",
+            "oms",
+            "narrative",
+            "resources",
+            "happy",
+            "celebrate",
+            "abundant",
+            "overflow",
+        ],
     },
     GardenProfile {
         slot: 27,
@@ -606,9 +893,20 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.4, 0.0, 0.6, 0.25, 0.8),
         resonance_partners: &["courage", "wonder", "creation"],
         dampening_partners: &["sanctuary", "stillness"],
-        keywords: &["adventure", "architecture", "abi", "formal-verify", "codegenome", "fix", "code", "journey", "travel", "move", "discover"],
+        keywords: &[
+            "adventure",
+            "architecture",
+            "abi",
+            "formal-verify",
+            "codegenome",
+            "fix",
+            "code",
+            "journey",
+            "travel",
+            "move",
+            "discover",
+        ],
     },
-
     // ── 29th Operational Garden: Browser ───────────────────────────────────
     GardenProfile {
         slot: 28,
@@ -624,7 +922,18 @@ pub static GARDEN_CATALOG: &[GardenProfile] = &[
         bias: Coordinate5D::new(0.0, -0.4, 0.0, 0.2, 0.5),
         resonance_partners: &["creation", "practice"],
         dampening_partners: &[],
-        keywords: &["browser", "cdp", "dom", "screenshot", "navigate", "page", "extract", "fetch", "web", "automation"],
+        keywords: &[
+            "browser",
+            "cdp",
+            "dom",
+            "screenshot",
+            "navigate",
+            "page",
+            "extract",
+            "fetch",
+            "web",
+            "automation",
+        ],
     },
 ];
 
@@ -719,7 +1028,10 @@ impl GardenResonanceEngine {
         };
 
         // 1. Direct activation
-        let current = self.activations.entry(profile.name.to_string()).or_insert(0.0);
+        let current = self
+            .activations
+            .entry(profile.name.to_string())
+            .or_insert(0.0);
         *current = (*current + boost).clamp(0.0, 1.0);
 
         // 2. Cascade 50% boost to resonance partners
@@ -847,7 +1159,11 @@ mod tests {
 
         // Verify all 28 canonical gardens have valid hexagrams 1..64
         for g in &GARDEN_CATALOG[0..28] {
-            assert!(g.hexagram >= 1 && g.hexagram <= 64, "Garden {} invalid hexagram", g.name);
+            assert!(
+                g.hexagram >= 1 && g.hexagram <= 64,
+                "Garden {} invalid hexagram",
+                g.name
+            );
         }
     }
 
@@ -888,7 +1204,9 @@ mod tests {
 
     #[test]
     fn test_match_keywords() {
-        let matches = GardenResonanceEngine::match_keywords("We need a firewall security audit and red-team scan");
+        let matches = GardenResonanceEngine::match_keywords(
+            "We need a firewall security audit and red-team scan",
+        );
         assert!(!matches.is_empty());
         let top_garden = matches[0].0.name;
         // Either love (security, firewall) or wonder (scan)

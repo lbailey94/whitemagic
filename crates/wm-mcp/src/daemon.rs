@@ -122,7 +122,7 @@ impl Default for DaemonConfig {
             watchdog_timeout: Duration::from_secs(60), // 1 minute without a tick = stalled
             checkpoint_interval: Duration::from_secs(300), // 5 minutes
             gan_ying_interval: Duration::from_secs(300), // 5 minutes
-            citta_interval: Duration::from_secs(60), // 1 minute
+            citta_interval: Duration::from_secs(60),   // 1 minute
             watchdog_audit_interval: Duration::from_secs(30), // 30 seconds
             symbiosync_interval: Duration::from_secs(60), // 1 minute
             phagic_interval: Duration::from_secs(600), // 10 minutes
@@ -257,7 +257,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     let mut last_symbiosync = std::time::Instant::now();
     let mut last_phagic = std::time::Instant::now();
     let mut symbiosync = wm_cognitive::SymbioSync::default();
-    let mut resonance_chamber = wm_cognitive::ResonanceChamber::with_default_config("daemon_chamber");
+    let mut resonance_chamber =
+        wm_cognitive::ResonanceChamber::with_default_config("daemon_chamber");
     let phagic_coordinator = wm_cognitive::PhagicCognitiveCoordinator::default();
     let mut citta_coordinator = CittaCoordinator::with_og_engines();
     let mut alchemical_coordinator = AlchemicalRoundCoordinator::new();
@@ -347,16 +348,28 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     println!("  Brain-wave tick: {:?}", config.brain_wave_interval);
     println!("  Min health:      {:.2}", config.min_health_score);
     if config.citta_interval > Duration::from_secs(0) {
-        println!("  Citta cycle:     {:?} (4-phase / 28 engines / 28 gardens)", config.citta_interval);
+        println!(
+            "  Citta cycle:     {:?} (4-phase / 28 engines / 28 gardens)",
+            config.citta_interval
+        );
     }
     if config.watchdog_audit_interval > Duration::from_secs(0) {
-        println!("  Watchdog audit:  {:?} (copilot active)", config.watchdog_audit_interval);
+        println!(
+            "  Watchdog audit:  {:?} (copilot active)",
+            config.watchdog_audit_interval
+        );
     }
     if config.symbiosync_interval > Duration::from_secs(0) {
-        println!("  SymbioSync:      {:?} (somatic subconscious consolidation)", config.symbiosync_interval);
+        println!(
+            "  SymbioSync:      {:?} (somatic subconscious consolidation)",
+            config.symbiosync_interval
+        );
     }
     if config.phagic_interval > Duration::from_secs(0) {
-        println!("  Phagic cold tier:{:?} (zero-loss lossless outer rim)", config.phagic_interval);
+        println!(
+            "  Phagic cold tier:{:?} (zero-loss lossless outer rim)",
+            config.phagic_interval
+        );
     }
     if config.research_interval > Duration::from_secs(0) {
         println!("  Research interval: {:?}", config.research_interval);
@@ -574,7 +587,9 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             && now.duration_since(last_citta) >= config.citta_interval
         {
             let hw = wm_cognitive::HardwareMonitor::sample();
-            server.dharma_gate().update_homeostasis(hw.to_homeostasis(true));
+            server
+                .dharma_gate()
+                .update_homeostasis(hw.to_homeostasis(true));
             let health = server.dharma_gate().homeostasis().health_score();
             let coherence = server.citta().vector.coherence();
             let uncommitted = server
@@ -590,29 +605,43 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 .with_uncommitted_ops(uncommitted);
 
             let citta_report = resilient("citta_cycle", || citta_coordinator.run_cycle(&citta_ctx));
-            let alchemical_report = resilient("alchemical_round", || alchemical_coordinator.execute_alchemical_round(&citta_ctx));
+            let alchemical_report = resilient("alchemical_round", || {
+                alchemical_coordinator.execute_alchemical_round(&citta_ctx)
+            });
             let garden_report = resilient("garden_resonance", || {
                 if !citta_ctx.uncommitted_ops.is_empty() {
                     garden_engine.stimulate_by_keywords(&["friction", "uncommitted", "audit"], 0.6);
                 }
-                garden_engine.stimulate_by_keywords(&["citta", "consciousness", "memory", "hologram"], 0.4);
+                garden_engine
+                    .stimulate_by_keywords(&["citta", "consciousness", "memory", "hologram"], 0.4);
                 garden_engine.generate_report()
             });
 
             if let Some(report) = citta_report {
                 stats.citta_cycles += 1;
-                let (stage_name, wisdom_score) = alchemical_report.as_ref().map_or(("Transmuting", 0.0), |r| {
-                    stats.alchemical_rounds += 1;
-                    (
-                        match r.active_stage {
-                            wm_cognitive::AlchemicalRoundStage::Nigredo => "Nigredo (Decay)",
-                            wm_cognitive::AlchemicalRoundStage::Albedo => "Albedo (Purification)",
-                            wm_cognitive::AlchemicalRoundStage::Citrinitas => "Citrinitas (Transmutation)",
-                            wm_cognitive::AlchemicalRoundStage::Rubedo => "Rubedo (Crystallization)",
-                        },
-                        r.transmuted_wisdom_score,
-                    )
-                });
+                let (stage_name, wisdom_score) =
+                    alchemical_report
+                        .as_ref()
+                        .map_or(("Transmuting", 0.0), |r| {
+                            stats.alchemical_rounds += 1;
+                            (
+                                match r.active_stage {
+                                    wm_cognitive::AlchemicalRoundStage::Nigredo => {
+                                        "Nigredo (Decay)"
+                                    }
+                                    wm_cognitive::AlchemicalRoundStage::Albedo => {
+                                        "Albedo (Purification)"
+                                    }
+                                    wm_cognitive::AlchemicalRoundStage::Citrinitas => {
+                                        "Citrinitas (Transmutation)"
+                                    }
+                                    wm_cognitive::AlchemicalRoundStage::Rubedo => {
+                                        "Rubedo (Crystallization)"
+                                    }
+                                },
+                                r.transmuted_wisdom_score,
+                            )
+                        });
 
                 let garden_summary = garden_report.as_ref().map_or_else(
                     || "Gardens: inactive".to_string(),
@@ -751,8 +780,12 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 match res {
                     Ok(report) => {
                         stats.symbiosync_cycles += 1;
-                        stats.symbiosync_thoughts_consolidated += report.memories_merged.len() as u64;
-                        if !report.yielded && (!report.patterns_aligned.is_empty() || !report.memories_merged.is_empty()) {
+                        stats.symbiosync_thoughts_consolidated +=
+                            report.memories_merged.len() as u64;
+                        if !report.yielded
+                            && (!report.patterns_aligned.is_empty()
+                                || !report.memories_merged.is_empty())
+                        {
                             tracing::info!(
                                 cycle_id = %report.cycle_id,
                                 aligned = report.patterns_aligned.len(),
@@ -1174,7 +1207,10 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     }
     if stats.symbiosync_cycles > 0 {
         println!("  SymbioSync cycles:{}", stats.symbiosync_cycles);
-        println!("  Thoughts merged:  {}", stats.symbiosync_thoughts_consolidated);
+        println!(
+            "  Thoughts merged:  {}",
+            stats.symbiosync_thoughts_consolidated
+        );
     }
     if stats.phagic_sweeps > 0 {
         println!("  Phagic sweeps:    {}", stats.phagic_sweeps);

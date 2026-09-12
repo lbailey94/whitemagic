@@ -3328,11 +3328,17 @@ impl McpServer {
                 data: None,
             })?;
 
-        let args = params.get("arguments").cloned().unwrap_or_else(|| json!({}));
+        let args = params
+            .get("arguments")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
 
         match name {
             "session_continuity" => {
-                let scope = args.get("scope").and_then(Value::as_str).unwrap_or("general");
+                let scope = args
+                    .get("scope")
+                    .and_then(Value::as_str)
+                    .unwrap_or("general");
                 Ok(json!({
                     "description": "Session continuity recall prompt",
                     "messages": [
@@ -3347,7 +3353,10 @@ impl McpServer {
                 }))
             }
             "memory_debug" => {
-                let err = args.get("error_or_topic").and_then(Value::as_str).unwrap_or("error");
+                let err = args
+                    .get("error_or_topic")
+                    .and_then(Value::as_str)
+                    .unwrap_or("error");
                 Ok(json!({
                     "description": "Memory-grounded debug investigation prompt",
                     "messages": [
@@ -3361,20 +3370,18 @@ impl McpServer {
                     ]
                 }))
             }
-            "dharma_governance_audit" => {
-                Ok(json!({
-                    "description": "Dharma governance posture audit prompt",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": {
-                                "type": "text",
-                                "text": "Perform a Dharma governance audit: call citta_status or wm(route=\"citta.status\") to check homeostasis health, review recent write audit journal entries, and ensure all system actions adhere to declared effect rows."
-                            }
+            "dharma_governance_audit" => Ok(json!({
+                "description": "Dharma governance posture audit prompt",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": "Perform a Dharma governance audit: call citta_status or wm(route=\"citta.status\") to check homeostasis health, review recent write audit journal entries, and ensure all system actions adhere to declared effect rows."
                         }
-                    ]
-                }))
-            }
+                    }
+                ]
+            })),
             _ => Err(RpcError {
                 code: -32602,
                 message: format!("Unknown prompt: {name}"),
@@ -7187,9 +7194,15 @@ mod tests {
         };
         let list_resp = server.handle(&list_req).await;
         assert!(list_resp.error.is_none());
-        let prompts = list_resp.result.unwrap()["prompts"].as_array().unwrap().clone();
+        let prompts = list_resp.result.unwrap()["prompts"]
+            .as_array()
+            .unwrap()
+            .clone();
         assert!(prompts.len() >= 3);
-        let names: Vec<&str> = prompts.iter().map(|p| p["name"].as_str().unwrap()).collect();
+        let names: Vec<&str> = prompts
+            .iter()
+            .map(|p| p["name"].as_str().unwrap())
+            .collect();
         assert!(names.contains(&"session_continuity"));
         assert!(names.contains(&"memory_debug"));
         assert!(names.contains(&"dharma_governance_audit"));

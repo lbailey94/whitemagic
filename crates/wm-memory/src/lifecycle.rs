@@ -221,7 +221,10 @@ impl Lifecycle {
     pub fn run_full_cycle_phagic(
         &self,
         store: &MemoryStore,
-    ) -> Result<(Vec<ConsolidationResult>, Vec<crate::cold_storage::PhagicDigestReport>)> {
+    ) -> Result<(
+        Vec<ConsolidationResult>,
+        Vec<crate::cold_storage::PhagicDigestReport>,
+    )> {
         let mut consol_results = Vec::new();
         let mut phagic_results = Vec::new();
 

@@ -3335,9 +3335,10 @@ impl Tool for WmMetaTool {
                     map.get("args").cloned().unwrap_or(Value::Null),
                 )
             } else {
-                let r = args.get("route").and_then(Value::as_str).map(|s| {
-                    resolve_route(s).unwrap_or(s).to_string()
-                });
+                let r = args
+                    .get("route")
+                    .and_then(Value::as_str)
+                    .map(|s| resolve_route(s).unwrap_or(s).to_string());
                 let a = args.get("args").cloned().unwrap_or(Value::Null);
                 (r, a)
             }
@@ -5817,13 +5818,15 @@ mod tests {
     #[test]
     fn lkep_expression_decodes_and_normalizes() {
         // String expressions
-        let (route, args) = decode_lkep(&json!("忆(问=\"deadlock\", 数=3)")).expect("LKEP string decodes");
+        let (route, args) =
+            decode_lkep(&json!("忆(问=\"deadlock\", 数=3)")).expect("LKEP string decodes");
         assert_eq!(route, "memory.search");
         assert_eq!(args["query"], "deadlock");
         assert_eq!(args["limit"], 3);
 
         // Positional shorthand
-        let (route2, args2) = decode_lkep(&json!("忆: memory corruption")).expect("colon syntax decodes");
+        let (route2, args2) =
+            decode_lkep(&json!("忆: memory corruption")).expect("colon syntax decodes");
         assert_eq!(route2, "memory.search");
         assert_eq!(args2["query"], "memory corruption");
 
@@ -5833,9 +5836,9 @@ mod tests {
         assert_eq!(args3, json!({}));
 
         // Root ideogram map
-        let (route4, args4) = decode_lkep(&json!({"忆": "fast lookup"})).expect("root ideogram decodes");
+        let (route4, args4) =
+            decode_lkep(&json!({"忆": "fast lookup"})).expect("root ideogram decodes");
         assert_eq!(route4, "memory.search");
         assert_eq!(args4["query"], "fast lookup");
     }
 }
-

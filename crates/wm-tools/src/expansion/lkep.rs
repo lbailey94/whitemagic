@@ -90,10 +90,7 @@ fn parse_scalar_or_json(raw: &str) -> Value {
     }
 
     // Handle single-quoted strings: 'foo' -> "foo"
-    if trimmed.len() >= 2
-        && trimmed.starts_with('\'')
-        && trimmed.ends_with('\'')
-    {
+    if trimmed.len() >= 2 && trimmed.starts_with('\'') && trimmed.ends_with('\'') {
         return Value::String(trimmed[1..trimmed.len() - 1].to_string());
     }
 
@@ -117,7 +114,9 @@ pub fn parse_lkep_expression(expr: &str) -> Result<(String, Value), LkepError> {
     // Case 1 & 2: Paren syntax — Route(...)
     if let Some(open_paren) = trimmed.find('(') {
         if !trimmed.ends_with(')') {
-            return Err(LkepError::SyntaxError("Missing closing parenthesis ')'".into()));
+            return Err(LkepError::SyntaxError(
+                "Missing closing parenthesis ')'".into(),
+            ));
         }
 
         let route_part = trimmed[..open_paren].trim();
@@ -331,7 +330,8 @@ impl Tool for LkepExecTool {
         let (route, resolved_args) = if let Some((r, a)) = decode_lkep(&args) {
             (r, a)
         } else if let Some(expr) = args.get("expr").and_then(Value::as_str) {
-            parse_lkep_expression(expr).map_err(|e| wm_core::CoreError::InvalidArgs(e.to_string()))?
+            parse_lkep_expression(expr)
+                .map_err(|e| wm_core::CoreError::InvalidArgs(e.to_string()))?
         } else {
             return Err(wm_core::CoreError::InvalidArgs(
                 "Expected logographic expression in string format, {expr: \"...\"}, or glyph object".into(),
@@ -423,7 +423,9 @@ mod tests {
         assert_eq!(res2.1["query"], "timeout");
 
         // Shape 3: Route object
-        let res3 = decode_lkep(&json!({ "route": "录", "args": { "文": "snapshot", "标": ["auto"] } })).unwrap();
+        let res3 =
+            decode_lkep(&json!({ "route": "录", "args": { "文": "snapshot", "标": ["auto"] } }))
+                .unwrap();
         assert_eq!(res3.0, "memory.create");
         assert_eq!(res3.1["content"], "snapshot");
 

@@ -13,7 +13,7 @@ use wm_core::Galaxy;
 use wm_memory::cold_storage::{
     ColdQuery, CompressionCodec, PhagicConfig, PhagicDigester, calculate_outer_rim_distance,
 };
-use wm_memory::{Memory, MemoryStore, MemoryType, SearchEngine, SearchOptions, Tier};
+use wm_memory::{Memory, MemoryStore, MemoryType, SearchEngine, Tier};
 
 fn setup_store_and_search() -> (tempfile::TempDir, MemoryStore, SearchEngine) {
     let tmp = tempdir().unwrap();
@@ -73,16 +73,23 @@ fn zero_data_loss_freeze_thaw_exact_fidelity() {
     assert!(store.get(galaxy, id).unwrap().is_none());
 
     // ...but present in cold storage
-    let cold_found = store.get_cold_record(id).unwrap().expect("Cold record must exist");
+    let cold_found = store
+        .get_cold_record(id)
+        .unwrap()
+        .expect("Cold record must exist");
     assert_eq!(cold_found.content_hash, mem.metadata.content_hash);
     assert_eq!(cold_found.tags, vec!["sacred", "v9", "phagic"]);
     assert_eq!(cold_found.version, 42);
 
     // find_anywhere returns it with is_cold = true
-    let (found_galaxy, found_mem, is_cold) = store.find_anywhere(id).unwrap().expect("Found in cold");
+    let (found_galaxy, found_mem, is_cold) =
+        store.find_anywhere(id).unwrap().expect("Found in cold");
     assert_eq!(found_galaxy, galaxy);
     assert_eq!(found_mem.content, content);
-    assert_eq!(found_mem.metadata.title, Some("Architectural Blueprint".into()));
+    assert_eq!(
+        found_mem.metadata.title,
+        Some("Architectural Blueprint".into())
+    );
     assert_eq!(found_mem.metadata.version, 42);
     assert_eq!(found_mem.metadata.corroborated_by.len(), 2);
     assert!(is_cold);
@@ -91,7 +98,10 @@ fn zero_data_loss_freeze_thaw_exact_fidelity() {
     let thawed = store.thaw_from_cold(None, id).unwrap();
     assert_eq!(thawed.metadata.id, id);
     assert_eq!(thawed.content, content);
-    assert_eq!(thawed.metadata.title, Some("Architectural Blueprint".into()));
+    assert_eq!(
+        thawed.metadata.title,
+        Some("Architectural Blueprint".into())
+    );
     assert_eq!(thawed.metadata.version, 42);
     assert_eq!(thawed.metadata.corroborated_by.len(), 2);
     assert_eq!(thawed.metadata.tier, Tier::Episodic);
@@ -157,7 +167,11 @@ fn outer_rim_identification_and_sorting() {
     let candidates = digester.scan_outer_rim(&store, galaxy).unwrap();
 
     // Candidates should only include mem_deep and mem_rim (distances >= threshold 0.70)
-    assert_eq!(candidates.len(), 2, "Only outer rim memories should qualify");
+    assert_eq!(
+        candidates.len(),
+        2,
+        "Only outer rim memories should qualify"
+    );
 
     // First candidate must be mem_deep (strictly furthest)
     assert_eq!(candidates[0].0.metadata.id, mem_deep.metadata.id);
@@ -192,7 +206,11 @@ fn phagic_thematic_condensation_and_digestion() {
     for i in 1..=4 {
         let content = format!("Historical log #{i}: experimental simulation results in orbit");
         let mut mem = Memory::new(galaxy, content)
-            .with_tags(vec!["simulation".into(), "orbit".into(), "telemetry".into()])
+            .with_tags(vec![
+                "simulation".into(),
+                "orbit".into(),
+                "telemetry".into(),
+            ])
             .with_importance(0.05);
         mem.metadata.accessed_at = now - chrono::Duration::days(140);
         mem.metadata.access_count = 0;
@@ -221,7 +239,9 @@ fn phagic_thematic_condensation_and_digestion() {
     assert_eq!(initial_hits.len(), 4);
 
     // Run Phagic Digestion with Tantivy integration
-    let report = digester.digest_galaxy(&store, Some(&search), galaxy).unwrap();
+    let report = digester
+        .digest_galaxy(&store, Some(&search), galaxy)
+        .unwrap();
 
     assert_eq!(report.memories_digested, 4);
     assert!(report.digest_memory_id.is_some());
@@ -229,18 +249,36 @@ fn phagic_thematic_condensation_and_digestion() {
 
     // Hot store now has 1 memory: the distilled thematic digest node
     assert_eq!(store.count(galaxy).unwrap(), 1);
-    let digest_mem = store.get(galaxy, digest_id).unwrap().expect("Digest node in hot store");
+    let digest_mem = store
+        .get(galaxy, digest_id)
+        .unwrap()
+        .expect("Digest node in hot store");
     assert_eq!(digest_mem.metadata.tier, Tier::Semantic);
     assert_eq!(digest_mem.metadata.memory_type, MemoryType::Symbolic);
     assert!(digest_mem.content.contains("Phagic Thematic Digest"));
-    assert!(digest_mem.metadata.tags.contains(&"phagic:digest".to_string()));
+    assert!(
+        digest_mem
+            .metadata
+            .tags
+            .contains(&"phagic:digest".to_string())
+    );
 
     // Cold store now has all 4 original memories
     assert_eq!(store.count_cold(Some(galaxy)).unwrap(), 4);
     for id in &ids {
-        assert!(store.get(galaxy, *id).unwrap().is_none(), "Original memory removed from hot");
-        let cold = store.get_cold_record(*id).unwrap().expect("Original memory in cold storage");
-        assert_eq!(cold.digest_id, Some(digest_id), "Cold record links to digest node");
+        assert!(
+            store.get(galaxy, *id).unwrap().is_none(),
+            "Original memory removed from hot"
+        );
+        let cold = store
+            .get_cold_record(*id)
+            .unwrap()
+            .expect("Original memory in cold storage");
+        assert_eq!(
+            cold.digest_id,
+            Some(digest_id),
+            "Cold record links to digest node"
+        );
     }
 
     // Tantivy search now:
@@ -249,7 +287,11 @@ fn phagic_thematic_condensation_and_digestion() {
     let hits_after = search
         .search_in_galaxy("experimental simulation", Some(galaxy), 10)
         .unwrap();
-    assert_eq!(hits_after.len(), 1, "Only the thematic digest node is found in active search");
+    assert_eq!(
+        hits_after.len(),
+        1,
+        "Only the thematic digest node is found in active search"
+    );
     assert_eq!(hits_after[0].memory_id, digest_id.to_string());
 
     // Thaw the first memory back to hot
@@ -262,8 +304,16 @@ fn phagic_thematic_condensation_and_digestion() {
     let hits_thawed = search
         .search_in_galaxy("simulation", Some(galaxy), 10)
         .unwrap();
-    assert!(hits_thawed.iter().any(|h| h.memory_id == ids[0].to_string()));
-    assert!(hits_thawed.iter().any(|h| h.memory_id == digest_id.to_string()));
+    assert!(
+        hits_thawed
+            .iter()
+            .any(|h| h.memory_id == ids[0].to_string())
+    );
+    assert!(
+        hits_thawed
+            .iter()
+            .any(|h| h.memory_id == digest_id.to_string())
+    );
 }
 
 #[test]
@@ -279,9 +329,12 @@ fn cold_query_filtering() {
     let id1 = m1.metadata.id;
     store.put(Galaxy::Codex, &m1).unwrap();
 
-    let mut m2 = Memory::new(Galaxy::Journals, "Day 42 observation of celestial bodies".into())
-        .with_tags(vec!["astronomy".into(), "journal".into()])
-        .with_importance(0.04);
+    let mut m2 = Memory::new(
+        Galaxy::Journals,
+        "Day 42 observation of celestial bodies".into(),
+    )
+    .with_tags(vec!["astronomy".into(), "journal".into()])
+    .with_importance(0.04);
     m2.metadata.accessed_at = now - chrono::Duration::days(150);
     let id2 = m2.metadata.id;
     store.put(Galaxy::Journals, &m2).unwrap();
@@ -291,10 +344,26 @@ fn cold_query_filtering() {
     let f2 = digester.calculate_distance(&m2, now);
 
     store
-        .freeze_to_cold(None, id1, f1.distance, f1, None, None, CompressionCodec::Gzip)
+        .freeze_to_cold(
+            None,
+            id1,
+            f1.distance,
+            f1,
+            None,
+            None,
+            CompressionCodec::Gzip,
+        )
         .unwrap();
     store
-        .freeze_to_cold(None, id2, f2.distance, f2, None, None, CompressionCodec::Deflate)
+        .freeze_to_cold(
+            None,
+            id2,
+            f2.distance,
+            f2,
+            None,
+            None,
+            CompressionCodec::Deflate,
+        )
         .unwrap();
 
     assert_eq!(store.count_cold(None).unwrap(), 2);
