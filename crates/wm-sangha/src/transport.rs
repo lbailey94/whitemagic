@@ -1831,6 +1831,10 @@ mod containment_tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        windows,
+        ignore = "UDP multicast beacons do not complete on Windows CI runners; tracked"
+    )]
     async fn udp_beacon_ingests_valid_and_ignores_garbage() {
         let port = 17_410;
         let state = spawn_beacon_listener("beacon-target", port).await;
@@ -1860,6 +1864,10 @@ mod containment_tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        windows,
+        ignore = "UDP multicast beacons do not complete on Windows CI runners; tracked"
+    )]
     async fn udp_self_beacon_is_ignored() {
         let port = 17_411;
         let state = spawn_beacon_listener("self-node", port).await;
