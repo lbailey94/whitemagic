@@ -903,15 +903,22 @@ async fn run_discovery_beacon(state: Arc<SanghaState>, config: &TransportConfig)
     let interval = std::time::Duration::from_secs(config.heartbeat_interval_sec);
 
     loop {
-        let mut announce = PeerAnnounce::new(&state.peer_id, &state.tcp_addr);
-        announce.sign(&state.keypair);
-        let bytes = announce.to_bytes();
+        let bytes = build_signed_announce(&state);
         if let Err(e) = sock.send_to(&bytes, multicast_addr).await {
             tracing::debug!("UDP beacon send error: {e}");
         }
 
         tokio::time::sleep(interval).await;
     }
+}
+
+/// Build the signed announce bytes a node broadcasts for discovery.
+/// Split out so the send path (signing + serialization) is testable
+/// without a live multicast socket.
+fn build_signed_announce(state: &SanghaState) -> Vec<u8> {
+    let mut announce = PeerAnnounce::new(&state.peer_id, &state.tcp_addr);
+    announce.sign(&state.keypair);
+    announce.to_bytes()
 }
 
 /// Listen for UDP multicast discovery beacons from other peers.
@@ -990,12 +997,26 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
 /// A node must never register itself: multicast loopback (`IP_MULTICAST_LOOP`
 /// defaults to enabled) delivers a node's own beacon back to its listener,
 /// and a self-entry would pollute peer counts and make the auto-join loop
-/// see a phantom peer. Beacons carry addresses, not identity — the signed
-/// heartbeat at join time is what binds a key.
+/// see a phantom peer.
+///
+/// Unknown peers are address hints — identity binds at the signed join.
+/// For peers whose key is already bound, the beacon must be signed by that
+/// key; otherwise any LAN peer could redirect connections for a known peer
+/// ID to an arbitrary address (PLAN_F F-4).
 async fn ingest_beacon(state: &SanghaState, announce: &PeerAnnounce) {
     if announce.peer_id == state.peer_id {
         tracing::debug!("ignoring own beacon (multicast loopback)");
         return;
+    }
+    let bound_key = state.peers.lock().await.bound_public_key(&announce.peer_id);
+    if let Some(key) = bound_key {
+        if !key.is_empty() && !announce.verify_signature(&key) {
+            tracing::warn!(
+                "dropping beacon for known peer {} — missing or invalid signature",
+                announce.peer_id
+            );
+            return;
+        }
     }
     tracing::debug!(
         "Discovered peer: {} at {}",
@@ -1885,5 +1906,102 @@ mod containment_tests {
             state.peers.lock().await.get("self-node").is_none(),
             "a node must never register itself via multicast loopback"
         );
+    }
+
+    #[test]
+    fn signed_discovery_announce_roundtrips_and_verifies() {
+        let keypair = MeshKeyPair::from_seed(b"sender-node");
+        let state = SanghaState::with_keypair("sender-node", "127.0.0.1:7369", keypair);
+        let bytes = build_signed_announce(&state);
+        let announce = PeerAnnounce::from_bytes(&bytes).expect("announce parses");
+        assert_eq!(announce.peer_id, "sender-node");
+        assert_eq!(announce.tcp_addr, "127.0.0.1:7369");
+        assert!(
+            announce.verify_signature(&state.keypair.public_key_hex()),
+            "broadcast announce must verify against the sender's bound key"
+        );
+    }
+
+    #[tokio::test]
+    #[cfg_attr(
+        windows,
+        ignore = "UDP multicast beacons do not complete on Windows CI runners; tracked"
+    )]
+    async fn udp_forged_beacon_cannot_redirect_known_peer() {
+        let port = 17_412;
+        let state = spawn_beacon_listener("beacon-guard", port).await;
+
+        // Bind a known peer's key the way a signed join heartbeat would.
+        let victim = MeshKeyPair::from_seed(b"victim-key");
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("victim", "127.0.0.1:1111").signed(&victim))
+            .expect("victim binds");
+
+        let sender = tokio::net::UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let dest = format!("127.0.0.1:{port}");
+
+        // Forged beacon (attacker key) claims the bound peer's ID with a new
+        // address — must be dropped, address unchanged.
+        let attacker = MeshKeyPair::from_seed(b"attacker-key");
+        let mut forged = PeerAnnounce::new("victim", "127.0.0.1:6666");
+        forged.sign(&attacker);
+        sender.send_to(&forged.to_bytes(), &dest).await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        assert_eq!(
+            state
+                .peers
+                .lock()
+                .await
+                .get("victim")
+                .unwrap()
+                .address
+                .clone(),
+            "127.0.0.1:1111",
+            "forged beacon must not redirect a bound peer"
+        );
+
+        // Unsigned beacon for the bound peer — also dropped.
+        let unsigned = PeerAnnounce::new("victim", "127.0.0.1:7777");
+        sender.send_to(&unsigned.to_bytes(), &dest).await.unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        assert_eq!(
+            state
+                .peers
+                .lock()
+                .await
+                .get("victim")
+                .unwrap()
+                .address
+                .clone(),
+            "127.0.0.1:1111",
+            "unsigned beacon must not redirect a bound peer"
+        );
+
+        // Genuine beacon from the bound key refreshes the address.
+        let mut genuine = PeerAnnounce::new("victim", "127.0.0.1:2222");
+        genuine.sign(&victim);
+        sender.send_to(&genuine.to_bytes(), &dest).await.unwrap();
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_millis(1_500);
+        loop {
+            let addr = state
+                .peers
+                .lock()
+                .await
+                .get("victim")
+                .unwrap()
+                .address
+                .clone();
+            if addr == "127.0.0.1:2222" {
+                break;
+            }
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "genuine beacon must refresh the bound peer's address (saw {addr})"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
     }
 }
