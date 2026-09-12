@@ -277,7 +277,15 @@ impl Embedder for HttpEmbedder {
     }
 
     fn cache_namespace(&self) -> String {
-        format!("http:{}:{}", self.config.endpoint, self.config.model)
+        // Endpoint + model alias + dimension. A different model served under
+        // the same alias remains undetectable without a fingerprint probe
+        // (llama.cpp `/props`); that alias-swap hazard is an operator
+        // responsibility, documented here so the namespace claim stays
+        // honest. Dimension is cheap extra separation, matching ONNX.
+        format!(
+            "http:{}:{}:{}",
+            self.config.endpoint, self.config.model, self.config.dimension
+        )
     }
 }
 
@@ -944,6 +952,22 @@ mod tests {
         };
         let embedder = HttpEmbedder::new(config);
         assert!(embedder.is_available());
+    }
+
+    #[test]
+    fn http_embedder_cache_namespace_separates_models_and_dims() {
+        let make = |model: &str, dim: usize| {
+            HttpEmbedder::new(EmbedderConfig {
+                endpoint: "http://localhost:8080".into(),
+                model: model.into(),
+                dimension: dim,
+                timeout: Duration::from_secs(10),
+            })
+        };
+        let base = make("bge-small", 384).cache_namespace();
+        assert_eq!(base, "http:http://localhost:8080:bge-small:384");
+        assert_ne!(base, make("nomic", 384).cache_namespace());
+        assert_ne!(base, make("bge-small", 768).cache_namespace());
     }
 
     // --- create_embedder tests ---
