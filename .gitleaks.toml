@@ -15,4 +15,6 @@ description = "credential-detector test fixtures (placeholder shapes only)"
 paths = [
     '''(^|/)crates/wm-memory/src/credentials\.rs$''',
     '''(^|/)scripts/mine_opencode_corpus\.py$''',
+    '''(^|/)crates/wm-governance/src/decoy_shell\.rs$''',
+    '''(^|/)crates/wm-governance/src/canary_tokens\.rs$''',
 ]
