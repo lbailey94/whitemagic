@@ -199,6 +199,7 @@ fn ahimsa_blocks_destructive_in_strict_mode_regardless_of_karma() {
 
     let effects = EffectRow {
         writes: vec![Resource::Filesystem],
+        destructive: true,
         ..Default::default()
     };
 

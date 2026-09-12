@@ -146,13 +146,23 @@ impl DharmaGate {
         let karma_debt = ctx.karma_debt;
         let intent_score = ctx.intent_score;
 
-        // Sutra 1: Ahimsa (non-harm) — check for destructive effects
-        let is_destructive = effects.writes.iter().any(|r| {
-            matches!(
-                r,
-                Resource::Filesystem | Resource::Process | Resource::Network
-            )
-        }) || effects.spawns;
+        // Sutra 1: Ahimsa (non-harm) — check for destructive effects.
+        //
+        // Destruction is declared (`EffectRow::destructive`), not inferred
+        // from resource types: additive filesystem writes (lease ledgers,
+        // audit logs, gnosis explanations) are not harm, and inferring them
+        // as destructive blocked coordination operations under system stress
+        // (live-caught 2026-09-12: code.claim/code.release refused with
+        // VIOLATION_AHIMSA at load 15). Process/Network writes and process
+        // spawning stay destructive-by-class — side effects with no additive
+        // reading. Destructive tools must set the flag for this gate and the
+        // confirm gate alike.
+        let is_destructive = effects.destructive
+            || effects.spawns
+            || effects
+                .writes
+                .iter()
+                .any(|r| matches!(r, Resource::Process | Resource::Network));
 
         if is_destructive {
             if strict {
@@ -248,6 +258,7 @@ mod tests {
         ctx.intent_score = 1.0;
         let effects = EffectRow {
             writes: vec![Resource::Filesystem],
+            destructive: true,
             spawns: false,
             ..Default::default()
         };
@@ -264,6 +275,7 @@ mod tests {
         ctx.intent_score = 1.0;
         let effects = EffectRow {
             writes: vec![Resource::Filesystem],
+            destructive: true,
             ..Default::default()
         };
         let verdict = gate.evaluate(&effects, &ctx);
@@ -279,10 +291,42 @@ mod tests {
         ctx.intent_score = 1.0;
         let effects = EffectRow {
             writes: vec![Resource::Filesystem],
+            destructive: true,
             ..Default::default()
         };
         let verdict = gate.evaluate(&effects, &ctx);
         assert_eq!(verdict, ActionVerdict::Observe);
+    }
+
+    #[test]
+    fn additive_filesystem_write_allowed_in_strict_mode() {
+        // Additive FS writes (lease ledgers, audit logs) are not destruction:
+        // strict mode must not block them. Live-caught 2026-09-12 —
+        // code.claim/code.release were refused under system stress.
+        let gate = DharmaGate::new();
+        let mut ctx = Context::new(BrainWave::Theta); // strict
+        ctx.karma_debt = 0.0;
+        ctx.intent_score = 1.0;
+        let effects = EffectRow {
+            writes: vec![Resource::Filesystem],
+            ..Default::default()
+        };
+        let verdict = gate.evaluate(&effects, &ctx);
+        assert_eq!(verdict, ActionVerdict::Observe);
+    }
+
+    #[test]
+    fn process_write_still_blocked_in_strict_mode() {
+        let gate = DharmaGate::new();
+        let mut ctx = Context::new(BrainWave::Theta);
+        ctx.karma_debt = 0.0;
+        ctx.intent_score = 1.0;
+        let effects = EffectRow {
+            writes: vec![Resource::Process],
+            ..Default::default()
+        };
+        let verdict = gate.evaluate(&effects, &ctx);
+        assert!(verdict.blocks());
     }
 
     #[test]
@@ -348,6 +392,7 @@ mod tests {
         ctx.intent_score = 1.0;
         let effects = EffectRow {
             writes: vec![Resource::Filesystem],
+            destructive: true,
             ..Default::default()
         };
         let verdict = gate.evaluate(&effects, &ctx);
@@ -440,11 +485,13 @@ mod tests {
             proptest::collection::vec(arb_resource(), 0..8),
             proptest::collection::vec(arb_resource(), 0..8),
             any::<bool>(),
+            any::<bool>(),
         )
-            .prop_map(|(reads, writes, spawns)| EffectRow {
+            .prop_map(|(reads, writes, spawns, destructive)| EffectRow {
                 reads,
                 writes,
                 spawns,
+                destructive,
                 ..Default::default()
             })
     }
@@ -488,9 +535,12 @@ mod tests {
             ctx.intent_score = 1.0;
             let verdict = gate.evaluate(&effects, &ctx);
             // Delta is strict mode — destructive actions must block
-            let is_destructive = effects.writes.iter().any(|r| {
-                matches!(r, Resource::Filesystem | Resource::Process | Resource::Network)
-            }) || effects.spawns;
+            let is_destructive = effects.destructive
+                || effects.spawns
+                || effects
+                    .writes
+                    .iter()
+                    .any(|r| matches!(r, Resource::Process | Resource::Network));
             if is_destructive {
                 prop_assert!(verdict.blocks(), "Delta must block destructive: {:?}", verdict);
             }
