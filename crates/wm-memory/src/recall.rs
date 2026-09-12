@@ -285,6 +285,9 @@ pub struct BackfillReport {
     pub embedded: usize,
     /// Memories that already had a stored vector.
     pub already_embedded: usize,
+    /// Memories skipped because their content is empty/whitespace — a 400
+    /// from the embedding server is guaranteed and a vector is meaningless.
+    pub skipped_empty: usize,
     /// Decode / embed / persist failures (details in logs, never fatal).
     pub errors: usize,
     /// True when nothing was written (plan-only pass).
@@ -786,6 +789,13 @@ impl RecallEngine {
                         report.already_embedded += 1;
                         continue;
                     }
+                    if memory.content.trim().is_empty() {
+                        // A vector for empty text is meaningless and the
+                        // embedding server rejects it (HTTP 400, live-caught
+                        // 2026-09-12) — skip it as a known class, not an error.
+                        report.skipped_empty += 1;
+                        continue;
+                    }
                     candidates.push(memory);
                     if candidates.len() >= limit {
                         break;
@@ -864,11 +874,8 @@ impl RecallEngine {
 
             for (i, memory) in chunk.iter().enumerate() {
                 let Some(vector) = vectors[i].take() else {
-                    report.errors += 1;
-                    tracing::warn!(
-                        memory = %memory.metadata.id,
-                        "reembed produced no vector"
-                    );
+                    // None here means the per-item fallback already accounted
+                    // this memory as an error — do not double-count.
                     continue;
                 };
                 if let Err(error) = self.store.put_embedding(memory.metadata.id, &vector) {
@@ -2822,6 +2829,56 @@ mod tests {
         assert_eq!(report.embedded, 40);
         assert_eq!(report.errors, 0);
         assert_eq!(engine.vector_store.lock().unwrap().len(), 40);
+    }
+
+    #[test]
+    fn backfill_skips_empty_content_and_counts_failures_once() {
+        struct FailEmbedder;
+        impl crate::embedder::Embedder for FailEmbedder {
+            fn embed_batch(&self, _texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+                Err(CoreError::Memory("simulated embedder failure".into()))
+            }
+            fn dimension(&self) -> usize {
+                4
+            }
+            fn is_available(&self) -> bool {
+                true
+            }
+            fn backend_name(&self) -> &'static str {
+                "test-fail"
+            }
+        }
+
+        let tmp = tempfile::tempdir().unwrap();
+        let store_dir = tmp.path().join("store");
+        std::fs::create_dir_all(&store_dir).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&store_dir).unwrap());
+        let index_dir = tmp.path().join("index");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let search_engine = Arc::new(SearchEngine::open(&index_dir).unwrap());
+
+        let empty = crate::Memory::new(Galaxy::Codex, "   ".to_string());
+        let real = crate::Memory::new(Galaxy::Codex, "real content".to_string());
+        store.put(Galaxy::Codex, &empty).unwrap();
+        store.put(Galaxy::Codex, &real).unwrap();
+
+        let engine = RecallEngine::new(
+            store,
+            search_engine,
+            VectorStore::new(),
+            Arc::new(FailEmbedder),
+            RecallConfig::default(),
+        )
+        .unwrap();
+        let report = engine
+            .backfill_embeddings(Some(Galaxy::Codex), 0, false)
+            .unwrap();
+        assert_eq!(report.skipped_empty, 1, "whitespace-only memory is skipped");
+        assert_eq!(report.candidates, 1);
+        assert_eq!(
+            report.errors, 1,
+            "a failed memory must be counted once (batch fallback), not twice"
+        );
     }
 
     #[test]
