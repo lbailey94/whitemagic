@@ -1,6 +1,6 @@
 # MCP Client Configuration Guide
 
-**Version**: 7.0.0-alpha.3
+**Version**: 9.1.2
 
 The release binary is a single executable: `wm` (dynamically linked; requires
 glibc 2.39+). The MCP server is the `serve` subcommand. The curated profile

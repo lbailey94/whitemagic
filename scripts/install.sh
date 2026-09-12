@@ -3,7 +3,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
-#   curl -fsSL ... | sh -s -- --version v7.0.0-alpha.4
+#   curl -fsSL ... | sh -s -- --version v9.1.2
 #
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
@@ -58,7 +58,7 @@ if [ -z "$VERSION" ]; then
         | grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
     if [ -z "$VERSION" ]; then
         echo "Could not determine latest release version." >&2
-        echo "Specify --version explicitly, e.g.: $0 --version v7.0.0-alpha.1" >&2
+        echo "Specify --version explicitly, e.g.: $0 --version v9.1.2" >&2
         exit 1
     fi
 fi

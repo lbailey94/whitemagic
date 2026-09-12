@@ -17,7 +17,7 @@ EXTERNAL="${BACKUP_DISK:+$BACKUP_DISK/whitemagic-backups}"
 LEGACY="$HOME/whitemagic-backups"
 LOG="$LEGACY/backup.log"
 OTS_BIN="$HOME/.local/ots-venv/bin/ots"
-WRITABLE_UNITS="wmv5 neon site planning"
+WRITABLE_UNITS="wmv9 neon site planning"
 
 if [ -n "$BACKUP_DISK" ]; then
   BACKUP_ROOT="$EXTERNAL"

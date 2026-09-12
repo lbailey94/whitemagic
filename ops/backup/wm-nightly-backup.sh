@@ -60,8 +60,8 @@ mkdir -p "$SEALS"
 
 # Writable stores: served by wm-serve@<name> units, need stop/backup/start.
 # Read-only stores (vault, live): no writer lock, back up directly.
-WRITABLE_UNITS="wmv5 neon site planning"
-RW_STORES="$BASE/wmv5 $BASE/neon $BASE/whitemagic-site $BASE/planning"
+WRITABLE_UNITS="wmv9 neon site planning"
+RW_STORES="$BASE/wmv9 $BASE/neon $BASE/whitemagic-site $BASE/planning"
 RO_STORES="$BASE/vault $HOME/Desktop/WHITEMAGIC/data/WMdata/live"
 
 # O-1: HMAC-seal the store, verify it, and snapshot BOTH the manifest and

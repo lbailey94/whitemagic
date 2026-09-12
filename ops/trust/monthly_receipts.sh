@@ -45,7 +45,7 @@ echo "## 1. Integrity seal tally (per store)"
 echo
 echo "| Store | seals | verify OK | verify FAIL | seal-snapshot | snapshot-fail |"
 echo "|---|---|---|---|---|---|"
-for store in live neon planning vault whitemagic-site wmv5; do
+for store in live neon planning vault whitemagic-site wmv9; do
   seals=$(grep -c "SEAL-OK\? $store\|VERIFY-OK $store" "$LOG" 2>/dev/null || true)
   vok=$(grep -c "VERIFY-OK $store" "$LOG" 2>/dev/null || true)
   vfail=$(grep -c "VERIFY-FAIL $store" "$LOG" 2>/dev/null || true)

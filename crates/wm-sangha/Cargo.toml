@@ -12,7 +12,7 @@ keywords = ["mcp", "memory", "ai-agents", "local-first"]
 
 
 [dependencies]
-wm-core = { version = "9.0.0", path = "../wm-core" }
+wm-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

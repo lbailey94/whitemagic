@@ -402,7 +402,7 @@ fn render_chapter_29() -> String {
 ## 1. Purpose
 The Great Year governs long-arc system cycles (25,920-year precession analog in software evolution).
 It provides perspective across generations of architectures, from the Python v1-v26 era
-to the Rust WMv8/v9 Rubedo epoch and beyond.
+to the Rust WMv9 Rubedo epoch and beyond.
 
 ## 2. Temporal Horizons
 - **Micro-Cycles:** Session ticks, memory consolidation passes, dream loops.

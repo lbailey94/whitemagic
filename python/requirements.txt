@@ -10,4 +10,4 @@ fastembed>=0.2.0
 transformers>=4.40.0
 
 # Note: The Rust extension module (whitemagic_v3) must be built separately:
-#   cargo build --release --features python -p wm-mcp
+#   cargo build --release --features python -p whitemagic

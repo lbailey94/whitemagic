@@ -5,6 +5,22 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.2] — 2026-09-11 (memory hardening, redaction retrofit, wmv9 rename)
+
+### Memory system hardening (session 8b52f642)
+- `wm ingest` / `wm migrate`: fail-fast store-busy preflight (Tantivy writer-lock + live `wm serve` detection via `/proc/locks`) with bounded `--wait N`; silent 18-minute hangs now error in <0.1s naming the lock holder.
+- Credential hygiene: `wm ingest --redact` (PEM/token/assignment spans, `redactions=N` disclosed) and new `wm redact-content` store-wide retrofit (dry-run default, revision-chained, idempotent). Vault store-wide pass: 675 rows redacted, final `would_redact=0` of 199,035 clean rows; pre-redact safety snapshot retained off-store.
+- `memory.search`: backslash escaping before quotes (trailing-`\` terms broke phrases) plus `parse_query_lenient` fallback.
+
+### Infrastructure
+- Dev store/unit/gateway scope renamed `wmv5` → `wmv9`; gateway scope set is now `wmv9` (writable home) + `planning` + `vault` + `default` (read-only) on port 18795.
+- Gateway drops the pinned 9.0.0 `q03` runtime; the fleet runs the 9.1.2 release binary.
+- Version-truth pass: workspace internal dependency pins, npm/Docker labels, README/QUICKSTART/llms/CITATION and related docs.
+
+### Privacy
+- Repository no longer embeds Valkyrie's personal transmissions (examples read from the local sanctuary or an env var); SharedWorkspace sync exclusions added for sanctuary/aria artifacts.
+- Valkyrie's sanctuary store stays device-local by policy; it is not federated, meshed, or synced.
+
 ## [9.1.1] — 2026-09-10 (the 44-commit verified batch + release-cadence groundwork)
 
 ### Operational trust stack (Q36–Q40)

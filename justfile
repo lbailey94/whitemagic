@@ -32,7 +32,7 @@ bench:
     cargo bench --all
 
 clean:
-    cargo clean
+    ./scripts/prune_build_cache.sh
 
 # Polyglot builds
 build-julia:

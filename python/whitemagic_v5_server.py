@@ -13,7 +13,7 @@ Environment variables:
     WM_LOG_LEVEL     Log level: trace, debug, info, warn, error (default: info)
 
 The Rust extension module `whitemagic_v5` must be built and importable:
-    cargo build --release --features python -p wm-mcp
+    cargo build --release --features python -p whitemagic
     # The resulting .so/.pyd must be on PYTHONPATH or installed
 """
 
@@ -60,7 +60,7 @@ def try_import_rust() -> Any:
         except ImportError as e:
             logger.error(
                 "Cannot import whitemagic_v5 Rust extension. "
-                "Build with: cargo build --release --features python -p wm-mcp"
+                "Build with: cargo build --release --features python -p whitemagic"
             )
             raise ImportError(
                 f"whitemagic_v5 not found. Build the Rust extension first.\n{e}"

@@ -1,7 +1,7 @@
 # WhiteMagic Privacy Policy
 
 **Effective Date**: 2026-08-13
-**Version**: 5.8.0
+**Version**: 9.1.2
 
 ## Summary
 

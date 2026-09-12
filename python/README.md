@@ -17,7 +17,7 @@ Python extension is required.
 ### 1. Build the Rust extension module
 
 ```bash
-cargo build --release --features python -p wm-mcp
+cargo build --release --features python -p whitemagic
 ```
 
 This produces a shared library (`libwhitemagic_v5.so` on Linux) in
