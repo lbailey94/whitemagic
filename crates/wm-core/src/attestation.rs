@@ -2,7 +2,8 @@
 //!
 //! Implements supply chain security for the tool ecosystem:
 //! - **Signed manifests**: Each tool has a cryptographic manifest declaring its
-//!   capabilities, effects, and provenance, signed with an HMAC key.
+//!   capabilities, effects, and provenance. Ed25519 (`ed25519:<hex>`) is the
+//!   preferred scheme; bare-hex HMAC-SHA256 remains as the legacy migration path.
 //! - **Provenance verification**: Verify that a tool's manifest hasn't been
 //!   tampered with and comes from a trusted publisher.
 //! - **Trust scope controls**: Restrict which tools external MCP servers can
@@ -102,7 +103,15 @@ pub fn verify_hmac(payload: &str, signature: &str, key: &[u8]) -> bool {
     if signature.is_empty() {
         return false;
     }
-    sign_hmac(payload, key).is_some_and(|expected| expected == signature)
+    let Some(expected) = decode_hex(signature) else {
+        return false;
+    };
+    let Ok(mut mac) = HmacSha256::new_from_slice(key) else {
+        return false;
+    };
+    mac.update(payload.as_bytes());
+    // Constant-time comparison via the MAC's own verifier.
+    mac.verify_slice(&expected).is_ok()
 }
 
 /// A tool capability manifest — declares what a tool can do and who published it.
@@ -127,7 +136,8 @@ pub struct ToolManifest {
     pub requires_human_review: bool,
     /// Manifest creation timestamp (Unix seconds).
     pub created_at: i64,
-    /// HMAC-SHA256 signature over the manifest content.
+    /// Signature over the manifest content: `ed25519:<hex>` (preferred) or
+    /// legacy bare-hex HMAC-SHA256.
     #[serde(default)]
     pub signature: String,
 }
@@ -410,11 +420,17 @@ impl TrustScope {
 }
 
 /// Registry of known tool manifests with verification.
+///
+/// Verification dispatches on the signature scheme: `ed25519:<hex>` against
+/// the registry's issuer key (preferred), bare hex against the legacy HMAC
+/// key. A scheme with no configured key fails closed.
 pub struct ToolAttestationRegistry {
     /// Known manifests keyed by tool name.
     manifests: ahash::AHashMap<String, ToolManifest>,
-    /// Signing key for manifest verification.
+    /// Legacy HMAC signing key (bare-hex signatures).
     signing_key: Vec<u8>,
+    /// Ed25519 issuer key — the preferred verification key (PLAN_F F-2).
+    ed25519_key: Option<ed25519_dalek::VerifyingKey>,
     /// Trust scope for external tools.
     external_scope: TrustScope,
     /// Set of trusted publishers.
@@ -422,14 +438,59 @@ pub struct ToolAttestationRegistry {
 }
 
 impl ToolAttestationRegistry {
-    /// Create a new registry with the given signing key.
+    /// Create a new registry with the given HMAC signing key (legacy path).
     #[must_use]
     pub fn new(signing_key: Vec<u8>) -> Self {
         Self {
             manifests: ahash::AHashMap::new(),
             signing_key,
+            ed25519_key: None,
             external_scope: TrustScope::default(),
             trusted_publishers: vec!["whitemagic-core".into()],
+        }
+    }
+
+    /// Create an Ed25519-first registry. `ed25519:<hex>` manifests verify
+    /// against `verifying_key`; legacy HMAC manifests are refused unless a
+    /// legacy key is attached via [`Self::with_legacy_hmac_key`].
+    #[must_use]
+    pub fn new_ed25519(verifying_key: ed25519_dalek::VerifyingKey) -> Self {
+        Self {
+            manifests: ahash::AHashMap::new(),
+            signing_key: Vec::new(),
+            ed25519_key: Some(verifying_key),
+            external_scope: TrustScope::default(),
+            trusted_publishers: vec!["whitemagic-core".into()],
+        }
+    }
+
+    /// Attach an Ed25519 issuer key to this registry.
+    #[must_use]
+    pub const fn with_ed25519_key(mut self, verifying_key: ed25519_dalek::VerifyingKey) -> Self {
+        self.ed25519_key = Some(verifying_key);
+        self
+    }
+
+    /// Attach the legacy HMAC key — migration window for pre-Ed25519 manifests.
+    #[must_use]
+    pub fn with_legacy_hmac_key(mut self, key: Vec<u8>) -> Self {
+        self.signing_key = key;
+        self
+    }
+
+    /// Verify a manifest against this registry's issuer keys, failing closed
+    /// when the signature's scheme has no configured key.
+    #[must_use]
+    fn verify_manifest(&self, manifest: &ToolManifest) -> bool {
+        match manifest.signature_scheme() {
+            "ed25519" => self
+                .ed25519_key
+                .as_ref()
+                .is_some_and(|key| manifest.verify_signature_ed25519(key)),
+            "hmac-sha256" => {
+                !self.signing_key.is_empty() && manifest.verify_signature(&self.signing_key)
+            }
+            _ => false,
         }
     }
 
@@ -452,8 +513,8 @@ impl ToolAttestationRegistry {
     /// Verifies the manifest's signature before registering. Returns false
     /// if the signature is invalid.
     pub fn register(&mut self, manifest: ToolManifest) -> bool {
-        // Verify signature
-        if !manifest.verify_signature(&self.signing_key) {
+        // Verify signature against the scheme's configured issuer key.
+        if !self.verify_manifest(&manifest) {
             return false;
         }
 
@@ -502,8 +563,7 @@ impl ToolAttestationRegistry {
     /// Verify a manifest's provenance (signature + publisher).
     #[must_use]
     pub fn verify_provenance(&self, manifest: &ToolManifest) -> bool {
-        manifest.verify_signature(&self.signing_key)
-            && self.trusted_publishers.contains(&manifest.publisher)
+        self.verify_manifest(manifest) && self.trusted_publishers.contains(&manifest.publisher)
     }
 
     /// List all registered tool names.
@@ -827,5 +887,88 @@ mod tests {
     fn unsigned_manifest_scheme_none() {
         let manifest = make_manifest("memory.search", "whitemagic-core");
         assert_eq!(manifest.signature_scheme(), "none");
+    }
+
+    // ── Registry scheme dispatch / migration (PLAN_F F-2) ────────────
+
+    #[test]
+    fn registry_ed25519_first_registers_ed25519_manifest() {
+        let key = ed25519_key();
+        let mut registry = ToolAttestationRegistry::new_ed25519(key.verifying_key());
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        assert!(registry.register(manifest.clone()));
+        assert!(registry.verify_provenance(&manifest));
+    }
+
+    #[test]
+    fn registry_ed25519_first_rejects_legacy_hmac_without_key() {
+        let key = ed25519_key();
+        let mut registry = ToolAttestationRegistry::new_ed25519(key.verifying_key());
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign(TEST_KEY);
+        assert!(
+            !registry.register(manifest),
+            "legacy HMAC must fail closed when no legacy key is configured"
+        );
+        assert_eq!(registry.len(), 0);
+    }
+
+    #[test]
+    fn registry_migration_window_accepts_both_schemes() {
+        let key = ed25519_key();
+        let mut registry = ToolAttestationRegistry::new_ed25519(key.verifying_key())
+            .with_legacy_hmac_key(TEST_KEY.to_vec());
+        let modern = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        let legacy = make_manifest("memory.recall", "whitemagic-core").sign(TEST_KEY);
+        assert!(registry.register(modern));
+        assert!(registry.register(legacy));
+        assert_eq!(registry.len(), 2);
+    }
+
+    #[test]
+    fn registry_ed25519_rejects_wrong_issuer_key() {
+        let key = ed25519_key();
+        let other = ed25519_dalek::SigningKey::from_bytes(&[9u8; 32]);
+        let mut registry = ToolAttestationRegistry::new_ed25519(other.verifying_key());
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        assert!(!registry.register(manifest));
+    }
+
+    #[test]
+    fn registry_ed25519_rejects_tampered_manifest() {
+        let key = ed25519_key();
+        let mut registry = ToolAttestationRegistry::new_ed25519(key.verifying_key());
+        let tampered = ToolManifest {
+            description: "Tampered".into(),
+            ..make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key)
+        };
+        assert!(!registry.register(tampered));
+    }
+
+    #[test]
+    fn registry_hmac_only_rejects_ed25519_manifest() {
+        let key = ed25519_key();
+        let mut registry = ToolAttestationRegistry::new(TEST_KEY.to_vec());
+        let manifest = make_manifest("memory.search", "whitemagic-core").sign_ed25519(&key);
+        assert!(
+            !registry.register(manifest),
+            "an ed25519 manifest needs an ed25519 issuer key"
+        );
+    }
+
+    #[test]
+    fn registry_rejects_unsigned_manifest_fail_closed() {
+        let mut registry = ToolAttestationRegistry::new(TEST_KEY.to_vec());
+        let manifest = make_manifest("memory.search", "whitemagic-core");
+        assert!(!registry.register(manifest));
+    }
+
+    #[test]
+    fn verify_hmac_rejects_forgeries_and_malformed_hex() {
+        let good = sign_hmac("payload", TEST_KEY).unwrap();
+        assert!(verify_hmac("payload", &good, TEST_KEY));
+        assert!(!verify_hmac("payload", &good, b"wrong"));
+        assert!(!verify_hmac("payload!", &good, TEST_KEY));
+        assert!(!verify_hmac("payload", "", TEST_KEY));
+        assert!(!verify_hmac("payload", "zz", TEST_KEY));
     }
 }
