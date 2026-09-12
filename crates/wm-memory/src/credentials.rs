@@ -164,6 +164,13 @@ pub fn redact_credential_content(content: &str) -> (String, Vec<&'static str>) {
         while let Some((start, end)) = pem_block_span(&out) {
             out.replace_range(start..end, "[REDACTED:private_key_pem]");
         }
+        // Detection fires on any content holding both "-----BEGIN" and
+        // "PRIVATE KEY" — including truncated/example fragments with no
+        // complete END block, which the span loop above cannot match.
+        // Neutralize the marker strings so the pass is idempotent.
+        out = out.replace("PRIVATE KEY-----", "[REDACTED:pem-key]");
+        out = out.replace("-----BEGIN", "[REDACTED:pem-begin]");
+        out = out.replace("-----END", "[REDACTED:pem-end]");
     }
 
     if kinds.contains(&"credential_assignment") {
@@ -450,6 +457,22 @@ mod tests {
         assert!(
             credential_shaped_content(&once).is_empty(),
             "short fragments must read clean after redaction: {once}"
+        );
+        let (twice, _) = redact_credential_content(&once);
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn pem_fragments_are_redacted_too() {
+        // Regression: a truncated/example PEM with no END block fires
+        // detection but has no complete span; the marker strings themselves
+        // must be neutralized so the store pass is idempotent (2026-09-11).
+        let text = "docs explain -----BEGIN PRIVATE KEY----- when truncated";
+        let (once, kinds) = redact_credential_content(text);
+        assert!(kinds.contains(&"private_key_pem"));
+        assert!(
+            credential_shaped_content(&once).is_empty(),
+            "PEM fragments must read clean after redaction: {once}"
         );
         let (twice, _) = redact_credential_content(&once);
         assert_eq!(once, twice);
