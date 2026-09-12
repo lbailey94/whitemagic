@@ -274,6 +274,23 @@ pub struct RecallEngine {
     conformal: Mutex<Option<crate::recall_conformal::RecallConformal>>,
 }
 
+/// Report from a [`RecallEngine::backfill_embeddings`] pass.
+#[derive(Debug, Clone, Default, serde::Serialize)]
+pub struct BackfillReport {
+    /// Memories visited during the (early-stopping) scan.
+    pub scanned: usize,
+    /// Memories found without a stored vector (the batch to embed).
+    pub candidates: usize,
+    /// Vectors embedded + persisted this pass.
+    pub embedded: usize,
+    /// Memories that already had a stored vector.
+    pub already_embedded: usize,
+    /// Decode / embed / persist failures (details in logs, never fatal).
+    pub errors: usize,
+    /// True when nothing was written (plan-only pass).
+    pub dry_run: bool,
+}
+
 impl RecallEngine {
     /// Create a new recall engine.
     ///
@@ -685,6 +702,121 @@ impl RecallEngine {
     }
 
     // ── Read path: hybrid search ───────────────────────────────────────
+
+    /// Backfill per-memory vectors for memories that have none.
+    ///
+    /// Streams the requested galaxies in LMDB key order and collects up to
+    /// `limit` memories lacking a stored embedding (`limit == 0` = no cap),
+    /// then embeds + persists them, also seeding the in-memory vector index.
+    /// The scan opens its own read transaction and the embed/put writes use
+    /// their own transactions — no nested LMDB read txns, no full-galaxy
+    /// materialization (candidate collection is capped by `limit`).
+    /// `dry_run` reports candidates without writing.
+    ///
+    /// # Errors
+    /// Fails fast when the wired embedder is the stub (backfill would store
+    /// noise), matching the `embedder_is_real` gate used by the write path.
+    pub fn backfill_embeddings(
+        &self,
+        galaxy: Option<Galaxy>,
+        limit: usize,
+        dry_run: bool,
+    ) -> Result<BackfillReport> {
+        if !self.embedder_is_real() {
+            return Err(CoreError::InvalidArgs(
+                "no real embedder configured — memory.reembed requires WM_EMBEDDER_ENDPOINT or the onnx backend".into(),
+            ));
+        }
+        use lmdb::{Cursor as _, Transaction as _};
+        let limit = if limit == 0 { usize::MAX } else { limit };
+        let galaxies: Vec<Galaxy> = match galaxy {
+            Some(g) => vec![g],
+            None => Galaxy::memory_galaxies().to_vec(),
+        };
+        let mut report = BackfillReport {
+            dry_run,
+            ..Default::default()
+        };
+        let mut candidates: Vec<crate::Memory> = Vec::new();
+
+        'galaxy: for g in galaxies {
+            let db = self.store.galaxy_db(g)?;
+            let embeddings_db = self.store.galaxy_db(Galaxy::Embeddings)?;
+            let tx = self
+                .store
+                .env()
+                .begin_ro_txn()
+                .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+            {
+                let mut cursor = tx
+                    .open_ro_cursor(db)
+                    .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
+                for (_key, value) in cursor.iter() {
+                    report.scanned += 1;
+                    let memory = match crate::codec::decode(value) {
+                        Ok(memory) => memory,
+                        Err(error) => {
+                            report.errors += 1;
+                            tracing::warn!("reembed scan skipped undecodable entry: {error}");
+                            continue;
+                        }
+                    };
+                    let has_vector = match tx.get(embeddings_db, memory.metadata.id.as_bytes()) {
+                        Ok(_) => true,
+                        Err(lmdb::Error::NotFound) => false,
+                        Err(e) => {
+                            return Err(CoreError::Memory(format!("LMDB get failed: {e}")));
+                        }
+                    };
+                    if has_vector {
+                        report.already_embedded += 1;
+                        continue;
+                    }
+                    candidates.push(memory);
+                    if candidates.len() >= limit {
+                        break;
+                    }
+                }
+            }
+            tx.commit()
+                .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+            if candidates.len() >= limit {
+                break 'galaxy;
+            }
+        }
+
+        report.candidates = candidates.len();
+        if dry_run {
+            return Ok(report);
+        }
+
+        for memory in candidates {
+            match self.embed_content(&memory.content) {
+                Ok(embedding) => {
+                    if let Err(error) = self.store.put_embedding(memory.metadata.id, &embedding) {
+                        report.errors += 1;
+                        tracing::warn!(
+                            memory = %memory.metadata.id,
+                            "reembed persist failed: {error}"
+                        );
+                        continue;
+                    }
+                    if let Ok(mut vs) = self.vector_store.lock() {
+                        vs.add(memory.metadata.id, memory.metadata.galaxy, embedding);
+                    }
+                    report.embedded += 1;
+                }
+                Err(error) => {
+                    report.errors += 1;
+                    tracing::warn!(
+                        memory = %memory.metadata.id,
+                        "reembed embed failed: {error}"
+                    );
+                }
+            }
+        }
+        Ok(report)
+    }
 
     /// Rehydrate the process-local vector index from the Embeddings galaxy.
     ///
@@ -2463,7 +2595,7 @@ mod tests {
 
         // Fresh process: new engine, empty in-memory vector index.
         let engine = RecallEngine::new(
-            store.clone(),
+            store,
             search_engine,
             VectorStore::new(),
             embedder,
@@ -2482,6 +2614,97 @@ mod tests {
             "vector store should be loaded after the first hybrid search"
         );
         assert_eq!(vs.len(), 1, "persisted embedding should be indexed");
+    }
+
+    #[test]
+    fn backfill_embeddings_dry_run_then_apply() {
+        struct TestEmbedder;
+        impl crate::embedder::Embedder for TestEmbedder {
+            fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+                Ok(texts.iter().map(|_| vec![0.25_f32; 8]).collect())
+            }
+            fn dimension(&self) -> usize {
+                8
+            }
+            fn is_available(&self) -> bool {
+                true
+            }
+            fn backend_name(&self) -> &'static str {
+                "test"
+            }
+        }
+
+        let tmp = tempfile::tempdir().unwrap();
+        let store_dir = tmp.path().join("store");
+        std::fs::create_dir_all(&store_dir).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&store_dir).unwrap());
+        let index_dir = tmp.path().join("index");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let search_engine = Arc::new(SearchEngine::open(&index_dir).unwrap());
+
+        let mem_a = crate::Memory::new(Galaxy::Codex, "alpha unique content".to_string());
+        let mem_b = crate::Memory::new(Galaxy::Codex, "beta unique content".to_string());
+        let (id_a, id_b) = (mem_a.metadata.id, mem_b.metadata.id);
+        store.put(Galaxy::Codex, &mem_a).unwrap();
+        store.put(Galaxy::Codex, &mem_b).unwrap();
+
+        let engine = RecallEngine::new(
+            store.clone(),
+            search_engine,
+            VectorStore::new(),
+            Arc::new(TestEmbedder),
+            RecallConfig::default(),
+        )
+        .unwrap();
+
+        // Dry run: candidates found, nothing written.
+        let plan = engine
+            .backfill_embeddings(Some(Galaxy::Codex), 0, true)
+            .unwrap();
+        assert!(plan.dry_run);
+        assert_eq!(plan.scanned, 2);
+        assert_eq!(plan.candidates, 2);
+        assert_eq!(plan.embedded, 0);
+        assert!(store.get_embedding(id_a).unwrap().is_none());
+
+        // Apply: both vectors persisted and indexed.
+        let applied = engine
+            .backfill_embeddings(Some(Galaxy::Codex), 0, false)
+            .unwrap();
+        assert_eq!(applied.embedded, 2);
+        assert!(store.get_embedding(id_a).unwrap().is_some());
+        assert!(store.get_embedding(id_b).unwrap().is_some());
+        assert_eq!(engine.vector_store.lock().unwrap().len(), 2);
+
+        // Re-run: nothing left to do.
+        let again = engine
+            .backfill_embeddings(Some(Galaxy::Codex), 0, false)
+            .unwrap();
+        assert_eq!(again.candidates, 0);
+        assert_eq!(again.already_embedded, 2);
+    }
+
+    #[test]
+    fn backfill_refuses_stub_embedder() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store_dir = tmp.path().join("store");
+        std::fs::create_dir_all(&store_dir).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&store_dir).unwrap());
+        let index_dir = tmp.path().join("index");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let search_engine = Arc::new(SearchEngine::open(&index_dir).unwrap());
+        let engine = RecallEngine::new(
+            store,
+            search_engine,
+            VectorStore::new(),
+            Arc::new(crate::embedder::StubEmbedder::default()),
+            RecallConfig::default(),
+        )
+        .unwrap();
+        let err = engine
+            .backfill_embeddings(Some(Galaxy::Codex), 10, true)
+            .unwrap_err();
+        assert!(err.to_string().contains("no real embedder"));
     }
 
     #[test]

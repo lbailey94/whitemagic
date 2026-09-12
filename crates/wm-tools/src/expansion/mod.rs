@@ -158,8 +158,8 @@ pub use knowledge_graph::{KgExtractTool, KgQueryTool, KgTopTool};
 pub use memory_ops::{
     MemoryAggregateTool, MemoryBatchReadTool, MemoryConsolidateTool, MemoryDecayTool,
     MemoryDeduplicateTool, MemoryEpisodicSearchTool, MemoryExportTool, MemoryFilterTool,
-    MemoryHybridRecallTool, MemoryRecallFeedbackTool, MemoryRevisionsTool, MemorySortTool,
-    MemoryStatsTool, MemoryTagTool, MemoryUpdateTool,
+    MemoryHybridRecallTool, MemoryRecallFeedbackTool, MemoryReembedTool, MemoryRevisionsTool,
+    MemorySortTool, MemoryStatsTool, MemoryTagTool, MemoryUpdateTool,
 };
 pub use mesh_tools::{
     MeshChatTool, MeshJoinTool, MeshQuarantineTool, MeshReadTool, MeshStatusTool,

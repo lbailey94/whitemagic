@@ -14,7 +14,7 @@ use wm_memory::{
 };
 
 use super::common::{
-    galaxy_name, int_prop, num_prop, parse_galaxy, parse_galaxy_or, schema, str_prop,
+    bool_prop, galaxy_name, int_prop, num_prop, parse_galaxy, parse_galaxy_or, schema, str_prop,
 };
 
 /// Resolve a memory id across all memory galaxies. Associations may point at
@@ -753,6 +753,102 @@ impl MemoryHybridRecallTool {
             effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
             route_name,
         }
+    }
+}
+
+/// `memory.reembed` — backfill per-memory vectors for memories that lack them.
+///
+/// Dry-run by default (plan only); `dry_run: false` persists vectors.
+/// Bounded by `limit` (default 200) so an interactive dispatch never runs
+/// unbounded; re-run to continue. Requires a real embedder — the tool
+/// refuses to store stub noise.
+pub struct MemoryReembedTool {
+    recall: Option<Arc<RecallEngine>>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl MemoryReembedTool {
+    #[must_use]
+    pub fn new(recall: Option<Arc<RecallEngine>>) -> Self {
+        Self {
+            recall,
+            stats: ToolStats::default(),
+            effects: EffectRow {
+                writes: {
+                    let mut writes = super::common::memory_galaxy_writes();
+                    writes.push(Resource::Galaxy("embeddings".into()));
+                    writes
+                },
+                reads: super::common::memory_galaxy_reads(),
+                destructive: false,
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for MemoryReembedTool {
+    fn name(&self) -> &str {
+        "memory.reembed"
+    }
+    fn gana(&self) -> Gana {
+        Gana::WinnowingBasket
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+    fn description(&self) -> &str {
+        "Backfill per-memory embedding vectors for memories that have none (dry-run by default; requires a real embedder). Bounded by limit; re-run to continue. Populates the persistent vector index used by hybrid recall."
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "galaxy": str_prop("Only this galaxy (optional; default: all memory galaxies)"),
+                "limit": int_prop("Maximum vectors to embed this pass (default 200; 0 = no cap)"),
+                "dry_run": bool_prop("Plan only, no writes (default true)"),
+            }),
+            &[],
+        )
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let galaxy = match args.get("galaxy").and_then(|v| v.as_str()) {
+            Some(name) => Some(parse_galaxy(name)?),
+            None => None,
+        };
+        let limit = args
+            .get("limit")
+            .and_then(serde_json::Value::as_u64)
+            .map_or(200usize, |v| v as usize);
+        let dry_run = args
+            .get("dry_run")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(true);
+
+        let Some(recall) = self.recall.as_ref() else {
+            return Ok(json!({
+                "status": "error",
+                "error": "no real embedder wired in this server — set WM_EMBEDDER_ENDPOINT (or the onnx backend) and restart; memory.reembed will not store stub noise",
+            }));
+        };
+        let report = recall.backfill_embeddings(galaxy, limit, dry_run)?;
+        let mut out = serde_json::to_value(&report).unwrap_or_else(|_| json!({}));
+        if let Some(obj) = out.as_object_mut() {
+            obj.insert("status".into(), json!("success"));
+            obj.insert(
+                "hint".into(),
+                json!(if dry_run {
+                    "dry-run only — call again with dry_run: false to persist vectors"
+                } else {
+                    "vectors persisted; the shared vector index is updated in this process, and restarted processes rehydrate it on first hybrid search"
+                }),
+            );
+        }
+        Ok(out)
     }
 }
 

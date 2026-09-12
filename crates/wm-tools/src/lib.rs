@@ -3581,7 +3581,9 @@ pub fn register_all(
             store.clone(),
             vector_store,
         )))
-        .register(Arc::new(GnosisTool::new(store.clone())));
+        .register(Arc::new(GnosisTool::new(store.clone())))
+        // Vector backfill for stub-era memories (dry-run default; bounded).
+        .register(Arc::new(expansion::MemoryReembedTool::new(recall.clone())));
 
     if let Some(conv) = conversational {
         reg = reg.register(Arc::new(MemoryChatTool::new(conv)));
