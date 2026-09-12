@@ -3554,7 +3554,7 @@ pub fn register_all(
     registry_persistence: expansion::RegistryPersistenceMode,
     circuit_breakers: Arc<wm_dispatch::CircuitBreakerRegistry>,
 ) -> ToolRegistry {
-    let mut reg = registry
+    let reg = registry
         .register(Arc::new(MemoryCreateTool::new(
             store.clone(),
             search.clone(),
