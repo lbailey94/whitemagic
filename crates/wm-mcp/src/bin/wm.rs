@@ -413,6 +413,31 @@ enum Commands {
         #[arg(long)]
         apply: bool,
     },
+    /// Redact credential-shaped content from stored memories in place
+    ///
+    /// Retrofit for content written before `wm ingest --redact` existed (or
+    /// by other write paths): scans memories for credential-shaped spans
+    /// (PEM keys, prefixed tokens, assignment values) and rewrites matching
+    /// rows with `[REDACTED:<kind>]` markers, chaining the revision history
+    /// and reindexing them. DRY-RUN by default — a `--tag` filter scopes the
+    /// pass (e.g. `source:convo-harvest-20260911`).
+    RedactContent {
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Only redact these galaxies (repeatable; default: all memory galaxies)
+        #[arg(long)]
+        galaxy: Vec<String>,
+        /// Only redact memories carrying this exact tag (e.g. source:my-export)
+        #[arg(long)]
+        tag: Option<String>,
+        /// Wait up to N seconds for a busy store (live serve) before failing
+        #[arg(long, default_value_t = 0)]
+        wait: u64,
+        /// Apply the redaction (default: dry-run report only)
+        #[arg(long)]
+        apply: bool,
+    },
     /// Session continuity over LMDB directly — CLI parity for the MCP
     /// session routes (board item 1): the continuity promise must not
     /// depend on MCP transport health. Shares the exact tool
@@ -1231,6 +1256,16 @@ fn main() -> anyhow::Result<()> {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_repair_content(&store_path, &galaxy, apply)?;
         }
+        Commands::RedactContent {
+            store,
+            galaxy,
+            tag,
+            wait,
+            apply,
+        } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            run_redact_content(&store_path, &galaxy, tag.as_deref(), apply, wait)?;
+        }
         Commands::Session { command } => {
             run_session_command(command)?;
         }
@@ -1866,6 +1901,97 @@ fn run_repair_content(
     println!(
         "A read-only server on this store should restart to observe the \
          rebuilt index."
+    );
+    Ok(())
+}
+
+/// Run the credential-redaction retrofit (`wm redact-content`).
+///
+/// Dry-run by default: reports what WOULD be redacted without touching the
+/// store. With `--apply`, matching rows are rewritten in place (same id,
+/// revision-chained) and reindexed — take a `wm backup` first. Galaxies
+/// filter via repeatable `--galaxy`; `--tag` scopes to memories carrying an
+/// exact tag (e.g. `source:convo-harvest-20260911`).
+fn run_redact_content(
+    store_path: &std::path::Path,
+    galaxy_filter: &[String],
+    tag: Option<&str>,
+    apply: bool,
+    wait_secs: u64,
+) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.exists() {
+        anyhow::bail!(
+            "No store found at {}. Run 'wm serve' first.",
+            lmdb_path.display()
+        );
+    }
+    let tantivy_path = wm_memory::reindex::tantivy_path_for(&lmdb_path);
+    if !tantivy_path.exists() {
+        return Err(wm_memory::reindex::missing_index_error(&lmdb_path).into());
+    }
+
+    let galaxies: Vec<wm_core::Galaxy> = if galaxy_filter.is_empty() {
+        wm_core::Galaxy::memory_galaxies().to_vec()
+    } else {
+        galaxy_filter
+            .iter()
+            .map(|s| {
+                wm_core::Galaxy::from_db_name(&s.to_lowercase())
+                    .or_else(|| wm_core::Galaxy::from_db_name(s))
+                    .ok_or_else(|| anyhow::anyhow!("unknown galaxy: {s}"))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?
+    };
+
+    wm_mcp::store_busy::ensure_store_available(store_path, wait_secs)?;
+
+    let store = wm_memory::MemoryStore::open_default(&lmdb_path)?;
+    let search = wm_memory::SearchEngine::open(&tantivy_path)?;
+
+    let report = wm_memory::redact::redact_store_content(&store, &search, &galaxies, tag, apply)?;
+
+    let kinds = if report.kinds.is_empty() {
+        String::new()
+    } else {
+        report
+            .kinds
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    if !apply {
+        println!(
+            "Dry run (store untouched): scanned={} would_redact={} already_clean={} filtered_out={}",
+            report.scanned, report.redacted, report.already_clean, report.filtered_out
+        );
+        if !kinds.is_empty() {
+            println!("Kinds: {kinds}");
+        }
+        println!("Run with --apply to redact in place (take a 'wm backup' first).");
+        return Ok(());
+    }
+
+    println!(
+        "Redaction complete: scanned={} redacted={} already_clean={} filtered_out={}",
+        report.scanned, report.redacted, report.already_clean, report.filtered_out
+    );
+    if !kinds.is_empty() {
+        println!("Kinds: {kinds}");
+    }
+    for g in &report.galaxies {
+        if g.redacted > 0 {
+            println!(
+                "  {:12} scanned={:7} redacted={:7} clean={:7} filtered={:6}",
+                g.galaxy, g.scanned, g.redacted, g.already_clean, g.filtered_out
+            );
+        }
+    }
+    println!(
+        "A read-only server on this store should restart to observe the \
+         reindexed store."
     );
     Ok(())
 }

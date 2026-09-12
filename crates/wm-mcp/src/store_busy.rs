@@ -47,7 +47,10 @@ mod imp {
             }
             let list = holders
                 .iter()
-                .map(|h| format!("  pid {} — {}", h.pid, h.cmdline))
+                .map(|h| {
+                    let cmd: String = h.cmdline.chars().take(160).collect();
+                    format!("  pid {} — {}", h.pid, cmd)
+                })
                 .collect::<Vec<_>>()
                 .join("\n");
             anyhow::bail!(
@@ -163,6 +166,12 @@ mod imp {
         if !serves {
             return false;
         }
+        // A `--readonly` serve takes no writer lock and no write transactions
+        // (LMDB MVCC + Tantivy read-only open), so it cannot block a writer —
+        // it must not be reported as a holder.
+        if args.contains(&"--readonly") {
+            return false;
+        }
         let store = store_path.to_string_lossy();
         args.iter()
             .any(|a| *a == store || a.contains(store.as_ref()))
@@ -183,7 +192,10 @@ mod imp {
         if trimmed.is_empty() {
             "(empty)".to_string()
         } else {
-            trimmed.chars().take(160).collect()
+            // Full command line: holder detection reads flags that can sit
+            // past any truncation (--readonly). Display truncation happens
+            // at the error-message seam only.
+            trimmed.to_string()
         }
     }
 }
@@ -219,12 +231,19 @@ mod tests {
     }
 
     #[test]
-    fn serving_cmdline_requires_serve_and_store() {
+    fn serving_cmdline_requires_writable_serve_and_store() {
         let store = Path::new("/data/vault");
         assert!(is_serving_cmdline(
-            "/home/u/.local/bin/wm serve --profile curated --store /data/vault --readonly",
+            "/home/u/.local/bin/wm serve --profile curated --store /data/vault",
             store
         ));
+        assert!(
+            !is_serving_cmdline(
+                "/home/u/.local/bin/wm serve --store /data/vault --readonly",
+                store
+            ),
+            "readonly serves hold no writer resources and must not block"
+        );
         assert!(!is_serving_cmdline(
             "/home/u/.local/bin/wm serve --store /data/other",
             store
@@ -243,7 +262,7 @@ mod tests {
         // no writer lock file: only the cmdline scan should fire
         let pid_dir = tmp.path().join("4242");
         std::fs::create_dir_all(&pid_dir).unwrap();
-        let cmdline = format!("wm\0serve\0--store\0{}\0--readonly\0", store.display());
+        let cmdline = format!("wm\0serve\0--store\0{}\0", store.display());
         std::fs::write(pid_dir.join("cmdline"), cmdline).unwrap();
 
         let holders = store_holders_in(tmp.path(), &store);

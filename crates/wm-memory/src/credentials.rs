@@ -122,8 +122,12 @@ fn assignment_shaped(content: &str) -> bool {
                 let value = rest[1..].trim_start();
                 let value = value.strip_prefix(['"', '\'']).unwrap_or(value);
                 // Redaction markers must never re-trigger detection, or the
-                // scrubber loops on its own output.
-                if !value.starts_with("[REDACTED:") {
+                // scrubber loops on its own output. `value` comes from the
+                // lowercased text, so the marker check is case-insensitive.
+                let is_marker = value
+                    .get(..10)
+                    .is_some_and(|p| p.eq_ignore_ascii_case("[REDACTED:"));
+                if !is_marker {
                     let run: usize = value
                         .chars()
                         .take_while(|c| !c.is_whitespace() && *c != '"' && *c != '\'')
@@ -168,6 +172,15 @@ pub fn redact_credential_content(content: &str) -> (String, Vec<&'static str>) {
         }
     }
 
+    // JWT detection fires on any two `eyJ` occurrences (fragments included),
+    // so redaction must remove every occurrence — a min-run scan left short
+    // fragments detectable and the apply pass non-idempotent.
+    if kinds.contains(&"jwt") {
+        while let Some(pos) = out.find("eyJ") {
+            out.replace_range(pos..pos + "eyJ".len(), "[REDACTED:jwt]");
+        }
+    }
+
     type TokenSpec = (&'static str, &'static str, usize, fn(char) -> bool);
     let token_specs: &[TokenSpec] = &[
         ("aws_access_key_id", "AKIA", 16, |c: char| {
@@ -199,9 +212,6 @@ pub fn redact_credential_content(content: &str) -> (String, Vec<&'static str>) {
         }),
         ("slack_token", "xoxs-", 10, |c: char| {
             c.is_ascii_alphanumeric() || c == '-'
-        }),
-        ("jwt", "eyJ", 8, |c: char| {
-            c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.'
         }),
     ];
     for (kind, prefix, min_len, charset) in token_specs {
@@ -257,7 +267,10 @@ fn assignment_value_span(text: &str) -> Option<(usize, usize)> {
                     }
                     bytes += c.len_utf8();
                 }
-                if bytes >= 16 && !text[vstart..].starts_with("[REDACTED:") {
+                let is_marker = text[vstart..]
+                    .get(..10)
+                    .is_some_and(|p| p.eq_ignore_ascii_case("[REDACTED:"));
+                if bytes >= 16 && !is_marker {
                     return Some((vstart, vstart + bytes));
                 }
             }
@@ -408,5 +421,37 @@ mod tests {
             kinds.is_empty(),
             "redacted marker must read clean: {kinds:?}"
         );
+    }
+
+    #[test]
+    fn assignment_marker_does_not_retrigger_detection() {
+        // Regression: detection lowercases before scanning, so the marker
+        // guard must compare case-insensitively or apply-pass runs are never
+        // idempotent (found by the wm redact-content store pass, 2026-09-11).
+        let text = "db password=correct-horse-battery-staple";
+        let (once, _) = redact_credential_content(text);
+        assert!(
+            credential_shaped_content(&once).is_empty(),
+            "redacted assignment must read clean: {once}"
+        );
+        let (twice, kinds) = redact_credential_content(&once);
+        assert_eq!(once, twice);
+        assert!(kinds.is_empty());
+    }
+
+    #[test]
+    fn short_jwt_fragments_are_redacted_too() {
+        // Regression: detection counts any two `eyJ` occurrences, but the
+        // redactor used to demand an 8-char run — short fragments stayed
+        // detectable and the store pass kept re-finding them (2026-09-11).
+        let text = "tokens eyJab and eyJcd appeared in logs";
+        let (once, kinds) = redact_credential_content(text);
+        assert!(kinds.contains(&"jwt"));
+        assert!(
+            credential_shaped_content(&once).is_empty(),
+            "short fragments must read clean after redaction: {once}"
+        );
+        let (twice, _) = redact_credential_content(&once);
+        assert_eq!(once, twice);
     }
 }

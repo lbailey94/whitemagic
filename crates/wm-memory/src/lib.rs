@@ -29,6 +29,7 @@ pub mod query_planner;
 pub mod recall;
 pub mod recall_conformal;
 pub mod recovery;
+pub mod redact;
 pub mod reindex;
 pub mod release_manifest;
 pub mod revision;
