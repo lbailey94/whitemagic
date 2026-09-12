@@ -1,19 +1,16 @@
 # Security Policy
 
-> NOTE (2026-09-10, Q05 — support window under review): the table below is the
-> existing policy statement; its current applicability is unverified in this
-> pass and the maintainer's support-window decision is explicitly unresolved.
-> Observed package/runtime versions are separate facts: the Q03 accepted gateway
-> reports package 9.0.0 (see `docs/V9_3_Q03_ACCEPTANCE.md`), and v9 is the
-> latest public release line. A newer package version does not establish the
-> maintenance policy of an older release.
+> NOTE (2026-09-11, updated after the 9.1.2 deploy): the fleet and gateway
+> now run package 9.1.2 (the pinned 9.0.0 gateway runtime was removed); v9 is
+> the latest public release line. The maintainer's support-window decision
+> remains open; the table below is the current working policy statement.
 
 ## Supported Versions
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.8.x   | :white_check_mark: |
-| < 5.8    | :x:                |
+| 9.1.x   | :white_check_mark: |
+| < 9.1   | :x:                |
 
 ## Reporting a Vulnerability
 
