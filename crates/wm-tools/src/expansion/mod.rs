@@ -60,6 +60,7 @@ pub mod firewall;
 pub mod galaxy;
 pub mod geneseed;
 pub mod glyph;
+pub mod governance_tools;
 pub mod graph;
 pub mod homeostasis;
 pub mod imagination;
@@ -141,6 +142,10 @@ pub use galaxy::{
     GalaxyTaxonomyTool, GalaxyTransferTool,
 };
 pub use geneseed::{GeneseedMineTool, GeneseedStatsTool};
+pub use governance_tools::{
+    CouncilDeliberateTool, HermitMediateTool, HermitResolveTool, HermitStatusTool,
+    HermitWithdrawTool, register_governance_tools,
+};
 pub use graph::{GraphCommunityTool, GraphPropagateTool, GraphWalkTool};
 pub use homeostasis::{
     HomeostasisAdjustTool, HomeostasisAlertsTool, HomeostasisCheckTool, HomeostasisHistoryTool,
@@ -642,6 +647,10 @@ pub fn register_expansion(
 
     // OSS bounty scanner (2) — GitHub bounty issues via gh (read-only)
     reg = crate::expansion::oss_bounty::register_oss_bounty(&reg);
+
+    // Governance & Hermit defense tools (5) — hermit.status, hermit.withdraw, hermit.mediate, hermit.resolve, council.deliberate
+    let hermit = Arc::new(std::sync::RwLock::new(wm_governance::HermitProtection::new()));
+    reg = crate::expansion::governance_tools::register_governance_tools(&reg, hermit);
 
     reg
 }
