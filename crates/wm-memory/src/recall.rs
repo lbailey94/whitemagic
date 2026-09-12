@@ -686,6 +686,24 @@ impl RecallEngine {
 
     // ── Read path: hybrid search ───────────────────────────────────────
 
+    /// Rehydrate the process-local vector index from the Embeddings galaxy.
+    ///
+    /// Vectors persist in LMDB, but `VectorStore` is in-memory: a fresh
+    /// process starts empty and would answer the vector half of hybrid
+    /// search with nothing (the restart gap caught live 2026-09-12 — a
+    /// persisted canary was BM25-invisible and vector-invisible until the
+    /// index was rehydrated). No-op once loaded.
+    fn ensure_vectors_loaded(&self) -> Result<()> {
+        let mut vs = self
+            .vector_store
+            .lock()
+            .map_err(|e| CoreError::Memory(format!("vector store lock: {e}")))?;
+        if vs.is_loaded() {
+            return Ok(());
+        }
+        vs.load(&self.store)
+    }
+
     /// Hybrid search combining BM25 + vector similarity.
     ///
     /// Weights: `bm25_weight * BM25 + vector_weight * cosine + importance_weight * importance`
@@ -717,6 +735,15 @@ impl RecallEngine {
             Ok(v) => v,
             Err(_) => return (Vec::new(), None),
         };
+
+        // 1b. Rehydrate the process-local vector index on first use
+        //     (vectors persist in LMDB; the index does not). Failure is
+        //     loud but non-fatal: the BM25 half still answers.
+        if let Err(error) = self.ensure_vectors_loaded() {
+            tracing::warn!(
+                "vector store rehydration failed ({error}) — hybrid vector half degraded"
+            );
+        }
 
         // 2. BM25 search (get more than limit for fusion)
         let bm25_limit = limit * 3;
@@ -2414,6 +2441,47 @@ mod tests {
         let reloaded = store.get(Galaxy::Codex, mem_id).unwrap().unwrap();
         assert_eq!(reloaded.metadata.recall_count, 1);
         assert!(reloaded.metadata.neuro_score > 0.5);
+    }
+
+    #[test]
+    fn hybrid_search_rehydrates_vectors_across_restart() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store_dir = tmp.path().join("store");
+        std::fs::create_dir_all(&store_dir).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&store_dir).unwrap());
+        let index_dir = tmp.path().join("index");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let search_engine = Arc::new(SearchEngine::open(&index_dir).unwrap());
+        let embedder = Arc::new(crate::embedder::StubEmbedder::default());
+        let dim = embedder.dimension();
+
+        // An earlier process persisted the memory + its embedding in LMDB.
+        let mem = crate::Memory::new(Galaxy::Codex, "persisted vector canary".to_string());
+        let mem_id = mem.metadata.id;
+        store.put(Galaxy::Codex, &mem).unwrap();
+        store.put_embedding(mem_id, &vec![0.5_f32; dim]).unwrap();
+
+        // Fresh process: new engine, empty in-memory vector index.
+        let engine = RecallEngine::new(
+            store.clone(),
+            search_engine,
+            VectorStore::new(),
+            embedder,
+            RecallConfig::default(),
+        )
+        .unwrap();
+        assert!(!engine.vector_store.lock().unwrap().is_loaded());
+
+        // The first hybrid query must rehydrate the index from LMDB —
+        // before the fix, the vector half answered from an empty index.
+        let _ = engine.hybrid_search_with_disclosure("rehydration probe", 5, None);
+
+        let vs = engine.vector_store.lock().unwrap();
+        assert!(
+            vs.is_loaded(),
+            "vector store should be loaded after the first hybrid search"
+        );
+        assert_eq!(vs.len(), 1, "persisted embedding should be indexed");
     }
 
     #[test]
