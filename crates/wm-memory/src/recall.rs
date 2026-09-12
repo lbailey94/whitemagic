@@ -405,6 +405,20 @@ impl RecallEngine {
         self.embedder.backend_name() != "stub"
     }
 
+    /// Probe the configured embedder with one tiny input.
+    ///
+    /// Degradation honesty: a configured embedder that cannot answer
+    /// (server down, model missing) must not silently downgrade recall.
+    /// Returns the produced vector length on success.
+    ///
+    /// # Errors
+    /// Propagates the embedder's error (transport, model, dimension).
+    pub fn embedder_probe(&self) -> Result<usize> {
+        self.embedder
+            .embed("wm embedder probe")
+            .map(|vector| vector.len())
+    }
+
     // ── Write path: auto-embed ─────────────────────────────────────────
 
     /// Persistent cache key for a text: embedder namespace + content hash.
@@ -790,32 +804,111 @@ impl RecallEngine {
             return Ok(report);
         }
 
-        for memory in candidates {
-            match self.embed_content(&memory.content) {
-                Ok(embedding) => {
-                    if let Err(error) = self.store.put_embedding(memory.metadata.id, &embedding) {
-                        report.errors += 1;
+        // Batch the apply: persistent-cache hits resolve first, misses ride
+        // the embedder's batch API (32 texts per call keeps the HTTP body
+        // and llama.cpp micro-batches sane; heritage-scale stores make the
+        // per-text path ~26 min, batching cuts that materially). A batch
+        // failure degrades to per-item embedding so one bad input cannot
+        // sink its chunk.
+        let chunk_size = self.embedder.preferred_max_batch_texts().clamp(1, 32);
+        for chunk in candidates.chunks(chunk_size) {
+            let keys: Vec<String> = chunk
+                .iter()
+                .map(|memory| self.embedding_cache_key(&memory.content))
+                .collect();
+            let mut vectors: Vec<Option<Vec<f32>>> =
+                match self.store.get_embedding_cache_batch(&keys) {
+                    Ok(cached) if cached.len() == chunk.len() => cached,
+                    Ok(_) | Err(_) => vec![None; chunk.len()],
+                };
+
+            let miss_idx: Vec<usize> = vectors
+                .iter()
+                .enumerate()
+                .filter(|(_, vector)| vector.is_none())
+                .map(|(i, _)| i)
+                .collect();
+            if !miss_idx.is_empty() {
+                let texts: Vec<&str> = miss_idx
+                    .iter()
+                    .map(|&i| chunk[i].content.as_str())
+                    .collect();
+                match self.embedder.embed_batch(&texts) {
+                    Ok(embedded) if embedded.len() == texts.len() => {
+                        let cache_entries: Vec<(String, Vec<f32>)> = miss_idx
+                            .iter()
+                            .zip(embedded.iter())
+                            .map(|(&i, vector)| (keys[i].clone(), vector.clone()))
+                            .collect();
+                        if let Err(error) = self.store.put_embedding_cache_batch(&cache_entries) {
+                            tracing::warn!("reembed cache persist failed: {error}");
+                        }
+                        for (&i, vector) in miss_idx.iter().zip(embedded) {
+                            vectors[i] = Some(vector);
+                        }
+                    }
+                    Ok(embedded) => {
                         tracing::warn!(
-                            memory = %memory.metadata.id,
-                            "reembed persist failed: {error}"
+                            expected = texts.len(),
+                            got = embedded.len(),
+                            "reembed batch length mismatch — falling back per item"
                         );
-                        continue;
+                        self.embed_misses_per_item(chunk, &miss_idx, &mut vectors, &mut report);
                     }
-                    if let Ok(mut vs) = self.vector_store.lock() {
-                        vs.add(memory.metadata.id, memory.metadata.galaxy, embedding);
+                    Err(error) => {
+                        tracing::warn!("reembed batch failed ({error}) — falling back per item");
+                        self.embed_misses_per_item(chunk, &miss_idx, &mut vectors, &mut report);
                     }
-                    report.embedded += 1;
                 }
-                Err(error) => {
+            }
+
+            for (i, memory) in chunk.iter().enumerate() {
+                let Some(vector) = vectors[i].take() else {
                     report.errors += 1;
                     tracing::warn!(
                         memory = %memory.metadata.id,
+                        "reembed produced no vector"
+                    );
+                    continue;
+                };
+                if let Err(error) = self.store.put_embedding(memory.metadata.id, &vector) {
+                    report.errors += 1;
+                    tracing::warn!(
+                        memory = %memory.metadata.id,
+                        "reembed persist failed: {error}"
+                    );
+                    continue;
+                }
+                if let Ok(mut vs) = self.vector_store.lock() {
+                    vs.add(memory.metadata.id, memory.metadata.galaxy, vector);
+                }
+                report.embedded += 1;
+            }
+        }
+        Ok(report)
+    }
+
+    /// Per-item embedding fallback for a failed batch: cache-aware (via
+    /// [`RecallEngine::embed_content`]) and error-accounted per memory.
+    fn embed_misses_per_item(
+        &self,
+        chunk: &[crate::Memory],
+        miss_idx: &[usize],
+        vectors: &mut [Option<Vec<f32>>],
+        report: &mut BackfillReport,
+    ) {
+        for &i in miss_idx {
+            match self.embed_content(&chunk[i].content) {
+                Ok(vector) => vectors[i] = Some(vector),
+                Err(error) => {
+                    report.errors += 1;
+                    tracing::warn!(
+                        memory = %chunk[i].metadata.id,
                         "reembed embed failed: {error}"
                     );
                 }
             }
         }
-        Ok(report)
     }
 
     /// Rehydrate the process-local vector index from the Embeddings galaxy.
@@ -2685,6 +2778,53 @@ mod tests {
     }
 
     #[test]
+    fn backfill_chunks_large_batches() {
+        struct TestEmbedder;
+        impl crate::embedder::Embedder for TestEmbedder {
+            fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+                Ok(texts.iter().map(|_| vec![0.1_f32; 4]).collect())
+            }
+            fn dimension(&self) -> usize {
+                4
+            }
+            fn is_available(&self) -> bool {
+                true
+            }
+            fn backend_name(&self) -> &'static str {
+                "test"
+            }
+        }
+
+        let tmp = tempfile::tempdir().unwrap();
+        let store_dir = tmp.path().join("store");
+        std::fs::create_dir_all(&store_dir).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&store_dir).unwrap());
+        let index_dir = tmp.path().join("index");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let search_engine = Arc::new(SearchEngine::open(&index_dir).unwrap());
+        for i in 0..40 {
+            let mem = crate::Memory::new(Galaxy::Codex, format!("chunked memory {i}"));
+            store.put(Galaxy::Codex, &mem).unwrap();
+        }
+        let engine = RecallEngine::new(
+            store,
+            search_engine,
+            VectorStore::new(),
+            Arc::new(TestEmbedder),
+            RecallConfig::default(),
+        )
+        .unwrap();
+
+        // 40 candidates > 32-text chunk → exercises the multi-chunk apply.
+        let report = engine
+            .backfill_embeddings(Some(Galaxy::Codex), 0, false)
+            .unwrap();
+        assert_eq!(report.embedded, 40);
+        assert_eq!(report.errors, 0);
+        assert_eq!(engine.vector_store.lock().unwrap().len(), 40);
+    }
+
+    #[test]
     fn backfill_refuses_stub_embedder() {
         let tmp = tempfile::tempdir().unwrap();
         let store_dir = tmp.path().join("store");
@@ -2705,6 +2845,13 @@ mod tests {
             .backfill_embeddings(Some(Galaxy::Codex), 10, true)
             .unwrap_err();
         assert!(err.to_string().contains("no real embedder"));
+    }
+
+    #[test]
+    fn embedder_probe_returns_vector_len() {
+        let (_tmp, engine) = setup_engine();
+        let dim = engine.embedder_probe().unwrap();
+        assert!(dim > 0, "probe must return the embedder dimension");
     }
 
     #[test]

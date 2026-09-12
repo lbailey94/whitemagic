@@ -991,7 +991,7 @@ impl Tool for MemoryHybridRecallTool {
         // halves are noise, so a stub-wired engine must not claim the
         // hybrid route (the server already refuses to wire one; this gate
         // makes the tool honest even when constructed directly).
-        let hybrid_available = self
+        let mut hybrid_available = self
             .recall
             .as_ref()
             .is_some_and(|recall| recall.embedder_is_real());
@@ -1047,6 +1047,21 @@ impl Tool for MemoryHybridRecallTool {
                 }
                 if !results.is_empty() {
                     recall_mode = "hybrid";
+                }
+            }
+        }
+
+        // Phase 0b: degradation honesty. A configured embedder that cannot
+        // answer (server down, model missing) means the hybrid route is
+        // actually unavailable — probe once and fall through to the
+        // episodic lane instead of skipping it to FTS. The probe runs only
+        // when hybrid produced nothing, so the happy path pays nothing.
+        let mut hybrid_degraded: Option<String> = None;
+        if hybrid_available && results.is_empty() && !query.is_empty() {
+            if let Some(recall) = self.recall.as_ref() {
+                if let Err(error) = recall.embedder_probe() {
+                    hybrid_degraded = Some(error.to_string());
+                    hybrid_available = false;
                 }
             }
         }
@@ -1366,6 +1381,12 @@ impl Tool for MemoryHybridRecallTool {
         }
         if let Some(td) = trust_disclosure {
             out["trust_weighting"] = td;
+        }
+        // Degradation disclosure: the configured embedder failed its probe,
+        // so the route fell through to the episodic lane. Named so callers
+        // do not misread "no matches" as "nothing exists".
+        if let Some(reason) = hybrid_degraded {
+            out["hybrid_degraded"] = json!(reason);
         }
         if let Some(min) = min_trust {
             out["min_trust"] = json!(min);
