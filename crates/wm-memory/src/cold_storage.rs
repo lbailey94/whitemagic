@@ -269,6 +269,14 @@ fn create_snippet(content: &str) -> String {
     }
 }
 
+/// A public digest is itself a public/model-visible derived record. Restricted
+/// sources must not contribute snippets, tags, lineage IDs, or aggregate shape
+/// to it. Keep this at the builder boundary as well as the outer-rim scan:
+/// direct `digest_cluster` callers must not bypass the policy.
+fn eligible_for_public_digest(mem: &Memory) -> bool {
+    !mem.metadata.is_protected && !mem.metadata.is_private && !mem.metadata.model_exclude
+}
+
 // ── Cold Storage Records & Summaries ────────────────────────────────────
 
 /// A persistent record stored in the cold archive.
@@ -568,8 +576,9 @@ impl PhagicDigester {
         let mut candidates = Vec::new();
 
         for mem in memories {
-            // Protected memories are immune to outer rim drift
-            if mem.metadata.is_protected {
+            // A public digest must not synthesize restricted source material.
+            // The same check is repeated by digest_cluster for direct callers.
+            if !eligible_for_public_digest(&mem) {
                 continue;
             }
 
@@ -598,7 +607,16 @@ impl PhagicDigester {
         galaxy: Galaxy,
         cluster: &[(Memory, OuterRimFactors)],
     ) -> Result<PhagicDigestReport> {
-        if cluster.is_empty() {
+        // A caller may invoke this public builder directly instead of using
+        // scan_outer_rim. Filter again before collecting any tag, time,
+        // snippet, ID, or count into a public derived record. Mixed clusters
+        // retain restricted originals untouched and digest eligible sources
+        // only; a restricted-only cluster is a truthful no-op.
+        let eligible: Vec<&(Memory, OuterRimFactors)> = cluster
+            .iter()
+            .filter(|(mem, _)| eligible_for_public_digest(mem))
+            .collect();
+        if eligible.is_empty() {
             return Ok(PhagicDigestReport {
                 galaxy,
                 memories_examined: 0,
@@ -621,7 +639,8 @@ impl PhagicDigester {
         let mut min_time = now;
         let mut max_time = DateTime::<Utc>::MIN_UTC;
 
-        for (mem, factors) in cluster {
+        for entry in &eligible {
+            let (mem, factors) = *entry;
             total_distance += factors.distance;
             if mem.metadata.created_at < min_time {
                 min_time = mem.metadata.created_at;
@@ -636,7 +655,7 @@ impl PhagicDigester {
             }
         }
 
-        let avg_distance = total_distance / cluster.len() as f32;
+        let avg_distance = total_distance / eligible.len() as f32;
 
         let mut top_tags: Vec<(String, usize)> = tag_counts.into_iter().collect();
         top_tags.sort_by_key(|a| std::cmp::Reverse(a.1));
@@ -659,7 +678,7 @@ impl PhagicDigester {
              ## Lineage Pointers (Thawable Cold Records)\n",
             galaxy.db_name(),
             galaxy.db_name(),
-            cluster.len(),
+            eligible.len(),
             min_time.format("%Y-%m-%d %H:%M:%S UTC"),
             max_time.format("%Y-%m-%d %H:%M:%S UTC"),
             avg_distance,
@@ -668,12 +687,13 @@ impl PhagicDigester {
             } else {
                 prominent_tags.join(", ")
             },
-            cluster.len(),
+            eligible.len(),
             galaxy.db_name(),
         );
 
         use std::fmt::Write as _;
-        for (mem, factors) in cluster {
+        for entry in &eligible {
+            let (mem, factors) = *entry;
             let snippet = create_snippet(&mem.content);
             let _ = writeln!(
                 digest_content,
@@ -724,7 +744,8 @@ impl PhagicDigester {
         let mut total_raw_bytes = 0;
         let mut total_cold_bytes = 0;
 
-        for (mem, factors) in cluster {
+        for entry in &eligible {
+            let (mem, factors) = *entry;
             let notes = format!("Digested in phagic cluster {cluster_id} (digest_id: {digest_id})");
             let cold_rec = store.freeze_to_cold(
                 search,
@@ -747,9 +768,9 @@ impl PhagicDigester {
 
         Ok(PhagicDigestReport {
             galaxy,
-            memories_examined: cluster.len(),
-            outer_rim_candidates: cluster.len(),
-            memories_digested: cluster.len(),
+            memories_examined: eligible.len(),
+            outer_rim_candidates: eligible.len(),
+            memories_digested: eligible.len(),
             digest_memory_id: Some(digest_id),
             total_raw_bytes,
             total_cold_bytes,
@@ -1051,5 +1072,74 @@ mod tests {
         assert_eq!(thawed.metadata.id, ids[0]);
         assert!(store.get(galaxy, ids[0]).unwrap().is_some());
         assert!(store.get_cold_record(ids[0]).unwrap().is_none());
+    }
+
+    #[test]
+    fn direct_digest_cluster_does_not_launder_restricted_source_material() {
+        let store = test_store();
+        let galaxy = Galaxy::Codex;
+        let factors = OuterRimFactors {
+            age_factor: 1.0,
+            access_factor: 1.0,
+            resonance_factor: 1.0,
+            emotional_factor: 1.0,
+            importance_factor: 1.0,
+            distance: 1.0,
+        };
+
+        let public =
+            Memory::new(galaxy, "public digest source".into()).with_tags(vec!["public-tag".into()]);
+        let mut private = Memory::new(galaxy, "PRIVATE-SOURCE-CONTENT".into())
+            .with_tags(vec!["private-source-tag".into()]);
+        private.metadata.is_private = true;
+        let mut model_excluded = Memory::new(galaxy, "MODEL-EXCLUDED-SOURCE-CONTENT".into())
+            .with_tags(vec!["model-excluded-source-tag".into()]);
+        model_excluded.metadata.model_exclude = true;
+        let protected = Memory::new(galaxy, "PROTECTED-SOURCE-CONTENT".into())
+            .with_tags(vec!["protected-source-tag".into()])
+            .with_protection(true);
+
+        for memory in [&public, &private, &model_excluded, &protected] {
+            store.put(galaxy, memory).unwrap();
+        }
+        let restricted = [private.clone(), model_excluded.clone(), protected.clone()];
+        let cluster = vec![
+            (public.clone(), factors.clone()),
+            (private.clone(), factors.clone()),
+            (model_excluded.clone(), factors.clone()),
+            (protected.clone(), factors),
+        ];
+
+        // Direct builder invocation is the discriminating boundary: relying
+        // only on scan_outer_rim would leave this path able to synthesize a
+        // public digest from restricted input.
+        let report = PhagicDigester::default_config()
+            .digest_cluster(&store, None, galaxy, &cluster)
+            .unwrap();
+        assert_eq!(report.memories_digested, 1);
+        let digest = store
+            .get(galaxy, report.digest_memory_id.unwrap())
+            .unwrap()
+            .unwrap();
+        assert!(!digest.metadata.is_private);
+        assert!(!digest.metadata.model_exclude);
+        assert!(digest.content.contains("public digest source"));
+        for source in &restricted {
+            assert!(!digest.content.contains(&source.content));
+            assert!(!digest.content.contains(&source.metadata.id.to_string()));
+            for tag in &source.metadata.tags {
+                assert!(!digest.metadata.tags.contains(tag));
+                assert!(!digest.content.contains(tag));
+            }
+            let retained = store.get(galaxy, source.metadata.id).unwrap().unwrap();
+            assert_eq!(
+                serde_json::to_value(retained).unwrap(),
+                serde_json::to_value(source).unwrap()
+            );
+            assert!(store.get_cold_record(source.metadata.id).unwrap().is_none());
+        }
+
+        assert!(store.get(galaxy, public.metadata.id).unwrap().is_none());
+        assert!(store.get_cold_record(public.metadata.id).unwrap().is_some());
     }
 }
