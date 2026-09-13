@@ -104,12 +104,12 @@ proptest! {
     }
 }
 
-// ── Galaxy: 15 Memory Galaxies (Valkyrie added 2026-09-11) ────────────
+// ── Galaxy: 16 variants (Valkyrie 2026-09-11; Telemetry 2026-09-13) ───
 
 #[test]
-fn galaxy_has_exactly_15_variants() {
-    assert_eq!(Galaxy::COUNT, 15);
-    assert_eq!(Galaxy::all().len(), 15);
+fn galaxy_has_exactly_16_variants() {
+    assert_eq!(Galaxy::COUNT, 16);
+    assert_eq!(Galaxy::all().len(), 16);
 }
 
 #[test]
