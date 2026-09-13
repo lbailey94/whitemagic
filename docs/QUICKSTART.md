@@ -10,6 +10,7 @@ Get from zero to working agent memory in under five minutes.
 
 ```bash
 wm quickstart   # two-process continuity demo on an isolated store
+wm selftest     # end-to-end invariant check (throwaway store, ~1 second)
 ```
 
 You will see a project decision recorded in one session survive a full

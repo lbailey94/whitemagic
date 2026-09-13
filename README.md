@@ -74,6 +74,15 @@ wm quickstart   # 30-second two-process continuity demo (isolated store)
 `wm doctor` is a troubleshooting tool, not a setup step — run
 `wm doctor --deep` when something looks wrong.
 
+## Everyday commands
+
+```bash
+wm status         # is WhiteMagic ready? (store, counts, index, last backup)
+wm selftest       # 5-second end-to-end invariant check (throwaway store)
+wm setup          # connect an MCP client (opencode, claude, cursor, windsurf, codex)
+wm update check   # is a newer signed release available? (notify-only)
+```
+
 ## Connect an MCP client
 
 Point any MCP client at:
