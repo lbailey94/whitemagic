@@ -116,6 +116,24 @@ pub fn int_prop(description: &str) -> serde_json::Value {
     serde_json::json!({"type": "integer", "description": description})
 }
 
+/// Canonicalize legacy or underscore tool-name aliases to the registered
+/// canonical name. This is the single mapping shared by the `wm` meta-tool
+/// route resolver and the MCP server's discrete-tool dispatch, so
+/// `memory.find`, `memory_find`, and `memory.search` all resolve to the same
+/// operation (first-run feedback, 2026-09-13: agents infer all three).
+#[must_use]
+pub fn canonical_tool_alias(name: &str) -> Option<&'static str> {
+    match name {
+        "memory.find" | "memory_find" | "memory_search" => Some("memory.search"),
+        "memory_create" => Some("memory.create"),
+        "memory_read" => Some("memory.read"),
+        "session_start" => Some("session.start"),
+        "citta_status" => Some("citta.status"),
+        "subagent_captain" => Some("captain.deploy"),
+        _ => None,
+    }
+}
+
 /// A boolean property.
 #[must_use]
 pub fn bool_prop(description: &str) -> serde_json::Value {

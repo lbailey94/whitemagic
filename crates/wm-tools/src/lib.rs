@@ -409,7 +409,7 @@ impl Tool for MemoryCreateTool {
                 "tags": str_array_prop("Optional tags"),
                 "title": str_prop("Optional human-readable title (envelope v2)"),
                 "topic": str_prop("Optional topic label for subject-scoped retrieval (envelope v2)"),
-                "importance": str_prop("Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)"),
+                            "importance": num_prop("Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)"),
                 "source": str_prop("Authorship claim: user (user-dictated content, trust 1.0) | agent (default, trust 0.7) | other free-form class (trust 0.7)"),
             }),
             &["content"],
@@ -675,7 +675,7 @@ impl Tool for MemoryBatchCreateTool {
                             "content": str_prop("Memory content (text)"),
                             "galaxy": str_prop("Target galaxy (default codex)"),
                             "tags": str_array_prop("Optional tags"),
-                            "importance": str_prop("Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)"),
+                "importance": num_prop("Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)"),
                         },
                         "required": ["content"],
                     },
@@ -3381,7 +3381,11 @@ impl Tool for WmMetaTool {
             }
         } else {
             (
-                args.get("route").and_then(Value::as_str).map(String::from),
+                args.get("route").and_then(Value::as_str).map(|s| {
+                    expansion::common::canonical_tool_alias(s)
+                        .unwrap_or(s)
+                        .to_string()
+                }),
                 args.get("args").cloned().unwrap_or(Value::Null),
             )
         };

@@ -514,14 +514,32 @@ impl Tool for SessionContinuityTool {
         // Find the most recent session_start that is not the current session.
         // `rfind` on scan order is a UUID lottery (LMDB iterates by key, and
         // v4 keys are random) — resolve by `created_at` instead.
+        //
+        // Empty-newest-session guard (2026-09-13, first-run feedback): a
+        // session that was just started but has no turns yet is the caller's
+        // *current* session in all but name. The default previous session is
+        // therefore the most recent candidate that actually recorded a turn;
+        // only when no candidate has turns do we fall back to the newest and
+        // report its empty turn list truthfully.
         let memories = self.store.scan_all(Galaxy::Sessions)?;
-        let previous = memories
+        let mut starts: Vec<_> = memories
             .iter()
             .filter(|m| {
                 m.metadata.tags.contains(&"start".to_string())
                     && current.is_none_or(|c| m.metadata.id.to_string() != c)
             })
-            .max_by_key(|m| m.metadata.created_at);
+            .collect();
+        starts.sort_by_key(|m| std::cmp::Reverse(m.metadata.created_at));
+        let previous = starts
+            .iter()
+            .find(|m| {
+                let sid = m.metadata.id.to_string();
+                load_turns(&self.store, Some(&sid), 1, false)
+                    .map(|turns| !turns.is_empty())
+                    .unwrap_or(false)
+            })
+            .copied()
+            .or_else(|| starts.first().copied());
 
         let Some(prev) = previous else {
             // Empty-continuity false-negative guard (2026-08-28 cold-start
@@ -1520,6 +1538,38 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(all["count"], 2);
+    }
+
+    #[tokio::test]
+    async fn continuity_skips_empty_newest_session() {
+        // First-run feedback (2026-09-13): session A records a decision, the
+        // user starts an empty session B, and `session.continuity` with no
+        // arguments must not answer from the empty B — it must recall A.
+        let store = test_store();
+        let sid1 = start_session(&store);
+        record_aged_turn(
+            &store,
+            &sid1,
+            0,
+            "Decision: use SQLite for the report cache",
+        );
+        let sid2 = start_session(&store); // empty newest session, never named
+
+        let continuity = SessionContinuityTool::new(store);
+        let mut ctx = Context::default();
+        let v = continuity.call(&mut ctx, json!({"n": 5})).await.unwrap();
+        assert_ne!(
+            v["previous_session"], sid2,
+            "empty newest session must be skipped: {v}"
+        );
+        assert_eq!(v["previous_session"], sid1);
+        assert_eq!(v["count"], 1);
+        assert!(
+            v["turns"][0]["content"]
+                .as_str()
+                .unwrap()
+                .contains("SQLite")
+        );
     }
 
     #[tokio::test]
