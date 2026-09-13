@@ -67,7 +67,7 @@ curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/i
 Verify the installation and see the product work end to end:
 
 ```bash
-wm --version    # wm 9.1.3
+wm --version    # wm 9.1.4
 wm quickstart   # 30-second two-process continuity demo (isolated store)
 ```
 

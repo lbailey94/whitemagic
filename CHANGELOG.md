@@ -5,6 +5,32 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.4] — 2026-09-13 (lossless continuation, cold discovery, first-run UX, signed updates)
+
+### Continuation & recall
+- **Lossless continuation contract** for `session.replay`: explicit session selection, byte-exact content, coherent-view cursors (unsigned placement hints, not authority), privacy/model-exclusion before output, explicit refusals instead of silent truncation, and independently bounded serialized output (`lossless_wire_ceiling_too_small`). 8 lossless + 6 replay tests including Unicode re-chunking and selection beyond 10,001 source records.
+- **Opt-in cold discovery**: `memory.search(include_cold: true, cold_scan_limit)` hydrates candidates from the cold payload, verifies the id/galaxy/content-hash chain (tamper → refuse), skips private and non-current records, and appends verified hits with `source=cold`, `integrity=verified`, `model_visible`, plus a `cold_discovery` disclosure — no thaw, no mutation. New `MemoryStore::find_cold_matching`.
+- Continuity skips the empty newest session; omitted replay defaults to the latest session; cold reads work without thawing; restricted sources are excluded from public digests; `importance` accepts numeric strings instead of silently defaulting to 0.5.
+- Deterministic **Gan Ying cue-to-recall-path trace** (test-only): detector → Research hint → proposal receipt → maintenance indexing → retrieval boundary, with an identical-cue disabled control.
+
+### First-run experience
+- New **`wm selftest`** (8 end-to-end invariants on a throwaway store, `--json`, ~1s), **`wm status`**, **`wm setup <client>`** (detects OpenCode/Claude/Cursor/Windsurf/Codex; shows the exact change; patches standard JSON configs with a timestamped backup and re-parses; JSONC/TOML are print-only), and **`wm update check`**.
+- Fresh-install `wm doctor` is neutral (exit 0) and points at `wm quickstart`; default doctor grades the supported surface only (optional subsystems move behind `--deep`).
+- `wm quickstart` is quiet by default regardless of ambient `RUST_LOG`; `--verbose` opts in.
+- Canonical tool aliases (`memory.find` / `memory_find` / `memory_search` → `memory.search`) and canonical discrete tool names; `memory.query` works with tags only; complete curated input-schema coverage (contract ratchet 18 → 0) with a documented-surface contract test suite.
+- One canonical platform story across README/QUICKSTART/install.sh; everyday-commands section.
+
+### Updates & release engineering
+- Each release now publishes a **signed `release-manifest.json`** (Ed25519 over the manifest itself; public key pinned at build time) with per-target URLs, sha256 digests and cosign bundle names.
+- **`wm update check`** (notify-only; anonymous static fetch; `--insecure-checksum` fallback that is loud; `install.json` state; package-manager-correct upgrade hints) and **transactional `wm update install` / `wm update rollback`**: sha256 check → candidate `wm selftest` gate → `wm.previous` backup → atomic swap → post-swap health check with automatic rollback. Package-manager installs are refused with their own command.
+- crates.io publish order derived from `cargo metadata`; MCP-registry publish retries during npm propagation; advisory npm-propagation wait.
+
+### Governance, sandbox & fleet
+- Capability gate (PLAN_F F-1 dispatch half): `EffectRow.invokes` maps to governance capabilities; presented engagement credentials are always verified and stripped before execution; strict mode via `WM_REQUIRE_CAPABILITIES=1`.
+- Subprocess sandbox runner (B2); daemon Landlock v0 + dharma decision counters (B1/B3); edge-galaxy policy (exclusions, `os_telemetry_threshold`, migrate mapping) and the `Telemetry` galaxy.
+- Public-surface guard now runs nightly (device names / personal strings / forbidden paths); public files sanitized.
+- Load-independent strict-mode test seam (`WM_HOMEOSTASIS_FROZEN`); workspace clippy clean.
+
 ## [9.1.3] — 2026-09-12 (persistent local embeddings, recall honesty, breaker ops, Ahimsa fix)
 
 ### Embeddings & recall (live fleet)
