@@ -56,6 +56,15 @@ DEFAULT_OUTPUT = os.path.join(REPO_ROOT, "benchmarks", "results")
 
 # ── Keyword extraction (ported from v26 adapter) ────────────────────────────
 
+def read_loadavg() -> str:
+    """1/5/15-minute load averages as a single string (host-load certificate)."""
+    try:
+        with open("/proc/loadavg", encoding="utf-8") as fh:
+            return " ".join(fh.read().split()[:3])
+    except OSError:
+        return "n/a"
+
+
 def extract_search_keywords(content: str) -> list[str]:
     """Extract entity-rich keywords from a turn to augment indexing."""
     extras = []
@@ -508,11 +517,14 @@ def run_benchmark(
     per_query_results: list[dict[str, Any]] = []
     errors: list[str] = []
     execution_failures: list[dict[str, Any]] = []
+    search_mode_counts: dict[str, int] = {}
+    hybrid_degraded_count = 0
     strict_source_r1 = 0
     strict_source_r5 = 0
     strict_coverage_sum = 0.0
 
     benchmark_start = time.perf_counter()
+    loadavg_start = read_loadavg()
 
     # Persistent server mode: one long-running process for all questions.
     # Uses a single store; for memory.search, each question gets a unique galaxy
@@ -741,8 +753,21 @@ def run_benchmark(
         # path has no spawn cost and keeps whole-batch timing.
         t_search = time.perf_counter()
         if persistent_server:
-            all_responses = persistent_server.send_batch(all_reqs, timeout=600)
-            latency_ms = (time.perf_counter() - t_search) * 1000
+            # Persistent mode splits ingest from search too: the process
+            # start is already paid once, so the search request gets its own
+            # window (previously both shared one batch window, which made
+            # reported search latencies mirror whole-batch ingest time).
+            ingest_reqs = all_reqs[:-1]
+            ingest_responses = (
+                persistent_server.send_batch(ingest_reqs, timeout=600)
+                if ingest_reqs
+                else []
+            )
+            t_ingest_done = time.perf_counter()
+            search_responses = persistent_server.send_batch(all_reqs[-1:], timeout=600)
+            latency_ms = (time.perf_counter() - t_ingest_done) * 1000
+            all_responses = ingest_responses + search_responses
+            ingest_sec = t_ingest_done - t0
         else:
             all_responses, windows = run_server_batch_split(
                 binary, tmpdir, all_reqs, search_id, batch_ids, timeout=600
@@ -750,7 +775,7 @@ def run_benchmark(
             latency_ms = windows["search_ms"]
             spawn_ms_times.append(windows["spawn_ms"])
             ingest_ms_times.append(windows["ingest_ms"])
-        ingest_sec = time.perf_counter() - t0
+            ingest_sec = time.perf_counter() - t0
         ingest_times.append(ingest_sec)
 
         case_failures = audit_jsonrpc_batch(all_responses, batch_ids, search_id)
@@ -779,7 +804,11 @@ def run_benchmark(
                         answer_memory_ids.add(str(ids[local_idx]))
                     break
 
-        # Parse search results
+        # Parse search results (and the recall-mode disclosure the tool
+        # attaches: hybrid | episodic | fts | importance | none, plus
+        # hybrid_degraded when the vector route fell back mid-query)
+        search_recall_mode: str | None = None
+        search_hybrid_degraded: str | None = None
         candidate_results = []
         for d in all_responses:
             if d.get("id") == search_id:
@@ -787,8 +816,16 @@ def run_benchmark(
                 if payload:
                     if payload.get("status") == "success" or "results" in payload:
                         candidate_results = payload.get("results", payload.get("memories", []))
+                        search_recall_mode = payload.get("recall_mode")
+                        search_hybrid_degraded = payload.get("hybrid_degraded")
                     elif payload.get("_error"):
                         errors.append(f"Q{qi} ({qid}): {payload['_error']}")
+        mode_key = search_recall_mode or (
+            "episodic" if search_route == "memory.episodic_search" else "undisclosed"
+        )
+        search_mode_counts[mode_key] = search_mode_counts.get(mode_key, 0) + 1
+        if search_hybrid_degraded:
+            hybrid_degraded_count += 1
 
         results = candidate_results[:limit]
         memory_session_ids: dict[str, str] = {}
@@ -914,6 +951,8 @@ def run_benchmark(
                 "expected_session_presence": ev["expected_session_presence"],
                 "expected_session_candidate_presence": ev["expected_session_candidate_presence"],
                 "latency_ms": round(latency_ms, 2),
+                "recall_mode": search_recall_mode,
+                "hybrid_degraded": search_hybrid_degraded,
                 "turns_ingested": turns_count,
                 "ingest_time_s": round(ingest_sec, 3),
                 "results_count": len(results),
@@ -952,7 +991,15 @@ def run_benchmark(
 
     results = {
         "execution_path": "local-wm-serve-stdio",
-        "retrieval_configuration": {"route": search_route, "real_embedder_required": False},
+        "retrieval_configuration": {
+            "route": search_route,
+            "real_embedder_required": False,
+            "embedder_endpoint": os.environ.get("WM_EMBEDDER_ENDPOINT") or None,
+            "episodic_rerank_only": os.environ.get("WM_EPISODIC_RERANK_ONLY") == "1",
+            "bm25_weight": os.environ.get("WM_RECALL_BM25_WEIGHT"),
+            "vector_weight": os.environ.get("WM_RECALL_VECTOR_WEIGHT"),
+            "importance_weight": os.environ.get("WM_RECALL_IMPORTANCE_WEIGHT"),
+        },
         "answer_generation_model": None,
         "benchmark": "longmemeval_s",
         "version": "v6-dev" if search_route == "memory.episodic_search" else "v5.8.0-compat-on-v6",
@@ -966,7 +1013,7 @@ def run_benchmark(
         "composite_windows": use_composites,
         "contextual_indexing": use_contextual,
         "candidate_limit": candidate_limit,
-        "timing": "fresh-process path: split windows — spawn_ms = start->initialize response, ingest_ms = batch_create round-trips, search_ms = search request round-trip (p50/p95 below are SEARCH-ONLY on that path). persistent path: whole-batch timing (no spawn per question).",
+        "timing": "fresh-process path: split windows — spawn_ms = start->initialize response, ingest_ms = batch_create round-trips, search_ms = search request round-trip (p50/p95 below are SEARCH-ONLY on that path). persistent path: ingest batch and search request are also measured in separate windows (no spawn per question).",
         "split_windows": {
             "spawn": {
                 "count": len(spawn_ms_times),
@@ -976,10 +1023,19 @@ def run_benchmark(
                 "count": len(ingest_ms_times),
                 "p50_ms": sorted(ingest_ms_times)[len(ingest_ms_times) // 2] if ingest_ms_times else 0,
             },
-            "search_p50_source": "search window only (split)" if spawn_ms_times else "whole batch (persistent path)",
+            "search_p50_source": "search window only (split process)" if spawn_ms_times else "search window only (persistent split)",
         },
         "total_questions": total_q,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "host": {
+            "cpu_count": os.cpu_count(),
+            "loadavg_start": loadavg_start,
+            "loadavg_end": read_loadavg(),
+            "embedder_endpoint": os.environ.get("WM_EMBEDDER_ENDPOINT") or None,
+            "episodic_rerank_only": os.environ.get("WM_EPISODIC_RERANK_ONLY") == "1",
+        },
+        "search_modes": search_mode_counts,
+        "hybrid_degraded_queries": hybrid_degraded_count,
         "total_elapsed_s": round(total_elapsed, 1),
         "search": {
             "count": len(search_latencies),
