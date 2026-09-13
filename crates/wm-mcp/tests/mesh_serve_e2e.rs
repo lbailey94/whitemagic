@@ -42,6 +42,9 @@ impl ServeProcess {
         .env("WM_MESH_KEY", format!("e2e-mesh-key-{peer_id}"))
         .env("WM_MESH_PEER_ID", peer_id)
         .env("WM_MESH_INTERVAL", "1")
+        // Determinism: keep strict-mode (Ahimsa) outcomes independent of the
+        // host's current load.
+        .env("WM_HOMEOSTASIS_FROZEN", "1")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());

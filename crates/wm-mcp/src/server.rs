@@ -811,9 +811,14 @@ impl McpServer {
             );
         }
 
-        // Sample hardware state immediately and feed into Dharma gate
-        let hv = substrate.sample();
-        dharma_gate.update_homeostasis(hv.into());
+        // Sample hardware state immediately and feed into the Dharma gate.
+        // Test builds (and spawned e2e children with WM_HOMEOSTASIS_FROZEN=1)
+        // skip the live sample so strict-mode outcomes never depend on the
+        // machine's current load.
+        if !Self::homeostasis_frozen() {
+            let hv = substrate.sample();
+            dharma_gate.update_homeostasis(hv.into());
+        }
 
         let associations = Arc::new(if readonly {
             AssociationStore::open_readonly(store.env())?
@@ -2707,9 +2712,25 @@ impl McpServer {
         Value::Object(counts)
     }
 
+    /// Test/build-time determinism seam: under `cfg!(test)` the Dharma gate
+    /// keeps its healthy default instead of sampling live hardware, and
+    /// spawned-binary e2e children pin it with `WM_HOMEOSTASIS_FROZEN=1`
+    /// (`cfg!(test)` is not set for the binary). Tests that need a specific
+    /// homeostasis still call `dharma_gate().update_homeostasis(..)` directly.
+    fn homeostasis_frozen() -> bool {
+        cfg!(test)
+            || matches!(
+                std::env::var("WM_HOMEOSTASIS_FROZEN").as_deref(),
+                Ok("1" | "true")
+            )
+    }
+
     /// Sample the current hardware state and update the Dharma gate's homeostasis.
     /// Should be called periodically (e.g., on each MCP request or timer tick).
     pub fn refresh_homeostasis(&self) {
+        if Self::homeostasis_frozen() {
+            return;
+        }
         let hv = self.substrate.sample();
         self.dharma_gate.update_homeostasis(hv.into());
     }

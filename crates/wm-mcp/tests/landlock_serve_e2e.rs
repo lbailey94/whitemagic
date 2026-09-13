@@ -34,6 +34,9 @@ impl ServeProcess {
         if landlock {
             cmd.env("WM_LANDLOCK", "1");
         }
+        // Determinism: keep strict-mode (Ahimsa) outcomes independent of the
+        // host's current load.
+        cmd.env("WM_HOMEOSTASIS_FROZEN", "1");
         let mut child = cmd.spawn().expect("spawn wm serve");
         let stdin = child.stdin.take().expect("stdin");
         let stdout = BufReader::new(child.stdout.take().expect("stdout"));

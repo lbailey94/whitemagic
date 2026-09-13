@@ -57,6 +57,9 @@ impl ServeProcess {
             cmd.env_remove("WM_TOOL_PROFILE");
         }
         cmd.env_remove("WM_TOOL_ALLOWLIST");
+        // Determinism: keep strict-mode (Ahimsa) outcomes independent of the
+        // host's current load.
+        cmd.env("WM_HOMEOSTASIS_FROZEN", "1");
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
