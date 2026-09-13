@@ -11,6 +11,7 @@ use async_trait::async_trait;
 
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::fmt::Write as _;
 use std::sync::Arc;
 use wm_core::{Context, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
@@ -136,6 +137,146 @@ fn format_turn(v: &Value, full: bool) -> Value {
             "preview": content.chars().take(120).collect::<String>(),
         })
     }
+}
+
+const LOSSLESS_MAX_PAGE_SIZE: usize = 64;
+const LOSSLESS_DEFAULT_PAGE_SIZE: usize = 16;
+const LOSSLESS_MIN_WIRE_BYTES: usize = 1024;
+const LOSSLESS_MAX_WIRE_BYTES: usize = 49_152;
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn hex_decode(value: &str) -> Option<Vec<u8>> {
+    if value.len() > 4096 || !value.len().is_multiple_of(2) {
+        return None;
+    }
+    (0..value.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&value[i..i + 2], 16).ok())
+        .collect()
+}
+
+fn base64_encode(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let n = u32::from(chunk[0]) << 16
+            | u32::from(*chunk.get(1).unwrap_or(&0)) << 8
+            | u32::from(*chunk.get(2).unwrap_or(&0));
+        out.push(char::from(TABLE[((n >> 18) & 63) as usize]));
+        out.push(char::from(TABLE[((n >> 12) & 63) as usize]));
+        out.push(if chunk.len() > 1 {
+            char::from(TABLE[((n >> 6) & 63) as usize])
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            char::from(TABLE[(n & 63) as usize])
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+fn base64_decode(value: &str) -> Option<Vec<u8>> {
+    fn digit(byte: u8) -> Option<u8> {
+        match byte {
+            b'A'..=b'Z' => Some(byte - b'A'),
+            b'a'..=b'z' => Some(byte - b'a' + 26),
+            b'0'..=b'9' => Some(byte - b'0' + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
+    }
+    if !value.len().is_multiple_of(4) {
+        return None;
+    }
+    let mut out = Vec::new();
+    for chunk in value.as_bytes().chunks_exact(4) {
+        let a = digit(chunk[0])?;
+        let b = digit(chunk[1])?;
+        let c = if chunk[2] == b'=' {
+            0
+        } else {
+            digit(chunk[2])?
+        };
+        let d = if chunk[3] == b'=' {
+            0
+        } else {
+            digit(chunk[3])?
+        };
+        out.push((a << 2) | (b >> 4));
+        if chunk[2] != b'=' {
+            out.push((b << 4) | (c >> 2));
+        }
+        if chunk[3] != b'=' {
+            out.push((c << 6) | d);
+        }
+    }
+    Some(out)
+}
+
+#[derive(Clone)]
+struct LosslessTurn {
+    memory: Memory,
+    turn: Value,
+    content: String,
+    content_hash: String,
+}
+
+fn lossless_error(kind: &str) -> wm_core::CoreError {
+    wm_core::CoreError::InvalidArgs(format!("lossless_{kind}"))
+}
+
+fn lossless_cursor(
+    session_id: &str,
+    include_superseded: bool,
+    view: &str,
+    index: usize,
+    offset: usize,
+) -> String {
+    // This is deliberately an unsigned, canonical placement hint. It is not
+    // authority: every request rebuilds the visible view before placement.
+    let value = json!({"v":1,"session_id":session_id,"include_superseded":include_superseded,"view":view,"index":index,"offset":offset});
+    hex_encode(value.to_string().as_bytes())
+}
+
+fn parse_lossless_cursor(
+    cursor: &str,
+    session_id: &str,
+    include_superseded: bool,
+) -> wm_core::Result<(String, usize, usize)> {
+    let bytes = hex_decode(cursor).ok_or_else(|| lossless_error("invalid_cursor"))?;
+    let text = String::from_utf8(bytes).map_err(|_| lossless_error("invalid_cursor"))?;
+    let value: Value = serde_json::from_str(&text).map_err(|_| lossless_error("invalid_cursor"))?;
+    let canonical = json!({"v":value.get("v"),"session_id":value.get("session_id"),"include_superseded":value.get("include_superseded"),"view":value.get("view"),"index":value.get("index"),"offset":value.get("offset")});
+    if canonical.to_string() != text
+        || value.get("v").and_then(Value::as_u64) != Some(1)
+        || value.get("session_id").and_then(Value::as_str) != Some(session_id)
+        || value.get("include_superseded").and_then(Value::as_bool) != Some(include_superseded)
+    {
+        return Err(lossless_error("invalid_cursor"));
+    }
+    let view = value
+        .get("view")
+        .and_then(Value::as_str)
+        .filter(|v| v.len() == 64)
+        .ok_or_else(|| lossless_error("invalid_cursor"))?;
+    let index = value
+        .get("index")
+        .and_then(Value::as_u64)
+        .and_then(|v| usize::try_from(v).ok())
+        .ok_or_else(|| lossless_error("invalid_cursor"))?;
+    let offset = value
+        .get("offset")
+        .and_then(Value::as_u64)
+        .and_then(|v| usize::try_from(v).ok())
+        .ok_or_else(|| lossless_error("invalid_cursor"))?;
+    Ok((view.to_string(), index, offset))
 }
 
 /// `session.record` — record a conversation turn as persistent session memory.
@@ -313,6 +454,174 @@ impl SessionReplayTool {
             effects: EffectRow::read_only(vec![Resource::Galaxy("sessions".into())]),
         }
     }
+
+    fn lossless(&self, args: &Value) -> wm_core::Result<Value> {
+        const ALLOWED: &[&str] = &[
+            "mode",
+            "session_id",
+            "include_superseded",
+            "page_size",
+            "max_wire_bytes",
+            "cursor",
+        ];
+        let object = args
+            .as_object()
+            .ok_or_else(|| lossless_error("invalid_args"))?;
+        if object.keys().any(|key| !ALLOWED.contains(&key.as_str())) {
+            return Err(lossless_error("unsupported_selection_args"));
+        }
+        let session_id = args
+            .get("session_id")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| lossless_error("session_id_required"))?;
+        uuid::Uuid::parse_str(session_id).map_err(|_| lossless_error("invalid_session_id"))?;
+        let include_superseded = args
+            .get("include_superseded")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let page_size = args
+            .get("page_size")
+            .and_then(Value::as_u64)
+            .map(|v| usize::try_from(v).ok())
+            .flatten()
+            .unwrap_or(LOSSLESS_DEFAULT_PAGE_SIZE);
+        let max_wire = args
+            .get("max_wire_bytes")
+            .and_then(Value::as_u64)
+            .map(|v| usize::try_from(v).ok())
+            .flatten()
+            .unwrap_or(LOSSLESS_MAX_WIRE_BYTES);
+        if !(1..=LOSSLESS_MAX_PAGE_SIZE).contains(&page_size)
+            || !(LOSSLESS_MIN_WIRE_BYTES..=LOSSLESS_MAX_WIRE_BYTES).contains(&max_wire)
+        {
+            return Err(lossless_error("invalid_args"));
+        }
+
+        let memories = self.store.scan_all(Galaxy::Sessions)?;
+        let start = memories.iter().find(|m| {
+            m.metadata.id.to_string() == session_id
+                && m.metadata.tags.contains(&"start".to_string())
+                && !m.metadata.is_private
+                && !m.metadata.model_exclude
+        });
+        if start.is_none() {
+            return Err(wm_core::CoreError::NotFound("session not found".into()));
+        }
+        let mut turns = Vec::new();
+        for memory in memories {
+            if memory.metadata.is_private
+                || memory.metadata.model_exclude
+                || (!include_superseded
+                    && memory
+                        .metadata
+                        .tags
+                        .iter()
+                        .any(|t| t.starts_with("superseded-by:")))
+            {
+                continue;
+            }
+            if !memory
+                .metadata
+                .tags
+                .contains(&format!("session:{session_id}"))
+            {
+                continue;
+            }
+            let turn = serde_json::from_str::<Value>(&memory.content)
+                .map_err(|_| lossless_error("malformed_selected_turn"))?;
+            let content = turn
+                .get("content")
+                .and_then(Value::as_str)
+                .ok_or_else(|| lossless_error("malformed_selected_turn"))?
+                .to_string();
+            if turn.get("type").and_then(Value::as_str) != Some("session_turn")
+                || turn.get("session_id").and_then(Value::as_str) != Some(session_id)
+                || turn.get("sequence").and_then(Value::as_u64).is_none()
+                || turn.get("timestamp").and_then(Value::as_i64).is_none()
+            {
+                return Err(lossless_error("malformed_selected_turn"));
+            }
+            turns.push(LosslessTurn {
+                content_hash: hex_encode(&Sha256::digest(content.as_bytes())),
+                memory,
+                turn,
+                content,
+            });
+        }
+        turns.sort_by_key(|turn| {
+            (
+                turn.turn["sequence"].as_u64().unwrap(),
+                turn.turn["timestamp"].as_i64().unwrap(),
+                turn.memory.metadata.id,
+            )
+        });
+        let manifest: Vec<Value> = turns.iter().map(|t| json!({"id":t.memory.metadata.id,"sequence":t.turn["sequence"],"timestamp":t.turn["timestamp"],"hash":t.content_hash})).collect();
+        let view = hex_encode(&Sha256::digest(json!({"v":1,"galaxy":"sessions","session_id":session_id,"include_superseded":include_superseded,"records":manifest}).to_string().as_bytes()));
+        let (mut index, mut offset) = match args.get("cursor").and_then(Value::as_str) {
+            Some(cursor) => {
+                let (token_view, index, offset) =
+                    parse_lossless_cursor(cursor, session_id, include_superseded)?;
+                if token_view != view {
+                    return Err(lossless_error("stale_view"));
+                }
+                (index, offset)
+            }
+            None => (0, 0),
+        };
+        if index > turns.len() || (index == turns.len() && offset != 0) {
+            return Err(lossless_error("invalid_placement"));
+        }
+        if index < turns.len() && offset > turns[index].content.len() {
+            return Err(lossless_error("invalid_placement"));
+        }
+        let mut records = Vec::new();
+        while index < turns.len() && records.len() < page_size {
+            let turn = &turns[index];
+            let bytes = turn.content.as_bytes();
+            let whole = json!({"record_id":turn.memory.metadata.id.to_string(),"sequence":turn.turn["sequence"],"timestamp":turn.turn["timestamp"],"content_encoding":"utf-8","content":turn.content,"content_sha256":turn.content_hash,"complete":true});
+            let candidate = json!({"status":"success","mode":"lossless","session_id":session_id,"galaxy":"sessions","view_fingerprint":view,"records":records.iter().cloned().chain(std::iter::once(whole.clone())).collect::<Vec<_>>(),"has_more":index+1<turns.len(),"next_cursor":lossless_cursor(session_id,include_superseded,&view,index+1,0),"complete":index+1==turns.len()});
+            if serde_json::to_vec(&candidate).unwrap().len() <= max_wire {
+                records.push(whole);
+                index += 1;
+                offset = 0;
+                continue;
+            }
+            if !records.is_empty() {
+                break;
+            }
+            let mut take = bytes.len().saturating_sub(offset);
+            while take > 0 {
+                let end = offset + take;
+                let chunk = json!({"record_id":turn.memory.metadata.id.to_string(),"content_sha256":turn.content_hash,"chunk":{"encoding":"base64","byte_offset":offset,"total_bytes":bytes.len(),"data_b64":base64_encode(&bytes[offset..end]),"complete":end==bytes.len()}});
+                let next = if end == bytes.len() {
+                    lossless_cursor(session_id, include_superseded, &view, index + 1, 0)
+                } else {
+                    lossless_cursor(session_id, include_superseded, &view, index, end)
+                };
+                let candidate = json!({"status":"success","mode":"lossless","session_id":session_id,"galaxy":"sessions","view_fingerprint":view,"records":[chunk.clone()],"has_more":end<bytes.len() || index+1<turns.len(),"next_cursor":next,"complete":end==bytes.len() && index+1==turns.len()});
+                if serde_json::to_vec(&candidate).unwrap().len() <= max_wire {
+                    records.push(chunk);
+                    if end == bytes.len() {
+                        index += 1;
+                        offset = 0;
+                    } else {
+                        offset = end;
+                    }
+                    break;
+                }
+                take /= 2;
+            }
+            if records.is_empty() {
+                return Err(lossless_error("wire_ceiling_too_small"));
+            }
+            break;
+        }
+        let complete = index == turns.len() && offset == 0;
+        Ok(
+            json!({"status":"success","mode":"lossless","session_id":session_id,"galaxy":"sessions","view_fingerprint":view,"records":records,"has_more":!complete,"next_cursor":if complete { Value::Null } else { json!(lossless_cursor(session_id,include_superseded,&view,index,offset)) },"complete":complete}),
+        )
+    }
 }
 
 #[async_trait]
@@ -340,7 +649,10 @@ impl Tool for SessionReplayTool {
                 },
                 "turn_types": super::common::str_array_prop("Selective mode: turn types to keep"),
                 "min_importance": super::common::num_prop("Selective mode floor (default 0.7)"),
-                "token_budget": super::common::int_prop("Progressive mode token budget (default 2000)"),
+            "token_budget": super::common::int_prop("Progressive mode token budget (default 2000)"),
+            "page_size": super::common::int_prop("Lossless mode records per page (1-64, default 16)"),
+            "max_wire_bytes": super::common::int_prop("Lossless mode serialized JSON ceiling (1024-49152)"),
+            "cursor": super::common::str_prop("Lossless mode opaque placement cursor"),
             }),
             &[],
         )
@@ -350,6 +662,9 @@ impl Tool for SessionReplayTool {
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let mode = args.get("mode").and_then(Value::as_str).unwrap_or("full");
+        if mode == "lossless" {
+            return self.lossless(&args);
+        }
         let requested_session_id = args
             .get("session_id")
             .and_then(Value::as_str)
@@ -2233,5 +2548,58 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(list2["pending_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn lossless_replay_binds_explicit_session_chunks_and_detects_stale_view() {
+        let store = test_store();
+        let older = start_session_aged(&store, 60);
+        let newer = start_session_aged(&store, 0);
+        let content = format!("prefix {} DISTINCT-FACT-AFTER-120", "é".repeat(900));
+        let mut turn = Memory::new(Galaxy::Sessions, json!({"type":"session_turn","session_id":older,"sequence":1,"timestamp":1_i64,"content":content}).to_string());
+        turn.metadata.tags = vec!["session".into(), "turn".into(), format!("session:{older}")];
+        store.put(Galaxy::Sessions, &turn).unwrap();
+        let mut other = Memory::new(Galaxy::Sessions, json!({"type":"session_turn","session_id":newer,"sequence":1,"timestamp":1_i64,"content":"newer-only"}).to_string());
+        other.metadata.tags = vec!["session".into(), "turn".into(), format!("session:{newer}")];
+        store.put(Galaxy::Sessions, &other).unwrap();
+        let replay = SessionReplayTool::new(store.clone());
+        let mut ctx = Context::default();
+        let mut response = replay
+            .call(
+                &mut ctx,
+                json!({"mode":"lossless","session_id":older,"page_size":1,"max_wire_bytes":1024}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response["session_id"], older);
+        assert!(response["records"][0].get("chunk").is_some());
+        let mut bytes = Vec::new();
+        loop {
+            for record in response["records"].as_array().unwrap() {
+                if let Some(chunk) = record.get("chunk") {
+                    bytes.extend(base64_decode(chunk["data_b64"].as_str().unwrap()).unwrap());
+                } else {
+                    bytes.extend(record["content"].as_str().unwrap().as_bytes());
+                }
+            }
+            if response["complete"] == true {
+                break;
+            }
+            let cursor = response["next_cursor"].as_str().unwrap();
+            response = replay.call(&mut ctx, json!({"mode":"lossless","session_id":older,"page_size":1,"max_wire_bytes":1024,"cursor":cursor})).await.unwrap();
+        }
+        assert_eq!(String::from_utf8(bytes).unwrap(), content);
+        let first = replay
+            .call(
+                &mut ctx,
+                json!({"mode":"lossless","session_id":older,"page_size":1,"max_wire_bytes":1024}),
+            )
+            .await
+            .unwrap();
+        let stale_cursor = first["next_cursor"].as_str().unwrap().to_string();
+        let mut appended = Memory::new(Galaxy::Sessions, json!({"type":"session_turn","session_id":older,"sequence":2,"timestamp":2_i64,"content":"later"}).to_string());
+        appended.metadata.tags = vec!["session".into(), "turn".into(), format!("session:{older}")];
+        store.put(Galaxy::Sessions, &appended).unwrap();
+        assert!(replay.call(&mut ctx, json!({"mode":"lossless","session_id":older,"page_size":1,"max_wire_bytes":1024,"cursor":stale_cursor})).await.unwrap_err().to_string().contains("stale_view"));
     }
 }
