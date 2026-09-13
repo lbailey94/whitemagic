@@ -542,6 +542,15 @@ impl Tool for SessionEndTool {
     fn description(&self) -> &str {
         "End a session — writes a session_end marker"
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "session_id": super::common::str_prop("Session UUID to end (start-memory id)"),
+                "summary": super::common::str_prop("Optional closing summary"),
+            }),
+            &["session_id"],
+        )
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let session_id = args
             .get("session_id")

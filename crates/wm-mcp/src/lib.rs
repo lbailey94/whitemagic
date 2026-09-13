@@ -33,6 +33,9 @@ pub mod trust_admin;
 pub mod update;
 
 #[cfg(test)]
+mod contract_tests;
+
+#[cfg(test)]
 mod effect_audit;
 
 pub use input_validation::{

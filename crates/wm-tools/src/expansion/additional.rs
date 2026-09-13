@@ -343,6 +343,17 @@ impl Tool for MemoryNearbyTool {
     fn description(&self) -> &str {
         "Find memories spatially near a query text using 5D holographic coordinates"
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "query": super::common::str_prop("Query text to locate in 5D space"),
+                "limit": super::common::int_prop("Maximum results (default 10)"),
+                "radius": super::common::num_prop("Spatial radius cutoff (optional)"),
+                "galaxy": super::common::str_prop("Galaxy (default: codex)"),
+            }),
+            &["query"],
+        )
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
         if query.is_empty() {

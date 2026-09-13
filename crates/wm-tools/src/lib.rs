@@ -2124,6 +2124,17 @@ impl Tool for MemoryAssociateTool {
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "source": str_prop("Source memory UUID"),
+                "target": str_prop("Target memory UUID"),
+                "type": str_prop("Link type (default: related)"),
+                "weight": num_prop("Association weight (default 1.0)"),
+            }),
+            &["source", "target"],
+        )
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let source_str = args.get("source").and_then(|v| v.as_str()).ok_or_else(|| {
             wm_core::CoreError::InvalidArgs("source (UUID string) required".into())
@@ -2190,6 +2201,15 @@ impl Tool for MemoryAssociationsTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "id": str_prop("Memory UUID to inspect"),
+                "direction": str_prop("Direction: from | to | both (default: both)"),
+            }),
+            &["id"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let id_str = args
@@ -3564,6 +3584,15 @@ impl Tool for WmMetaTool {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
+
+/// Public contract view of the meta-tool's hardcoded required-arg table.
+/// `wm-mcp`'s contract tests prove this table never drifts from the tools'
+/// own schemas (the `memory.query` mismatch, 2026-09-13, was exactly such a
+/// drift).
+#[must_use]
+pub fn required_arg_for(tool_name: &str) -> Option<&'static str> {
+    WmMetaTool::required_arg(tool_name)
+}
 
 /// Parse a galaxy name string into a Galaxy enum.
 fn parse_galaxy(s: &str) -> wm_core::Result<Galaxy> {

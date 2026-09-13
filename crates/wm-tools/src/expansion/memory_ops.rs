@@ -209,6 +209,15 @@ impl Tool for MemoryBatchReadTool {
     fn description(&self) -> &str {
         "Read multiple memories by ID from a galaxy"
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "ids": super::common::str_array_prop("Memory UUIDs to read"),
+                "galaxy": super::common::str_prop("Galaxy (default: codex)"),
+            }),
+            &["ids"],
+        )
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = args
             .get("galaxy")
@@ -302,6 +311,20 @@ impl Tool for MemoryUpdateTool {
     }
     fn description(&self) -> &str {
         "Update tags, importance, title/topic, or content of an existing memory"
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "id": super::common::str_prop("Memory UUID to update"),
+                "content": super::common::str_prop("New content (optional)"),
+                "tags": super::common::str_array_prop("Replacement tags (optional)"),
+                "importance": super::common::num_prop("New importance 0.0-1.0 (optional)"),
+                "title": super::common::str_prop("New title (optional)"),
+                "topic": super::common::str_prop("New topic label (optional)"),
+                "galaxy": super::common::str_prop("Galaxy (default: codex)"),
+            }),
+            &["id"],
+        )
     }
     async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
@@ -501,6 +524,16 @@ impl Tool for MemoryRevisionsTool {
     fn description(&self) -> &str {
         "List or verify a memory's content revision chain (tamper evidence)"
     }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "id": super::common::str_prop("Memory UUID to inspect"),
+                "action": super::common::str_prop("Action: list (default) | verify"),
+                "galaxy": super::common::str_prop("Galaxy (default: codex)"),
+            }),
+            &["id"],
+        )
+    }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
         let id_str = args
@@ -591,6 +624,17 @@ impl Tool for MemoryTagTool {
     }
     fn description(&self) -> &str {
         "Add or remove tags from a memory"
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "id": super::common::str_prop("Memory UUID to tag"),
+                "tags": super::common::str_array_prop("Tags to apply"),
+                "action": super::common::str_prop("Action: add (default) | remove"),
+                "galaxy": super::common::str_prop("Galaxy (default: codex)"),
+            }),
+            &["id", "tags"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
@@ -2310,6 +2354,17 @@ impl Tool for MemoryDeduplicateTool {
     }
     fn description(&self) -> &str {
         "Find and merge duplicate memories by content hash or similarity"
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to deduplicate"),
+                "mode": super::common::str_prop("Strategy: hash | similarity (default: hash)"),
+                "limit": super::common::int_prop("Maximum entries to scan"),
+                "dry_run": super::common::bool_prop("Preview only (default: true)"),
+            }),
+            &["galaxy"],
+        )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
