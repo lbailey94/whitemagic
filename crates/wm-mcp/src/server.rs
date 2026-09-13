@@ -2,7 +2,8 @@
 //!
 //! Implements the Model Context Protocol with three methods:
 //! - `initialize`: handshake with client info
-//! - `tools/list`: returns only the `wm` meta-tool (single entry point)
+//! - `tools/list`: returns the `wm` meta-tool plus a discrete lifecycle
+//!   catalog (memory.*, session.*) for registry/agent discovery
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
 //! The `wm` meta-tool routes natural language to 229 tools via TF-IDF NLU
@@ -3061,7 +3062,7 @@ impl McpServer {
         }
     }
 
-    /// Handle `tools/list` — return only the `wm` meta-tool.
+    /// Handle `tools/list` — `wm` meta-tool plus the discrete lifecycle catalog.
     ///
     /// The `wm` meta-tool is the single entry point for MCP clients. It routes
     /// natural language input to the active tool surface via TF-IDF NLU
@@ -3108,7 +3109,7 @@ impl McpServer {
                 (None, None) => String::new(),
             };
             let description = format!(
-                "WhiteMagic meta-tool — {} tool surface ({} tools).{}{} Use thought= for NLU routing (e.g. 'remember that X is Y', 'search for Z', 'list tools'), route= for explicit dispatch (e.g. 'memory.create'), and args= for passthrough arguments. Say 'list tools' to discover available tools.",
+                "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Say 'list tools' to enumerate the curated surface.",
                 self.profile_name, tool_count, mode_hint, scope
             );
             tools.push(json!({
@@ -3212,6 +3213,62 @@ impl McpServer {
                 }),
             ),
             (
+                "memory.list",
+                "memory.list",
+                "List memories with filters (galaxy, tags, limit, offset) for inventory and discovery.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "galaxy": { "type": "string", "description": "Galaxy to list, or omit for all galaxies" },
+                        "limit": { "type": "integer", "description": "Maximum number of memories to return" },
+                        "offset": { "type": "integer", "description": "Pagination offset" }
+                    }
+                }),
+            ),
+            (
+                "memory.hybrid_recall",
+                "memory.hybrid_recall",
+                "Fused recall across full-text, vector, graph, and coordinate lookup with recall_mode disclosure.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "query": { "type": "string", "description": "Natural language or keyword query" },
+                        "galaxy": { "type": "string", "description": "Galaxy to search, or omit for all galaxies" },
+                        "limit": { "type": "integer", "description": "Maximum results (default: 10)" }
+                    },
+                    "required": ["query"]
+                }),
+            ),
+            (
+                "session.record",
+                "session.record",
+                "Record a session turn (decision, breakthrough, summary) so the next session can resume.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "content": { "type": "string", "description": "Turn content to persist" },
+                        "role": { "type": "string", "enum": ["user", "ai"], "description": "Who produced the turn" },
+                        "turn_type": { "type": "string", "description": "decision | breakthrough | summary | note" },
+                        "importance": { "type": "number", "description": "0.0 to 1.0 salience" },
+                        "session_id": { "type": "string", "description": "Target session (current session when omitted)" }
+                    },
+                    "required": ["content"]
+                }),
+            ),
+            (
+                "session.continuity",
+                "session.continuity",
+                "Recall where the previous session left off: recent turns, checkpoints, and open work.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "n": { "type": "integer", "description": "Number of recent turns to recall (default: 5)" },
+                        "since": { "type": "string", "description": "Time filter (epoch seconds | RFC 3339 | YYYY-MM-DD)" },
+                        "session_id": { "type": "string", "description": "Target session (current session when omitted)" }
+                    }
+                }),
+            ),
+            (
                 "session.start",
                 "session.start",
                 "Start or resume an agent session for persistent continuity across tool invocations.",
@@ -3288,10 +3345,12 @@ impl McpServer {
                 } else {
                     fallback_schema
                 };
-                let final_desc = if tool.description().is_empty() {
-                    desc
-                } else {
+                // Prefer the discovery copy written for this catalog; the
+                // registry description is the fallback.
+                let final_desc = if desc.is_empty() {
                     tool.description()
+                } else {
+                    desc
                 };
                 tools.push(json!({
                     "name": alias,
@@ -4680,7 +4739,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn tools_list_returns_only_wm_meta_tool() {
+    async fn tools_list_exposes_meta_tool_and_lifecycle_catalog() {
         let mut server = test_server();
         // Trigger an event to move from Delta to Beta
         let _ = server.eco_mode.record_event();
@@ -4699,6 +4758,17 @@ mod tests {
         assert_eq!(tools[0]["name"], "wm");
         assert!(tools.iter().any(|t| t["name"] == "memory.search"));
         assert!(tools.iter().any(|t| t["name"] == "memory.create"));
+        for expected in [
+            "memory.list",
+            "memory.hybrid_recall",
+            "session.record",
+            "session.continuity",
+        ] {
+            assert!(
+                tools.iter().any(|t| t["name"] == expected),
+                "lifecycle catalog should expose {expected}"
+            );
+        }
         // Legacy underscore/dotted aliases remain callable even though the
         // exposed discrete names are canonical (first-run feedback 2026-09-13).
         assert_eq!(
@@ -4708,6 +4778,14 @@ mod tests {
         assert_eq!(
             wm_tools::expansion::common::canonical_tool_alias("memory.find"),
             Some("memory.search")
+        );
+        assert_eq!(
+            wm_tools::expansion::common::canonical_tool_alias("session_continuity"),
+            Some("session.continuity")
+        );
+        assert_eq!(
+            wm_tools::expansion::common::canonical_tool_alias("memory_hybrid_recall"),
+            Some("memory.hybrid_recall")
         );
         assert!(tools[0]["inputSchema"].is_object());
         let description = tools[0]["description"].as_str().unwrap();
