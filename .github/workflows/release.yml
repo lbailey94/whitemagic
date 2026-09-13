@@ -221,5 +221,5 @@ jobs:
           rc=$?
           echo "$out"
           if [ $rc -ne 0 ]; then
-            echo "$out" | grep -qiE "already|exists|duplicate|conflict|409" && echo "already published - skipping" || exit 1
+            echo "$out" | grep -qiE "already published|already exists|duplicate|conflict|409" && echo "already published - skipping" || { echo "MCP registry publish FAILED"; exit 1; }
           fi
