@@ -145,12 +145,18 @@ const LOSSLESS_MIN_WIRE_BYTES: usize = 1024;
 const LOSSLESS_MAX_WIRE_BYTES: usize = 49_152;
 
 fn hex_encode(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    use std::fmt::Write as _;
+    bytes
+        .iter()
+        .fold(String::with_capacity(bytes.len() * 2), |mut out, b| {
+            let _ = write!(out, "{b:02x}");
+            out
+        })
 }
 
 fn hex_decode(value: &str) -> Option<Vec<u8>> {
     if value.len() > 4096
-        || !value.len().is_multiple_of(2)
+        || value.len() % 2 != 0
         || !value
             .bytes()
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
@@ -186,8 +192,9 @@ fn base64_encode(bytes: &[u8]) -> String {
     out
 }
 
+#[cfg(test)]
 fn base64_decode(value: &str) -> Option<Vec<u8>> {
-    fn digit(byte: u8) -> Option<u8> {
+    const fn digit(byte: u8) -> Option<u8> {
         match byte {
             b'A'..=b'Z' => Some(byte - b'A'),
             b'a'..=b'z' => Some(byte - b'a' + 26),
@@ -197,7 +204,7 @@ fn base64_decode(value: &str) -> Option<Vec<u8>> {
             _ => None,
         }
     }
-    if !value.len().is_multiple_of(4) {
+    if value.len() % 4 != 0 {
         return None;
     }
     let mut out = Vec::new();
@@ -263,7 +270,9 @@ fn parse_lossless_cursor(
     let text = String::from_utf8(bytes).map_err(|_| lossless_error("invalid_cursor"))?;
     let value: Value = serde_json::from_str(&text).map_err(|_| lossless_error("invalid_cursor"))?;
     let canonical = json!({"v":value.get("v"),"session_id":value.get("session_id"),"include_superseded":value.get("include_superseded"),"page_size":value.get("page_size"),"max_wire_bytes":value.get("max_wire_bytes"),"view":value.get("view"),"index":value.get("index"),"offset":value.get("offset")});
-    if canonical.to_string() != text
+    let canonical_text =
+        serde_json::to_string(&canonical).map_err(|_| lossless_error("invalid_cursor"))?;
+    if canonical_text != text
         || value.get("v").and_then(Value::as_u64) != Some(1)
         || value.get("session_id").and_then(Value::as_str) != Some(session_id)
         || value.get("include_superseded").and_then(Value::as_bool) != Some(include_superseded)
