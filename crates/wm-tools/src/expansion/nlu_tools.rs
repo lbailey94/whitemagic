@@ -33,6 +33,9 @@ impl NluShadowReportTool {
 
 #[async_trait]
 impl Tool for NluShadowReportTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(&json!({}), &[])
+    }
     fn name(&self) -> &str {
         "nlu.shadow_report"
     }

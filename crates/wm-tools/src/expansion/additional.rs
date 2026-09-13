@@ -29,6 +29,14 @@ impl MemoryCountTool {
 
 #[async_trait]
 impl Tool for MemoryCountTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to count (optional; all memory galaxies when absent)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.count"
     }
@@ -70,6 +78,14 @@ impl MemoryTagsTool {
 
 #[async_trait]
 impl Tool for MemoryTagsTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy whose tags to list (optional; default codex)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.tags"
     }
@@ -119,6 +135,17 @@ impl SessionListTool {
 
 #[async_trait]
 impl Tool for SessionListTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "session_id": super::common::str_prop("Filter by session UUID"),
+                "title": super::common::str_prop("Filter by title substring"),
+                "sequence": super::common::int_prop("Filter by start sequence number"),
+                "type": super::common::str_prop("Filter by session type"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "session.list"
     }

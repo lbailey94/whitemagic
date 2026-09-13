@@ -34,7 +34,7 @@ fn full_server() -> (tempfile::TempDir, crate::McpServer) {
 
 /// Curated routes still missing an input schema (legacy surface). This is a
 /// ratchet: it may only go down. Burn it to zero; never raise it.
-const SCHEMA_GAP_BASELINE: usize = 18;
+const SCHEMA_GAP_BASELINE: usize = 0;
 
 #[test]
 fn every_route_has_a_wellformed_unique_schema() {

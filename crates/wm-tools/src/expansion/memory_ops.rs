@@ -57,6 +57,14 @@ impl MemoryConsolidateTool {
 
 #[async_trait]
 impl Tool for MemoryConsolidateTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to consolidate (optional; default codex)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.consolidate"
     }
@@ -127,6 +135,16 @@ impl MemoryDecayTool {
 
 #[async_trait]
 impl Tool for MemoryDecayTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to decay (optional; default codex)"),
+                "importance_threshold": super::common::num_prop("Decay memories below this importance (0-1)"),
+                "decay_factor": super::common::num_prop("Multiplier applied to importance (0-1)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.decay"
     }
@@ -701,6 +719,14 @@ impl MemoryStatsTool {
 
 #[async_trait]
 impl Tool for MemoryStatsTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to summarize (optional; default codex)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.stats"
     }
@@ -2105,6 +2131,17 @@ impl MemorySortTool {
 
 #[async_trait]
 impl Tool for MemorySortTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to sort (optional; default codex)"),
+                "sort_by": super::common::str_prop("Sort key: importance | created_at | accessed_at | access_count"),
+                "order": super::common::str_prop("Order: asc | desc (default desc)"),
+                "limit": super::common::int_prop("Maximum entries (default 50)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.sort"
     }
@@ -2562,6 +2599,16 @@ impl MemoryExportTool {
 
 #[async_trait]
 impl Tool for MemoryExportTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to export (optional; default codex)"),
+                "format": super::common::str_prop("Export format: json | jsonl | markdown"),
+                "limit": super::common::int_prop("Maximum entries to export"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.export"
     }

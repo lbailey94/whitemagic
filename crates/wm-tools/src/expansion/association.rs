@@ -32,6 +32,15 @@ impl MemoryAssociateMineTool {
 
 #[async_trait]
 impl Tool for MemoryAssociateMineTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "galaxy": super::common::str_prop("Galaxy to mine (optional; default codex)"),
+                "limit": super::common::int_prop("Maximum memories to mine (default 50)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "memory.associate_mine"
     }

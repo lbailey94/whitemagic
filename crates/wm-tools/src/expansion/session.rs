@@ -461,6 +461,15 @@ impl SessionRecallTool {
 
 #[async_trait]
 impl Tool for SessionRecallTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "session_id": super::common::str_prop("Session UUID to recall (defaults to the most recent session)"),
+                "limit": super::common::int_prop("Maximum turns to return (default 50)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "session.recall"
     }

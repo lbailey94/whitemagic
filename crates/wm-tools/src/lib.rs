@@ -1195,6 +1195,9 @@ impl GnosisTool {
 
 #[async_trait]
 impl Tool for GnosisTool {
+    fn input_schema(&self) -> Value {
+        schema(&json!({}), &[])
+    }
     fn name(&self) -> &str {
         "gnosis"
     }
@@ -1252,6 +1255,9 @@ impl ToolsListTool {
 
 #[async_trait]
 impl Tool for ToolsListTool {
+    fn input_schema(&self) -> Value {
+        schema(&json!({}), &[])
+    }
     fn name(&self) -> &str {
         "tools.list"
     }
@@ -1992,6 +1998,17 @@ impl MemoryVectorSearchTool {
 
 #[async_trait]
 impl Tool for MemoryVectorSearchTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "memory_id": str_prop("Memory UUID whose stored embedding is the query"),
+                "embedding": json!({"type": "array", "items": {"type": "number"}, "description": "Raw embedding vector (alternative to memory_id)"}),
+                "galaxy": str_prop("Galaxy filter (optional)"),
+                "limit": int_prop("Maximum results (default 10)"),
+            }),
+            &["memory_id"],
+        )
+    }
     fn name(&self) -> &str {
         "memory.vector.search"
     }
@@ -2535,6 +2552,9 @@ impl GnosisStatusTool {
 
 #[async_trait]
 impl Tool for GnosisStatusTool {
+    fn input_schema(&self) -> Value {
+        schema(&json!({}), &[])
+    }
     fn name(&self) -> &str {
         "gnosis.status"
     }
@@ -2604,6 +2624,14 @@ impl GnosisHistoryTool {
 
 #[async_trait]
 impl Tool for GnosisHistoryTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "limit": int_prop("Maximum history entries (default 20)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "gnosis.history"
     }
@@ -2693,6 +2721,19 @@ impl GnosisExplainTool {
 
 #[async_trait]
 impl Tool for GnosisExplainTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "tool_name": str_prop("Tool name to explain"),
+                "is_write": bool_prop("Claim: the invocation writes"),
+                "is_spawn": bool_prop("Claim: the invocation spawns a process"),
+                "is_network": bool_prop("Claim: the invocation uses the network"),
+                "has_purpose": bool_prop("Claim: the invocation carries a purpose"),
+                "args_hash": str_prop("Hash of the arguments under evaluation"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "gnosis.explain"
     }
@@ -3374,6 +3415,16 @@ impl WmMetaTool {
 
 #[async_trait]
 impl Tool for WmMetaTool {
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "route": str_prop("Explicit canonical route, e.g. \"memory.search\" (preferred for agents)"),
+                "thought": str_prop("Natural-language convenience routing (least reliable; prefer route)"),
+                "args": json!({"type": "object", "description": "Arguments passed through to the target tool"}),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "wm"
     }
