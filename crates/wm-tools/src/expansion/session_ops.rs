@@ -373,15 +373,14 @@ impl Tool for SessionReplayTool {
             .get("include_superseded")
             .and_then(Value::as_bool)
             .unwrap_or(false);
-        let turns = filter_by_time(
-            load_turns(
-                &self.store,
-                session_id.as_deref(),
-                10_000,
-                include_superseded,
-            )?,
-            &args,
-        )?;
+        // No resolved session_start is a cold/no-start state, not permission
+        // to replay arbitrary orphan turn records. Explicit IDs below still
+        // retain their existing direct replay behavior for recovery callers.
+        let loaded_turns = match session_id.as_deref() {
+            Some(sid) => load_turns(&self.store, Some(sid), 10_000, include_superseded)?,
+            None => Vec::new(),
+        };
+        let turns = filter_by_time(loaded_turns, &args)?;
 
         // An explicitly requested session that has no turns is an error, not
         // an empty success — silent emptiness hides typos and stale IDs.
@@ -1461,6 +1460,35 @@ mod tests {
         assert_eq!(value["session_id"], Value::Null);
         assert_eq!(value["count"], 0);
         assert_eq!(value["turns"], json!([]));
+    }
+
+    #[tokio::test]
+    async fn replay_omitted_id_does_not_combine_orphan_turns_without_a_start() {
+        let store = test_store();
+        // Explicit session IDs are supported by session.record even before a
+        // start record exists. Omission must not turn these recovery records
+        // into a synthetic combined "latest" session.
+        record_aged_turn(&store, "orphan-a", 0, "orphan-a-only");
+        record_aged_turn(&store, "orphan-b", 0, "orphan-b-only");
+
+        let replay = SessionReplayTool::new(store);
+        let mut ctx = Context::default();
+
+        let omitted = replay.call(&mut ctx, json!({})).await.unwrap();
+        assert_eq!(omitted["session_id"], Value::Null);
+        assert_eq!(
+            omitted["count"], 0,
+            "omitted id must not combine orphans: {omitted}"
+        );
+        assert_eq!(omitted["turns"], json!([]));
+
+        let explicit = replay
+            .call(&mut ctx, json!({"session_id": "orphan-a"}))
+            .await
+            .unwrap();
+        assert_eq!(explicit["session_id"], "orphan-a");
+        assert_eq!(explicit["count"], 1);
+        assert_eq!(explicit["turns"][0]["content"], "orphan-a-only");
     }
 
     #[tokio::test]
