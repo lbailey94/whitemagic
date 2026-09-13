@@ -104,6 +104,31 @@ else
   fail "OTS proof missing: $manifest.sha256.ots"
 fi
 
+# 2b. Prescience ledger coverage: manifest digest + Merkle root vs live file.
+echo "-- prescience ledger coverage"
+if [ -f "$manifest" ]; then
+  python3 - "$manifest" <<'PYEOF'
+import hashlib, json, os, sys
+m = json.load(open(sys.argv[1]))
+p = m.get("site", {}).get("prescience_ledger", {})
+if "sha256" not in p:
+    print("  [FAIL] manifest has no site.prescience_ledger block"); sys.exit(2)
+live = os.path.expanduser(p.get("path", ""))
+if not os.path.isfile(live):
+    print(f"  [FAIL] live prescience ledger missing: {live}"); sys.exit(2)
+raw = open(live, "rb").read()
+ok_digest = hashlib.sha256(raw).hexdigest() == p.get("sha256")
+root = json.loads(raw)["summary"].get("ledger_attestation", {}).get("merkle_root")
+ok_root = root == p.get("merkle_root")
+print(f"  [{'OK' if ok_digest else 'FAIL'}] prescience digest {'matches' if ok_digest else 'DIFFERS from'} manifest")
+print(f"  [{'OK' if ok_root else 'FAIL'}] prescience Merkle root {'matches' if ok_root else 'DIFFERS from'} manifest ({str(root)[:16]}...)")
+sys.exit(0 if (ok_digest and ok_root) else 2)
+PYEOF
+  if [ $? -ne 0 ]; then fails=$((fails+1)); fi
+else
+  warn "no manifest — cannot verify prescience coverage"
+fi
+
 # 3. RFC-3161 re-verify against archived TSR (independent of the log line).
 tsr="$TRUST/trust-$day.tsr"
 if [ -f "$tsr" ] && [ -f "$manifest" ] && [ -f "$TRUST/freetsa-cacert.pem" ] \

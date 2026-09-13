@@ -112,6 +112,27 @@ for digest in "$BACKUP_ROOT"/trust/trust-*.json.sha256; do
   echo "| $day | $ots_status | $rfc_status |"
 done
 echo
+echo "## 3b. Prescience ledger coverage (site)"
+echo
+newest_manifest="$(ls -1t "$BACKUP_ROOT"/trust/trust-*.json 2>/dev/null | head -1)"
+if [ -n "$newest_manifest" ]; then
+  python3 - "$newest_manifest" <<'PYEOF'
+import hashlib, json, os, sys
+m = json.load(open(sys.argv[1]))
+p = m.get("site", {}).get("prescience_ledger", {})
+if "sha256" not in p:
+    print("- **FAIL**: manifest carries no prescience ledger block"); raise SystemExit
+live = os.path.expanduser(p.get("path", ""))
+h = hashlib.sha256(open(live, "rb").read()).hexdigest() if os.path.isfile(live) else None
+print(f"- Manifest {os.path.basename(sys.argv[1])}: root `{str(p.get('merkle_root'))[:16]}...`, "
+      f"{p.get('validated','?')} validated / {p.get('pending','?')} pending / {p.get('expired','?')} expired / "
+      f"{p.get('falsified','?')} falsified; primary {p.get('scoring_primary','?')}")
+print(f"- Live digest match: {'**OK**' if h == p.get('sha256') else '**MISMATCH** (ledger changed after this manifest - next nightly run re-covers it)'}")
+PYEOF
+else
+  echo "- No trust manifest on file yet - nightly coverage starts with the next backup run."
+fi
+echo
 echo "## 4. Backup continuity (disaster-recovery posture)"
 echo
 echo "- Backup OK lines this month: $(grep -c "$(date -u -d "$MONTH-01" +%Y-%m)" "$LOG" >/dev/null 2>&1 && grep "^$(date -u -d "$MONTH-01" +%Y-%m)" "$LOG" | grep -c ' OK ' || echo 0)"
@@ -128,7 +149,10 @@ cat <<'EOF'
   not impossible.
 - Anchor chains cover the attestations DBI. Where `valid` is 0, the chain
   honestly anchored an **empty Merkle root** — coverage is disclosed, not
-  padded. Prescience-ledger timestamps are not yet covered by anchors.
+  padded. The site prescience ledger is covered at chain level by nightly
+  manifest digest inclusion (`site.prescience_ledger`: sha256 + Merkle root
+  + cohort counts), stamped by both authorities; per-row attestations live
+  in the ledger itself (Ed25519 + its own Merkle root).
 - All evidence here is self-produced (our log, our seals, our anchors).
   External anchoring removes *time-travel* of claims, not *authorship*
   disputes. Third-party audit remains the endgame (audit roadmap item 7).

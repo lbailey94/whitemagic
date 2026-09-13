@@ -188,77 +188,7 @@ FREETSA_CA="$TRUST/freetsa-cacert.pem"
 trust_stamp() {
   local day="$1" manifest manifest_digest n_ots upgraded pending
   manifest="$TRUST/trust-$day.json"
-  python3 - "$ANCHORS" "$SEALS" "$manifest" "$day" <<'PYEOF'
-import hashlib, json, os, sys, glob
-
-anchors_dir, seals_dir, out, day = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
-
-def sha256_file(p):
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-def tail_record(path):
-    try:
-        with open(path, "rb") as f:
-            last = f.read().strip().split(b"\n")[-1].decode()
-        r = json.loads(last)
-        return {k: r.get(k) for k in ("root", "prev_hash", "leaf_count", "valid", "stale", "invalid")}
-    except Exception as e:
-        return {"error": str(e)}
-
-manifest = {
-    "type": "wm-nightly-trust-manifest",
-    "v": 1,
-    "utc_date": day,
-    "stores": {},
-}
-
-# 2026-09-10 Q36 follow-up: fold the site prescience ledger (81-row public
-# register, whitemagic-site/public/api/prescience.json) into the manifest so
-# its state is covered by the dual-authority stamps every night — closes the
-# "prescience-ledger timestamps not covered by the anchor" gap by nightly
-# digest inclusion (chain-level coverage; per-row attestations remain future work).
-_prescience = os.path.expanduser("~/Desktop/WHITEMAGIC/whitemagic-site/public/api/prescience.json")
-manifest["site"] = {}
-if os.path.isfile(_prescience):
-    manifest["site"]["prescience_ledger"] = {
-        "path": "~" + _prescience[len(os.path.expanduser("~")):],
-        "sha256": sha256_file(_prescience),
-        "bytes": os.path.getsize(_prescience),
-        "mtime_utc": __import__("datetime").datetime.utcfromtimestamp(os.path.getmtime(_prescience)).isoformat() + "Z",
-    }
-else:
-    manifest["site"]["prescience_ledger"] = {"error": "file missing"}
-for log_path in sorted(glob.glob(os.path.join(anchors_dir, "*", "anchors.jsonl"))):
-    store = os.path.basename(os.path.dirname(log_path))
-    rec = tail_record(log_path)
-    n_lines = sum(1 for _ in open(log_path, "rb"))
-    manifest["stores"][store] = {
-        "anchors_log_sha256": sha256_file(log_path),
-        "anchors_records": n_lines,
-        "anchor_tail": rec,
-        "coverage": f"{rec.get('valid', 0)} valid attestations"
-                    if isinstance(rec.get('valid'), int) else "unknown",
-    }
-# newest seal snapshot per store: commit its manifest+key digests
-for store_dir in sorted(glob.glob(os.path.join(seals_dir, "*"))):
-    store = os.path.basename(store_dir)
-    days = sorted(os.listdir(store_dir))
-    if not days:
-        continue
-    newest = os.path.join(store_dir, days[-1])
-    entry = {"snapshot_day": days[-1]}
-    for fname in sorted(os.listdir(newest)):
-        entry[f"{fname}_sha256"] = sha256_file(os.path.join(newest, fname))
-    manifest["stores"].setdefault(store, {})["seal_snapshot"] = entry
-
-with open(out, "w") as f:
-    json.dump(manifest, f, indent=2, sort_keys=True)
-print(f"manifest: {len(manifest['stores'])} stores, {sum(1 for s in manifest['stores'].values() if 'anchors_log_sha256' in s)} anchor logs")
-PYEOF
+  python3 "$(dirname "$0")/../trust/build_trust_manifest.py" --anchors "$ANCHORS" --seals "$SEALS" --out "$manifest"
   local rc=$?
   if [ $rc -ne 0 ] || [ ! -s "$manifest" ]; then
     echo "$(date -Is) TRUST-MANIFEST-FAIL (rc=$rc) — external stamping skipped this night" >>"$LOG"
