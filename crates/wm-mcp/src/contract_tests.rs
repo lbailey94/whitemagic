@@ -84,12 +84,14 @@ fn every_route_has_a_wellformed_unique_schema() {
         problems.len(),
         problems.join("\n  ")
     );
+    // black_box keeps the ratchet a runtime comparison (clippy would fold
+    // `len() <= 0` into an absurd-extreme-comparison lint at baseline 0).
+    let baseline = std::hint::black_box(SCHEMA_GAP_BASELINE);
     assert!(
-        gaps.len() <= SCHEMA_GAP_BASELINE,
-        "schema coverage regressed: {} uncovered routes (baseline {}):\n  {}\n\
+        gaps.len() <= baseline,
+        "schema coverage regressed: {} uncovered routes (baseline {baseline}):\n  {}\n\
          Burn the baseline down; never raise it.",
         gaps.len(),
-        SCHEMA_GAP_BASELINE,
         gaps.join("\n  ")
     );
     if !gaps.is_empty() {

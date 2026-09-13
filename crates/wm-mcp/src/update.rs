@@ -139,7 +139,7 @@ pub fn release_public_key() -> Option<String> {
 }
 
 /// Outcome of a manifest verification attempt.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SignatureStatus {
     /// Signature verified against the pinned key.
     Verified,
@@ -170,6 +170,215 @@ pub fn verify_manifest(
     } else {
         SignatureStatus::Invalid
     }
+}
+
+/// Target key for the running platform (matches the manifest's target keys).
+#[must_use]
+pub const fn current_target() -> Option<&'static str> {
+    if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        Some("linux-x86_64-musl")
+    } else if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
+        Some("macos-x86_64")
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        Some("macos-aarch64")
+    } else if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
+        Some("windows-x86_64")
+    } else {
+        None
+    }
+}
+
+/// Sibling path for a binary (`/usr/bin/wm` -> `/usr/bin/wm.previous`).
+#[must_use]
+pub fn sibling(exe: &Path, suffix: &str) -> PathBuf {
+    let mut name = exe
+        .file_name()
+        .map_or_else(|| "wm".into(), std::ffi::OsStr::to_os_string);
+    name.push(format!(".{suffix}"));
+    exe.with_file_name(name)
+}
+
+/// SHA-256 of a file (streaming; no size ceiling).
+///
+/// # Errors
+/// IO failures opening or reading the file.
+pub fn sha256_file(path: &Path) -> anyhow::Result<String> {
+    use sha2::{Digest, Sha256};
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher)?;
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Stream a URL to `dest`, returning the byte count.
+///
+/// # Errors
+/// Network, HTTP, or IO failure.
+pub fn download_to(url: &str, dest: &Path, timeout: Duration) -> anyhow::Result<u64> {
+    let agent = ureq::config::Config::builder()
+        .timeout_global(Some(timeout))
+        .build()
+        .new_agent();
+    let response = agent
+        .get(url)
+        .call()
+        .map_err(|e| anyhow::anyhow!("download failed: {e}"))?;
+    let mut reader = response.into_body().into_reader();
+    let mut file = std::fs::File::create(dest)?;
+    let n = std::io::copy(&mut reader, &mut file)?;
+    use std::io::Write as _;
+    file.flush()?;
+    Ok(n)
+}
+
+/// Parse the version a binary reports (`wm 9.1.4` -> `9.1.4`).
+///
+/// # Errors
+/// The binary failed to run or exited non-zero.
+pub fn version_of(binary: &Path) -> anyhow::Result<String> {
+    let out = std::process::Command::new(binary)
+        .arg("--version")
+        .output()
+        .map_err(|e| anyhow::anyhow!("could not run {}: {e}", binary.display()))?;
+    if !out.status.success() {
+        anyhow::bail!("{} --version exited {}", binary.display(), out.status);
+    }
+    let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    Ok(text.split_whitespace().last().unwrap_or(&text).to_string())
+}
+
+/// Run the candidate's own `wm selftest --json` and require an explicit pass.
+///
+/// # Errors
+/// The candidate could not be executed.
+pub fn candidate_selftest_ok(candidate: &Path) -> anyhow::Result<(bool, String)> {
+    let out = std::process::Command::new(candidate)
+        .args(["selftest", "--json"])
+        .output()
+        .map_err(|e| anyhow::anyhow!("could not run candidate selftest: {e}"))?;
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let parsed: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap_or_default();
+    let passed = out.status.success()
+        && parsed.get("passed").and_then(serde_json::Value::as_bool) == Some(true);
+    Ok((passed, stdout))
+}
+
+/// Result of a transactional install (`wm update install`).
+#[derive(Debug, Clone, Serialize)]
+pub struct InstallReport {
+    pub from: String,
+    pub to: String,
+    pub backup: Option<String>,
+    pub selftest_ok: bool,
+    pub dry_run: bool,
+    pub swapped: bool,
+}
+
+/// Install a verified candidate over `exe`: selftest gate -> backup ->
+/// atomic swap -> health check (auto-rollback on failure) -> state update.
+///
+/// # Errors
+/// Selftest refusal, IO failure, or a post-swap health-check failure (which
+/// rolls the previous binary back into place before returning).
+pub fn install_from_file(
+    exe: &Path,
+    candidate: &Path,
+    new_version: &str,
+    state_root: &Path,
+    dry_run: bool,
+) -> anyhow::Result<InstallReport> {
+    let old_version = version_of(exe).unwrap_or_else(|_| env!("CARGO_PKG_VERSION").to_string());
+    let (selftest_ok, selftest_out) = candidate_selftest_ok(candidate)?;
+    if !selftest_ok {
+        anyhow::bail!("candidate failed `wm selftest` — refusing to install:\n{selftest_out}");
+    }
+    if dry_run {
+        return Ok(InstallReport {
+            from: old_version,
+            to: new_version.to_string(),
+            backup: None,
+            selftest_ok,
+            dry_run: true,
+            swapped: false,
+        });
+    }
+
+    let backup = sibling(exe, "previous");
+    std::fs::copy(exe, &backup)?;
+    std::fs::rename(candidate, exe).map_err(|e| {
+        anyhow::anyhow!(
+            "atomic swap failed ({e}); on Windows a running binary cannot be replaced \
+             in place — use the platform installer"
+        )
+    })?;
+
+    let after = match version_of(exe) {
+        Ok(v) => v,
+        Err(e) => {
+            let _ = std::fs::rename(&backup, exe);
+            anyhow::bail!("post-swap health check failed ({e}) — rolled back to {old_version}");
+        }
+    };
+    if !after.contains(new_version) {
+        let _ = std::fs::rename(&backup, exe);
+        anyhow::bail!(
+            "post-swap health check: binary reports '{after}', expected {new_version} — \
+             rolled back to {old_version}"
+        );
+    }
+
+    let mut state = read_install_state(state_root).unwrap_or_else(|| InstallState {
+        schema: 1,
+        installed_via: detect_installed_via(exe).to_string(),
+        version: old_version.clone(),
+        previous: None,
+        channel: "stable".to_string(),
+        update_policy: "notify".to_string(),
+        last_check: None,
+        latest_seen: None,
+    });
+    state.previous = Some(old_version.clone());
+    state.version = new_version.to_string();
+    state.last_check = Some(chrono::Utc::now().to_rfc3339());
+    state.latest_seen = Some(new_version.to_string());
+    let _ = write_install_state(state_root, &state);
+
+    Ok(InstallReport {
+        from: old_version,
+        to: new_version.to_string(),
+        backup: Some(backup.display().to_string()),
+        selftest_ok,
+        dry_run: false,
+        swapped: true,
+    })
+}
+
+/// Restore the binary saved by the last `wm update install`.
+///
+/// # Errors
+/// No saved binary, or the restore/health check failed.
+pub fn rollback_install(exe: &Path, state_root: &Path) -> anyhow::Result<String> {
+    let backup = sibling(exe, "previous");
+    if !backup.is_file() {
+        anyhow::bail!("no previous binary saved at {}", backup.display());
+    }
+    std::fs::rename(&backup, exe)?;
+    let version = version_of(exe)?;
+    let mut state = read_install_state(state_root).unwrap_or_else(|| InstallState {
+        schema: 1,
+        installed_via: detect_installed_via(exe).to_string(),
+        version: version.clone(),
+        previous: None,
+        channel: "stable".to_string(),
+        update_policy: "notify".to_string(),
+        last_check: None,
+        latest_seen: None,
+    });
+    state.previous = None;
+    state.version.clone_from(&version);
+    state.last_check = Some(chrono::Utc::now().to_rfc3339());
+    let _ = write_install_state(state_root, &state);
+    Ok(version)
 }
 
 #[cfg(test)]
@@ -235,5 +444,80 @@ mod tests {
             detect_installed_via(Path::new("/home/x/.local/bin/wm")),
             "release-binary"
         );
+    }
+
+    #[test]
+    fn platform_target_mapping_exists_on_supported_builds() {
+        #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+        assert_eq!(current_target(), Some("linux-x86_64-musl"));
+    }
+
+    #[test]
+    fn sha256_matches_known_vector() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("payload");
+        std::fs::write(&path, b"abc").unwrap();
+        assert_eq!(
+            sha256_file(&path).unwrap(),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[cfg(unix)]
+    fn fake_binary(path: &Path, version: &str) {
+        use std::os::unix::fs::PermissionsExt as _;
+        let script = format!(
+            "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo \"wm {version}\"; \
+             elif [ \"$1\" = \"selftest\" ]; then echo '{{\"passed\": true}}'; fi\n"
+        );
+        std::fs::write(path, script).unwrap();
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn transactional_install_and_rollback_with_selftest_gate() {
+        let tmp = tempfile::tempdir().unwrap();
+        let exe = tmp.path().join("wm");
+        let candidate = tmp.path().join("wm.new");
+        let root = tmp.path().join("store-root");
+        fake_binary(&exe, "1.0.0");
+        fake_binary(&candidate, "2.0.0");
+
+        let report = install_from_file(&exe, &candidate, "2.0.0", &root, false).unwrap();
+        assert!(report.swapped && report.selftest_ok);
+        assert_eq!(report.from, "1.0.0");
+        assert!(sibling(&exe, "previous").is_file());
+        assert_eq!(version_of(&exe).unwrap(), "2.0.0");
+        let state = read_install_state(&root).unwrap();
+        assert_eq!(state.version, "2.0.0");
+        assert_eq!(state.previous.as_deref(), Some("1.0.0"));
+
+        let rolled = rollback_install(&exe, &root).unwrap();
+        assert_eq!(rolled, "1.0.0");
+        assert_eq!(version_of(&exe).unwrap(), "1.0.0");
+        assert!(read_install_state(&root).unwrap().previous.is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn install_refuses_a_candidate_that_fails_selftest() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let tmp = tempfile::tempdir().unwrap();
+        let exe = tmp.path().join("wm");
+        let candidate = tmp.path().join("wm.new");
+        let root = tmp.path().join("store-root");
+        fake_binary(&exe, "1.0.0");
+        std::fs::write(
+            &candidate,
+            "#!/bin/sh\necho '{\"passed\": false}'\nexit 1\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&candidate, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let err = install_from_file(&exe, &candidate, "9.9.9", &root, false).unwrap_err();
+        assert!(err.to_string().contains("selftest"), "{err}");
+        assert_eq!(version_of(&exe).unwrap(), "1.0.0", "exe must be untouched");
+        assert!(!sibling(&exe, "previous").exists());
     }
 }

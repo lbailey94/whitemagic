@@ -691,6 +691,46 @@ fn detect_hostname() -> String {
     "unknown".to_string()
 }
 
+const fn signature_label(status: wm_mcp::update::SignatureStatus) -> &'static str {
+    use wm_mcp::update::SignatureStatus;
+    match status {
+        SignatureStatus::Verified => "verified (Ed25519)",
+        SignatureStatus::NoKey => "UNVERIFIED (no pinned key; --insecure-checksum)",
+        SignatureStatus::Missing => "missing signature (transport only)",
+        SignatureStatus::Invalid => "INVALID",
+    }
+}
+
+/// Fetch a release manifest, verify its signature policy, and refuse loudly
+/// on anything short of the requested assurance level.
+fn load_verified_manifest(
+    url: &str,
+    insecure_checksum: bool,
+) -> anyhow::Result<(
+    wm_mcp::update::ReleaseManifest,
+    wm_mcp::update::SignatureStatus,
+)> {
+    use wm_mcp::update::{self, SignatureStatus};
+    let text = update::fetch_manifest_text(url, std::time::Duration::from_secs(15))?;
+    let manifest: update::ReleaseManifest = serde_json::from_str(&text)?;
+    let sig =
+        update::fetch_manifest_text(&format!("{url}.sig"), std::time::Duration::from_secs(10))
+            .ok()
+            .map(|s| s.trim().to_string());
+    let key = update::release_public_key();
+    let status = update::verify_manifest(text.as_bytes(), sig.as_deref(), key.as_deref());
+    if matches!(status, SignatureStatus::Invalid) {
+        anyhow::bail!("release manifest signature is INVALID — do not use this release");
+    }
+    if matches!(status, SignatureStatus::NoKey) && !insecure_checksum {
+        anyhow::bail!(
+            "no pinned release key in this build (set WM_RELEASE_PUBKEY or rebuild with it); \
+             re-run with --insecure-checksum for transport-integrity only"
+        );
+    }
+    Ok((manifest, status))
+}
+
 #[derive(Subcommand)]
 enum UpdateAction {
     /// Check for a newer signed release (notify-only, no installation)
@@ -705,6 +745,20 @@ enum UpdateAction {
         #[arg(long)]
         insecure_checksum: bool,
     },
+    /// Download, verify, selftest, and atomically install the latest release
+    Install {
+        /// Override the manifest URL
+        #[arg(long)]
+        manifest_url: Option<String>,
+        /// Verify transport integrity only (no pinned key available); loud
+        #[arg(long)]
+        insecure_checksum: bool,
+        /// Verify and selftest without swapping the binary
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Restore the binary saved by the last `wm update install`
+    Rollback,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -1070,19 +1124,9 @@ fn main() -> anyhow::Result<()> {
                 json,
                 insecure_checksum,
             } => {
-                use wm_mcp::update::{self, SignatureStatus};
+                use wm_mcp::update;
                 let url = manifest_url.unwrap_or_else(|| update::DEFAULT_MANIFEST_URL.to_string());
-                let text = update::fetch_manifest_text(&url, std::time::Duration::from_secs(15))?;
-                let manifest: update::ReleaseManifest = serde_json::from_str(&text)?;
-                let sig = update::fetch_manifest_text(
-                    &format!("{url}.sig"),
-                    std::time::Duration::from_secs(10),
-                )
-                .ok()
-                .map(|s| s.trim().to_string());
-                let key = update::release_public_key();
-                let status =
-                    update::verify_manifest(text.as_bytes(), sig.as_deref(), key.as_deref());
+                let (manifest, status) = load_verified_manifest(&url, insecure_checksum)?;
                 let current = env!("CARGO_PKG_VERSION");
                 let available = manifest.version != current;
                 let exe = std::env::current_exe()?;
@@ -1104,23 +1148,7 @@ fn main() -> anyhow::Result<()> {
                 state.channel.clone_from(&manifest.channel);
                 let _ = update::write_install_state(&root, &state);
 
-                if matches!(status, SignatureStatus::Invalid) {
-                    anyhow::bail!(
-                        "release manifest signature is INVALID — do not use this release"
-                    );
-                }
-                if matches!(status, SignatureStatus::NoKey) && !insecure_checksum {
-                    anyhow::bail!(
-                        "no pinned release key in this build (set WM_RELEASE_PUBKEY or rebuild with it); \
-                         re-run with --insecure-checksum for transport-integrity only"
-                    );
-                }
-                let sig_label = match status {
-                    SignatureStatus::Verified => "verified (Ed25519)",
-                    SignatureStatus::NoKey => "UNVERIFIED (no pinned key; --insecure-checksum)",
-                    SignatureStatus::Missing => "missing signature (transport only)",
-                    SignatureStatus::Invalid => "INVALID",
-                };
+                let sig_label = signature_label(status);
                 if json {
                     println!(
                         "{}",
@@ -1159,6 +1187,105 @@ fn main() -> anyhow::Result<()> {
                         println!("Up to date.");
                     }
                 }
+            }
+            UpdateAction::Install {
+                manifest_url,
+                insecure_checksum,
+                dry_run,
+            } => {
+                use wm_mcp::update;
+                let url = manifest_url.unwrap_or_else(|| update::DEFAULT_MANIFEST_URL.to_string());
+                let (manifest, status) = load_verified_manifest(&url, insecure_checksum)?;
+                let exe = std::env::current_exe()?;
+                let installed_via = update::detect_installed_via(&exe);
+                if installed_via != "release-binary" {
+                    anyhow::bail!(
+                        "this installation is managed by {installed_via} — update with its \
+                         package manager (run 'wm update check' for the exact command)"
+                    );
+                }
+                let current = env!("CARGO_PKG_VERSION");
+                if manifest.version == current {
+                    println!("WhiteMagic {current} is up to date.");
+                    return Ok(());
+                }
+                let Some(target) = update::current_target() else {
+                    anyhow::bail!("no release artifact mapping for this platform");
+                };
+                let Some(artifact) = manifest.targets.get(target) else {
+                    anyhow::bail!(
+                        "release {} publishes no artifact for {target}",
+                        manifest.version
+                    );
+                };
+                println!("Manifest:  {url} [{}]", signature_label(status));
+                println!("Updating:  {current} -> {}", manifest.version);
+                let temp = update::sibling(&exe, &format!("new-{}", std::process::id()));
+                println!("Downloading {}", artifact.url);
+                let bytes = match update::download_to(
+                    &artifact.url,
+                    &temp,
+                    std::time::Duration::from_secs(300),
+                ) {
+                    Ok(n) => n,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&temp);
+                        return Err(e);
+                    }
+                };
+                println!("  {bytes} bytes; verifying sha256");
+                let digest = update::sha256_file(&temp)?;
+                if !digest.eq_ignore_ascii_case(&artifact.sha256) {
+                    let _ = std::fs::remove_file(&temp);
+                    anyhow::bail!(
+                        "sha256 mismatch: manifest says {} but download hashed {digest}",
+                        artifact.sha256
+                    );
+                }
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt as _;
+                    std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o755))?;
+                }
+                println!(
+                    "Verified sha256 ({}…); running candidate `wm selftest`",
+                    &digest[..12]
+                );
+                let report = match update::install_from_file(
+                    &exe,
+                    &temp,
+                    &manifest.version,
+                    &default_store_path(),
+                    dry_run,
+                ) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&temp);
+                        return Err(e);
+                    }
+                };
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "from": report.from,
+                        "to": report.to,
+                        "backup": report.backup,
+                        "selftest_ok": report.selftest_ok,
+                        "dry_run": report.dry_run,
+                        "swapped": report.swapped,
+                        "signature": signature_label(status),
+                    }))?
+                );
+                if report.swapped {
+                    println!("Update committed. Roll back with 'wm update rollback'.");
+                } else {
+                    println!("Dry run complete — nothing was swapped.");
+                }
+            }
+            UpdateAction::Rollback => {
+                let exe = std::env::current_exe()?;
+                let version = wm_mcp::update::rollback_install(&exe, &default_store_path())?;
+                println!("Rolled back to WhiteMagic {version}.");
             }
         },
         Commands::Doctor {

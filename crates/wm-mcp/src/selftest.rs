@@ -34,6 +34,8 @@ pub struct Check {
 pub struct Report {
     /// Binary version under test.
     pub version: String,
+    /// True when every check passed (serialized for the updater gate).
+    pub passed: bool,
     /// Individual checks, in execution order.
     pub checks: Vec<Check>,
     /// Total wall time.
@@ -135,8 +137,10 @@ pub async fn run() -> anyhow::Result<Report> {
         }
         Err(e) => {
             checks.push(check("store_open", false, format!("open failed: {e}"), t));
+            let passed = checks.iter().all(|c| c.ok);
             return Ok(Report {
                 version,
+                passed,
                 checks,
                 total_ms: overall.elapsed().as_millis(),
             });
@@ -303,8 +307,10 @@ pub async fn run() -> anyhow::Result<Report> {
         ));
     }
 
+    let passed = checks.iter().all(|c| c.ok);
     Ok(Report {
         version,
+        passed,
         checks,
         total_ms: overall.elapsed().as_millis(),
     })
