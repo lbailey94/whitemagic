@@ -38,6 +38,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{Mutex, Notify, RwLock};
@@ -191,6 +192,19 @@ pub struct RpcResponse {
     pub id: u64,
 }
 
+/// Engagement credential carried in RPC params (`params.engagement`).
+///
+/// Bundles an Ed25519-signed engagement token with the issuer's public key,
+/// which the receiver anchors to the requester's bound peer key before
+/// granting a privileged mesh operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EngagementCredential {
+    /// Scope-of-engagement token issued by an Ed25519 key.
+    pub token: wm_governance::engagement_tokens::EngagementToken,
+    /// Issuer public key (hex) — must match the holder's bound mesh key.
+    pub issuer_public_key: String,
+}
+
 impl RpcResponse {
     /// Create a success response.
     #[must_use]
@@ -268,6 +282,10 @@ pub struct SanghaState {
     /// heartbeats so remote peers can verify authorship and bind the
     /// public key to this node's ID.
     pub keypair: crate::crypto::MeshKeyPair,
+    /// Strict engagement-token enforcement for privileged RPC methods
+    /// (`WM_SANGHA_REQUIRE_TOKENS=1` at construction, or
+    /// [`SanghaState::set_require_tokens`]).
+    require_tokens: AtomicBool,
 }
 
 impl SanghaState {
@@ -315,7 +333,21 @@ impl SanghaState {
             locks: Mutex::new(ResourceLockManager::default()),
             hologram: Mutex::new(HologramSync::default()),
             keypair,
+            require_tokens: AtomicBool::new(
+                std::env::var("WM_SANGHA_REQUIRE_TOKENS").is_ok_and(|v| v == "1"),
+            ),
         }
+    }
+
+    /// Whether privileged RPC methods require an engagement credential.
+    #[must_use]
+    pub fn require_tokens(&self) -> bool {
+        self.require_tokens.load(Ordering::Relaxed)
+    }
+
+    /// Enable or disable strict engagement-token enforcement.
+    pub fn set_require_tokens(&self, required: bool) {
+        self.require_tokens.store(required, Ordering::Relaxed);
     }
 }
 
@@ -678,6 +710,62 @@ async fn handle_connection(mut stream: TcpStream, state: Arc<SanghaState>) -> st
     }
 }
 
+/// Verify an engagement credential attached to a privileged lock request
+/// (`params.engagement`).
+///
+/// When present, a credential is always verified cryptographically: token
+/// signature against the supplied issuer key, presenter binding
+/// (`issued_to` == the lock holder), issuer-key binding (the issuer key must
+/// be the holder's bound mesh key), revocation/expiry, and the scope-derived
+/// capability set. In strict mode (`WM_SANGHA_REQUIRE_TOKENS=1`) a missing
+/// credential is rejected; otherwise missing credentials keep legacy
+/// behavior.
+async fn enforce_lock_engagement(
+    state: &SanghaState,
+    req: &RpcRequest,
+    holder: &str,
+) -> std::result::Result<(), String> {
+    let Some(credential_value) = req.params.get("engagement") else {
+        if state.require_tokens() {
+            return Err("engagement credential required for lock operations".into());
+        }
+        return Ok(());
+    };
+
+    let credential: EngagementCredential = serde_json::from_value(credential_value.clone())
+        .map_err(|e| format!("malformed engagement credential: {e}"))?;
+
+    if credential.token.issued_to != holder {
+        return Err(format!(
+            "engagement token issued_to '{}' does not match holder '{holder}'",
+            credential.token.issued_to
+        ));
+    }
+
+    let bound = state
+        .peers
+        .lock()
+        .await
+        .bound_public_key(holder)
+        .unwrap_or_default();
+    if bound.is_empty() || bound != credential.issuer_public_key {
+        return Err(format!(
+            "engagement issuer key is not the bound key for holder '{holder}'"
+        ));
+    }
+
+    let required = wm_governance::capabilities::CapabilitySet::from([
+        wm_governance::capabilities::Capability::MemoryWrite,
+    ]);
+    wm_governance::capabilities::assert_engagement_token_capabilities(
+        &credential.token,
+        &credential.issuer_public_key,
+        required,
+        chrono::Utc::now().timestamp(),
+    )
+    .map_err(|e| format!("engagement rejected: {e}"))
+}
+
 /// Handle a single RPC request.
 async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcResponse {
     match req.method.as_str() {
@@ -823,6 +911,10 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 .and_then(serde_json::Value::as_i64)
                 .unwrap_or(30);
 
+            if let Err(reason) = enforce_lock_engagement(state, req, holder).await {
+                return RpcResponse::err(reason, req.id);
+            }
+
             let result = {
                 let mut locks = state.locks.lock().await;
                 locks.acquire_with_ttl(resource, holder, ttl)
@@ -847,6 +939,10 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 .get("holder")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
+
+            if let Err(reason) = enforce_lock_engagement(state, req, holder).await {
+                return RpcResponse::err(reason, req.id);
+            }
 
             let released = {
                 let mut locks = state.locks.lock().await;
@@ -1230,6 +1326,178 @@ mod tests {
         assert_eq!(
             result.get("released").and_then(serde_json::Value::as_bool),
             Some(true)
+        );
+    }
+
+    // ── Engagement-token enforcement on privileged RPCs (PLAN_F F-1) ──
+
+    async fn engagement_fixture() -> (
+        Arc<SanghaState>,
+        wm_governance::engagement_tokens::EngagementIssuer,
+    ) {
+        let seed = [7u8; 32];
+        let mesh_kp = crate::crypto::MeshKeyPair::from_secret(seed);
+        let state = Arc::new(SanghaState::with_keypair(
+            "local",
+            "127.0.0.1:7369",
+            crate::crypto::MeshKeyPair::from_seed(b"local"),
+        ));
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("holder-a", "127.0.0.1:9999").signed(&mesh_kp))
+            .expect("holder binds");
+        let issuer = wm_governance::engagement_tokens::EngagementIssuer::with_keypair(
+            wm_governance::network_profile::AgentKeypair::from_seed(seed),
+        );
+        (state, issuer)
+    }
+
+    fn lock_params_with_engagement(
+        holder: &str,
+        token: &wm_governance::engagement_tokens::EngagementToken,
+        issuer_public_key: &str,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "resource": "memory:galaxy:codex",
+            "holder": holder,
+            "ttl_sec": 30,
+            "engagement": {
+                "token": token,
+                "issuer_public_key": issuer_public_key,
+            },
+        })
+    }
+
+    #[tokio::test]
+    async fn lock_request_with_valid_engagement_token_is_accepted() {
+        let (state, mut issuer) = engagement_fixture().await;
+        let token = issuer.issue(
+            "holder-a",
+            wm_governance::engagement_tokens::EngagementScope::Poc,
+            "mesh-roe",
+            Some(300),
+        );
+        let req = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: lock_params_with_engagement(
+                "holder-a",
+                &token,
+                &issuer.signer_public_key_hex(),
+            ),
+            id: 40,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(
+            resp.error.is_none(),
+            "valid credential must be accepted: {:?}",
+            resp.error
+        );
+        assert_eq!(
+            resp.result
+                .unwrap()
+                .get("acquired")
+                .and_then(serde_json::Value::as_bool),
+            Some(true)
+        );
+    }
+
+    #[tokio::test]
+    async fn lock_request_with_forged_engagement_token_is_rejected() {
+        let (state, mut issuer) = engagement_fixture().await;
+        let mut token = issuer.issue(
+            "holder-a",
+            wm_governance::engagement_tokens::EngagementScope::Poc,
+            "mesh-roe",
+            Some(300),
+        );
+        token.scope = wm_governance::engagement_tokens::EngagementScope::Custom("x".into());
+        let req = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: lock_params_with_engagement(
+                "holder-a",
+                &token,
+                &issuer.signer_public_key_hex(),
+            ),
+            id: 41,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.result.is_none());
+        assert!(
+            resp.error.unwrap().contains("engagement rejected"),
+            "tampered scope must fail the signature check"
+        );
+    }
+
+    #[tokio::test]
+    async fn lock_request_with_unbound_issuer_is_rejected() {
+        let (state, _) = engagement_fixture().await;
+        let mut foreign = wm_governance::engagement_tokens::EngagementIssuer::with_keypair(
+            wm_governance::network_profile::AgentKeypair::from_seed([9u8; 32]),
+        );
+        let token = foreign.issue(
+            "holder-a",
+            wm_governance::engagement_tokens::EngagementScope::Poc,
+            "mesh-roe",
+            Some(300),
+        );
+        let req = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: lock_params_with_engagement(
+                "holder-a",
+                &token,
+                &foreign.signer_public_key_hex(),
+            ),
+            id: 42,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.result.is_none());
+        assert!(
+            resp.error.unwrap().contains("not the bound key"),
+            "issuer key must be anchored to the holder's bound key"
+        );
+    }
+
+    #[tokio::test]
+    async fn strict_mode_requires_engagement_credential() {
+        let (state, _) = engagement_fixture().await;
+        state.set_require_tokens(true);
+        let req = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: serde_json::json!({
+                "resource": "memory:galaxy:codex",
+                "holder": "holder-a",
+                "ttl_sec": 30,
+            }),
+            id: 43,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.result.is_none());
+        assert!(
+            resp.error.unwrap().contains("credential required"),
+            "strict mode must refuse token-less lock requests"
+        );
+    }
+
+    #[tokio::test]
+    async fn permissive_mode_keeps_legacy_token_less_locks() {
+        let (state, _) = engagement_fixture().await;
+        assert!(!state.require_tokens());
+        let req = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: serde_json::json!({
+                "resource": "memory:galaxy:codex",
+                "holder": "holder-a",
+                "ttl_sec": 30,
+            }),
+            id: 44,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(
+            resp.error.is_none(),
+            "non-strict mode preserves legacy behavior: {:?}",
+            resp.error
         );
     }
 

@@ -13,6 +13,7 @@ keywords = ["mcp", "memory", "ai-agents", "local-first"]
 
 [dependencies]
 wm-core = { workspace = true }
+wm-governance = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

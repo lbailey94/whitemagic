@@ -259,6 +259,10 @@ pub enum CapabilityError {
     /// The underlying engagement token was revoked.
     #[error("Engagement token {token_id} has been revoked")]
     TokenRevoked { token_id: String },
+    /// The engagement token's Ed25519 signature does not verify against the
+    /// supplied issuer key (forged, tampered, or wrong issuer).
+    #[error("Engagement token {token_id} signature is invalid for the supplied issuer key")]
+    TokenSignatureInvalid { token_id: String },
     /// File access path outside allowed bounds.
     #[error("Path '{path}' is not permitted by capability grant (allowed: {allowed:?})")]
     PathDisallowed { path: String, allowed: Vec<String> },
@@ -408,12 +412,24 @@ pub fn capabilities_for_engagement(scope: &EngagementScope) -> CapabilitySet {
     }
 }
 
-/// Assert that an EngagementToken grants the required capability set at the given timestamp.
+/// Assert that an EngagementToken is validly signed by the issuer and grants
+/// the required capability set at the given timestamp.
+///
+/// Full check set: Ed25519 signature → revocation → expiry → scope-derived
+/// capabilities. The signature check comes first, so a forged token can never
+/// pass on a lucky scope match.
 pub fn assert_engagement_token_capabilities(
     token: &EngagementToken,
+    issuer_public_key_hex: &str,
     required: CapabilitySet,
     now: i64,
 ) -> Result<(), CapabilityError> {
+    if !crate::engagement_tokens::verify_token_signature(token, issuer_public_key_hex) {
+        return Err(CapabilityError::TokenSignatureInvalid {
+            token_id: token.id.clone(),
+        });
+    }
+
     if token.revoked {
         return Err(CapabilityError::TokenRevoked {
             token_id: token.id.clone(),
@@ -587,44 +603,88 @@ mod tests {
 
     #[test]
     fn engagement_token_capability_assertions() {
-        let mut token = EngagementToken {
-            id: "evt_1234567890abcdef12345678".to_string(),
-            issued_to: "tester".to_string(),
-            scope: EngagementScope::Poc,
-            rules_of_engagement_hash: "hash".to_string(),
-            nonce: "nonce".to_string(),
-            issued_at: 1000,
-            expires_at: Some(5000),
-            revoked: false,
-            signature: "sig".to_string(),
-        };
+        let mut issuer = crate::engagement_tokens::EngagementIssuer::with_keypair(
+            crate::network_profile::AgentKeypair::from_seed([42u8; 32]),
+        );
+        let issuer_key = issuer.signer_public_key_hex();
+        let token = issuer.issue("tester", EngagementScope::Poc, "hash", Some(5000));
+        let now = token.issued_at + 1;
 
         // Poc grants FsRead, MemoryRead, MemoryWrite, ModelInvoke
         assert!(
             assert_engagement_token_capabilities(
                 &token,
+                &issuer_key,
                 CapabilitySet::from(Capability::FsRead),
-                2000
+                now
             )
             .is_ok()
         );
         assert!(
             assert_engagement_token_capabilities(
                 &token,
+                &issuer_key,
                 CapabilitySet::from(Capability::NetOutbound),
-                2000
+                now
             )
             .is_err()
         );
 
         // Revocation blocks
-        token.revoked = true;
+        let mut revoked = token.clone();
+        revoked.revoked = true;
         let err = assert_engagement_token_capabilities(
-            &token,
+            &revoked,
+            &issuer_key,
             CapabilitySet::from(Capability::FsRead),
-            2000,
+            now,
         )
         .unwrap_err();
-        assert_eq!(err, CapabilityError::TokenRevoked { token_id: token.id });
+        assert_eq!(
+            err,
+            CapabilityError::TokenRevoked {
+                token_id: revoked.id
+            }
+        );
+
+        // Forged signature blocks even with a matching scope
+        let mut forged = token.clone();
+        forged.signature = "0".repeat(128);
+        let err = assert_engagement_token_capabilities(
+            &forged,
+            &issuer_key,
+            CapabilitySet::from(Capability::FsRead),
+            now,
+        )
+        .unwrap_err();
+        assert_eq!(
+            err,
+            CapabilityError::TokenSignatureInvalid {
+                token_id: forged.id
+            }
+        );
+
+        // Wrong issuer key blocks
+        let other_key = crate::network_profile::AgentKeypair::from_seed([9u8; 32]).public_key_hex();
+        assert!(
+            assert_engagement_token_capabilities(
+                &token,
+                &other_key,
+                CapabilitySet::from(Capability::FsRead),
+                now
+            )
+            .is_err()
+        );
+
+        // Expiry blocks
+        assert!(
+            assert_engagement_token_capabilities(
+                &token,
+                &issuer_key,
+                CapabilitySet::from(Capability::FsRead),
+                token.expires_at.unwrap() + 1
+            )
+            .is_err()
+        );
     }
 }

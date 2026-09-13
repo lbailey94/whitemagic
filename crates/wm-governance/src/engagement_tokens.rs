@@ -309,6 +309,22 @@ impl EngagementIssuer {
     }
 }
 
+/// Verify only the Ed25519 signature over a token's canonical payload.
+///
+/// Stateless cryptographic gate for validators that do not hold the issuer's
+/// revocation set or the ROE document (e.g. mesh request authorization).
+/// Callers must still check revocation, expiry, and scope — see
+/// [`crate::capabilities::assert_engagement_token_capabilities`].
+#[must_use]
+pub fn verify_token_signature(token: &EngagementToken, issuer_public_key_hex: &str) -> bool {
+    is_hex_str(&token.signature, 128)
+        && crate::network_profile::verify_signature(
+            issuer_public_key_hex,
+            canonical_payload(token).as_bytes(),
+            &token.signature,
+        )
+}
+
 /// Verify a token against an explicit issuer public key (stateless path).
 ///
 /// Same checks as [`EngagementIssuer::validate`] — signature →
