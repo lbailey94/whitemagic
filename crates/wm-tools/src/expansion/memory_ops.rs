@@ -1413,8 +1413,7 @@ impl Tool for MemoryHybridRecallTool {
         // superseded and tamper-failing records are refused; nothing is
         // thawed or mutated. Appended only after hot routes settle, and
         // only into remaining `limit` headroom.
-        let mut cold_discovery: Option<serde_json::Value> = None;
-        if include_cold && !query.is_empty() {
+        let cold_discovery: Option<serde_json::Value> = if include_cold && !query.is_empty() {
             let terms: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
             let remaining = limit.saturating_sub(results.len());
             let outcome = self.store.find_cold_matching(
@@ -1457,7 +1456,7 @@ impl Tool for MemoryHybridRecallTool {
             if appended > 0 && recall_mode == "none" {
                 recall_mode = "cold";
             }
-            cold_discovery = Some(json!({
+            Some(json!({
                 "enabled": true,
                 "scanned": outcome.scanned,
                 "candidates": outcome.candidates,
@@ -1467,8 +1466,10 @@ impl Tool for MemoryHybridRecallTool {
                 "private_skipped": outcome.private_skipped,
                 "non_current_skipped": outcome.non_current_skipped,
                 "no_thaw": true,
-            }));
-        }
+            }))
+        } else {
+            None
+        };
         let hint = if results.is_empty() && !query.is_empty() {
             Some(if galaxy_explicit {
                 empty_result_hint(&self.store, galaxy)

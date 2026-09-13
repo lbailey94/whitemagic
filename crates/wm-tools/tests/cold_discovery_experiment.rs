@@ -49,12 +49,13 @@ async fn public_cold_fact_search_to_read_is_measured_before_and_after_digest() {
         correction.clone(),
     ];
     store.put_batch(Galaxy::Codex, &fixtures).unwrap();
-    let mut writer = search.writer().unwrap();
-    for memory in &fixtures {
-        search.index_memory(&mut writer, memory).unwrap();
+    {
+        let mut writer = search.writer().unwrap();
+        for memory in &fixtures {
+            search.index_memory(&mut writer, memory).unwrap();
+        }
+        search.commit(&mut writer).unwrap();
     }
-    search.commit(&mut writer).unwrap();
-    drop(writer);
     let search_tool = MemorySearchTool::new(search.clone(), store.clone());
     let read_tool = MemoryReadTool::new(store.clone());
     let args = json!({"query":fact,"galaxy":"codex","limit":20});
