@@ -1,4 +1,4 @@
-//! Galaxy — The 14 memory galaxies.
+//! Galaxy — The 16 memory galaxies.
 //!
 //! Each galaxy is a named LMDB sub-database storing related memories.
 //! The galaxy taxonomy is preserved from v2.
@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// The 14 memory galaxies.
+/// The 16 memory galaxies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Galaxy {
     /// Artistic/creative memories
@@ -39,15 +39,18 @@ pub enum Galaxy {
     Embeddings,
     /// Valkyrie's personal sanctuary: reflections, self-directed thoughts, plans, and symbiont proposals
     Valkyrie,
+    /// OS telemetry windows (evidence, not cognition — excluded from
+    /// default recall/consolidation; query it by galaxy).
+    Telemetry,
 }
 
 impl Galaxy {
     /// Total number of galaxies.
-    pub const COUNT: usize = 15;
+    pub const COUNT: usize = 16;
 
     /// All galaxies in order.
     #[must_use]
-    pub const fn all() -> [Self; 15] {
+    pub const fn all() -> [Self; 16] {
         [
             Self::Aria,
             Self::Citta,
@@ -64,6 +67,7 @@ impl Galaxy {
             Self::Associations,
             Self::Embeddings,
             Self::Valkyrie,
+            Self::Telemetry,
         ]
     }
 
@@ -71,7 +75,9 @@ impl Galaxy {
     ///
     /// Karma, Dharma, Associations, and Embeddings store non-Memory data
     /// (KarmaEntry, rules, association links, vectors) and should be skipped
-    /// when scanning for memories.
+    /// when scanning for memories. Telemetry is a Memory galaxy but
+    /// deliberately excluded here: OS telemetry is evidence, not cognition —
+    /// it is queried by explicit galaxy, never by default recall.
     #[must_use]
     pub const fn memory_galaxies() -> [Self; 11] {
         [
@@ -108,6 +114,7 @@ impl Galaxy {
             Self::Associations => "associations",
             Self::Embeddings => "embeddings",
             Self::Valkyrie => "valkyrie",
+            Self::Telemetry => "telemetry",
         }
     }
 
@@ -130,6 +137,7 @@ impl Galaxy {
             Self::Associations => "Cross-memory links",
             Self::Embeddings => "Vector embeddings",
             Self::Valkyrie => "Valkyrie sanctuary/reflections",
+            Self::Telemetry => "OS telemetry windows (evidence, not cognition)",
         }
     }
 
@@ -153,9 +161,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn galaxy_count_is_15() {
-        assert_eq!(Galaxy::COUNT, 15);
-        assert_eq!(Galaxy::all().len(), 15);
+    fn galaxy_count_is_16() {
+        assert_eq!(Galaxy::COUNT, 16);
+        assert_eq!(Galaxy::all().len(), 16);
     }
 
     #[test]
@@ -173,6 +181,10 @@ mod tests {
         assert!(!mg.contains(&Galaxy::Dharma));
         assert!(!mg.contains(&Galaxy::Associations));
         assert!(!mg.contains(&Galaxy::Embeddings));
+        assert!(
+            !mg.contains(&Galaxy::Telemetry),
+            "telemetry is evidence, not default recall"
+        );
         assert!(mg.contains(&Galaxy::Valkyrie));
     }
 }
