@@ -1,5 +1,6 @@
-//! `wm selftest` — a five-second end-to-end invariant check on a throwaway
-//! store. Intended for installs, updates, bug reports, CI, and agents that
+//! `wm selftest` — a five-second end-to-end invariant check on a throwaway store.
+//!
+//! Intended for installs, updates, bug reports, CI, and agents that
 //! want to verify their own memory substrate before trusting it.
 //!
 //! Every check is local, deterministic, and touches only a temporary
@@ -67,7 +68,7 @@ async fn call(server: &mut McpServer, id: u64, route: &str, args: Value) -> Valu
         .pointer("/result/content/0/text")
         .and_then(Value::as_str)
         .unwrap_or("{}");
-    serde_json::from_str(text).unwrap_or(json!({}))
+    serde_json::from_str(text).unwrap_or_else(|_| json!({}))
 }
 
 async fn handshake(server: &mut McpServer) -> Value {

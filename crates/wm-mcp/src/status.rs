@@ -59,7 +59,7 @@ impl StatusReport {
         ));
         match (&self.last_backup, self.last_backup_age_secs) {
             (Some(ts), Some(age)) => {
-                out.push(format!("Last backup        {ts} ({} ago)", human_age(age)))
+                out.push(format!("Last backup        {ts} ({} ago)", human_age(age)));
             }
             _ => {
                 out.push("Last backup        none found (~/whitemagic-backups)".to_string());
@@ -111,12 +111,11 @@ fn last_backup() -> (Option<String>, Option<u64>) {
 }
 
 fn dirs_home() -> PathBuf {
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."))
+    std::env::var_os("HOME").map_or_else(|| PathBuf::from("."), PathBuf::from)
 }
 
 /// Read `install.json` (update channel/state) beside the store.
+#[must_use]
 pub fn read_install_json(store_root: &Path) -> Option<serde_json::Value> {
     let p = store_root.join("install.json");
     let text = std::fs::read_to_string(p).ok()?;
