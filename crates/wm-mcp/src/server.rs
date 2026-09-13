@@ -5083,11 +5083,11 @@ mod tests {
         assert!(resp.error.is_none());
         let beta_result = resp.result.unwrap();
         let beta_count = beta_result["tools"].as_array().unwrap().len();
-        // In Beta: wm meta-tool is exposed at index 0 plus discrete catalog (7 tools)
-        // In Delta: 0 tools
+        // In Beta: wm meta-tool is exposed at index 0 plus the discrete
+        // lifecycle catalog (10 tools, 2026-09-13). In Delta: 0 tools.
         assert!(beta_count > delta_count);
         assert_eq!(beta_result["tools"][0]["name"], "wm");
-        assert_eq!(beta_count, 7);
+        assert_eq!(beta_count, 11);
     }
 
     #[tokio::test]
