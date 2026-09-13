@@ -8,7 +8,9 @@
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
 #
-# Supported platform (private alpha): Linux x86-64 only.
+# Install gate (alpha): Linux x86-64 only. macOS/Windows binaries are
+# published in every release but their install paths are not gated yet —
+# this script deliberately refuses them rather than guessing.
 # On Linux x86-64 the fully static (musl) build is preferred when the target
 # release provides it; the dynamically linked glibc build requires glibc 2.39+.
 
@@ -109,7 +111,8 @@ case "$TARGET" in
         ;;
     *)
         echo "Unsupported target for this release: ${TARGET}" >&2
-        echo "The private alpha supports Linux x86-64 only." >&2
+        echo "The alpha install gate covers Linux x86-64 only." >&2
+        echo "macOS/Windows binaries are published in every release: https://github.com/${REPO}/releases" >&2
         exit 1
         ;;
 esac

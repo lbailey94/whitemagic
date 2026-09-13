@@ -1,7 +1,8 @@
 # WhiteMagic Quickstart
 
 **Version**: 9.1.3
-**Supported platform**: Linux x86-64
+**Install path**: Linux x86-64 (static musl). macOS and Windows binaries ship
+in every release but their install paths are not gated yet.
 
 Get from zero to working agent memory in under five minutes.
 

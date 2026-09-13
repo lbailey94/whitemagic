@@ -23,10 +23,9 @@ next session — without sending your memory store to any hosted service.
 
 ## Status
 
-**WhiteMagic v9.** General release for AI coding agents.
+**WhiteMagic v9.** Public alpha for AI coding agents.
 
-- **Supported platforms: Linux x86-64, macOS, Windows.**
-- The Linux x86-64 artifact is fully static — no glibc or distribution requirements.
+- **Install path: Linux x86-64** — fully static (musl) build, no glibc or distribution requirements. macOS and Windows binaries are published in every release but are not yet install-gated.
 - Trusted, local-first, single-user operation with Landlock containment and firebreak guards.
 
 ## What it does
@@ -65,12 +64,15 @@ checksum automatically):
 curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
 ```
 
-Verify the installation:
+Verify the installation and see the product work end to end:
 
 ```bash
-wm --version   # wm 9.1.3
-wm doctor      # environment health check
+wm --version    # wm 9.1.3
+wm quickstart   # 30-second two-process continuity demo (isolated store)
 ```
+
+`wm doctor` is a troubleshooting tool, not a setup step — run
+`wm doctor --deep` when something looks wrong.
 
 ## Connect an MCP client
 
