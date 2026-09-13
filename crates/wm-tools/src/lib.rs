@@ -3586,6 +3586,7 @@ impl Tool for WmMetaTool {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /// Public contract view of the meta-tool's hardcoded required-arg table.
+///
 /// `wm-mcp`'s contract tests prove this table never drifts from the tools'
 /// own schemas (the `memory.query` mismatch, 2026-09-13, was exactly such a
 /// drift).

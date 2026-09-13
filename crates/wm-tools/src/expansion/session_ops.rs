@@ -534,9 +534,7 @@ impl Tool for SessionContinuityTool {
             .iter()
             .find(|m| {
                 let sid = m.metadata.id.to_string();
-                load_turns(&self.store, Some(&sid), 1, false)
-                    .map(|turns| !turns.is_empty())
-                    .unwrap_or(false)
+                load_turns(&self.store, Some(&sid), 1, false).is_ok_and(|turns| !turns.is_empty())
             })
             .copied()
             .or_else(|| starts.first().copied());

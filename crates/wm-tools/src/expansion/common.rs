@@ -117,10 +117,12 @@ pub fn int_prop(description: &str) -> serde_json::Value {
 }
 
 /// Canonicalize legacy or underscore tool-name aliases to the registered
-/// canonical name. This is the single mapping shared by the `wm` meta-tool
-/// route resolver and the MCP server's discrete-tool dispatch, so
-/// `memory.find`, `memory_find`, and `memory.search` all resolve to the same
-/// operation (first-run feedback, 2026-09-13: agents infer all three).
+/// canonical name.
+///
+/// This is the single mapping shared by the `wm` meta-tool route resolver and
+/// the MCP server's discrete-tool dispatch, so `memory.find`, `memory_find`,
+/// and `memory.search` all resolve to the same operation (first-run feedback,
+/// 2026-09-13: agents infer all three).
 #[must_use]
 pub fn canonical_tool_alias(name: &str) -> Option<&'static str> {
     match name {
@@ -211,8 +213,9 @@ pub fn parse_galaxy(s: &str) -> wm_core::Result<Galaxy> {
         "associations" => Ok(Galaxy::Associations),
         "embeddings" => Ok(Galaxy::Embeddings),
         "valkyrie" => Ok(Galaxy::Valkyrie),
+        "telemetry" => Ok(Galaxy::Telemetry),
         other => Err(CoreError::InvalidArgs(format!(
-            "Unknown galaxy: '{other}'. Valid galaxies: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal, karma, dharma, associations, embeddings, valkyrie"
+            "Unknown galaxy: '{other}'. Valid galaxies: aria, citta, codex, journals, dreams, research, sessions, substrate, tutorial, universal, karma, dharma, associations, embeddings, valkyrie, telemetry"
         ))),
     }
 }
@@ -228,23 +231,9 @@ pub fn parse_galaxy_or(s: Option<&str>, default: Galaxy) -> wm_core::Result<Gala
 
 #[must_use]
 pub const fn galaxy_name(g: Galaxy) -> &'static str {
-    match g {
-        Galaxy::Aria => "aria",
-        Galaxy::Citta => "citta",
-        Galaxy::Codex => "codex",
-        Galaxy::Journals => "journals",
-        Galaxy::Dreams => "dreams",
-        Galaxy::Research => "research",
-        Galaxy::Sessions => "sessions",
-        Galaxy::Substrate => "substrate",
-        Galaxy::Tutorial => "tutorial",
-        Galaxy::Universal => "universal",
-        Galaxy::Karma => "karma",
-        Galaxy::Dharma => "dharma",
-        Galaxy::Associations => "associations",
-        Galaxy::Embeddings => "embeddings",
-        Galaxy::Valkyrie => "valkyrie",
-    }
+    // Single source of truth: `Galaxy::db_name` (keeps the two tables from
+    // drifting as galaxies are added).
+    g.db_name()
 }
 
 #[cfg(test)]
