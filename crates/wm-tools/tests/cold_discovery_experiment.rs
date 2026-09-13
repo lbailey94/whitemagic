@@ -194,4 +194,45 @@ async fn public_cold_fact_search_to_read_is_measured_before_and_after_digest() {
         "KNOWN_ID_CONTROL id={target_id} read_latency_us={control_us} exact_bytes={} no_thaw=true discovery=false",
         target_bytes.len()
     );
+
+    // ── Opt-in cold discovery on the live retrieval verb (the accepted seam
+    // from the 2026-09-13 lossless cycle): the digested original is now
+    // discoverable by query — hydrated and integrity-verified from the cold
+    // payload, explicitly disclosed, still no thaw. Private originals stay
+    // absent; the legacy-tool observations above are unchanged.
+    let live = wm_tools::expansion::MemoryHybridRecallTool::as_search(
+        store.clone(),
+        Some(search.clone()),
+        None,
+    );
+    let clock = std::time::Instant::now();
+    let discovered = live
+        .call(
+            &mut Context::default(),
+            json!({"query":fact,"galaxy":"codex","limit":20,"include_cold":true}),
+        )
+        .await
+        .unwrap();
+    let discovered_us = clock.elapsed().as_micros();
+    assert_eq!(
+        discovered["cold_discovery"]["no_thaw"], true,
+        "{discovered}"
+    );
+    assert!(
+        discovered["results"].as_array().unwrap().iter().any(|r| {
+            r["id"].as_str() == Some(target_id.to_string().as_str())
+                && r["source"] == "cold"
+                && r["integrity"] == "verified"
+        }),
+        "{discovered}"
+    );
+    assert!(
+        !discovered
+            .to_string()
+            .contains(&private.metadata.id.to_string()),
+        "{discovered}"
+    );
+    eprintln!(
+        "OPT_IN_COLD_DISCOVERY query={fact} latency_us={discovered_us} no_thaw=true result={discovered}"
+    );
 }

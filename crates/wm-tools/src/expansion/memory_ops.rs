@@ -980,6 +980,8 @@ impl Tool for MemoryHybridRecallTool {
                 "min_score": num_prop("Absolute BM25 score floor"),
                 "min_score_ratio": num_prop("Relative floor: reject hits below this fraction of the top score"),
                 "min_trust": num_prop("Minimum source_trust (0-1): drop results below this trust floor"),
+                "include_cold": bool_prop("Opt-in cold-storage discovery: scan, hydrate and integrity-verify cold originals by content (bounded, no thaw)"),
+                "cold_scan_limit": int_prop("Maximum cold records to scan when include_cold is set (default 2048)"),
             }),
             &["query"],
         )
@@ -992,6 +994,14 @@ impl Tool for MemoryHybridRecallTool {
             .get("limit")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(10) as usize;
+        let include_cold = args
+            .get("include_cold")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        let cold_scan_limit = args
+            .get("cold_scan_limit")
+            .and_then(serde_json::Value::as_u64)
+            .map_or(2048, |v| v.clamp(1, 100_000) as usize);
         let min_importance = args
             .get("min_importance")
             .and_then(serde_json::Value::as_f64)
@@ -1397,6 +1407,68 @@ impl Tool for MemoryHybridRecallTool {
         // where the content actually lives. Prevents the "silent zero" class
         // of failure (e.g. stores like the vault whose memories live in
         // `sessions`/`research`, not the default `codex`).
+        // Cold discovery (opt-in, bounded, identity-bound): hydrate and
+        // authorize candidates from the cold payload rather than trusting
+        // stale index entries. Private records never surface over MCP;
+        // superseded and tamper-failing records are refused; nothing is
+        // thawed or mutated. Appended only after hot routes settle, and
+        // only into remaining `limit` headroom.
+        let mut cold_discovery: Option<serde_json::Value> = None;
+        if include_cold && !query.is_empty() {
+            let terms: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
+            let remaining = limit.saturating_sub(results.len());
+            let outcome = self.store.find_cold_matching(
+                &terms,
+                if galaxy_explicit { Some(galaxy) } else { None },
+                remaining.max(1),
+                cold_scan_limit,
+            )?;
+            let existing: std::collections::HashSet<String> = results
+                .iter()
+                .filter_map(|r| {
+                    r.get("id")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_string)
+                })
+                .collect();
+            let mut appended = 0usize;
+            for record in &outcome.records {
+                if appended >= remaining {
+                    break;
+                }
+                let id = record.id.to_string();
+                if existing.contains(&id) {
+                    continue;
+                }
+                let mem = record.decompress()?;
+                results.push(json!({
+                    "id": id,
+                    "content": &mem.content,
+                    "importance": mem.metadata.importance,
+                    "score": serde_json::Value::Null,
+                    "source": "cold",
+                    "cold": true,
+                    "integrity": "verified",
+                    "model_visible": !mem.metadata.model_exclude,
+                    "tags": &mem.metadata.tags,
+                }));
+                appended += 1;
+            }
+            if appended > 0 && recall_mode == "none" {
+                recall_mode = "cold";
+            }
+            cold_discovery = Some(json!({
+                "enabled": true,
+                "scanned": outcome.scanned,
+                "candidates": outcome.candidates,
+                "matched": outcome.matched,
+                "appended": appended,
+                "integrity_rejected": outcome.integrity_rejected,
+                "private_skipped": outcome.private_skipped,
+                "non_current_skipped": outcome.non_current_skipped,
+                "no_thaw": true,
+            }));
+        }
         let hint = if results.is_empty() && !query.is_empty() {
             Some(if galaxy_explicit {
                 empty_result_hint(&self.store, galaxy)
@@ -1435,6 +1507,9 @@ impl Tool for MemoryHybridRecallTool {
         if let Some(min) = min_trust {
             out["min_trust"] = json!(min);
             out["min_trust_filtered"] = json!(min_trust_filtered);
+        }
+        if let Some(cd) = cold_discovery {
+            out["cold_discovery"] = cd;
         }
         Ok(out)
     }

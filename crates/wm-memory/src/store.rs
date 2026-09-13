@@ -1769,6 +1769,86 @@ impl MemoryStore {
         Ok(results)
     }
 
+    /// Bounded, identity-bound cold discovery.
+    ///
+    /// Scans at most `max_scan` cold records (LMDB `cold_storage` DBI),
+    /// filters by galaxy when given, decompresses each candidate, verifies
+    /// the id/galaxy/content-hash chain, applies visibility (private never
+    /// surfaces; superseded/non-current records are skipped), and returns
+    /// up to `limit` full cold records whose content or tags contain every
+    /// query term (case-insensitive). Nothing is thawed or mutated.
+    pub fn find_cold_matching(
+        &self,
+        terms: &[String],
+        galaxy: Option<Galaxy>,
+        limit: usize,
+        max_scan: usize,
+    ) -> Result<crate::cold_storage::ColdDiscoveryOutcome> {
+        let mut out = crate::cold_storage::ColdDiscoveryOutcome::default();
+        if terms.is_empty() || limit == 0 || max_scan == 0 {
+            return Ok(out);
+        }
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let mut cursor = tx
+            .open_ro_cursor(self.cold_storage_db)
+            .map_err(|e| CoreError::Memory(format!("LMDB open_ro_cursor failed: {e}")))?;
+        for (_key, val) in cursor.iter() {
+            if out.scanned >= max_scan || out.records.len() >= limit {
+                break;
+            }
+            out.scanned += 1;
+            let record: crate::cold_storage::ColdRecord = if let Ok(r) = rmp_serde::from_slice(val)
+            {
+                r
+            } else {
+                out.integrity_rejected += 1;
+                continue;
+            };
+            if let Some(g) = galaxy {
+                if record.galaxy != g {
+                    continue;
+                }
+            }
+            out.candidates += 1;
+            let mem = if let Ok(m) = record.decompress() {
+                m
+            } else {
+                out.integrity_rejected += 1;
+                continue;
+            };
+            if mem.metadata.is_private {
+                out.private_skipped += 1;
+                continue;
+            }
+            if !mem.metadata.validity.is_current() {
+                out.non_current_skipped += 1;
+                continue;
+            }
+            let integrity_ok = mem.metadata.id == record.id
+                && mem.metadata.galaxy == record.galaxy
+                && mem.metadata.content_hash == record.content_hash
+                && crate::content_hash(&mem.content) == record.content_hash;
+            if !integrity_ok {
+                out.integrity_rejected += 1;
+                continue;
+            }
+            let haystack = format!(
+                "{} {}",
+                mem.content.to_lowercase(),
+                mem.metadata.tags.join(" ").to_lowercase()
+            );
+            if !terms.iter().all(|t| haystack.contains(t.as_str())) {
+                continue;
+            }
+            out.matched += 1;
+            out.records.push(record);
+        }
+        Ok(out)
+    }
+
     /// Freeze an active hot memory into the compressed cold archive.
     ///
     /// Non-destructive: preserves complete metadata, vector clocks, content, embeddings,
@@ -1883,6 +1963,73 @@ mod tests {
         for galaxy in Galaxy::all() {
             let _db = store.galaxy_db(galaxy).unwrap();
         }
+    }
+
+    #[test]
+    fn cold_discovery_hydrates_verifies_and_respects_visibility() {
+        use crate::cold_storage::{ColdRecord, CompressionCodec, OuterRimFactors};
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let factors = OuterRimFactors {
+            age_factor: 0.5,
+            access_factor: 0.5,
+            resonance_factor: 0.5,
+            emotional_factor: 0.5,
+            importance_factor: 0.5,
+            distance: 0.5,
+        };
+
+        let pub_mem = Memory::new(
+            Galaxy::Codex,
+            "public needle zxquniquecoldfact741 buried".into(),
+        );
+        let rec = ColdRecord::new(
+            &pub_mem,
+            0.5,
+            factors.clone(),
+            None,
+            None,
+            CompressionCodec::Gzip,
+        )
+        .unwrap();
+        store.put_cold_record(&rec).unwrap();
+        let out = store
+            .find_cold_matching(&["zxquniquecoldfact741".to_string()], None, 10, 100)
+            .unwrap();
+        assert_eq!(out.matched, 1);
+        assert_eq!(out.integrity_rejected, 0);
+        assert_eq!(out.records.len(), 1);
+
+        // Private originals never surface over MCP discovery.
+        let mut priv_mem = Memory::new(Galaxy::Codex, "private needle zxquniquecoldfact742".into());
+        priv_mem.metadata.is_private = true;
+        store
+            .put_cold_record(
+                &ColdRecord::new(&priv_mem, 0.5, factors, None, None, CompressionCodec::Gzip)
+                    .unwrap(),
+            )
+            .unwrap();
+        let out_priv = store
+            .find_cold_matching(&["zxquniquecoldfact742".to_string()], None, 10, 100)
+            .unwrap();
+        assert_eq!(out_priv.matched, 0);
+        assert_eq!(out_priv.private_skipped, 1);
+
+        // Tamper: the payload decompresses to content that no longer matches
+        // the advertised content hash — refuse, never return.
+        let mut tampered = rec.clone();
+        let mut bad = Memory::new(Galaxy::Codex, "tampered needle zxquniquecoldfact743".into());
+        bad.metadata.id = rec.id;
+        let (payload, size) =
+            crate::cold_storage::compress_memory(&bad, CompressionCodec::Gzip).unwrap();
+        tampered.compressed_payload = payload;
+        tampered.uncompressed_size = size;
+        store.put_cold_record(&tampered).unwrap();
+        let out_tamper = store
+            .find_cold_matching(&["zxquniquecoldfact743".to_string()], None, 10, 100)
+            .unwrap();
+        assert_eq!(out_tamper.matched, 0);
+        assert_eq!(out_tamper.integrity_rejected, 1);
     }
 
     /// Substring filter (memory.query trap fix, 2026-08-29): literal

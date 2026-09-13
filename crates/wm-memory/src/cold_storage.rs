@@ -421,6 +421,29 @@ pub struct ColdQuery {
     pub limit: usize,
 }
 
+/// Outcome of a bounded cold-storage discovery scan.
+///
+/// Discovery is opt-in and bounded: candidates are hydrated and authorized
+/// from the cold payload (decompress + integrity + visibility) rather than
+/// trusting stale index entries. No record is thawed or mutated.
+#[derive(Debug, Default, Clone)]
+pub struct ColdDiscoveryOutcome {
+    /// Cold records visited by the scan.
+    pub scanned: usize,
+    /// Records in the requested galaxy.
+    pub candidates: usize,
+    /// Records that text-matched, verified, and passed visibility.
+    pub matched: usize,
+    /// Records refused because decompression or hash verification failed.
+    pub integrity_rejected: usize,
+    /// Records skipped because they are private (never surface over MCP).
+    pub private_skipped: usize,
+    /// Records skipped because their validity is not current (superseded).
+    pub non_current_skipped: usize,
+    /// Verified, visible matching records (caller decompresses for output).
+    pub records: Vec<ColdRecord>,
+}
+
 impl ColdQuery {
     /// Create a new query matching all cold records (limit 100).
     #[must_use]

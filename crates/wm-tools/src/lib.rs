@@ -4947,6 +4947,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn memory_search_cold_discovery_is_opt_in_and_verified() {
+        let store = test_store();
+        let factors = wm_memory::cold_storage::OuterRimFactors {
+            age_factor: 0.5,
+            access_factor: 0.5,
+            resonance_factor: 0.5,
+            emotional_factor: 0.5,
+            importance_factor: 0.5,
+            distance: 0.5,
+        };
+        let mem = Memory::new(
+            Galaxy::Codex,
+            "cold original zxquniquehotcold999 deep".into(),
+        );
+        let rec = wm_memory::cold_storage::ColdRecord::new(
+            &mem,
+            0.5,
+            factors,
+            None,
+            None,
+            wm_memory::cold_storage::CompressionCodec::Gzip,
+        )
+        .unwrap();
+        store.put_cold_record(&rec).unwrap();
+
+        let registry = test_registry_with(&store);
+        // test_registry_with runs without a search engine, so memory.search is
+        // not registered there; construct the public retrieval tool directly.
+        let _ = &registry;
+        let search = expansion::MemoryHybridRecallTool::as_search(store.clone(), None, None);
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // Default: hot-only (no cold scan, previous behavior intact).
+        let without = search
+            .call(
+                &mut ctx,
+                json!({"query": "zxquniquehotcold999", "limit": 5}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(without["count"], 0, "{without}");
+
+        // Opt-in: cold original discovered, integrity-verified, no thaw.
+        let with = search
+            .call(
+                &mut ctx,
+                json!({"query": "zxquniquehotcold999", "limit": 5, "include_cold": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(with["cold_discovery"]["no_thaw"], true, "{with}");
+        assert!(
+            with["results"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|r| r["source"] == "cold" && r["integrity"] == "verified"),
+            "{with}"
+        );
+    }
+
+    #[tokio::test]
     async fn wm_missing_arg_returns_hint() {
         let store = test_store();
         let registry = test_registry_with(&store);
