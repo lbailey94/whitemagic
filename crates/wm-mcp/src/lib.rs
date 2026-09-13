@@ -24,9 +24,13 @@ pub mod network_audit;
 pub mod opencode;
 pub mod resources;
 pub mod seal;
+pub mod selftest;
 pub mod server;
+pub mod setup;
+pub mod status;
 pub mod store_busy;
 pub mod trust_admin;
+pub mod update;
 
 #[cfg(test)]
 mod effect_audit;

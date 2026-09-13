@@ -135,6 +135,38 @@ enum Commands {
         #[arg(long)]
         verbose: bool,
     },
+    /// Run a five-second end-to-end invariant check on a throwaway store
+    Selftest {
+        /// Machine-readable report
+        #[arg(long)]
+        json: bool,
+    },
+    /// Human-facing health summary (store, counts, index, backup, update)
+    Status {
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Machine-readable report
+        #[arg(long)]
+        json: bool,
+    },
+    /// Configure an MCP client to use WhiteMagic (standard JSON configs can
+    /// be patched; the change is always shown first)
+    Setup {
+        /// Client id: opencode | claude | cursor | windsurf | codex (omit to list)
+        client: Option<String>,
+        /// Apply the change (standard JSON configs only; timestamped backup first)
+        #[arg(long)]
+        write: bool,
+        /// Path written into the client config (default: this executable)
+        #[arg(long)]
+        binary: Option<PathBuf>,
+    },
+    /// Update operations (notify-only; GitHub Releases are canonical)
+    Update {
+        #[command(subcommand)]
+        action: UpdateAction,
+    },
     /// Diagnose system issues
     Doctor {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
@@ -659,6 +691,22 @@ fn detect_hostname() -> String {
     "unknown".to_string()
 }
 
+#[derive(Subcommand)]
+enum UpdateAction {
+    /// Check for a newer signed release (notify-only, no installation)
+    Check {
+        /// Override the manifest URL
+        #[arg(long)]
+        manifest_url: Option<String>,
+        /// Machine-readable result
+        #[arg(long)]
+        json: bool,
+        /// Verify transport integrity only (no pinned key available); loud
+        #[arg(long)]
+        insecure_checksum: bool,
+    },
+}
+
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
@@ -904,6 +952,214 @@ fn main() -> anyhow::Result<()> {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async { run_quickstart().await })?;
         }
+        Commands::Selftest { json } => {
+            let rt = tokio::runtime::Runtime::new()?;
+            let report = rt.block_on(async { wm_mcp::selftest::run().await })?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!("wm selftest {}", report.version);
+                for c in &report.checks {
+                    println!(
+                        "  {} {:<20} {} ({} ms)",
+                        if c.ok { "OK  " } else { "FAIL" },
+                        c.name,
+                        c.detail,
+                        c.ms
+                    );
+                }
+                let (passed, total) = report.score();
+                println!("{passed}/{total} passed in {} ms", report.total_ms);
+            }
+            if !report.passed() {
+                std::process::exit(1);
+            }
+        }
+        Commands::Status { store, json } => {
+            let root = store.unwrap_or_else(default_store_path);
+            let report = wm_mcp::status::collect(&root);
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                for line in report.lines() {
+                    println!("{line}");
+                }
+                if !report.store_ok {
+                    println!();
+                    println!("No store yet — run 'wm quickstart' to create one.");
+                }
+            }
+        }
+        Commands::Setup {
+            client,
+            write,
+            binary,
+        } => {
+            let exe = match binary {
+                Some(p) => p,
+                None => std::env::current_exe()?,
+            };
+            match client {
+                None => {
+                    println!("=== WhiteMagic Setup ===");
+                    println!();
+                    println!("Supported clients:");
+                    for spec in wm_mcp::setup::specs() {
+                        let state = if spec.config_path.exists() {
+                            "config found"
+                        } else {
+                            "config not found"
+                        };
+                        println!(
+                            "  {:<9} {:<16} {} ({state})",
+                            spec.id,
+                            spec.label,
+                            spec.config_path.display()
+                        );
+                    }
+                    println!();
+                    println!(
+                        "Usage: wm setup <client> [--write]  (binary: {})",
+                        exe.display()
+                    );
+                }
+                Some(id) => match wm_mcp::setup::find(&id) {
+                    None => anyhow::bail!(
+                        "unknown client '{id}' (expected: opencode, claude, cursor, windsurf, codex)"
+                    ),
+                    Some(spec) => {
+                        println!("{} ({})", spec.label, spec.id);
+                        println!("  config:  {}", spec.config_path.display());
+                        println!("  binary:  {}", exe.display());
+                        println!(
+                            "  status:  {}",
+                            if spec.config_path.exists() {
+                                "existing config found"
+                            } else {
+                                "no config yet"
+                            }
+                        );
+                        println!();
+                        println!("Proposed addition:");
+                        println!("{}", wm_mcp::setup::proposal(&spec, &exe));
+                        println!();
+                        if write {
+                            let (msg, backup) = wm_mcp::setup::write_mcp_servers_json(&spec, &exe)?;
+                            println!("{msg}");
+                            if let Some(b) = backup {
+                                println!("backup:  {}", b.display());
+                            }
+                            println!("Next: restart {} and run 'wm selftest'.", spec.label);
+                        } else if spec.kind == wm_mcp::setup::Kind::McpServersJson {
+                            println!(
+                                "Dry run. Re-run with --write to patch this config (backup made first)."
+                            );
+                        } else {
+                            println!(
+                                "This format is print-only in v1 — paste the snippet above, then restart {}.",
+                                spec.label
+                            );
+                        }
+                    }
+                },
+            }
+        }
+        Commands::Update { action } => match action {
+            UpdateAction::Check {
+                manifest_url,
+                json,
+                insecure_checksum,
+            } => {
+                use wm_mcp::update::{self, SignatureStatus};
+                let url = manifest_url.unwrap_or_else(|| update::DEFAULT_MANIFEST_URL.to_string());
+                let text = update::fetch_manifest_text(&url, std::time::Duration::from_secs(15))?;
+                let manifest: update::ReleaseManifest = serde_json::from_str(&text)?;
+                let sig = update::fetch_manifest_text(
+                    &format!("{url}.sig"),
+                    std::time::Duration::from_secs(10),
+                )
+                .ok()
+                .map(|s| s.trim().to_string());
+                let key = update::release_public_key();
+                let status =
+                    update::verify_manifest(text.as_bytes(), sig.as_deref(), key.as_deref());
+                let current = env!("CARGO_PKG_VERSION");
+                let available = manifest.version != current;
+                let exe = std::env::current_exe()?;
+                let installed_via = update::detect_installed_via(&exe);
+                let root = default_store_path();
+                let mut state = update::read_install_state(&root).unwrap_or(update::InstallState {
+                    schema: 1,
+                    installed_via: installed_via.to_string(),
+                    version: current.to_string(),
+                    previous: None,
+                    channel: manifest.channel.clone(),
+                    update_policy: "notify".to_string(),
+                    last_check: None,
+                    latest_seen: None,
+                });
+                state.last_check = Some(chrono::Utc::now().to_rfc3339());
+                state.latest_seen = Some(manifest.version.clone());
+                state.channel = manifest.channel.clone();
+                let _ = update::write_install_state(&root, &state);
+
+                if matches!(status, SignatureStatus::Invalid) {
+                    anyhow::bail!(
+                        "release manifest signature is INVALID — do not use this release"
+                    );
+                }
+                if matches!(status, SignatureStatus::NoKey) && !insecure_checksum {
+                    anyhow::bail!(
+                        "no pinned release key in this build (set WM_RELEASE_PUBKEY or rebuild with it); \
+                         re-run with --insecure-checksum for transport-integrity only"
+                    );
+                }
+                let sig_label = match status {
+                    SignatureStatus::Verified => "verified (Ed25519)",
+                    SignatureStatus::NoKey => "UNVERIFIED (no pinned key; --insecure-checksum)",
+                    SignatureStatus::Missing => "missing signature (transport only)",
+                    SignatureStatus::Invalid => "INVALID",
+                };
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "current": current,
+                            "latest": manifest.version,
+                            "available": available,
+                            "channel": manifest.channel,
+                            "published": manifest.published,
+                            "signature": sig_label,
+                            "installed_via": installed_via,
+                            "manifest_url": url,
+                        }))?
+                    );
+                } else {
+                    println!("WhiteMagic {current} ({installed_via})");
+                    println!("Channel:  {}", manifest.channel);
+                    println!("Manifest: {url}");
+                    println!("Signature: {sig_label}");
+                    println!();
+                    if available {
+                        println!("Update available: {} -> {}", current, manifest.version);
+                        if let Some(notes) = &manifest.notes {
+                            println!("{notes}");
+                        }
+                        println!();
+                        match installed_via {
+                            "cargo" => println!("Update with: cargo install whitemagic --locked"),
+                            "homebrew" => println!("Update with: brew upgrade whitemagic"),
+                            "npm" => println!("Update with: npm update -g whitemagic-mcp"),
+                            _ => println!(
+                                "Update with: rerun the release installer, or download from the release page"
+                            ),
+                        }
+                    } else {
+                        println!("Up to date.");
+                    }
+                }
+            }
+        },
         Commands::Doctor {
             store,
             check_integrity,

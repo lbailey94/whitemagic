@@ -28,6 +28,8 @@ wm-selfmodel = { workspace = true }
 wm-bicameral = { workspace = true }
 wm-sangha = { workspace = true, features = ["transport"] }
 wm-simulation = { workspace = true }
+# selftest uses a throwaway store namespace (runtime, not just tests).
+tempfile = "3"
 wm-conformal = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
