@@ -982,41 +982,40 @@ impl Tool for MemoryReadTool {
             .unwrap_or("codex");
         let galaxy = parse_galaxy(galaxy_str)?;
 
-        let memory = match self.store.get(galaxy, id)? {
-            Some(memory) => memory,
-            None => {
-                // Cold storage is keyed only by memory ID, so it must remain
-                // galaxy-bound at this response boundary. Do not use
-                // find_anywhere: it searches hot galaxies broadly before cold
-                // storage and could disclose a same-ID record from another
-                // galaxy. A cold read is deliberately read-only: no thaw,
-                // counter update, hot insertion, indexing, or diagnostics.
-                let Some(record) = self.store.get_cold_record(id)? else {
-                    return Ok(json!({
-                        "status": "not_found",
-                        "id": id_str,
-                        "galaxy": galaxy.db_name(),
-                    }));
-                };
-                if record.id != id || record.galaxy != galaxy {
-                    return Ok(json!({
-                        "status": "not_found",
-                        "id": id_str,
-                        "galaxy": galaxy.db_name(),
-                    }));
-                }
-                let memory = record.decompress()?;
-                if memory.metadata.id != id
-                    || memory.metadata.galaxy != galaxy
-                    || memory.metadata.content_hash != record.content_hash
-                    || wm_memory::content_hash(&memory.content) != record.content_hash
-                {
-                    return Err(wm_core::CoreError::Memory(
-                        "cold memory header/payload integrity mismatch".into(),
-                    ));
-                }
-                memory
+        let memory = if let Some(memory) = self.store.get(galaxy, id)? {
+            memory
+        } else {
+            // Cold storage is keyed only by memory ID, so it must remain
+            // galaxy-bound at this response boundary. Do not use
+            // find_anywhere: it searches hot galaxies broadly before cold
+            // storage and could disclose a same-ID record from another
+            // galaxy. A cold read is deliberately read-only: no thaw,
+            // counter update, hot insertion, indexing, or diagnostics.
+            let Some(record) = self.store.get_cold_record(id)? else {
+                return Ok(json!({
+                    "status": "not_found",
+                    "id": id_str,
+                    "galaxy": galaxy.db_name(),
+                }));
+            };
+            if record.id != id || record.galaxy != galaxy {
+                return Ok(json!({
+                    "status": "not_found",
+                    "id": id_str,
+                    "galaxy": galaxy.db_name(),
+                }));
             }
+            let memory = record.decompress()?;
+            if memory.metadata.id != id
+                || memory.metadata.galaxy != galaxy
+                || memory.metadata.content_hash != record.content_hash
+                || wm_memory::content_hash(&memory.content) != record.content_hash
+            {
+                return Err(wm_core::CoreError::Memory(
+                    "cold memory header/payload integrity mismatch".into(),
+                ));
+            }
+            memory
         };
         if memory.metadata.is_private {
             // Private memories never appear in MCP responses — treat them as
