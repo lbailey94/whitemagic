@@ -53,6 +53,11 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Build release binary
+        env:
+          # Compile-time pinned update key (Repository variable, not a secret:
+          # it is a public key). Empty → binaries require WM_RELEASE_PUBKEY or
+          # --insecure-checksum for update checks.
+          WM_RELEASE_PUBKEY: ${{ vars.WM_RELEASE_PUBKEY }}
         run: cargo build --release --target ${{ matrix.target }} --bin wm
 
       - name: Smoke test curated workflow (Linux)
@@ -133,6 +138,23 @@ jobs:
             echo "signing $f"
             cosign sign-blob --yes "$f" --bundle "$f.bundle"
           done
+
+      - name: Build + sign release manifest
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          python3 scripts/release_manifest.py --version "${GITHUB_REF_NAME#v}" \
+            --out artifacts/release-manifest.json
+          if [ -n "${RELEASE_SIGNING_KEY:-}" ]; then
+            printf '%s' "$RELEASE_SIGNING_KEY" > /tmp/wm-release-key.pem
+            openssl pkeyutl -sign -rawin -inkey /tmp/wm-release-key.pem \
+              -in artifacts/release-manifest.json | xxd -p -c 400 | tr -d '\n' \
+              > artifacts/release-manifest.json.sig
+            rm -f /tmp/wm-release-key.pem
+            echo "release manifest signed (Ed25519)"
+          else
+            echo "::warning::RELEASE_SIGNING_KEY not set — publishing an unsigned manifest (update check will require --insecure-checksum)"
+          fi
 
       - name: Create release
         uses: softprops/action-gh-release@v2
