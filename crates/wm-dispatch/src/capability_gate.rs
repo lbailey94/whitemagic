@@ -25,6 +25,14 @@
 //! grantable by any current [`EngagementScope`], so strict mode refuses
 //! tools that declare them until a signed-grant path exists — that is the
 //! intended conservative default, not a bug.
+//!
+//! Trust-anchor limitation (v1): the issuer key is presented alongside the
+//! token, so a valid credential proves integrity + scope coverage, not
+//! issuer *authority* — dispatch has no bound-identity anchor the way the
+//! mesh transport binds issuer keys to peer keys. Pinning issuer keys
+//! (configured allowlist or bound peers) is the next hardening step.
+//!
+//! [`EngagementScope`]: wm_governance::engagement_tokens::EngagementScope
 
 use serde::{Deserialize, Serialize};
 use wm_core::{Capability as CoreCapability, EffectRow};
