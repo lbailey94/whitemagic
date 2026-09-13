@@ -149,7 +149,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 }
 
 fn hex_decode(value: &str) -> Option<Vec<u8>> {
-    if value.len() > 4096 || !value.len().is_multiple_of(2) {
+    if value.len() > 4096 || !value.is_ascii() || !value.len().is_multiple_of(2) {
         return None;
     }
     (0..value.len())
@@ -498,7 +498,7 @@ impl SessionReplayTool {
             return Err(lossless_error("invalid_args"));
         }
 
-        let memories = self.store.scan_all(Galaxy::Sessions)?;
+        let memories = self.store.scan_all_strict(Galaxy::Sessions)?;
         let start = memories.iter().find(|m| {
             m.metadata.id.to_string() == session_id
                 && m.metadata.tags.contains(&"start".to_string())
@@ -530,13 +530,15 @@ impl SessionReplayTool {
             }
             let turn = serde_json::from_str::<Value>(&memory.content)
                 .map_err(|_| lossless_error("malformed_selected_turn"))?;
+            if turn.get("type").and_then(Value::as_str) != Some("session_turn") {
+                continue;
+            }
             let content = turn
                 .get("content")
                 .and_then(Value::as_str)
                 .ok_or_else(|| lossless_error("malformed_selected_turn"))?
                 .to_string();
-            if turn.get("type").and_then(Value::as_str) != Some("session_turn")
-                || turn.get("session_id").and_then(Value::as_str) != Some(session_id)
+            if turn.get("session_id").and_then(Value::as_str) != Some(session_id)
                 || turn.get("sequence").and_then(Value::as_u64).is_none()
                 || turn.get("timestamp").and_then(Value::as_i64).is_none()
             {
@@ -581,7 +583,7 @@ impl SessionReplayTool {
             let bytes = turn.content.as_bytes();
             let whole = json!({"record_id":turn.memory.metadata.id.to_string(),"sequence":turn.turn["sequence"],"timestamp":turn.turn["timestamp"],"content_encoding":"utf-8","content":turn.content,"content_sha256":turn.content_hash,"complete":true});
             let candidate = json!({"status":"success","mode":"lossless","session_id":session_id,"galaxy":"sessions","view_fingerprint":view,"records":records.iter().cloned().chain(std::iter::once(whole.clone())).collect::<Vec<_>>(),"has_more":index+1<turns.len(),"next_cursor":lossless_cursor(session_id,include_superseded,&view,index+1,0),"complete":index+1==turns.len()});
-            if serde_json::to_vec(&candidate).unwrap().len() <= max_wire {
+            if offset == 0 && serde_json::to_vec(&candidate).unwrap().len() <= max_wire {
                 records.push(whole);
                 index += 1;
                 offset = 0;
