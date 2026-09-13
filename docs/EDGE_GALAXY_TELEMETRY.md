@@ -91,15 +91,48 @@ positive blocked delta. Crossings are change-based: one event on entry, not
 one per window. Bus events are ephemeral (rule: low-latency, not durable
 evidence — the durable record is the window).
 
-## Retention (current state and plan)
+## Retention (implemented 2026-09-13)
 
-- **Today:** `galaxy.cold_rotate` archives and (with confirm) deletes only
-  `is_telemetry_or_noise` rows — telemetry is exactly its remit; `galaxy.purge`
-  exists for hard resets (`{"confirm": true}` required). Write budget ledger
-  has a 90-day horizon.
-- **Planned policy** (not yet wired): ring 5 min / windows 7 d / hourly
-  rollups 90 d; a per-galaxy retention entry on the galaxy taxonomy so the
-  policy is declared once, versioned, and attributable.
+The ladder lives in `telemetry.rollup` + `telemetry.prune` (plus the
+producer's local ring):
+
+| Tier | Mechanism | Target |
+|---|---|---|
+| Raw samples | producer ring (volatile) | minutes |
+| Windows | `telemetry.window` records | 7 d (`windows_older_than_days=7`) |
+| Rollups | `telemetry.rollup` — deterministic hourly aggregates (avg/min/max per dim, guna sums, event topics); re-runs deduplicate | 90 d (`rollups_older_than_days=90`) |
+
+- `telemetry.record` — typed ingestion (validates kind/ts/harmony_score/dims,
+  caps importance at the telemetry class ceiling 0.40, dedup-aware).
+- `telemetry.rollup` — aggregates **completed** hours by default
+  (`include_current=false`); `dry_run` supported.
+- `telemetry.prune` — destructive with pipeline `confirm`; **dry-run defaults
+  to true**. Note: it declares `destructive`, so the dharma gate can veto it
+  under stress (observed live: `VIOLATION_AHIMSA … strict mode` while the
+  host was busy) — a read-only `telemetry.retention` planner is the follow-up
+  so dry-runs are never gated.
+- `galaxy.cold_rotate` remains the bulk archival path for
+  `is_telemetry_or_noise` rows.
+
+Operator wiring (systemd timer calling rollup + prune on the edge serve) is
+still manual; run `telemetry.rollup` hourly and `telemetry.prune` daily once
+a calm window is available.
+
+## Operational findings (2026-09-13, live edge serve)
+
+- **Health-scaled write budgets can starve steady fan-in.** Yama scales
+  `max_writes_per_minute` by system health; under dev-build load the limit
+  fell to 10/min and a spool burst hit `Budget exceeded for writes: 10/10`.
+  The telemetry serve now sets `WM_RESOURCE_MAX_WRITES_PER_MIN=240` —
+  telemetry is steady, low-volume, and non-cognitive, so stress-scaling it
+  buys nothing. Producers should still treat budget rejections as retryable.
+- **Dedup is delivery.** If a response is lost after the row was stored,
+  replay re-creates identical content and the write gate answers
+  `status: "deduplicated"` (with `dup_count` bumped). Consumers must treat
+  that as an ack — Lakshmi's spool now does.
+- **Out-of-order replay is acceptable.** Windows carry `ts`, so the spool
+  probes the newest entry when the head is stuck (freshness path) rather
+  than blocking all newer windows behind one slow record.
 
 ## Consumers
 
