@@ -79,6 +79,14 @@ fn record_write_audit(
     success: bool,
     confirm_gated: Option<bool>,
 ) {
+    // The meta-router (`wm`) mutates only through nested dispatches, which
+    // journal themselves with the real tool identity; a router entry would
+    // attribute the inner writes to 'wm' as an undeclared mutation — a
+    // permanent false misdeclaration for every meta-routed write (first-run
+    // feedback, 2026-09-13: `wm doctor` never reached a clean summary).
+    if tool == "wm" {
+        return;
+    }
     let reported_writes = output
         .get("writes")
         .and_then(|w| w.as_array())
@@ -2197,6 +2205,28 @@ mod tests {
         assert!(!mis.is_empty(), "misdeclaring tool must be detected");
         assert_eq!(mis.last().unwrap().tool, "sneaky_tool");
         assert!(mis.last().unwrap().undeclared_mutation());
+    }
+
+    #[tokio::test]
+    async fn pipeline_write_audit_skips_meta_router() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(wm_memory::MemoryStore::open_default(tmp.path()).unwrap());
+        let journal = Arc::new(WriteAuditJournal::with_flush_threshold(store.clone(), 0).unwrap());
+        let pipeline = DispatchPipeline::with_defaults().with_write_audit(journal.clone());
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // The meta-router mutates through nested dispatches (which journal
+        // the real tool); its own entry must never be flagged as an
+        // undeclared mutation (first-run feedback regression, 2026-09-13).
+        let tool = TestTool::new("wm", EffectRow::pure()).with_store(store);
+        let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
+        assert!(result.is_ok());
+
+        let mis = journal.misdeclarations().unwrap();
+        assert!(
+            mis.iter().all(|m| m.tool != "wm"),
+            "meta router must not appear as a misdeclaration: {mis:?}"
+        );
     }
 
     #[tokio::test]
