@@ -474,9 +474,13 @@ impl Tool for MemoryCreateTool {
             .map(String::from);
         // V8 S5: optional importance (the write gate rewrites this to the
         // class-policy value when it recognizes the content); class/tier
-        // re-stamped now that tags are known.
-        if let Some(importance) = args.get("importance").and_then(Value::as_f64) {
-            memory.metadata.importance = importance as f32;
+        // re-stamped now that tags are known. String forms are accepted
+        // loudly — the old number-only parse silently discarded them.
+        if let Some(importance) =
+            wm_dispatch::write_gate::parse_importance_value(args.get("importance"))
+                .map_err(wm_core::CoreError::InvalidArgs)?
+        {
+            memory.metadata.importance = importance;
         }
         memory.metadata.class = wm_memory::typology::detect_class(content, &memory.metadata.tags);
         memory.metadata.tier = memory.metadata.class.map_or(
@@ -752,9 +756,13 @@ impl Tool for MemoryBatchCreateTool {
             // the class policy value when it recognizes the content);
             // class/tier re-stamped with tags now that they are known —
             // tag families (rsi:/ingest:/heritage) carry provenance the
-            // content shape alone lacks.
-            if let Some(importance) = item.get("importance").and_then(Value::as_f64) {
-                memory.metadata.importance = importance as f32;
+            // content shape alone lacks. String importance forms are
+            // accepted loudly (same legacy-schema reason as single create).
+            if let Some(importance) =
+                wm_dispatch::write_gate::parse_importance_value(item.get("importance"))
+                    .map_err(wm_core::CoreError::InvalidArgs)?
+            {
+                memory.metadata.importance = importance;
             }
             memory.metadata.class =
                 wm_memory::typology::detect_class(content, &memory.metadata.tags);
@@ -2993,7 +3001,6 @@ impl WmMetaTool {
             "memory.delete" => Some("id"),
             "memory.search" => Some("query"),
             "memory.episodic_search" => Some("query"),
-            "memory.query" => Some("query"),
             "memory.associate" => Some("source"),
             "memory.associations" => Some("id"),
             "memory.update" => Some("id"),
@@ -3025,7 +3032,7 @@ impl WmMetaTool {
             ("memory.read", "id") => "Provide a memory UUID, e.g. wm(thought='recall <uuid>') or wm(route='memory.read', args={\"id\": \"<uuid>\"}). To list memories instead, use wm(route='memory.list', args={\"galaxy\": \"codex\", \"limit\": 10})".into(),
             ("memory.delete", "id") => "Provide a memory UUID, e.g. wm(thought='delete memory <uuid>')".into(),
             ("memory.search", "query") => "Provide a search query, e.g. wm(thought='search for rust')".into(),
-            ("memory.query", "query") => "Provide a literal substring to match against memory content, e.g. wm(route='memory.query', args={\"query\": \"rust\", \"tags\": [\"project:myapp\"]}). Note: substring match, not ranked full-text — use memory.search for that.".into(),
+            ("memory.query", "query") => "memory.query accepts `query` as optional when filtering by tags/importance/dates, e.g. wm(route='memory.query', args={\"tags\": [\"project:myapp\"]})".into(),
             ("memory.vector.search", "memory_id") => "Provide a memory UUID for similarity search, e.g. wm(thought='find similar to <uuid>')".into(),
             ("memory.update", "id") => "Provide a memory UUID to update, e.g. wm(route='memory.update', args={\"id\": \"<uuid>\", \"tags\": [\"new\"]})".into(),
             ("memory.revisions", "id") => "Provide a memory UUID to inspect, e.g. wm(route='memory.revisions', args={\"id\": \"<uuid>\", \"action\": \"verify\"}) — actions: list (default) | verify".into(),
@@ -4870,6 +4877,43 @@ mod tests {
 
         assert_eq!(result["status"], "error");
         assert!(result["message"].as_str().unwrap().contains("Unknown tool"));
+    }
+
+    #[tokio::test]
+    async fn memory_query_tags_only_is_allowed() {
+        // Second synthetic-run feedback (2026-09-13): the meta-tool's
+        // hardcoded required-arg table demanded `query` even though the
+        // tool schema and implementation treat it as optional.
+        let store = test_store();
+        let mut mem = Memory::new(Galaxy::Codex, "atlas constraint note".into());
+        mem.metadata.tags = vec!["atlas".into(), "constraint".into()];
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let registry = test_registry_with(&store);
+        let registry = register_meta_tools(
+            &registry,
+            &store,
+            std::sync::Arc::new(std::sync::RwLock::new(
+                embedding_router::ShadowModeStats::default(),
+            )),
+        );
+        let wm = registry.get("wm").unwrap();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = wm
+            .call(
+                &mut ctx,
+                json!({"route": "memory.query", "args": {"tags": ["atlas", "constraint"]}}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success", "{result}");
+        assert_eq!(result["total"], 1, "{result}");
+        assert!(
+            result["memories"][0]
+                .to_string()
+                .contains("atlas constraint"),
+            "{result}"
+        );
     }
 
     #[tokio::test]

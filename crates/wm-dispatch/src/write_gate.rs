@@ -55,6 +55,38 @@ fn jnum(v: f32) -> serde_json::Value {
     serde_json::json!((d * 1000.0).round() / 1000.0)
 }
 
+/// Parse an `importance` argument leniently.
+///
+/// The pre-2026-09-13 schema advertised a *string* type, so agents sent
+/// `"0.9"`; the old number-only parse silently fell back to the 0.5 default
+/// and the value was lost without a trace (second synthetic-run feedback).
+/// Numbers and numeric strings are accepted; absent/null/empty mean "no
+/// explicit value"; anything else is a loud error, never a silent default.
+pub fn parse_importance_value(
+    value: Option<&serde_json::Value>,
+) -> std::result::Result<Option<f32>, String> {
+    match value {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Number(n)) => n
+            .as_f64()
+            .map(|v| Some(v as f32))
+            .ok_or_else(|| format!("importance must be a number in 0.0-1.0, got: {n}")),
+        Some(serde_json::Value::String(s)) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                return Ok(None);
+            }
+            trimmed
+                .parse::<f32>()
+                .map(Some)
+                .map_err(|_| format!("importance must be a number in 0.0-1.0, got: \"{s}\""))
+        }
+        Some(other) => Err(format!(
+            "importance must be a number in 0.0-1.0, got: {other}"
+        )),
+    }
+}
+
 /// The write gate. Holds the store for the dedup lookup + bump.
 pub struct WriteGate {
     store: Arc<MemoryStore>,
@@ -108,10 +140,15 @@ impl WriteGate {
         // 1 + 3. Junk filter / plausibility — the class policy owns
         // importance where it recognizes the content.
         if let Some(class) = class {
-            let requested = args
-                .get("importance")
-                .and_then(serde_json::Value::as_f64)
-                .map_or(0.5, |v| v as f32);
+            let raw_importance = args.get("importance");
+            let parsed =
+                parse_importance_value(raw_importance).map_err(wm_core::CoreError::InvalidArgs)?;
+            if matches!(raw_importance, Some(serde_json::Value::String(_))) && parsed.is_some() {
+                // Transparency: a numeric string was accepted and coerced
+                // (legacy clients still send the old string form).
+                disclosure.insert("importance_from_string".into(), serde_json::json!(true));
+            }
+            let requested = parsed.map_or(0.5, |v| v);
             let policy = typology::apply_class_policy(class, requested);
             if (policy - requested).abs() > f32::EPSILON {
                 disclosure.insert("importance_capped".into(), serde_json::json!(true));
@@ -355,6 +392,25 @@ fn parse_galaxy_lenient(v: Option<&serde_json::Value>) -> Option<Galaxy> {
 mod tests {
     use super::*;
     use wm_memory::Memory;
+
+    #[test]
+    fn importance_parses_numeric_strings_and_rejects_garbage() {
+        use serde_json::json;
+        assert_eq!(
+            parse_importance_value(Some(&json!(0.9))).unwrap(),
+            Some(0.9_f32)
+        );
+        // The pre-2026-09-13 schema advertised a string type; legacy clients
+        // still send the quoted form and it must not be silently dropped.
+        assert_eq!(
+            parse_importance_value(Some(&json!("0.9"))).unwrap(),
+            Some(0.9_f32)
+        );
+        assert_eq!(parse_importance_value(Some(&json!("  "))).unwrap(), None);
+        assert_eq!(parse_importance_value(None).unwrap(), None);
+        assert!(parse_importance_value(Some(&json!("high"))).is_err());
+        assert!(parse_importance_value(Some(&json!(true))).is_err());
+    }
 
     /// Echo tool named `memory.create` — proves the gate's arg rewrite
     /// reaches the tool and the disclosure reaches the response.
