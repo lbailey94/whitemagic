@@ -159,6 +159,19 @@ for unit in $WRITABLE_UNITS; do
   fi
 done
 
+# 4b. Public-surface guard (2026-09-13): grade the most recent nightly
+# hygiene audit of the public repo (device names / personal strings /
+# forbidden paths). Grades the last line in the log — the nightly log is
+# append-only, so the newest occurrence is the one that matters.
+echo "-- public surface"
+last_ps="$(grep 'PUBLIC-SURFACE-' "$LOG" 2>/dev/null | tail -1)"
+case "$last_ps" in
+  *PUBLIC-SURFACE-CLEAN*)   ok "nightly public-surface guard: clean (last run)" ;;
+  *PUBLIC-SURFACE-BLOCKED*) fail "nightly public-surface guard: BLOCKED — $last_ps" ;;
+  *PUBLIC-SURFACE-SKIP*)    warn "nightly public-surface guard skipped — $last_ps" ;;
+  "")                       warn "no PUBLIC-SURFACE line in backup log yet (guard landed 2026-09-13)" ;;
+esac
+
 # 5. Anchor tails: leaf counts (0 is honest until attested creates land).
 echo "-- anchor tails"
 if [ -f "$manifest" ]; then

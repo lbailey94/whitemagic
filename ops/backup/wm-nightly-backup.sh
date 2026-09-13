@@ -246,6 +246,22 @@ trust_stamp() {
 
 trust_stamp "$(date -u +%Y%m%d)"
 
+# 2026-09-13 (hygiene): public-surface guard — the repo that ships publicly
+# gets audited every night so a device name, personal string, or forbidden
+# path cannot sit on the public surface unnoticed. Advisory by design: a
+# blocking finding logs loudly but never fails the backup (disaster
+# recovery outranks hygiene, same rule as stamping).
+PUBLIC_REPO="$HOME/Desktop/WHITEMAGIC/WMv9"
+if [ -f "$PUBLIC_REPO/scripts/public_surface_check.sh" ] && [ -d "$PUBLIC_REPO/.git" ]; then
+  if (cd "$PUBLIC_REPO" && bash scripts/public_surface_check.sh) >>"$LOG" 2>&1; then
+    echo "$(date -Is) PUBLIC-SURFACE-CLEAN $PUBLIC_REPO" >>"$LOG"
+  else
+    echo "$(date -Is) PUBLIC-SURFACE-BLOCKED $PUBLIC_REPO (guard findings in log above — inspect before any push)" >>"$LOG"
+  fi
+else
+  echo "$(date -Is) PUBLIC-SURFACE-SKIP (guard or repo missing at $PUBLIC_REPO)" >>"$LOG"
+fi
+
 # Retention: keep newest KEEP dirs per store
 for d in "$BACKUP_ROOT"/*/; do
   ls -1dt "$d"* 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -rf
