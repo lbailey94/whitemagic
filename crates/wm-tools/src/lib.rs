@@ -982,32 +982,59 @@ impl Tool for MemoryReadTool {
             .unwrap_or("codex");
         let galaxy = parse_galaxy(galaxy_str)?;
 
-        match self.store.get(galaxy, id)? {
-            Some(memory) => {
-                if memory.metadata.is_private {
-                    // Private memories never appear in MCP responses —
-                    // treat them as not found rather than leaking content.
+        let memory = match self.store.get(galaxy, id)? {
+            Some(memory) => memory,
+            None => {
+                // Cold storage is keyed only by memory ID, so it must remain
+                // galaxy-bound at this response boundary. Do not use
+                // find_anywhere: it searches hot galaxies broadly before cold
+                // storage and could disclose a same-ID record from another
+                // galaxy. A cold read is deliberately read-only: no thaw,
+                // counter update, hot insertion, indexing, or diagnostics.
+                let Some(record) = self.store.get_cold_record(id)? else {
+                    return Ok(json!({
+                        "status": "not_found",
+                        "id": id_str,
+                        "galaxy": galaxy.db_name(),
+                    }));
+                };
+                if record.id != id || record.galaxy != galaxy {
                     return Ok(json!({
                         "status": "not_found",
                         "id": id_str,
                         "galaxy": galaxy.db_name(),
                     }));
                 }
-                Ok(json!({
-                    "status": "success",
-                    "id": memory.metadata.id.to_string(),
-                    "galaxy": memory.metadata.galaxy.db_name(),
-                    "content": memory.content,
-                    "tags": memory.metadata.tags,
-                    "created_at": memory.metadata.created_at.to_rfc3339(),
-                }))
+                let memory = record.decompress()?;
+                if memory.metadata.id != id
+                    || memory.metadata.galaxy != galaxy
+                    || memory.metadata.content_hash != record.content_hash
+                    || wm_memory::content_hash(&memory.content) != record.content_hash
+                {
+                    return Err(wm_core::CoreError::Memory(
+                        "cold memory header/payload integrity mismatch".into(),
+                    ));
+                }
+                memory
             }
-            None => Ok(json!({
+        };
+        if memory.metadata.is_private {
+            // Private memories never appear in MCP responses — treat them as
+            // not found before any cold header or payload field is exposed.
+            return Ok(json!({
                 "status": "not_found",
                 "id": id_str,
                 "galaxy": galaxy.db_name(),
-            })),
+            }));
         }
+        Ok(json!({
+            "status": "success",
+            "id": memory.metadata.id.to_string(),
+            "galaxy": memory.metadata.galaxy.db_name(),
+            "content": memory.content,
+            "tags": memory.metadata.tags,
+            "created_at": memory.metadata.created_at.to_rfc3339(),
+        }))
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -3774,11 +3801,71 @@ pub fn register_meta_tools_with_router(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
+    use std::path::{Path, PathBuf};
     use wm_core::BrainWave;
 
     fn test_store() -> Arc<MemoryStore> {
         let tmp = tempfile::tempdir().unwrap();
         Arc::new(MemoryStore::open_default(tmp.path()).unwrap())
+    }
+
+    fn cold_factors() -> wm_memory::cold_storage::OuterRimFactors {
+        wm_memory::cold_storage::OuterRimFactors {
+            age_factor: 1.0,
+            access_factor: 1.0,
+            resonance_factor: 1.0,
+            emotional_factor: 1.0,
+            importance_factor: 1.0,
+            distance: 1.0,
+        }
+    }
+
+    fn freeze_for_read_test(
+        store: &MemoryStore,
+        galaxy: Galaxy,
+        content: &str,
+        is_private: bool,
+    ) -> (uuid::Uuid, wm_memory::cold_storage::ColdRecord) {
+        let mut memory = wm_memory::Memory::new(galaxy, content.to_string());
+        memory.metadata.is_private = is_private;
+        let id = memory.metadata.id;
+        store.put(galaxy, &memory).unwrap();
+        let record = store
+            .freeze_to_cold(
+                None,
+                id,
+                1.0,
+                cold_factors(),
+                None,
+                None,
+                wm_memory::cold_storage::CompressionCodec::Gzip,
+            )
+            .unwrap();
+        (id, record)
+    }
+
+    fn readonly_tree_snapshot(root: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
+        fn visit(root: &Path, path: &Path, out: &mut BTreeMap<PathBuf, Vec<u8>>) {
+            for entry in std::fs::read_dir(path).unwrap() {
+                let entry = entry.unwrap();
+                let entry_path = entry.path();
+                let relative = entry_path.strip_prefix(root).unwrap().to_path_buf();
+                if relative == Path::new("lock.mdb") {
+                    continue;
+                }
+                if entry.file_type().unwrap().is_dir() {
+                    out.insert(relative.clone(), Vec::new());
+                    visit(root, &entry_path, out);
+                } else {
+                    out.insert(relative, std::fs::read(entry_path).unwrap());
+                }
+            }
+        }
+
+        let mut snapshot = BTreeMap::new();
+        visit(root, root, &mut snapshot);
+        snapshot
     }
 
     #[tokio::test]
@@ -3890,6 +3977,113 @@ mod tests {
             .unwrap()
             .expect("explicit memory writes mirror into episodic storage");
         assert_eq!(episodic.content, "test memory content");
+    }
+
+    #[tokio::test]
+    async fn memory_read_recovers_cold_content_after_reopen_without_thawing() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().to_path_buf();
+        let content = "cold UTF-8: cafe\u{301} \u{1f980}\nsecond line — exact".repeat(128);
+        let (id, before) = {
+            let store = MemoryStore::open_default(&path).unwrap();
+            freeze_for_read_test(&store, Galaxy::Codex, &content, false)
+        };
+
+        let store = Arc::new(MemoryStore::open_default(&path).unwrap());
+        assert!(store.get(Galaxy::Codex, id).unwrap().is_none());
+        assert_eq!(store.get_cold_record(id).unwrap().as_ref(), Some(&before));
+        let before_read_tree = readonly_tree_snapshot(&path);
+
+        let mut ctx = Context::default();
+        let result = MemoryReadTool::new(store.clone())
+            .call(&mut ctx, json!({"id": id, "galaxy": "codex"}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
+        assert_eq!(result["content"], content);
+
+        // A cold read is not a thaw: the hot galaxy stays empty and the exact
+        // cold record remains present and unchanged after the read/reopen.
+        assert!(store.get(Galaxy::Codex, id).unwrap().is_none());
+        assert_eq!(store.get_cold_record(id).unwrap().as_ref(), Some(&before));
+        assert_eq!(readonly_tree_snapshot(&path), before_read_tree);
+        drop(store);
+        let reopened = MemoryStore::open_default(&path).unwrap();
+        assert!(reopened.get(Galaxy::Codex, id).unwrap().is_none());
+        assert_eq!(
+            reopened.get_cold_record(id).unwrap().as_ref(),
+            Some(&before)
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_read_cold_fallback_is_galaxy_bound_and_missing_is_not_found() {
+        let store = test_store();
+        let (id, _) = freeze_for_read_test(&store, Galaxy::Codex, "cold codex only", false);
+        let mut ctx = Context::default();
+        let tool = MemoryReadTool::new(store);
+
+        let wrong_galaxy = tool
+            .call(&mut ctx, json!({"id": id, "galaxy": "sessions"}))
+            .await
+            .unwrap();
+        assert_eq!(wrong_galaxy["status"], "not_found");
+        assert_eq!(wrong_galaxy["galaxy"], "sessions");
+        assert!(wrong_galaxy.get("content").is_none());
+
+        let missing = tool
+            .call(
+                &mut ctx,
+                json!({"id": uuid::Uuid::new_v4(), "galaxy": "codex"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(missing["status"], "not_found");
+        assert!(missing.get("content").is_none());
+    }
+
+    #[tokio::test]
+    async fn memory_read_private_cold_record_is_not_found_without_headers() {
+        let store = test_store();
+        let (id, _) = freeze_for_read_test(&store, Galaxy::Codex, "private cold content", true);
+        let mut ctx = Context::default();
+        let result = MemoryReadTool::new(store)
+            .call(&mut ctx, json!({"id": id, "galaxy": "codex"}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "not_found");
+        assert!(result.get("content").is_none());
+        assert!(result.get("tags").is_none());
+        assert!(result.get("created_at").is_none());
+    }
+
+    #[tokio::test]
+    async fn memory_read_refuses_corrupt_cold_payload_or_header_mismatch() {
+        let store = test_store();
+        let (payload_id, mut payload_record) =
+            freeze_for_read_test(&store, Galaxy::Codex, "payload integrity", false);
+        payload_record.compressed_payload[0] ^= 0xff;
+        store.put_cold_record(&payload_record).unwrap();
+
+        let mut ctx = Context::default();
+        let tool = MemoryReadTool::new(store.clone());
+        assert!(
+            tool.call(&mut ctx, json!({"id": payload_id, "galaxy": "codex"}))
+                .await
+                .is_err()
+        );
+        assert!(store.get(Galaxy::Codex, payload_id).unwrap().is_none());
+
+        let (header_id, mut header_record) =
+            freeze_for_read_test(&store, Galaxy::Codex, "header integrity", false);
+        header_record.content_hash = "wrong-header-hash".into();
+        store.put_cold_record(&header_record).unwrap();
+        assert!(
+            tool.call(&mut ctx, json!({"id": header_id, "galaxy": "codex"}))
+                .await
+                .is_err()
+        );
+        assert!(store.get(Galaxy::Codex, header_id).unwrap().is_none());
     }
 
     /// Track F Slice A: `attested` disclosure on memory.create. Fully
