@@ -1088,19 +1088,20 @@ fn main() -> anyhow::Result<()> {
                 let exe = std::env::current_exe()?;
                 let installed_via = update::detect_installed_via(&exe);
                 let root = default_store_path();
-                let mut state = update::read_install_state(&root).unwrap_or(update::InstallState {
-                    schema: 1,
-                    installed_via: installed_via.to_string(),
-                    version: current.to_string(),
-                    previous: None,
-                    channel: manifest.channel.clone(),
-                    update_policy: "notify".to_string(),
-                    last_check: None,
-                    latest_seen: None,
-                });
+                let mut state =
+                    update::read_install_state(&root).unwrap_or_else(|| update::InstallState {
+                        schema: 1,
+                        installed_via: installed_via.to_string(),
+                        version: current.to_string(),
+                        previous: None,
+                        channel: manifest.channel.clone(),
+                        update_policy: "notify".to_string(),
+                        last_check: None,
+                        latest_seen: None,
+                    });
                 state.last_check = Some(chrono::Utc::now().to_rfc3339());
                 state.latest_seen = Some(manifest.version.clone());
-                state.channel = manifest.channel.clone();
+                state.channel.clone_from(&manifest.channel);
                 let _ = update::write_install_state(&root, &state);
 
                 if matches!(status, SignatureStatus::Invalid) {
@@ -2535,6 +2536,7 @@ fn run_network_audit() -> u32 {
     issues
 }
 
+#[allow(clippy::fn_params_excessive_bools)] // doctor flags are naturally booleans
 fn run_doctor(
     store: Option<PathBuf>,
     check_integrity: bool,
@@ -3291,6 +3293,23 @@ fn run_doctor(
         None => {
             println!("[INFO] Landlock: not enabled (opt in with WM_LANDLOCK=1)");
         }
+    }
+
+    // 11d-2. Subprocess sandbox (B2) — which OS runner would wrap external
+    //        commands right now? Detection is live (WM_SANDBOX_RUNNER →
+    //        PATH lookup, same as the dispatch path); the per-server
+    //        dispatch/degraded counters are disclosed via `/status`.
+    println!();
+    match wm_core::sandbox::detect_runner() {
+        Some(info) => println!(
+            "[OK]   Subprocess sandbox: runner {} (source: {}) — Sandbox::Subprocess tools wrap spawns",
+            info.path.display(),
+            info.source.as_str()
+        ),
+        None => println!(
+            "[INFO] Subprocess sandbox: no runner resolved (set WM_SANDBOX_RUNNER or install \
+             mandala-sandbox on PATH) — declared spawns run unconfined"
+        ),
     }
 
     // 11e. Gateway contract (Phase 5 federated gateway) — did the last
