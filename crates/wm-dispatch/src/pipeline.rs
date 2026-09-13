@@ -24,6 +24,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wm_core::{Args, Context, CoreError, Output, Result, Tool};
 
+use crate::capability_gate::{CapabilityGateMode, GateOutcome};
 use crate::circuit_breaker::CircuitBreakerRegistry;
 use crate::rate_limiter::RateLimiter;
 use wm_governance::{
@@ -148,6 +149,11 @@ pub struct DispatchPipeline {
     /// (P1.6). Armed by default on every construction path; see
     /// [`wm_governance::Firebreak`].
     firebreak: Option<Arc<wm_governance::Firebreak>>,
+    /// Capability gate (PLAN_F F-1, dispatch half) — maps `EffectRow.invokes`
+    /// onto governance capabilities and verifies any engagement credential
+    /// presented under `args["_engagement"]`. Advisory by default; strict via
+    /// `WM_REQUIRE_CAPABILITIES=1`.
+    capability_mode: CapabilityGateMode,
     /// Optional GanaRegistry for tracking co-usage patterns (Phase 6)
     gana_registry: Option<Arc<std::sync::Mutex<wm_core::GanaRegistry>>>,
     /// Optional upper bound on tool execution. When a call exceeds it, the
@@ -191,6 +197,7 @@ impl DispatchPipeline {
             // `WM_FIREBREAK=0` kill-switch. A guardrail you must remember to
             // attach is not a guardrail.
             firebreak: Some(Arc::new(wm_governance::Firebreak::promoted())),
+            capability_mode: CapabilityGateMode::from_env(),
             gana_registry: None,
             dispatch_timeout: None,
         }
@@ -234,6 +241,13 @@ impl DispatchPipeline {
             Arc::new(DharmaGate::default()),
             None,
         )
+    }
+
+    /// Override the capability-gate mode (tests, deliberate strict runs).
+    #[must_use]
+    pub const fn with_capability_mode(mut self, mode: CapabilityGateMode) -> Self {
+        self.capability_mode = mode;
+        self
     }
 
     /// Attach a GanaRegistry for co-usage tracking (Phase 6).
@@ -370,6 +384,7 @@ impl DispatchPipeline {
     /// Dispatch a tool call through the full pipeline.
     pub async fn dispatch(&self, tool: &dyn Tool, ctx: &mut Context, args: Args) -> Result<Output> {
         let start = Instant::now();
+        let mut args = args;
 
         // 1. Effect check — brain-wave compatibility
         if !tool.effects().is_available_in(ctx.brain_wave) {
@@ -438,6 +453,33 @@ impl DispatchPipeline {
                 drive_energy = ctx.drive_energy,
                 "low drive energy — write operation may be resource-constrained"
             );
+        }
+
+        // 1f. Capability gate (PLAN_F F-1, dispatch half) — the tool's
+        // declared `invokes` must be covered by a presented engagement
+        // credential. Presenting a credential always triggers cryptographic
+        // verification (signature → revocation → expiry → scope coverage);
+        // missing credentials are advisory by default and refused under
+        // `WM_REQUIRE_CAPABILITIES=1`. The credential key is stripped from
+        // args so tokens never reach tool bodies or audit digests.
+        match crate::capability_gate::evaluate(
+            tool.effects(),
+            &mut args,
+            self.capability_mode,
+            chrono::Utc::now().timestamp(),
+        ) {
+            Ok(GateOutcome::AdvisoryMissing { required }) => {
+                tracing::debug!(
+                    tool = tool.name(),
+                    required = %required.labels().join(", "),
+                    mode = self.capability_mode.label(),
+                    "capability gate: requirement unmet (advisory)"
+                );
+            }
+            Ok(_) => {}
+            Err(reason) => {
+                return Err(CoreError::Governance(format!("capability gate: {reason}")));
+            }
         }
 
         // 2. Dharma gate — ethical governance
@@ -527,7 +569,6 @@ impl DispatchPipeline {
         // memory-create path. Sits after Yama (budgets gate the caller's
         // rights) and before rate limiting (the gate may rewrite args or
         // short-circuit, which must not consume rate budget).
-        let mut args = args;
         let gate_disclosure: Option<serde_json::Value> = if let Some(ref gate) = self.write_gate {
             let outcome = gate.enforce(tool.name(), &mut args)?;
             if let Some(sc) = outcome.short_circuit {
@@ -1140,6 +1181,77 @@ mod tests {
             Err(CoreError::Governance(_)) => {}
             other => panic!("Expected Governance error, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn pipeline_capability_gate_strict_blocks_uncredentialed() {
+        let pipeline =
+            DispatchPipeline::with_defaults().with_capability_mode(CapabilityGateMode::Strict);
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "capability_tool",
+            EffectRow {
+                invokes: vec![wm_core::Capability::MemoryWrite],
+                ..Default::default()
+            },
+        );
+
+        let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
+        match result {
+            Err(CoreError::Governance(msg)) => {
+                assert!(msg.contains("capability gate"), "{msg}");
+                assert!(msg.contains("memory:write"), "{msg}");
+            }
+            other => panic!("Expected capability refusal, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn pipeline_capability_gate_strict_allows_valid_token() {
+        let pipeline =
+            DispatchPipeline::with_defaults().with_capability_mode(CapabilityGateMode::Strict);
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "capability_tool_ok",
+            EffectRow {
+                invokes: vec![wm_core::Capability::MemoryWrite],
+                ..Default::default()
+            },
+        );
+
+        let mut issuer = wm_governance::engagement_tokens::EngagementIssuer::with_keypair(
+            wm_governance::network_profile::AgentKeypair::from_seed([7u8; 32]),
+        );
+        let issuer_key = issuer.signer_public_key_hex();
+        let token = issuer.issue(
+            "tester",
+            wm_governance::engagement_tokens::EngagementScope::Poc,
+            "rules-hash",
+            Some(3600),
+        );
+        let args = serde_json::json!({
+            "_engagement": { "token": token, "issuer_public_key": issuer_key }
+        });
+
+        let result = pipeline.dispatch(&tool, &mut ctx, args).await;
+        assert!(result.is_ok(), "valid Poc token should pass: {result:?}");
+    }
+
+    #[tokio::test]
+    async fn pipeline_capability_gate_advisory_allows_uncredentialed() {
+        let pipeline =
+            DispatchPipeline::with_defaults().with_capability_mode(CapabilityGateMode::Advisory);
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "capability_tool_advisory",
+            EffectRow {
+                invokes: vec![wm_core::Capability::MemoryWrite],
+                ..Default::default()
+            },
+        );
+
+        let result = pipeline.dispatch(&tool, &mut ctx, Args::default()).await;
+        assert!(result.is_ok(), "advisory mode must not block: {result:?}");
     }
 
     #[tokio::test]

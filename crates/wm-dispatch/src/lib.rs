@@ -5,6 +5,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod capability_gate;
 pub mod circuit_breaker;
 pub mod composition;
 pub mod flight;
