@@ -158,7 +158,8 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -uo pipefail
-          CRATES="wm-core wm-conformal wm-substrate wm-selfmodel wm-simulation wm-workspace wm-polyglot wm-memory wm-governance wm-bicameral wm-sangha wm-dispatch wm-cognitive wm-tools whitemagic"
+          CRATES="$(python3 scripts/crates_publish_order.py)"
+          echo "publish order (derived from cargo metadata): $CRATES"
           for c in $CRATES; do
             done_pkg=""; lag=0
             while [ -z "$done_pkg" ]; do
@@ -197,6 +198,18 @@ jobs:
             npm publish --access public
           fi
 
+      - name: Wait for npm propagation (advisory)
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for i in $(seq 1 16); do
+            if npm view "whitemagic-mcp@${VERSION}" version >/dev/null 2>&1; then
+              echo "npm whitemagic-mcp@${VERSION} visible after ${i} probe(s)"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::warning::npm whitemagic-mcp@${VERSION} not visible after ~4 minutes; continuing to MCP registry with retries"
+
       - name: Publish Docker Hub (skips without secrets)
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -211,15 +224,36 @@ jobs:
           docker push "lbailey94/whitemagic:${MAJOR}"
           docker push lbailey94/whitemagic:latest
 
-      - name: Publish MCP registry (GitHub OIDC)
+      - name: Publish MCP registry (GitHub OIDC, propagation-aware)
         run: |
           curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz -C /tmp mcp-publisher
           cd npm/whitemagic-mcp
           /tmp/mcp-publisher login github-oidc
           set +e
-          out=$(/tmp/mcp-publisher publish server.json 2>&1)
-          rc=$?
-          echo "$out"
-          if [ $rc -ne 0 ]; then
-            echo "$out" | grep -qiE "already published|already exists|duplicate|conflict|409" && echo "already published - skipping" || { echo "MCP registry publish FAILED"; exit 1; }
-          fi
+          attempt=1
+          max_attempts=6
+          while [ "$attempt" -le "$max_attempts" ]; do
+            out=$(/tmp/mcp-publisher publish server.json 2>&1)
+            rc=$?
+            echo "attempt $attempt/$max_attempts:"
+            echo "$out"
+            if [ $rc -eq 0 ]; then
+              echo "MCP registry publish OK"
+              exit 0
+            fi
+            if echo "$out" | grep -qiE "already published|already exists|duplicate|conflict|409"; then
+              echo "already published - skipping"
+              exit 0
+            fi
+            if [ "$attempt" -lt "$max_attempts" ] \
+               && echo "$out" | grep -qiE "not found|404|npm|propagat|unavailable|fetch|validation"; then
+              echo "transient validation failure (npm propagation?) - retry in 30s"
+              attempt=$((attempt + 1))
+              sleep 30
+              continue
+            fi
+            echo "MCP registry publish FAILED"
+            exit 1
+          done
+          echo "MCP registry publish FAILED after $max_attempts attempts"
+          exit 1

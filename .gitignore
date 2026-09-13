@@ -143,6 +143,7 @@ wm-leases.json
 # Internal development and staging scripts (public surface: install.sh + smoke test + release)
 /scripts/*
 !/scripts/install.sh
+!/scripts/crates_publish_order.py
 !/scripts/curated_smoke_test.py
 !/scripts/longmemeval_bench.py
 !/scripts/memorastrict_bench.py
