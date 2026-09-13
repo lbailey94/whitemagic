@@ -350,22 +350,44 @@ impl Tool for SessionReplayTool {
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let mode = args.get("mode").and_then(Value::as_str).unwrap_or("full");
-        let session_id = args.get("session_id").and_then(Value::as_str);
+        let requested_session_id = args
+            .get("session_id")
+            .and_then(Value::as_str)
+            .filter(|sid| !sid.is_empty());
+        // Match session.record, digest, and export: omission means the most
+        // recent session_start by created_at, never all sessions in LMDB key
+        // order. Per-session sequence numbers collide, so replaying the
+        // unfiltered set can otherwise interleave unrelated conversations.
+        let session_id = match requested_session_id {
+            Some(sid) => Some(sid.to_string()),
+            None => self
+                .store
+                .scan_all(Galaxy::Sessions)?
+                .iter()
+                .filter(|m| m.metadata.tags.contains(&"start".to_string()))
+                .max_by_key(|m| m.metadata.created_at)
+                .map(|m| m.metadata.id.to_string()),
+        };
         let n = args.get("n").and_then(Value::as_u64).unwrap_or(50) as usize;
         let include_superseded = args
             .get("include_superseded")
             .and_then(Value::as_bool)
             .unwrap_or(false);
         let turns = filter_by_time(
-            load_turns(&self.store, session_id, 10_000, include_superseded)?,
+            load_turns(
+                &self.store,
+                session_id.as_deref(),
+                10_000,
+                include_superseded,
+            )?,
             &args,
         )?;
 
         // An explicitly requested session that has no turns is an error, not
         // an empty success — silent emptiness hides typos and stale IDs.
-        if session_id.is_some_and(|sid| !sid.is_empty()) && turns.is_empty() {
+        if requested_session_id.is_some() && turns.is_empty() {
             return Err(wm_core::CoreError::InvalidArgs(format!(
-                "no session found with id {session_id:?}"
+                "no session found with id {requested_session_id:?}"
             )));
         }
 
@@ -1393,6 +1415,52 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn replay_omitted_session_id_uses_latest_session_start() {
+        let store = test_store();
+        // Session-local sequence numbers intentionally collide here. The
+        // omitted-id path must select by session_start.created_at before it
+        // ever orders turns, rather than combining both conversations.
+        let older = start_session_aged(&store, 120);
+        record_aged_turn(&store, &older, 0, "older-session-only");
+        let latest = start_session_aged(&store, 60);
+        record_aged_turn(&store, &latest, 0, "latest-session-only");
+
+        let replay = SessionReplayTool::new(store);
+        let mut ctx = Context::default();
+
+        let omitted = replay
+            .call(&mut ctx, json!({"mode": "full"}))
+            .await
+            .unwrap();
+        assert_eq!(omitted["session_id"], latest);
+        assert_eq!(
+            omitted["count"], 1,
+            "omitted id must not combine sessions: {omitted}"
+        );
+        assert_eq!(omitted["turns"][0]["content"], "latest-session-only");
+
+        let explicit_older = replay
+            .call(&mut ctx, json!({"session_id": older, "mode": "full"}))
+            .await
+            .unwrap();
+        assert_eq!(explicit_older["session_id"], older);
+        assert_eq!(explicit_older["count"], 1);
+        assert_eq!(explicit_older["turns"][0]["content"], "older-session-only");
+    }
+
+    #[tokio::test]
+    async fn replay_without_any_session_remains_truthfully_empty() {
+        let replay = SessionReplayTool::new(test_store());
+        let mut ctx = Context::default();
+
+        let value = replay.call(&mut ctx, json!({})).await.unwrap();
+        assert_eq!(value["status"], "success");
+        assert_eq!(value["session_id"], Value::Null);
+        assert_eq!(value["count"], 0);
+        assert_eq!(value["turns"], json!([]));
     }
 
     #[tokio::test]
