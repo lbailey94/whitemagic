@@ -19,7 +19,8 @@ fn map_galaxy(name: &str) -> Option<Galaxy> {
         "citta" | "self_discovery" => Some(Galaxy::Citta),
         "dreams" => Some(Galaxy::Dreams),
         "research" | "insight" => Some(Galaxy::Research),
-        "substrate" | "meta" | "telemetry" => Some(Galaxy::Substrate),
+        "substrate" | "meta" => Some(Galaxy::Substrate),
+        "telemetry" => Some(Galaxy::Telemetry),
         "tutorial" => Some(Galaxy::Tutorial),
         "journals" => Some(Galaxy::Journals),
         // Skip benchmark/quarantine galaxies — no cognitive value

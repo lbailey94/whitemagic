@@ -182,7 +182,8 @@ impl NervousSubsystem {
             | EventType::CerebellarErrorCorrection
             | EventType::CerebellarTimingCalibration
             | EventType::CerebellarMotorMemoryRecalled
-            | EventType::PatternDetected => Self::Sensory,
+            | EventType::PatternDetected
+            | EventType::OsTelemetryThreshold => Self::Sensory,
 
             // Motor — output, action
             EventType::MemoryCreated

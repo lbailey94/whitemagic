@@ -188,7 +188,11 @@ impl Lifecycle {
         for galaxy in wm_core::Galaxy::all() {
             // Skip system galaxies
             match galaxy {
-                Galaxy::Substrate | Galaxy::Dharma | Galaxy::Karma | Galaxy::Embeddings => continue,
+                Galaxy::Substrate
+                | Galaxy::Dharma
+                | Galaxy::Karma
+                | Galaxy::Embeddings
+                | Galaxy::Telemetry => continue,
                 _ => {}
             }
             let count = store.count(galaxy).unwrap_or(0);
@@ -235,7 +239,8 @@ impl Lifecycle {
                 | Galaxy::Dharma
                 | Galaxy::Karma
                 | Galaxy::Embeddings
-                | Galaxy::Associations => continue,
+                | Galaxy::Associations
+                | Galaxy::Telemetry => continue,
                 _ => {}
             }
             let count = store.count(galaxy).unwrap_or(0);

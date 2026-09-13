@@ -346,6 +346,12 @@ pub enum EventType {
     /// Novel semantic cluster discovered (e.g. rabbit-hole research) —
     /// cross-subsystem awakening signal for background reflection.
     PatternDetected = 233,
+
+    // ── OS telemetry (234) ───────────────────────────────────────
+    /// An OS telemetry dimension crossed its threshold (edge galaxy, B2-era
+    /// telemetry slice). Payload carries `{topic, value, threshold, window}`
+    /// — e.g. topic `os.telemetry.responsiveness`, value 0.28.
+    OsTelemetryThreshold = 234,
 }
 
 impl EventType {
@@ -364,6 +370,9 @@ impl EventType {
             175..=199 => EventCategory::Agent,
             200..=228 => EventCategory::Embodiment,
             229..=233 => EventCategory::Coordination,
+            // OS telemetry threshold crossings surface under harmony (the
+            // primary subscriber filter for anomaly work).
+            234 => EventCategory::Harmony,
             _ => EventCategory::System, // unreachable
         }
     }
@@ -616,6 +625,8 @@ impl EventType {
             Self::CoordinationClaimDenied => "coordination_claim_denied",
             Self::CoordinationClaimExpired => "coordination_claim_expired",
             Self::PatternDetected => "pattern_detected",
+            // OS telemetry
+            Self::OsTelemetryThreshold => "os_telemetry_threshold",
         }
     }
 
@@ -628,14 +639,14 @@ impl EventType {
             .collect()
     }
 
-    /// All 234 event types in canonical order.
+    /// All 235 event types in canonical order.
     #[must_use]
     pub fn all() -> Vec<Self> {
-        (0..=233u16).map(Self::from_id).collect()
+        (0..=234u16).map(Self::from_id).collect()
     }
 
     /// Total number of event types.
-    pub const COUNT: usize = 234;
+    pub const COUNT: usize = 235;
 
     /// Convert from u16 id.
     #[must_use]
@@ -875,6 +886,7 @@ impl EventType {
             231 => Self::CoordinationClaimDenied,
             232 => Self::CoordinationClaimExpired,
             233 => Self::PatternDetected,
+            234 => Self::OsTelemetryThreshold,
             _ => Self::SystemStartup, // unreachable
         }
     }
@@ -893,9 +905,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn event_count_is_234() {
-        assert_eq!(EventType::all().len(), 234);
-        assert_eq!(EventType::COUNT, 234);
+    fn event_count_is_235() {
+        assert_eq!(EventType::all().len(), 235);
+        assert_eq!(EventType::COUNT, 235);
     }
 
     #[test]
@@ -999,7 +1011,7 @@ mod tests {
             25
         );
         assert_eq!(EventType::in_category(EventCategory::Drive).len(), 25);
-        assert_eq!(EventType::in_category(EventCategory::Harmony).len(), 25);
+        assert_eq!(EventType::in_category(EventCategory::Harmony).len(), 26);
         assert_eq!(EventType::in_category(EventCategory::Governance).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Tool).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Agent).len(), 25);

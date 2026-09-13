@@ -415,7 +415,8 @@ impl<'a> DreamContext<'a> {
                 | Galaxy::Dharma
                 | Galaxy::Karma
                 | Galaxy::Embeddings
-                | Galaxy::Associations => continue,
+                | Galaxy::Associations
+                | Galaxy::Telemetry => continue,
                 _ => {}
             }
             let mems = self.store.scan(galaxy, limit)?;
@@ -1486,7 +1487,8 @@ impl DreamCycle {
                 | Galaxy::Dharma
                 | Galaxy::Karma
                 | Galaxy::Embeddings
-                | Galaxy::Associations => continue,
+                | Galaxy::Associations
+                | Galaxy::Telemetry => continue,
                 _ => {}
             }
             let count = ctx.store.count(galaxy).unwrap_or(0);
@@ -1677,7 +1679,8 @@ impl DreamCycle {
                 | Galaxy::Dharma
                 | Galaxy::Karma
                 | Galaxy::Embeddings
-                | Galaxy::Associations => continue,
+                | Galaxy::Associations
+                | Galaxy::Telemetry => continue,
                 _ => {}
             }
             let mems = ctx.store.scan(galaxy, 10_000).unwrap_or_default();
