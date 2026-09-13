@@ -129,7 +129,12 @@ enum Commands {
         store: Option<PathBuf>,
     },
     /// Run the built-in quickstart demo
-    Quickstart,
+    Quickstart {
+        /// Show subsystem diagnostics (the demo is quiet by default — it is
+        /// the product's first impression)
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Diagnose system issues
     Doctor {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
@@ -149,6 +154,11 @@ enum Commands {
         /// Run Kaizen correlation analysis across memories
         #[arg(long)]
         kaizen: bool,
+        /// Grade optional/experimental subsystems (calibration state,
+        /// embedder route quality, …) as issues too. Default doctor grades
+        /// the supported product surface only (first-run feedback, 2026-09-13).
+        #[arg(long)]
+        deep: bool,
     },
     /// Analyze git history and mine codebase patterns with longevity scores (read-only)
     Geneseed {
@@ -652,9 +662,21 @@ fn detect_hostname() -> String {
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    // Initialize logging (only to stderr — stdout is for JSON-RPC)
+    // Initialize logging (only to stderr — stdout is for JSON-RPC).
+    // Quickstart is the product's first impression: quiet (errors only)
+    // unless --verbose, regardless of ambient RUST_LOG (a sandbox that
+    // exports RUST_LOG=warn otherwise turns a working demo into a wall of
+    // subsystem warnings — first-run feedback, 2026-09-13).
+    let log_filter = match &cli.command {
+        Commands::Quickstart { verbose: false } => tracing_subscriber::EnvFilter::new("error"),
+        Commands::Quickstart { verbose: true } => {
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+        }
+        _ => tracing_subscriber::EnvFilter::from_default_env(),
+    };
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_env_filter(log_filter)
         .with_writer(std::io::stderr)
         .init();
 
@@ -878,7 +900,7 @@ fn main() -> anyhow::Result<()> {
             // for it indefinitely. Force shutdown with a bounded timeout instead.
             rt.shutdown_timeout(std::time::Duration::from_millis(500));
         }
-        Commands::Quickstart => {
+        Commands::Quickstart { .. } => {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async { run_quickstart().await })?;
         }
@@ -888,6 +910,7 @@ fn main() -> anyhow::Result<()> {
             repair,
             network,
             kaizen,
+            deep,
         } => {
             // Posture-by-observation is store-independent: `--network` runs
             // the socket audit alone and never opens the LMDB env.
@@ -904,7 +927,7 @@ fn main() -> anyhow::Result<()> {
                 }
                 issues
             } else {
-                run_doctor(store, check_integrity, repair, kaizen)?
+                run_doctor(store, check_integrity, repair, kaizen, deep)?
             };
             if issues > 0 {
                 std::process::exit(1);
@@ -2261,19 +2284,32 @@ fn run_doctor(
     check_integrity: bool,
     repair: bool,
     kaizen: bool,
+    deep: bool,
 ) -> anyhow::Result<u32> {
     let store_path = store.unwrap_or_else(default_store_path);
     let lmdb_path = store_path.join("lmdb");
     let mut issues = 0u32;
+    let mut optional_suppressed = 0u32;
 
     println!("=== WhiteMagic Doctor ===");
     println!();
 
-    // 1. LMDB store check
+    // 1. LMDB store check — a missing store is the normal state on a fresh
+    // install, not a failure. Point at the real first step (`wm quickstart`)
+    // instead of `wm serve` (which blocks on stdio).
     if !lmdb_path.exists() {
-        println!("[FAIL] LMDB store not found at {}", lmdb_path.display());
-        println!("  Run 'wm serve' to initialize the store.");
-        return Ok(1);
+        println!(
+            "[INFO] No store at {} yet — this is normal on a fresh install.",
+            lmdb_path.display()
+        );
+        println!("       Run 'wm quickstart' for the 30-second two-process demo (isolated store),");
+        println!(
+            "       or 'wm serve' to start an MCP server (it creates the store on first use)."
+        );
+        println!();
+        println!("=== Doctor Summary ===");
+        println!("Fresh install — nothing to check yet. 'wm quickstart' is the verification step.");
+        return Ok(0);
     }
     println!("[OK]   LMDB store: {}", lmdb_path.display());
 
@@ -2593,7 +2629,9 @@ fn run_doctor(
                     println!("[WARN] Karma chain: deep verification could not run: {e}");
                 }
             },
-            None => println!("[WARN] Karma chain: ledger not enabled in this server"),
+            None => println!(
+                "[INFO] Karma chain: ledger not enabled in this server (optional governance subsystem)"
+            ),
         }
     }
 
@@ -2615,7 +2653,7 @@ fn run_doctor(
 
                             println!(
                                 "[{}] Conformal calibration: {}",
-                                if clf_ok || reg_ok { "OK" } else { "WARN" },
+                                if clf_ok || reg_ok { "OK" } else { "INFO" },
                                 conformal_path.display()
                             );
                             println!(
@@ -2658,10 +2696,17 @@ fn run_doctor(
                             );
                             if !clf_ok && !reg_ok {
                                 if store.classifier_samples() > 0 || store.regressor_samples() > 0 {
-                                    println!(
-                                        "       [WARN] Calibration samples exist but nothing is fitted — run conformal.fit_classifier / conformal.fit_regressor, then conformal.export"
-                                    );
-                                    issues += 1;
+                                    if deep {
+                                        println!(
+                                            "       [WARN] Calibration samples exist but nothing is fitted — run conformal.fit_classifier / conformal.fit_regressor, then conformal.export"
+                                        );
+                                        issues += 1;
+                                    } else {
+                                        println!(
+                                            "       [INFO] Calibration samples exist but nothing is fitted (optional subsystem) — run 'wm doctor --deep' to grade"
+                                        );
+                                        optional_suppressed += 1;
+                                    }
                                 } else {
                                     println!(
                                         "       [INFO] No calibration fitted yet — calibrate via conformal.fit_classifier / conformal.fit_regressor"
@@ -2670,19 +2715,40 @@ fn run_doctor(
                             }
                         }
                         Err(e) => {
-                            println!("[WARN] Conformal state corrupt (parse failed: {e})");
-                            issues += 1;
+                            if deep {
+                                println!("[WARN] Conformal state corrupt (parse failed: {e})");
+                                issues += 1;
+                            } else {
+                                println!(
+                                    "[INFO] Conformal state unreadable (optional subsystem) — run 'wm doctor --deep' to grade"
+                                );
+                                optional_suppressed += 1;
+                            }
                         }
                     }
                 }
                 Err(e) => {
-                    println!("[WARN] Conformal state unparseable: {e}");
-                    issues += 1;
+                    if deep {
+                        println!("[WARN] Conformal state unparseable: {e}");
+                        issues += 1;
+                    } else {
+                        println!(
+                            "[INFO] Conformal state unparseable (optional subsystem) — run 'wm doctor --deep' to grade"
+                        );
+                        optional_suppressed += 1;
+                    }
                 }
             },
             Err(e) => {
-                println!("[WARN] Cannot read conformal state: {e}");
-                issues += 1;
+                if deep {
+                    println!("[WARN] Cannot read conformal state: {e}");
+                    issues += 1;
+                } else {
+                    println!(
+                        "[INFO] Cannot read conformal state (optional subsystem) — run 'wm doctor --deep' to grade"
+                    );
+                    optional_suppressed += 1;
+                }
             }
         }
     } else {
@@ -3064,11 +3130,16 @@ fn run_doctor(
                 println!(
                     "[OK]   Recall route: episodic deterministic default (stub embedder, {episodic_count} episodic records mirror the memory lane{cache_note}) — measured R@1 0.86 (LongMemEval-S 50q, S8 protocol 2026-09-01)"
                 );
-            } else {
+            } else if deep {
                 println!(
                     "[WARN] Recall route: BM25 full-text fallback (stub embedder, episodic lane empty) — measured R@1 0.64 vs 0.86 on the episodic route (LongMemEval-S 50q, S8 protocol 2026-09-01); memory writes populate the episodic mirror, which upgrades the default route"
                 );
                 issues += 1;
+            } else {
+                println!(
+                    "[INFO] Recall route: BM25 full-text fallback (stub embedder, episodic lane empty) — memory writes populate the episodic mirror, which upgrades the default route; run 'wm doctor --deep' to grade route quality"
+                );
+                optional_suppressed += 1;
             }
         } else {
             let started = std::time::Instant::now();
@@ -3323,6 +3394,11 @@ fn run_doctor(
     println!("=== Doctor Summary ===");
     if issues == 0 {
         println!("All systems healthy.");
+        if optional_suppressed > 0 {
+            println!(
+                "{optional_suppressed} optional subsystem note(s) suppressed — run 'wm doctor --deep' to grade them."
+            );
+        }
     } else {
         println!("{issues} issue(s) found — exit code 1.");
     }
@@ -3484,7 +3560,7 @@ async fn run_quickstart() -> anyhow::Result<()> {
     println!("  2. Start sessions and record decisions as you work.");
     println!("  3. Before each new session, ask for continuity.");
     println!("  4. Back up the whole store directory regularly.");
-    println!("  5. Run 'wm doctor' any time for a health check.");
+    println!("  5. If something looks wrong, run 'wm doctor --deep' for the full gate.");
 
     Ok(())
 }

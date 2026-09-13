@@ -3102,7 +3102,7 @@ impl McpServer {
         // Provides direct verb_noun tool schemas for automated evaluators and explicit clients.
         let discrete_definitions = [
             (
-                "memory_create",
+                "memory.create",
                 "memory.create",
                 "Store a new memory in the holographic memory core with 5D spatial coordinates and galaxy routing.",
                 json!({
@@ -3134,7 +3134,7 @@ impl McpServer {
                 }),
             ),
             (
-                "memory_find",
+                "memory.search",
                 "memory.search",
                 "Search and recall memories across galaxies using hybrid semantic, BM25, and associative retrieval.",
                 json!({
@@ -3157,7 +3157,7 @@ impl McpServer {
                 }),
             ),
             (
-                "memory_read",
+                "memory.read",
                 "memory.read",
                 "Retrieve a specific memory by its ID or coordinate address.",
                 json!({
@@ -3176,7 +3176,7 @@ impl McpServer {
                 }),
             ),
             (
-                "session_start",
+                "session.start",
                 "session.start",
                 "Start or resume an agent session for persistent continuity across tool invocations.",
                 json!({
@@ -3412,7 +3412,7 @@ impl McpServer {
                             "role": "user",
                             "content": {
                                 "type": "text",
-                                "text": format!("Investigate this failure grounded in WhiteMagic memory: '{err}'. Call memory_find or wm(route=\"memory.search\") to check prior occurrences, test cases, and solutions before modifying code.")
+                                "text": format!("Investigate this failure grounded in WhiteMagic memory: '{err}'. Call memory.search or wm(route=\"memory.search\") to check prior occurrences, test cases, and solutions before modifying code.")
                             }
                         }
                     ]
@@ -3449,15 +3449,8 @@ impl McpServer {
                 data: None,
             })?;
 
-        let canonical_name = match name {
-            "memory_create" => "memory.create",
-            "memory_find" | "memory_search" => "memory.search",
-            "memory_read" => "memory.read",
-            "session_start" => "session.start",
-            "citta_status" => "citta.status",
-            "subagent_captain" => "captain.deploy",
-            other => other,
-        };
+        let canonical_name =
+            wm_tools::expansion::common::canonical_tool_alias(name).unwrap_or(name);
 
         // Look up the tool — canonical alias, exact name, or underscore/dot translation
         let tool = self
@@ -4646,8 +4639,18 @@ mod tests {
         // The wm meta-tool is first, followed by discrete tool aliases for MCP discovery
         assert!(!tools.is_empty());
         assert_eq!(tools[0]["name"], "wm");
-        assert!(tools.iter().any(|t| t["name"] == "memory_find"));
-        assert!(tools.iter().any(|t| t["name"] == "memory_create"));
+        assert!(tools.iter().any(|t| t["name"] == "memory.search"));
+        assert!(tools.iter().any(|t| t["name"] == "memory.create"));
+        // Legacy underscore/dotted aliases remain callable even though the
+        // exposed discrete names are canonical (first-run feedback 2026-09-13).
+        assert_eq!(
+            wm_tools::expansion::common::canonical_tool_alias("memory_find"),
+            Some("memory.search")
+        );
+        assert_eq!(
+            wm_tools::expansion::common::canonical_tool_alias("memory.find"),
+            Some("memory.search")
+        );
         assert!(tools[0]["inputSchema"].is_object());
         let description = tools[0]["description"].as_str().unwrap();
         assert!(
