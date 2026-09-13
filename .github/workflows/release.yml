@@ -158,7 +158,7 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -uo pipefail
-          CRATES="wm-core wm-conformal wm-memory wm-substrate wm-simulation wm-workspace wm-polyglot wm-sangha wm-selfmodel wm-governance wm-bicameral wm-dispatch wm-cognitive wm-tools whitemagic"
+          CRATES="wm-core wm-conformal wm-substrate wm-selfmodel wm-simulation wm-workspace wm-polyglot wm-memory wm-governance wm-bicameral wm-sangha wm-dispatch wm-cognitive wm-tools whitemagic"
           for c in $CRATES; do
             done_pkg=""; lag=0
             while [ -z "$done_pkg" ]; do
