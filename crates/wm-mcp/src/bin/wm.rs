@@ -1126,6 +1126,29 @@ fn main() -> anyhow::Result<()> {
             let lmdb_path = store_path.join("lmdb");
             std::fs::create_dir_all(&lmdb_path)?;
 
+            // Landlock v0: confine write-class FS rights to the store root
+            // when requested. Applied on the main thread before the daemon
+            // spawns any runtime or worker threads (thread-local restriction,
+            // inherited by descendants) — same contract as `serve`.
+            let landlock_report = if wm_mcp::landlock_sandbox::requested() {
+                let report = wm_mcp::landlock_sandbox::restrict_to_store_root(&store_path);
+                match report.outcome {
+                    wm_mcp::landlock_sandbox::LandlockOutcome::Enforced => tracing::info!(
+                        store_root = %report.store_root,
+                        "Landlock enforced — write-class FS rights confined to the store root"
+                    ),
+                    other => tracing::warn!(
+                        outcome = other.as_str(),
+                        detail = %report.detail,
+                        "Landlock v0 degraded — daemon is NOT fully confined"
+                    ),
+                }
+                wm_mcp::landlock_sandbox::persist_report(&store_path, &report);
+                Some(report)
+            } else {
+                None
+            };
+
             tracing::info!("Starting daemon, store: {}", lmdb_path.display());
 
             let mut server = match wm_mcp::McpServer::with_defaults(&lmdb_path) {
@@ -1142,6 +1165,10 @@ fn main() -> anyhow::Result<()> {
                     wm_mcp::McpServer::with_defaults(&lmdb_path)?
                 }
             };
+
+            if let Some(report) = landlock_report {
+                server.set_landlock_report(report);
+            }
 
             // Start with config file values, then apply CLI overrides
             let mut daemon_cfg = wm_config.daemon_durations();

@@ -2352,6 +2352,7 @@ impl Tool for DharmaStatusTool {
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let homeostasis = self.gate.homeostasis();
         let health = homeostasis.health_score();
+        let decisions = wm_governance::dharma_gate::verdict_counts();
 
         Ok(json!({
             "status": "success",
@@ -2361,6 +2362,16 @@ impl Tool for DharmaStatusTool {
                 "active": homeostasis.active,
                 "health_score": health,
                 "stressed": homeostasis.is_stressed(),
+            },
+            "decisions": {
+                "observe": decisions.observe,
+                "advise": decisions.advise,
+                "correct": decisions.correct,
+                "intervene": decisions.intervene,
+                "panic": decisions.panic,
+                "total": decisions.total(),
+                "blocked": decisions.blocked(),
+                "blocked_ratio": decisions.blocked_ratio(),
             },
             "sutras": {
                 "ahimsa": "Non-harm — destructive actions blocked in strict mode",
@@ -4707,6 +4718,8 @@ mod tests {
         assert_eq!(result["status"], "success");
         assert!(result["homeostasis"]["health_score"].is_f64());
         assert!(result["sutras"]["ahimsa"].is_string());
+        assert!(result["decisions"]["total"].is_u64());
+        assert!(result["decisions"]["blocked_ratio"].is_number());
     }
 
     #[tokio::test]

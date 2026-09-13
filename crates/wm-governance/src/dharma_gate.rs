@@ -12,6 +12,7 @@
 //! - Ahimsa (non-harm): Destructive actions blocked in strict/low-maturity states.
 //! - Satya (truth): Memory fabrication is always forbidden.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use wm_core::{BrainWave, Context, EffectRow, Resource};
 
 /// The verdict from a Dharma evaluation.
@@ -49,6 +50,77 @@ impl ActionVerdict {
             Self::Observe => "observe",
             Self::Advise(r) | Self::Correct(r) | Self::Intervene(r) | Self::Panic(r) => r,
         }
+    }
+}
+
+// ── Decision counters (telemetry) ────────────────────────────────────
+
+static OBSERVE_COUNT: AtomicU64 = AtomicU64::new(0);
+static ADVISE_COUNT: AtomicU64 = AtomicU64::new(0);
+static CORRECT_COUNT: AtomicU64 = AtomicU64::new(0);
+static INTERVENE_COUNT: AtomicU64 = AtomicU64::new(0);
+static PANIC_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Per-verdict decision counts since process start.
+///
+/// Consumed by telemetry surfaces (`dharma.status`, Lakshmi's dharma
+/// dimension): rates are meaningful as deltas between polls, absolute
+/// values reset each process start by design.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct VerdictCounts {
+    pub observe: u64,
+    pub advise: u64,
+    pub correct: u64,
+    pub intervene: u64,
+    pub panic: u64,
+}
+
+impl VerdictCounts {
+    /// Total evaluations counted.
+    #[must_use]
+    pub const fn total(&self) -> u64 {
+        self.observe + self.advise + self.correct + self.intervene + self.panic
+    }
+
+    /// Blocking verdicts (Intervene + Panic).
+    #[must_use]
+    pub const fn blocked(&self) -> u64 {
+        self.intervene + self.panic
+    }
+
+    /// Blocked / total in [0.0, 1.0]; 0.0 when no decisions yet.
+    #[must_use]
+    pub fn blocked_ratio(&self) -> f32 {
+        let total = self.total();
+        if total == 0 {
+            0.0
+        } else {
+            self.blocked() as f32 / total as f32
+        }
+    }
+}
+
+/// Increment the per-verdict counter (called by [`DharmaGate::evaluate`]).
+pub fn record_verdict(verdict: &ActionVerdict) {
+    let counter = match verdict {
+        ActionVerdict::Observe => &OBSERVE_COUNT,
+        ActionVerdict::Advise(_) => &ADVISE_COUNT,
+        ActionVerdict::Correct(_) => &CORRECT_COUNT,
+        ActionVerdict::Intervene(_) => &INTERVENE_COUNT,
+        ActionVerdict::Panic(_) => &PANIC_COUNT,
+    };
+    counter.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Snapshot of the decision counters since process start.
+#[must_use]
+pub fn verdict_counts() -> VerdictCounts {
+    VerdictCounts {
+        observe: OBSERVE_COUNT.load(Ordering::Relaxed),
+        advise: ADVISE_COUNT.load(Ordering::Relaxed),
+        correct: CORRECT_COUNT.load(Ordering::Relaxed),
+        intervene: INTERVENE_COUNT.load(Ordering::Relaxed),
+        panic: PANIC_COUNT.load(Ordering::Relaxed),
     }
 }
 
@@ -139,6 +211,13 @@ impl DharmaGate {
     ///
     /// Returns a verdict indicating whether the call should proceed.
     pub fn evaluate(&self, effects: &EffectRow, ctx: &Context) -> ActionVerdict {
+        let verdict = self.evaluate_inner(effects, ctx);
+        record_verdict(&verdict);
+        verdict
+    }
+
+    /// Uncounted inner evaluation — public entry is [`Self::evaluate`].
+    fn evaluate_inner(&self, effects: &EffectRow, ctx: &Context) -> ActionVerdict {
         let bw = ctx.brain_wave;
         let homeostasis = self.homeostasis();
         let maturity = maturity_from_brain_wave(bw);
@@ -248,6 +327,22 @@ mod tests {
         let effects = EffectRow::read_only(vec![Resource::Galaxy("codex".into())]);
         let verdict = gate.evaluate(&effects, &ctx);
         assert_eq!(verdict, ActionVerdict::Observe);
+    }
+
+    #[test]
+    fn verdict_counters_track_evaluations() {
+        let gate = DharmaGate::new();
+        let ctx = Context::new(BrainWave::Gamma);
+        let effects = EffectRow::read_only(vec![Resource::Galaxy("codex".into())]);
+        let before = verdict_counts();
+        let verdict = gate.evaluate(&effects, &ctx);
+        let after = verdict_counts();
+        assert_eq!(verdict, ActionVerdict::Observe);
+        assert!(after.observe > before.observe);
+        assert!(after.total() > before.total());
+        assert!(after.blocked() >= before.blocked());
+        let ratio = after.blocked_ratio();
+        assert!((0.0..=1.0).contains(&ratio));
     }
 
     #[test]
