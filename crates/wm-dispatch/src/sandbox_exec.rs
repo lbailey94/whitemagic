@@ -27,10 +27,11 @@
 //!   call is synchronous in the dispatcher); timeout parity is v1.1.
 //! - The per-dispatch cost is one OS thread + one current-thread runtime
 //!   (measured in the acceptance tests; parked-thread pooling is v1.1).
-//! - Subprocess-creating tools are out of the first taxonomy batch: the
-//!   per-thread ruleset grants the store root + `/dev/null` only, so a
-//!   tool that needs the `.git` lease-ledger grant must not be marked
-//!   `StoreScoped` yet.
+//! - Subprocess-creating tools take a different seam: they declare
+//!   [`wm_core::Sandbox::Subprocess`] and build spawns through the
+//!   `SpawnPolicy` injected on the context (B2,
+//!   `crate::subprocess_sandbox`), because thread-local Landlock cannot
+//!   confine a child process.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 

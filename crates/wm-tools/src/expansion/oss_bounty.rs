@@ -11,8 +11,8 @@ use async_trait::async_trait;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::process::Command;
-use wm_core::{Context, CoreError, EffectRow, Gana, Resource, Tool, ToolStats};
+use wm_core::sandbox::SpawnPolicy;
+use wm_core::{Context, CoreError, EffectRow, Gana, Resource, Sandbox, Tool, ToolStats};
 
 const ALGORA_LABELS: &[&str] = &["bounty", "algora", "algora-bounty"];
 const OPIRE_LABELS: &[&str] = &["opire", "opire-bounty", "bounty"];
@@ -39,14 +39,17 @@ struct GhRepo {
     name_with_owner: String,
 }
 
-fn gh_command(args: &[&str]) -> Option<String> {
-    // Prefer `timeout 30 gh ...` so a hung CLI cannot stall dispatch.
-    let output = Command::new("timeout")
-        .arg("30")
-        .arg("gh")
-        .args(args)
+fn gh_command(policy: &SpawnPolicy, args: &[&str]) -> Option<String> {
+    // Prefer `timeout 30 gh ...` so a hung CLI cannot stall dispatch; the
+    // fallback drops `timeout` for minimal hosts but stays wrapped by the
+    // same spawn policy (B2: the dispatcher hands this tool a runner-backed
+    // policy, so `gh` is contained by the OS sandbox when one is attached).
+    let mut timed: Vec<&str> = vec!["30", "gh"];
+    timed.extend_from_slice(args);
+    let output = policy
+        .command("timeout", &timed)
         .output()
-        .or_else(|_| Command::new("gh").args(args).output())
+        .or_else(|_| policy.command("gh", args).output())
         .ok()?;
     if !output.status.success() {
         return None;
@@ -54,8 +57,8 @@ fn gh_command(args: &[&str]) -> Option<String> {
     String::from_utf8(output.stdout).ok()
 }
 
-fn gh_available() -> bool {
-    gh_command(&["--version"]).is_some()
+fn gh_available(policy: &SpawnPolicy) -> bool {
+    gh_command(policy, &["--version"]).is_some()
 }
 
 fn detect_platform(labels: &[String]) -> Option<&'static str> {
@@ -107,21 +110,24 @@ fn extract_amount(body: &str) -> Option<String> {
     None
 }
 
-fn scan_repo(repo: &str) -> Result<Vec<Value>, String> {
-    let output = gh_command(&[
-        "issue",
-        "list",
-        "--repo",
-        repo,
-        "--state",
-        "open",
-        "--label",
-        "bounty",
-        "--limit",
-        "50",
-        "--json",
-        "number,title,url,labels,body",
-    ])
+fn scan_repo(policy: &SpawnPolicy, repo: &str) -> Result<Vec<Value>, String> {
+    let output = gh_command(
+        policy,
+        &[
+            "issue",
+            "list",
+            "--repo",
+            repo,
+            "--state",
+            "open",
+            "--label",
+            "bounty",
+            "--limit",
+            "50",
+            "--json",
+            "number,title,url,labels,body",
+        ],
+    )
     .ok_or_else(|| format!("gh issue list failed for {repo}"))?;
     let issues: Vec<GhIssue> =
         serde_json::from_str(&output).map_err(|e| format!("gh JSON parse: {e}"))?;
@@ -172,6 +178,7 @@ impl OssBountyScanTool {
             effects: EffectRow {
                 reads: vec![Resource::Network, Resource::Process],
                 spawns: true,
+                sandbox: Sandbox::Subprocess,
                 ..Default::default()
             },
         }
@@ -192,36 +199,39 @@ impl Tool for OssBountyScanTool {
     fn description(&self) -> &str {
         "Scan GitHub for bounty-labeled issues via the gh CLI. Args: repo (owner/name) or org (name). Read-only; requires the gh CLI to be installed and authenticated."
     }
-    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        if !gh_available() {
+    async fn call(&self, ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        if !gh_available(&ctx.spawn) {
             return Ok(json!({
                 "status": "error",
                 "message": "gh CLI not available; install/authenticate gh to scan OSS bounties",
             }));
         }
         if let Some(repo) = args.get("repo").and_then(Value::as_str) {
-            let issues = scan_repo(repo)
+            let issues = scan_repo(&ctx.spawn, repo)
                 .map_err(|e| CoreError::Internal(format!("oss scan failed: {e}")))?;
             return Ok(
                 json!({"status": "success", "repo": repo, "count": issues.len(), "issues": issues}),
             );
         }
         if let Some(org) = args.get("org").and_then(Value::as_str) {
-            let repos_json = gh_command(&[
-                "repo",
-                "list",
-                org,
-                "--limit",
-                "100",
-                "--json",
-                "nameWithOwner",
-            ])
+            let repos_json = gh_command(
+                &ctx.spawn,
+                &[
+                    "repo",
+                    "list",
+                    org,
+                    "--limit",
+                    "100",
+                    "--json",
+                    "nameWithOwner",
+                ],
+            )
             .ok_or_else(|| CoreError::Internal(format!("gh repo list failed for {org}")))?;
             let repos: Vec<GhRepo> = serde_json::from_str(&repos_json)
                 .map_err(|e| CoreError::Internal(format!("gh JSON parse: {e}")))?;
             let mut all = Vec::new();
             for repo in repos {
-                if let Ok(mut issues) = scan_repo(&repo.name_with_owner) {
+                if let Ok(mut issues) = scan_repo(&ctx.spawn, &repo.name_with_owner) {
                     all.append(&mut issues);
                 }
             }
@@ -257,6 +267,7 @@ impl OssBountyStatusTool {
             effects: EffectRow {
                 reads: vec![Resource::Process],
                 spawns: true,
+                sandbox: Sandbox::Subprocess,
                 ..Default::default()
             },
         }
@@ -277,10 +288,10 @@ impl Tool for OssBountyStatusTool {
     fn description(&self) -> &str {
         "OSS bounty scanner status: gh CLI availability + Algora/Opire label taxonomy."
     }
-    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+    async fn call(&self, ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         Ok(json!({
             "status": "success",
-            "gh_available": gh_available(),
+            "gh_available": gh_available(&ctx.spawn),
             "algora_labels": ALGORA_LABELS,
             "opire_labels": OPIRE_LABELS,
         }))

@@ -96,6 +96,12 @@ pub enum Sandbox {
     /// Tool only touches paths beneath the store root — eligible for the
     /// v1 per-tool restricted-thread pathway.
     StoreScoped,
+    /// Tool launches external processes — its spawn sites must build
+    /// commands through [`crate::Context::spawn`] so the OS runner
+    /// (`mandala-sandbox`) can wrap them (B2). Declaring this is the
+    /// tool's assertion that it uses the policy; the dispatcher injects
+    /// it and loud-degrades when no runner resolves.
+    Subprocess,
 }
 
 /// The effect row of a tool — what it does to the world.

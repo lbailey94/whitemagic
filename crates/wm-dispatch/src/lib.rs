@@ -15,6 +15,7 @@ pub mod registry;
 pub mod sandbox_exec;
 pub mod secret_scan;
 pub mod speculative;
+pub mod subprocess_sandbox;
 pub mod write_gate;
 
 pub use circuit_breaker::{BreakerConfig, BreakerState, CircuitBreaker, CircuitBreakerRegistry};
@@ -24,3 +25,4 @@ pub use pipeline::DispatchPipeline;
 pub use rate_limiter::{RateLimiter, RateLimiterConfig, SlidingWindow};
 pub use registry::{ToolRegistry, ToolRegistryBuilder};
 pub use speculative::{CheckResult, SpeculativeExecutor, ValidationResult};
+pub use subprocess_sandbox::SubprocessSandbox;

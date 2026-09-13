@@ -1164,6 +1164,24 @@ impl McpServer {
         } else {
             None
         };
+        // B2 subprocess spawn sandbox: resolve the OS runner once at startup
+        // (WM_SANDBOX_RUNNER → PATH). Attached unconditionally so the
+        // dispatch counters and the degraded path are always observable —
+        // no runner means declared spawns run unconfined with a WARN and a
+        // counter, never silently.
+        let subprocess_sandbox = std::sync::Arc::new(wm_dispatch::SubprocessSandbox::detect());
+        if let Some(runner) = subprocess_sandbox.runner() {
+            tracing::info!(
+                runner = %runner.path.display(),
+                source = runner.source.as_str(),
+                "subprocess sandbox runner resolved (B2)"
+            );
+        } else {
+            tracing::info!(
+                "subprocess sandbox: no runner resolved (WM_SANDBOX_RUNNER unset, \
+                 mandala-sandbox not on PATH) — Sandbox::Subprocess tools will loud-degrade"
+            );
+        }
         let pipeline = Arc::new(
             DispatchPipeline::new(
                 std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
@@ -1189,6 +1207,7 @@ impl McpServer {
             // Read-only mode must not append journal entries either.
             .with_write_audit_option(if readonly { None } else { Some(write_audit) })
             .with_sandbox_executor(sandbox_exec)
+            .with_subprocess_sandbox(Some(subprocess_sandbox))
             .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env()),
         );
 
@@ -1972,6 +1991,23 @@ impl McpServer {
             // Circuit-breaker operator snapshot (read-only): open/half-open
             // tools + non-zero trip counts. Env-tunable via WM_BREAKER_*.
             "breaker": self.pipeline.circuit_breakers().snapshot(),
+            // Landlock v1 executor counters (B1 pathway) — null when the
+            // per-tool pathway is not attached (WM_LANDLOCK_V1 unset).
+            "landlock_v1": self.pipeline.sandbox_executor().map_or(
+                serde_json::Value::Null,
+                |executor| {
+                    let (runs, degraded, failures) = executor.stats();
+                    json!({"runs": runs, "degraded": degraded, "failures": failures})
+                },
+            ),
+            // Subprocess spawn sandbox (B2) — runner resolution (env →
+            // PATH) + dispatch/degraded/unmigrated counters. Always
+            // attached; `active:false` means declared spawns are not
+            // contained (the unsafe state is itself disclosed).
+            "subprocess_sandbox": self.pipeline.subprocess_sandbox().map_or(
+                serde_json::Value::Null,
+                wm_dispatch::SubprocessSandbox::status,
+            ),
             // Embedder honesty (init-time config + live store counts) so
             // fleet rollout/verification needs no store-locking CLI calls.
             "embedder": {
@@ -4223,6 +4259,23 @@ mod tests {
         server.status_payload()["landlock"].is_null()
     }
 
+    #[tokio::test]
+    async fn status_payload_discloses_subprocess_sandbox() {
+        // B2: the pipeline always carries the subprocess registry in the
+        // server construction path; `/status` must disclose the runner
+        // resolution and counters (including the inactive state).
+        let server = test_server();
+        let payload = server.status_payload();
+        let sandbox = &payload["subprocess_sandbox"];
+        assert!(!sandbox.is_null(), "got: {payload}");
+        assert_eq!(sandbox["envelope"], "wm-sandbox-exec-v1");
+        assert_eq!(sandbox["active"], false, "test server has no runner");
+        assert!(sandbox["runner"].is_null());
+        assert!(sandbox["dispatches"].is_number());
+        assert!(sandbox["degraded"].is_number());
+        assert!(sandbox["unconfined_spawns"].is_number());
+    }
+
     /// Store path for tests: a nested dir inside the tempdir so that
     /// `store.path().parent()` (where self_model.json etc. live) stays inside
     /// the tempdir. Passing the tempdir root directly made those files land
@@ -4485,7 +4538,12 @@ mod tests {
             .with_write_gate(Arc::new(wm_dispatch::write_gate::WriteGate::new(
                 store.clone(),
             )))
-            .with_write_audit(write_audit),
+            .with_write_audit(write_audit)
+            // B2 registry with a deterministic inactive runner so status
+            // disclosure is testable without host env/PATH dependence.
+            .with_subprocess_sandbox(Some(std::sync::Arc::new(
+                wm_dispatch::SubprocessSandbox::with_runner(None),
+            ))),
         );
         let (registry, _router) = wm_tools::register_meta_tools_with_router(
             &registry,

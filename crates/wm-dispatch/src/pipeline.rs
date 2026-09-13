@@ -149,6 +149,12 @@ pub struct DispatchPipeline {
     /// `StoreScoped` tools run confined on a fresh thread. `None` = the
     /// declared flag is inert (v0 whole-process ruleset may still apply).
     sandbox_exec: Option<Arc<crate::sandbox_exec::ScopedSandboxExecutor>>,
+    /// Optional subprocess spawn sandbox registry (B2) — tools declaring
+    /// `Sandbox::Subprocess` get a runner-backed
+    /// [`wm_core::sandbox::SpawnPolicy`] injected into their context;
+    /// counters and the active-runner disclosure ride the dispatch.
+    /// `None` = the declarations are inert (Landlock v1 doctrine).
+    subprocess_sandbox: Option<Arc<crate::subprocess_sandbox::SubprocessSandbox>>,
     /// Optional flight recorder (Q35b) — opt-in JSONL payload capture for
     /// replay. Captures at the same point as `args_digest` so sidecar args
     /// always hash to the journal digest (the replay identity gate).
@@ -199,6 +205,10 @@ impl DispatchPipeline {
             // deployment (wm-mcp injects the Landlock callback when
             // WM_LANDLOCK_V1=1); without it, StoreScoped marks are inert.
             sandbox_exec: None,
+            // Same doctrine for the B2 subprocess registry: attached
+            // explicitly by the deployment (wm-mcp injects a detected
+            // runner); without it, Subprocess marks are inert.
+            subprocess_sandbox: None,
             // The firebreak arms by default: every construction path (server,
             // daemon, CLI, tests) inherits the veto + scope law unless it is
             // explicitly disarmed with `with_firebreak_option(None)` or the
@@ -337,6 +347,24 @@ impl DispatchPipeline {
     #[must_use]
     pub fn sandbox_executor(&self) -> Option<&crate::sandbox_exec::ScopedSandboxExecutor> {
         self.sandbox_exec.as_deref()
+    }
+
+    /// Attach the subprocess spawn sandbox registry (B2). When attached,
+    /// `Sandbox::Subprocess` tools receive a runner-backed spawn policy in
+    /// their context; anything short of an active runner loud-degrades.
+    #[must_use]
+    pub fn with_subprocess_sandbox(
+        mut self,
+        sandbox: Option<Arc<crate::subprocess_sandbox::SubprocessSandbox>>,
+    ) -> Self {
+        self.subprocess_sandbox = sandbox;
+        self
+    }
+
+    /// The subprocess spawn sandbox registry attached to this pipeline.
+    #[must_use]
+    pub fn subprocess_sandbox(&self) -> Option<&crate::subprocess_sandbox::SubprocessSandbox> {
+        self.subprocess_sandbox.as_deref()
     }
 
     /// Attach a firebreak with an explicit arm state (tests, special
@@ -771,6 +799,38 @@ impl DispatchPipeline {
             .write_audit
             .as_ref()
             .map_or(0, |j| j.dispatch_baseline());
+        // 4e. B2 subprocess spawn policy. Declared `Sandbox::Subprocess`
+        // tools receive a runner-backed policy on their context *before*
+        // the call; a declared tool with no runner resolvable still runs
+        // (availability first) but is counted and warned — and a tool that
+        // declares raw `spawns` without the contract is surfaced once.
+        let mut spawn_disclosure: Option<serde_json::Value> = None;
+        if let Some(sb) = self.subprocess_sandbox.as_deref() {
+            if crate::subprocess_sandbox::SubprocessSandbox::declared(tool.effects()) {
+                let policy = sb.policy_for(tool.effects());
+                if policy.is_active() {
+                    let mut disclosure = serde_json::json!({
+                        "net": policy.allow_net(),
+                        "envelope": wm_core::sandbox::ENVELOPE_SCHEMA,
+                    });
+                    if let Some(runner) = policy.runner()
+                        && let Some(obj) = disclosure.as_object_mut()
+                    {
+                        obj.insert(
+                            "runner".to_string(),
+                            serde_json::Value::String(runner.display().to_string()),
+                        );
+                    }
+                    sb.note_confined();
+                    spawn_disclosure = Some(disclosure);
+                } else {
+                    sb.note_degraded(tool.name());
+                }
+                ctx.spawn = policy;
+            } else if tool.effects().spawns {
+                sb.note_unconfined_spawn(tool.name());
+            }
+        }
         // P-SANDBOX-3 (Landlock v1): a `StoreScoped` tool with an executor
         // attached runs on a confined scoped thread (synchronous — see
         // `sandbox_exec` for why, and for the timeout-parity v1 gap).
@@ -853,6 +913,18 @@ impl DispatchPipeline {
                         "firebreak".to_string(),
                         serde_json::json!({ "advisories": advisories }),
                     );
+                }
+                Ok(output)
+            }
+            (result, _) => result,
+        };
+
+        // Attach the subprocess-sandbox disclosure the same way — active
+        // confinement on a declared spawn tool is announced, never silent.
+        let result = match (result, spawn_disclosure) {
+            (Ok(mut output), Some(disclosure)) => {
+                if let serde_json::Value::Object(ref mut map) = output {
+                    map.insert("sandbox".to_string(), disclosure);
                 }
                 Ok(output)
             }
@@ -1823,6 +1895,206 @@ mod tests {
                 .await
                 .is_ok()
         );
+    }
+
+    #[tokio::test]
+    async fn pipeline_injects_subprocess_policy_and_discloses() {
+        // B2: declared `Sandbox::Subprocess` tools get a runner-backed
+        // policy on their context before the call, and the active runner is
+        // disclosed on the response.
+        use crate::subprocess_sandbox::SubprocessSandbox;
+        use std::path::PathBuf;
+        use wm_core::sandbox::RunnerSource;
+        let sandbox = Arc::new(SubprocessSandbox::with_runner(Some(
+            wm_core::sandbox::RunnerInfo {
+                path: PathBuf::from("/opt/mandala-sandbox"),
+                source: RunnerSource::Env,
+            },
+        )));
+        let pipeline =
+            DispatchPipeline::with_defaults().with_subprocess_sandbox(Some(Arc::clone(&sandbox)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "spawn_tool",
+            EffectRow {
+                reads: vec![wm_core::Resource::Network, wm_core::Resource::Process],
+                spawns: true,
+                sandbox: Sandbox::Subprocess,
+                ..Default::default()
+            },
+        )
+        .with_output(serde_json::json!({"ok": true}));
+
+        let out = pipeline
+            .dispatch(&tool, &mut ctx, Args::default())
+            .await
+            .expect("declared spawn tool dispatches");
+        assert!(ctx.spawn.is_active(), "policy must ride the context");
+        assert!(ctx.spawn.allow_net(), "network read grants the runner net");
+        assert_eq!(out["sandbox"]["runner"], "/opt/mandala-sandbox");
+        assert_eq!(out["sandbox"]["net"], true);
+        assert_eq!(
+            out["sandbox"]["envelope"],
+            wm_core::sandbox::ENVELOPE_SCHEMA
+        );
+        assert_eq!(sandbox.status()["dispatches"], 1);
+        assert_eq!(sandbox.status()["degraded"], 0);
+    }
+
+    #[tokio::test]
+    async fn pipeline_degrades_loudly_when_runner_missing() {
+        // No runner resolvable: the declared tool still runs (availability
+        // first), the dispatch is counted, and no confinement is claimed.
+        use crate::subprocess_sandbox::SubprocessSandbox;
+        let sandbox = Arc::new(SubprocessSandbox::with_runner(None));
+        let pipeline =
+            DispatchPipeline::with_defaults().with_subprocess_sandbox(Some(Arc::clone(&sandbox)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "spawn_tool",
+            EffectRow {
+                reads: vec![wm_core::Resource::Process],
+                spawns: true,
+                sandbox: Sandbox::Subprocess,
+                ..Default::default()
+            },
+        )
+        .with_output(serde_json::json!({"ok": true}));
+
+        let out = pipeline
+            .dispatch(&tool, &mut ctx, Args::default())
+            .await
+            .expect("degrade keeps availability up");
+        assert!(!ctx.spawn.is_active());
+        assert!(
+            out.get("sandbox").is_none(),
+            "no runner means no confinement claim"
+        );
+        assert_eq!(sandbox.status()["dispatches"], 1);
+        assert_eq!(sandbox.status()["degraded"], 1);
+    }
+
+    #[tokio::test]
+    async fn pipeline_surfaces_unmigrated_spawn_tools() {
+        // A tool that declares raw `spawns` without adopting the
+        // `Sandbox::Subprocess` contract is counted and warned — the seam
+        // must not silently pretend coverage it does not have.
+        use crate::subprocess_sandbox::SubprocessSandbox;
+        use std::path::PathBuf;
+        use wm_core::sandbox::RunnerSource;
+        let sandbox = Arc::new(SubprocessSandbox::with_runner(Some(
+            wm_core::sandbox::RunnerInfo {
+                path: PathBuf::from("/opt/mandala-sandbox"),
+                source: RunnerSource::Env,
+            },
+        )));
+        let pipeline =
+            DispatchPipeline::with_defaults().with_subprocess_sandbox(Some(Arc::clone(&sandbox)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new(
+            "legacy_git_tool",
+            EffectRow {
+                reads: vec![wm_core::Resource::Process],
+                spawns: true,
+                ..Default::default()
+            },
+        );
+
+        assert!(
+            pipeline
+                .dispatch(&tool, &mut ctx, Args::default())
+                .await
+                .is_ok()
+        );
+        assert!(!ctx.spawn.is_active());
+        assert_eq!(sandbox.status()["unconfined_spawns"], 1);
+        assert_eq!(sandbox.status()["dispatches"], 0);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn declared_spawn_executes_through_the_runner_envelope() {
+        // End-to-end wrap proof: a tool builds its command through
+        // `ctx.spawn.command(...)`, the fake runner receives the JSON
+        // envelope on argv, and the envelope carries program/args/net.
+        use crate::subprocess_sandbox::SubprocessSandbox;
+        use std::os::unix::fs::PermissionsExt;
+        use wm_core::sandbox::{RunnerInfo, RunnerSource};
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let marker = dir.path().join("envelope.json");
+        let runner = dir.path().join("fake-runner");
+        std::fs::write(
+            &runner,
+            format!(
+                "#!/bin/sh\nprintf '%s' \"$2\" > '{}'\nexit 0\n",
+                marker.display()
+            ),
+        )
+        .expect("write fake runner");
+        std::fs::set_permissions(&runner, std::fs::Permissions::from_mode(0o755))
+            .expect("chmod fake runner");
+
+        struct SpawnProbeTool {
+            effects: EffectRow,
+            stats: ToolStats,
+        }
+        #[async_trait]
+        impl Tool for SpawnProbeTool {
+            fn name(&self) -> &str {
+                "spawn_probe"
+            }
+            fn gana(&self) -> Gana {
+                Gana::Heart
+            }
+            fn effects(&self) -> &EffectRow {
+                &self.effects
+            }
+            async fn call(&self, ctx: &mut Context, _args: Args) -> Result<Output> {
+                let out = ctx
+                    .spawn
+                    .command("printf", &["%s", "hi"])
+                    .output()
+                    .map_err(|e| CoreError::Tool(format!("spawn failed: {e}")))?;
+                if !out.status.success() {
+                    return Err(CoreError::Tool("wrapped command failed".into()));
+                }
+                Ok(serde_json::json!({"ok": true}))
+            }
+            fn stats(&self) -> &ToolStats {
+                &self.stats
+            }
+        }
+
+        let sandbox = Arc::new(SubprocessSandbox::with_runner(Some(RunnerInfo {
+            path: runner,
+            source: RunnerSource::Env,
+        })));
+        let pipeline =
+            DispatchPipeline::with_defaults().with_subprocess_sandbox(Some(Arc::clone(&sandbox)));
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = SpawnProbeTool {
+            effects: EffectRow {
+                reads: vec![wm_core::Resource::Network, wm_core::Resource::Process],
+                spawns: true,
+                sandbox: Sandbox::Subprocess,
+                ..Default::default()
+            },
+            stats: ToolStats::default(),
+        };
+        let out = pipeline
+            .dispatch(&tool, &mut ctx, Args::default())
+            .await
+            .expect("wrapped spawn succeeds");
+        assert_eq!(out["ok"], true);
+        assert_eq!(out["sandbox"]["net"], true);
+
+        let captured = std::fs::read_to_string(&marker).expect("runner captured the envelope");
+        let envelope: serde_json::Value = serde_json::from_str(&captured).expect("envelope JSON");
+        assert_eq!(envelope["schema"], wm_core::sandbox::ENVELOPE_SCHEMA);
+        assert_eq!(envelope["program"], "printf");
+        assert_eq!(envelope["args"], serde_json::json!(["%s", "hi"]));
+        assert_eq!(envelope["net"], true);
     }
 
     #[tokio::test]

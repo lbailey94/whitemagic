@@ -6,6 +6,7 @@
 
 use crate::brain_wave::BrainWave;
 use crate::galaxy::Galaxy;
+use crate::sandbox::SpawnPolicy;
 use std::collections::HashMap;
 
 /// Per-request execution context.
@@ -53,6 +54,11 @@ pub struct Context {
     /// Operation ID (monotonic time-ordered ID) grouping multi-step write
     /// sequences (U6). Enables crash detection across multi-tool dispatches.
     pub operation_id: Option<String>,
+    /// Subprocess spawn confinement policy (B2). The dispatcher resolves
+    /// it for tools that declare `Sandbox::Subprocess` (or `spawns`) and
+    /// tools build every external command through
+    /// [`SpawnPolicy::command`](crate::sandbox::SpawnPolicy::command).
+    pub spawn: SpawnPolicy,
 }
 
 impl Context {
@@ -80,6 +86,7 @@ impl Context {
             last_gana: None,
             readonly: false,
             operation_id: None,
+            spawn: SpawnPolicy::disabled(),
         }
     }
 
