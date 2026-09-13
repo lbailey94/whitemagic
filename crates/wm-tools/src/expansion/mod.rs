@@ -50,6 +50,7 @@ pub mod captains;
 pub mod claims_tools;
 pub mod code;
 pub mod common;
+pub mod telemetry_tools;
 pub mod conformal;
 pub mod consciousness;
 pub mod constellation;
@@ -570,6 +571,7 @@ pub fn register_expansion(
     reg = register_research(&reg, store, gan_ying_bus);
 
     // Session ops (4) — record, replay, continuity, handoff
+    let telemetry_search = search.clone();
     reg = register_session_ops(&reg, store, search);
 
     // Dharma escalation (3) — escalate, review_queue, resolve_review
@@ -648,6 +650,9 @@ pub fn register_expansion(
 
     // OSS bounty scanner (2) — GitHub bounty issues via gh (read-only)
     reg = crate::expansion::oss_bounty::register_oss_bounty(&reg);
+
+    // Edge-galaxy telemetry (3) — typed record, hourly rollup, retention prune
+    reg = crate::expansion::telemetry_tools::register_telemetry(&reg, store, telemetry_search);
 
     // Governance & Hermit defense tools (5) — hermit.status, hermit.withdraw, hermit.mediate, hermit.resolve, council.deliberate
     let hermit = Arc::new(std::sync::RwLock::new(
