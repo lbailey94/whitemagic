@@ -74,6 +74,14 @@ fn validate_record(record: &Value) -> std::result::Result<&'static str, String> 
     if !record.get("dims").is_some_and(Value::is_object) {
         return Err("record.dims (object) is required".to_string());
     }
+    // Windows must carry the honesty field: a window without provenance notes
+    // is a probe, and probes must not pollute trend lanes (learned live
+    // 2026-09-13 when a typed probe flattened the dashboard dharma trend).
+    if *kind == "telemetry.window" && !record.get("dim_notes").is_some_and(Value::is_object) {
+        return Err(
+            "record.dim_notes (object) is required for telemetry.window records".to_string(),
+        );
+    }
     Ok(kind)
 }
 
@@ -654,6 +662,14 @@ mod tests {
             )
             .await;
         assert!(bad.is_err(), "missing harmony_score/dims must error");
+
+        // A window without provenance notes is a probe, not evidence.
+        let mut probe = window_record("2026-09-13T11:00:00+00:00", 0.5);
+        probe.as_object_mut().unwrap().remove("dim_notes");
+        let probe_reply = tool
+            .call(&mut Context::default(), json!({"record": probe}))
+            .await;
+        assert!(probe_reply.is_err(), "windows require dim_notes");
     }
 
     #[tokio::test]
