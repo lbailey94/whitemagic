@@ -227,8 +227,7 @@ impl SpawnPolicy {
             }
             Some(runner) => {
                 let mut cmd = Command::new(runner);
-                cmd.arg("--exec")
-                    .arg(self.envelope_json(program, args));
+                cmd.arg("--exec").arg(self.envelope_json(program, args));
                 cmd
             }
         }
@@ -258,10 +257,7 @@ mod tests {
         assert_eq!(classify_env("/no/such/runner"), EnvRunner::Disabled);
         // An existing file resolves.
         let exe = std::env::current_exe().expect("test exe");
-        assert_eq!(
-            classify_env(exe.to_str().unwrap()),
-            EnvRunner::Path(exe)
-        );
+        assert_eq!(classify_env(exe.to_str().unwrap()), EnvRunner::Path(exe));
     }
 
     #[test]

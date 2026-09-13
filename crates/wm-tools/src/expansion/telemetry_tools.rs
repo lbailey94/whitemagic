@@ -22,7 +22,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration as ChronoDuration, Timelike, Utc};
 use serde_json::{Value, json};
-use wm_core::{Context, CoreError, EffectRow, Gana, Galaxy, Resource, Tool, ToolStats};
+use wm_core::{Context, CoreError, EffectRow, Galaxy, Gana, Resource, Tool, ToolStats};
 use wm_memory::Memory;
 use wm_memory::MemoryStore;
 use wm_memory::search::SearchEngine;
@@ -93,8 +93,8 @@ fn store_record(
     kind: &str,
     source: &str,
 ) -> std::result::Result<(String, bool), String> {
-    let content = serde_json::to_string(record)
-        .map_err(|e| format!("record serialization failed: {e}"))?;
+    let content =
+        serde_json::to_string(record).map_err(|e| format!("record serialization failed: {e}"))?;
     let mut memory = Memory::new(Galaxy::Telemetry, content);
     let mut tags: Vec<String> = record
         .get("tags")
@@ -131,12 +131,13 @@ fn store_record(
         .map(|ts| format!("telemetry {kind_tag} {ts}"));
     memory.metadata.source = source.to_string();
     memory.metadata.source_trust = SOURCE_TRUST;
-    memory.metadata.class = wm_memory::typology::detect_class(&memory.content, &memory.metadata.tags)
-        .or(Some(wm_memory::typology::MemoryClass::Telemetry));
-    memory.metadata.tier = memory
-        .metadata
-        .class
-        .map_or(wm_memory::memory::Tier::Working, wm_memory::typology::initial_tier);
+    memory.metadata.class =
+        wm_memory::typology::detect_class(&memory.content, &memory.metadata.tags)
+            .or(Some(wm_memory::typology::MemoryClass::Telemetry));
+    memory.metadata.tier = memory.metadata.class.map_or(
+        wm_memory::memory::Tier::Working,
+        wm_memory::typology::initial_tier,
+    );
 
     let new_id = memory.metadata.id;
     let stored_id = store
@@ -214,8 +215,9 @@ impl Tool for TelemetryRecordTool {
             .get("source")
             .and_then(Value::as_str)
             .unwrap_or("agent");
-        let (id, deduplicated) = store_record(&self.store, self.search.as_deref(), &record, kind, source)
-            .map_err(CoreError::Internal)?;
+        let (id, deduplicated) =
+            store_record(&self.store, self.search.as_deref(), &record, kind, source)
+                .map_err(CoreError::Internal)?;
         Ok(json!({
             "status": "success",
             "id": id,
@@ -374,8 +376,9 @@ impl Tool for TelemetryRollupTool {
             .and_then(Value::as_bool)
             .unwrap_or(false);
         let cutoff = Utc::now() - ChronoDuration::minutes((hours * 60.0) as i64);
-        let current_period = period_bounds(&Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
-            .map(|(start, _)| start);
+        let current_period =
+            period_bounds(&Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+                .map(|(start, _)| start);
 
         let memories = self
             .store
@@ -511,14 +514,8 @@ impl Tool for TelemetryPruneTool {
             .get("rollups_older_than_days")
             .and_then(Value::as_f64)
             .unwrap_or(90.0);
-        let dry_run = args
-            .get("dry_run")
-            .and_then(Value::as_bool)
-            .unwrap_or(true);
-        let limit = args
-            .get("limit")
-            .and_then(Value::as_u64)
-            .unwrap_or(0) as usize;
+        let dry_run = args.get("dry_run").and_then(Value::as_bool).unwrap_or(true);
+        let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(0) as usize;
 
         let memories = self
             .store
@@ -720,7 +717,10 @@ mod tests {
             .iter()
             .map(|r| r["samples"].as_u64().unwrap_or(0))
             .collect();
-        assert!(samples.contains(&2) && samples.contains(&1), "got {samples:?}");
+        assert!(
+            samples.contains(&2) && samples.contains(&1),
+            "got {samples:?}"
+        );
     }
 
     #[tokio::test]
