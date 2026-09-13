@@ -273,7 +273,7 @@ fn create_snippet(content: &str) -> String {
 /// sources must not contribute snippets, tags, lineage IDs, or aggregate shape
 /// to it. Keep this at the builder boundary as well as the outer-rim scan:
 /// direct `digest_cluster` callers must not bypass the policy.
-fn eligible_for_public_digest(mem: &Memory) -> bool {
+const fn eligible_for_public_digest(mem: &Memory) -> bool {
     !mem.metadata.is_protected && !mem.metadata.is_private && !mem.metadata.model_exclude
 }
 
@@ -1105,9 +1105,9 @@ mod tests {
         let restricted = [private.clone(), model_excluded.clone(), protected.clone()];
         let cluster = vec![
             (public.clone(), factors.clone()),
-            (private.clone(), factors.clone()),
-            (model_excluded.clone(), factors.clone()),
-            (protected.clone(), factors),
+            (private, factors.clone()),
+            (model_excluded, factors.clone()),
+            (protected, factors),
         ];
 
         // Direct builder invocation is the discriminating boundary: relying
