@@ -77,7 +77,7 @@ jobs:
         # Criterion benches only (crates/*/Cargo.toml `harness = false`):
         # the `--` args are criterion flags and the libtest-harness
         # targets compiled by `cargo bench --workspace` reject them
-        # (2026-09-02 CI reds, classified by inspiron-prime board 41).
+        # (2026-09-02 CI reds, classified in local triage notes).
         run: >-
           cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench
           -- --save-baseline pr
@@ -93,7 +93,7 @@ jobs:
         # Criterion benches only (crates/*/Cargo.toml `harness = false`):
         # the `--` args are criterion flags and the libtest-harness
         # targets compiled by `cargo bench --workspace` reject them
-        # (2026-09-02 CI reds, classified by inspiron-prime board 41).
+        # (2026-09-02 CI reds, classified in local triage notes).
         run: >-
           cargo bench -p wm-bicameral -p wm-cognitive -p wm-core -p wm-dispatch -p wm-memory -p wm-tools --bench router_bench --bench self_play_bench --bench dream_bench --bench reflex_bench --bench mutable_bench --bench pipeline_bench --bench embedder_bench --bench episodic_bench --bench store_bench --bench rsi_bench --bench transaction_bench
           -- --save-baseline base

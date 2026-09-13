@@ -12,7 +12,7 @@
 //! `ATTESTATION_DOMAIN` (`wm-record-attestation/v1`), so a record
 //! attestation can never verify as a mesh heartbeat/chat payload or vice
 //! versa, even though the key is shared. The choice of mesh-key reuse vs a
-//! domain-separated attestation seed is inspiron's S9 call (key/KDF plans);
+//! domain-separated attestation seed is a security-review decision (key/KDF plans);
 //! this default is documented for overrule — re-keying means new
 //! attestations only, old ones keep verifying under the recorded pubkey.
 //!

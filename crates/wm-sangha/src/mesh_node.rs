@@ -996,7 +996,7 @@ mod tests {
         // production node, that node's registry holds stale test addresses
         // from earlier runs and its auto-join keeps dialing them — foreign
         // entries can appear in any test registry over TCP even with
-        // multicast isolation (observed live: `t4800s`).
+        // multicast isolation (observed live on a fleet host).
         let report = within("a join b", a.join("127.0.0.1:17603"))
             .await
             .expect("a join b");

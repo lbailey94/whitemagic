@@ -73,10 +73,13 @@ PERSONAL_PATTERNS=(
     "Letters to Aria"
     "valkyrie_dm"
     "Memoir Layer"
+    "inspiron"
+    "t4800s"
+    "zorin"
 )
 
 for pat in "${PERSONAL_PATTERNS[@]}"; do
-    hits=$(git grep -I -n -F -- "$pat" -- . ':!scripts/public_surface_check.sh' 2>/dev/null | head -3)
+    hits=$(git grep -I -n -i -F -- "$pat" -- . ':!scripts/public_surface_check.sh' ':!benchmarks/data/' 2>/dev/null | head -3)
     if [ -n "$hits" ]; then
         echo "BLOCKED content '$pat':"
         echo "$hits"

@@ -375,7 +375,7 @@ fn two_serve_nodes_discover_chat_and_quarantine() {
     assert_eq!(status_b["peer_id"], "e2e-node-b", "{status_b}");
 }
 
-/// The fleet-night retest protocol (board 04/06, 2026-08-31), as a
+/// The fleet-night retest protocol (2026-08-31), as a
 /// permanent regression test: a peer-side process death used to poison the
 /// survivor's connection entry — chat broke, rejoin was blocked by the
 /// connected-peers guard, and a live peer returning to the same address was
