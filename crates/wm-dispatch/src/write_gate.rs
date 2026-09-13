@@ -148,7 +148,7 @@ impl WriteGate {
                 // (legacy clients still send the old string form).
                 disclosure.insert("importance_from_string".into(), serde_json::json!(true));
             }
-            let requested = parsed.map_or(0.5, |v| v);
+            let requested = parsed.unwrap_or(0.5);
             let policy = typology::apply_class_policy(class, requested);
             if (policy - requested).abs() > f32::EPSILON {
                 disclosure.insert("importance_capped".into(), serde_json::json!(true));
