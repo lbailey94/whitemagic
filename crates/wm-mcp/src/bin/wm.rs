@@ -4752,6 +4752,47 @@ mod readonly_startup_tests {
     }
 
     #[test]
+    fn doctor_readonly_inspection_preserves_store_and_index() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = tmp.path().join("store");
+        let lmdb = store.join("lmdb");
+        drop(open_server_for_serve(&lmdb, false, false).unwrap());
+
+        fn snapshot(
+            dir: &std::path::Path,
+            base: &std::path::Path,
+        ) -> Vec<(String, Option<Vec<u8>>)> {
+            let mut out = Vec::new();
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    out.extend(snapshot(&path, base));
+                } else {
+                    let rel = path.strip_prefix(base).unwrap().display().to_string();
+                    let bytes = if rel.ends_with("lock.mdb") {
+                        None
+                    } else {
+                        Some(std::fs::read(&path).unwrap())
+                    };
+                    out.push((rel, bytes));
+                }
+            }
+            out.sort();
+            out
+        }
+
+        let before = snapshot(&store, &store);
+        let result = run_doctor(Some(store.clone()), false, false, false, false).unwrap();
+        let after = snapshot(&store, &store);
+
+        assert_eq!(
+            after, before,
+            "readonly doctor inspection mutated the store or index"
+        );
+        assert_eq!(result, 0, "doctor graded a clean readonly store as unhealthy");
+    }
+
+    #[test]
     fn writable_serve_still_creates_a_new_store() {
         let tmp = tempfile::tempdir().unwrap();
         let lmdb = tmp.path().join("lmdb");

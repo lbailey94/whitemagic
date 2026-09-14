@@ -2082,11 +2082,38 @@ mod tests {
             }
         }
 
+        let files_before: Vec<String> = {
+            let mut names: Vec<String> = std::fs::read_dir(&path)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+                .collect();
+            names.sort();
+            names
+        };
+        let data_before = std::fs::read(path.join("data.mdb")).unwrap();
+
         let error = match MemoryStore::open_readonly(&path) {
             Ok(_) => panic!("strict read-only open must refuse an incomplete store"),
             Err(e) => e.to_string(),
         };
         assert!(error.contains("cold_storage"), "{error}");
+        assert_eq!(
+            std::fs::read(path.join("data.mdb")).unwrap(),
+            data_before,
+            "readonly refusal must not mutate the pre-cold store"
+        );
+        let files_after: Vec<String> = {
+            let mut names: Vec<String> = std::fs::read_dir(&path)
+                .unwrap()
+                .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+                .collect();
+            names.sort();
+            names
+        };
+        assert_eq!(
+            files_after, files_before,
+            "readonly refusal changed the store directory"
+        );
 
         let created = MemoryStore::ensure_schema(&path).unwrap();
         assert_eq!(created, vec!["cold_storage".to_string()], "{created:?}");
