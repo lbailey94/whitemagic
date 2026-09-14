@@ -34,6 +34,15 @@ set -u
 WM="$HOME/.local/bin/wm"
 BASE="$HOME/Desktop/WHITEMAGIC/data/WMdata/projects"
 KEEP=7
+# --trust-only: run only the trust manifest + external stamping pass against
+# the existing backup root (no store passes, no unit stops). Used to repair
+# evidence after a TSA or builder outage without re-copying stores.
+TRUST_ONLY=false
+case "${1:-}" in
+  --trust-only) TRUST_ONLY=true ;;
+  "") ;;
+  *) echo "unknown flag: $1 (usage: wm-nightly-backup.sh [--trust-only])" >&2; exit 2 ;;
+esac
 EXTERNAL_DISK=""
 for d in "/media/lucas/SD_CARD1" "/media/lucas/4198-16FD"; do
   if mountpoint -q "$d" 2>/dev/null; then
@@ -161,16 +170,10 @@ backup_store() {
 }
 
 # Stop the writable units (only those actually running), always restart.
+# --trust-only skips the store passes entirely (evidence repair after a TSA
+# or builder outage); the trap stays installed so a partial stop always
+# resumes, though nothing is stopped in that mode.
 stopped=()
-for unit in $WRITABLE_UNITS; do
-  if systemctl --user is-active --quiet "wm-serve@$unit" 2>/dev/null; then
-    stopped+=("$unit")
-  fi
-done
-if [ ${#stopped[@]} -gt 0 ]; then
-  systemctl --user stop "${stopped[@]/#/wm-serve@}"
-  echo "$(date -Is) paused units: ${stopped[*]}" >>"$LOG"
-fi
 restore_units() {
   if [ ${#stopped[@]} -gt 0 ]; then
     systemctl --user start "${stopped[@]/#/wm-serve@}"
@@ -179,12 +182,24 @@ restore_units() {
 }
 trap restore_units EXIT
 
-for store in $RW_STORES; do
-  seal_store "$store" && anchor_store "$store" && backup_store "$store"
-done
-for store in $RO_STORES; do
-  seal_store "$store" && anchor_store "$store" && backup_store "$store"
-done
+if ! $TRUST_ONLY; then
+  for unit in $WRITABLE_UNITS; do
+    if systemctl --user is-active --quiet "wm-serve@$unit" 2>/dev/null; then
+      stopped+=("$unit")
+    fi
+  done
+  if [ ${#stopped[@]} -gt 0 ]; then
+    systemctl --user stop "${stopped[@]/#/wm-serve@}"
+    echo "$(date -Is) paused units: ${stopped[*]}" >>"$LOG"
+  fi
+
+  for store in $RW_STORES; do
+    seal_store "$store" && anchor_store "$store" && backup_store "$store"
+  done
+  for store in $RO_STORES; do
+    seal_store "$store" && anchor_store "$store" && backup_store "$store"
+  done
+fi
 
 # 2026-09-10 Q36 (external trust anchoring): the seal snapshots and the
 # chained anchor logs are local evidence — an adversary with the disk (or
@@ -210,9 +225,20 @@ FREETSA_URL="https://freetsa.org/tsr"
 FREETSA_CA="$TRUST/freetsa-cacert.pem"
 
 trust_stamp() {
-  local day="$1" manifest manifest_digest n_ots upgraded pending
+  local day="$1" manifest manifest_digest n_ots upgraded pending builder
   manifest="$TRUST/trust-$day.json"
-  python3 "$(dirname "$0")/../trust/build_trust_manifest.py" --anchors "$ANCHORS" --seals "$SEALS" --out "$manifest"
+  # Sibling path works when run from the repo; the installed copy lives in
+  # ~/.local/bin, where the sibling does not exist — fall back to the repo
+  # (the 2026-09-14 trust outage: rc=2, python could not open the builder).
+  builder="$(dirname "$0")/../trust/build_trust_manifest.py"
+  if [ ! -f "$builder" ]; then
+    builder="$HOME/Desktop/WHITEMAGIC/WMv9/ops/trust/build_trust_manifest.py"
+  fi
+  if [ ! -f "$builder" ]; then
+    echo "$(date -Is) TRUST-MANIFEST-FAIL (builder missing: $builder) — external stamping skipped" >>"$LOG"
+    return 0
+  fi
+  python3 "$builder" --anchors "$ANCHORS" --seals "$SEALS" --out "$manifest"
   local rc=$?
   if [ $rc -ne 0 ] || [ ! -s "$manifest" ]; then
     echo "$(date -Is) TRUST-MANIFEST-FAIL (rc=$rc) — external stamping skipped this night" >>"$LOG"
