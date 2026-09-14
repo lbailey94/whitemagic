@@ -23,8 +23,9 @@
 //! of the landlock dependency, preserving the dependency direction.
 //!
 //! v1 scope limits, documented rather than hidden:
-//! - `WM_DISPATCH_TIMEOUT_MS` is not applied to the sandboxed path (the
-//!   call is synchronous in the dispatcher); timeout parity is v1.1.
+//! - `WM_DISPATCH_TIMEOUT_MS` is enforced inside the confined thread: the
+//!   tool future is dropped on timeout (the same semantics as the normal
+//!   dispatch path). `with_timeout` overrides the env-derived value.
 //! - The per-dispatch cost is one OS thread + one current-thread runtime
 //!   (measured in the acceptance tests; parked-thread pooling is v1.1).
 //! - Subprocess-creating tools take a different seam: they declare
@@ -34,6 +35,7 @@
 //!   confine a child process.
 
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
 use wm_core::{Args, Context, CoreError, Output, Result, Sandbox, Tool};
 
@@ -57,23 +59,44 @@ pub type RestrictFn = Box<dyn Fn() -> std::result::Result<(), String> + Send + S
 /// Runs [`Sandbox::StoreScoped`] tools on a confined scoped thread.
 pub struct ScopedSandboxExecutor {
     restrict: RestrictFn,
+    timeout: Option<Duration>,
     runs: AtomicU64,
     degraded: AtomicU64,
     failures: AtomicU64,
+    timeouts: AtomicU64,
 }
 
 impl ScopedSandboxExecutor {
     /// Build with the caller's confinement callback.
+    ///
+    /// The dispatch timeout defaults to
+    /// [`crate::DispatchPipeline::timeout_from_env`] (`WM_DISPATCH_TIMEOUT_MS`),
+    /// matching the normal dispatch path; [`Self::with_timeout`] overrides it.
     #[must_use]
     pub fn new(
         restrict: impl Fn() -> std::result::Result<(), String> + Send + Sync + 'static,
     ) -> Self {
         Self {
             restrict: Box::new(restrict),
+            timeout: crate::DispatchPipeline::timeout_from_env(),
             runs: AtomicU64::new(0),
             degraded: AtomicU64::new(0),
             failures: AtomicU64::new(0),
+            timeouts: AtomicU64::new(0),
         }
+    }
+
+    /// Override the dispatch timeout (`None` disables the bound).
+    #[must_use]
+    pub const fn with_timeout(mut self, timeout: Option<Duration>) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
+    /// Dispatch timeouts observed since construction.
+    #[must_use]
+    pub fn timeouts(&self) -> u64 {
+        self.timeouts.load(Ordering::Relaxed)
     }
 
     /// (runs, degraded runs, contained panics/runtime failures).
@@ -89,10 +112,14 @@ impl ScopedSandboxExecutor {
     /// Execute one tool call on a confined thread.
     ///
     /// Synchronous by design: the dispatcher blocks while the confined
-    /// thread runs. Panics inside the tool are contained by the scoped
-    /// thread and surface as a `CoreError::Tool` — the process survives.
+    /// thread runs. The configured dispatch timeout is applied inside the
+    /// confined thread — a timed-out tool future is dropped and reported as
+    /// a `CoreError::Tool`, mirroring the normal dispatch path. Panics
+    /// inside the tool are contained by the scoped thread and surface as a
+    /// `CoreError::Tool` — the process survives.
     pub fn run(&self, tool: &dyn Tool, ctx: &mut Context, args: Args) -> Result<Output> {
         self.runs.fetch_add(1, Ordering::Relaxed);
+        let timeout = self.timeout;
         let outcome = std::thread::scope(|scope| {
             scope
                 .spawn(|| {
@@ -110,7 +137,27 @@ impl ScopedSandboxExecutor {
                         .map_err(|e| {
                             CoreError::Tool(format!("sandbox runtime build failed: {e}"))
                         })?;
-                    runtime.block_on(tool.call(ctx, args))
+                    match timeout {
+                        Some(timeout) => match runtime.block_on(async {
+                            tokio::time::timeout(timeout, tool.call(ctx, args)).await
+                        }) {
+                            Ok(result) => result,
+                            Err(_elapsed) => {
+                                self.timeouts.fetch_add(1, Ordering::Relaxed);
+                                tracing::error!(
+                                    tool = tool.name(),
+                                    timeout_ms = timeout.as_millis(),
+                                    "sandboxed tool dispatch timed out"
+                                );
+                                Err(CoreError::Tool(format!(
+                                    "sandboxed tool '{}' timed out after {}ms",
+                                    tool.name(),
+                                    timeout.as_millis()
+                                )))
+                            }
+                        },
+                        None => runtime.block_on(tool.call(ctx, args)),
+                    }
                 })
                 .join()
         });
@@ -146,6 +193,7 @@ mod tests {
         /// Set when the tool body runs; the test's restriction callback
         /// sets `restricted` first, so ordering is observable.
         restricted_seen: Option<Arc<AtomicBool>>,
+        hang: bool,
         panic: bool,
     }
 
@@ -162,6 +210,9 @@ mod tests {
         }
         async fn call(&self, _ctx: &mut wm_core::Context, _args: Args) -> wm_core::Result<Output> {
             assert!(!self.panic, "probe tool panicked");
+            if self.hang {
+                std::future::pending::<()>().await;
+            }
             if let Some(flag) = &self.restricted_seen {
                 assert!(
                     flag.load(Ordering::SeqCst),
@@ -183,6 +234,7 @@ mod tests {
             },
             stats: ToolStats::default(),
             restricted_seen: None,
+            hang: false,
             panic: false,
         }
     }
@@ -249,5 +301,58 @@ mod tests {
         assert!(!parse(Some("0")));
         assert!(!parse(Some("true")));
         assert!(!parse(None));
+    }
+
+    #[test]
+    fn hung_tool_times_out_promptly_and_is_counted() {
+        let executor =
+            ScopedSandboxExecutor::new(|| Ok(())).with_timeout(Some(Duration::from_millis(50)));
+        let mut tool = probe();
+        tool.hang = true;
+        let mut ctx = wm_core::Context::new(BrainWave::Gamma);
+        let started = std::time::Instant::now();
+        let error = executor
+            .run(&tool, &mut ctx, serde_json::json!({}))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("timed out"), "{error}");
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "timeout must return promptly, took {:?}",
+            started.elapsed()
+        );
+        assert_eq!(executor.timeouts(), 1);
+        assert_eq!(executor.stats(), (1, 0, 0));
+    }
+
+    #[test]
+    fn executor_recovers_after_a_timeout() {
+        let executor =
+            ScopedSandboxExecutor::new(|| Ok(())).with_timeout(Some(Duration::from_millis(50)));
+        let mut hung = probe();
+        hung.hang = true;
+        let mut ctx = wm_core::Context::new(BrainWave::Gamma);
+        assert!(
+            executor
+                .run(&hung, &mut ctx, serde_json::json!({}))
+                .is_err()
+        );
+        let out = executor
+            .run(&probe(), &mut ctx, serde_json::json!({}))
+            .unwrap();
+        assert_eq!(out["ok"], true);
+        assert_eq!(executor.timeouts(), 1);
+        assert_eq!(executor.stats(), (2, 0, 0));
+    }
+
+    #[test]
+    fn unbounded_executor_runs_without_a_deadline() {
+        let executor = ScopedSandboxExecutor::new(|| Ok(())).with_timeout(None);
+        let mut ctx = wm_core::Context::new(BrainWave::Gamma);
+        let out = executor
+            .run(&probe(), &mut ctx, serde_json::json!({}))
+            .unwrap();
+        assert_eq!(out["ok"], true);
+        assert_eq!(executor.timeouts(), 0);
     }
 }
