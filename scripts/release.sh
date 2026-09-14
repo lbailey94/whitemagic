@@ -45,6 +45,8 @@ git fetch origin main --quiet
 [ -z "$(git rev-list HEAD..origin/main)" ] || { echo "ERROR: local main is behind origin — pull first"; exit 1; }
 CUR=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
 echo "workspace: $CUR → $VERSION"
+python3 scripts/version_truth.py --check \
+  || { echo "ERROR: version-truth drift — every surface must agree before a release"; exit 1; }
 for tool in gh cargo npm docker; do command -v "$tool" >/dev/null || { echo "ERROR: $tool missing"; exit 1; }; done
 if ! $DRY_RUN; then
   npm whoami >/dev/null 2>&1 || { echo "ERROR: npm not logged in (npm login)"; exit 1; }
@@ -56,28 +58,12 @@ echo "preflight ok"
 # ── version bump ─────────────────────────────────────────────────────────
 banner "VERSION BUMP → $VERSION"
 if $DRY_RUN; then
-  echo "[dry-run] sed workspace Cargo.toml version; update Cargo.lock (cargo check);"
-  echo "[dry-run] sed $NPM_DIR/package.json + server.json versions; commit + tag v$VERSION + push"
+  echo "[dry-run] python3 scripts/version_truth.py --set $VERSION (all 15 surfaces;"
+  echo "[dry-run]   Cargo.toml pins, npm package/server/MCPB, Dockerfile labels,"
+  echo "[dry-run]   server-card, CITATION, docs, install examples)"
+  echo "[dry-run] cargo check (refresh Cargo.lock); commit + push; tag v$VERSION"
 else
-  python3 - "$VERSION" <<'EOF'
-import json, pathlib, re, sys
-v = sys.argv[1]
-root = pathlib.Path("Cargo.toml")
-t = root.read_text()
-t2 = re.sub(r'^version = "[^"]*"', f'verison = "{v}"'.replace("verison", "version"), t, count=1, flags=re.M)
-assert t2 != t, "workspace version bump failed"
-root.write_text(t2)
-pkg = pathlib.Path("npm/whitemagic-mcp/package.json")
-d = json.loads(pkg.read_text()); d["version"] = v
-pkg.write_text(json.dumps(d, indent=2) + "\n")
-srv = pathlib.Path("npm/whitemagic-mcp/server.json")
-j = json.loads(srv.read_text()); j["version"] = v
-for p in j.get("packages", []):
-    if p.get("registryType") == "npm":
-        p["version"] = v
-srv.write_text(json.dumps(j, indent=2) + "\n")
-print(f"bumped Cargo.toml, package.json, server.json → {v}")
-EOF
+  python3 scripts/version_truth.py --set "$VERSION"
   cargo check --workspace --quiet 2>/dev/null || cargo check -p wm-core --quiet   # refresh Cargo.lock
   git add -A
   git -c user.name="WhiteMagic AI" -c user.email="lbailey94@protonmail.com" commit -m "release: v$VERSION"

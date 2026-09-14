@@ -5,6 +5,28 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.5] — unreleased (draft; finalize at tag time)
+
+> Draft assembled from `v9.1.4..main` on 2026-09-14. More changes are expected
+> before the tag; the release ceremony replaces this heading with a date and
+> a one-line theme.
+
+### Telemetry & governance
+- `telemetry.record` accepts `telemetry.observation` policy decision records (policy id/metric/state/action/value mandatory) and rollups validate via `harmony.avg` — the typed path behind the live step-0 observation policies.
+- New **`telemetry.retention`** read-only planner: per-tier counts/bytes/ages/eligibility under the exact `telemetry.prune` horizons, plus a `managed: false` observation inventory. Declares no writes and is not destructive, so it is never confirm- or dharma-gated — pre-prune evidence is always available.
+- Weekly `wm-telemetry-retention.timer` operator unit (planner first, then a confirmed prune; degrades gracefully on pre-9.1.5 fleets), complementing the hourly rollup timer.
+
+### Setup & onboarding
+- **`wm setup --write` now patches every supported client config**, not just `mcpServers` JSON: OpenCode `opencode.jsonc` is edited by a comment/string-aware structural editor (comments, siblings, and formatting preserved), and Codex `config.toml` via `toml_edit`. Every write is backup-first and re-parsed; malformed sections are refused, re-runs are idempotent.
+- Onboarding states the contract — explicit routes are the contract — in `wm setup` output and the client configuration guide.
+
+### Distribution & release engineering
+- New **release-health record + reconciliation**: `scripts/release_health.py` probes the GitHub release assets, every workspace crate on crates.io, npm, Docker Hub, and the official MCP registry; `release-health.yml` retries laggards on Release completion and daily, certifies the npm and Docker install paths with `wm selftest`, uploads `release-health.json` to the GitHub Release, and gates red while any surface lags.
+- `wm selftest --json` now runs on all five build targets in the release matrix (the curated smoke test remains the deeper Linux check).
+- **Version truth**: `scripts/version_truth.py --check/--set` covers all 15 version-bearing surfaces (Cargo pins, npm package/server/MCPB, Dockerfile labels, hosted server-card, CITATION, docs, install examples); `release.sh` preflight refuses drift and the bump stage uses the tool instead of the old three-file inline edit.
+- Distribution fixes: MCPB bundle, reproducible Smithery publishes, sanitized tools snapshot.
+- Curated catalog trimmed to the 9-tool lifecycle surface; tool annotations, `outputSchema`, and `structuredContent` on the server surface.
+
 ## [9.1.4] — 2026-09-13 (lossless continuation, cold discovery, first-run UX, signed updates)
 
 ### Continuation & recall

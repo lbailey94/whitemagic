@@ -147,6 +147,7 @@ wm-leases.json
 !/scripts/eval_matrix.sh
 !/scripts/release_manifest.py
 !/scripts/release_health.py
+!/scripts/version_truth.py
 !/scripts/curated_smoke_test.py
 !/scripts/longmemeval_bench.py
 !/scripts/memorastrict_bench.py
@@ -154,6 +155,7 @@ wm-leases.json
 !/scripts/public_surface_check.sh
 !/scripts/tests/
 !/scripts/tests/test_eval_protocol.py
+!/scripts/tests/test_version_truth.py
 
 # ── Private / companion + internal evidence (purged from public history
 #    2026-09-12 via git-filter-repo; kept locally for development only) ──
