@@ -17,6 +17,30 @@ use super::common::{
     bool_prop, galaxy_name, int_prop, num_prop, parse_galaxy, parse_galaxy_or, schema, str_prop,
 };
 
+/// Attach the navigation disclosure to a scrubbed excerpt result. The source
+/// stays exact and `memory.read` remains the complete-read path.
+fn with_navigation_disclosure(mut result: serde_json::Value, original: &str) -> serde_json::Value {
+    let limit = wm_memory::search::MAX_INDEX_CONTENT_LEN;
+    let scrubbed = result
+        .get("content")
+        .and_then(serde_json::Value::as_str)
+        .is_none_or(|navigation| navigation != original);
+    if let Some(obj) = result.as_object_mut() {
+        obj.insert(
+            "content_representation".into(),
+            json!("scrubbed_navigation"),
+        );
+        obj.insert("content_character_limit".into(), json!(limit));
+        obj.insert(
+            "content_truncated".into(),
+            json!(original.chars().nth(limit).is_some()),
+        );
+        obj.insert("content_scrubbed".into(), json!(scrubbed));
+        obj.insert("exact_read_available".into(), json!(true));
+    }
+    result
+}
+
 /// Resolve a memory id across all memory galaxies. Associations may point at
 /// records in any galaxy; callers should not have to guess which one.
 fn resolve_memory_across_galaxies(
@@ -1096,20 +1120,24 @@ impl Tool for MemoryHybridRecallTool {
                             && crate::expansion::common::mcp_visible(&mem)
                             && crate::expansion::common::validity_visible(&mem)
                         {
-                            results.push(json!({
-                                "id": mem.metadata.id,
-                                "galaxy": mem.metadata.galaxy.db_name(),
-                                "content": wm_memory::scrub_text(&mem.content),
-                                "importance": mem.metadata.importance,
-                                "score": hr.score,
-                                "trust_factor": hr.trust_factor,
-                                "corroboration": hr.corroboration,
-                                "in_conformal_set": hr.in_conformal_set,
-                                "bm25_score": hr.bm25_score,
-                                "vector_score": hr.vector_score,
-                                "trust": mem.metadata.source_trust,
-                                "source": "hybrid",
-                            }));
+                            let navigation = wm_memory::scrub_text(&mem.content);
+                            results.push(with_navigation_disclosure(
+                                json!({
+                                    "id": mem.metadata.id,
+                                    "galaxy": mem.metadata.galaxy.db_name(),
+                                    "content": navigation,
+                                    "importance": mem.metadata.importance,
+                                    "score": hr.score,
+                                    "trust_factor": hr.trust_factor,
+                                    "corroboration": hr.corroboration,
+                                    "in_conformal_set": hr.in_conformal_set,
+                                    "bm25_score": hr.bm25_score,
+                                    "vector_score": hr.vector_score,
+                                    "trust": mem.metadata.source_trust,
+                                    "source": "hybrid",
+                                }),
+                                &mem.content,
+                            ));
                         }
                     }
                 }
@@ -1190,16 +1218,20 @@ impl Tool for MemoryHybridRecallTool {
                 {
                     continue;
                 }
-                results.push(json!({
-                    "id": mem.metadata.id,
-                    "galaxy": hit_galaxy.db_name(),
-                    "content": wm_memory::scrub_text(&mem.content),
-                    "importance": mem.metadata.importance,
-                    "score": er.score,
-                    "matched_terms": er.matched_terms,
-                    "trust": mem.metadata.source_trust,
-                    "source": "episodic",
-                }));
+                let navigation = wm_memory::scrub_text(&mem.content);
+                results.push(with_navigation_disclosure(
+                    json!({
+                        "id": mem.metadata.id,
+                        "galaxy": hit_galaxy.db_name(),
+                        "content": navigation,
+                        "importance": mem.metadata.importance,
+                        "score": er.score,
+                        "matched_terms": er.matched_terms,
+                        "trust": mem.metadata.source_trust,
+                        "source": "episodic",
+                    }),
+                    &mem.content,
+                ));
             }
             if !results.is_empty() {
                 recall_mode = "episodic";
@@ -1246,10 +1278,12 @@ impl Tool for MemoryHybridRecallTool {
                                     && crate::expansion::common::mcp_visible(&mem)
                                     && crate::expansion::common::validity_visible(&mem)
                                 {
-                                    results.push(json!({
+                                    let navigation = wm_memory::scrub_text(&mem.content);
+                                    results.push(with_navigation_disclosure(
+                                        json!({
                                             "id": mem.metadata.id,
                                             "galaxy": hit_galaxy.db_name(),
-                                            "content": wm_memory::scrub_text(&mem.content),
+                                            "content": navigation,
                                             "importance": mem.metadata.importance,
                                             "score": wm_memory::trust_weighted_score(
                                                 hit.score,
@@ -1257,9 +1291,11 @@ impl Tool for MemoryHybridRecallTool {
                                                 trust_weight,
                                             ),
                                             "normalized_score": hit.normalized_score,
-                                        "trust": mem.metadata.source_trust,
-                                        "source": "fts",
-                                    }));
+                                            "trust": mem.metadata.source_trust,
+                                            "source": "fts",
+                                        }),
+                                        &mem.content,
+                                    ));
                                     if recall_mode == "none" {
                                         recall_mode = "fts";
                                     }
@@ -1296,6 +1332,10 @@ impl Tool for MemoryHybridRecallTool {
                     "importance": mem.metadata.importance,
                     "score": mem.metadata.importance,
                     "source": "importance",
+                    "content_representation": "verbatim",
+                    "content_truncated": false,
+                    "content_scrubbed": false,
+                    "exact_read_available": true,
                 }));
                 if recall_mode == "none" {
                     recall_mode = "importance";
@@ -1387,16 +1427,20 @@ impl Tool for MemoryHybridRecallTool {
                     {
                         continue;
                     }
-                    results.push(json!({
-                        "id": mem.metadata.id,
-                        "content": wm_memory::scrub_text(&mem.content),
-                        "importance": mem.metadata.importance,
-                        "score": score,
-                        "weight": weight,
-                        "link_type": link_type,
-                        "via": seed_id.to_string(),
-                        "source": "association",
-                    }));
+                    let navigation = wm_memory::scrub_text(&mem.content);
+                    results.push(with_navigation_disclosure(
+                        json!({
+                            "id": mem.metadata.id,
+                            "content": navigation,
+                            "importance": mem.metadata.importance,
+                            "score": score,
+                            "weight": weight,
+                            "link_type": link_type,
+                            "via": seed_id.to_string(),
+                            "source": "association",
+                        }),
+                        &mem.content,
+                    ));
                 }
             }
         }
@@ -1478,24 +1522,22 @@ impl Tool for MemoryHybridRecallTool {
                     }
                     let mem = record.decompress()?;
                     let navigation = wm_memory::search::scrub_text(&mem.content);
-                    results.push(json!({
-                    "id": id,
-                    "galaxy": mem.metadata.galaxy.db_name(),
-                    "content": navigation,
-                    "content_representation": "scrubbed_navigation",
-                    "content_character_limit": wm_memory::search::MAX_INDEX_CONTENT_LEN,
-                    "content_truncated": mem.content.chars().nth(wm_memory::search::MAX_INDEX_CONTENT_LEN).is_some(),
-                    "content_scrubbed": navigation != mem.content,
-                    "exact_read_available": true,
-                    "importance": mem.metadata.importance,
-                    "trust": mem.metadata.source_trust,
-                    "score": serde_json::Value::Null,
-                    "source": "cold",
-                    "cold": true,
-                    "integrity": "verified",
-                    "model_visible": !mem.metadata.model_exclude,
-                    "tags": &mem.metadata.tags,
-                }));
+                    results.push(with_navigation_disclosure(
+                        json!({
+                            "id": id,
+                            "galaxy": mem.metadata.galaxy.db_name(),
+                            "content": navigation,
+                            "importance": mem.metadata.importance,
+                            "trust": mem.metadata.source_trust,
+                            "score": serde_json::Value::Null,
+                            "source": "cold",
+                            "cold": true,
+                            "integrity": "verified",
+                            "model_visible": !mem.metadata.model_exclude,
+                            "tags": &mem.metadata.tags,
+                        }),
+                        &mem.content,
+                    ));
                     appended += 1;
                 }
                 if appended > 0 && recall_mode == "none" {
