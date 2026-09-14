@@ -11,8 +11,8 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
 wm --version         # expect: wm 9.1.4
-wm grimoire          # guided first-run (v9.1.5+); --json for a machine-readable report
-# on v9.1.4 or older, use the step-by-step path below:
+wm grimoire          # guided first-run (when present); --json for a machine-readable report
+# builds without grimoire: use the step-by-step path below
 wm quickstart        # throwaway demo store — a decision survives a restart
 wm selftest --json   # 8 end-to-end invariants on a throwaway store
 wm setup             # list detected MCP clients; add --write to patch the config
