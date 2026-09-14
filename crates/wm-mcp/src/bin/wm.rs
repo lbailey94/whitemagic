@@ -2152,6 +2152,32 @@ fn run_restore(
     }
     copy_tree(&data_src, store_path, &mut Vec::new())?;
 
+    // Older backups can be byte-exact yet lack named databases this build
+    // expects (2026-09-14 drill: a 9.0.0 backup had no `cold_storage`).
+    // Complete the schema in place before declaring the restore usable.
+    // The LMDB environment lives in the store root's `lmdb/` subdirectory.
+    let lmdb_dir = store_path.join("lmdb");
+    let schema_path = if lmdb_dir.is_dir() {
+        lmdb_dir
+    } else {
+        store_path.to_path_buf()
+    };
+    match wm_memory::MemoryStore::ensure_schema(&schema_path) {
+        Ok(created) if !created.is_empty() => println!(
+            "Schema completed: created {} missing database(s): {}",
+            created.len(),
+            created.join(", ")
+        ),
+        Ok(_) => {}
+        Err(e) => {
+            anyhow::bail!(
+                "Restored {} byte-exact, but schema completion failed: {e}. \
+                 The store is present; inspect it before use.",
+                store_path.display()
+            );
+        }
+    }
+
     println!(
         "Restored {} from {}",
         store_path.display(),

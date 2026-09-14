@@ -392,6 +392,64 @@ impl MemoryStore {
         })
     }
 
+    /// Named databases `open()` creates and `open_readonly()` requires,
+    /// beyond the galaxy and secondary-index sets.
+    const NAMED_DBIS: [&'static str; 6] = [
+        "episodic_records",
+        "episodic_terms_v2",
+        "embedding_cache",
+        "revisions",
+        crate::attestation::ATTESTATIONS_DB,
+        "cold_storage",
+    ];
+
+    /// Complete a store's schema in place: create any galaxy, index, or named
+    /// database this build expects but an older store lacks, then let the
+    /// caller reopen normally. Returns the database names that were missing.
+    ///
+    /// Restores from older builds can be byte-exact yet not openable (found
+    /// 2026-09-14: a 9.0.0 backup lacked `cold_storage`). This is the only
+    /// in-place repair path; `open_readonly` deliberately stays strict so
+    /// preservation callers see an incomplete store instead of a silent fix.
+    pub fn ensure_schema(path: impl AsRef<Path>) -> Result<Vec<String>> {
+        let path = path.as_ref().to_path_buf();
+        if !path.is_dir() {
+            return Err(CoreError::Memory(format!(
+                "Store directory does not exist: {}",
+                path.display()
+            )));
+        }
+        let expected = || {
+            Galaxy::all()
+                .into_iter()
+                .map(|galaxy| galaxy.db_name().to_string())
+                .chain(
+                    crate::indexes::INDEX_DBS
+                        .iter()
+                        .map(|(name, _)| (*name).to_string()),
+                )
+                .chain(Self::NAMED_DBIS.iter().map(|name| (*name).to_string()))
+        };
+        let missing: Vec<String> = {
+            let env = Environment::new()
+                .set_max_dbs(64)
+                .set_flags(EnvironmentFlags::READ_ONLY)
+                .open(&path)
+                .map_err(|e| CoreError::Memory(format!("Read-only LMDB open failed: {e}")))?;
+            expected()
+                .filter(|name| env.open_db(Some(name.as_str())).is_err())
+                .collect()
+        };
+        if missing.is_empty() {
+            return Ok(missing);
+        }
+        // A writable open creates every missing galaxy, index, and named
+        // database. Drop it immediately; the caller reopens as usual.
+        let store = Self::open_default(&path)?;
+        drop(store);
+        Ok(missing)
+    }
+
     /// Set a per-galaxy entry limit for DoS prevention.
     ///
     /// When set, `put` will reject writes that would exceed the limit.
@@ -1992,6 +2050,52 @@ mod tests {
         for galaxy in Galaxy::all() {
             let _db = store.galaxy_db(galaxy).unwrap();
         }
+    }
+
+    #[test]
+    fn ensure_schema_completes_a_pre_cold_store() {
+        use lmdb::{DatabaseFlags as LmdbFlags, Environment as LmdbEnv};
+        use uuid::Uuid;
+
+        // Synthetic pre-cold store: every DBI a 9.0.0 store had, but no
+        // `cold_storage` (the exact 2026-09-14 restore-drill finding).
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("old-store");
+        std::fs::create_dir_all(&path).unwrap();
+        {
+            let env = LmdbEnv::new().set_max_dbs(64).open(&path).unwrap();
+            for galaxy in Galaxy::all() {
+                env.create_db(Some(galaxy.db_name()), LmdbFlags::default())
+                    .unwrap();
+            }
+            for (name, flags) in crate::indexes::INDEX_DBS {
+                env.create_db(Some(name), *flags).unwrap();
+            }
+            for (name, flags) in [
+                ("episodic_records", LmdbFlags::default()),
+                ("episodic_terms_v2", LmdbFlags::DUP_SORT),
+                ("embedding_cache", LmdbFlags::default()),
+                ("revisions", LmdbFlags::default()),
+                (crate::attestation::ATTESTATIONS_DB, LmdbFlags::default()),
+            ] {
+                env.create_db(Some(name), flags).unwrap();
+            }
+        }
+
+        let error = match MemoryStore::open_readonly(&path) {
+            Ok(_) => panic!("strict read-only open must refuse an incomplete store"),
+            Err(e) => e.to_string(),
+        };
+        assert!(error.contains("cold_storage"), "{error}");
+
+        let created = MemoryStore::ensure_schema(&path).unwrap();
+        assert_eq!(created, vec!["cold_storage".to_string()], "{created:?}");
+
+        let store = MemoryStore::open_readonly(&path).unwrap();
+        assert!(store.get_cold_record(Uuid::nil()).unwrap().is_none());
+
+        // Idempotent: a complete store reports nothing missing.
+        assert!(MemoryStore::ensure_schema(&path).unwrap().is_empty());
     }
 
     #[test]
