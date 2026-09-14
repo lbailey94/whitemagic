@@ -16,6 +16,11 @@
 //! plain command; the dispatcher is responsible for the loud-degrade
 //! warning and counter (the doctrine of Landlock v0/v1).
 //!
+//! Two OS runners implement the same contract: `mandala-sandbox` (bwrap)
+//! and `landrun-sandbox` (pure Landlock — for stores that already run a
+//! Landlock domain, where bwrap cannot mount; rulesets stack). Point
+//! `WM_SANDBOX_RUNNER` at whichever the store's mechanism requires.
+//!
 //! Runner discovery (strict, in order):
 //! 1. `WM_SANDBOX_RUNNER` — explicit path; `""`/`0`/`false`/`off`/`none`
 //!    disable; a value that is not a file disables with a WARN.
