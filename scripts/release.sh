@@ -72,10 +72,30 @@ fi
 
 # ── tag + CI ─────────────────────────────────────────────────────────────
 banner "TAG + CI"
-if $DRY_RUN; then
-  echo "[dry-run] git tag v$VERSION; git push origin v$VERSION; wait for CI"
+# Source provenance: sign the tag when a signing key is configured; fall
+# back to an annotated (unsigned) tag with a loud warning otherwise.
+if git config --get user.signingkey >/dev/null 2>&1 \
+  || git config --get gpg.format >/dev/null 2>&1; then
+  SIGNED_TAG=1
 else
-  git tag "v$VERSION"
+  SIGNED_TAG=0
+fi
+if $DRY_RUN; then
+  if [ "$SIGNED_TAG" = "1" ]; then
+    echo "[dry-run] git tag -s v$VERSION -m 'WhiteMagic v$VERSION' (signed)"
+  else
+    echo "[dry-run] git tag -a v$VERSION -m 'WhiteMagic v$VERSION' (UNSIGNED —"
+    echo "[dry-run]   configure user.signingkey for source provenance)"
+  fi
+  echo "[dry-run] git push origin v$VERSION; wait for CI"
+else
+  if [ "$SIGNED_TAG" = "1" ]; then
+    git tag -s "v$VERSION" -m "WhiteMagic v$VERSION"
+  else
+    echo "WARN: no signing key configured — creating an annotated but UNSIGNED tag."
+    echo "      Set user.signingkey (and gpg.format for SSH signing) before the next release."
+    git tag -a "v$VERSION" -m "WhiteMagic v$VERSION"
+  fi
   git push origin "v$VERSION"
 fi
 if ! $SKIP_CI_WAIT && ! $DRY_RUN; then

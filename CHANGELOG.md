@@ -20,12 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`wm setup --write` now patches every supported client config**, not just `mcpServers` JSON: OpenCode `opencode.jsonc` is edited by a comment/string-aware structural editor (comments, siblings, and formatting preserved), and Codex `config.toml` via `toml_edit`. Every write is backup-first and re-parsed; malformed sections are refused, re-runs are idempotent.
 - Onboarding states the contract — explicit routes are the contract — in `wm setup` output and the client configuration guide.
 
+### First-run & routing
+- New **`wm grimoire`** — one guided pass for a fresh install: host inspection, substrate selftest, release check (offline-tolerant), agent-config detection, memory calibration, vocabulary teaching, and a restart-continuity demonstration on a throwaway store. Human `[OK]/[WARN]/[SKIP]/[FAIL]` lines plus a `--json` report; `--write` patches detected client configs. The MCP `initialize` instructions and `skill.md` now point at it.
+- `wm status` on a fresh install no longer suggests `quickstart` as the way to create the real store (the demo store is isolated by design); it now points at `wm quickstart` for verification and `wm serve --profile curated` / `wm setup` for normal use.
+- `wm selftest` is quiet by default (like `quickstart`); subsystem warnings require `--verbose`.
+- Recall phrasing: `recall X` routes to `memory.search` (it previously chose `memory.read` and treated the phrase like an id), and multi-word intentions — "find X", "what do you remember about X", "what did we decide about X", "look up X" — route to search instead of falling through to gnosis. Covered by regression tests.
+- `wm update check` (and `install`) treat an unreachable network as an ordinary local-first state: a calm message, exit code 2, structured detail under `--json`, no error chain or backtrace.
+
 ### Distribution & release engineering
 - New **release-health record + reconciliation**: `scripts/release_health.py` probes the GitHub release assets, every workspace crate on crates.io, npm, Docker Hub, and the official MCP registry; `release-health.yml` retries laggards on Release completion and daily, certifies the npm and Docker install paths with `wm selftest`, uploads `release-health.json` to the GitHub Release, and gates red while any surface lags.
 - `wm selftest --json` now runs on all five build targets in the release matrix (the curated smoke test remains the deeper Linux check).
 - **Version truth**: `scripts/version_truth.py --check/--set` covers all 15 version-bearing surfaces (Cargo pins, npm package/server/MCPB, Dockerfile labels, hosted server-card, CITATION, docs, install examples); `release.sh` preflight refuses drift and the bump stage uses the tool instead of the old three-file inline edit.
 - Distribution fixes: MCPB bundle, reproducible Smithery publishes, sanitized tools snapshot.
 - Curated catalog trimmed to the 9-tool lifecycle surface; tool annotations, `outputSchema`, and `structuredContent` on the server surface.
+- **Signed release tags**: `release.sh` creates a signed tag (`git tag -s`) when a signing key is configured and falls back to an annotated tag with a loud warning otherwise — source provenance alongside the signed release manifest, which remains the binary trust anchor.
+- Public-surface guard hardening: every private doc path is blocked at pre-push and by a dedicated `security.yml` CI job; the trust-tier pricing sketch is now private.
 
 ## [9.1.4] — 2026-09-13 (lossless continuation, cold discovery, first-run UX, signed updates)
 
