@@ -1186,8 +1186,9 @@ impl AutonomousCycleRunner {
     fn run_improve(&self, ctx: &CycleContext) -> CycleResult {
         let mut result = CycleResult::new(CycleType::Improve, CycleStatus::Completed);
 
-        // Scan Codex for friction entries
-        let memories = match ctx.store.scan(Galaxy::Codex, self.config.memory_budget) {
+        // Scan Codex for friction entries; auto-logged dispatch friction
+        // lives in Telemetry (evidence, excluded from recall).
+        let mut memories = match ctx.store.scan(Galaxy::Codex, self.config.memory_budget) {
             Ok(m) => m,
             Err(e) => {
                 result.status = CycleStatus::Error;
@@ -1195,6 +1196,9 @@ impl AutonomousCycleRunner {
                 return result;
             }
         };
+        if let Ok(mut auto) = ctx.store.scan(Galaxy::Telemetry, self.config.memory_budget) {
+            memories.append(&mut auto);
+        }
 
         // Filter to friction entries and extract metadata
         #[derive(Debug)]
@@ -1510,8 +1514,9 @@ impl AutonomousCycleRunner {
     fn run_redteam(&self, ctx: &CycleContext) -> CycleResult {
         let mut result = CycleResult::new(CycleType::Redteam, CycleStatus::Completed);
 
-        // Check for friction entries that inform red-team targets
-        let memories = match ctx.store.scan(Galaxy::Codex, self.config.memory_budget) {
+        // Check for friction entries that inform red-team targets; include
+        // the Telemetry home of the dispatch auto-logger.
+        let mut memories = match ctx.store.scan(Galaxy::Codex, self.config.memory_budget) {
             Ok(m) => m,
             Err(e) => {
                 result.status = CycleStatus::Error;
@@ -1519,6 +1524,9 @@ impl AutonomousCycleRunner {
                 return result;
             }
         };
+        if let Ok(mut auto) = ctx.store.scan(Galaxy::Telemetry, self.config.memory_budget) {
+            memories.append(&mut auto);
+        }
 
         let friction_count = memories
             .iter()
@@ -2018,6 +2026,11 @@ impl AutonomousCycleRunner {
             .store
             .scan(Galaxy::Codex, self.config.memory_budget)
             .unwrap_or_default();
+        // Auto-logged dispatch friction lives in Telemetry (evidence).
+        let auto_friction = ctx
+            .store
+            .scan(Galaxy::Telemetry, self.config.memory_budget)
+            .unwrap_or_default();
         let research_mems = ctx
             .store
             .scan(Galaxy::Research, self.config.memory_budget)
@@ -2026,8 +2039,8 @@ impl AutonomousCycleRunner {
         let mut scanned = 0usize;
         let mut open_problems: Vec<(String, Vec<String>)> = Vec::new();
 
-        // Find friction entries (unresolved)
-        for mem in &codex_mems {
+        // Find friction entries (unresolved) across both friction homes.
+        for mem in codex_mems.iter().chain(auto_friction.iter()) {
             scanned += 1;
             if mem.metadata.tags.iter().any(|t| t.contains("rsi:friction")) {
                 let is_resolved = mem.metadata.tags.iter().any(|t| t.contains("resolved"));

@@ -6,6 +6,12 @@
 //! (codebase-grounded improvement cycles) and Phase 3 (adversarial
 //! self-testing).
 //!
+//! Friction has two homes: `friction.log` writes cognition (Codex), while
+//! the dispatch auto-logger (`friction.auto_log`) writes evidence — dispatch
+//! errors and anomalies — to the **Telemetry** galaxy, which is excluded
+//! from ordinary recall by design. `friction.review` and the autonomous RSI
+//! cycles read both, so diagnostics never crowd out working knowledge.
+//!
 //! Design principles (from v2 investigation):
 //! - All tools are human-triggered, not autonomous
 //! - Friction entries are grounded in real usage, not self-inspection
@@ -92,15 +98,25 @@ pub fn friction_hash(tool: &str, category: &str, severity: &str, error: &str) ->
     format!("{:016x}", hasher.finish())
 }
 
-/// Check if a friction entry with the given hash tag already exists.
+/// Check if a friction entry with the given hash tag already exists in
+/// either friction home: Codex (manual `friction.log`) or Telemetry
+/// (auto-logged dispatch errors — evidence, excluded from recall).
 pub fn friction_hash_exists(store: &MemoryStore, hash_tag: &str) -> bool {
-    find_existing_friction(store, hash_tag).is_ok_and(|opt| opt.is_some())
+    [wm_core::Galaxy::Codex, wm_core::Galaxy::Telemetry]
+        .iter()
+        .any(|galaxy| {
+            find_existing_friction(store, *galaxy, hash_tag).is_ok_and(|opt| opt.is_some())
+        })
 }
 
-/// Scan Codex for an existing friction entry with the given hash tag.
+/// Scan `galaxy` for an existing friction entry with the given hash tag.
 /// Returns `Some(memory)` if a duplicate is found.
-fn find_existing_friction(store: &MemoryStore, hash_tag: &str) -> wm_core::Result<Option<Memory>> {
-    let memories = store.scan(wm_core::Galaxy::Codex, 500)?;
+fn find_existing_friction(
+    store: &MemoryStore,
+    galaxy: wm_core::Galaxy,
+    hash_tag: &str,
+) -> wm_core::Result<Option<Memory>> {
+    let memories = store.scan(galaxy, 500)?;
     for mem in memories {
         if mem.metadata.tags.iter().any(|t| t == hash_tag) {
             return Ok(Some(mem));
@@ -136,7 +152,8 @@ fn escalate_severity(severity: &str) -> &str {
 
 /// Log a friction point encountered during v4 usage.
 ///
-/// Creates a structured memory in the Codex galaxy with the `rsi:friction`
+/// Creates a structured memory in the Telemetry galaxy (evidence, not cognition —
+/// excluded from ordinary recall) with the `rsi:friction`
 /// tag, plus optional severity and category tags. This is the primary
 /// data-collection mechanism for Phase 1 RSI.
 pub struct FrictionLogTool {
@@ -206,7 +223,9 @@ impl Tool for FrictionLogTool {
         let hash = friction_hash(tool_name, category, severity, what_happened);
         let hash_tag = format!("rsi:hash:{hash}");
 
-        if let Some(existing) = find_existing_friction(&self.store, &hash_tag)? {
+        if let Some(existing) =
+            find_existing_friction(&self.store, wm_core::Galaxy::Codex, &hash_tag)?
+        {
             // WS-5: Regression detection — if existing entry is resolved, create new
             if is_resolved(&existing) {
                 let escalated = escalate_severity(severity);
@@ -354,7 +373,7 @@ impl Tool for FrictionLogTool {
 
 /// Review recent friction entries, optionally filtered by category or severity.
 ///
-/// Scans the Codex galaxy for memories tagged `rsi:friction` and returns
+/// Scans Codex and Telemetry for memories tagged `rsi:friction` and returns
 /// a summary. This is the analysis tool for Phase 1 RSI — it surfaces
 /// patterns in friction data for human review.
 pub struct FrictionReviewTool {
@@ -368,7 +387,10 @@ impl FrictionReviewTool {
         Self {
             store,
             stats: ToolStats::default(),
-            effects: EffectRow::read_only(vec![Resource::Galaxy("codex".into())]),
+            effects: EffectRow::read_only(vec![
+                Resource::Galaxy("codex".into()),
+                Resource::Galaxy("telemetry".into()),
+            ]),
         }
     }
 }
@@ -395,8 +417,12 @@ impl Tool for FrictionReviewTool {
         let category_filter = args.get("category").and_then(|v| v.as_str());
         let severity_filter = args.get("severity").and_then(|v| v.as_str());
 
-        // Scan codex for friction entries
-        let memories = self.store.scan(wm_core::Galaxy::Codex, limit * 5)?;
+        // Friction lives in Codex (manual log) and Telemetry (auto-logged
+        // dispatch errors); review needs both.
+        let mut memories = self.store.scan(wm_core::Galaxy::Codex, limit * 5)?;
+        if let Ok(mut auto) = self.store.scan(wm_core::Galaxy::Telemetry, limit * 5) {
+            memories.append(&mut auto);
+        }
 
         let mut entries: Vec<Value> = Vec::new();
         let mut by_category: std::collections::HashMap<String, usize> =
@@ -545,7 +571,7 @@ impl FrictionAutoLogTool {
             search,
             stats: ToolStats::default(),
             effects: EffectRow {
-                writes: vec![Resource::Galaxy("codex".into())],
+                writes: vec![Resource::Galaxy("telemetry".into())],
                 invokes: vec![Capability::MemoryWrite],
                 ..Default::default()
             },
@@ -566,7 +592,7 @@ impl FrictionAutoLogTool {
         let hash = friction_hash(&telemetry.tool, "error", severity, &telemetry.error);
         let hash_tag = format!("rsi:hash:{hash}");
 
-        if let Some(existing) = find_existing_friction(&self.store, &hash_tag)? {
+        if let Some(existing) = find_existing_friction(&self.store, wm_core::Galaxy::Telemetry, &hash_tag)? {
             // WS-5: Regression detection — if existing entry is resolved, create new
             if is_resolved(&existing) {
                 let escalated = escalate_severity(severity);
@@ -586,7 +612,7 @@ impl FrictionAutoLogTool {
                     serde_json::to_string_pretty(telemetry).unwrap_or_default(),
                 );
                 let now = chrono::Utc::now().to_rfc3339();
-                let mut memory = Memory::new(wm_core::Galaxy::Codex, content);
+                let mut memory = Memory::new(wm_core::Galaxy::Telemetry, content);
                 memory.metadata.tags = vec![
                     "rsi:friction".to_string(),
                     format!("rsi:severity:{escalated}"),
@@ -602,7 +628,7 @@ impl FrictionAutoLogTool {
                 memory.metadata.source_trust = 0.9;
                 memory.metadata.importance = 0.95;
                 let id = memory.metadata.id;
-                self.store.put(wm_core::Galaxy::Codex, &memory)?;
+                self.store.put(wm_core::Galaxy::Telemetry, &memory)?;
 
                 if let Some(search) = &self.search {
                     if let Err(e) = (|| {
@@ -610,7 +636,7 @@ impl FrictionAutoLogTool {
                         search.add_document(
                             &mut writer,
                             &id.to_string(),
-                            "codex",
+                            "telemetry",
                             &memory.content,
                             &memory.metadata.tags,
                             memory.metadata.created_at.timestamp(),
@@ -636,7 +662,7 @@ impl FrictionAutoLogTool {
                 .retain(|t| !t.starts_with("rsi:last_seen:"));
             updated.metadata.tags.push(format!("rsi:last_seen:{now}"));
 
-            self.store.put(wm_core::Galaxy::Codex, &updated)?;
+            self.store.put(wm_core::Galaxy::Telemetry, &updated)?;
             return Ok(());
         }
 
@@ -655,7 +681,7 @@ impl FrictionAutoLogTool {
         );
 
         let now = chrono::Utc::now().to_rfc3339();
-        let mut memory = Memory::new(wm_core::Galaxy::Codex, content);
+        let mut memory = Memory::new(wm_core::Galaxy::Telemetry, content);
         memory.metadata.tags = vec![
             "rsi:friction".to_string(),
             format!("rsi:severity:{severity}"),
@@ -674,7 +700,7 @@ impl FrictionAutoLogTool {
         };
 
         let id = memory.metadata.id;
-        self.store.put(wm_core::Galaxy::Codex, &memory)?;
+        self.store.put(wm_core::Galaxy::Telemetry, &memory)?;
 
         // Index into Tantivy (non-fatal)
         if let Some(search) = &self.search {
@@ -683,7 +709,7 @@ impl FrictionAutoLogTool {
                 search.add_document(
                     &mut writer,
                     &id.to_string(),
-                    "codex",
+                    "telemetry",
                     &memory.content,
                     &memory.metadata.tags,
                     memory.metadata.created_at.timestamp(),
@@ -727,7 +753,7 @@ impl FrictionAutoLogTool {
             _ => "ux",
         };
 
-        let mut memory = Memory::new(wm_core::Galaxy::Codex, content);
+        let mut memory = Memory::new(wm_core::Galaxy::Telemetry, content);
         memory.metadata.tags = vec![
             "rsi:friction".to_string(),
             "rsi:severity:medium".to_string(),
@@ -740,7 +766,7 @@ impl FrictionAutoLogTool {
         memory.metadata.importance = 0.5;
 
         let id = memory.metadata.id;
-        self.store.put(wm_core::Galaxy::Codex, &memory)?;
+        self.store.put(wm_core::Galaxy::Telemetry, &memory)?;
 
         if let Some(search) = &self.search {
             if let Err(e) = (|| {
@@ -748,7 +774,7 @@ impl FrictionAutoLogTool {
                 search.add_document(
                     &mut writer,
                     &id.to_string(),
-                    "codex",
+                    "telemetry",
                     &memory.content,
                     &memory.metadata.tags,
                     memory.metadata.created_at.timestamp(),
@@ -1730,8 +1756,15 @@ mod tests {
         };
         tool.log_error(&telemetry).unwrap();
 
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         assert_eq!(memories.len(), 1);
+        assert!(
+            store
+                .scan(wm_core::Galaxy::Codex, 10)
+                .unwrap()
+                .is_empty(),
+            "auto-logged friction must not pollute ordinary recall (Codex)"
+        );
         assert!(
             memories[0]
                 .metadata
@@ -1775,7 +1808,7 @@ mod tests {
         let result = tool.call(&mut ctx, args).await;
         assert!(result.is_ok());
 
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         assert_eq!(memories.len(), 1);
     }
 
@@ -1807,6 +1840,8 @@ mod tests {
         .await
         .unwrap();
 
+        // Manual friction.log stays in Codex (cognition), unlike the
+        // dispatch auto-logger which writes evidence to Telemetry.
         let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
         assert!(
             memories[0]
@@ -1976,7 +2011,7 @@ mod tests {
         let telemetry = DispatchTelemetry::minimal("gnosis", "", 500.0);
         tool.log_anomaly(&telemetry, "high_latency").unwrap();
 
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         assert_eq!(memories.len(), 1);
         assert!(
             memories[0]
@@ -2009,7 +2044,7 @@ mod tests {
 
         // First occurrence: creates new entry
         tool.log_error(&telemetry).unwrap();
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         assert_eq!(memories.len(), 1);
         let dup_tag = memories[0]
             .metadata
@@ -2021,7 +2056,7 @@ mod tests {
 
         // Second occurrence: increments duplicate_count
         tool.log_error(&telemetry).unwrap();
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         assert_eq!(memories.len(), 1, "should still be 1 entry (deduped)");
         let dup_tag = memories[0]
             .metadata
@@ -2033,7 +2068,7 @@ mod tests {
 
         // Third occurrence: increments again
         tool.log_error(&telemetry).unwrap();
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         assert_eq!(memories.len(), 1, "should still be 1 entry (deduped)");
         let dup_tag = memories[0]
             .metadata
@@ -2254,16 +2289,16 @@ mod tests {
         };
         tool.log_error(&telemetry).unwrap();
 
-        // Resolve the entry
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        // Resolve the entry (auto-logged entries live in Telemetry)
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         let mut entry = memories[0].clone();
         entry.metadata.tags.push("rsi:resolved".to_string());
-        store.put(wm_core::Galaxy::Codex, &entry).unwrap();
+        store.put(wm_core::Galaxy::Telemetry, &entry).unwrap();
 
         // Log the same error again — should create a regression entry
         tool.log_error(&telemetry).unwrap();
 
-        let memories = store.scan(wm_core::Galaxy::Codex, 10).unwrap();
+        let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         let regression = memories
             .iter()
             .find(|m| m.metadata.tags.iter().any(|t| t == "rsi:regression"))
