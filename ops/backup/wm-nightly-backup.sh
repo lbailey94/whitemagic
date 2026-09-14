@@ -14,6 +14,12 @@
 # without a verified backup is one mistake away from gone — outranks the
 # wear concern) but the log screams about it. Each OK line records the
 # backup size so the write-budget story covers backup volume too.
+# 2026-09-14 fragmentation fix: SD_CARD1 is canonical (checked first); the
+# unmounted case stages under ~/whitemagic-backups/nvme-fallback and the
+# next card-present run folds that into the card tree before retention, so
+# one chain always survives. Canonical history was seeded on the card the
+# same day (home store snapshots through Sep 8/9 + wmv9 seed + vault from
+# whitemagic-archives/local-backups-20260913).
 # 2026-09-02 O-1 (nightly seal): every backup is preceded by `wm seal`
 # (HMAC-SHA256 manifest) + `wm verify` on the live store, and BOTH
 # seal.json and .seal_key are snapshotted OFF-STORE into a dated
@@ -29,7 +35,7 @@ WM="$HOME/.local/bin/wm"
 BASE="$HOME/Desktop/WHITEMAGIC/data/WMdata/projects"
 KEEP=7
 EXTERNAL_DISK=""
-for d in "/media/lucas/4198-16FD" "/media/lucas/SD_CARD1"; do
+for d in "/media/lucas/SD_CARD1" "/media/lucas/4198-16FD"; do
   if mountpoint -q "$d" 2>/dev/null; then
     EXTERNAL_DISK="$d"
     break
@@ -37,6 +43,12 @@ for d in "/media/lucas/4198-16FD" "/media/lucas/SD_CARD1"; do
 done
 EXTERNAL="${EXTERNAL_DISK:+$EXTERNAL_DISK/whitemagic-backups}"
 LEGACY="$HOME/whitemagic-backups"
+# NVMe fallback is a STAGING area, never a second history. When no card is
+# mounted snapshots land here; the next card-present run folds them into the
+# canonical tree before retention. The 2026-09-14 split: SD_CARD1 was mounted
+# with no tree while store snapshots sat on the NVMe, so the next nightly
+# would have started a fresh chain. See CATCHUP below.
+FALLBACK="$LEGACY/nvme-fallback"
 LOG="$LEGACY/backup.log"
 
 mkdir -p "$LEGACY"
@@ -46,14 +58,26 @@ if [ ! -x "$WM" ]; then
   exit 1
 fi
 
-# Target: the SD card when mounted, the legacy NVMe path with a loud WARN
-# when it is not. Never skip the backup; never fall back silently.
+# Target: the SD card when mounted, the NVMe staging path with a loud WARN
+# when it is not. Never skip the backup; never fall back silently; never let
+# the fallback become a second history.
 if [ -n "$EXTERNAL_DISK" ]; then
   BACKUP_ROOT="$EXTERNAL"
   mkdir -p "$BACKUP_ROOT"
+  echo "$(date -Is) TARGET $BACKUP_ROOT (card $EXTERNAL_DISK mounted)" >>"$LOG"
+  if [ -d "$FALLBACK" ] && [ -n "$(ls -A "$FALLBACK" 2>/dev/null)" ]; then
+    echo "$(date -Is) CATCHUP folding NVMe fallback into $BACKUP_ROOT" >>"$LOG"
+    if rsync -a "$FALLBACK/" "$BACKUP_ROOT/" >>"$LOG" 2>&1; then
+      rm -rf "$FALLBACK"
+      echo "$(date -Is) CATCHUP-OK fallback folded and cleared" >>"$LOG"
+    else
+      echo "$(date -Is) CATCHUP-FAIL fallback left in place (retry next card run)" >>"$LOG"
+    fi
+  fi
 else
-  BACKUP_ROOT="$LEGACY"
-  echo "$(date -Is) WARN backup disk not mounted — falling back to NVMe ($LEGACY). NVMe wear continues until the card is remounted." >>"$LOG"
+  BACKUP_ROOT="$FALLBACK"
+  mkdir -p "$BACKUP_ROOT"
+  echo "$(date -Is) WARN backup disk not mounted — staging on NVMe ($FALLBACK); folded into the card on the next card-present run." >>"$LOG"
 fi
 SEALS="$BACKUP_ROOT/seals"
 mkdir -p "$SEALS"
