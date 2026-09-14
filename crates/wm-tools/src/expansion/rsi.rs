@@ -592,7 +592,9 @@ impl FrictionAutoLogTool {
         let hash = friction_hash(&telemetry.tool, "error", severity, &telemetry.error);
         let hash_tag = format!("rsi:hash:{hash}");
 
-        if let Some(existing) = find_existing_friction(&self.store, wm_core::Galaxy::Telemetry, &hash_tag)? {
+        if let Some(existing) =
+            find_existing_friction(&self.store, wm_core::Galaxy::Telemetry, &hash_tag)?
+        {
             // WS-5: Regression detection — if existing entry is resolved, create new
             if is_resolved(&existing) {
                 let escalated = escalate_severity(severity);
@@ -1759,10 +1761,7 @@ mod tests {
         let memories = store.scan(wm_core::Galaxy::Telemetry, 10).unwrap();
         assert_eq!(memories.len(), 1);
         assert!(
-            store
-                .scan(wm_core::Galaxy::Codex, 10)
-                .unwrap()
-                .is_empty(),
+            store.scan(wm_core::Galaxy::Codex, 10).unwrap().is_empty(),
             "auto-logged friction must not pollute ordinary recall (Codex)"
         );
         assert!(
