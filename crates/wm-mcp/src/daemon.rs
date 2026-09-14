@@ -130,6 +130,40 @@ impl Default for DaemonConfig {
     }
 }
 
+/// Bounded, store-free Gan Ying hint queue.
+///
+/// Strong-coincidence summaries wait here for the next general or Research
+/// cycle, which consumes them exactly once. The cap drops the oldest hint, so
+/// a coincidence storm can delay but never flood cycle inputs. Counters make
+/// accepted, dropped and consumed work observable without changing any queue
+/// semantics.
+#[derive(Debug, Default)]
+struct PendingSyncHints {
+    hints: Vec<String>,
+    accepted: u64,
+    dropped: u64,
+    consumed: u64,
+}
+
+impl PendingSyncHints {
+    const CAP: usize = 10;
+
+    fn push(&mut self, hint: String) {
+        self.hints.push(hint);
+        self.accepted += 1;
+        while self.hints.len() > Self::CAP {
+            self.hints.remove(0);
+            self.dropped += 1;
+        }
+    }
+
+    /// Consume every pending hint exactly once.
+    fn take(&mut self) -> Vec<String> {
+        self.consumed += self.hints.len() as u64;
+        std::mem::take(&mut self.hints)
+    }
+}
+
 /// Daemon statistics — tracks what the daemon has been doing.
 #[derive(Debug, Default)]
 pub struct DaemonStats {
@@ -171,6 +205,12 @@ pub struct DaemonStats {
     pub synchronicities_found: u64,
     /// Total strong (3+ subsystem) coincidences detected.
     pub strong_synchronicities: u64,
+    /// Total Gan Ying strong-coincidence hints accepted into the pending queue.
+    pub sync_hints_accepted: u64,
+    /// Total pending Gan Ying hints dropped by the bounded queue (drop-oldest).
+    pub sync_hints_dropped: u64,
+    /// Total pending Gan Ying hints consumed exactly once by a cycle.
+    pub sync_hints_consumed: u64,
     /// Total Citta 4-phase cognitive cycles completed.
     pub citta_cycles: u64,
     /// Total Alchemical Transmutation Rounds completed.
@@ -280,7 +320,7 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
     // exactly once via `CycleContext::with_synchronicity`. Bounded: only
     // strong coincidences qualify and the oldest drops past the cap, so a
     // coincidence storm can delay but never flood Research inputs.
-    let mut pending_sync_hints: Vec<String> = Vec::new();
+    let mut pending_sync_hints = PendingSyncHints::default();
     {
         let detector_bus = Arc::clone(&synchronicity);
         if let Ok(mut bus) = server.gan_ying_bus().lock() {
@@ -485,7 +525,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 .with_sensorimotor(&sensorimotor_bus, &reflex_loop)
                 .with_imagination(&scenario_engine)
                 .with_dynamic_galaxies(server.dynamic_galaxies())
-                .with_synchronicity(std::mem::take(&mut pending_sync_hints));
+                .with_synchronicity(pending_sync_hints.take());
+            stats.sync_hints_consumed = pending_sync_hints.consumed;
 
             if let Some(results) = resilient("cycle_sweep", || runner.run_all(&ctx)) {
                 stats.cycle_sweeps += 1;
@@ -898,7 +939,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             let health = server.dharma_gate().homeostasis().health_score();
             let ctx = CycleContext::new(&store, &associations, health)
                 .with_imagination(&scenario_engine)
-                .with_synchronicity(std::mem::take(&mut pending_sync_hints));
+                .with_synchronicity(pending_sync_hints.take());
+            stats.sync_hints_consumed = pending_sync_hints.consumed;
 
             let result = resilient("research_cycle", || {
                 runner.run_cycle(CycleType::Research, &ctx)
@@ -1047,9 +1089,6 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                             sync.mean_salience,
                             sync.time_span_ms,
                         ));
-                        while pending_sync_hints.len() > 10 {
-                            pending_sync_hints.remove(0);
-                        }
                     }
                     for event_type in &sync.event_types {
                         let subsystem = nervous.route(*event_type, is_error_event(*event_type));
@@ -1059,6 +1098,8 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                         }
                     }
                 }
+                stats.sync_hints_accepted = pending_sync_hints.accepted;
+                stats.sync_hints_dropped = pending_sync_hints.dropped;
                 subsystems.sort();
                 stats.synchronicities_found += fresh.len() as u64;
                 tracing::info!(
@@ -1194,6 +1235,10 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         println!("  Sync scans:       {}", stats.synchronicity_scans);
         println!("  Coincidences:     {}", stats.synchronicities_found);
         println!("  Strong syncs:     {}", stats.strong_synchronicities);
+        println!(
+            "  Sync hints:       {} accepted, {} dropped, {} consumed",
+            stats.sync_hints_accepted, stats.sync_hints_dropped, stats.sync_hints_consumed
+        );
     }
     if stats.citta_cycles > 0 {
         println!("  Citta cycles:     {}", stats.citta_cycles);
@@ -1292,6 +1337,34 @@ mod tests {
     fn daemon_config_default_checkpoint_is_five_minutes() {
         let config = DaemonConfig::default();
         assert_eq!(config.checkpoint_interval, Duration::from_secs(300));
+    }
+
+    #[test]
+    fn pending_sync_hints_caps_at_ten_dropping_oldest_and_counts() {
+        let mut queue = PendingSyncHints::default();
+        for i in 0..10 {
+            queue.push(format!("hint-{i}"));
+        }
+        assert_eq!(queue.hints.len(), PendingSyncHints::CAP);
+        assert_eq!(queue.accepted, 10);
+        assert_eq!(queue.dropped, 0);
+        queue.push("hint-10".into());
+        assert_eq!(queue.hints.len(), PendingSyncHints::CAP);
+        assert_eq!(queue.accepted, 11);
+        assert_eq!(queue.dropped, 1);
+        assert_eq!(queue.hints.first().map(String::as_str), Some("hint-1"));
+        let drained = queue.take();
+        assert_eq!(drained.len(), PendingSyncHints::CAP);
+        assert_eq!(queue.consumed, 10);
+        assert!(queue.take().is_empty(), "consume is exactly once");
+        assert_eq!(queue.consumed, 10);
+    }
+
+    #[test]
+    fn pending_sync_hints_disabled_control_consumes_nothing() {
+        let mut queue = PendingSyncHints::default();
+        assert!(queue.take().is_empty());
+        assert_eq!((queue.accepted, queue.dropped, queue.consumed), (0, 0, 0));
     }
 
     #[test]
