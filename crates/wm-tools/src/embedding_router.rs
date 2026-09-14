@@ -28,7 +28,7 @@ use ahash::AHashMap;
 use std::sync::{Arc, RwLock};
 use wm_memory::Embedder;
 
-use crate::nlu::{PREFIX_ROUTES, TOOL_PROFILES, ToolProfile};
+use crate::nlu::{PHRASE_ROUTES, PREFIX_ROUTES, TOOL_PROFILES, ToolProfile};
 
 /// OATS refinement strength (interpolation factor toward success centroid).
 const OATS_ALPHA: f32 = 0.15;
@@ -267,11 +267,7 @@ impl EmbeddingRouter {
         // On the anchored path it fights the intent anchors ("list tools" was
         // boosted toward memory.list despite tools.list carrying the anchor).
         let prefix_bonus: Option<(&str, f64)> = if self.apply_prefix_bonus {
-            let first_word = lower.split_whitespace().next().unwrap_or("");
-            PREFIX_ROUTES
-                .iter()
-                .find(|(verb, _, _)| *verb == first_word)
-                .map(|(_, tool, bonus)| (*tool, *bonus))
+            intent_bonus(&lower)
         } else {
             None
         };
@@ -621,6 +617,26 @@ fn profile_to_description(profile: &ToolProfile) -> String {
     format!("{} {}", profile.tool_name, keywords.join(" "))
 }
 
+/// Curated phrase/verb intent for the legacy prefix-bonus path.
+///
+/// Multi-word intentions are checked first (they are explicit enough not to
+/// need semantic support), then the single-word command-verb table. Mirrors
+/// the TF-IDF classifier's routing so both NLU layers agree.
+fn intent_bonus(lower: &str) -> Option<(&'static str, f64)> {
+    let probe = lower.trim_start();
+    PHRASE_ROUTES
+        .iter()
+        .find(|(phrase, _, _)| probe.starts_with(phrase))
+        .map(|(_, tool, bonus)| (*tool, *bonus))
+        .or_else(|| {
+            let first_word = probe.split_whitespace().next().unwrap_or("");
+            PREFIX_ROUTES
+                .iter()
+                .find(|(verb, _, _)| *verb == first_word)
+                .map(|(_, tool, bonus)| (*tool, *bonus))
+        })
+}
+
 /// Intent anchors: natural-language phrasings users say when they mean a tool.
 ///
 /// The registry's `description()` strings describe *what a tool does* (display
@@ -669,6 +685,9 @@ static INTENT_ANCHORS: &[(&str, &[&str])] = &[
             "memory search",
             "search for rust",
             "search memories",
+            "what do you remember about",
+            "what did we decide about",
+            "look up",
         ],
     ),
     (
@@ -1043,6 +1062,24 @@ mod tests {
         let b = vec![1.0, 2.0, 3.0];
         let sim = cosine_sim(&a, &b);
         assert_eq!(sim, 0.0, "different-length vectors should return 0.0");
+    }
+
+    #[test]
+    fn intent_bonus_prefers_phrases_then_verbs() {
+        assert_eq!(
+            intent_bonus("what do you remember about the quartz submarine"),
+            Some(("memory.search", 1.5))
+        );
+        assert_eq!(
+            intent_bonus("look up the quartz submarine"),
+            Some(("memory.search", 1.4))
+        );
+        assert_eq!(
+            intent_bonus("recall the last memory"),
+            Some(("memory.search", 1.5))
+        );
+        assert_eq!(intent_bonus("remember this"), Some(("memory.create", 1.5)));
+        assert_eq!(intent_bonus("xyzzy frobnicate"), None);
     }
 
     #[test]
