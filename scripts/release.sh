@@ -121,7 +121,9 @@ fi
 
 # ── crates.io (ordered; rides 429 windows if any) ────────────────────────
 banner "CRATES.IO"
-CRATES="wm-core wm-conformal wm-memory wm-substrate wm-simulation wm-workspace wm-polyglot wm-sangha wm-selfmodel wm-governance wm-bicameral wm-dispatch wm-cognitive wm-tools whitemagic"
+# Derived from cargo metadata (same source as release.yml) so the order can
+# never drift from the actual dependency graph.
+CRATES="$(python3 scripts/crates_publish_order.py)"
 for c in $CRATES; do
   published=""
   lag=0
