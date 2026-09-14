@@ -22,9 +22,9 @@ use wm_cognitive::{
 };
 use wm_core::{Context, Galaxy, Tool};
 use wm_memory::{
-    reindex::heal_index_drift, AssociationStore, MemoryStore, MemoryType, SearchEngine,
+    AssociationStore, MemoryStore, MemoryType, SearchEngine, reindex::heal_index_drift,
 };
-use wm_tools::{expansion::MemoryHybridRecallTool, MemoryReadTool};
+use wm_tools::{MemoryReadTool, expansion::MemoryHybridRecallTool};
 
 const CUE_TOKEN: &str = "zxqganyingtool742";
 
@@ -56,9 +56,11 @@ impl TierHandler for CueBoundHandler {
 
 #[test]
 fn synthetic_generator_refuses_an_input_without_the_cue() {
-    assert!(CueBoundHandler
-        .handle("unrelated planner input", 256)
-        .is_err());
+    assert!(
+        CueBoundHandler
+            .handle("unrelated planner input", 256)
+            .is_err()
+    );
 }
 
 fn detector() -> SynchronicityDetector {
