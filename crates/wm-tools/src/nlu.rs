@@ -334,6 +334,41 @@ pub static TOOL_PROFILES: &[ToolProfile] = &[
             ("history", 1.5),
         ],
     },
+    ToolProfile {
+        tool_name: "session.continuity",
+        keywords: &[
+            ("resume", 3.0),
+            ("continue", 2.5),
+            ("left", 2.0),
+            ("off", 1.5),
+            ("last", 2.0),
+            ("time", 1.5),
+            ("previous", 2.5),
+            ("pick", 2.0),
+            ("up", 1.5),
+            ("decide", 2.0),
+            ("recap", 2.5),
+            ("where", 1.5),
+            ("were", 1.5),
+            ("handoff", 1.5),
+            ("carry", 1.5),
+            ("over", 1.0),
+            ("session", 1.5),
+        ],
+    },
+    ToolProfile {
+        tool_name: "session.record",
+        keywords: &[
+            ("record", 3.0),
+            ("log", 2.5),
+            ("turn", 2.5),
+            ("note", 2.0),
+            ("decision", 2.0),
+            ("breakthrough", 2.0),
+            ("transcript", 1.5),
+            ("capture", 1.5),
+        ],
+    },
     // ── Consciousness ──────────────────────────────────────────────
     ToolProfile {
         tool_name: "citta.status",
@@ -2331,6 +2366,7 @@ pub const PREFIX_ROUTES: &[(&str, &str, f64)] = &[
     ("store", "memory.create", 1.5),
     ("save", "memory.create", 1.5),
     ("memorize", "memory.create", 1.5),
+    ("resume", "session.continuity", 1.5),
     ("recall", "memory.search", 1.5),
     ("search", "memory.search", 1.3),
     ("find", "memory.search", 1.4),
@@ -2374,6 +2410,15 @@ pub const PHRASE_ROUTES: &[(&str, &str, f64)] = &[
     ("what did we decide about", "memory.search", 1.5),
     ("do you remember", "memory.search", 1.4),
     ("look up", "memory.search", 1.4),
+    // Continuity phrases (9.1.6): resume intentions land on
+    // session.continuity, not gnosis or session.recall. The continuity
+    // profile alone loses to smaller-norm profiles on cosine; these
+    // decisive phrases are the grimoire-taught conveniences.
+    ("where were we", "session.continuity", 1.5),
+    ("where did we leave off", "session.continuity", 1.5),
+    ("what did we decide last", "session.continuity", 1.5),
+    ("continue from", "session.continuity", 1.4),
+    ("pick up where", "session.continuity", 1.4),
 ];
 
 /// If no profile scores above the minimum threshold, falls back to "gnosis"
@@ -2584,6 +2629,28 @@ mod tests {
     fn classify_session_end_routes_correctly() {
         let (tool, _conf) = classify("end session abc-123");
         assert_eq!(tool, "session.end");
+    }
+
+    #[test]
+    fn classify_session_continuity_routes_correctly() {
+        // 9.1.6: continuity phrases must reach session.continuity, not gnosis.
+        for phrase in [
+            "what did we decide last time",
+            "resume where we left off",
+            "where were we in the previous session",
+            "continue from where I stopped",
+            "pick up where we left off",
+        ] {
+            let (tool, conf) = classify(phrase);
+            assert_eq!(tool, "session.continuity", "phrase: {phrase}");
+            assert!(conf > 0.1, "phrase {phrase} confidence too low: {conf}");
+        }
+    }
+
+    #[test]
+    fn classify_session_record_routes_correctly() {
+        let (tool, _conf) = classify("record this decision for later");
+        assert_eq!(tool, "session.record");
     }
 
     #[test]
