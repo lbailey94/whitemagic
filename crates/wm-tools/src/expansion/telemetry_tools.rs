@@ -31,7 +31,12 @@ use super::common;
 
 const TAG_WINDOW: &str = "window";
 const TAG_ROLLUP: &str = "rollup";
-const RECORD_KINDS: [&str; 2] = ["telemetry.window", "telemetry.rollup"];
+const TAG_OBSERVATION: &str = "observation";
+const RECORD_KINDS: [&str; 3] = [
+    "telemetry.window",
+    "telemetry.rollup",
+    "telemetry.observation",
+];
 const IMPORTANCE_CEILING: f32 = 0.40;
 const SOURCE_TRUST: f32 = 0.7;
 
@@ -62,9 +67,38 @@ fn validate_record(record: &Value) -> std::result::Result<&'static str, String> 
         .get("ts")
         .and_then(Value::as_str)
         .ok_or_else(|| "record.ts (RFC3339) is required".to_string())?;
+    if *kind == "telemetry.observation" {
+        // Policy decision records (step-0 observation ladder): identity and
+        // transition fields are mandatory; harmony/dims do not apply.
+        for field in ["policy_id", "metric", "state", "action"] {
+            if record
+                .get(field)
+                .and_then(Value::as_str)
+                .is_none_or(|v| v.is_empty())
+            {
+                return Err(format!(
+                    "record.{field} (non-empty string) is required for telemetry.observation records"
+                ));
+            }
+        }
+        if record.get("value").and_then(Value::as_f64).is_none() {
+            return Err(
+                "record.value (number) is required for telemetry.observation records".to_string(),
+            );
+        }
+        return Ok(kind);
+    }
+    // Windows and rollups carry a harmony score; rollups aggregate it as
+    // `{"harmony":{"avg":...}}`, windows as the scalar `harmony_score`.
     let harmony = record
         .get("harmony_score")
         .and_then(Value::as_f64)
+        .or_else(|| {
+            record
+                .get("harmony")
+                .and_then(|h| h.get("avg"))
+                .and_then(Value::as_f64)
+        })
         .ok_or_else(|| "record.harmony_score (0.0-1.0) is required".to_string())?;
     if !(0.0..=1.0).contains(&harmony) {
         return Err(format!(
@@ -111,10 +145,10 @@ fn store_record(
             tags.push(required.to_string());
         }
     }
-    let kind_tag = if kind == "telemetry.window" {
-        TAG_WINDOW
-    } else {
-        TAG_ROLLUP
+    let kind_tag = match kind {
+        "telemetry.window" => TAG_WINDOW,
+        "telemetry.observation" => TAG_OBSERVATION,
+        _ => TAG_ROLLUP,
     };
     if !tags.iter().any(|t| t == kind_tag) {
         tags.push(kind_tag.to_string());
@@ -667,6 +701,54 @@ mod tests {
             .call(&mut Context::default(), json!({"record": probe}))
             .await;
         assert!(probe_reply.is_err(), "windows require dim_notes");
+    }
+
+    #[tokio::test]
+    async fn record_accepts_policy_observations_and_typed_rollups() {
+        let (_tmp, store) = open_store();
+        let tool = TelemetryRecordTool::new(Arc::clone(&store), None);
+        let obs = json!({
+            "kind": "telemetry.observation",
+            "ts": "2026-09-13T12:00:00+00:00",
+            "policy_id": "energy.over_budget.v1",
+            "metric": "energy",
+            "state": "observing",
+            "action": "observe",
+            "value": 0.33,
+            "enter": 0.9,
+            "exit": 0.97,
+            "dwell_windows": 1,
+            "tags": ["telemetry", "edge", "observation", "policy"],
+        });
+        let out = tool
+            .call(&mut Context::default(), json!({"record": obs}))
+            .await
+            .unwrap();
+        assert_eq!(out["kind"], "telemetry.observation");
+        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 1);
+
+        // Identity fields are mandatory for observations.
+        let bad = json!({"kind": "telemetry.observation", "ts": "x", "metric": "energy"});
+        assert!(
+            tool.call(&mut Context::default(), json!({"record": bad}))
+                .await
+                .is_err()
+        );
+
+        // Rollups validate via harmony.avg (the typed path now matches what
+        // the rollup builder actually produces).
+        let rollup = json!({
+            "kind": "telemetry.rollup",
+            "ts": "2026-09-13T12:00:00+00:00",
+            "harmony": {"avg": 0.6},
+            "dims": {"fairness": {"avg": 0.5}},
+        });
+        let out = tool
+            .call(&mut Context::default(), json!({"record": rollup}))
+            .await
+            .unwrap();
+        assert_eq!(out["kind"], "telemetry.rollup");
+        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 2);
     }
 
     #[tokio::test]
