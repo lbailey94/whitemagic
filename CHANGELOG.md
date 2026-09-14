@@ -5,6 +5,11 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 9.1.6 (in progress)
+
+### Preservation & verification
+- Readonly inspection is proven non-mutating at byte level: `wm doctor` on a live store leaves LMDB, the Tantivy index and every store file untouched (new bin test `doctor_readonly_inspection_preserves_store_and_index`), and a strict read-only open of a pre-cold store leaves `data.mdb` and the directory listing unchanged when it refuses (strengthened `ensure_schema_completes_a_pre_cold_store`).
+
 ## [9.1.5] — 2026-09-14 (agent-first onboarding, telemetry retention, signed releases)
 
 > Released 2026-09-14. The canonical record is the signed
