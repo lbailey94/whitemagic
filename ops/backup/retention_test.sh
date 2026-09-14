@@ -33,6 +33,10 @@ for evidence in trust anchors; do
   test "$(cat "$fixture/$evidence/store/receipt")" = 'original evidence'
 done
 if prune_backup_retention "$fixture" invalid; then exit 1; fi
+mkdir -p "$fixture/linked-root" "$fixture/external-seals/store/2026-01-01" "$fixture/external-seals/store/2026-01-02"
+ln -s "$fixture/external-seals" "$fixture/linked-root/seals"
+prune_backup_retention "$fixture/linked-root" 1
+test -d "$fixture/external-seals/store/2026-01-01"
 # Exercise the actual nightly retention entry block without any earlier service,
 # store, sealing, or timestamp operations. Its sibling helper is deliberately absent.
 entry=$(sed -n '/^if source .*retention.sh/,/^fi$/p' "$(dirname "${BASH_SOURCE[0]}")/wm-nightly-backup.sh")

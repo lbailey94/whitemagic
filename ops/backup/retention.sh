@@ -21,11 +21,14 @@ prune_dated_directories() {
 
 prune_backup_retention() {
   local root="$1" keep="$2" store
+  [[ "$keep" =~ ^[0-9]+$ ]] && [ "$keep" -gt 0 ] || return 2
+  [ -d "$root" ] && [ ! -L "$root" ] || return 0
   for store in "$root"/*; do
     [ -d "$store" ] && [ ! -L "$store" ] || continue
     case "${store##*/}" in anchors|seals|trust) continue ;; esac
     prune_dated_directories "$store" "$keep" '^whitemagic-backup-[0-9]{8}T[0-9]{6}Z$' || return
   done
+  [ -d "$root/seals" ] && [ ! -L "$root/seals" ] || return 0
   for store in "$root"/seals/*; do
     prune_dated_directories "$store" "$keep" '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' || return
   done
