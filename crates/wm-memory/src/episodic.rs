@@ -1234,8 +1234,13 @@ fn contains_number_word(text: &str) -> bool {
 mod tests {
     use super::*;
     use crate::MemoryStore;
+    // Used only by the Q06 commit-boundary experiment, which is Unix-only
+    // (SIGKILL semantics); ungated imports are unused on Windows and fail the
+    // CI `-D warnings` build.
+    #[cfg(unix)]
     use chrono::{DateTime, Utc};
     use tempfile::tempdir;
+    #[cfg(unix)]
     use uuid::Uuid;
     use wm_core::{EpisodicKind, Provenance, ProvenanceSource, ValidityState};
 
