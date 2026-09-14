@@ -46,6 +46,35 @@ import json, sys
 stage, snap = sys.argv[1], sys.argv[2]
 m = json.load(open(f"{stage}/manifest.json"))
 m["tools"] = json.load(open(snap))
+m["prompts"] = [
+    {
+        "name": "session_continuity",
+        "description": "Recall project context, key decisions, and where the previous session left off before starting work.",
+        "arguments": [
+            {
+                "name": "scope",
+                "description": "Optional topic or subsystem to focus continuity recall on (e.g. auth, memory, ci).",
+                "required": False,
+            }
+        ],
+    },
+    {
+        "name": "memory_debug",
+        "description": "Ground an error or bug investigation in WhiteMagic episodic memory to retrieve prior solutions and test cases.",
+        "arguments": [
+            {
+                "name": "error_or_topic",
+                "description": "Error message, stack trace snippet, or topic to search past solutions for.",
+                "required": True,
+            }
+        ],
+    },
+    {
+        "name": "dharma_governance_audit",
+        "description": "Review current system governance posture against Ahimsa principles, Landlock boundaries, and recent write audit entries.",
+        "arguments": [],
+    },
+]
 json.dump(m, open(f"{stage}/manifest.json", "w"), indent=2)
 PY
   rm -f "$out/server-smithery.mcpb"

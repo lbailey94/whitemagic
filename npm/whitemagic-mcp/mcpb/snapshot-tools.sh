@@ -7,7 +7,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 ver="${1:-$(python3 -c "import json;print(json.load(open('$here/../package.json'))['version'])")}"
 bin="${HOME}/.cache/whitemagic/bin/v${ver}/wm-linux-x86_64-musl"
-store="$(mktemp -d)"
+store="$(mktemp -d -p "${TMPDIR:-/tmp}" wm-snapshot-XXXXXX)"  # dotless path: sanitizer-friendly
 trap 'rm -rf "$store"' EXIT
 if [ ! -x "$bin" ]; then
   echo "binary not cached: $bin — run npx whitemagic-mcp --version first" >&2
@@ -32,7 +32,8 @@ if not tools:
     raise SystemExit("no tools/list response")
 clean = []
 for t in tools:
-    desc = re.sub(r"\s+(Mode|Scope): [^.]*\.", "", t.get("description", "")).strip()
+    desc = t.get("description", "").split(" Invoke with", 1)[0].strip()
+    desc = re.sub(r"\s+(Mode|Scope): .*$", "", desc).strip()
     clean.append({"name": t["name"], "description": desc, "inputSchema": t["inputSchema"]})
 json.dump(clean, open(sys.argv[2], "w"), indent=2)
 open(sys.argv[2], "a").write("\n")

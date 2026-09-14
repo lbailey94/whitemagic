@@ -104,9 +104,9 @@ wm serve --profile curated
 ```
 
 The server communicates over stdio and exposes the `wm` meta-tool plus a
-discrete lifecycle catalog — 11 tools in the curated profile
+discrete lifecycle catalog — 9 tools in the curated profile
 (`memory.create/search/read/list/hybrid_recall`,
-`session.start/record/continuity`, `citta.status`, `captain.deploy`). Direct
+`session.start/record/continuity`). Direct
 handles for the common lifecycle calls, with NLU routing still available.
 Explicit routing is the dependable contract:
 

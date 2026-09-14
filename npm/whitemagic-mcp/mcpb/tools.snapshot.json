@@ -1,7 +1,7 @@
 [
   {
     "name": "wm",
-    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (60 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.IlKohg9KwQ/lmdb. Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Say 'list tools' to enumerate the curated surface.",
+    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (60 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.",
     "inputSchema": {
       "properties": {
         "args": {
