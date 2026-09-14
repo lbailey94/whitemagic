@@ -5,11 +5,12 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.1.5] — unreleased (draft; finalize at tag time)
+## [9.1.5] — 2026-09-14 (agent-first onboarding, telemetry retention, signed releases)
 
-> Draft assembled from `v9.1.4..main` on 2026-09-14. More changes are expected
-> before the tag; the release ceremony replaces this heading with a date and
-> a one-line theme.
+> Released 2026-09-14. The canonical record is the signed
+> `release-manifest.json` on the GitHub Release (artifact sizes, install
+> gating, crate count); `wm grimoire`/`wm connect` are the new first-run
+> doors, and tags are signed-and-Verified from this release onward.
 
 ### Telemetry & governance
 - `telemetry.record` accepts `telemetry.observation` policy decision records (policy id/metric/state/action/value mandatory) and rollups validate via `harmony.avg` — the typed path behind the live step-0 observation policies.
