@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sandbox executor deadline (Landlock v1)**: the scoped-thread pathway now enforces `WM_DISPATCH_TIMEOUT_MS` inside the confined thread — a timed-out tool future is dropped and reported, mirroring the normal dispatch path; `with_timeout` overrides per executor and timeouts are counted.
 - **`sandbox.set_limits` input validation**: all six fields are validated before any is applied; wrong-typed, negative, or out-of-range values are rejected with the field named (no silent `u32` truncation, no partial application). Behavior tests cover acceptance, atomic rejection, and effective write/spawn/network budget enforcement.
 
+### Retrieval
+- **Hot-path navigation disclosure**: hybrid, episodic, FTS, and association results now declare `content_representation: "scrubbed_navigation"`, the 8,192-character bound, whether the excerpt was truncated or scrubbed, and that a complete read is available (`exact_read_available`); the importance browse path declares `verbatim`. Cold discovery already carried this contract — the disclosure now shares one implementation.
+
 ### Preservation & verification
 - Readonly inspection is proven non-mutating at byte level: `wm doctor` on a live store leaves LMDB, the Tantivy index and every store file untouched (new bin test `doctor_readonly_inspection_preserves_store_and_index`), and a strict read-only open of a pre-cold store leaves `data.mdb` and the directory listing unchanged when it refuses (strengthened `ensure_schema_completes_a_pre_cold_store`).
 
