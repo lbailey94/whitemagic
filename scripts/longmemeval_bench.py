@@ -33,8 +33,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
-from collections import Counter
+from collections import Counter, deque
 from pathlib import Path
 from typing import Any
 
@@ -268,6 +269,9 @@ class PersistentServer:
         self.store = store
         self.proc: subprocess.Popen | None = None
         self._req_id = 0
+        # Bounded tail of the server's stderr: drained continuously so a
+        # chatty server can never block on a full stderr pipe.
+        self._stderr_tail: deque[str] = deque(maxlen=200)
 
     def start(self):
         env = os.environ.copy()
@@ -289,6 +293,7 @@ class PersistentServer:
             text=True,
             env=env,
         )
+        threading.Thread(target=self._drain_stderr, daemon=True).start()
         # Send initialize and wait for response
         self._send_recv('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}')
         # Disable resource rules
@@ -304,6 +309,15 @@ class PersistentServer:
                 },
             }},
         }))
+
+    def _drain_stderr(self) -> None:
+        if not self.proc or not self.proc.stderr:
+            return
+        try:
+            for line in self.proc.stderr:
+                self._stderr_tail.append(line.rstrip("\n"))
+        except (ValueError, OSError):
+            pass
 
     def _send_recv(self, req_line: str) -> dict[str, Any] | None:
         if not self.proc or not self.proc.stdin or not self.proc.stdout:
@@ -327,28 +341,47 @@ class PersistentServer:
         return None
 
     def send_batch(self, requests: list[str], timeout: int = 600) -> list[dict[str, Any]]:
-        """Send multiple requests and collect all responses."""
+        """Send multiple requests and collect all responses.
+
+        Responses are drained on a reader thread while requests are written.
+        Writing the whole batch before reading deadlocks once request +
+        response bytes exceed the OS pipe buffers (observed with tuned
+        ingest: bench blocked writing stdin, server blocked writing stdout
+        on a ~64KB response backlog). The server is free to keep streaming
+        responses while the client is still sending.
+        """
         if not self.proc or not self.proc.stdin or not self.proc.stdout:
             return []
         expected = len(requests)
-        for req in requests:
-            self.proc.stdin.write(req + "\n")
-        self.proc.stdin.flush()
-        responses = []
-        deadline = time.monotonic() + timeout
-        while len(responses) < expected and time.monotonic() < deadline:
-            remaining = deadline - time.monotonic()
-            ready, _, _ = select.select([self.proc.stdout], [], [], min(remaining, 1.0))
-            if not ready:
-                continue
-            line = self.proc.stdout.readline()
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                responses.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
+        responses: list[dict[str, Any]] = []
+        done = threading.Event()
+
+        def _drain() -> None:
+            while not done.is_set() and len(responses) < expected:
+                ready, _, _ = select.select([self.proc.stdout], [], [], 0.5)
+                if not ready:
+                    continue
+                line = self.proc.stdout.readline()
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    responses.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+
+        reader = threading.Thread(target=_drain, daemon=True)
+        reader.start()
+        try:
+            for req in requests:
+                self.proc.stdin.write(req + "\n")
+                self.proc.stdin.flush()
+            deadline = time.monotonic() + timeout
+            while len(responses) < expected and time.monotonic() < deadline:
+                time.sleep(0.05)
+        finally:
+            done.set()
+            reader.join(timeout=2)
         return responses
 
     def stop(self):
