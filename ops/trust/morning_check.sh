@@ -7,7 +7,10 @@
 set -u
 
 BACKUP_DISK=""
-for d in "/media/lucas/4198-16FD" "/media/lucas/SD_CARD1"; do
+# SD_CARD1 is canonical (same order as wm-nightly-backup.sh, 2026-09-14);
+# the old 4198-16FD card stays as a secondary so a plugged-in seeded card
+# still grades rather than reporting everything missing.
+for d in "/media/lucas/SD_CARD1" "/media/lucas/4198-16FD"; do
   if mountpoint -q "$d" 2>/dev/null; then
     BACKUP_DISK="$d"
     break
@@ -86,15 +89,21 @@ else
 fi
 if [ -f "$manifest.sha256.ots" ]; then
   if [ -x "$OTS_BIN" ]; then
-    if "$OTS_BIN" status "$manifest.sha256.ots" >/tmp/mc_ots_status.$$ 2>&1; then
-      st="$(grep -iE 'confirmed|pending' /tmp/mc_ots_status.$$ | head -1 || true)"
-      if echo "$st" | grep -qi confirmed; then
-        ok "OTS proof CONFIRMED (BTC-anchored)"
-      else
-        ok "OTS proof pending BTC inclusion (normal for <48h)"
-      fi
+    # `verify` is the status-facing subcommand (the client has no `status`):
+    # prints "Success! Bitcoin block ..." once confirmed, "waiting for N
+    # confirmations" once a transaction exists, else "Pending confirmation".
+    # It exits non-zero while any timestamp is still pending, so the output is
+    # the signal — not the exit code.
+    "$OTS_BIN" verify "$manifest.sha256.ots" >/tmp/mc_ots_status.$$ 2>&1 || true
+    st="$(grep -iE 'success|waiting for|pending' /tmp/mc_ots_status.$$ | head -1 || true)"
+    if echo "$st" | grep -qiE 'success'; then
+      ok "OTS proof CONFIRMED (BTC-anchored)"
+    elif echo "$st" | grep -qi 'waiting for'; then
+      ok "OTS proof in a Bitcoin block — waiting for confirmations"
+    elif [ -n "$st" ]; then
+      ok "OTS proof pending BTC inclusion (normal for <48h)"
     else
-      warn "ots status errored: $(head -1 /tmp/mc_ots_status.$$)"
+      warn "ots verify produced no status: $(head -1 /tmp/mc_ots_status.$$)"
     fi
     rm -f /tmp/mc_ots_status.$$
   else

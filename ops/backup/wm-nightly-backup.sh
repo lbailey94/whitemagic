@@ -312,8 +312,16 @@ else
   echo "$(date -Is) PUBLIC-SURFACE-SKIP (guard or repo missing at $PUBLIC_REPO)" >>"$LOG"
 fi
 
-# Retention: keep newest KEEP dirs per store
+# Retention: keep newest KEEP dirs per STORE. Evidence dirs are exempt:
+# `trust/` is a flat dir of dated manifests/digests/proofs/certs (the generic
+# loop deleted the RFC3161 CA certs and the Sep-13 manifest+digest+tsr on
+# 2026-09-14, orphaning that day's OTS proof); `anchors/` and `seals/` are
+# per-store dirs whose retention is either unbounded by design (anchor
+# chains are the evidence) or handled by the dedicated seal loop below.
 for d in "$BACKUP_ROOT"/*/; do
+  case "$(basename "$d")" in
+    anchors|seals|trust) continue ;;
+  esac
   ls -1dt "$d"* 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -rf
 done
 # Seal snapshots: same retention per store (one dir per UTC day).
