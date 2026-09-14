@@ -347,11 +347,15 @@ pub enum EventType {
     /// cross-subsystem awakening signal for background reflection.
     PatternDetected = 233,
 
-    // ── OS telemetry (234) ───────────────────────────────────────
+    // ── OS telemetry (234–235) ───────────────────────────────────
     /// An OS telemetry dimension crossed its threshold (edge galaxy, B2-era
     /// telemetry slice). Payload carries `{topic, value, threshold, window}`
     /// — e.g. topic `os.telemetry.responsiveness`, value 0.28.
     OsTelemetryThreshold = 234,
+    /// A subprocess-sandbox drift incident surfaced for the Yama v0 bridge
+    /// (`wm-dispatch` registry → bus). Payload carries
+    /// `{tool, kind, counts, ts_ms}` — kind is `degraded` | `unconfined_spawn`.
+    SandboxObservation = 235,
 }
 
 impl EventType {
@@ -373,6 +377,8 @@ impl EventType {
             // OS telemetry threshold crossings surface under harmony (the
             // primary subscriber filter for anomaly work).
             234 => EventCategory::Harmony,
+            // Sandbox drift is the same OS-telemetry family (Yama v0 bridge).
+            235 => EventCategory::Harmony,
             _ => EventCategory::System, // unreachable
         }
     }
@@ -627,6 +633,7 @@ impl EventType {
             Self::PatternDetected => "pattern_detected",
             // OS telemetry
             Self::OsTelemetryThreshold => "os_telemetry_threshold",
+            Self::SandboxObservation => "sandbox_observation",
         }
     }
 
@@ -639,14 +646,14 @@ impl EventType {
             .collect()
     }
 
-    /// All 235 event types in canonical order.
+    /// All 236 event types in canonical order.
     #[must_use]
     pub fn all() -> Vec<Self> {
-        (0..=234u16).map(Self::from_id).collect()
+        (0..=235u16).map(Self::from_id).collect()
     }
 
     /// Total number of event types.
-    pub const COUNT: usize = 235;
+    pub const COUNT: usize = 236;
 
     /// Convert from u16 id.
     #[must_use]
@@ -887,6 +894,7 @@ impl EventType {
             232 => Self::CoordinationClaimExpired,
             233 => Self::PatternDetected,
             234 => Self::OsTelemetryThreshold,
+            235 => Self::SandboxObservation,
             _ => Self::SystemStartup, // unreachable
         }
     }
@@ -905,9 +913,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn event_count_is_235() {
-        assert_eq!(EventType::all().len(), 235);
-        assert_eq!(EventType::COUNT, 235);
+    fn event_count_is_236() {
+        assert_eq!(EventType::all().len(), 236);
+        assert_eq!(EventType::COUNT, 236);
     }
 
     #[test]
@@ -1011,7 +1019,7 @@ mod tests {
             25
         );
         assert_eq!(EventType::in_category(EventCategory::Drive).len(), 25);
-        assert_eq!(EventType::in_category(EventCategory::Harmony).len(), 26);
+        assert_eq!(EventType::in_category(EventCategory::Harmony).len(), 27);
         assert_eq!(EventType::in_category(EventCategory::Governance).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Tool).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Agent).len(), 25);
