@@ -83,11 +83,18 @@ class Server:
         ]
         if extra_args:
             args += extra_args
+        # Functional gate on a shared/loaded host: pin the Dharma gate to its
+        # healthy default so stress-scaled AHIMSA vetoes (observed live under
+        # load: "Destructive action blocked in strict mode") cannot make the
+        # release smoke flaky. Stress behavior is covered by unit tests that
+        # drive homeostasis directly.
+        env = {**os.environ, "WM_HOMEOSTASIS_FROZEN": "1"}
         self.proc = subprocess.Popen(
             args,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            env=env,
         )
 
     def rpc(self, method, params=None, msg_id=1):
@@ -254,7 +261,8 @@ def run_workflow(server):
         10,
     )
     if after.get("status") == "success" and any(
-        r.get("memory_id") == temp_id for r in after.get("results", [])
+        r.get("id") == temp_id or r.get("memory_id") == temp_id
+        for r in after.get("results", [])
     ):
         fail("transaction.rollback", "temporary memory still present after rollback", after)
     else:
@@ -533,6 +541,42 @@ def run_backup_gate(binary):
     shutil.rmtree(out, ignore_errors=True)
 
 
+def run_grimoire_gate(binary):
+    """First-run gate: `wm grimoire --json` must report ready.
+
+    The grimoire orchestrates host -> substrate -> release -> agent -> memory
+    -> teach -> continuity. On CI the release check may skip (offline) and no
+    client config may be present, but no step may FAIL and the report must be
+    ready with the full step set.
+    """
+    result = subprocess.run(
+        [binary, "grimoire", "--json"],
+        capture_output=True, text=True, timeout=180,
+        env={**os.environ, "RUST_LOG": "error"},
+    )
+    if result.returncode != 0:
+        fail("grimoire gate", f"exit {result.returncode}: {result.stderr[:500]}")
+        return
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        fail("grimoire gate", f"non-JSON output: {e}: {result.stdout[:500]}")
+        return
+
+    expected = ["host", "substrate", "release", "agent", "memory", "teach", "continuity"]
+    steps = {s.get("name"): s.get("status") for s in payload.get("steps", [])}
+    missing = [name for name in expected if name not in steps]
+    failed = [name for name, status in steps.items() if status == "fail"]
+    if missing:
+        fail("grimoire gate", f"missing steps: {missing}", payload)
+    elif failed:
+        fail("grimoire gate", f"failed steps: {failed}", payload)
+    elif not payload.get("ready"):
+        fail("grimoire gate", "report is not ready", payload)
+    else:
+        ok(f"grimoire gate: ready ({len(steps)} steps, {payload.get('total_ms')} ms)")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Curated profile smoke test")
     parser.add_argument("--binary", default=None, help="path to the wm binary")
@@ -672,6 +716,9 @@ def main():
 
     # G1.9 full-store backup/restore gate (own temp stores).
     run_backup_gate(binary)
+
+    # First-run orchestration gate.
+    run_grimoire_gate(binary)
 
     if FAILURES:
         print(f"\n{len(FAILURES)} smoke step(s) failed: {FAILURES}")
