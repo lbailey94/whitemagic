@@ -324,3 +324,42 @@ if source "$(dirname "${BASH_SOURCE[0]}")/retention.sh"; then
 else
   echo "$(date -Is) RETENTION-FAIL (sibling retention.sh unavailable; pruning refused)" >>"$LOG"
 fi
+
+# 2026-09-14 (incident follow-through): evidence-presence guard. Retention and
+# interrupted runs can both remove or never create the day's evidence, and both
+# used to do it silently (the Sep-13 trust manifest was pruned unnoticed until a
+# morning check). Assert the day's evidence exists at the end of every run and
+# log EVIDENCE-MISSING loudly for each absent item. Advisory by design: the
+# backup result still stands (recovery outranks hygiene), but a missing
+# manifest, digest, proof or seal snapshot is never invisible again.
+EVIDENCE_MISSING=0
+evidence_require() {
+  if [ ! -e "$1" ]; then
+    echo "$(date -Is) EVIDENCE-MISSING $2 ($1)" >>"$LOG"
+    EVIDENCE_MISSING=$((EVIDENCE_MISSING + 1))
+  fi
+}
+
+verify_evidence_presence() {
+  local dayc dayd store name scope
+  dayc="$(date -u +%Y%m%d)"
+  dayd="$(date -u +%Y-%m-%d)"
+  scope="trust manifest/digest/OTS/TSR"
+  evidence_require "$TRUST/trust-$dayc.json" "trust manifest trust-$dayc.json"
+  evidence_require "$TRUST/trust-$dayc.json.sha256" "trust digest trust-$dayc.json.sha256"
+  evidence_require "$TRUST/trust-$dayc.json.sha256.ots" "OTS proof trust-$dayc.json.sha256.ots"
+  evidence_require "$TRUST/trust-$dayc.tsr" "RFC3161 response trust-$dayc.tsr"
+  if ! $TRUST_ONLY; then
+    scope="$scope + seal snapshots"
+    for store in $RW_STORES $RO_STORES; do
+      name="$(basename "$store")"
+      evidence_require "$SEALS/$name/$dayd" "seal snapshot $name/$dayd"
+    done
+  fi
+  if [ "$EVIDENCE_MISSING" -eq 0 ]; then
+    echo "$(date -Is) EVIDENCE-OK ($scope)" >>"$LOG"
+  else
+    echo "$(date -Is) EVIDENCE-SUMMARY $EVIDENCE_MISSING item(s) missing — see EVIDENCE-MISSING lines above" >>"$LOG"
+  fi
+}
+verify_evidence_presence
