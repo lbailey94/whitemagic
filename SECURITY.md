@@ -1,16 +1,17 @@
 # Security Policy
 
-> NOTE (2026-09-12, updated after the 9.1.4 deploy): the fleet and gateway
-> now run package 9.1.4 (the pinned 9.0.0 gateway runtime was removed); v9 is
-> the latest public release line. The maintainer's support-window decision
-> remains open; the table below is the current working policy statement.
+> NOTE (2026-09-14): the support-window policy is decided. Supported releases
+> are the current minor and the previous minor on the install-gated Linux
+> x86-64 line. macOS and Windows binaries are published in every release but
+> are not install-gated and are not supported. Older minors are archival.
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 9.1.x   | :white_check_mark: |
-| < 9.1   | :x:                |
+| Release line | Support |
+| ------------ | ------- |
+| Current minor (latest release) | Security and bug fixes |
+| Previous minor | Security fixes |
+| Older minors | Archival — no fixes |
 
 ## Reporting a Vulnerability
 
