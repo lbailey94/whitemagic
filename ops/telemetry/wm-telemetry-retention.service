@@ -1,0 +1,6 @@
+[Unit]
+Description=WhiteMagic weekly telemetry retention — read-only planner + confirmed prune (gateway store)
+
+[Service]
+Type=oneshot
+ExecStart=%h/Desktop/WHITEMAGIC/WMv9/ops/telemetry/retention_run.sh

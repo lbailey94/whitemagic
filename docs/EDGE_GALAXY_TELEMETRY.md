@@ -109,14 +109,31 @@ producer's local ring):
 - `telemetry.prune` — destructive with pipeline `confirm`; **dry-run defaults
   to true**. Note: it declares `destructive`, so the dharma gate can veto it
   under stress (observed live: `VIOLATION_AHIMSA … strict mode` while the
-  host was busy) — a read-only `telemetry.retention` planner is the follow-up
-  so dry-runs are never gated.
+  host was busy).
+- `telemetry.retention` — **read-only retention planner** (v9.1.5+): per-tier
+  counts/bytes/oldest-newest/eligible under the exact horizons prune uses,
+  plus `managed: false` observation inventory (policy decision records are
+  governance evidence and are not pruned). It declares no writes and is never
+  confirm-gated or dharma-gated, so pre-prune evidence is always available —
+  live-verified on a scratch store 2026-09-14 (planner reported
+  `next_eligible_since` and `prune_due`; a wet prune was then vetoed by the
+  dharma gate under load, which the planner makes visible instead of silent).
 - `galaxy.cold_rotate` remains the bulk archival path for
   `is_telemetry_or_noise` rows.
 
-Operator wiring (systemd timer calling rollup + prune on the edge serve) is
-still manual; run `telemetry.rollup` hourly and `telemetry.prune` daily once
-a calm window is available.
+Operator wiring: `telemetry.rollup` runs hourly via Lakshmi
+(`lakshmi-rollup.timer`); the weekly retention pass is now installed as
+`wm-telemetry-retention.{service,timer}` (repo: `ops/telemetry/`, timer
+`Sun 05:10` + `Persistent=true` + randomised delay). The one-shot runs the
+read-only planner first, then a confirmed prune — on a pre-9.1.5 fleet the
+planner answers `Unknown tool` and the script proceeds with prune alone
+(observed live 2026-09-14: planner unavailable, prune `scanned: 77,
+candidates: 0, status: success`). Install:
+
+```bash
+cp ops/telemetry/wm-telemetry-retention.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now wm-telemetry-retention.timer
+```
 
 ## Operational findings (2026-09-13, live edge serve)
 

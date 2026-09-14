@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly WhiteMagic telemetry retention (Sun 05:10, catch-up after sleep)
+
+[Timer]
+OnCalendar=Sun 05:10
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

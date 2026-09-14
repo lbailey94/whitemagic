@@ -9,6 +9,8 @@
 //!   memories (deterministic content, so re-runs deduplicate).
 //! - `telemetry.prune`  — destructive retention: delete windows/rollups older
 //!   than their horizons (pipeline requires `confirm: true`).
+//! - `telemetry.retention` — read-only planner: per-tier counts/ages/eligible
+//!   inventory under the same horizons as prune; never gated.
 //!
 //! Policy target (see `docs/EDGE_GALAXY_TELEMETRY.md`): ring 5 min / windows
 //! 7 d / hourly rollups 90 d. This module implements the window + rollup
@@ -611,7 +613,184 @@ impl Tool for TelemetryPruneTool {
     }
 }
 
-/// Register the telemetry surface (3 tools).
+/// Per-tier retention inventory. The eligibility rule mirrors `telemetry.prune`
+/// exactly (age by `created_at`, eligible at `>= horizon`), so a planner run
+/// reporting `prune_due: true` will have work when prune runs.
+fn retention_inventory(
+    store: &MemoryStore,
+    window_days: f64,
+    rollup_days: f64,
+) -> std::result::Result<(Value, bool), String> {
+    #[derive(Default)]
+    struct Tier {
+        count: u64,
+        eligible: u64,
+        bytes: u64,
+        oldest: Option<DateTime<Utc>>,
+        newest: Option<DateTime<Utc>>,
+        oldest_eligible: Option<DateTime<Utc>>,
+        oldest_kept: Option<DateTime<Utc>>,
+    }
+
+    fn stamp(dt: DateTime<Utc>) -> String {
+        dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    }
+
+    impl Tier {
+        fn observe(&mut self, created: DateTime<Utc>, eligible_now: bool, bytes: u64) {
+            self.count += 1;
+            self.bytes += bytes;
+            self.oldest = Some(self.oldest.map_or(created, |o| o.min(created)));
+            self.newest = Some(self.newest.map_or(created, |n| n.max(created)));
+            if eligible_now {
+                self.eligible += 1;
+                self.oldest_eligible =
+                    Some(self.oldest_eligible.map_or(created, |o| o.min(created)));
+            } else {
+                self.oldest_kept = Some(self.oldest_kept.map_or(created, |o| o.min(created)));
+            }
+        }
+
+        fn ages(&self) -> Value {
+            json!({
+                "count": self.count,
+                "bytes": self.bytes,
+                "oldest_created": self.oldest.map(stamp),
+                "newest_created": self.newest.map(stamp),
+            })
+        }
+
+        fn json(&self, horizon_days: f64) -> Value {
+            let mut value = self.ages();
+            value["eligible"] = json!(self.eligible);
+            value["oldest_eligible"] = json!(self.oldest_eligible.map(stamp));
+            value["next_eligible_since"] = json!(
+                self.oldest_kept
+                    .map(|d| stamp(d + ChronoDuration::minutes((horizon_days * 1440.0) as i64)))
+            );
+            value
+        }
+    }
+
+    let memories = store
+        .scan_all(Galaxy::Telemetry)
+        .map_err(|e| format!("telemetry scan failed: {e}"))?;
+    let now = Utc::now();
+    let mut windows = Tier::default();
+    let mut rollups = Tier::default();
+    let mut observations = Tier::default();
+    let mut unmanaged = Tier::default();
+    for memory in &memories {
+        let created = memory.metadata.created_at;
+        let bytes = memory.content.len() as u64;
+        let tags = &memory.metadata.tags;
+        if tags.iter().any(|t| t == TAG_WINDOW) {
+            let eligible = now.signed_duration_since(created)
+                >= ChronoDuration::minutes((window_days * 1440.0) as i64);
+            windows.observe(created, eligible, bytes);
+        } else if tags.iter().any(|t| t == TAG_ROLLUP) {
+            let eligible = now.signed_duration_since(created)
+                >= ChronoDuration::minutes((rollup_days * 1440.0) as i64);
+            rollups.observe(created, eligible, bytes);
+        } else if tags.iter().any(|t| t == TAG_OBSERVATION) {
+            observations.observe(created, false, bytes);
+        } else {
+            unmanaged.observe(created, false, bytes);
+        }
+    }
+
+    let mut observation_json = observations.ages();
+    observation_json["managed"] = json!(false);
+    observation_json["note"] = json!(
+        "policy decision records are governance evidence; telemetry.prune does not delete them"
+    );
+    let mut unmanaged_json = unmanaged.ages();
+    unmanaged_json["note"] = json!("telemetry rows without a window/rollup/observation tag");
+
+    let prune_due = windows.eligible + rollups.eligible > 0;
+    let inventory = json!({
+        "windows": windows.json(window_days),
+        "rollups": rollups.json(rollup_days),
+        "observations": observation_json,
+        "unmanaged": unmanaged_json,
+    });
+    Ok((inventory, prune_due))
+}
+
+/// `telemetry.retention` — read-only retention planner.
+pub struct TelemetryRetentionTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl TelemetryRetentionTool {
+    /// Create the retention planner.
+    #[must_use]
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: telemetry_effects(false, false),
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for TelemetryRetentionTool {
+    fn name(&self) -> &str {
+        "telemetry.retention"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Ghost
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Read-only retention planner: per-tier counts/ages/eligibility for telemetry windows (7 d) and rollups (90 d) under the exact horizons telemetry.prune uses, plus managed=false observation inventory. No confirm and no dharma gate — safe to run any time; act with telemetry.prune."
+    }
+    fn input_schema(&self) -> Value {
+        common::schema(
+            &json!({
+                "windows_older_than_days": common::num_prop("window horizon to project (default 7)"),
+                "rollups_older_than_days": common::num_prop("rollup horizon to project (default 90)"),
+            }),
+            &[],
+        )
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let window_days = args
+            .get("windows_older_than_days")
+            .and_then(Value::as_f64)
+            .unwrap_or(7.0);
+        let rollup_days = args
+            .get("rollups_older_than_days")
+            .and_then(Value::as_f64)
+            .unwrap_or(90.0);
+        let (inventory, prune_due) = retention_inventory(&self.store, window_days, rollup_days)
+            .map_err(CoreError::Internal)?;
+        Ok(json!({
+            "status": "success",
+            "read_only": true,
+            "generated_at": Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            "basis": "record created_at (identical to telemetry.prune)",
+            "horizons": {"windows_days": window_days, "rollups_days": rollup_days},
+            "inventory": inventory,
+            "prune_due": prune_due,
+            "advice": if prune_due {
+                "eligible records exist — run telemetry.prune with dry_run:false + confirm:true"
+            } else {
+                "nothing eligible — no prune needed"
+            },
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+/// Register the telemetry surface (4 tools).
 #[must_use]
 pub fn register_telemetry(
     registry: &wm_dispatch::ToolRegistry,
@@ -628,6 +807,7 @@ pub fn register_telemetry(
             search,
         )))
         .register(Arc::new(TelemetryPruneTool::new(Arc::clone(store))))
+        .register(Arc::new(TelemetryRetentionTool::new(Arc::clone(store))))
 }
 
 #[cfg(test)]
@@ -840,5 +1020,71 @@ mod tests {
         assert_eq!(wet["by_kind"]["window"], 1);
         assert_eq!(wet["by_kind"]["rollup"], 1);
         assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 2);
+    }
+
+    #[tokio::test]
+    async fn retention_planner_reports_tiers_read_only() {
+        let (_tmp, store) = open_store();
+        let now = Utc::now();
+        for (tag, created) in [
+            ("window", now - ChronoDuration::days(10)),
+            ("window", now - ChronoDuration::hours(1)),
+            ("rollup", now - ChronoDuration::days(100)),
+            ("rollup", now - ChronoDuration::hours(2)),
+            ("observation", now - ChronoDuration::days(1)),
+            ("", now - ChronoDuration::days(30)),
+        ] {
+            let mut mem = Memory::new(Galaxy::Telemetry, format!("{{\"ts\":\"{created}\"}}"));
+            mem.metadata.tags = if tag.is_empty() {
+                vec!["telemetry".into()]
+            } else {
+                vec!["telemetry".into(), tag.into()]
+            };
+            mem.metadata.created_at = created;
+            store.put(Galaxy::Telemetry, &mem).unwrap();
+        }
+
+        let tool = TelemetryRetentionTool::new(Arc::clone(&store));
+        let out = tool.call(&mut Context::default(), json!({})).await.unwrap();
+        assert_eq!(out["status"], "success");
+        assert_eq!(out["read_only"], true);
+        assert_eq!(out["prune_due"], true);
+        assert_eq!(out["inventory"]["windows"]["count"], 2);
+        assert_eq!(out["inventory"]["windows"]["eligible"], 1);
+        assert_eq!(out["inventory"]["rollups"]["count"], 2);
+        assert_eq!(out["inventory"]["rollups"]["eligible"], 1);
+        assert_eq!(out["inventory"]["observations"]["count"], 1);
+        assert_eq!(out["inventory"]["observations"]["managed"], false);
+        assert_eq!(out["inventory"]["unmanaged"]["count"], 1);
+        assert!(
+            out["inventory"]["windows"]["next_eligible_since"].is_string(),
+            "a kept window must project its next eligibility"
+        );
+        assert!(out["inventory"]["windows"]["bytes"].as_u64().unwrap() > 0);
+        assert_eq!(
+            store.count(Galaxy::Telemetry).unwrap(),
+            6,
+            "the planner is read-only"
+        );
+
+        // Wider horizons project no work, without touching the store.
+        let calm = tool
+            .call(
+                &mut Context::default(),
+                json!({"windows_older_than_days": 365, "rollups_older_than_days": 3650}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(calm["prune_due"], false);
+        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 6);
+
+        // And a wet prune executes exactly what the planner predicted.
+        let prune = TelemetryPruneTool::new(Arc::clone(&store));
+        let wet = prune
+            .call(&mut Context::default(), json!({"dry_run": false}))
+            .await
+            .unwrap();
+        assert_eq!(wet["deleted"], 2);
+        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 4);
     }
 }

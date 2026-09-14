@@ -651,7 +651,7 @@ pub fn register_expansion(
     // OSS bounty scanner (2) — GitHub bounty issues via gh (read-only)
     reg = crate::expansion::oss_bounty::register_oss_bounty(&reg);
 
-    // Edge-galaxy telemetry (3) — typed record, hourly rollup, retention prune
+    // Edge-galaxy telemetry (4) — typed record, hourly rollup, retention prune, read-only planner
     reg = crate::expansion::telemetry_tools::register_telemetry(&reg, store, telemetry_search);
 
     // Governance & Hermit defense tools (5) — hermit.status, hermit.withdraw, hermit.mediate, hermit.resolve, council.deliberate
