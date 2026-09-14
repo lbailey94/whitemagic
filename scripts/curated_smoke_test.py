@@ -14,6 +14,9 @@ Runs the curated release workflow end to end against a fresh temporary store:
   8. claims calibration returns a valid scorecard
   9. restart persistence: a new process finds the memory after restart
  10. read-only mode: reads succeed and mutations are refused
+ 11. claims.add/resolve are annotated as writes, reads stay read-only
+ 12. claims.add write path succeeds end to end
+ 13. NLU routing: resume intentions land on session.continuity
 
 The test asserts JSON payloads, not just process exit codes. Any failure
 prints a diagnostic and exits 1. This is the process-level release gate
@@ -273,6 +276,57 @@ def run_workflow(server):
         fail("claims.calibration", "calibration scorecard missing", calibration)
     else:
         ok("claims.calibration returns a scorecard")
+
+    # 12. claims.add/resolve declare the ledger write (9.1.6): annotations
+    # must be truthful — add/resolve write, status/list/calibration read.
+    ann = {
+        tool.get("name"): tool.get("annotations", {}).get("readOnlyHint")
+        for tool in profile_tools
+    }
+    if ann.get("claims.add") is not False or ann.get("claims.resolve") is not False:
+        fail("claims annotations", f"add/resolve must be write-capable: {ann}", None)
+    elif ann.get("claims.status") is not True or ann.get("claims.calibration") is not True:
+        fail("claims annotations", f"status/calibration must stay read-only: {ann}", None)
+    else:
+        ok("claims.add/resolve annotated as writes, reads stay read-only")
+
+    added = server.wm_payload(
+        "claims.add",
+        {
+            "statement": "curated smoke claim",
+            "domain": "release",
+            "source_date": "2026-09-14",
+            "predicted_outcome": "smoke gate passes",
+            "confidence": 0.6,
+            "falsification_criteria": "gate fails",
+        },
+        12,
+    )
+    if added.get("status") != "success":
+        fail("claims.add", "write path failed", added)
+    else:
+        ok("claims.add write path")
+
+    # 13. NLU routing: resume intentions land on session.continuity (9.1.6),
+    # remember lands on memory.create — never gnosis.
+    for phrase, want in (
+        ("what did we decide last time?", "session.continuity"),
+        ("resume where we left off", "session.continuity"),
+        ("remember that the sky is blue", "memory.create"),
+    ):
+        resp = server.rpc(
+            "tools/call",
+            {"name": "wm", "arguments": {"thought": phrase}},
+            13,
+        )
+        content = resp.get("result", {}).get("content")
+        routed = None
+        if content:
+            routed = json.loads(content[0]["text"]).get("_wm_route", {}).get("tool")
+        if routed != want:
+            fail("NLU routing", f"{phrase!r} -> {routed}, want {want}", resp)
+        else:
+            ok(f"NLU {phrase!r} -> {want}")
 
     return memory_id
 

@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NLU routing gains `session.continuity` and `session.record` profiles, decisive phrase routes ("where were we", "what did we decide last", "continue from", "pick up where", "where did we leave off") and a `resume` prefix route — resume intentions now land on `session.continuity` instead of `gnosis`/`session.recall` (verified live at confidence 1.0; classifier regression tests cover 5 phrasings).
 
 ### Release gates
-- New `scripts/curated_surface_gate.py`: self-contained pass/fail gate over the public curated surface (59 routes + destructive confirm gating + transaction rollback flow + NLU routing). Stress-aware: governance blocks under system load report SKIP, never FAIL. Exit code 0 = gate green.
+- `scripts/curated_smoke_test.py` extended: claims annotation truthfulness (add/resolve write-capable, reads read-only), `claims.add` write path, and NLU routing checks (resume/continuity phrases → `session.continuity`, "remember..." → `memory.create`) — the process-level gate now covers the 9.1.6 governance/routing changes end to end.
 
 ## [9.1.5] — 2026-09-14 (agent-first onboarding, telemetry retention, signed releases)
 
