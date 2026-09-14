@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "type": "string",
+      "title": "Tool profile",
+      "description": "Tool surface profile. curated (default) is the product surface; minimal is recall-only; full is the research archive.",
+      "enum": ["curated", "minimal", "full"],
+      "default": "curated"
+    },
+    "readonly": {
+      "type": "boolean",
+      "title": "Read-only mode",
+      "description": "Open the index read-only (no writes).",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

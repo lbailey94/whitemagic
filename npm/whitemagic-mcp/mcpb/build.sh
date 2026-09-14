@@ -33,4 +33,24 @@ else
   echo "mcpb CLI unavailable; falling back to zip (valid per MCPB spec 0.3)" >&2
   (cd "$stage" && zip -q -r "$out/server.mcpb" . -x '.*')
 fi
+# Smithery registry variant: declares tool schemas in the manifest.
+# Upstream CLI/registry bug (arcadeai-labs/smithery-cli#787): an MCPB bundle
+# with no `tools` is rejected with 400 "No values to set", and tools without
+# `inputSchema` are rejected as invalid — so we hand-pack a variant whose
+# manifest carries the released schemas (tools.snapshot.json) and publish
+# that one. Refresh the snapshot each release:
+#   tools/list against the released binary -> mcpb/tools.snapshot.json
+if [ -f "$here/tools.snapshot.json" ]; then
+  python3 - "$stage" "$here/tools.snapshot.json" <<'PY'
+import json, sys
+stage, snap = sys.argv[1], sys.argv[2]
+m = json.load(open(f"{stage}/manifest.json"))
+m["tools"] = json.load(open(snap))
+json.dump(m, open(f"{stage}/manifest.json", "w"), indent=2)
+PY
+  rm -f "$out/server-smithery.mcpb"
+  (cd "$stage" && zip -q -r "$out/server-smithery.mcpb" . -x '.*')
+  echo "built $out/server-smithery.mcpb ($(stat -c%s "$out/server-smithery.mcpb") bytes, v$pkgver)"
+fi
+
 echo "built $out/server.mcpb ($(stat -c%s "$out/server.mcpb") bytes, v$pkgver)"

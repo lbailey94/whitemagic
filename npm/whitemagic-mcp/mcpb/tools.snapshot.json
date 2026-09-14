@@ -1,0 +1,291 @@
+[
+  {
+    "name": "wm",
+    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (60 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution. Mode: writable. Scope: store /tmp/opencode/smith-tools/store/lmdb. Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Say 'list tools' to enumerate the curated surface.",
+    "inputSchema": {
+      "properties": {
+        "args": {
+          "description": "Arguments to pass through to the target tool.",
+          "type": "object"
+        },
+        "route": {
+          "description": "Explicit tool name for direct dispatch (e.g. 'memory.create', 'tools.list').",
+          "type": "string"
+        },
+        "thought": {
+          "description": "Natural language input describing what to do. Auto-routes to the best-matching tool via TF-IDF NLU classification.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "memory.create",
+    "description": "Store a new memory in the holographic memory core with 5D spatial coordinates and galaxy routing.",
+    "inputSchema": {
+      "properties": {
+        "content": {
+          "description": "Memory content (text)",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Target galaxy (default codex)",
+          "type": "string"
+        },
+        "importance": {
+          "description": "Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)",
+          "type": "number"
+        },
+        "source": {
+          "description": "Authorship claim: user (user-dictated content, trust 1.0) | agent (default, trust 0.7) | other free-form class (trust 0.7)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Optional tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "description": "Optional human-readable title (envelope v2)",
+          "type": "string"
+        },
+        "topic": {
+          "description": "Optional topic label for subject-scoped retrieval (envelope v2)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "memory.search",
+    "description": "Search and recall memories across galaxies using hybrid semantic, BM25, and associative retrieval.",
+    "inputSchema": {
+      "properties": {
+        "cold_scan_limit": {
+          "description": "Maximum cold records to scan when include_cold is set (default 2048)",
+          "type": "integer"
+        },
+        "galaxy": {
+          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled)",
+          "type": "string"
+        },
+        "include_cold": {
+          "description": "Opt-in cold-storage discovery: scan, hydrate and integrity-verify cold originals by content (bounded, no thaw)",
+          "type": "boolean"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "min_importance": {
+          "description": "Minimum memory importance (0-1)",
+          "type": "number"
+        },
+        "min_score": {
+          "description": "Absolute BM25 score floor",
+          "type": "number"
+        },
+        "min_score_ratio": {
+          "description": "Relative floor: reject hits below this fraction of the top score",
+          "type": "number"
+        },
+        "min_trust": {
+          "description": "Minimum source_trust (0-1): drop results below this trust floor",
+          "type": "number"
+        },
+        "query": {
+          "description": "Full-text query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "memory.read",
+    "description": "Retrieve a specific memory by its ID or coordinate address.",
+    "inputSchema": {
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy containing the memory (default codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "memory.list",
+    "description": "List memories with filters (galaxy, tags, limit, offset) for inventory and discovery.",
+    "inputSchema": {
+      "properties": {
+        "exclude_tags": {
+          "description": "Drop memories carrying any of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "galaxy": {
+          "description": "Galaxy to list (default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 20)",
+          "type": "integer"
+        },
+        "offset": {
+          "description": "Skip this many matching entries before returning (default 0)",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  {
+    "name": "memory.hybrid_recall",
+    "description": "Fused recall across full-text, vector, graph, and coordinate lookup with recall_mode disclosure.",
+    "inputSchema": {
+      "properties": {
+        "cold_scan_limit": {
+          "description": "Maximum cold records to scan when include_cold is set (default 2048)",
+          "type": "integer"
+        },
+        "galaxy": {
+          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled)",
+          "type": "string"
+        },
+        "include_cold": {
+          "description": "Opt-in cold-storage discovery: scan, hydrate and integrity-verify cold originals by content (bounded, no thaw)",
+          "type": "boolean"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "min_importance": {
+          "description": "Minimum memory importance (0-1)",
+          "type": "number"
+        },
+        "min_score": {
+          "description": "Absolute BM25 score floor",
+          "type": "number"
+        },
+        "min_score_ratio": {
+          "description": "Relative floor: reject hits below this fraction of the top score",
+          "type": "number"
+        },
+        "min_trust": {
+          "description": "Minimum source_trust (0-1): drop results below this trust floor",
+          "type": "number"
+        },
+        "query": {
+          "description": "Full-text query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "session.record",
+    "description": "Record a session turn (decision, breakthrough, summary) so the next session can resume.",
+    "inputSchema": {
+      "properties": {
+        "content": {
+          "description": "Turn content",
+          "type": "string"
+        },
+        "importance": {
+          "description": "0-1 importance (default 0.5)",
+          "type": "number"
+        },
+        "role": {
+          "description": "user | ai (default user)",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Target session (default: most recent session)",
+          "type": "string"
+        },
+        "supersedes": {
+          "description": "Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)",
+          "type": "string"
+        },
+        "turn_type": {
+          "description": "message, decision, breakthrough, question, answer, code_change, error, summary, context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "session.continuity",
+    "description": "Recall where the previous session left off: recent turns, checkpoints, and open work.",
+    "inputSchema": {
+      "properties": {
+        "current_session_id": {
+          "description": "Session to exclude (optional)",
+          "type": "string"
+        },
+        "n": {
+          "description": "Number of prior turns (default 10)",
+          "type": "integer"
+        },
+        "since": {
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        },
+        "until": {
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  },
+  {
+    "name": "session.start",
+    "description": "Start or resume an agent session for persistent continuity across tool invocations.",
+    "inputSchema": {
+      "properties": {
+        "title": {
+          "description": "Session title",
+          "type": "string"
+        },
+        "user": {
+          "description": "User identifier (default 'default')",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  }
+]
