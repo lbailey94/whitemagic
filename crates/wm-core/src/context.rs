@@ -51,6 +51,12 @@ pub struct Context {
     /// Read-only server mode — the dispatch pipeline refuses any tool that
     /// declares writes while this is set.
     pub readonly: bool,
+    /// Whether this dispatch carries an explicit `confirm: true` from the
+    /// caller. The dispatch pipeline sets it before the Dharma gate runs so
+    /// that deliberate operator intent can pass the brain-wave strict-mode
+    /// block (Theta/Delta) for destructive tools — stressed-homeostasis
+    /// blocks stay absolute. 9.1.6.
+    pub explicit_confirm: bool,
     /// Operation ID (monotonic time-ordered ID) grouping multi-step write
     /// sequences (U6). Enables crash detection across multi-tool dispatches.
     pub operation_id: Option<String>,
@@ -85,6 +91,7 @@ impl Context {
             drive_conservative_weight: 0.3,
             last_gana: None,
             readonly: false,
+            explicit_confirm: false,
             operation_id: None,
             spawn: SpawnPolicy::disabled(),
         }

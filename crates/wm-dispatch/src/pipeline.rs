@@ -423,7 +423,17 @@ impl DispatchPipeline {
         let mut args = args;
 
         // 1. Effect check — brain-wave compatibility
-        if !tool.effects().is_available_in(ctx.brain_wave) {
+        // Explicit `confirm: true` (resolved here, before every gate, so
+        // deliberate operator intent is visible downstream) bypasses the
+        // eco-mode availability restriction: eco mode conserves autonomous
+        // resources, and a confirmed destructive action is deliberate, not
+        // autonomous. The coherence gate below stays absolute (9.1.6).
+        let confirmed = args
+            .get("confirm")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        ctx.explicit_confirm = confirmed;
+        if !tool.effects().is_available_in(ctx.brain_wave) && !confirmed {
             return Err(CoreError::Governance(format!(
                 "tool '{}' not available in {:?} brain-wave state",
                 tool.name(),
@@ -519,6 +529,8 @@ impl DispatchPipeline {
         }
 
         // 2. Dharma gate — ethical governance
+        // (`confirmed` was resolved at step 1; the confirm gate in 4b
+        // re-uses the same value.)
         let verdict = self.dharma_gate.evaluate(tool.effects(), ctx);
         match verdict {
             ActionVerdict::Panic(reason) => {
@@ -630,10 +642,7 @@ impl DispatchPipeline {
         }
 
         // 4b. Destructive tool confirmation — requires explicit `confirm: true` in args
-        let confirmed = args
-            .get("confirm")
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false);
+        // (`confirmed` was resolved above, before the Dharma gate).
         let confirm_gated = if tool.effects().destructive {
             if !confirmed {
                 return Err(CoreError::Governance(format!(
@@ -1261,6 +1270,34 @@ mod tests {
             Err(CoreError::Governance(_)) => {}
             other => panic!("Expected Governance error, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn pipeline_dharma_confirm_passes_brain_wave_strict_for_destructive() {
+        // 9.1.6: explicit `confirm: true` (deliberate operator intent)
+        // passes the Theta/Delta brain-wave strict arm; stressed
+        // homeostasis must still block (covered by dharma_gate unit tests).
+        let pipeline = DispatchPipeline::with_defaults().with_resource_rules(Arc::new(
+            ResourceRules::new(ResourceRulesConfig {
+                require_human_review: false,
+                ..Default::default()
+            }),
+        ));
+        let mut ctx = Context::new(BrainWave::Theta);
+        let tool = TestTool::new(
+            "destructive_tool",
+            EffectRow {
+                writes: vec![wm_core::Resource::Filesystem],
+                ..Default::default()
+            },
+        );
+        let result = pipeline
+            .dispatch(&tool, &mut ctx, serde_json::json!({"confirm": true}))
+            .await;
+        assert!(
+            result.is_ok(),
+            "confirmed destructive dispatch must pass brain-wave strict: {result:?}"
+        );
     }
 
     #[tokio::test]

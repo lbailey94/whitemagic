@@ -171,10 +171,12 @@ const fn maturity_from_brain_wave(bw: BrainWave) -> u8 {
 /// Whether strict mode should be active given the system state.
 ///
 /// Strict mode blocks destructive actions entirely. It's active when:
-/// - Brain-wave is Theta or Delta (low power)
-/// - Homeostasis shows system stress (health < 0.3)
-fn is_strict_mode(bw: BrainWave, homeostasis: &Homeostasis) -> bool {
-    matches!(bw, BrainWave::Theta | BrainWave::Delta) || homeostasis.is_stressed()
+/// - Brain-wave is Theta or Delta (low power) — unless the caller carried
+///   an explicit `confirm: true` (deliberate operator intent; 9.1.6)
+/// - Homeostasis shows system stress (health < 0.3) — never bypassed
+fn is_strict_mode(bw: BrainWave, homeostasis: &Homeostasis, explicit_confirm: bool) -> bool {
+    (matches!(bw, BrainWave::Theta | BrainWave::Delta) && !explicit_confirm)
+        || homeostasis.is_stressed()
 }
 
 /// The Dharma gate — evaluates tool calls against ethical principles.
@@ -221,7 +223,12 @@ impl DharmaGate {
         let bw = ctx.brain_wave;
         let homeostasis = self.homeostasis();
         let maturity = maturity_from_brain_wave(bw);
-        let strict = is_strict_mode(bw, &homeostasis);
+        // Strict mode = low-power brain wave (Theta/Delta) or stressed
+        // homeostasis. Deliberate operator intent (`ctx.explicit_confirm`,
+        // set by the dispatch pipeline from a `confirm: true` arg) passes
+        // the brain-wave arm — a human explicitly authorized the action;
+        // the stressed-homeostasis arm stays absolute (9.1.6).
+        let strict = is_strict_mode(bw, &homeostasis, ctx.explicit_confirm);
         let karma_debt = ctx.karma_debt;
         let intent_score = ctx.intent_score;
 
@@ -248,7 +255,7 @@ impl DharmaGate {
                 return ActionVerdict::Panic(
                     "VIOLATION_AHIMSA: Destructive action blocked in strict mode (low energy or system stress)".into(),
                 );
-            } else if maturity < 4 {
+            } else if maturity < 4 && !ctx.explicit_confirm {
                 return ActionVerdict::Intervene(
                     "Maturity level too low for destructive actions (requires Beta+ brain-wave)"
                         .into(),
