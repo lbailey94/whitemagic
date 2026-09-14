@@ -318,13 +318,9 @@ fi
 # 2026-09-14, orphaning that day's OTS proof); `anchors/` and `seals/` are
 # per-store dirs whose retention is either unbounded by design (anchor
 # chains are the evidence) or handled by the dedicated seal loop below.
-for d in "$BACKUP_ROOT"/*/; do
-  case "$(basename "$d")" in
-    anchors|seals|trust) continue ;;
-  esac
-  ls -1dt "$d"* 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -rf
-done
-# Seal snapshots: same retention per store (one dir per UTC day).
-for d in "$SEALS"/*/; do
-  ls -1dt "$d"* 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -rf
-done
+if source "$(dirname "${BASH_SOURCE[0]}")/retention.sh"; then
+  prune_backup_retention "$BACKUP_ROOT" "$KEEP" \
+    || echo "$(date -Is) RETENTION-FAIL (invalid retention or removal failure)" >>"$LOG"
+else
+  echo "$(date -Is) RETENTION-FAIL (sibling retention.sh unavailable; pruning refused)" >>"$LOG"
+fi
