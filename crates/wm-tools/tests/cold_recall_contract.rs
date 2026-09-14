@@ -225,3 +225,53 @@ fn cold_integrity_and_private_visibility_remain_fail_closed() {
     assert_eq!(outcome.records.len(), 1);
     assert_eq!(outcome.records[0].id, good.metadata.id);
 }
+
+#[tokio::test]
+async fn hot_duplicate_does_not_consume_cold_headroom() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(MemoryStore::open_default(dir.path().join("lmdb")).unwrap());
+    let hot = cold(
+        &store,
+        1,
+        Galaxy::Codex,
+        "zxqcoldcontract shared identity".into(),
+        0.9,
+        0.9,
+    );
+    store.put(Galaxy::Codex, &hot).unwrap();
+    let later = cold(
+        &store,
+        2,
+        Galaxy::Codex,
+        "zxqcoldcontract later".into(),
+        0.9,
+        0.9,
+    );
+    let index = Arc::new(wm_memory::SearchEngine::open(dir.path().join("tantivy")).unwrap());
+    {
+        let mut writer = index.writer().unwrap();
+        index.index_memory(&mut writer, &hot).unwrap();
+        index.commit(&mut writer).unwrap();
+    }
+    let live = MemoryHybridRecallTool::as_search(store, Some(index), None);
+    let response = live
+        .call(
+            &mut Context::default(),
+            json!({"query":"zxqcoldcontract","limit":2,"include_cold":true}),
+        )
+        .await
+        .unwrap();
+    let hits = response["results"].as_array().unwrap();
+    assert_eq!(hits.len(), 2, "{response}");
+    assert_eq!(
+        hits.iter()
+            .filter(|hit| hit["id"] == hot.metadata.id.to_string())
+            .count(),
+        1
+    );
+    assert!(
+        hits.iter()
+            .any(|hit| hit["id"] == later.metadata.id.to_string() && hit["source"] == "cold")
+    );
+    assert_eq!(response["cold_discovery"]["eligibility_skipped"], 1);
+}
