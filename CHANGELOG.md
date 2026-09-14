@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Setup & onboarding
 - **`wm connect`** — one command detects installed MCP clients (config file or client config directory present) and wires WhiteMagic into each, dry-run by default; `--write` patches every detected client with timestamped backups through the same read-back-verified `wm setup` machinery.
 - **`wm setup --write` now patches every supported client config**, not just `mcpServers` JSON: OpenCode `opencode.jsonc` is edited by a comment/string-aware structural editor (comments, siblings, and formatting preserved), and Codex `config.toml` via `toml_edit`. Every write is backup-first and re-parsed; malformed sections are refused, re-runs are idempotent.
+- Patching an inline empty `mcp` object (`"mcp": {}`) now inserts the member with clean indentation, matching the structural editor's pretty behavior.
 - Onboarding states the contract — explicit routes are the contract — in `wm setup` output and the client configuration guide.
 
 ### First-run & routing

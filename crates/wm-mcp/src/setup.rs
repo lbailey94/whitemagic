@@ -419,6 +419,16 @@ fn line_indent(text: &str, pos: usize) -> String {
     }
 }
 
+/// Leading whitespace of the line containing `pos`, regardless of whether
+/// anything else appears on that line (used for inline empty objects).
+fn line_leading_ws(text: &str, pos: usize) -> String {
+    let start = text[..pos].rfind('\n').map_or(0, |nl| nl + 1);
+    text[start..]
+        .chars()
+        .take_while(|c| *c == ' ' || *c == '\t')
+        .collect()
+}
+
 /// Insert (or replace) `key: value` in the object `text[open..close]`,
 /// preserving comments elsewhere in the document. Returns the edited text.
 fn upsert_member(text: &str, open: usize, close: usize, key: &str, value: &Value) -> String {
@@ -463,7 +473,17 @@ fn upsert_member(text: &str, open: usize, close: usize, key: &str, value: &Value
         }
     }
 
-    let close_indent = line_indent(text, close_brace);
+    let close_indent = {
+        let ind = line_indent(text, close_brace);
+        if ind.is_empty() && !text[..close_brace].ends_with('\n') {
+            // Inline empty object (`"mcp": {}`): the closing brace shares a
+            // line, so take that line's leading whitespace instead of the
+            // (non-whitespace) prefix before the brace.
+            line_leading_ws(text, close_brace)
+        } else {
+            ind
+        }
+    };
     let member_indent =
         last_key_start.map_or_else(|| format!("{close_indent}  "), |k| line_indent(text, k));
     let (from, separator) = match last_value_end {
@@ -879,6 +899,34 @@ mod tests {
         let (msg2, backup2) = write_opencode_jsonc(&spec, exe).unwrap();
         assert!(msg2.contains("already configured"));
         assert!(backup2.is_none());
+    }
+
+    #[test]
+    fn jsonc_insert_into_an_empty_mcp_object_is_cleanly_indented() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("opencode.jsonc");
+        let original = "\
+{
+  // keep me
+  \"mcp\": {}
+}
+";
+        std::fs::write(&path, original).unwrap();
+        let spec = spec(Kind::OpencodeJsonc, path.clone());
+        write_opencode_jsonc(&spec, Path::new("/opt/wm")).unwrap();
+
+        let edited = std::fs::read_to_string(&path).unwrap();
+        assert!(edited.contains("// keep me"), "comment lost: {edited}");
+        assert!(
+            edited.contains("\n    \"whitemagic\""),
+            "member should be indented under mcp: {edited}"
+        );
+        assert!(
+            edited.contains("\n  }\n}"),
+            "mcp closing brace should keep its indent: {edited}"
+        );
+        let v = parse_jsonc(&edited).unwrap();
+        assert_eq!(v["mcp"]["whitemagic"]["command"][0], "/opt/wm");
     }
 
     #[test]
