@@ -74,7 +74,7 @@ fn validate_record(record: &Value) -> std::result::Result<&'static str, String> 
             if record
                 .get(field)
                 .and_then(Value::as_str)
-                .is_none_or(|v| v.is_empty())
+                .is_none_or(str::is_empty)
             {
                 return Err(format!(
                     "record.{field} (non-empty string) is required for telemetry.observation records"
