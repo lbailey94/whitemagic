@@ -185,3 +185,44 @@ wm(route='galaxy.stats', args={galaxy: 'telemetry'})
   spool file 0 bytes.
 - `bus.emit os_telemetry_threshold` → `bus.recent {category: "harmony"}`
   returns the event with its payload intact.
+
+## 72-hour soak gate (due 2026-09-17 ~00:00Z)
+
+Started 2026-09-14 00:00:58 UTC (`edge-galaxy.service`, dev-build stand-in
+until the v9.1.x fleet deploy). Run these checks in order; all four must pass
+for the gate to count.
+
+1. **Continuity** — one process, no restarts, ≥72 h uptime:
+   ```bash
+   systemctl --user show edge-galaxy.service \
+     -p ActiveState,SubState,NRestarts,ExecMainStartTimestamp,MemoryCurrent
+   ```
+   Pass: `ActiveState=active`, `SubState=running`, `NRestarts=0`, timestamp ≤ 72 h ago.
+2. **Store integrity** — planner reads the tiers without error and reports
+   non-trivial fan-in (windows count grows, `oldest` reaches back into the
+   soak window):
+   ```bash
+   wm-edge-telemetry doctor --store ~/.local/share/edge-galaxy || true   # if the dev build carries doctor
+   # or via the gateway once 9.1.5 is deployed:
+   # wm(route='telemetry.retention', args={})
+   ```
+   Pass: no corruption, `eligible`/`prune_due` consistent with the 7 d/90 d
+   horizons (at 72 h nothing should be eligible for prune yet).
+3. **Quiet journals** — no unexplained errors since start:
+   ```bash
+   journalctl --user -u edge-galaxy.service --since '2026-09-14 00:00' -p warning --no-pager | tail -20
+   ```
+   Pass: only expected entries (budget warnings imply the env headroom was
+   lost; investigate before passing).
+4. **Rollup chain** — if the Lakshmi rollup timer is enabled, hourly rollups
+   exist for completed hours; if disabled, record that as a known gap (the
+   timer is not required for the gate, only disclosed):
+   ```bash
+   systemctl --user list-timers --all | grep -i lakshmi
+   ```
+
+**Decision on pass:** promote the telemetry writer to the 9.1.5 fleet build
+(remove the dev-binary stand-in), keep the retention timer, and re-baseline
+the 7 d/90 d horizons from the soak start.
+**On fail:** do not promote; capture the failing artifact, fix, and restart
+the soak clock. A gate that is quietly extended is not a gate.
