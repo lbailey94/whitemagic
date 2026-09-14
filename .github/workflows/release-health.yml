@@ -1,0 +1,187 @@
+name: Release health
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+  schedule:
+    - cron: '10 4 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without the v (default: latest GitHub release)'
+        required: false
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-health
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Probe, retry laggards, certify installs
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ github.event.inputs.version }}"
+          if [ -z "$V" ]; then
+            V="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name | sed 's/^v//')"
+          fi
+          [ -n "$V" ] || { echo "could not resolve a version"; exit 1; }
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "probing v$V"
+
+      - name: Probe registries (initial)
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/release_health.py --version "${{ steps.version.outputs.version }}" \
+            --json release-health.json
+
+      - name: Show laggards
+        run: |
+          if jq -e '.status == "healthy"' release-health.json >/dev/null; then
+            echo "all surfaces live after fan-out"
+          else
+            echo "laggards:"; jq -c '.registries | to_entries[] | select(.value.status != "live")' release-health.json
+          fi
+
+      # ── Retries: idempotent, per surface, only when that surface lags ──
+
+      - uses: actions/setup-node@v4
+        if: ${{ !cancelled() }}
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Retry npm (if lagging)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          [ "$(jq -r '.registries.npm.status' release-health.json)" = "live" ] && { echo "npm live"; exit 0; }
+          cd npm/whitemagic-mcp
+          npm publish --access public
+
+      - uses: dtolnay/rust-toolchain@stable
+        if: ${{ !cancelled() }}
+
+      - name: Retry crates.io (if lagging)
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          missing="$(jq -r '.registries["crates.io"].missing[]? // empty' release-health.json)"
+          if [ "$(jq -r '.registries["crates.io"].status' release-health.json)" = "live" ] || [ -z "$missing" ]; then
+            echo "crates.io live"; exit 0
+          fi
+          for c in $missing; do
+            echo "retrying $c"
+            cargo publish -p "$c" || echo "retry failed for $c (re-probe decides)"
+          done
+
+      - name: Retry Docker Hub (if lagging)
+        if: ${{ !cancelled() }}
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ "$(jq -r '.registries.docker.status' release-health.json)" = "live" ]; then
+            echo "docker live"; exit 0
+          fi
+          if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - cannot retry"; exit 0; fi
+          VERSION="${{ steps.version.outputs.version }}"; MAJOR="${VERSION%%.*}"
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          docker build --build-arg "WM_VERSION=v${VERSION}" \
+            -t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest .
+          docker push "lbailey94/whitemagic:${VERSION}"
+
+      - name: Retry MCP registry (if lagging)
+        if: ${{ !cancelled() }}
+        run: |
+          if [ "$(jq -r '.registries["mcp-registry"].status' release-health.json)" = "live" ]; then
+            echo "mcp-registry live"; exit 0
+          fi
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz -C /tmp mcp-publisher
+          cd npm/whitemagic-mcp
+          /tmp/mcp-publisher login github-oidc
+          /tmp/mcp-publisher publish server.json || echo "publish attempt failed (re-probe decides)"
+
+      - name: Re-probe (final record)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          python3 scripts/release_health.py --version "${{ steps.version.outputs.version }}" \
+            --json release-health.json
+          echo "re-probe exit=$? (1 = laggards remain; the gate below decides)"
+
+      # ── Install certification: the published artifacts must run ──
+
+      - name: Certify npm install (download funnel + selftest)
+        continue-on-error: true
+        run: |
+          [ "$(jq -r '.registries.npm.status' release-health.json)" = "live" ] || exit 0
+          npm install -g "whitemagic-mcp@${{ steps.version.outputs.version }}"
+          whitemagic-mcp selftest --json > npm-selftest.json
+
+      - name: Certify Docker image (run + selftest)
+        continue-on-error: true
+        run: |
+          [ "$(jq -r '.registries.docker.status' release-health.json)" = "live" ] || exit 0
+          docker run --rm "lbailey94/whitemagic:${{ steps.version.outputs.version }}" selftest --json > docker-selftest.json
+
+      - name: Merge certifications into the record
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          rec = json.loads(pathlib.Path("release-health.json").read_text())
+          certs = {}
+          for name in ("npm", "docker"):
+              p = pathlib.Path(f"{name}-selftest.json")
+              if p.exists():
+                  data = json.loads(p.read_text())
+                  certs[name] = {"status": "pass" if data.get("passed") else "fail", "selftest": data}
+              else:
+                  certs[name] = {"status": "not-run"}
+          rec["install_certification"] = certs
+          pathlib.Path("release-health.json").write_text(
+              json.dumps(rec, indent=2, sort_keys=True) + "\n")
+          PY
+          jq -c '.install_certification | map_values(.status)' release-health.json
+
+      - name: Upload the record to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp release-health.json "release-health-$(date -u +%Y%m%d).json"
+          if gh release view "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            gh release upload "v${{ steps.version.outputs.version }}" release-health.json --clobber
+          else
+            echo "release tag not found; keeping the record as a workflow artifact"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: release-health
+          path: release-health*.json
+
+      - name: Gate — every surface live and every install certified
+        run: |
+          jq -e '.status == "healthy"' release-health.json >/dev/null \
+            || { echo "registries still lagging:"; jq -c '.registries | to_entries[] | select(.value.status != "live") | {key, status: .value.status}' release-health.json; exit 1; }
+          jq -e '.install_certification.npm.status == "pass"
+                 and .install_certification.docker.status == "pass"' release-health.json >/dev/null \
+            || { echo "install certification not passing:"; jq -c '.install_certification | map_values(.status)' release-health.json; exit 1; }
+          echo "release v${{ steps.version.outputs.version }} is healthy and certified"

@@ -146,6 +146,7 @@ wm-leases.json
 !/scripts/crates_publish_order.py
 !/scripts/eval_matrix.sh
 !/scripts/release_manifest.py
+!/scripts/release_health.py
 !/scripts/curated_smoke_test.py
 !/scripts/longmemeval_bench.py
 !/scripts/memorastrict_bench.py

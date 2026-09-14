@@ -60,6 +60,13 @@ jobs:
           WM_RELEASE_PUBKEY: ${{ vars.WM_RELEASE_PUBKEY }}
         run: cargo build --release --target ${{ matrix.target }} --bin wm
 
+      - name: Selftest built artifact (every target)
+        shell: bash
+        run: |
+          BIN="target/${{ matrix.target }}/release/wm"
+          if [ -f "${BIN}.exe" ]; then BIN="${BIN}.exe"; fi
+          "$BIN" selftest --json
+
       - name: Smoke test curated workflow (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: python3 scripts/curated_smoke_test.py --binary target/${{ matrix.target }}/release/wm
