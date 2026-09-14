@@ -134,8 +134,6 @@ pub fn canonical_tool_alias(name: &str) -> Option<&'static str> {
         "session_start" => Some("session.start"),
         "session_record" => Some("session.record"),
         "session_continuity" => Some("session.continuity"),
-        "citta_status" => Some("citta.status"),
-        "subagent_captain" => Some("captain.deploy"),
         _ => None,
     }
 }
