@@ -4,3 +4,11 @@
 # 34312871405, 34318342534 — 45m/90m timeouts on Windows-only hangs).
 [profile.ci]
 slow-timeout = { period = "60s", terminate-after = 3 }
+# Absorb platform flakes (root causes tracked for hardening):
+# - Windows: wm-memory search::tests::boolean_operator_doesnt_bypass_search
+#   (Tantivy commit "Access is denied (os error 5)" — AV/indexer locking)
+# - macOS: wm-bicameral local_llm::tests::llama_fixture_reports_truncated_request_as_eof
+#   (FIN vs RST teardown: EOF diagnostic race)
+# - macOS: wm-mcp server::tests::e2e_oats_persistence_roundtrip (timing)
+# Evidence: CI runs 34793840025, 34794652351, 34795794851 (2026-09-14).
+retries = 2
