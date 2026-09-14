@@ -73,7 +73,19 @@ fi
 if [ -n "$EXTERNAL_DISK" ]; then
   BACKUP_ROOT="$EXTERNAL"
   mkdir -p "$BACKUP_ROOT"
-  echo "$(date -Is) TARGET $BACKUP_ROOT (card $EXTERNAL_DISK mounted)" >>"$LOG"
+  # Volume identity (label/uuid) so card rotation is visible in history rather
+  # than silently splitting evidence across cards. 2026-09-14 forensics: the
+  # Sep 9/10 seals went to a different SD_CARD1-labeled volume, Sep 11 to
+  # 4198-16FD, and the current card (FA99-F6E6) was seeded fresh by the fold —
+  # the "missing seals" were never pruned, they are on other media.
+  vol=""
+  if command -v findmnt >/dev/null 2>&1 && command -v lsblk >/dev/null 2>&1; then
+    vsrc="$(findmnt -n -o SOURCE --target "$BACKUP_ROOT" 2>/dev/null || true)"
+    if [ -n "$vsrc" ]; then
+      vol="$(lsblk -n -o LABEL,UUID "$vsrc" 2>/dev/null | tr -s ' ' '/' | sed 's|/$||')"
+    fi
+  fi
+  echo "$(date -Is) TARGET $BACKUP_ROOT (card $EXTERNAL_DISK mounted; volume ${vol:-unknown})" >>"$LOG"
   if [ -d "$FALLBACK" ] && [ -n "$(ls -A "$FALLBACK" 2>/dev/null)" ]; then
     echo "$(date -Is) CATCHUP folding NVMe fallback into $BACKUP_ROOT" >>"$LOG"
     if rsync -a "$FALLBACK/" "$BACKUP_ROOT/" >>"$LOG" 2>&1; then
