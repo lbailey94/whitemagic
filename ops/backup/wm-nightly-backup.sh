@@ -105,8 +105,8 @@ mkdir -p "$SEALS"
 
 # Writable stores: served by wm-serve@<name> units, need stop/backup/start.
 # Read-only stores (vault, live): no writer lock, back up directly.
-WRITABLE_UNITS="wmv9 neon site planning"
-RW_STORES="$BASE/wmv9 $BASE/neon $BASE/whitemagic-site $BASE/planning"
+WRITABLE_UNITS="wmv9 neon site planning opencode"
+RW_STORES="$BASE/wmv9 $BASE/neon $BASE/whitemagic-site $BASE/planning $BASE/opencode"
 RO_STORES="$BASE/vault $HOME/Desktop/WHITEMAGIC/data/WMdata/live"
 
 # O-1: HMAC-seal the store, verify it, and snapshot BOTH the manifest and
@@ -211,6 +211,41 @@ if ! $TRUST_ONLY; then
   for store in $RO_STORES; do
     seal_store "$store" && anchor_store "$store" && backup_store "$store"
   done
+
+  # 2026-09-14: session-source preservation for coding agents whose corpora are
+  # not WM stores. Mirror semantics are add-only (rsync -a, no --delete): a
+  # source deletion never propagates into the backup. Secrets are excluded by
+  # name (codex auth.json, tokens/credentials/keys). agy's conversations/*.db
+  # (~5 GB) are deliberately out of nightly scope — that corpus is a
+  # TB-drive/cold-tier decision, logged below so its absence is never silent.
+  SRC_ROOT="$BACKUP_ROOT/session-sources"
+  mkdir -p "$SRC_ROOT/codex"
+  for pair in "sessions:codex/sessions" "archived_sessions:codex/archived_sessions"; do
+    src="$HOME/.codex/${pair%%:*}"
+    dest="$SRC_ROOT/${pair##*:}"
+    if [ -d "$src" ]; then
+      if rsync -a --exclude 'auth.json' --exclude '*token*' --exclude '*credential*' --exclude '*.key' "$src/" "$dest/" >>"$LOG" 2>&1; then
+        echo "$(date -Is) SESSION-SRC-OK codex/${pair%%:*} -> $dest ($(du -sh "$dest" 2>/dev/null | cut -f1))" >>"$LOG"
+      else
+        echo "$(date -Is) SESSION-SRC-FAIL codex/${pair%%:*} ($src)" >>"$LOG"
+      fi
+    else
+      echo "$(date -Is) SESSION-SRC-SKIP codex/${pair%%:*} (missing $src)" >>"$LOG"
+    fi
+  done
+  AGY_DIR="$HOME/.gemini/antigravity-cli"
+  if [ -d "$AGY_DIR" ]; then
+    mkdir -p "$SRC_ROOT/agy"
+    cp -f "$AGY_DIR/history.jsonl" "$AGY_DIR/settings.json" "$SRC_ROOT/agy/" 2>/dev/null || true
+    if command -v sqlite3 >/dev/null 2>&1 && [ -f "$AGY_DIR/conversation_summaries.db" ]; then
+      if sqlite3 "$AGY_DIR/conversation_summaries.db" ".backup $SRC_ROOT/agy/conversation_summaries.db" >>"$LOG" 2>&1; then
+        echo "$(date -Is) SESSION-SRC-OK agy-metadata (summaries/history/settings)" >>"$LOG"
+      else
+        echo "$(date -Is) SESSION-SRC-FAIL agy-metadata" >>"$LOG"
+      fi
+    fi
+    echo "$(date -Is) SESSION-SRC-NOTE agy conversations/*.db (~5 GB) excluded from nightly — TB-drive/cold-tier decision" >>"$LOG"
+  fi
 fi
 
 # 2026-09-10 Q36 (external trust anchoring): the seal snapshots and the
