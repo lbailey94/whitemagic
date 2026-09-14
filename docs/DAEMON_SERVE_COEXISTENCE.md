@@ -87,6 +87,42 @@ the daemon can never host a transport.
   serves on 28795; writes are `wm` CLI over SSH (verified working with the
   daemon active, e.g. `session record`).
 
+## Host fleet topology and client patterns (2026-09-14)
+
+Ten long-lived loopback processes: nine `wm-serve@<name>` units (all with
+`--max-requests 0`) plus the federated gateway.
+
+| Unit | Port | Store | Mode |
+|---|---|---|---|
+| `wm-serve@valkyrie` | 18785 | `~/.local/share/whitemagic` | curated, writable (device-local sanctuary; deliberately not federated) |
+| `wm-serve@vault` | 18789 | `projects/vault` | curated, read-only |
+| `wm-serve@wmv9` | 18790 | `projects/wmv9` | full, writable |
+| `wm-serve@neon` | 18791 | `projects/neon` | curated, writable |
+| `wm-serve@default` | 18792 | `projects/default` | curated, read-only scratch |
+| `wm-serve@site` | 18793 | `projects/whitemagic-site` | curated, writable |
+| `wm-serve@planning` | 18794 | `projects/planning` | curated, writable |
+| `wm-gateway` | 18795 | (federation: wmv9, planning, vault, default) | `--federate`, no store |
+| `wm-serve@heritage` | 18797 | `projects/heritage` | curated, writable |
+| `wm-serve@opencode` | 18799 | `projects/opencode` | curated, writable |
+
+Client rules learned the hard way (2026-09-14):
+
+1. **Connect to the serve; never spawn a per-session stdio server against a
+   served store.** A per-session `wm serve --store <served store>` takes the
+   Tantivy writer and fails LockBusy against the unit — opencode's local MCP
+   showed "inactive" in every session while a stale stdio holder owned the
+   opencode store. If a store is served, clients point at its port
+   (remote HTTP/SSE), and exactly one process owns the writer.
+2. **CLI write paths contend too.** Session import/write CLIs against a
+   served store need a maintenance window (stop the unit) or the MCP route;
+   LMDB's MVCC does not exempt the Tantivy writer.
+3. **`--max-requests 0` on long-lived shared serves.** The default
+   per-connection cap (10,000) is sized for short-lived clients; a multiplexed
+   desktop client exhausted it mid-day (2026-09-14) and every subsequent call
+   failed until reconnect. Rate limits (`--rate-limit`,
+   `WM_DISPATCH_TOOL_RPM` / `_GLOBAL_RPM` / `_BURST`) remain the runaway
+   guard; the lifetime cap is the wrong tool for persistent connections.
+
 ## References
 
 - `crates/wm-memory/src/search.rs` — writer lock + read-only semantics
