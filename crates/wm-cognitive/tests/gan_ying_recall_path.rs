@@ -14,16 +14,52 @@
 use std::sync::Arc;
 
 use serde_json::json;
+use wm_bicameral::{ScenarioEngine, ScenarioEvaluator, TierHandler, WorldModel};
 use wm_cognitive::{
     AutonomousCycleRunner, CycleContext, CycleStatus, CycleType, EventType, ResonanceEvent,
     SynchronicityConfig, SynchronicityDetector,
 };
 use wm_core::Galaxy;
 use wm_memory::{
-    AssociationStore, Memory, MemoryStore, MemoryType, SearchEngine, reindex::heal_index_drift,
+    AssociationStore, MemoryStore, MemoryType, SearchEngine, reindex::heal_index_drift,
 };
 
 const CUE_TOKEN: &str = "zxqganyingcue741";
+
+/// Synthetic inference only: require the cue in the actual planner input,
+/// then return predictions that cross the unchanged production threshold.
+struct CueBoundHandler;
+
+impl TierHandler for CueBoundHandler {
+    fn handle(&self, prompt: &str, _max_tokens: usize) -> Result<(String, f32), String> {
+        if !prompt.contains(CUE_TOKEN) {
+            return Err("synthetic handler requires the propagated cue".into());
+        }
+        let answer = if prompt.contains("creative action planner") {
+            format!("1. Investigate {CUE_TOKEN} with an invented controlled experiment")
+        } else {
+            format!(
+                "DESCRIPTION: Invented experiment resolves {CUE_TOKEN}\n\
+                 CHANGES: invented observation\nRISKS: none\n\
+                 PROGRESS: 0.95\nCONFIDENCE: 0.95"
+            )
+        };
+        Ok((answer, 0.95))
+    }
+
+    fn name(&self) -> &'static str {
+        "synthetic-cue-bound"
+    }
+}
+
+#[test]
+fn synthetic_generator_refuses_an_input_without_the_cue() {
+    assert!(
+        CueBoundHandler
+            .handle("unrelated planner input", 256)
+            .is_err()
+    );
+}
 
 fn detector() -> SynchronicityDetector {
     SynchronicityDetector::new(SynchronicityConfig {
@@ -110,11 +146,7 @@ fn gan_ying_cue_reaches_bounded_research_receipt_and_eventual_index() {
     );
 
     // 2. Disabled control: identical cue withheld -> no proposals.
-    use wm_bicameral::{ScenarioEngine, ScenarioEvaluator, StubWorldModelHandler, WorldModel};
-    let world = WorldModel::new(
-        Arc::new(StubWorldModelHandler::left()),
-        Some(Arc::new(StubWorldModelHandler::right())),
-    );
+    let world = WorldModel::new(Arc::new(CueBoundHandler), None);
     let imagination = ScenarioEngine::with_defaults(world, ScenarioEvaluator::with_defaults());
 
     let mut runner = AutonomousCycleRunner::default();
@@ -125,6 +157,7 @@ fn gan_ying_cue_reaches_bounded_research_receipt_and_eventual_index() {
         CycleStatus::NoProposals,
         "disabled cue must not propose: {disabled_result:?}"
     );
+    assert!(store.scan(Galaxy::Research, 1_000).unwrap().is_empty());
 
     // 3. Enabled: the cue becomes a bounded Research problem/hypothesis.
     let enabled = CycleContext::new(&store, &assoc, 0.8)
@@ -149,32 +182,30 @@ fn gan_ying_cue_reaches_bounded_research_receipt_and_eventual_index() {
         .filter(|h| h.stored)
         .count();
 
-    // 4. Persistence -> maintenance indexing -> retrieval boundary.
-    //    The cycle's own stored hypothesis is used when the stub scored one
-    //    above the storage threshold; otherwise a cycle-shaped boundary
-    //    control carrying the deterministic token stands in, explicitly
-    //    labeled. Either way the boundary under test is the same: Research
-    //    writes are not synchronously indexed, and heal_index_drift makes
-    //    them searchable later.
-    let mut research = store.scan(Galaxy::Research, 1_000).unwrap();
-    if !research.iter().any(|m| m.content.contains(CUE_TOKEN)) {
-        let mut control = Memory::new(
-            Galaxy::Research,
-            format!(
-                "Hypothesis: investigate {CUE_TOKEN} → Predicted: bounded control \
-                 (score: 0.80, confidence: 0.80)"
-            ),
+    assert!(stored_by_cycle >= 1, "cycle must persist its own output");
+
+    // 4. No substitute write: every stored record must correspond exactly to
+    // a cue-bound, above-threshold proposal produced by this cycle.
+    let research = store.scan(Galaxy::Research, 1_000).unwrap();
+    assert_eq!(research.len(), stored_by_cycle);
+    for memory in &research {
+        assert_eq!(memory.metadata.memory_type, MemoryType::Hypothesis);
+        assert!(
+            enabled_result.hypotheses.iter().any(|proposal| {
+                proposal.stored
+                    && proposal.score > 0.5
+                    && proposal.problem.contains(CUE_TOKEN)
+                    && memory.content
+                        == format!(
+                            "Hypothesis: {} → Predicted: {} (score: {:.2}, confidence: {:.2})",
+                            proposal.hypothesis,
+                            proposal.predicted_outcome,
+                            proposal.score,
+                            proposal.confidence,
+                        )
+            }),
+            "stored record must be the actual cycle output: {memory:?}"
         );
-        control.metadata.memory_type = MemoryType::Hypothesis;
-        control.metadata.tags = vec![
-            "hypothesis".into(),
-            "research".into(),
-            "imagination".into(),
-            "gan-ying-boundary-control".into(),
-        ];
-        control.metadata.importance = 0.8;
-        store.put(Galaxy::Research, &control).unwrap();
-        research = store.scan(Galaxy::Research, 1_000).unwrap();
     }
     let boundary = research
         .iter()
@@ -192,6 +223,15 @@ fn gan_ying_cue_reaches_bounded_research_receipt_and_eventual_index() {
     assert!(
         post.iter().any(|r| r.memory_id == boundary_id),
         "maintenance indexing must make the hypothesis retrievable: {post:?}"
+    );
+    let fetched = store
+        .get(Galaxy::Research, boundary.metadata.id)
+        .unwrap()
+        .expect("indexed cycle record must resolve by its authoritative identity");
+    assert_eq!(fetched.content, boundary.content);
+    assert_eq!(
+        fetched.metadata.content_hash,
+        boundary.metadata.content_hash
     );
 
     eprintln!(
