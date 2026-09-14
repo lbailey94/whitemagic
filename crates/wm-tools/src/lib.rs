@@ -3163,13 +3163,50 @@ impl WmMetaTool {
                 }
             }
             "memory.search" => {
-                for prefix in &["search for ", "search "] {
-                    if lower.starts_with(prefix) {
-                        let query = thought[prefix.len()..].trim().to_string();
-                        if !query.is_empty() {
-                            return Some(("query".into(), query));
+                // Strip the same curated intents the NLU router understands,
+                // so a routed thought actually carries its query argument.
+                // Phrase table first, then the idioms, then command verbs —
+                // the phrase/verb tables are shared with nlu.rs (no drift).
+                let mut text: &str = thought;
+                if let Some((phrase, _, _)) = crate::nlu::PHRASE_ROUTES
+                    .iter()
+                    .find(|(phrase, tool, _)| *tool == "memory.search" && lower.starts_with(phrase))
+                {
+                    text = &thought[phrase.len()..];
+                } else if lower.starts_with("search for ") {
+                    text = &thought["search for ".len()..];
+                } else if lower.starts_with("search ") {
+                    text = &thought["search ".len()..];
+                } else {
+                    for (verb, tool, _) in crate::nlu::PREFIX_ROUTES {
+                        if *tool != "memory.search" {
+                            continue;
+                        }
+                        if let Some(rest) = lower.strip_prefix(verb) {
+                            if rest.is_empty() || rest.starts_with(' ') || rest.starts_with(':') {
+                                text = thought[verb.len()..].trim_start_matches([' ', ':']);
+                                break;
+                            }
                         }
                     }
+                }
+                // Drop filler after a verb ("find in memory X" rarely
+                // occurs, but "search memory for X" does).
+                let lower_text = text.to_lowercase();
+                for filler in ["memory for ", "memories for ", "memory ", "memories "] {
+                    if lower_text.starts_with(filler) {
+                        text = &text[filler.len()..];
+                        break;
+                    }
+                }
+                let query = text
+                    .trim()
+                    .trim_end_matches(['?', '!'])
+                    .trim()
+                    .trim_end_matches(" in memory")
+                    .trim();
+                if !query.is_empty() {
+                    return Some(("query".into(), query.to_string()));
                 }
             }
             "memory.chat" => {
@@ -5088,6 +5125,36 @@ mod tests {
                 .contains("Missing required argument")
         );
         assert!(result["hint"].as_str().unwrap().contains("uuid"));
+    }
+
+    #[test]
+    fn search_payload_extracts_curated_intents() {
+        let cases = [
+            (
+                "find BETA quartz submarine in memory",
+                "BETA quartz submarine",
+            ),
+            (
+                "What do you remember about BETA quartz submarine?",
+                "BETA quartz submarine",
+            ),
+            (
+                "What did we decide about BETA quartz submarine?",
+                "BETA quartz submarine",
+            ),
+            ("recall BETA quartz submarine", "BETA quartz submarine"),
+            ("look up BETA quartz submarine", "BETA quartz submarine"),
+            ("search for rust", "rust"),
+            ("search memory for rust", "rust"),
+        ];
+        for (thought, expected) in cases {
+            let got = WmMetaTool::extract_payload(thought, "memory.search");
+            assert_eq!(
+                got,
+                Some(("query".to_string(), expected.to_string())),
+                "for {thought:?}"
+            );
+        }
     }
 
     #[tokio::test]
