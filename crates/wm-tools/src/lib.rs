@@ -3090,11 +3090,11 @@ impl WmMetaTool {
     fn missing_arg_hint(tool_name: &str, missing: &str) -> String {
         match (tool_name, missing) {
             ("memory.create", "content") => "Provide the content to store, e.g. wm(thought='remember that rust is fast')".into(),
-            ("memory.read", "id") => "Provide a memory UUID, e.g. wm(thought='recall <uuid>') or wm(route='memory.read', args={\"id\": \"<uuid>\"}). To list memories instead, use wm(route='memory.list', args={\"galaxy\": \"codex\", \"limit\": 10})".into(),
+            ("memory.read", "id") => "Provide a memory UUID, e.g. wm(route='memory.read', args={\"id\": \"<uuid>\"}). To search by content instead, use wm(thought='find <text>') or wm(route='memory.search', args={\"query\": \"...\"}). To list memories, use wm(route='memory.list', args={\"galaxy\": \"codex\", \"limit\": 10})".into(),
             ("memory.delete", "id") => "Provide a memory UUID, e.g. wm(thought='delete memory <uuid>')".into(),
             ("memory.search", "query") => "Provide a search query, e.g. wm(thought='search for rust')".into(),
             ("memory.query", "query") => "memory.query accepts `query` as optional when filtering by tags/importance/dates, e.g. wm(route='memory.query', args={\"tags\": [\"project:myapp\"]})".into(),
-            ("memory.vector.search", "memory_id") => "Provide a memory UUID for similarity search, e.g. wm(thought='find similar to <uuid>')".into(),
+            ("memory.vector.search", "memory_id") => "Provide a memory UUID for similarity search, e.g. wm(route='memory.vector.search', args={\"memory_id\": \"<uuid>\"})".into(),
             ("memory.update", "id") => "Provide a memory UUID to update, e.g. wm(route='memory.update', args={\"id\": \"<uuid>\", \"tags\": [\"new\"]})".into(),
             ("memory.revisions", "id") => "Provide a memory UUID to inspect, e.g. wm(route='memory.revisions', args={\"id\": \"<uuid>\", \"action\": \"verify\"}) — actions: list (default) | verify".into(),
             ("memory.tag", "id") => "Provide a memory UUID to tag, e.g. wm(route='memory.tag', args={\"id\": \"<uuid>\", \"tags\": [\"rust\"]})".into(),
@@ -5105,14 +5105,20 @@ mod tests {
         let wm = registry.get("wm").unwrap();
         let mut ctx = Context::new(BrainWave::Gamma);
 
-        // "recall" routes to memory.read but no UUID provided
+        // "fetch memory" auto-routes to memory.read; with no UUID it
+        // returns the missing-argument hint. (Bare "recall" now routes to
+        // search, which this minimal registry does not carry — the nlu
+        // tests cover that reassignment separately.)
         let result = wm
-            .call(&mut ctx, json!({"thought": "recall"}))
+            .call(&mut ctx, json!({"thought": "fetch memory"}))
             .await
             .unwrap();
 
         assert_eq!(result["status"], "error");
-        assert!(result["hint"].as_str().unwrap().contains("uuid"));
+        assert!(
+            result["hint"].as_str().is_some_and(|h| h.contains("uuid")),
+            "expected a read hint, got {result}"
+        );
     }
 
     #[tokio::test]

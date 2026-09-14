@@ -40,7 +40,6 @@ pub static TOOL_PROFILES: &[ToolProfile] = &[
     ToolProfile {
         tool_name: "memory.read",
         keywords: &[
-            ("recall", 3.0),
             ("read", 2.5),
             ("fetch", 2.5),
             ("get", 1.5),
@@ -84,6 +83,7 @@ pub static TOOL_PROFILES: &[ToolProfile] = &[
         keywords: &[
             ("search", 3.5),
             ("find", 2.0),
+            ("recall", 2.5),
             ("query", 1.0),
             ("lookup", 2.0),
             ("fulltext", 2.5),
@@ -2331,8 +2331,9 @@ pub const PREFIX_ROUTES: &[(&str, &str, f64)] = &[
     ("store", "memory.create", 1.5),
     ("save", "memory.create", 1.5),
     ("memorize", "memory.create", 1.5),
-    ("recall", "memory.read", 1.5),
+    ("recall", "memory.search", 1.5),
     ("search", "memory.search", 1.3),
+    ("find", "memory.search", 1.4),
     ("list", "memory.list", 1.3),
     ("delete", "memory.delete", 1.5),
     ("remove", "memory.delete", 1.3),
@@ -2362,6 +2363,19 @@ pub const PREFIX_ROUTES: &[(&str, &str, f64)] = &[
     ("counterfactual", "imagine.reflect", 1.5),
 ];
 
+/// Multi-word intentions checked before the single-word table.
+///
+/// Natural phrasing ("what do you remember about X", "what did we decide
+/// about X") lands on `memory.search` instead of falling through to gnosis.
+/// The contract stays explicit `route=` dispatch; these are the
+/// high-frequency conveniences the grimoire teaches first.
+pub const PHRASE_ROUTES: &[(&str, &str, f64)] = &[
+    ("what do you remember about", "memory.search", 1.5),
+    ("what did we decide about", "memory.search", 1.5),
+    ("do you remember", "memory.search", 1.4),
+    ("look up", "memory.search", 1.4),
+];
+
 /// If no profile scores above the minimum threshold, falls back to "gnosis"
 /// with confidence 0.0.
 #[must_use]
@@ -2378,8 +2392,20 @@ pub fn classify(text: &str) -> (&'static str, f64) {
 
     let input_tf = term_frequencies(&tokens);
 
-    // Check for prefix-based routing bonus
-    let first_word = lower.split_whitespace().next().unwrap_or("");
+    // Curated multi-word intentions are decisive: they are explicit enough
+    // that profile scoring (which needs lexical overlap) should not veto
+    // them — "what do you remember about X" shares no keywords with
+    // memory.search yet is exactly a search.
+    let probe = lower.trim_start();
+    if let Some((_, tool, _)) = PHRASE_ROUTES
+        .iter()
+        .find(|(phrase, _, _)| probe.starts_with(phrase))
+    {
+        return (tool, 1.0);
+    }
+
+    // Check for prefix-based routing bonus (single-word command verbs).
+    let first_word = probe.split_whitespace().next().unwrap_or("");
     let prefix_bonus: Option<(&str, f64)> = PREFIX_ROUTES
         .iter()
         .find(|(verb, _, _)| *verb == first_word)
@@ -2463,9 +2489,35 @@ mod tests {
     }
 
     #[test]
-    fn classify_recall_routes_to_memory_read() {
+    fn classify_recall_routes_to_memory_search() {
+        // Human phrasing: "recall X" is a lookup, not an id read
+        // (first-run feedback, 2026-09-14).
         let (tool, _conf) = classify("recall the last memory");
-        assert_eq!(tool, "memory.read");
+        assert_eq!(tool, "memory.search");
+    }
+
+    #[test]
+    fn classify_find_routes_to_memory_search() {
+        let (tool, _conf) = classify("find BETA quartz submarine in memory");
+        assert_eq!(tool, "memory.search");
+    }
+
+    #[test]
+    fn classify_what_do_you_remember_routes_to_memory_search() {
+        let (tool, _conf) = classify("What do you remember about BETA quartz submarine?");
+        assert_eq!(tool, "memory.search");
+    }
+
+    #[test]
+    fn classify_what_did_we_decide_routes_to_memory_search() {
+        let (tool, _conf) = classify("What did we decide about BETA quartz submarine?");
+        assert_eq!(tool, "memory.search");
+    }
+
+    #[test]
+    fn classify_look_up_routes_to_memory_search() {
+        let (tool, _conf) = classify("look up the quartz submarine");
+        assert_eq!(tool, "memory.search");
     }
 
     #[test]
@@ -2596,7 +2648,9 @@ mod tests {
 
     #[test]
     fn classify_nearby_memories_routes_correctly() {
-        let (tool, _conf) = classify("find nearby memories");
+        // "find X" is a search intention taught by the grimoire; the
+        // specialist nearby route stays reachable without the verb.
+        let (tool, _conf) = classify("memories nearby");
         assert_eq!(tool, "memory.nearby");
     }
 
