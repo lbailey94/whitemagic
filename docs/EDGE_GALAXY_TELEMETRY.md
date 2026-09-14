@@ -186,31 +186,50 @@ wm(route='galaxy.stats', args={galaxy: 'telemetry'})
 - `bus.emit os_telemetry_threshold` → `bus.recent {category: "harmony"}`
   returns the event with its payload intact.
 
-## 72-hour soak gate (due 2026-09-17 ~00:00Z)
+## 72-hour soak gate (due 2026-09-17 14:26Z)
 
 Started 2026-09-14 00:00:58 UTC (`edge-galaxy.service`, dev-build stand-in
-until the v9.1.x fleet deploy). Run these checks in order; all four must pass
-for the gate to count.
+until the v9.1.x fleet deploy); **re-baselined 2026-09-14 14:26:36 UTC** after
+the host rebooted at 14:25:53 UTC — the process restarted, so the continuity
+criterion resets (disclosed, not silently extended). Gate due 72 h later:
+**2026-09-17 14:26:36 UTC**. Run these checks in order; all four must pass for
+the gate to count.
 
 1. **Continuity** — one process, no restarts, ≥72 h uptime:
    ```bash
    systemctl --user show edge-galaxy.service \
      -p ActiveState,SubState,NRestarts,ExecMainStartTimestamp,MemoryCurrent
    ```
-   Pass: `ActiveState=active`, `SubState=running`, `NRestarts=0`, timestamp ≤ 72 h ago.
-2. **Store integrity** — planner reads the tiers without error and reports
-   non-trivial fan-in (windows count grows, `oldest` reaches back into the
-   soak window):
+   Pass: `ActiveState=active`, `SubState=running`, `NRestarts=0`,
+   `ExecMainStartTimestamp=Mon 2026-09-14 10:26:36 EDT` (or later; an earlier
+   start means the clock was not re-baselined after the reboot).
+2. **Store integrity** — the 9.1.5 planner reads the tiers without error.
+   The dev stand-in (9.1.3) lacks `telemetry.retention`, so run the planner
+   with the fleet binary **without stopping the soak writer** (a read-only
+   serve holds no writer lock):
    ```bash
-   wm-edge-telemetry doctor --store ~/.local/share/edge-galaxy || true   # if the dev build carries doctor
-   # or via the gateway once 9.1.5 is deployed:
-   # wm(route='telemetry.retention', args={})
+   wm doctor --store ~/.local/share/edge-galaxy            # read-only audit
+   wm serve --profile full --readonly --transport sse \
+     --bind 127.0.0.1:18999 --store ~/.local/share/edge-galaxy &
+   curl -sS -X POST http://127.0.0.1:18999/mcp \
+     -H 'Content-Type: application/json' \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":
+         {"name":"telemetry.retention","arguments":{}}}'
+   # kill the scratch serve when done; it writes nothing
    ```
-   Pass: no corruption, `eligible`/`prune_due` consistent with the 7 d/90 d
-   horizons (at 72 h nothing should be eligible for prune yet).
-3. **Quiet journals** — no unexplained errors since start:
+   Pass: no corruption; `eligible`/`prune_due` consistent with the 7 d/90 d
+   horizons (at 72 h nothing should be eligible for prune).
+   **Open decision (fan-in):** the store's newest window is
+   `2026-09-13T23:36:08Z` and the newest rollup `2026-09-13T23:08:04Z` — since
+   the v9.1.4 deploy, `lakshmi-sampler.service` intentionally emits to the
+   fleet store (18790), so no producer currently feeds the soak store. Until
+   that is resolved, "windows count grows" cannot be satisfied: either point a
+   soak producer at 18798 (a dedicated sampler instance keeps fleet emission
+   untouched) or redefine this check against the produced evidence and say so
+   here.
+3. **Quiet journals** — no unexplained errors since the re-baseline:
    ```bash
-   journalctl --user -u edge-galaxy.service --since '2026-09-14 00:00' -p warning --no-pager | tail -20
+   journalctl --user -u edge-galaxy.service --since '2026-09-14 14:26' -p warning --no-pager | tail -20
    ```
    Pass: only expected entries (budget warnings imply the env headroom was
    lost; investigate before passing).
@@ -220,6 +239,22 @@ for the gate to count.
    ```bash
    systemctl --user list-timers --all | grep -i lakshmi
    ```
+   Note: the timer posts `telemetry.rollup` to the fleet store (18790) by
+   design since v9.1.4; the soak store's two rollups are pre-soak
+   (`2026-09-13T23:08Z`). Same open decision as check 2.
+
+### Pre-check (2026-09-14, post-reboot, before first gate run)
+
+| Check | Result |
+|---|---|
+| Continuity | `active`/`running`, `NRestarts=0`, start 14:26:36Z — **pass so far** |
+| Store integrity | `wm doctor --store ~/.local/share/edge-galaxy`: all healthy; planner via read-only 9.1.5 serve: 86 windows / 2 rollups / 0 observations, nothing eligible — **reads clean; fan-in open decision above** |
+| Quiet journals | no warnings since midnight/reboot — **pass so far** |
+| Rollup chain | timer active hourly, posts to 18790 — **disclosed, not the soak store** |
+
+Producer wiring: sampler/rollup/dashboard units and the LAKSHMI README disagree
+(units say 18790 "the telemetry galaxy lives in the real store now"; README
+says 18798 during the soak). Decision needed before the gate counts.
 
 **Decision on pass:** promote the telemetry writer to the 9.1.5 fleet build
 (remove the dev-binary stand-in), keep the retention timer, and re-baseline
