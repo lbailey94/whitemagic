@@ -147,7 +147,9 @@ async fn full_hot_page_does_not_scan_cold() {
         0.9,
         0.9,
     );
-    let index = Arc::new(wm_memory::SearchEngine::open(dir.path().join("tantivy")).unwrap());
+    let index_path = dir.path().join("tantivy");
+    std::fs::create_dir_all(&index_path).unwrap();
+    let index = Arc::new(wm_memory::SearchEngine::open(index_path).unwrap());
     {
         let mut writer = index.writer().unwrap();
         index.index_memory(&mut writer, &hot).unwrap();
@@ -247,7 +249,9 @@ async fn hot_duplicate_does_not_consume_cold_headroom() {
         0.9,
         0.9,
     );
-    let index = Arc::new(wm_memory::SearchEngine::open(dir.path().join("tantivy")).unwrap());
+    let index_path = dir.path().join("tantivy");
+    std::fs::create_dir_all(&index_path).unwrap();
+    let index = Arc::new(wm_memory::SearchEngine::open(index_path).unwrap());
     {
         let mut writer = index.writer().unwrap();
         index.index_memory(&mut writer, &hot).unwrap();
