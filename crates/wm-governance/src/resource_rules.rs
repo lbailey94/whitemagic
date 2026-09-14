@@ -41,7 +41,11 @@ pub struct ResourceRulesConfig {
 impl Default for ResourceRulesConfig {
     fn default() -> Self {
         Self {
-            max_writes_per_minute: 60,
+            // 9.1.6: 60 → 120. Health-scaled budgets starved legit batch
+            // workflows (ingest, session imports) on low-health stores
+            // (~9 writes/min at health 0.15); the write_limit floor in
+            // `evaluate` keeps a minimal working budget even when stressed.
+            max_writes_per_minute: 120,
             max_spawns_per_minute: 10,
             max_network_per_minute: 30,
             novelty_window: 50,
@@ -263,9 +267,20 @@ impl ResourceRules {
         // Budgets scale with health — when stressed, budgets shrink
         let health_scale = health.clamp(0.1, 1.0);
         let cfg = self.config();
-        let write_limit = ((cfg.max_writes_per_minute as f32) * health_scale) as u32;
-        let spawn_limit = ((cfg.max_spawns_per_minute as f32) * health_scale) as u32;
-        let network_limit = ((cfg.max_network_per_minute as f32) * health_scale) as u32;
+        // Floors keep a minimal working budget on low-health stores
+        // (9.1.6: batch workflows starved at ~9 writes/min): writes ≥ 10,
+        // spawns ≥ 2, network ≥ 5. Floors never override an explicit
+        // stricter config (min with cfg_max) — Secure compartments keep
+        // their tighter budgets.
+        let write_limit = (((cfg.max_writes_per_minute as f32) * health_scale) as u32)
+            .max(10)
+            .min(cfg.max_writes_per_minute);
+        let spawn_limit = (((cfg.max_spawns_per_minute as f32) * health_scale) as u32)
+            .max(2)
+            .min(cfg.max_spawns_per_minute);
+        let network_limit = (((cfg.max_network_per_minute as f32) * health_scale) as u32)
+            .max(5)
+            .min(cfg.max_network_per_minute);
 
         // In low-power states, budgets are further reduced
         let (write_limit, spawn_limit, network_limit) = match brain_wave {
@@ -568,10 +583,13 @@ mod tests {
     fn theta_reduces_writes() {
         let rules = ResourceRules::default();
         let h = perfect_health();
-        for i in 0..15 {
+        // Theta quarter-budgets the healthy write limit; derive the expected
+        // allowance from config so the test survives default changes.
+        let theta_limit = ResourceRulesConfig::default().max_writes_per_minute / 4;
+        for i in 0..u64::from(theta_limit) {
             let v = rules.evaluate(
                 "memory.create",
-                i as u64,
+                i,
                 true,
                 false,
                 false,
