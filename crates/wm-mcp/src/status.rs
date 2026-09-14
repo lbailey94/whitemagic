@@ -146,8 +146,15 @@ pub fn collect(store_root: &Path) -> StatusReport {
 
     let update = read_install_json(store_root).and_then(|v| {
         let latest = v.get("latest_seen").and_then(serde_json::Value::as_str)?;
-        if latest == env!("CARGO_PKG_VERSION") {
-            None
+        let current = env!("CARGO_PKG_VERSION");
+        if latest == current {
+            // We have checked and are current: say so instead of telling the
+            // user to run a check they already ran.
+            let checked = v.get("last_check").and_then(serde_json::Value::as_str);
+            Some(match checked {
+                Some(ts) => format!("{current} (up to date, last checked {ts})"),
+                None => format!("{current} (up to date)"),
+            })
         } else {
             Some(format!(
                 "{latest} available (installed via {})",
@@ -187,6 +194,33 @@ mod tests {
         let lines = r.lines();
         assert!(lines[0].contains("WhiteMagic"));
         assert!(lines.iter().any(|l| l.contains("Search index")));
+    }
+
+    #[test]
+    fn status_reports_up_to_date_when_install_state_agrees() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = format!(
+            r#"{{"latest_seen":"{}","last_check":"2026-09-14T02:00:00Z","installed_via":"release-binary"}}"#,
+            env!("CARGO_PKG_VERSION")
+        );
+        std::fs::write(tmp.path().join("install.json"), state).unwrap();
+        let report = collect(tmp.path());
+        let update = report.update.expect("update line");
+        assert!(update.contains("up to date"), "{update}");
+    }
+
+    #[test]
+    fn status_reports_newer_release_when_install_state_lags() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("install.json"),
+            r#"{"latest_seen":"99.0.0","installed_via":"cargo"}"#,
+        )
+        .unwrap();
+        let report = collect(tmp.path());
+        let update = report.update.expect("update line");
+        assert!(update.contains("99.0.0 available"), "{update}");
+        assert!(update.contains("cargo"), "{update}");
     }
 
     #[test]

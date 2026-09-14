@@ -21,6 +21,7 @@
 use serde::Serialize;
 use serde_json::{Value, json};
 use std::fmt::Write as _;
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -255,37 +256,72 @@ fn agent_step(write: bool) -> Step {
     step("agent", status, parts.join("; "), t)
 }
 
+fn probe_endpoint(addr: SocketAddr) -> bool {
+    TcpStream::connect_timeout(&addr, Duration::from_millis(500)).is_ok()
+}
+
+fn endpoint_host_port(url: &str) -> Option<SocketAddr> {
+    let without_scheme = url.split_once("://").map_or(url, |(_, rest)| rest);
+    let authority = without_scheme.split('/').next()?;
+    let host_port = authority.rsplit('@').next()?;
+    let (host, port) = match host_port.rsplit_once(':') {
+        Some((h, p)) => (h, p.parse::<u16>().ok()?),
+        None => (host_port, if url.starts_with("https") { 443 } else { 80 }),
+    };
+    (host, port).to_socket_addrs().ok()?.next()
+}
+
+/// Report the embedder posture honestly: reachable when configured, lexical
+/// when not, and a warning when configured but unreachable.
+fn probe_embedder() -> (StepStatus, String) {
+    if let Ok(endpoint) = std::env::var("WM_EMBEDDER_ENDPOINT") {
+        let endpoint = endpoint.trim();
+        if endpoint.is_empty() {
+            return (
+                StepStatus::Ok,
+                "lexical search (no model needed)".to_string(),
+            );
+        }
+        return match endpoint_host_port(endpoint) {
+            Some(addr) => {
+                if probe_endpoint(addr) {
+                    (
+                        StepStatus::Ok,
+                        format!("local embeddings reachable at {addr}"),
+                    )
+                } else {
+                    (
+                        StepStatus::Warn,
+                        format!(
+                            "embedder endpoint {addr} configured but unreachable — lexical fallback"
+                        ),
+                    )
+                }
+            }
+            None => (
+                StepStatus::Warn,
+                format!("embedder endpoint unparseable: {endpoint}"),
+            ),
+        };
+    }
+    if std::env::var("WM_EMBEDDER_BACKEND").is_ok_and(|b| b.eq_ignore_ascii_case("onnx")) {
+        return (
+            StepStatus::Ok,
+            "local ONNX embeddings (in-process)".to_string(),
+        );
+    }
+    (
+        StepStatus::Ok,
+        "lexical search (no model needed)".to_string(),
+    )
+}
+
 fn memory_step(store: &Path) -> Step {
     let t = Instant::now();
     let report = crate::status::collect(store);
-    let embedder = if std::env::var("WM_EMBEDDER_ENDPOINT").is_ok()
-        || std::env::var("WM_EMBEDDER_BACKEND").is_ok()
-    {
-        "local embeddings configured"
-    } else {
-        "lexical search (no model needed)"
-    };
+    let (embed_status, embedder) = probe_embedder();
 
-    if !report.store_ok {
-        return step(
-            "memory",
-            StepStatus::Ok,
-            format!(
-                "no store yet at {} — created on first 'wm serve' or agent write; {embedder}",
-                store.display()
-            ),
-            t,
-        );
-    }
-
-    let status = if report.index_ok {
-        StepStatus::Ok
-    } else {
-        StepStatus::Warn
-    };
-    step(
-        "memory",
-        status,
+    let detail = if report.store_ok {
         format!(
             "{} — {} memories, {} sessions, index {}; {embedder}",
             store.display(),
@@ -296,9 +332,25 @@ fn memory_step(store: &Path) -> Step {
             } else {
                 "missing"
             }
-        ),
-        t,
-    )
+        )
+    } else {
+        format!(
+            "no store yet at {} — created on first 'wm serve' or agent write; {embedder}",
+            store.display()
+        )
+    };
+
+    let store_status = if report.store_ok && !report.index_ok {
+        StepStatus::Warn
+    } else {
+        StepStatus::Ok
+    };
+    let status = if embed_status == StepStatus::Warn {
+        StepStatus::Warn
+    } else {
+        store_status
+    };
+    step("memory", status, detail, t)
 }
 
 /// The core habits an arriving agent should internalize. The contract is
@@ -441,6 +493,29 @@ mod tests {
         let s = memory_step(tmp.path());
         assert_eq!(s.status, StepStatus::Ok);
         assert!(s.detail.contains("no store yet"));
+    }
+
+    #[test]
+    fn endpoint_parsing_covers_schemes_and_defaults() {
+        assert_eq!(
+            endpoint_host_port("http://127.0.0.1:9/manifest.json").map(|a| a.to_string()),
+            Some("127.0.0.1:9".to_string())
+        );
+        assert_eq!(
+            endpoint_host_port("https://example.com").map(|a| a.port()),
+            Some(443)
+        );
+        assert_eq!(
+            endpoint_host_port("127.0.0.1:18899").map(|a| a.port()),
+            Some(18899)
+        );
+    }
+
+    #[test]
+    fn probe_endpoint_detects_a_listening_socket() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        assert!(probe_endpoint(addr));
     }
 
     #[test]

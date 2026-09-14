@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `wm selftest` is quiet by default (like `quickstart`); subsystem warnings require `--verbose`.
 - Recall phrasing: `recall X` routes to `memory.search` (it previously chose `memory.read` and treated the phrase like an id), and multi-word intentions — "find X", "what do you remember about X", "what did we decide about X", "look up X" — route to search instead of falling through to gnosis. Covered by regression tests.
 - `wm update check` (and `install`) treat an unreachable network as an ordinary local-first state: a calm message, exit code 2, structured detail under `--json`, no error chain or backtrace.
+- The embedding-router NLU layer now carries the same curated phrase intent as the TF-IDF classifier (memory.search anchors plus phrase bonuses), so both layers agree on "find X", "what do you remember about X", "what did we decide about X", and "look up X".
+- `wm grimoire`'s memory step probes a configured `WM_EMBEDDER_ENDPOINT` (reachable, or a loud warning plus lexical-fallback note when unreachable) and reports `WM_EMBEDDER_BACKEND=onnx` as in-process instead of a generic "configured".
+- `wm status` reports `up to date (last checked …)` from the recorded install state instead of always pointing at `wm update check`.
 
 ### Distribution & release engineering
 - New **release-health record + reconciliation**: `scripts/release_health.py` probes the GitHub release assets, every workspace crate on crates.io, npm, Docker Hub, and the official MCP registry; `release-health.yml` retries laggards on Release completion and daily, certifies the npm and Docker install paths with `wm selftest`, uploads `release-health.json` to the GitHub Release, and gates red while any surface lags.
