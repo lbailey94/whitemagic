@@ -179,3 +179,5 @@ wm-leases.json
 /scripts/tests/q07_*.py
 /scripts/tests/q11_*.py
 /scripts/tests/test_heritage_pilot_*.py
+# MCPB build output
+npm/whitemagic-mcp/dist/

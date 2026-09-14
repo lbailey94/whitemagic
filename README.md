@@ -37,7 +37,7 @@ The supported alpha contract:
 - durable memory creation and lexical search without an external model;
 - session record, replay, and cross-session continuity;
 - a complete backup, verification, and restore path;
-- no telemetry and no required WhiteMagic cloud service;
+- no telemetry by default and no required WhiteMagic cloud service;
 - truthful degradation when optional models or embeddings are unavailable.
 
 ## Install
@@ -63,6 +63,18 @@ checksum automatically):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
 ```
+
+### Other channels
+
+```bash
+npx whitemagic-mcp serve                     # npm (no global install)
+cargo install whitemagic                     # crates.io
+docker run -i lbailey94/whitemagic:9 serve   # Docker Hub
+```
+
+Adoption snapshot (2026-09-13): 759 npm downloads/30d · 1,846 Docker pulls ·
+67 crates.io downloads. Package installs are independent of the installer and
+grew without any website CTA — the substrate chooses its own doors.
 
 Verify the installation and see the product work end to end:
 
@@ -91,7 +103,11 @@ Point any MCP client at:
 wm serve --profile curated
 ```
 
-The server communicates over stdio and exposes a single `wm` meta-tool.
+The server communicates over stdio and exposes the `wm` meta-tool plus a
+discrete lifecycle catalog — 11 tools in the curated profile
+(`memory.create/search/read/list/hybrid_recall`,
+`session.start/record/continuity`, `citta.status`, `captain.deploy`). Direct
+handles for the common lifecycle calls, with NLU routing still available.
 Explicit routing is the dependable contract:
 
 - `wm(route="memory.create", args={...})`
@@ -105,7 +121,8 @@ archive surface (see below).
 ## Privacy and data
 
 - Your store lives locally at `~/.local/share/whitemagic`. Nothing is sent to
-  WhiteMagic-operated services; there is no telemetry.
+  WhiteMagic-operated services; there is no telemetry by default (any future
+  sharing is opt-in, previewable, and schema-bound).
 - Privacy flags exclude memories from responses and reasoning. **They are
   access controls, not encryption** — anyone who can read the store files can
   read the contents. Do not store credentials in memories.
