@@ -23,6 +23,15 @@ pub struct StatusReport {
     pub index_ok: bool,
     pub last_backup: Option<String>,
     pub last_backup_age_secs: Option<u64>,
+    /// Backup root the nightly runner last chose (card or NVMe staging).
+    pub backup_target: Option<String>,
+    /// Age of the newest store snapshot found under the target/staging.
+    pub backup_newest_age_secs: Option<u64>,
+    /// Snapshots are sitting in `nvme-fallback/` awaiting the next fold.
+    pub backup_staging_pending: bool,
+    /// Store snapshot dirs found directly under `~/whitemagic-backups` — the
+    /// history-split signature (one chain must survive on one root).
+    pub backup_history_split: bool,
     pub profile: String,
     pub project: Option<String>,
     pub update: Option<String>,
@@ -57,13 +66,37 @@ impl StatusReport {
             "Search index       {}",
             if self.index_ok { "healthy" } else { "missing" }
         ));
-        match (&self.last_backup, self.last_backup_age_secs) {
-            (Some(ts), Some(age)) => {
-                out.push(format!("Last backup        {ts} ({} ago)", human_age(age)));
+        if let (Some(ts), Some(age)) = (&self.last_backup, self.last_backup_age_secs) {
+            out.push(format!("Last backup        {ts} ({} ago)", human_age(age)));
+        } else {
+            let where_ = self
+                .backup_target
+                .clone()
+                .unwrap_or_else(|| "~/whitemagic-backups".to_string());
+            out.push(format!("Last backup        none found ({where_})"));
+        }
+        if let Some(target) = &self.backup_target {
+            out.push(format!("Backup target      {target}"));
+        }
+        if let Some(age) = self.backup_newest_age_secs {
+            if age > 48 * 3600 {
+                out.push(format!(
+                    "Backup warn        newest snapshot is {} old (>48h) — check the card mount",
+                    human_age(age)
+                ));
             }
-            _ => {
-                out.push("Last backup        none found (~/whitemagic-backups)".to_string());
-            }
+        }
+        if self.backup_staging_pending {
+            out.push(
+                "Backup note        NVMe staging holds snapshots awaiting the next card fold"
+                    .to_string(),
+            );
+        }
+        if self.backup_history_split {
+            out.push(
+                "Backup warn        snapshots found directly under ~/whitemagic-backups — history split"
+                    .to_string(),
+            );
         }
         out.push(format!("MCP profile        {}", self.profile));
         if let Some(p) = &self.project {
@@ -88,11 +121,11 @@ fn human_age(secs: u64) -> String {
     }
 }
 
-fn last_backup() -> (Option<String>, Option<u64>) {
-    let log: PathBuf = dirs_home().join("whitemagic-backups").join("backup.log");
-    let Ok(text) = std::fs::read_to_string(&log) else {
-        return (None, None);
-    };
+fn backup_log_path() -> PathBuf {
+    dirs_home().join("whitemagic-backups").join("backup.log")
+}
+
+fn last_backup_from(text: &str) -> (Option<String>, Option<u64>) {
     // Prefer the newest store-backup line (` OK `); fall back to any line.
     let pick = text
         .lines()
@@ -108,6 +141,75 @@ fn last_backup() -> (Option<String>, Option<u64>) {
         (now.timestamp() - t.with_timezone(&chrono::Utc).timestamp()).max(0) as u64
     });
     (Some(ts), age)
+}
+
+/// Backup root named by the newest runner line: `TARGET <path> (card ...)` or
+/// the loud staging WARN (`staging on NVMe (<path>)`).
+fn backup_target_from(text: &str) -> Option<String> {
+    for line in text.lines().rev() {
+        if let Some(idx) = line.find("TARGET ") {
+            let rest = &line[idx + "TARGET ".len()..];
+            let target = rest.split_whitespace().next().unwrap_or("");
+            if target.starts_with('/') {
+                return Some(target.to_string());
+            }
+        }
+        if let Some(idx) = line.find("staging on NVMe (") {
+            let rest = &line[idx + "staging on NVMe (".len()..];
+            if let Some(end) = rest.find(')') {
+                return Some(rest[..end].to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Snapshot dirs (`whitemagic-backup-*`) one level below `root`, skipping the
+/// named subtrees (e.g. `nvme-fallback`, `logs`, `seals`, `anchors`, `trust`).
+fn snapshot_dirs(root: &Path, skip: &[&str]) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    let Ok(stores) = std::fs::read_dir(root) else {
+        return found;
+    };
+    for store in stores.flatten() {
+        let store_path = store.path();
+        let name = store.file_name();
+        let name = name.to_string_lossy();
+        if !store_path.is_dir() || skip.contains(&name.as_ref()) {
+            continue;
+        }
+        if let Ok(whitemagic_backup) = std::fs::read_dir(&store_path) {
+            for entry in whitemagic_backup.flatten() {
+                let entry_name = entry.file_name();
+                if entry_name
+                    .to_string_lossy()
+                    .starts_with("whitemagic-backup-")
+                    && entry.path().is_dir()
+                {
+                    found.push(entry.path());
+                }
+            }
+        }
+    }
+    found
+}
+
+/// Age in seconds of the newest snapshot dir under `root`.
+fn newest_snapshot_age_in(root: &Path, skip: &[&str]) -> Option<u64> {
+    snapshot_dirs(root, skip)
+        .iter()
+        .filter_map(|d| {
+            std::fs::metadata(d)
+                .ok()
+                .and_then(|m| m.modified().ok())
+                .map(|t| (d, t))
+        })
+        .max_by_key(|(_, t)| *t)
+        .map(|(_, t)| {
+            std::time::SystemTime::now()
+                .duration_since(t)
+                .map_or(0, |d| d.as_secs())
+        })
 }
 
 fn dirs_home() -> PathBuf {
@@ -129,7 +231,19 @@ pub fn collect(store_root: &Path) -> StatusReport {
     let profile = std::env::var("WM_TOOL_PROFILE").unwrap_or_else(|_| "curated".to_string());
     let project = std::env::var("WM_PROJECT").ok().filter(|s| !s.is_empty());
     let index_ok = lmdb.join("tantivy").exists();
-    let (last_backup, last_backup_age_secs) = last_backup();
+    let home_backups = dirs_home().join("whitemagic-backups");
+    let log_text = std::fs::read_to_string(backup_log_path()).ok();
+    let (last_backup, last_backup_age_secs) =
+        log_text.as_deref().map_or((None, None), last_backup_from);
+    let backup_target = log_text.as_deref().and_then(backup_target_from);
+    let staging_root = home_backups.join("nvme-fallback");
+    let backup_staging_pending = !snapshot_dirs(&staging_root, &[]).is_empty();
+    let backup_history_split = !snapshot_dirs(&home_backups, &["nvme-fallback", "logs"]).is_empty();
+    let backup_newest_age_secs = backup_target
+        .as_deref()
+        .map(Path::new)
+        .and_then(|root| newest_snapshot_age_in(root, &[]))
+        .or_else(|| newest_snapshot_age_in(&staging_root, &[]));
 
     let mut memories = 0u64;
     let mut sessions = 0u64;
@@ -174,6 +288,10 @@ pub fn collect(store_root: &Path) -> StatusReport {
         index_ok,
         last_backup,
         last_backup_age_secs,
+        backup_target,
+        backup_newest_age_secs,
+        backup_staging_pending,
+        backup_history_split,
         profile,
         project,
         update,
@@ -221,6 +339,73 @@ mod tests {
         let update = report.update.expect("update line");
         assert!(update.contains("99.0.0 available"), "{update}");
         assert!(update.contains("cargo"), "{update}");
+    }
+
+    #[test]
+    fn backup_target_parses_card_and_staging_lines() {
+        let card = "2026-09-14T13:32:19-04:00 TARGET /media/lucas/SD_CARD1/whitemagic-backups (card /media/lucas/SD_CARD1 mounted)\n";
+        assert_eq!(
+            backup_target_from(card).as_deref(),
+            Some("/media/lucas/SD_CARD1/whitemagic-backups")
+        );
+        let staged = "2026-09-14T03:30:00-04:00 WARN backup disk not mounted — staging on NVMe (/home/u/whitemagic-backups/nvme-fallback); folded into the card on the next card-present run.\n";
+        assert_eq!(
+            backup_target_from(staged).as_deref(),
+            Some("/home/u/whitemagic-backups/nvme-fallback")
+        );
+        assert_eq!(backup_target_from("no target line here"), None);
+    }
+
+    #[test]
+    fn status_warns_on_stale_split_and_staging() {
+        let report = StatusReport {
+            version: "test".into(),
+            store_path: "/tmp/store".into(),
+            store_ok: true,
+            memories: 0,
+            sessions: 0,
+            index_ok: true,
+            last_backup: None,
+            last_backup_age_secs: None,
+            backup_target: Some("/media/lucas/SD_CARD1/whitemagic-backups".into()),
+            backup_newest_age_secs: Some(49 * 3600),
+            backup_staging_pending: true,
+            backup_history_split: true,
+            profile: "curated".into(),
+            project: None,
+            update: None,
+        };
+        let text = report.lines().join("\n");
+        assert!(text.contains("none found (/media/lucas/SD_CARD1/whitemagic-backups)"));
+        assert!(text.contains("Backup target"));
+        assert!(text.contains("newest snapshot is 2d old (>48h)"), "{text}");
+        assert!(text.contains("staging holds snapshots"), "{text}");
+        assert!(text.contains("history split"), "{text}");
+    }
+
+    #[test]
+    fn snapshot_scan_classifies_split_and_staging() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        std::fs::create_dir_all(home.join("wmv9/whitemagic-backup-20260914T000000Z")).unwrap();
+        assert_eq!(
+            snapshot_dirs(home, &["nvme-fallback", "logs"]).len(),
+            1,
+            "a store snapshot directly under home is the split signature"
+        );
+        assert!(
+            snapshot_dirs(home, &["wmv9"]).is_empty(),
+            "skip list must exclude named subtrees"
+        );
+        assert!(snapshot_dirs(&home.join("nvme-fallback"), &[]).is_empty());
+        std::fs::create_dir_all(home.join("nvme-fallback/neon/whitemagic-backup-20260914T010000Z"))
+            .unwrap();
+        assert_eq!(snapshot_dirs(&home.join("nvme-fallback"), &[]).len(), 1);
+        let age = newest_snapshot_age_in(home, &["nvme-fallback", "logs"]).unwrap();
+        assert!(
+            age < 60,
+            "a snapshot just created must read as fresh: {age}s"
+        );
     }
 
     #[test]

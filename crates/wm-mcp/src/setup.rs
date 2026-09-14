@@ -656,7 +656,7 @@ fn codex_entry_matches(item: &toml_edit::Item, exe: &Path) -> bool {
         .get("args")
         .and_then(toml_edit::Item::as_array)
         .map(|array| array.iter().filter_map(toml_edit::Value::as_str).collect());
-    command_ok && args == Some(serve_args().to_vec())
+    command_ok && args.as_deref() == Some(serve_args().as_slice())
 }
 
 /// Patch Codex's `config.toml` (`[mcp_servers.whitemagic]`), preserving
