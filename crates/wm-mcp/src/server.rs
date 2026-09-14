@@ -677,15 +677,17 @@ impl McpServer {
 
     /// Resolve the tool surface profile from the environment.
     ///
-    /// `WM_TOOL_ALLOWLIST` (comma-separated tool-name prefixes) wins; then
+    /// Precedence: `WM_TOOL_ALLOWLIST` (comma-separated prefixes) wins; then
+    /// `WM_TOOL_PACK` (`continuity` | `research` | `coding` | `ops`); then
     /// `WM_TOOL_PROFILE` (`full` | `curated` | `minimal`, default `full`
-    /// here; `wm serve` writes `curated` into the env when the flag is omitted).
-    /// Invalid names log a warning and fall back to the full surface.
+    /// here; `wm serve` writes `curated` into the env when the flag is
+    /// omitted). Invalid pack/profile names log a warning and fall back.
     fn tool_profile_from_env() -> &'static wm_tools::profiles::ToolProfile {
-        wm_tools::profiles::resolve_tool_profile(
+        wm_tools::profiles::resolve_tool_surface(
             None,
             std::env::var("WM_TOOL_PROFILE").ok().as_deref(),
             std::env::var("WM_TOOL_ALLOWLIST").ok().as_deref(),
+            std::env::var("WM_TOOL_PACK").ok().as_deref(),
         )
     }
 

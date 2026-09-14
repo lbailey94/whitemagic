@@ -73,6 +73,136 @@ pub static PROFILE_PRAY: ToolProfile = ToolProfile {
 #[deprecated(since = "9.2.0", note = "renamed to PROFILE_PRAY")]
 pub use self::PROFILE_PRAY as PROFILE_PRAT;
 
+/// A named, task-focused tool pack (Q04-HER.P2).
+///
+/// Packs are a thin data layer over the profile/allowlist mechanism: each
+/// pack declares tool-name prefixes and resolves to an `allowlist`-style
+/// surface. They do not add a second registry, and they are not advertised
+/// as a supported surface until a release carries them.
+#[derive(Debug, Clone, Copy)]
+pub struct ToolPack {
+    /// Pack name (`continuity`, `research`, `coding`, `ops`).
+    pub name: &'static str,
+    /// One-line task description.
+    pub description: &'static str,
+    /// Matching tool-name prefixes.
+    pub prefixes: &'static [&'static str],
+}
+
+/// Capture and resume: the memory hierarchy plus session continuity.
+pub static PACK_CONTINUITY: ToolPack = ToolPack {
+    name: "continuity",
+    description: "capture, search, resume, replay and checkpoint sessions",
+    prefixes: &["memory", "session", "gnosis"],
+};
+
+/// Evidence-oriented retrieval: search/read with claims and gnosis.
+pub static PACK_RESEARCH: ToolPack = ToolPack {
+    name: "research",
+    description: "evidence-oriented search, reads, claims and gnosis",
+    prefixes: &[
+        "memory.search",
+        "memory.read",
+        "memory.hybrid_recall",
+        "memory.query",
+        "session.continuity",
+        "session.replay",
+        "claims",
+        "gnosis",
+    ],
+};
+
+/// Project work: create/update memories, sessions, transaction snapshots.
+pub static PACK_CODING: ToolPack = ToolPack {
+    name: "coding",
+    description: "project memory writes, sessions and transaction snapshots",
+    prefixes: &[
+        "memory.create",
+        "memory.update",
+        "memory.read",
+        "memory.search",
+        "session",
+        "transaction",
+    ],
+};
+
+/// Operational visibility: telemetry, breakers and continuity reads.
+pub static PACK_OPS: ToolPack = ToolPack {
+    name: "ops",
+    description: "telemetry records/rollups/retention, breakers, continuity reads",
+    prefixes: &[
+        "telemetry",
+        "breaker",
+        "memory.search",
+        "memory.read",
+        "session.continuity",
+    ],
+};
+
+/// All shipped packs.
+pub static PACKS: &[&ToolPack] = &[&PACK_CONTINUITY, &PACK_RESEARCH, &PACK_CODING, &PACK_OPS];
+
+/// Look up a pack by name (case-insensitive).
+#[must_use]
+pub fn pack_from_name(name: &str) -> Option<&'static ToolPack> {
+    let name = name.trim().to_ascii_lowercase();
+    PACKS.iter().copied().find(|pack| pack.name == name)
+}
+
+/// The available pack names, for refusal messages.
+#[must_use]
+pub fn pack_names() -> Vec<&'static str> {
+    PACKS.iter().map(|pack| pack.name).collect()
+}
+
+/// Resolve a pack to an allowlist-style profile. The returned name is
+/// `pack:<name>` so contracts disclose which pack produced the surface.
+#[must_use]
+pub fn profile_from_pack(pack: &ToolPack) -> &'static ToolProfile {
+    Box::leak(Box::new(ToolProfile {
+        name: Box::leak(format!("pack:{}", pack.name).into_boxed_str()),
+        prefixes: pack.prefixes,
+    }))
+}
+
+/// Resolve the active tool surface with packs in the precedence chain:
+///
+/// 1. `WM_TOOL_ALLOWLIST` — an explicit prefix allowlist always wins.
+/// 2. `WM_TOOL_PACK` (or `wm serve --pack`) — a task-focused pack.
+/// 3. CLI `--profile` / `WM_TOOL_PROFILE`.
+/// 4. Caller default.
+///
+/// Unknown pack names warn and fall through to profile resolution.
+#[must_use]
+pub fn resolve_tool_surface(
+    cli_profile: Option<&str>,
+    env_profile: Option<&str>,
+    env_allowlist: Option<&str>,
+    env_pack: Option<&str>,
+) -> &'static ToolProfile {
+    if let Some(allow) = env_allowlist {
+        if let Some(profile) = allowlist_from_env(allow) {
+            tracing::info!(
+                allowlist = %allow,
+                "WM_TOOL_ALLOWLIST tool surface in effect"
+            );
+            return Box::leak(Box::new(profile));
+        }
+    }
+    if let Some(name) = env_pack {
+        if let Some(pack) = pack_from_name(name) {
+            tracing::info!(pack = pack.name, "WM_TOOL_PACK tool surface in effect");
+            return profile_from_pack(pack);
+        }
+        tracing::warn!(
+            pack = name,
+            available = ?pack_names(),
+            "unknown tool pack — falling back to profile resolution"
+        );
+    }
+    resolve_tool_profile(cli_profile, env_profile, None)
+}
+
 /// Look up a profile by name (`full`, `curated`, `minimal`, `pray`; `prat` kept as a deprecated alias).
 #[must_use]
 pub fn profile_from_name(name: &str) -> Option<&'static ToolProfile> {
@@ -620,5 +750,45 @@ mod tests {
         assert_eq!(profile_from_name("pray").unwrap().name, "pray");
         // Deprecated `prat` alias keeps resolving to the same surface.
         assert_eq!(profile_from_name("prat").unwrap().name, "pray");
+    }
+
+    #[test]
+    fn packs_resolve_and_are_unique() {
+        assert_eq!(
+            pack_from_name("Continuity").map(|p| p.name),
+            Some("continuity")
+        );
+        assert!(pack_from_name("bogus").is_none());
+        assert_eq!(
+            pack_names(),
+            vec!["continuity", "research", "coding", "ops"]
+        );
+        for pack in PACKS {
+            assert!(!pack.prefixes.is_empty(), "{} has prefixes", pack.name);
+            assert!(
+                !pack.description.is_empty(),
+                "{} has a description",
+                pack.name
+            );
+        }
+    }
+
+    #[test]
+    fn pack_precedence_and_unknown_fallback() {
+        // Explicit allowlist wins over a pack.
+        let allow = resolve_tool_surface(None, None, Some("memory,session"), Some("continuity"));
+        assert_eq!(allow.name, "allowlist");
+        // Pack wins over the CLI profile and environment profile.
+        let pack = resolve_tool_surface(Some("minimal"), Some("minimal"), None, Some("continuity"));
+        assert_eq!(pack.name, "pack:continuity");
+        assert!(pack.prefixes.contains(&"session"));
+        // Unknown pack warns and falls back to profile resolution.
+        let fallback = resolve_tool_surface(Some("minimal"), None, None, Some("bogus"));
+        assert_eq!(fallback.name, "minimal");
+        // No pack → unchanged behavior.
+        assert_eq!(
+            resolve_tool_surface(Some("curated"), None, None, None).name,
+            "curated"
+        );
     }
 }

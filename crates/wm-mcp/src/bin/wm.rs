@@ -91,10 +91,14 @@ enum Commands {
         preservation_readonly: bool,
         /// Tool surface profile: full | curated | minimal. When omitted,
         /// `wm serve` uses curated (the product surface) unless
-        /// WM_TOOL_PROFILE / WM_TOOL_ALLOWLIST is set. Full is the
-        /// archive/research surface.
+        /// WM_TOOL_PROFILE / WM_TOOL_PACK / WM_TOOL_ALLOWLIST is set. Full is
+        /// the archive/research surface.
         #[arg(long)]
         profile: Option<String>,
+        /// Task-focused tool pack: continuity | research | coding | ops.
+        /// Wins over --profile; WM_TOOL_ALLOWLIST still wins over both.
+        #[arg(long)]
+        pack: Option<String>,
         /// Transport: stdio (default) or sse
         #[arg(long, default_value = "stdio")]
         transport: String,
@@ -872,6 +876,7 @@ fn main() -> anyhow::Result<()> {
             readonly,
             preservation_readonly,
             profile,
+            pack,
             transport,
             bind,
             federate,
@@ -925,29 +930,49 @@ fn main() -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            // Resolve the tool surface profile with explicit precedence:
-            // WM_TOOL_ALLOWLIST > --profile flag > WM_TOOL_PROFILE > curated.
-            // `wm serve` with no flag and no env is the product surface.
-            // `wm daemon` and library constructors still default to full
-            // (cycle tools live outside curated). The resolved name is
-            // exported so `tool_profile_from_env()` sees the winning value.
+            // Resolve the tool surface with explicit precedence:
+            // WM_TOOL_ALLOWLIST > --pack / WM_TOOL_PACK > --profile /
+            // WM_TOOL_PROFILE > curated. `wm serve` with no flag and no env is
+            // the product surface. `wm daemon` and library constructors still
+            // default to full (cycle tools live outside curated). The
+            // resolved identity is exported so `tool_profile_from_env()` sees
+            // the winning value.
             let env_profile = std::env::var("WM_TOOL_PROFILE").ok();
             let env_allowlist = std::env::var("WM_TOOL_ALLOWLIST").ok();
-            let resolved = if profile.is_none() && env_profile.is_none() && env_allowlist.is_none()
+            let env_pack = std::env::var("WM_TOOL_PACK").ok();
+            if let Some(name) = pack.as_deref() {
+                if wm_tools::profiles::pack_from_name(name).is_none() {
+                    anyhow::bail!(
+                        "unknown tool pack '{name}' — available: {}",
+                        wm_tools::profiles::pack_names().join(", ")
+                    );
+                }
+            }
+            let resolved = if profile.is_none()
+                && pack.is_none()
+                && env_profile.is_none()
+                && env_allowlist.is_none()
+                && env_pack.is_none()
             {
                 &wm_tools::profiles::PROFILE_CURATED
             } else {
-                wm_tools::profiles::resolve_tool_profile(
+                wm_tools::profiles::resolve_tool_surface(
                     profile.as_deref(),
                     env_profile.as_deref(),
                     env_allowlist.as_deref(),
+                    pack.as_deref().or(env_pack.as_deref()),
                 )
             };
             // `std::env::set_var` is unsafe in Rust 2024 (not thread-safe);
             // main() is single-threaded here, before any runtime is spawned.
             #[allow(unsafe_code)]
             unsafe {
-                std::env::set_var("WM_TOOL_PROFILE", resolved.name);
+                if let Some(pack_name) = resolved.name.strip_prefix("pack:") {
+                    std::env::set_var("WM_TOOL_PACK", pack_name);
+                    std::env::remove_var("WM_TOOL_PROFILE");
+                } else {
+                    std::env::set_var("WM_TOOL_PROFILE", resolved.name);
+                }
             }
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
@@ -957,15 +982,11 @@ fn main() -> anyhow::Result<()> {
             // root; reads stay free. This must run on the main thread BEFORE
             // the tokio runtime spawns — workers inherit the spawning
             // thread's restriction. Every outcome is non-fatal: unsupported
-            // kernels continue unconfined, loudly.
-            let landlock_report = if readonly && wm_mcp::landlock_sandbox::requested() {
-                tracing::warn!(
-                    "WM_LANDLOCK requested but skipped for --readonly serve: no Landlock ruleset is applied"
-                );
-                Some(wm_mcp::landlock_sandbox::LandlockReport::skipped_readonly(
-                    &store_path,
-                ))
-            } else if wm_mcp::landlock_sandbox::requested() {
+            // kernels continue unconfined, loudly. Under --readonly the
+            // ruleset still applies; only the on-disk report is suppressed
+            // (the in-memory report stays served via /status), so a frozen
+            // store is never written to.
+            let landlock_report = if wm_mcp::landlock_sandbox::requested() {
                 let report = wm_mcp::landlock_sandbox::restrict_to_store_root(&store_path);
                 match report.outcome {
                     wm_mcp::landlock_sandbox::LandlockOutcome::Enforced => tracing::info!(
@@ -978,7 +999,9 @@ fn main() -> anyhow::Result<()> {
                         "Landlock v0 degraded — process is NOT fully confined"
                     ),
                 }
-                wm_mcp::landlock_sandbox::persist_report(&store_path, &report);
+                if !readonly {
+                    wm_mcp::landlock_sandbox::persist_report(&store_path, &report);
+                }
                 Some(report)
             } else {
                 None
