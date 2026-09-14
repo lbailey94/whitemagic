@@ -404,6 +404,30 @@ mod tests {
         assert!(!w.try_acquire());
     }
 
+    // Negative fixture (Q04 batch 3): a mutant that counts rejected calls as
+    // requests, or that drains/restores burst tokens on rejection, would pass
+    // the boolean-only tests above but must fail here.
+    #[test]
+    fn rejected_acquire_does_not_consume_budget_or_burst() {
+        let w = SlidingWindow::new(1, 60_000, 1);
+        assert!(w.try_acquire(), "base permit");
+        assert!(w.try_acquire(), "burst permit");
+        let rate_at_limit = w.current_rate();
+        for _ in 0..5 {
+            assert!(!w.try_acquire(), "no permits remain");
+        }
+        assert_eq!(
+            w.current_rate(),
+            rate_at_limit,
+            "rejections must not count as requests"
+        );
+        assert_eq!(
+            w.burst_tokens.load(Ordering::Relaxed),
+            0,
+            "rejections must not restore or drain burst tokens"
+        );
+    }
+
     #[test]
     fn rate_limiter_per_tool() {
         let limiter = RateLimiter::new(1000, 5, 0);
