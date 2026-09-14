@@ -3572,6 +3572,28 @@ impl McpServer {
         }
     }
 
+    /// Yama v0 bridge: drain subprocess-sandbox drift incidents and surface
+    /// each as a `SandboxObservation` bus event (exactly-once per incident).
+    fn emit_sandbox_observations(&self) {
+        let Some(sandbox) = self.pipeline.subprocess_sandbox() else {
+            return;
+        };
+        let events = sandbox.drain_events();
+        if events.is_empty() {
+            return;
+        }
+        let status = sandbox.status();
+        if let Ok(mut bus) = self.gan_ying_bus.lock() {
+            for event in events {
+                bus.emit(
+                    wm_cognitive::EventType::SandboxObservation,
+                    "sandbox",
+                    event.to_json(&status),
+                );
+            }
+        }
+    }
+
     /// Handle `tools/call` — dispatch through the governance pipeline.
     async fn handle_tools_call(&mut self, params: &Value) -> Result<Value, RpcError> {
         let name = params
@@ -3698,6 +3720,9 @@ impl McpServer {
             .dispatch(tool.as_ref(), &mut ctx, arguments)
             .await;
         let dispatch_latency = dispatch_start.elapsed().as_secs_f32();
+
+        // ── Yama v0 bridge: subprocess-sandbox drift incidents → bus ──
+        self.emit_sandbox_observations();
 
         // The `wm` meta-tool reports inner tool failures as structured
         // `{"status":"error", ...}` payloads (Ok at the JSON-RPC level) so
@@ -4399,6 +4424,40 @@ mod tests {
         assert!(sandbox["dispatches"].is_number());
         assert!(sandbox["degraded"].is_number());
         assert!(sandbox["unconfined_spawns"].is_number());
+    }
+
+    #[tokio::test]
+    async fn sandbox_drift_emits_bus_observation() {
+        // Yama v0 bridge: a drift incident recorded on the pipeline's
+        // registry must surface as exactly one SandboxObservation bus event.
+        let server = test_server();
+        let sandbox = server
+            .pipeline
+            .subprocess_sandbox()
+            .expect("test server carries the subprocess registry");
+        sandbox.note_unconfined_spawn("test.spawn");
+        server.emit_sandbox_observations();
+
+        {
+            let bus = server.gan_ying_bus.lock().unwrap();
+            let recent = bus.recent_events(10);
+            let hit = recent
+                .iter()
+                .find(|e| e.event_type == wm_cognitive::EventType::SandboxObservation)
+                .expect("sandbox_observation on the bus");
+            assert_eq!(hit.payload["tool"], "test.spawn");
+            assert_eq!(hit.payload["kind"], "unconfined_spawn");
+        }
+
+        // Exactly-once: a second drain emits nothing new.
+        server.emit_sandbox_observations();
+        let bus = server.gan_ying_bus.lock().unwrap();
+        let count = bus
+            .recent_events(20)
+            .iter()
+            .filter(|e| e.event_type == wm_cognitive::EventType::SandboxObservation)
+            .count();
+        assert_eq!(count, 1);
     }
 
     /// Store path for tests: a nested dir inside the tempdir so that
