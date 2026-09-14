@@ -219,14 +219,14 @@ the gate to count.
    ```
    Pass: no corruption; `eligible`/`prune_due` consistent with the 7 d/90 d
    horizons (at 72 h nothing should be eligible for prune).
-   **Open decision (fan-in):** the store's newest window is
-   `2026-09-13T23:36:08Z` and the newest rollup `2026-09-13T23:08:04Z` — since
-   the v9.1.4 deploy, `lakshmi-sampler.service` intentionally emits to the
-   fleet store (18790), so no producer currently feeds the soak store. Until
-   that is resolved, "windows count grows" cannot be satisfied: either point a
-   soak producer at 18798 (a dedicated sampler instance keeps fleet emission
-   untouched) or redefine this check against the produced evidence and say so
-   here.
+   Soak producer (resolved 2026-09-14): `lakshmi-edge-sampler.service` is a
+   dedicated instance emitting to 18798 (the fleet sampler keeps emitting to
+   18790 — production telemetry stays intact), with its own state dir and
+   spool so the two samplers never share the mirror. Verified live: windows
+   86 → 90 within minutes of enablement (newest `2026-09-14T18:30:06Z`).
+   Disclosure: the process has run since 14:26:36 UTC but had no producer for
+   its first ~4 h (fan-in resumed 18:27Z); the gate keeps the 14:26:36Z
+   baseline with that gap recorded rather than moving the goalposts.
 3. **Quiet journals** — no unexplained errors since the re-baseline:
    ```bash
    journalctl --user -u edge-galaxy.service --since '2026-09-14 14:26' -p warning --no-pager | tail -20
@@ -239,22 +239,25 @@ the gate to count.
    ```bash
    systemctl --user list-timers --all | grep -i lakshmi
    ```
-   Note: the timer posts `telemetry.rollup` to the fleet store (18790) by
-   design since v9.1.4; the soak store's two rollups are pre-soak
-   (`2026-09-13T23:08Z`). Same open decision as check 2.
+   Soak rollups: `lakshmi-edge-rollup.{service,timer}` posts to 18798 hourly
+   (the fleet rollup keeps posting to 18790). `telemetry.rollup` aggregates
+   completed hours only, so the first soak-hour rollup lands after
+   `2026-09-14T19:00Z`; the two existing rollups are pre-soak
+   (`2026-09-13T23:08Z`). Verify with the planner's `rollups` inventory.
 
 ### Pre-check (2026-09-14, post-reboot, before first gate run)
 
 | Check | Result |
 |---|---|
 | Continuity | `active`/`running`, `NRestarts=0`, start 14:26:36Z — **pass so far** |
-| Store integrity | `wm doctor --store ~/.local/share/edge-galaxy`: all healthy; planner via read-only 9.1.5 serve: 86 windows / 2 rollups / 0 observations, nothing eligible — **reads clean; fan-in open decision above** |
+| Store integrity | `wm doctor --store ~/.local/share/edge-galaxy`: all healthy; planner via read-only 9.1.5 serve: 86 windows / 2 rollups / 0 observations, nothing eligible — **reads clean; fan-in resumed 18:27Z (86 → 90 windows, newest 18:30Z)** |
 | Quiet journals | no warnings since midnight/reboot — **pass so far** |
-| Rollup chain | timer active hourly, posts to 18790 — **disclosed, not the soak store** |
+| Rollup chain | edge timer active hourly against 18798 — **first soak-hour rollup after 19:00Z** |
 
-Producer wiring: sampler/rollup/dashboard units and the LAKSHMI README disagree
-(units say 18790 "the telemetry galaxy lives in the real store now"; README
-says 18798 during the soak). Decision needed before the gate counts.
+Producer wiring (resolved): the fleet sampler/dashboard keep the production
+store (18790); the soak store is fed by the dedicated edge units
+(`lakshmi-edge-sampler`, `lakshmi-edge-rollup`). Installed and verified
+2026-09-14; LAKSHMI README updated to match.
 
 **Decision on pass:** promote the telemetry writer to the 9.1.5 fleet build
 (remove the dev-binary stand-in), keep the retention timer, and re-baseline
