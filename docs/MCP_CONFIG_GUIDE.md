@@ -11,7 +11,7 @@ is the supported surface.
 Install the release binary:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+curl -fsSL https://www.whitemagic.dev/install.sh?ref=mcp-guide | sh
 ```
 
 This installs `wm` to `~/.local/bin/wm` with SHA-256 checksum verification.
@@ -47,7 +47,16 @@ different location to use a specific store:
 
 ## One-command setup
 
-`wm setup` detects a known client's config, shows the exact change, and
+`wm connect` detects installed clients (config file or client config
+directory present) and wires every one of them in a single pass — dry run
+by default, `--write` applies with timestamped backups:
+
+```bash
+wm connect                  # wire every detected client (dry run)
+wm connect --write          # apply to all detected clients
+```
+
+`wm setup` handles one client at a time, shows the exact change, and
 (with `--write`) patches it in place after a timestamped backup:
 
 ```bash

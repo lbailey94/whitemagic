@@ -179,6 +179,16 @@ enum Commands {
         #[arg(long)]
         binary: Option<PathBuf>,
     },
+    /// Detect installed MCP clients and wire WhiteMagic into each in one
+    /// command (dry run by default; timestamped backups on --write)
+    Connect {
+        /// Apply changes to every detected client
+        #[arg(long)]
+        write: bool,
+        /// Path written into client configs (default: this executable)
+        #[arg(long)]
+        binary: Option<PathBuf>,
+    },
     /// Update operations (notify-only; GitHub Releases are canonical)
     Update {
         #[command(subcommand)]
@@ -1104,7 +1114,8 @@ fn main() -> anyhow::Result<()> {
                     println!("  wm serve --profile curated");
                     println!();
                     println!("Wire an MCP client:");
-                    println!("  wm setup");
+                    println!("  wm connect            # wire every detected client");
+                    println!("  wm setup              # list clients / per-client setup");
                 }
             }
         }
@@ -1189,6 +1200,9 @@ fn main() -> anyhow::Result<()> {
                         exe.display()
                     );
                     println!(
+                        "Tip: run 'wm connect --write' to configure every detected client in one command."
+                    );
+                    println!(
                         "Contract: explicit routes are the contract — the wm meta-tool takes route=\"...\" for dependable behavior."
                     );
                 }
@@ -1230,6 +1244,47 @@ fn main() -> anyhow::Result<()> {
                     }
                 },
             }
+        }
+        Commands::Connect { write, binary } => {
+            let exe = match binary {
+                Some(p) => p,
+                None => std::env::current_exe()?,
+            };
+            println!("=== WhiteMagic Connect ===");
+            println!("Scanning for installed MCP clients (config or config dir present)...");
+            println!("binary:  {}", exe.display());
+            println!();
+            let outcomes = wm_mcp::setup::connect(&exe, write);
+            if outcomes.is_empty() {
+                println!("No installed clients detected.");
+                println!("Run 'wm setup' to see every supported client and its config path.");
+            } else {
+                for o in &outcomes {
+                    let detail = match &o.action {
+                        wm_mcp::setup::ConnectAction::Configured => {
+                            "already configured".to_string()
+                        }
+                        wm_mcp::setup::ConnectAction::Written => "configured".to_string(),
+                        wm_mcp::setup::ConnectAction::Proposed => {
+                            "found — re-run with --write to configure".to_string()
+                        }
+                        wm_mcp::setup::ConnectAction::Failed(e) => format!("write failed: {e}"),
+                    };
+                    println!("  {:<9} {:<16} {detail}", o.id, o.label);
+                    if let Some(b) = &o.backup {
+                        println!("             backup: {}", b.display());
+                    }
+                }
+                println!();
+                if write {
+                    println!("Restart the configured clients, then run 'wm selftest'.");
+                } else {
+                    println!("Dry run — no files changed. Re-run 'wm connect --write' to apply.");
+                }
+            }
+            println!(
+                "Contract: explicit routes are the contract — call the wm meta-tool with route=\"...\" for dependable behavior."
+            );
         }
         Commands::Update { action } => match action {
             UpdateAction::Check {

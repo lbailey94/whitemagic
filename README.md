@@ -61,7 +61,7 @@ Or use the install script (resolves the latest release and verifies the
 checksum automatically):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+curl -fsSL https://www.whitemagic.dev/install.sh?ref=readme | sh
 ```
 
 ### Other channels

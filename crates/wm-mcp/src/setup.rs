@@ -682,6 +682,80 @@ pub fn write(spec: &ClientSpec, exe: &Path) -> anyhow::Result<(String, Option<Pa
     }
 }
 
+/// What `connect` did (or would do) for one detected client.
+#[derive(Debug, Clone)]
+pub enum ConnectAction {
+    /// Client is installed and already references whitemagic.
+    Configured,
+    /// Client config was patched (write mode).
+    Written,
+    /// Client is installed; dry run only proposed the change.
+    Proposed,
+    /// Client is installed but the write failed.
+    Failed(String),
+}
+
+/// One detected client and the outcome for it.
+#[derive(Debug, Clone)]
+pub struct ConnectOutcome {
+    pub id: &'static str,
+    pub label: &'static str,
+    pub action: ConnectAction,
+    pub backup: Option<PathBuf>,
+}
+
+/// A client counts as installed when its config file exists or its config
+/// directory does (the app has written something there at least once).
+#[must_use]
+pub fn installed(spec: &ClientSpec) -> bool {
+    spec.config_path.exists()
+        || spec
+            .config_path
+            .parent()
+            .is_some_and(std::path::Path::exists)
+}
+
+/// True when the config already references whitemagic.
+#[must_use]
+pub fn configured(spec: &ClientSpec) -> bool {
+    std::fs::read_to_string(&spec.config_path).is_ok_and(|t| t.contains("whitemagic"))
+}
+
+/// Wire every detected client that is not already configured.
+///
+/// Dry run (`apply == false`) never touches a file; apply mode uses the
+/// same backup + read-back path as `wm setup <client> --write`.
+#[must_use]
+pub fn connect(exe: &Path, apply: bool) -> Vec<ConnectOutcome> {
+    connect_with(&specs(), exe, apply)
+}
+
+/// Testable core of [`connect`] with an explicit spec list.
+#[must_use]
+pub fn connect_with(list: &[ClientSpec], exe: &Path, apply: bool) -> Vec<ConnectOutcome> {
+    list.iter()
+        .filter(|spec| installed(spec))
+        .map(|spec| {
+            let outcome = |action, backup| ConnectOutcome {
+                id: spec.id,
+                label: spec.label,
+                action,
+                backup,
+            };
+            if configured(spec) {
+                return outcome(ConnectAction::Configured, None);
+            }
+            if !apply {
+                return outcome(ConnectAction::Proposed, None);
+            }
+            match write(spec, exe) {
+                Ok((_, backup)) => outcome(ConnectAction::Written, backup),
+                Err(e) => outcome(ConnectAction::Failed(e.to_string()), None),
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -712,6 +786,34 @@ mod tests {
         let codex = specs.iter().find(|s| s.id == "codex").unwrap();
         let snippet = proposal(codex, exe);
         assert!(snippet.contains("[mcp_servers.whitemagic]"));
+    }
+
+    #[test]
+    fn connect_wires_detected_clients_only() {
+        let tmp = tempfile::tempdir().unwrap();
+        let installed_path = tmp.path().join("a/mcp.json");
+        std::fs::create_dir_all(installed_path.parent().unwrap()).unwrap();
+        std::fs::write(&installed_path, r#"{"mcpServers":{}}"#).unwrap();
+        let missing = tmp.path().join("missing/mcp.json");
+        let list = vec![
+            spec(Kind::McpServersJson, installed_path.clone()),
+            spec(Kind::McpServersJson, missing),
+        ];
+        let exe = Path::new("/opt/wm");
+
+        let dry = connect_with(&list, exe, false);
+        assert_eq!(dry.len(), 1, "only the installed client is a target");
+        assert!(matches!(dry[0].action, ConnectAction::Proposed));
+
+        let written = connect_with(&list, exe, true);
+        assert!(matches!(written[0].action, ConnectAction::Written));
+        assert!(written[0].backup.as_ref().unwrap().exists());
+        let v: Value =
+            serde_json::from_str(&std::fs::read_to_string(&installed_path).unwrap()).unwrap();
+        assert_eq!(v["mcpServers"]["whitemagic"]["command"], "/opt/wm");
+
+        let again = connect_with(&list, exe, false);
+        assert!(matches!(again[0].action, ConnectAction::Configured));
     }
 
     #[test]
