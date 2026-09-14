@@ -13,6 +13,11 @@
 # Site + Hub README get printed reminders (site is a separate repo; Hub
 # README via API needs HUB_TOKEN in the environment).
 #
+# Ordering: the release commit is pushed first, CI on that commit is watched
+# to green, and only then is the signed tag created and pushed — release.yml
+# publishes on tag push, so tagging before the gate would make a red CI
+# unable to prevent publication. --skip-ci-wait overrides the gate loudly.
+#
 # Conventions kept:
 #   - workspace version = npm package version = server.json version
 #   - image tags: vX.Y.Z + major tag (X) flipped to latest
@@ -81,14 +86,42 @@ else
   SIGNED_TAG=0
 fi
 if $DRY_RUN; then
+  echo "[dry-run] wait for CI on the release commit (gh run watch); abort before tagging if red"
   if [ "$SIGNED_TAG" = "1" ]; then
     echo "[dry-run] git tag -s v$VERSION -m 'WhiteMagic v$VERSION' (signed)"
   else
     echo "[dry-run] git tag -a v$VERSION -m 'WhiteMagic v$VERSION' (UNSIGNED —"
     echo "[dry-run]   configure user.signingkey for source provenance)"
   fi
-  echo "[dry-run] git push origin v$VERSION; wait for CI"
+  echo "[dry-run] git push origin v$VERSION (release.yml builds + publishes)"
 else
+  # Pre-tag CI gate. CI runs on the main push from the bump stage; watch that
+  # run BEFORE the tag exists. release.yml publishes on tag push, so a red CI
+  # discovered after tagging cannot prevent publication (the v9.1.5 incident:
+  # release.sh aborted at its post-tag CI gate while the release was already
+  # out). Nothing is tagged until this commit is green.
+  if $SKIP_CI_WAIT; then
+    echo "WARN: --skip-ci-wait — tagging $(git rev-parse --short HEAD) without a CI gate."
+  else
+    RELEASE_SHA=$(git rev-parse HEAD)
+    echo "waiting for CI on $RELEASE_SHA before tagging (nothing tagged yet)..."
+    RUN_ID=""
+    for _ in $(seq 1 20); do
+      RUN_ID=$(gh run list --workflow CI --commit "$RELEASE_SHA" --limit 1 \
+        --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null || true)
+      [ -n "$RUN_ID" ] && break
+      sleep 6
+    done
+    if [ -z "$RUN_ID" ]; then
+      echo "ERROR: no CI run found for $RELEASE_SHA after 120s — aborting before the tag."
+      echo "       (commit not pushed? Actions outage? override with --skip-ci-wait)"
+      exit 1
+    fi
+    gh run watch "$RUN_ID" --exit-status \
+      || { echo "CI FAILED on $RELEASE_SHA — aborting before the tag; nothing published"; exit 1; }
+    echo "CI green on $RELEASE_SHA."
+  fi
+
   # `git tag -s` can exit 0 while silently creating an UNSIGNED tag when the
   # signer fails (observed 2026-09-14: agent refused operation). Verify a
   # signature block actually landed; fall back loudly if not.
@@ -111,12 +144,6 @@ else
     git tag -a "v$VERSION" -m "WhiteMagic v$VERSION"
   fi
   git push origin "v$VERSION"
-fi
-if ! $SKIP_CI_WAIT && ! $DRY_RUN; then
-  echo "waiting for CI on tag push (gh run watch — Ctrl-C to skip waiting and continue)"
-  sleep 15
-  RUN_ID=$(gh run list --workflow CI --limit 1 --json databaseId --jq '.[0].databaseId')
-  gh run watch "$RUN_ID" --exit-status || { echo "CI FAILED — aborting release"; exit 1; }
 fi
 
 # ── build assets + GitHub release ────────────────────────────────────────
