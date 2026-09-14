@@ -7,8 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 9.1.6 (in progress)
 
+### Security
+- **Sandbox executor deadline (Landlock v1)**: the scoped-thread pathway now enforces `WM_DISPATCH_TIMEOUT_MS` inside the confined thread — a timed-out tool future is dropped and reported, mirroring the normal dispatch path; `with_timeout` overrides per executor and timeouts are counted.
+- **`sandbox.set_limits` input validation**: all six fields are validated before any is applied; wrong-typed, negative, or out-of-range values are rejected with the field named (no silent `u32` truncation, no partial application). Behavior tests cover acceptance, atomic rejection, and effective write/spawn/network budget enforcement.
+
 ### Preservation & verification
 - Readonly inspection is proven non-mutating at byte level: `wm doctor` on a live store leaves LMDB, the Tantivy index and every store file untouched (new bin test `doctor_readonly_inspection_preserves_store_and_index`), and a strict read-only open of a pre-cold store leaves `data.mdb` and the directory listing unchanged when it refuses (strengthened `ensure_schema_completes_a_pre_cold_store`).
+
+### Governance & safety
+- **Destructive ops now honor explicit operator intent:** `confirm: true` bypasses the eco-mode brain-wave availability restriction (Alpha/Theta/Delta) and the Dharma strict-mode brain-wave arm for destructive tools — a confirmed action is deliberate, not autonomous. The stressed-homeostasis arm (health < 0.3) stays absolute and is never bypassed. `confirm` is resolved at the top of the dispatch pipeline so every gate sees it; the delete-confirm audit is unchanged.
+- **Yama write budgets:** healthy default `max_writes_per_minute` raised 60 → 120, and health-scaled budgets now have floors (writes ≥ 10, spawns ≥ 2, network ≥ 5) clamped to the configured maximum — batch workflows (ingest, session imports) are no longer starved on low-health stores, while explicitly stricter configs (Secure compartments) keep their tighter budgets.
+- `claims.add` / `claims.resolve` declare the ledger write in their `EffectRow` — the tools/list `readOnlyHint` annotation and write-budget accounting now treat them as writes; read-only claims actions (status/list/calibration) stay read-only.
+
+### Routing
+- NLU routing gains `session.continuity` and `session.record` profiles, decisive phrase routes ("where were we", "what did we decide last", "continue from", "pick up where", "where did we leave off") and a `resume` prefix route — resume intentions now land on `session.continuity` instead of `gnosis`/`session.recall` (verified live at confidence 1.0; classifier regression tests cover 5 phrasings).
+
+### Release gates
+- New `scripts/curated_surface_gate.py`: self-contained pass/fail gate over the public curated surface (59 routes + destructive confirm gating + transaction rollback flow + NLU routing). Stress-aware: governance blocks under system load report SKIP, never FAIL. Exit code 0 = gate green.
 
 ## [9.1.5] — 2026-09-14 (agent-first onboarding, telemetry retention, signed releases)
 
