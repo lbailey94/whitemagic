@@ -180,7 +180,9 @@ explicit routes:
   a holder; for a hand-written entry, add `--readonly` or stop the daemon.
 - **Writes refused at "conservative dispatch blocks writes"**: the self-model
   confidence dipped below 0.5 (host load / cold history). Reads still work;
-  retry when load settles. `WM_HOMEOSTASIS_FROZEN=1` does not cover this gate.
+  retry when load settles. Deterministic runs (e2e, smoke, benchmarks) pin it
+  with `WM_HOMEOSTASIS_FROZEN=1` or `WM_SELFMODEL_FROZEN=1` — the pin keeps
+  metric recording off, so confidence stays at its healthy 0.5 default.
 - **Unknown tool errors**: the curated profile only exposes the memory/session
   surface. Use `wm(route="tools.list")` to see what is available.
 - **Verify the install**: run `wm doctor --store <path>` and

@@ -463,7 +463,7 @@ impl DispatchPipeline {
             // Block write operations when confidence is low — can't trust side effects
             if !tool.effects().writes.is_empty() {
                 return Err(CoreError::Governance(format!(
-                    "tool '{}' requires write access but self-model confidence is {:.2} (minimum {:.2}) — conservative dispatch blocks writes",
+                    "tool '{}' requires write access but self-model confidence is {:.2} (minimum {:.2}) — conservative dispatch blocks writes; this is load-sensitive, retry when the host settles (deterministic runs can pin WM_HOMEOSTASIS_FROZEN=1)",
                     tool.name(),
                     ctx.self_model_confidence,
                     CONFIDENCE_THRESHOLD

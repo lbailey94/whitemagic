@@ -2764,6 +2764,28 @@ impl McpServer {
             )
     }
 
+    /// Parse a freeze env value (`1`/`true`).
+    fn frozen_env(value: Option<&str>) -> bool {
+        matches!(value, Some("1" | "true"))
+    }
+
+    /// Whether self-model metric recording is pinned for deterministic runs.
+    ///
+    /// Pinned runs keep `SelfModel::confidence()` at its healthy default
+    /// (0.5, no metrics), so host load cannot push it below the 0.5
+    /// conservative-dispatch threshold and veto every write. That veto is
+    /// load-sensitive by design (2026-09-14: a fresh store at load ~2.7
+    /// refused `memory.create`/`telemetry.record` at confidence 0.49), and
+    /// `WM_HOMEOSTASIS_FROZEN=1` did not cover it — the spawned-binary
+    /// e2e/smoke pin now covers both gates.
+    ///
+    /// Deliberately env-only (no `cfg!(test)`): unit tests must keep
+    /// exercising the real metric-recording path.
+    fn self_model_frozen() -> bool {
+        Self::frozen_env(std::env::var("WM_HOMEOSTASIS_FROZEN").ok().as_deref())
+            || Self::frozen_env(std::env::var("WM_SELFMODEL_FROZEN").ok().as_deref())
+    }
+
     /// Sample the current hardware state and update the Dharma gate's homeostasis.
     /// Should be called periodically (e.g., on each MCP request or timer tick).
     pub fn refresh_homeostasis(&self) {
@@ -2779,6 +2801,9 @@ impl McpServer {
     /// Should be called on each MCP request to keep the self-model's
     /// metric history up to date for forecasting.
     pub fn refresh_self_model(&self) {
+        if Self::self_model_frozen() {
+            return;
+        }
         let hv = self.substrate.sample();
         if let Ok(model) = self.self_model.lock() {
             model.record(wm_selfmodel::MetricKind::CpuLoad, hv.cpu_load);
@@ -3692,10 +3717,13 @@ impl McpServer {
         };
 
         // Record dispatch metrics into self-model for future forecasting
-        if let Ok(model) = self.self_model.lock() {
-            model.record(wm_selfmodel::MetricKind::Latency, dispatch_latency);
-            let error_rate = if success { 0.0 } else { 1.0 };
-            model.record(wm_selfmodel::MetricKind::ErrorRate, error_rate);
+        // (skipped under the freeze pin: no metrics keeps confidence at 0.5).
+        if !Self::self_model_frozen() {
+            if let Ok(model) = self.self_model.lock() {
+                model.record(wm_selfmodel::MetricKind::Latency, dispatch_latency);
+                let error_rate = if success { 0.0 } else { 1.0 };
+                model.record(wm_selfmodel::MetricKind::ErrorRate, error_rate);
+            }
         }
 
         // Citta heartbeat — post-dispatch consciousness update
@@ -4242,6 +4270,23 @@ mod tests {
     use super::*;
     use crate::input_validation::MAX_PARAMS_SIZE;
     use std::sync::Arc;
+
+    #[test]
+    fn frozen_env_accepts_the_documented_pins_only() {
+        for on in ["1", "true"] {
+            assert!(
+                McpServer::frozen_env(Some(on)),
+                "{on:?} must pin the self-model"
+            );
+        }
+        for off in ["0", "false", "yes", "", "TRUE"] {
+            assert!(
+                !McpServer::frozen_env(Some(off)),
+                "{off:?} must not pin the self-model"
+            );
+        }
+        assert!(!McpServer::frozen_env(None));
+    }
 
     #[test]
     fn http_head_parsing_extracts_method_path_and_length() {
