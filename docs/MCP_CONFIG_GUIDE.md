@@ -111,6 +111,12 @@ and a worked example: [`MULTI_PROJECT_MEMORY.md`](MULTI_PROJECT_MEMORY.md).
 
 When another process (e.g. `wm daemon`) owns the store, add `--readonly`:
 
+`wm setup` / `wm connect` detect this for you: if the default store's search
+writer is already held by a running `wm serve`/`wm daemon`, the entry they
+write carries `--readonly` and the command prints why. A free store keeps the
+writable server, and re-running either command self-heals the direction
+(backup first).
+
 ```json
 {
   "mcpServers": {
@@ -170,7 +176,11 @@ explicit routes:
   and ignores notifications (fixed in 5.8.0). Update the binary and restart
   the client.
 - **LockBusy on startup**: another process owns the store's search index.
-  Use `--readonly`, or stop the daemon.
+  `wm setup` / `wm connect` write `--readonly` automatically when they detect
+  a holder; for a hand-written entry, add `--readonly` or stop the daemon.
+- **Writes refused at "conservative dispatch blocks writes"**: the self-model
+  confidence dipped below 0.5 (host load / cold history). Reads still work;
+  retry when load settles. `WM_HOMEOSTASIS_FROZEN=1` does not cover this gate.
 - **Unknown tool errors**: the curated profile only exposes the memory/session
   surface. Use `wm(route="tools.list")` to see what is available.
 - **Verify the install**: run `wm doctor --store <path>` and
