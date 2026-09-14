@@ -1,6 +1,6 @@
 # Hosted recall deploy kit — one sitting from a fresh Hetzner box
 
-**Target:** CCX23 (€17/mo, per `docs/hetzner/SETUP.md`), Ubuntu 24.04.
+**Target:** CAX21 (€10.49 + €0.50 IPv4 ≈ €10.99/mo, per `docs/hetzner/SETUP.md`), Ubuntu 24.04. Verify live stock before ordering — the Cost-Optimized line showed "currently unavailable" on 2026-09-14.
 **Result:** `https://mcp.whitemagic.dev/mcp` serving read-only WhiteMagic
 recall behind API-key auth, with the Smithery static server card live and
 the x402 metered lane designed in (sidecar flag).
