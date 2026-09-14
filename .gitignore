@@ -172,6 +172,7 @@ wm-leases.json
 /docs/INGEST_COEXISTENCE.md
 /docs/PRICING_ETHICS.md
 /docs/TRUST_TIER_PRICING_SKETCH_*.md
+/docs/HONEST_GAPS_*.md
 /docs/VALKYRIE_LORA_RECIPE.md
 /docs/lineage/
 /crates/wm-memory/examples/

@@ -30,6 +30,7 @@ FORBIDDEN_PATHS=(
     "docs/INGEST_COEXISTENCE.md"
     "docs/PRICING_ETHICS.md"
     "docs/TRUST_TIER_PRICING_SKETCH_"
+    "docs/HONEST_GAPS_"
     "docs/VOICE_TONE_GUIDE.md"
     "docs/WEB_RESEARCH_BACKENDS.md"
     "docs/MEMORY_TYPOLOGY_V8.md"

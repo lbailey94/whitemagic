@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Curated catalog trimmed to the 9-tool lifecycle surface; tool annotations, `outputSchema`, and `structuredContent` on the server surface.
 - **Signed release tags**: `release.sh` creates a signed tag (`git tag -s`) when a signing key is configured and falls back to an annotated tag with a loud warning otherwise — source provenance alongside the signed release manifest, which remains the binary trust anchor.
 - Public-surface guard hardening: every private doc path is blocked at pre-push and by a dedicated `security.yml` CI job; the trust-tier pricing sketch is now private.
+- Release smoke gate: the curated smoke test pins a frozen homeostasis (load-independent, so stress-scaled AHIMSA vetoes cannot flake the release gate), verifies rollback against the real result id fields, and asserts `wm grimoire --json` readiness; a teach-surface contract test binds the grimoire vocabulary, `skill.md`, and the MCP instructions together.
 
 ## [9.1.4] — 2026-09-13 (lossless continuation, cold discovery, first-run UX, signed updates)
 
