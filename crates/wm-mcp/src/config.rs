@@ -353,6 +353,12 @@ impl WmConfig {
         Self::default_store_dir().join("config.toml")
     }
 
+    /// Default store root (public: store-contention preflight in `setup`).
+    #[must_use]
+    pub fn default_store_root() -> PathBuf {
+        Self::default_store_dir()
+    }
+
     /// Default store directory.
     ///
     /// - Windows: `%APPDATA%\whitemagic` (roaming), falling back to

@@ -254,6 +254,9 @@ fn agent_step(write: bool) -> Step {
             }
         }
     }
+    if crate::setup::read_only_note().is_some() {
+        parts.push("entries read-only (store held by a running serve/daemon)".to_string());
+    }
     step("agent", status, parts.join("; "), t)
 }
 

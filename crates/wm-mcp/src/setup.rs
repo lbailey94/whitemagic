@@ -89,8 +89,41 @@ pub fn find(id: &str) -> Option<ClientSpec> {
         .find(|s| s.id.eq_ignore_ascii_case(id.trim()))
 }
 
-const fn serve_args() -> [&'static str; 3] {
-    ["serve", "--profile", "curated"]
+/// True when another writable WhiteMagic process (a `wm serve` without
+/// `--readonly`, or `wm daemon`) already holds the default store's search
+/// writer. A second writable server fails at startup with Tantivy LockBusy;
+/// the documented doctrine (`docs/DAEMON_SERVE_COEXISTENCE.md`) is read-only
+/// alongside, with writes routed through the holder or the `wm` CLI.
+fn store_writer_present() -> bool {
+    !crate::store_busy::store_holders(&crate::config::WmConfig::default_store_root()).is_empty()
+}
+
+/// Serve args for a new client entry, given whether the store is held.
+fn serve_args_for(store_held: bool) -> Vec<&'static str> {
+    if store_held {
+        vec!["serve", "--profile", "curated", "--readonly"]
+    } else {
+        vec!["serve", "--profile", "curated"]
+    }
+}
+
+/// Serve args for this machine: `--readonly` when the store is already held,
+/// so the configured entry actually starts.
+fn serve_args() -> Vec<&'static str> {
+    serve_args_for(store_writer_present())
+}
+
+/// Disclosure for `wm connect` / `wm setup` when entries were configured
+/// read-only because another server holds the store.
+#[must_use]
+pub fn read_only_note() -> Option<String> {
+    store_writer_present().then(|| {
+        format!(
+            "a writable wm serve/daemon already holds {} — new client entries are \
+             read-only; route writes through that server or the wm CLI",
+            crate::config::WmConfig::default_store_root().display()
+        )
+    })
 }
 
 /// The standard `mcpServers` entry for this binary.
@@ -104,9 +137,11 @@ pub fn entry(exe: &Path) -> Value {
 
 /// The OpenCode JSONC `mcp.<name>` entry (command is an array).
 fn opencode_entry(exe: &Path) -> Value {
+    let mut command = vec![exe.display().to_string()];
+    command.extend(serve_args().into_iter().map(str::to_string));
     json!({
         "type": "local",
-        "command": [exe.display().to_string(), "serve", "--profile", "curated"],
+        "command": command,
         "enabled": true,
     })
 }
@@ -806,6 +841,31 @@ mod tests {
         let codex = specs.iter().find(|s| s.id == "codex").unwrap();
         let snippet = proposal(codex, exe);
         assert!(snippet.contains("[mcp_servers.whitemagic]"));
+    }
+
+    #[test]
+    fn held_store_switches_serve_args_to_readonly() {
+        assert_eq!(
+            serve_args_for(false),
+            ["serve", "--profile", "curated"],
+            "a free store gets a writable server"
+        );
+        assert_eq!(
+            serve_args_for(true),
+            ["serve", "--profile", "curated", "--readonly"],
+            "a held store gets a read-only server so the entry can start"
+        );
+
+        // The generated entries reflect whichever mode this machine is in and
+        // must stay parseable in both.
+        let exe = Path::new("/opt/wm");
+        let entry_args = entry(exe);
+        let args = entry_args["args"].as_array().unwrap();
+        assert_eq!(args[0], "serve");
+        assert!(args.iter().any(|a| a == "--profile"));
+        if store_writer_present() {
+            assert!(args.iter().any(|a| a == "--readonly"));
+        }
     }
 
     #[test]

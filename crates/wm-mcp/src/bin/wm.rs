@@ -1249,6 +1249,10 @@ fn main() -> anyhow::Result<()> {
                         println!("Proposed addition:");
                         println!("{}", wm_mcp::setup::proposal(&spec, &exe));
                         println!();
+                        if let Some(note) = wm_mcp::setup::read_only_note() {
+                            println!("Note: {note}");
+                            println!();
+                        }
                         if write {
                             let (msg, backup) = wm_mcp::setup::write(&spec, &exe)?;
                             println!("{msg}");
@@ -1297,6 +1301,10 @@ fn main() -> anyhow::Result<()> {
                     if let Some(b) = &o.backup {
                         println!("             backup: {}", b.display());
                     }
+                }
+                if let Some(note) = wm_mcp::setup::read_only_note() {
+                    println!();
+                    println!("Note: {note}");
                 }
                 println!();
                 if write {
