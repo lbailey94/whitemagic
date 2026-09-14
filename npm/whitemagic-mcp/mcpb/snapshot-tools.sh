@@ -6,7 +6,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 ver="${1:-$(python3 -c "import json;print(json.load(open('$here/../package.json'))['version'])")}"
-bin="${HOME}/.cache/whitemagic/bin/v${ver}/wm-linux-x86_64-musl"
+bin="${WM_BIN:-${HOME}/.cache/whitemagic/bin/v${ver}/wm-linux-x86_64-musl}"
 store="$(mktemp -d -p "${TMPDIR:-/tmp}" wm-snapshot-XXXXXX)"  # dotless path: sanitizer-friendly
 trap 'rm -rf "$store"' EXIT
 if [ ! -x "$bin" ]; then
@@ -34,7 +34,11 @@ clean = []
 for t in tools:
     desc = t.get("description", "").split(" Invoke with", 1)[0].strip()
     desc = re.sub(r"\s+(Mode|Scope): .*$", "", desc).strip()
-    clean.append({"name": t["name"], "description": desc, "inputSchema": t["inputSchema"]})
+    entry = {"name": t["name"], "description": desc, "inputSchema": t["inputSchema"]}
+    for key in ("title", "outputSchema", "annotations"):
+        if key in t:
+            entry[key] = t[key]
+    clean.append(entry)
 json.dump(clean, open(sys.argv[2], "w"), indent=2)
 open(sys.argv[2], "a").write("\n")
 print(f"snapshot: {len(clean)} tools -> {sys.argv[2]}")

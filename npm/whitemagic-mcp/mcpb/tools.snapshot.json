@@ -18,6 +18,19 @@
         }
       },
       "type": "object"
+    },
+    "title": "WhiteMagic memory and continuity meta-tool",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "The dispatched tool's result envelope; fields vary by route.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "WhiteMagic memory and continuity meta-tool"
     }
   },
   {
@@ -61,6 +74,19 @@
         "content"
       ],
       "type": "object"
+    },
+    "title": "Create memory",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Create memory"
     }
   },
   {
@@ -109,6 +135,19 @@
         "query"
       ],
       "type": "object"
+    },
+    "title": "Search memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Search memories"
     }
   },
   {
@@ -129,6 +168,19 @@
         "id"
       ],
       "type": "object"
+    },
+    "title": "Read memory",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Read memory"
     }
   },
   {
@@ -158,6 +210,19 @@
       },
       "required": [],
       "type": "object"
+    },
+    "title": "List memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "List memories"
     }
   },
   {
@@ -206,6 +271,19 @@
         "query"
       ],
       "type": "object"
+    },
+    "title": "Hybrid recall",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Hybrid recall"
     }
   },
   {
@@ -242,6 +320,19 @@
         "content"
       ],
       "type": "object"
+    },
+    "title": "Record a session turn",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Record a session turn"
     }
   },
   {
@@ -268,6 +359,19 @@
       },
       "required": [],
       "type": "object"
+    },
+    "title": "Recall session continuity",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Recall session continuity"
     }
   },
   {
@@ -286,6 +390,19 @@
       },
       "required": [],
       "type": "object"
+    },
+    "title": "Start or resume a session",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Start or resume a session"
     }
   }
 ]

@@ -3062,6 +3062,30 @@ impl McpServer {
         }
     }
 
+    /// Discovery annotations for the lifecycle catalog: (title, read_only,
+    /// destructive, idempotent). openWorld is false for every entry — the
+    /// server is local by construction. `wm` is marked destructive because it
+    /// can route to destructive tools with explicit confirmation.
+    fn catalog_annotations(name: &str) -> (&'static str, bool, bool, bool) {
+        match name {
+            "wm" => (
+                "WhiteMagic memory and continuity meta-tool",
+                false,
+                true,
+                false,
+            ),
+            "memory.create" => ("Create memory", false, false, false),
+            "memory.search" => ("Search memories", true, false, true),
+            "memory.read" => ("Read memory", true, false, true),
+            "memory.list" => ("List memories", true, false, true),
+            "memory.hybrid_recall" => ("Hybrid recall", true, false, true),
+            "session.start" => ("Start or resume a session", false, false, false),
+            "session.record" => ("Record a session turn", false, false, false),
+            "session.continuity" => ("Recall session continuity", true, false, true),
+            _ => ("WhiteMagic tool", false, false, false),
+        }
+    }
+
     /// Handle `tools/list` — `wm` meta-tool plus the discrete lifecycle catalog.
     ///
     /// The `wm` meta-tool is the single entry point for MCP clients. It routes
@@ -3112,8 +3136,10 @@ impl McpServer {
                 "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Say 'list tools' to enumerate the curated surface.",
                 self.profile_name, tool_count, mode_hint, scope
             );
+            let (wm_title, wm_ro, wm_destructive, wm_idem) = Self::catalog_annotations("wm");
             tools.push(json!({
                 "name": wm.name(),
+                "title": wm_title,
                 "description": description,
                 "inputSchema": {
                     "type": "object",
@@ -3131,6 +3157,18 @@ impl McpServer {
                             "description": "Arguments to pass through to the target tool.",
                         },
                     },
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "description": "The dispatched tool's result envelope; fields vary by route.",
+                    "additionalProperties": true,
+                },
+                "annotations": {
+                    "title": wm_title,
+                    "readOnlyHint": wm_ro,
+                    "destructiveHint": wm_destructive,
+                    "idempotentHint": wm_idem,
+                    "openWorldHint": false,
                 },
             }));
         }
@@ -3311,10 +3349,24 @@ impl McpServer {
                 } else {
                     desc
                 };
+                let (title, read_only, destructive, idempotent) = Self::catalog_annotations(alias);
                 tools.push(json!({
                     "name": alias,
+                    "title": title,
                     "description": final_desc,
                     "inputSchema": final_schema,
+                    "outputSchema": {
+                        "type": "object",
+                        "description": "Result envelope for this tool; fields vary by operation.",
+                        "additionalProperties": true,
+                    },
+                    "annotations": {
+                        "title": title,
+                        "readOnlyHint": read_only,
+                        "destructiveHint": destructive,
+                        "idempotentHint": idempotent,
+                        "openWorldHint": false,
+                    },
                 }));
             }
         }
@@ -4144,12 +4196,19 @@ impl McpServer {
             }
         }
 
-        Ok(json!({
-            "content": [{
-                "type": "text",
-                "text": serde_json::to_string_pretty(&result).unwrap_or_else(|_| result.to_string()),
-            }],
-        }))
+        let text = serde_json::to_string_pretty(&result).unwrap_or_else(|_| result.to_string());
+        // Tools declare an object outputSchema, so return structuredContent
+        // alongside the text block (MCP output-schema contract).
+        if result.is_object() {
+            Ok(json!({
+                "content": [{ "type": "text", "text": text }],
+                "structuredContent": result,
+            }))
+        } else {
+            Ok(json!({
+                "content": [{ "type": "text", "text": text }],
+            }))
+        }
     }
 }
 
@@ -4747,6 +4806,24 @@ mod tests {
             Some("memory.hybrid_recall")
         );
         assert!(tools[0]["inputSchema"].is_object());
+        // Discovery metadata: every catalog entry carries annotations and
+        // an outputSchema (Smithery/Glama tool-quality surface).
+        for t in &tools {
+            let ann = t["annotations"].as_object().expect("annotations object");
+            assert!(ann["readOnlyHint"].is_boolean(), "readOnlyHint: {t}");
+            assert!(ann["destructiveHint"].is_boolean(), "destructiveHint: {t}");
+            assert!(ann["idempotentHint"].is_boolean(), "idempotentHint: {t}");
+            assert!(ann["openWorldHint"].is_boolean(), "openWorldHint: {t}");
+            assert!(ann["title"].is_string(), "title: {t}");
+            assert!(t["outputSchema"].is_object(), "outputSchema: {t}");
+            assert!(t["title"].is_string(), "top-level title: {t}");
+        }
+        let search = tools.iter().find(|t| t["name"] == "memory.search").unwrap();
+        assert_eq!(search["annotations"]["readOnlyHint"], true);
+        assert_eq!(search["annotations"]["destructiveHint"], false);
+        assert_eq!(tools[0]["annotations"]["destructiveHint"], true);
+        assert_eq!(tools[0]["annotations"]["openWorldHint"], false);
+
         let description = tools[0]["description"].as_str().unwrap();
         assert!(
             description.contains("meta-tool") && description.contains("tool surface"),
