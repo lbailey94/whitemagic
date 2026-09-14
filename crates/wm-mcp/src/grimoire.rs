@@ -357,6 +357,7 @@ fn memory_step(store: &Path) -> Step {
 /// The core habits an arriving agent should internalize. The contract is
 /// explicit `route=` dispatch; these are the mappings worth teaching first.
 pub const VOCABULARY: &[(&str, &str)] = &[
+    ("begin / resume a work session", "session.start"),
     ("remember / record X", "memory.create"),
     ("find X / what do you remember about X", "memory.search"),
     ("what did we decide about X", "memory.search"),
@@ -529,6 +530,60 @@ mod tests {
                 .iter()
                 .any(|(_, route)| *route == "memory.search")
         );
+    }
+
+    #[test]
+    fn teach_surfaces_agree_on_the_vocabulary() {
+        // The MCP initialize instructions live in this crate, so a
+        // source-level assertion is stable (and packaging-safe).
+        let server_src = include_str!("server.rs");
+        assert!(
+            server_src.contains("wm grimoire"),
+            "MCP instructions must point at wm grimoire"
+        );
+
+        // skill.md is outside the crate package; read it from the workspace
+        // at test time and skip gracefully if it is not there (packaged).
+        let skill_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../skill.md");
+        let Ok(skill) = std::fs::read_to_string(&skill_path) else {
+            eprintln!("skip: skill.md not present at {}", skill_path.display());
+            return;
+        };
+        assert!(
+            skill.contains("wm grimoire"),
+            "skill.md must point at wm grimoire"
+        );
+
+        let section = skill
+            .split("## Vocabulary")
+            .nth(1)
+            .and_then(|rest| rest.split("\n## ").next())
+            .expect("skill.md must carry a Vocabulary section");
+
+        // Every route the grimoire teaches must be visible in the table...
+        for (_, route) in VOCABULARY {
+            let primary = route.split_whitespace().next().unwrap_or(route);
+            assert!(
+                section.contains(primary),
+                "skill.md vocabulary misses {primary} ({route})"
+            );
+        }
+        // ...and every backticked route in the table must be taught by the
+        // grimoire (no stale rows).
+        for line in section.lines().filter(|l| l.trim_start().starts_with('|')) {
+            for token in line.split('`').skip(1).step_by(2) {
+                let token = token.trim();
+                // Only route-shaped tokens (dotted tool names) are contracts;
+                // prose fragments like `galaxy` or `route=` are not.
+                if token.is_empty() || !token.contains('.') {
+                    continue;
+                }
+                assert!(
+                    VOCABULARY.iter().any(|(_, route)| route.contains(token)),
+                    "skill.md teaches '{token}' but the grimoire VOCABULARY does not"
+                );
+            }
+        }
     }
 
     #[tokio::test]
