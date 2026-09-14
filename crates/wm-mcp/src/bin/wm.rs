@@ -140,6 +140,9 @@ enum Commands {
         /// Machine-readable report
         #[arg(long)]
         json: bool,
+        /// Show subsystem diagnostics (quiet by default, like quickstart)
+        #[arg(long)]
+        verbose: bool,
     },
     /// Human-facing health summary (store, counts, index, backup, update)
     Status {
@@ -149,6 +152,20 @@ enum Commands {
         /// Machine-readable report
         #[arg(long)]
         json: bool,
+    },
+    /// Guided first-run: inspect host, verify substrate, check release,
+    /// configure the agent, calibrate memory, teach the vocabulary, and
+    /// demonstrate restart continuity (agent-first; `--json` for machines)
+    Grimoire {
+        /// Machine-readable report
+        #[arg(long)]
+        json: bool,
+        /// Apply configuration changes (patch detected client configs)
+        #[arg(long)]
+        write: bool,
+        /// Show subsystem diagnostics (quiet by default, like quickstart)
+        #[arg(long)]
+        verbose: bool,
     },
     /// Configure an MCP client to use WhiteMagic (JSON, JSONC, and TOML
     /// configs can be patched; the change is always shown first)
@@ -731,6 +748,40 @@ fn load_verified_manifest(
     Ok((manifest, status))
 }
 
+/// A manifest fetch failure is an ordinary state for a local-first tool:
+/// report it calmly (structured under `--json`, exit 2) instead of
+/// surfacing a transport error chain. Signature failures stay loud.
+fn is_fetch_failure(err: &anyhow::Error) -> bool {
+    err.chain()
+        .any(|cause| cause.to_string().contains("manifest fetch failed"))
+}
+
+fn offline_update_message(current: &str) -> String {
+    format!(
+        "Could not check for updates: network unavailable.\n\n\
+         WhiteMagic {current} remains unchanged.\n\n\
+         Try again later."
+    )
+}
+
+fn offline_update_exit(json: bool, current: &str, detail: &str) -> ! {
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "status": "offline",
+                "current": current,
+                "detail": detail,
+                "hint": "try again later; WhiteMagic is unchanged",
+            }))
+            .unwrap_or_default()
+        );
+    } else {
+        println!("{}", offline_update_message(current));
+    }
+    std::process::exit(2);
+}
+
 #[derive(Subcommand)]
 enum UpdateAction {
     /// Check for a newer signed release (notify-only, no installation)
@@ -770,8 +821,12 @@ fn main() -> anyhow::Result<()> {
     // exports RUST_LOG=warn otherwise turns a working demo into a wall of
     // subsystem warnings — first-run feedback, 2026-09-13).
     let log_filter = match &cli.command {
-        Commands::Quickstart { verbose: false } => tracing_subscriber::EnvFilter::new("error"),
-        Commands::Quickstart { verbose: true } => {
+        Commands::Quickstart { verbose: false }
+        | Commands::Selftest { verbose: false, .. }
+        | Commands::Grimoire { verbose: false, .. } => tracing_subscriber::EnvFilter::new("error"),
+        Commands::Quickstart { verbose: true }
+        | Commands::Selftest { verbose: true, .. }
+        | Commands::Grimoire { verbose: true, .. } => {
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
         }
@@ -1006,7 +1061,7 @@ fn main() -> anyhow::Result<()> {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async { run_quickstart().await })?;
         }
-        Commands::Selftest { json } => {
+        Commands::Selftest { json, .. } => {
             let rt = tokio::runtime::Runtime::new()?;
             let report = rt.block_on(async { wm_mcp::selftest::run().await })?;
             if json {
@@ -1040,8 +1095,65 @@ fn main() -> anyhow::Result<()> {
                 }
                 if !report.store_ok {
                     println!();
-                    println!("No store yet — run 'wm quickstart' to create one.");
+                    println!("No working store yet — this is a fresh install.");
+                    println!();
+                    println!("Verify WhiteMagic (throwaway demo store):");
+                    println!("  wm quickstart");
+                    println!();
+                    println!("Initialize normal use (your store is created on first run):");
+                    println!("  wm serve --profile curated");
+                    println!();
+                    println!("Wire an MCP client:");
+                    println!("  wm setup");
                 }
+            }
+        }
+        Commands::Grimoire { json, write, .. } => {
+            let rt = tokio::runtime::Runtime::new()?;
+            let report = rt.block_on(async {
+                wm_mcp::grimoire::run(wm_mcp::grimoire::Options {
+                    store: default_store_path(),
+                    write,
+                    check_release: true,
+                })
+                .await
+            })?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                use wm_mcp::grimoire::StepStatus;
+                println!("=== WhiteMagic Grimoire ===");
+                println!();
+                for s in &report.steps {
+                    println!(
+                        "  {} {:<11} {}",
+                        match s.status {
+                            StepStatus::Ok => "[OK]  ",
+                            StepStatus::Warn => "[WARN]",
+                            StepStatus::Skip => "[SKIP]",
+                            StepStatus::Fail => "[FAIL]",
+                        },
+                        s.name,
+                        s.detail
+                    );
+                }
+                println!();
+                println!("Core habits (explicit route= is the contract):");
+                for (phrase, route) in wm_mcp::grimoire::VOCABULARY {
+                    println!("  {phrase:<42} {route}");
+                }
+                println!();
+                if report.ready {
+                    println!("WhiteMagic ready. Elapsed: {} ms.", report.total_ms);
+                } else {
+                    println!(
+                        "WhiteMagic needs attention (see [FAIL] steps). Elapsed: {} ms.",
+                        report.total_ms
+                    );
+                }
+            }
+            if !report.ready {
+                std::process::exit(1);
             }
         }
         Commands::Setup {
@@ -1127,7 +1239,13 @@ fn main() -> anyhow::Result<()> {
             } => {
                 use wm_mcp::update;
                 let url = manifest_url.unwrap_or_else(|| update::DEFAULT_MANIFEST_URL.to_string());
-                let (manifest, status) = load_verified_manifest(&url, insecure_checksum)?;
+                let (manifest, status) = match load_verified_manifest(&url, insecure_checksum) {
+                    Ok(v) => v,
+                    Err(e) if is_fetch_failure(&e) => {
+                        offline_update_exit(json, env!("CARGO_PKG_VERSION"), &e.to_string())
+                    }
+                    Err(e) => return Err(e),
+                };
                 let current = env!("CARGO_PKG_VERSION");
                 let available = manifest.version != current;
                 let exe = std::env::current_exe()?;
@@ -1196,7 +1314,13 @@ fn main() -> anyhow::Result<()> {
             } => {
                 use wm_mcp::update;
                 let url = manifest_url.unwrap_or_else(|| update::DEFAULT_MANIFEST_URL.to_string());
-                let (manifest, status) = load_verified_manifest(&url, insecure_checksum)?;
+                let (manifest, status) = match load_verified_manifest(&url, insecure_checksum) {
+                    Ok(v) => v,
+                    Err(e) if is_fetch_failure(&e) => {
+                        offline_update_exit(false, env!("CARGO_PKG_VERSION"), &e.to_string())
+                    }
+                    Err(e) => return Err(e),
+                };
                 let exe = std::env::current_exe()?;
                 let installed_via = update::detect_installed_via(&exe);
                 if installed_via != "release-binary" {
@@ -4156,5 +4280,28 @@ mod readonly_startup_tests {
 
         assert!(lmdb.join("data.mdb").is_file());
         assert!(lmdb.join("tantivy/meta.json").is_file());
+    }
+}
+
+#[cfg(test)]
+mod offline_update_tests {
+    use super::*;
+
+    #[test]
+    fn fetch_failures_are_classified_as_offline() {
+        let fetch = anyhow::anyhow!("manifest fetch failed: connection refused");
+        assert!(is_fetch_failure(&fetch));
+        let sig =
+            anyhow::anyhow!("release manifest signature is INVALID — do not use this release");
+        assert!(!is_fetch_failure(&sig));
+    }
+
+    #[test]
+    fn offline_message_is_calm_and_keeps_the_install() {
+        let msg = offline_update_message("9.1.4");
+        assert!(msg.contains("network unavailable"));
+        assert!(msg.contains("WhiteMagic 9.1.4 remains unchanged"));
+        assert!(!msg.to_lowercase().contains("backtrace"));
+        assert!(!msg.contains("Error:"));
     }
 }

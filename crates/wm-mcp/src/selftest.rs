@@ -59,7 +59,7 @@ impl Report {
     }
 }
 
-async fn call(server: &mut McpServer, id: u64, route: &str, args: Value) -> Value {
+pub(crate) async fn call(server: &mut McpServer, id: u64, route: &str, args: Value) -> Value {
     let req = json!({
         "jsonrpc": "2.0", "id": id, "method": "tools/call",
         "params": {"name": "wm", "arguments": {"route": route, "args": args}}
@@ -73,7 +73,7 @@ async fn call(server: &mut McpServer, id: u64, route: &str, args: Value) -> Valu
     serde_json::from_str(text).unwrap_or_else(|_| json!({}))
 }
 
-async fn handshake(server: &mut McpServer) -> Value {
+pub(crate) async fn handshake(server: &mut McpServer) -> Value {
     let req = json!({
         "jsonrpc": "2.0", "id": 1, "method": "initialize",
         "params": {"protocolVersion": "2024-11-05", "capabilities": {},

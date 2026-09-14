@@ -2944,6 +2944,7 @@ impl McpServer {
             "4. Use explicit route= dispatch for important operations so behavior is dependable.\n",
             "5. At the end of a session, record a short summary turn, then wm(route=\"session.checkpoint\").\n",
             "6. Discover the available surface with wm(route=\"tools.list\").\n",
+            "7. First-run onboarding: the CLI's `wm grimoire` walks host, substrate, release, agent config, memory, vocabulary, and restart continuity in one pass (`--json` for machines, `--write` to patch detected client configs).\n",
             "Privacy and backup: memory is stored locally under your store directory and is not encrypted — never record credentials or secrets. Back up the whole store directory regularly; privacy flags exclude memories from responses but do not encrypt them."
         ));
         if self.readonly {

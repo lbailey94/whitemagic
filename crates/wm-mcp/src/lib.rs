@@ -15,6 +15,7 @@ pub mod config;
 pub mod cyberbrain;
 pub mod daemon;
 pub mod gateway;
+pub mod grimoire;
 pub mod ingest;
 pub mod input_validation;
 pub mod landlock_sandbox;
