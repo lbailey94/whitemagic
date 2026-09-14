@@ -300,14 +300,24 @@ pub struct ClaimsAliasTool {
     name: &'static str,
     action: &'static str,
     inner: ClaimsTool,
+    effects: EffectRow,
 }
 
 impl ClaimsAliasTool {
     pub fn new(name: &'static str, action: &'static str, ledger: Arc<Mutex<ClaimsLedger>>) -> Self {
+        // add/resolve mutate the ledger (persisted to claims_ledger.json) —
+        // they must declare the write so annotations/readOnlyHint and the
+        // write budget treat them as writes (9.1.6). Read actions stay
+        // read-only over the simulation galaxy.
+        let mut effects = EffectRow::read_only(vec![Resource::Galaxy("simulation".into())]);
+        if action == "add" || action == "resolve" {
+            effects.writes = vec![Resource::Galaxy("claims".into())];
+        }
         Self {
             name,
             action,
             inner: ClaimsTool::new(ledger),
+            effects,
         }
     }
 }
@@ -321,7 +331,7 @@ impl Tool for ClaimsAliasTool {
         self.inner.gana()
     }
     fn effects(&self) -> &EffectRow {
-        self.inner.effects()
+        &self.effects
     }
     fn input_schema(&self) -> Value {
         match self.action {
@@ -661,6 +671,22 @@ mod tests {
                 "claims.calibration"
             ]
         );
+
+        // 9.1.6: add/resolve declare the ledger write (annotations and the
+        // write budget treat them as writes); read actions stay read-only.
+        let writes = |t: &ClaimsAliasTool| !t.effects().writes.is_empty();
+        let add = aliases.iter().find(|t| t.name() == "claims.add").unwrap();
+        let resolve = aliases
+            .iter()
+            .find(|t| t.name() == "claims.resolve")
+            .unwrap();
+        let status = aliases
+            .iter()
+            .find(|t| t.name() == "claims.status")
+            .unwrap();
+        assert!(writes(add), "claims.add must declare a write");
+        assert!(writes(resolve), "claims.resolve must declare a write");
+        assert!(!writes(status), "claims.status must stay read-only");
 
         // claims.calibration works without an action argument.
         let calibration = aliases
