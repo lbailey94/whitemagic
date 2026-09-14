@@ -97,6 +97,15 @@ case "$SUITE" in
         add rerank-alpha05     memory.episodic_search embedder-rerankonly   "--rerank --rerank-alpha 0.5"
         add rerank-alpha07     memory.episodic_search embedder-rerankonly   "--rerank --rerank-alpha 0.7"
         add rerank-alpha09     memory.episodic_search embedder-rerankonly   "--rerank --rerank-alpha 0.9"
+        # alpha >= 2.0 = protected top-K: membership of the deterministic
+        # top-limit set is fixed, so recall@limit cannot regress — only
+        # ordering (R@1/MRR) can change. The blending alphas above can drop
+        # correct items out of top-K (observed: R@10 100% -> ~79%).
+        add rerank-protected20 memory.episodic_search embedder-rerankonly   "--rerank --rerank-alpha 2.0"
+        # NOTE: episodic.rs caps the rerank pool at 50 candidates
+        # (rerank_pool = limit.max(candidate_limit).min(50)), so these
+        # candidate-limit runs exercise the same pool as the default today.
+        # Kept for when the cap lifts.
         add rerank-cand200     memory.episodic_search embedder-rerankonly   "--rerank --rerank-alpha 0.7 --candidate-limit 200"
         add rerank-cand500     memory.episodic_search embedder-rerankonly   "--rerank --rerank-alpha 0.7 --candidate-limit 500"
         ;;
