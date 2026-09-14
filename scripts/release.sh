@@ -89,11 +89,25 @@ if $DRY_RUN; then
   fi
   echo "[dry-run] git push origin v$VERSION; wait for CI"
 else
+  # `git tag -s` can exit 0 while silently creating an UNSIGNED tag when the
+  # signer fails (observed 2026-09-14: agent refused operation). Verify a
+  # signature block actually landed; fall back loudly if not.
+  tag_ok=0
   if [ "$SIGNED_TAG" = "1" ]; then
-    git tag -s "v$VERSION" -m "WhiteMagic v$VERSION"
+    git tag -s "v$VERSION" -m "WhiteMagic v$VERSION" || true
+    if git cat-file -p "v$VERSION" 2>/dev/null | grep -qE 'BEGIN (SSH|PGP|X509) SIGNATURE'; then
+      echo "tag v$VERSION signed."
+      tag_ok=1
+    else
+      echo "WARN: tag signing failed (key or agent unavailable) — removing the"
+      echo "      unsigned tag and falling back to an annotated tag."
+      git tag -d "v$VERSION" >/dev/null
+    fi
   else
     echo "WARN: no signing key configured — creating an annotated but UNSIGNED tag."
     echo "      Set user.signingkey (and gpg.format for SSH signing) before the next release."
+  fi
+  if [ "$tag_ok" = "0" ]; then
     git tag -a "v$VERSION" -m "WhiteMagic v$VERSION"
   fi
   git push origin "v$VERSION"
