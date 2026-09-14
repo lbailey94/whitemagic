@@ -150,12 +150,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Configure an MCP client to use WhiteMagic (standard JSON configs can
-    /// be patched; the change is always shown first)
+    /// Configure an MCP client to use WhiteMagic (JSON, JSONC, and TOML
+    /// configs can be patched; the change is always shown first)
     Setup {
         /// Client id: opencode | claude | cursor | windsurf | codex (omit to list)
         client: Option<String>,
-        /// Apply the change (standard JSON configs only; timestamped backup first)
+        /// Apply the change (JSON/JSONC/TOML; timestamped backup first)
         #[arg(long)]
         write: bool,
         /// Path written into the client config (default: this executable)
@@ -1076,6 +1076,9 @@ fn main() -> anyhow::Result<()> {
                         "Usage: wm setup <client> [--write]  (binary: {})",
                         exe.display()
                     );
+                    println!(
+                        "Contract: explicit routes are the contract — the wm meta-tool takes route=\"...\" for dependable behavior."
+                    );
                 }
                 Some(id) => match wm_mcp::setup::find(&id) {
                     None => anyhow::bail!(
@@ -1098,20 +1101,18 @@ fn main() -> anyhow::Result<()> {
                         println!("{}", wm_mcp::setup::proposal(&spec, &exe));
                         println!();
                         if write {
-                            let (msg, backup) = wm_mcp::setup::write_mcp_servers_json(&spec, &exe)?;
+                            let (msg, backup) = wm_mcp::setup::write(&spec, &exe)?;
                             println!("{msg}");
                             if let Some(b) = backup {
                                 println!("backup:  {}", b.display());
                             }
                             println!("Next: restart {} and run 'wm selftest'.", spec.label);
-                        } else if spec.kind == wm_mcp::setup::Kind::McpServersJson {
                             println!(
-                                "Dry run. Re-run with --write to patch this config (backup made first)."
+                                "Contract: explicit routes are the contract — call the wm meta-tool with route=\"...\" for dependable behavior."
                             );
                         } else {
                             println!(
-                                "This format is print-only in v1 — paste the snippet above, then restart {}.",
-                                spec.label
+                                "Dry run. Re-run with --write to patch this config (timestamped backup first)."
                             );
                         }
                     }

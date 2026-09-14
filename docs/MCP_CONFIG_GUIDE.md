@@ -45,6 +45,31 @@ different location to use a specific store:
 }
 ```
 
+## One-command setup
+
+`wm setup` detects a known client's config, shows the exact change, and
+(with `--write`) patches it in place after a timestamped backup:
+
+```bash
+wm setup                    # list detected clients and config paths
+wm setup opencode --write   # OpenCode (opencode.jsonc; comments preserved)
+wm setup codex --write      # Codex CLI (config.toml; comments preserved)
+wm setup claude --write     # Claude Desktop — also: cursor, windsurf (JSON)
+```
+
+Supported formats: `mcpServers` JSON, OpenCode JSONC, and Codex TOML. Every
+write is read back and re-parsed before the command returns, and a config
+that cannot be parsed back is never written. Re-running is idempotent
+(`already configured`).
+
+Onboarding contract: **explicit routes are the contract** — call the single
+`wm` meta-tool with an explicit `route=...` for dependable behavior, rather
+than relying on natural-language routing:
+
+- `wm(route="memory.search", args={"query": "..."})`
+- `wm(route="session.continuity", args={"n": 5})`
+- `wm(route="tools.list")` — discover the curated surface and schemas
+
 ## One store per project (recommended for multi-project users)
 
 If you work across several projects, give each project its own store and

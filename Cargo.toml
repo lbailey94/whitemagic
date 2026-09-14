@@ -92,6 +92,8 @@ ureq = { version = "3", features = ["json"] }
 regex = "1"
 # TOML parsing (redteam manifest)
 toml = "0.8"
+# TOML document editing (client config writes preserve comments)
+toml_edit = "0.22"
 # Socket options (multicast join for Sangha transport)
 socket2 = "0.6"
 # Kernel FS sandbox (Landlock, Linux-only; target-gated in wm-mcp)
