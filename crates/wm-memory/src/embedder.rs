@@ -18,6 +18,7 @@
 //! | `WM_EMBEDDER_MODEL` | `local` | Model name for the embeddings API |
 //! | `WM_EMBEDDER_DIM` | `384` | Expected embedding dimensionality |
 //! | `WM_EMBEDDER_TIMEOUT_MS` | `30000` | Request timeout in milliseconds |
+//! | `WM_EMBEDDER_HTTP_CONCURRENCY` | `4` | Concurrent requests for `HttpEmbedder::embed_batch` (split across the server's slots) |
 
 #![allow(clippy::cast_possible_wrap)]
 
@@ -190,6 +191,20 @@ pub struct HttpEmbedder {
     config: EmbedderConfig,
     agent: ureq::Agent,
     available: bool,
+    /// Maximum concurrent requests used to fan a batch across the embed
+    /// server's slots. 1 disables fan-out (single request, legacy shape).
+    concurrency: usize,
+}
+
+/// Default fan-out concurrency (llama-server runs 4 slots by default).
+const HTTP_EMBED_CONCURRENCY_DEFAULT: usize = 4;
+
+fn http_concurrency_from_env() -> usize {
+    std::env::var("WM_EMBEDDER_HTTP_CONCURRENCY")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|n| *n >= 1)
+        .unwrap_or(HTTP_EMBED_CONCURRENCY_DEFAULT)
 }
 
 impl HttpEmbedder {
@@ -204,7 +219,15 @@ impl HttpEmbedder {
             config,
             agent,
             available: true,
+            concurrency: http_concurrency_from_env(),
         }
+    }
+
+    /// Override the fan-out concurrency (1 = single request).
+    #[must_use]
+    pub fn with_concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency.max(1);
+        self
     }
 
     /// Create from environment variables, if configured.
@@ -222,6 +245,36 @@ impl HttpEmbedder {
         } else {
             format!("{}/v1/embeddings", self.config.endpoint)
         }
+    }
+
+    /// POST one OpenAI-compatible embeddings request for a contiguous chunk.
+    fn embed_chunk(&self, url: &str, prepared: &[&str]) -> Result<Vec<Vec<f32>>> {
+        let request = EmbeddingsRequest {
+            model: &self.config.model,
+            input: prepared,
+        };
+
+        let response = self
+            .agent
+            .post(url)
+            .header("Content-Type", "application/json")
+            .send_json(&request)
+            .map_err(|e| CoreError::Memory(format!("Embedder HTTP error: {e}")))?;
+
+        let embed_resp: EmbeddingsResponse = response
+            .into_body()
+            .read_json()
+            .map_err(|e| CoreError::Memory(format!("Embedder response parse error: {e}")))?;
+
+        let vectors: Vec<Vec<f32>> = embed_resp.data.into_iter().map(|d| d.embedding).collect();
+        if vectors.len() != prepared.len() {
+            return Err(CoreError::Memory(format!(
+                "Embedder returned {} vectors for {} inputs",
+                vectors.len(),
+                prepared.len()
+            )));
+        }
+        Ok(vectors)
     }
 }
 
@@ -269,26 +322,46 @@ impl Embedder for HttpEmbedder {
             );
         }
 
-        // OpenAI-compatible embeddings request
-        let request = EmbeddingsRequest {
-            model: &self.config.model,
-            input: &prepared,
-        };
+        // Fan the batch across the server's slots: llama-server processes
+        // the inputs of one request ~sequentially (~1s per 512-token input
+        // measured on the fleet bge-small), so a 50-candidate rerank batch
+        // in a single request costs ~45s. Concurrent requests let the
+        // server's slots work in parallel (measured ~2-4x wall-clock win).
+        // Order is preserved by collecting chunk results in input order.
+        let concurrency = self.concurrency.min(prepared.len());
+        if concurrency <= 1 {
+            let vectors = self.embed_chunk(&url, &prepared)?;
+            if vectors.len() != texts.len() {
+                return Err(CoreError::Memory(format!(
+                    "Embedder returned {} vectors for {} inputs",
+                    vectors.len(),
+                    texts.len()
+                )));
+            }
+            return Ok(vectors);
+        }
 
-        let response = self
-            .agent
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .send_json(&request)
-            .map_err(|e| CoreError::Memory(format!("Embedder HTTP error: {e}")))?;
+        let chunk_size = prepared.len().div_ceil(concurrency);
+        let mut results: Vec<Result<Vec<Vec<f32>>>> = Vec::with_capacity(concurrency);
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = prepared
+                .chunks(chunk_size)
+                .map(|chunk| {
+                    let url = &url;
+                    scope.spawn(move || self.embed_chunk(url, chunk))
+                })
+                .collect();
+            for handle in handles {
+                results.push(handle.join().unwrap_or_else(|_| {
+                    Err(CoreError::Memory("embedder fan-out thread panicked".into()))
+                }));
+            }
+        });
 
-        let embed_resp: EmbeddingsResponse = response
-            .into_body()
-            .read_json()
-            .map_err(|e| CoreError::Memory(format!("Embedder response parse error: {e}")))?;
-
-        let vectors: Vec<Vec<f32>> = embed_resp.data.into_iter().map(|d| d.embedding).collect();
-
+        let mut vectors = Vec::with_capacity(texts.len());
+        for result in results {
+            vectors.extend(result?);
+        }
         if vectors.len() != texts.len() {
             return Err(CoreError::Memory(format!(
                 "Embedder returned {} vectors for {} inputs",
@@ -988,6 +1061,93 @@ mod tests {
         };
         let embedder = HttpEmbedder::new(config);
         assert!(embedder.is_available());
+    }
+
+    #[test]
+    fn http_embedder_fanout_preserves_order() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+
+        let texts = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta"];
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        // Mock llama-server: answer each request with one vector per input,
+        // tagged with the input's index in `texts` so the client's final
+        // order can be checked across chunks.
+        let server = std::thread::spawn(move || {
+            let mut served = 0usize;
+            let deadline = std::time::Instant::now() + Duration::from_secs(10);
+            while served < 3 && std::time::Instant::now() < deadline {
+                listener.set_nonblocking(true).unwrap();
+                let Ok((mut stream, _)) = listener.accept() else {
+                    std::thread::sleep(Duration::from_millis(5));
+                    continue;
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 2048];
+                let header_end = loop {
+                    let n = stream.read(&mut tmp).unwrap();
+                    buf.extend_from_slice(&tmp[..n]);
+                    if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                        break pos + 4;
+                    }
+                };
+                let headers = String::from_utf8_lossy(&buf[..header_end]).to_ascii_lowercase();
+                let content_length: usize = headers
+                    .lines()
+                    .find_map(|l| l.strip_prefix("content-length:"))
+                    .and_then(|v| v.trim().parse().ok())
+                    .unwrap_or(0);
+                while buf.len() < header_end + content_length {
+                    let n = stream.read(&mut tmp).unwrap();
+                    buf.extend_from_slice(&tmp[..n]);
+                }
+                let req: serde_json::Value =
+                    serde_json::from_slice(&buf[header_end..header_end + content_length]).unwrap();
+                let inputs = req["input"].as_array().unwrap();
+                let data: Vec<_> = inputs
+                    .iter()
+                    .map(|v| {
+                        let s = v.as_str().unwrap();
+                        let idx = texts.iter().position(|t| *t == s).unwrap();
+                        serde_json::json!({"embedding": [idx as f32]})
+                    })
+                    .collect();
+                let body = serde_json::json!({"data": data}).to_string();
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream.write_all(response.as_bytes()).unwrap();
+                served += 1;
+            }
+            served
+        });
+
+        let embedder = HttpEmbedder::new(EmbedderConfig {
+            endpoint: format!("http://{addr}"),
+            model: "mock".into(),
+            dimension: 1,
+            timeout: Duration::from_secs(10),
+        })
+        .with_concurrency(3);
+
+        let vectors = embedder.embed_batch(&texts).unwrap();
+        assert_eq!(vectors.len(), texts.len());
+        for (i, v) in vectors.iter().enumerate() {
+            assert_eq!(v, &vec![i as f32], "fan-out must preserve input order");
+        }
+        assert_eq!(
+            server.join().unwrap(),
+            3,
+            "7 inputs at concurrency 3 must fan out into 3 requests"
+        );
     }
 
     #[test]
