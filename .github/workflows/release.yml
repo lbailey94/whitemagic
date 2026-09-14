@@ -143,6 +143,23 @@ jobs:
 
       - uses: sigstore/cosign-installer@v3
 
+      - name: Fetch CI facts (tests, benchmarks) — best effort
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p ci-facts
+          tests_run=$(gh run list --workflow CI --commit "$GITHUB_SHA" --status completed \
+            --limit 1 --json databaseId,conclusion --jq '.[0] | select(.conclusion=="success") | .databaseId')
+          if [ -n "$tests_run" ]; then
+            gh run download "$tests_run" -n tests-summary -D ci-facts/tests || true
+          fi
+          bench_run=$(gh run list --workflow Benchmarks --commit "$GITHUB_SHA" --status completed \
+            --limit 1 --json databaseId,conclusion --jq '.[0] | select(.conclusion=="success") | .databaseId')
+          if [ -n "$bench_run" ]; then
+            gh run download "$bench_run" -n benchmark-results -D ci-facts/bench || true
+          fi
+          find ci-facts -type f | sort || true
+
       - name: Sign release artifacts (keyless, Sigstore)
         run: |
           for f in artifacts/wm-*; do
@@ -155,8 +172,15 @@ jobs:
         env:
           RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
         run: |
+          FACT_ARGS=""
+          if [ -f ci-facts/tests/tests.json ]; then
+            FACT_ARGS="$FACT_ARGS --tests-json ci-facts/tests/tests.json"
+          fi
+          if [ -f ci-facts/bench/benchmark_results.txt ]; then
+            FACT_ARGS="$FACT_ARGS --benchmarks-file ci-facts/bench/benchmark_results.txt"
+          fi
           python3 scripts/release_manifest.py --version "${GITHUB_REF_NAME#v}" \
-            --out artifacts/release-manifest.json
+            --out artifacts/release-manifest.json $FACT_ARGS
           if [ -n "${RELEASE_SIGNING_KEY:-}" ]; then
             printf '%s' "$RELEASE_SIGNING_KEY" > /tmp/wm-release-key.pem
             openssl pkeyutl -sign -rawin -inkey /tmp/wm-release-key.pem \

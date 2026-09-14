@@ -42,7 +42,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --all-targets
+      - name: Run tests (capture counts)
+        run: |
+          set -o pipefail
+          cargo test --all-targets 2>&1 | tee /tmp/cargo-test.log
+      - name: Write test counts (release facts)
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re
+          log = pathlib.Path('/tmp/cargo-test.log')
+          passed = failed = ignored = 0
+          if log.is_file():
+              for m in re.finditer(
+                  r'test result: \w+\. (\d+) passed; (\d+) failed; (\d+) ignored',
+                  log.read_text(),
+              ):
+                  passed += int(m.group(1)); failed += int(m.group(2)); ignored += int(m.group(3))
+          pathlib.Path('tests.json').write_text(json.dumps({
+              "passed": passed, "failed": failed, "ignored": ignored,
+              "source": "CI Linux: cargo test --all-targets",
+          }, indent=2) + "\n")
+          print(f"passed={passed} failed={failed} ignored={ignored}")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-summary
+          path: tests.json
+          if-no-files-found: warn
 
   smoke:
     timeout-minutes: 15
