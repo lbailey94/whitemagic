@@ -15,7 +15,8 @@ wm grimoire          # guided first-run (when present); --json for a machine-rea
 # builds without grimoire: use the step-by-step path below
 wm quickstart        # throwaway demo store — a decision survives a restart
 wm selftest --json   # 8 end-to-end invariants on a throwaway store
-wm setup             # list detected MCP clients; add --write to patch the config
+wm connect --write   # detect installed MCP clients and wire each (dry-run first: wm connect)
+wm setup             # per-client view: wm setup <client> [--write]
 ```
 
 `wm doctor` is the troubleshooting tool — run it when something misbehaves, not on a healthy fresh install.

@@ -209,50 +209,51 @@ fn release_step() -> Step {
 
 fn agent_step(write: bool) -> Step {
     let t = Instant::now();
-    let exe = std::env::current_exe().ok();
     let detected: Vec<_> = crate::setup::specs()
         .into_iter()
-        .filter(|s| s.config_path.exists())
+        .filter(crate::setup::installed)
         .collect();
 
     if detected.is_empty() {
         return step(
             "agent",
             StepStatus::Warn,
-            "no MCP client config detected — wire one with 'wm setup <client>'".to_string(),
+            "no MCP client config detected — wire one with 'wm connect --write' or 'wm setup <client>'"
+                .to_string(),
             t,
         );
     }
 
+    let Some(exe) = std::env::current_exe().ok() else {
+        return step(
+            "agent",
+            StepStatus::Warn,
+            "cannot resolve this binary for client wiring".to_string(),
+            t,
+        );
+    };
+
+    // Same wiring path as `wm connect` — one implementation, two doors.
+    let outcomes = crate::setup::connect_with(&detected, &exe, write);
     let mut parts = Vec::new();
     let mut status = StepStatus::Ok;
-    for spec in &detected {
-        let configured = std::fs::read_to_string(&spec.config_path)
-            .is_ok_and(|text| text.contains("whitemagic"));
-        if configured {
-            parts.push(format!("{}: configured", spec.id));
-            continue;
-        }
-        if write {
-            match exe.as_deref().map(|e| crate::setup::write(spec, e)) {
-                Some(Ok((msg, _backup))) => parts.push(format!("{}: {msg}", spec.id)),
-                Some(Err(e)) => {
-                    status = StepStatus::Warn;
-                    parts.push(format!("{}: write failed: {e}", spec.id));
-                }
-                None => {
-                    status = StepStatus::Warn;
-                    parts.push(format!("{}: cannot resolve this binary", spec.id));
-                }
+    for outcome in &outcomes {
+        match &outcome.action {
+            crate::setup::ConnectAction::Configured => {
+                parts.push(format!("{}: configured", outcome.id));
             }
-        } else {
-            parts.push(format!(
-                "{}: found — run 'wm setup {} --write'",
-                spec.id, spec.id
-            ));
+            crate::setup::ConnectAction::Written => {
+                parts.push(format!("{}: wired (backup saved)", outcome.id));
+            }
+            crate::setup::ConnectAction::Proposed => {
+                parts.push(format!("{}: found — run 'wm connect --write'", outcome.id));
+            }
+            crate::setup::ConnectAction::Failed(e) => {
+                status = StepStatus::Warn;
+                parts.push(format!("{}: write failed: {e}", outcome.id));
+            }
         }
     }
-
     step("agent", status, parts.join("; "), t)
 }
 
