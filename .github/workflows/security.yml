@@ -23,6 +23,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  public-surface:
+    name: public-surface guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/public_surface_check.sh
+
   # Ported concept from the v26 archives (og_whitemagic
   # .github/workflows/security-ci.yml: STRATA checkers + dependency audits).
   # The Rust-side equivalents: clippy (lint gate in ci.yml) + cargo-deny
