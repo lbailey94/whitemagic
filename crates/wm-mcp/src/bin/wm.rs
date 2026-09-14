@@ -2176,22 +2176,30 @@ fn run_restore(
                 store_path.display()
             );
         }
-        std::fs::remove_dir_all(store_path)?;
     }
     if let Some(parent) = store_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    copy_tree(&data_src, store_path, &mut Vec::new())?;
+    // Prepare on the target filesystem while the previous target remains intact.
+    // Restore is an offline operation: callers must exclude concurrent writers.
+    let parent = store_path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| std::path::Path::new("."));
+    let candidate = tempfile::Builder::new()
+        .prefix(".wm-restore-candidate-")
+        .tempdir_in(parent)?;
+    copy_tree(&data_src, candidate.path(), &mut Vec::new())?;
 
     // Older backups can be byte-exact yet lack named databases this build
     // expects (2026-09-14 drill: a 9.0.0 backup had no `cold_storage`).
     // Complete the schema in place before declaring the restore usable.
     // The LMDB environment lives in the store root's `lmdb/` subdirectory.
-    let lmdb_dir = store_path.join("lmdb");
+    let lmdb_dir = candidate.path().join("lmdb");
     let schema_path = if lmdb_dir.is_dir() {
         lmdb_dir
     } else {
-        store_path.to_path_buf()
+        candidate.path().to_path_buf()
     };
     match wm_memory::MemoryStore::ensure_schema(&schema_path) {
         Ok(created) if !created.is_empty() => println!(
@@ -2202,12 +2210,14 @@ fn run_restore(
         Ok(_) => {}
         Err(e) => {
             anyhow::bail!(
-                "Restored {} byte-exact, but schema completion failed: {e}. \
-                 The store is present; inspect it before use.",
+                "Restore candidate schema completion failed: {e}. \
+                 Existing target {} was not replaced.",
                 store_path.display()
             );
         }
     }
+
+    promote_restore_candidate(candidate.path(), store_path)?;
 
     println!(
         "Restored {} from {}",
@@ -2219,6 +2229,53 @@ fn run_restore(
         "If doctor reports index drift, run 'wm reindex --store {}'.",
         store_path.display()
     );
+    Ok(())
+}
+
+/// Offline same-filesystem promotion. The rollback directory is uniquely reserved;
+/// it is never auto-deleted while it contains the old target after an error.
+fn promote_restore_candidate(
+    candidate: &std::path::Path,
+    target: &std::path::Path,
+) -> anyhow::Result<()> {
+    promote_restore_candidate_with(candidate, target, |from, to| std::fs::rename(from, to))
+}
+
+fn promote_restore_candidate_with(
+    candidate: &std::path::Path,
+    target: &std::path::Path,
+    promote: impl FnOnce(&std::path::Path, &std::path::Path) -> std::io::Result<()>,
+) -> anyhow::Result<()> {
+    if !target.exists() {
+        return Ok(promote(candidate, target)?);
+    }
+    let parent = target
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| std::path::Path::new("."));
+    let rollback = tempfile::Builder::new()
+        .prefix(".wm-restore-rollback-")
+        .tempdir_in(parent)?;
+    let old = rollback.path().join("previous");
+    std::fs::rename(target, &old)?;
+    if let Err(error) = promote(candidate, target) {
+        if let Err(recovery) = std::fs::rename(&old, target) {
+            let retained = rollback.keep();
+            anyhow::bail!(
+                "Restore promotion failed: {error}; rollback failed: {recovery}. Previous target retained at {}",
+                retained.join("previous").display()
+            );
+        }
+        anyhow::bail!("Restore promotion failed: {error}; previous target restored unchanged.");
+    }
+    // Cleanup failure is not failed promotion: new target is usable, old retained.
+    if let Err(error) = std::fs::remove_dir_all(&old) {
+        let retained = rollback.keep();
+        eprintln!(
+            "WARN: restore promoted successfully; previous target cleanup failed: {error}; inspect {}",
+            retained.display()
+        );
+    }
     Ok(())
 }
 
@@ -4321,6 +4378,305 @@ fn run_brain_wave(store: Option<PathBuf>) {
     println!("Citta coherence: {:.3}", citta.vector.coherence());
     println!("Citta valence:   {:.3}", citta.vector.valence());
     println!("Heartbeats:      {}", citta.heartbeats());
+}
+
+#[cfg(test)]
+mod restore_preservation_tests {
+    use super::*;
+    use wm_memory::{Memory, MemoryStore};
+
+    fn backup_fixture(source: &std::path::Path, out: &std::path::Path) -> std::path::PathBuf {
+        run_backup(source, Some(out)).unwrap();
+        std::fs::read_dir(out)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path()
+    }
+
+    #[test]
+    fn forced_schema_failure_preserves_previous_target() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("target");
+        let store = MemoryStore::open_default(&target.join("lmdb")).unwrap();
+        let mut original = Memory::new(
+            wm_core::Galaxy::Codex,
+            "previous acknowledged original".into(),
+        );
+        original.metadata.id = uuid::Uuid::from_u128(0x901);
+        store.put(wm_core::Galaxy::Codex, &original).unwrap();
+        drop(store);
+        let before = std::fs::read(target.join("lmdb/data.mdb")).unwrap();
+        let backup = tmp.path().join("invalid-backup");
+        std::fs::create_dir_all(backup.join("data/lmdb")).unwrap();
+        let bytes = b"not an LMDB environment";
+        std::fs::write(backup.join("data/lmdb/data.mdb"), bytes).unwrap();
+        use sha2::Digest;
+        std::fs::write(
+            backup.join("SHA256SUMS"),
+            format!(
+                "{}  data/lmdb/data.mdb\n",
+                hex(&sha2::Sha256::digest(bytes))
+            ),
+        )
+        .unwrap();
+        assert!(run_restore(&backup, &target, true).is_err());
+        assert!(
+            std::fs::read(target.join("lmdb/data.mdb")).unwrap() == before,
+            "previous acknowledged LMDB changed after rejected restore"
+        );
+        let reopened = MemoryStore::open_default(&target.join("lmdb")).unwrap();
+        assert_eq!(
+            reopened
+                .get(wm_core::Galaxy::Codex, original.metadata.id)
+                .unwrap()
+                .unwrap()
+                .content,
+            original.content
+        );
+        assert!(!std::fs::read_dir(tmp.path()).unwrap().any(|e| {
+            e.unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".wm-restore-")
+        }));
+    }
+
+    #[test]
+    fn failed_promotion_rolls_back_previous_tree() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("target");
+        let candidate = tmp.path().join("candidate");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::create_dir(&candidate).unwrap();
+        std::fs::write(target.join("original"), "acknowledged").unwrap();
+        std::fs::write(candidate.join("new"), "replacement").unwrap();
+        let error = promote_restore_candidate_with(&candidate, &target, |_, _| {
+            Err(std::io::Error::other("synthetic promotion refusal"))
+        })
+        .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("previous target restored unchanged")
+        );
+        assert_eq!(
+            std::fs::read_to_string(target.join("original")).unwrap(),
+            "acknowledged"
+        );
+        assert!(!target.join("new").exists());
+        assert!(candidate.join("new").exists());
+    }
+
+    #[test]
+    fn failed_rollback_retains_previous_tree_and_reports_location() {
+        let tmp = tempfile::tempdir().unwrap();
+        let target = tmp.path().join("target");
+        let candidate = tmp.path().join("candidate");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::create_dir(&candidate).unwrap();
+        std::fs::write(target.join("original"), "acknowledged").unwrap();
+        let error = promote_restore_candidate_with(&candidate, &target, |_, to| {
+            std::fs::create_dir(to)?;
+            std::fs::write(to.join("synthetic-conflict"), "block rollback")?;
+            Err(std::io::Error::other("synthetic promotion refusal"))
+        })
+        .unwrap_err();
+        assert!(error.to_string().contains("rollback failed"));
+        assert!(!error.to_string().contains("restored unchanged"));
+        let retained = std::fs::read_dir(tmp.path())
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .find(|p| {
+                p.file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with(".wm-restore-rollback-")
+            })
+            .unwrap();
+        assert!(error.to_string().contains(&retained.display().to_string()));
+        assert_eq!(
+            std::fs::read_to_string(retained.join("previous/original")).unwrap(),
+            "acknowledged"
+        );
+    }
+
+    #[tokio::test]
+    async fn restore_compares_authoritative_records_revisions_associations_and_session_partition() {
+        let tmp = tempfile::tempdir().unwrap();
+        let source = tmp.path().join("source");
+        let target = tmp.path().join("target");
+        let store = std::sync::Arc::new(MemoryStore::open_default(&source.join("lmdb")).unwrap());
+        let mut original = Memory::new(
+            wm_core::Galaxy::Codex,
+            "orchidquasar original\n完整 🪷".into(),
+        );
+        original.metadata.id = uuid::Uuid::from_u128(0x902);
+        let mut private = Memory::new(wm_core::Galaxy::Codex, "private lotus source".into())
+            .with_privacy(true, true);
+        private.metadata.id = uuid::Uuid::from_u128(0x903);
+        store.put(wm_core::Galaxy::Codex, &original).unwrap();
+        store.put(wm_core::Galaxy::Codex, &private).unwrap();
+        let old = Memory::new(wm_core::Galaxy::Codex, "orchidquasar initial".into());
+        let intermediate = Memory::new(wm_core::Galaxy::Codex, "orchidquasar corrected".into());
+        for (old, new) in [
+            (
+                &old.metadata.content_hash,
+                &intermediate.metadata.content_hash,
+            ),
+            (
+                &intermediate.metadata.content_hash,
+                &original.metadata.content_hash,
+            ),
+        ] {
+            store
+                .record_revision(
+                    wm_core::Galaxy::Codex,
+                    original.metadata.id,
+                    old,
+                    new,
+                    Default::default(),
+                )
+                .unwrap();
+        }
+        let revisions = store
+            .revisions(wm_core::Galaxy::Codex, original.metadata.id)
+            .unwrap();
+        assert!(
+            wm_memory::revision::verify_chain(&revisions, &original.metadata.content_hash).valid
+        );
+        let assoc = wm_memory::Association::new(
+            original.metadata.id,
+            private.metadata.id,
+            wm_memory::LinkType::Related,
+            0.75,
+        );
+        wm_memory::AssociationStore::open(store.env())
+            .unwrap()
+            .put(store.env(), &assoc)
+            .unwrap();
+        use wm_core::episodic::{EpisodicKind, EpisodicRecord, Provenance, ProvenanceSource};
+        let sessions = [uuid::Uuid::from_u128(0x910), uuid::Uuid::from_u128(0x911)];
+        let mut records = Vec::new();
+        for (i, session) in sessions.into_iter().enumerate() {
+            let mut record = EpisodicRecord::new(
+                Some(session),
+                1,
+                EpisodicKind::UserStatement,
+                format!("session {i} byte exact 🪷"),
+                Provenance::new(ProvenanceSource::User),
+            );
+            record.id = uuid::Uuid::from_u128(0x920 + i as u128);
+            store.episodic().append(&record).unwrap();
+            records.push(record);
+        }
+        use wm_core::Tool;
+        use wm_tools::expansion::session_ops::{SessionRecordTool, SessionReplayTool};
+        let recorder = SessionRecordTool::new(store.clone());
+        let replay = SessionReplayTool::new(store.clone());
+        let mut expected_replays = Vec::new();
+        for session in sessions {
+            let mut start = Memory::new(wm_core::Galaxy::Sessions, serde_json::json!({"type": "session_start", "title": "synthetic restore session", "user": "fixture"}).to_string());
+            start.metadata.id = session;
+            start.metadata.tags = vec!["session".into(), "start".into()];
+            store.put(wm_core::Galaxy::Sessions, &start).unwrap();
+            recorder.call(&mut wm_core::Context::default(), serde_json::json!({"session_id": session.to_string(), "content": format!("original replay turn {session} 🪷"), "role": "user"})).await.unwrap();
+            expected_replays.push(
+                replay
+                    .call(
+                        &mut wm_core::Context::default(),
+                        serde_json::json!({"session_id": session.to_string(), "mode": "lossless"}),
+                    )
+                    .await
+                    .unwrap(),
+            );
+        }
+        drop(recorder);
+        drop(replay);
+        drop(store);
+        let backup_started = std::time::Instant::now();
+        let backup = backup_fixture(&source, &tmp.path().join("backups"));
+        println!(
+            "BATCH1_MEASURE backup_ms={:.3}",
+            backup_started.elapsed().as_secs_f64() * 1000.0
+        );
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("old-target"), "replace me").unwrap();
+        let restore_started = std::time::Instant::now();
+        run_restore(&backup, &target, true).unwrap();
+        println!(
+            "BATCH1_MEASURE restore_ms={:.3}",
+            restore_started.elapsed().as_secs_f64() * 1000.0
+        );
+        assert!(!target.join("old-target").exists());
+        let restored =
+            std::sync::Arc::new(MemoryStore::open_default(&target.join("lmdb")).unwrap());
+        for memory in [&original, &private] {
+            assert_eq!(
+                serde_json::to_value(
+                    restored
+                        .get(wm_core::Galaxy::Codex, memory.metadata.id)
+                        .unwrap()
+                        .unwrap()
+                )
+                .unwrap(),
+                serde_json::to_value(memory).unwrap()
+            );
+        }
+        assert_eq!(
+            restored
+                .revisions(wm_core::Galaxy::Codex, original.metadata.id)
+                .unwrap(),
+            revisions
+        );
+        let restored_assoc = wm_memory::AssociationStore::open(restored.env())
+            .unwrap()
+            .get(restored.env(), original.metadata.id, private.metadata.id)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(restored_assoc).unwrap(),
+            serde_json::to_value(assoc).unwrap()
+        );
+        for record in records {
+            let partition = restored.episodic().scan(record.session_id, 10).unwrap();
+            assert!(partition.iter().any(|item| item.id == record.id));
+            assert_eq!(
+                serde_json::to_value(partition.iter().find(|item| item.id == record.id).unwrap())
+                    .unwrap(),
+                serde_json::to_value(record).unwrap()
+            );
+        }
+        let replay = SessionReplayTool::new(restored.clone());
+        for (session, expected) in sessions.into_iter().zip(expected_replays) {
+            assert_eq!(
+                replay
+                    .call(
+                        &mut wm_core::Context::default(),
+                        serde_json::json!({"session_id": session.to_string(), "mode": "lossless"})
+                    )
+                    .await
+                    .unwrap(),
+                expected
+            );
+        }
+        let index_started = std::time::Instant::now();
+        std::fs::create_dir_all(target.join("lmdb/tantivy")).unwrap();
+        let search = wm_memory::SearchEngine::open(&target.join("lmdb/tantivy")).unwrap();
+        wm_memory::rebuild_index(&restored, &search, &[]).unwrap();
+        assert!(
+            search
+                .search("orchidquasar", 10)
+                .unwrap()
+                .iter()
+                .any(|r| r.memory_id == original.metadata.id.to_string())
+        );
+        println!(
+            "BATCH1_MEASURE index_and_search_ms={:.3}",
+            index_started.elapsed().as_secs_f64() * 1000.0
+        );
+    }
 }
 
 #[cfg(test)]
