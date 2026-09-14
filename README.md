@@ -82,6 +82,7 @@ Verify the installation and see the product work end to end:
 ```bash
 wm --version    # wm 9.1.4
 wm quickstart   # 30-second two-process continuity demo (isolated store)
+wm grimoire     # guided first-run: host, substrate, agent wiring, vocabulary, continuity
 ```
 
 `wm doctor` is a troubleshooting tool, not a setup step — run
@@ -92,7 +93,8 @@ wm quickstart   # 30-second two-process continuity demo (isolated store)
 ```bash
 wm status         # is WhiteMagic ready? (store, counts, index, last backup)
 wm selftest       # 5-second end-to-end invariant check (throwaway store)
-wm setup          # connect an MCP client (opencode, claude, cursor, windsurf, codex)
+wm connect        # wire every detected MCP client (dry run first; add --write)
+wm setup          # list clients / per-client setup (wm setup <client> --write)
 wm update check   # is a newer signed release available? (notify-only)
 ```
 
