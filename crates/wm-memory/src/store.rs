@@ -1784,6 +1784,20 @@ impl MemoryStore {
         limit: usize,
         max_scan: usize,
     ) -> Result<crate::cold_storage::ColdDiscoveryOutcome> {
+        self.find_cold_matching_eligible(terms, galaxy, limit, max_scan, |_| true)
+    }
+
+    /// Apply caller eligibility to verified payloads before consuming result
+    /// capacity. Rejected matches still consume the bounded scan budget.
+    pub fn find_cold_matching_eligible(
+        &self,
+        terms: &[String],
+        galaxy: Option<Galaxy>,
+        limit: usize,
+        max_scan: usize,
+        eligible: impl Fn(&Memory) -> bool,
+    ) -> Result<crate::cold_storage::ColdDiscoveryOutcome> {
+        use crate::cold_storage::ColdDiscoveryStop;
         let mut out = crate::cold_storage::ColdDiscoveryOutcome::default();
         if terms.is_empty() || limit == 0 || max_scan == 0 {
             return Ok(out);
@@ -1795,10 +1809,20 @@ impl MemoryStore {
         let mut cursor = tx
             .open_ro_cursor(self.cold_storage_db)
             .map_err(|e| CoreError::Memory(format!("LMDB open_ro_cursor failed: {e}")))?;
-        for (_key, val) in cursor.iter() {
-            if out.scanned >= max_scan || out.records.len() >= limit {
+        let mut iter = cursor.iter();
+        loop {
+            if out.scanned >= max_scan {
+                out.stop_reason = ColdDiscoveryStop::ScanLimit;
                 break;
             }
+            if out.records.len() >= limit {
+                out.stop_reason = ColdDiscoveryStop::ResultLimit;
+                break;
+            }
+            let Some((key, val)) = iter.next() else {
+                out.stop_reason = ColdDiscoveryStop::Exhausted;
+                break;
+            };
             out.scanned += 1;
             let record: crate::cold_storage::ColdRecord = if let Ok(r) = rmp_serde::from_slice(val)
             {
@@ -1827,7 +1851,8 @@ impl MemoryStore {
                 out.non_current_skipped += 1;
                 continue;
             }
-            let integrity_ok = mem.metadata.id == record.id
+            let integrity_ok = key == record.id.as_bytes()
+                && mem.metadata.id == record.id
                 && mem.metadata.galaxy == record.galaxy
                 && mem.metadata.content_hash == record.content_hash
                 && crate::content_hash(&mem.content) == record.content_hash;
@@ -1844,6 +1869,10 @@ impl MemoryStore {
                 continue;
             }
             out.matched += 1;
+            if !eligible(&mem) {
+                out.eligibility_skipped += 1;
+                continue;
+            }
             out.records.push(record);
         }
         Ok(out)
@@ -2030,6 +2059,27 @@ mod tests {
             .unwrap();
         assert_eq!(out_tamper.matched, 0);
         assert_eq!(out_tamper.integrity_rejected, 1);
+
+        // Even an internally consistent header/payload must not be accepted
+        // under another physical UUID key (which would break known-ID read).
+        store.delete_cold_record(rec.id).unwrap();
+        let wrong_key = uuid::Uuid::from_u128(741);
+        assert_ne!(wrong_key, rec.id);
+        let value = rmp_serde::to_vec_named(&rec).unwrap();
+        let mut tx = store.env.begin_rw_txn().unwrap();
+        tx.put(
+            store.cold_storage_db,
+            wrong_key.as_bytes(),
+            &value,
+            WriteFlags::default(),
+        )
+        .unwrap();
+        tx.commit().unwrap();
+        let wrong_key_out = store
+            .find_cold_matching(&["zxquniquecoldfact741".into()], None, 10, 100)
+            .unwrap();
+        assert!(wrong_key_out.records.is_empty());
+        assert_eq!(wrong_key_out.integrity_rejected, 1);
     }
 
     /// Substring filter (memory.query trap fix, 2026-08-29): literal

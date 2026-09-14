@@ -421,6 +421,17 @@ pub struct ColdQuery {
     pub limit: usize,
 }
 
+/// Why a bounded scan stopped. Exhaustion is established only by iterator end.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ColdDiscoveryStop {
+    #[default]
+    NotStarted,
+    Exhausted,
+    ScanLimit,
+    ResultLimit,
+}
+
 /// Outcome of a bounded cold-storage discovery scan.
 ///
 /// Discovery is opt-in and bounded: candidates are hydrated and authorized
@@ -428,6 +439,8 @@ pub struct ColdQuery {
 /// trusting stale index entries. No record is thawed or mutated.
 #[derive(Debug, Default, Clone)]
 pub struct ColdDiscoveryOutcome {
+    /// Actual termination boundary, not inferred from visit counters.
+    pub stop_reason: ColdDiscoveryStop,
     /// Cold records visited by the scan.
     pub scanned: usize,
     /// Records in the requested galaxy.
@@ -440,6 +453,8 @@ pub struct ColdDiscoveryOutcome {
     pub private_skipped: usize,
     /// Records skipped because their validity is not current (superseded).
     pub non_current_skipped: usize,
+    /// Visible text matches rejected by the caller's eligibility predicate.
+    pub eligibility_skipped: usize,
     /// Verified, visible matching records (caller decompresses for output).
     pub records: Vec<ColdRecord>,
 }

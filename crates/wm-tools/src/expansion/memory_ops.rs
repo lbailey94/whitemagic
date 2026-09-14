@@ -1006,7 +1006,7 @@ impl Tool for MemoryHybridRecallTool {
                 "min_score": num_prop("Absolute BM25 score floor"),
                 "min_score_ratio": num_prop("Relative floor: reject hits below this fraction of the top score"),
                 "min_trust": num_prop("Minimum source_trust (0-1): drop results below this trust floor"),
-                "include_cold": bool_prop("Opt-in cold-storage discovery: scan, hydrate and integrity-verify cold originals by content (bounded, no thaw)"),
+                "include_cold": bool_prop("Opt-in unranked cold recovery (no thaw). Trust/importance floors apply; BM25 floors do not apply to unscored recovery. Search content is scrubbed navigation capped at 8192 characters; read by id/galaxy for the exact original."),
                 "cold_scan_limit": int_prop("Maximum cold records to scan when include_cold is set (default 2048)"),
             }),
             &["query"],
@@ -1442,34 +1442,53 @@ impl Tool for MemoryHybridRecallTool {
         let cold_discovery: Option<serde_json::Value> = if include_cold && !query.is_empty() {
             let terms: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
             let remaining = limit.saturating_sub(results.len());
-            let outcome = self.store.find_cold_matching(
-                &terms,
-                if galaxy_explicit { Some(galaxy) } else { None },
-                remaining.max(1),
-                cold_scan_limit,
-            )?;
-            let existing: std::collections::HashSet<String> = results
-                .iter()
-                .filter_map(|r| {
-                    r.get("id")
-                        .and_then(serde_json::Value::as_str)
-                        .map(str::to_string)
-                })
-                .collect();
-            let mut appended = 0usize;
-            for record in &outcome.records {
-                if appended >= remaining {
-                    break;
-                }
-                let id = record.id.to_string();
-                if existing.contains(&id) {
-                    continue;
-                }
-                let mem = record.decompress()?;
-                results.push(json!({
+            if remaining == 0 {
+                Some(
+                    json!({"enabled":true,"scanned":0,"candidates":0,"matched":0,"appended":0,"integrity_rejected":0,"private_skipped":0,"non_current_skipped":0,"eligibility_skipped":0,"stop_reason":"no_headroom","exhausted":false,"no_thaw":true,"ranked":false,"scan_order":"uuid_key","score_floors":"not_applicable_unscored_recovery"}),
+                )
+            } else {
+                let existing: std::collections::HashSet<String> = results
+                    .iter()
+                    .filter_map(|r| {
+                        r.get("id")
+                            .and_then(serde_json::Value::as_str)
+                            .map(str::to_string)
+                    })
+                    .collect();
+                let outcome = self.store.find_cold_matching_eligible(
+                    &terms,
+                    if galaxy_explicit { Some(galaxy) } else { None },
+                    remaining,
+                    cold_scan_limit,
+                    |mem| {
+                        mem.metadata.importance >= min_importance
+                            && min_trust
+                                .is_none_or(|floor| f64::from(mem.metadata.source_trust) >= floor)
+                            && !existing.contains(&mem.metadata.id.to_string())
+                    },
+                )?;
+                let mut appended = 0usize;
+                for record in &outcome.records {
+                    if appended >= remaining {
+                        break;
+                    }
+                    let id = record.id.to_string();
+                    if existing.contains(&id) {
+                        continue;
+                    }
+                    let mem = record.decompress()?;
+                    let navigation = wm_memory::search::scrub_text(&mem.content);
+                    results.push(json!({
                     "id": id,
-                    "content": &mem.content,
+                    "galaxy": mem.metadata.galaxy.db_name(),
+                    "content": navigation,
+                    "content_representation": "scrubbed_navigation",
+                    "content_character_limit": wm_memory::search::MAX_INDEX_CONTENT_LEN,
+                    "content_truncated": mem.content.chars().nth(wm_memory::search::MAX_INDEX_CONTENT_LEN).is_some(),
+                    "content_scrubbed": navigation != mem.content,
+                    "exact_read_available": true,
                     "importance": mem.metadata.importance,
+                    "trust": mem.metadata.source_trust,
                     "score": serde_json::Value::Null,
                     "source": "cold",
                     "cold": true,
@@ -1477,22 +1496,29 @@ impl Tool for MemoryHybridRecallTool {
                     "model_visible": !mem.metadata.model_exclude,
                     "tags": &mem.metadata.tags,
                 }));
-                appended += 1;
+                    appended += 1;
+                }
+                if appended > 0 && recall_mode == "none" {
+                    recall_mode = "cold";
+                }
+                Some(json!({
+                    "enabled": true,
+                    "scanned": outcome.scanned,
+                    "candidates": outcome.candidates,
+                    "matched": outcome.matched,
+                    "appended": appended,
+                    "integrity_rejected": outcome.integrity_rejected,
+                    "private_skipped": outcome.private_skipped,
+                    "non_current_skipped": outcome.non_current_skipped,
+                    "eligibility_skipped": outcome.eligibility_skipped,
+                    "stop_reason": outcome.stop_reason,
+                    "exhausted": outcome.stop_reason == wm_memory::cold_storage::ColdDiscoveryStop::Exhausted,
+                    "ranked": false,
+                    "scan_order": "uuid_key",
+                    "score_floors": "not_applicable_unscored_recovery",
+                    "no_thaw": true,
+                }))
             }
-            if appended > 0 && recall_mode == "none" {
-                recall_mode = "cold";
-            }
-            Some(json!({
-                "enabled": true,
-                "scanned": outcome.scanned,
-                "candidates": outcome.candidates,
-                "matched": outcome.matched,
-                "appended": appended,
-                "integrity_rejected": outcome.integrity_rejected,
-                "private_skipped": outcome.private_skipped,
-                "non_current_skipped": outcome.non_current_skipped,
-                "no_thaw": true,
-            }))
         } else {
             None
         };
