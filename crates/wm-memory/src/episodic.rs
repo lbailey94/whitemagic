@@ -15,6 +15,54 @@ use crate::episodic_keys::{AdaptiveAliases, key_index_terms_with_aliases};
 use crate::query_planner::QueryPlan;
 use crate::search::strip_stopwords;
 
+/// Test-only pause points around the authoritative raw episodic commit.
+///
+/// Absent from production builds. A no-op unless a child test process sets
+/// `WM_Q06_CASE` to the matching boundary, in which case it prints exactly one
+/// marker line and blocks on stdin until the parent kills it. It must not
+/// write to the store or call sync.
+#[cfg(test)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CommitBoundary {
+    BeforeRawCommit,
+    AfterRawCommit,
+}
+
+#[cfg(test)]
+fn commit_boundary_test_hook(boundary: CommitBoundary, records: &[EpisodicRecord]) -> Result<()> {
+    use std::io::{Read, Write};
+    let Ok(case) = std::env::var("WM_Q06_CASE") else {
+        return Ok(());
+    };
+    let expected = match boundary {
+        CommitBoundary::BeforeRawCommit => "before_raw_commit",
+        CommitBoundary::AfterRawCommit => "after_raw_commit",
+    };
+    if case != expected {
+        return Ok(());
+    }
+    let uuid = std::env::var("WM_Q06_UUID")
+        .map_err(|_| CoreError::Memory("q06 hook: WM_Q06_UUID is required".into()))?;
+    let names: Vec<String> = records.iter().map(|record| record.id.to_string()).collect();
+    if names.len() != 1 || names[0] != uuid {
+        return Err(CoreError::Memory(
+            "q06 hook: candidate set must be the single WM_Q06_UUID record".into(),
+        ));
+    }
+    println!("WM_Q06_BOUNDARY {expected} {uuid}");
+    let _ = std::io::stdout().flush();
+    let mut release = [0_u8; 1];
+    match std::io::stdin().read(&mut release) {
+        Ok(0) => Err(CoreError::Memory(
+            "q06 hook: stdin closed before release".into(),
+        )),
+        Ok(_) => Ok(()),
+        Err(e) => Err(CoreError::Memory(format!(
+            "q06 hook: stdin read failed: {e}"
+        ))),
+    }
+}
+
 /// Deterministic raw episodic search result.
 #[derive(Debug, Clone)]
 pub struct EpisodicSearchResult {
@@ -124,8 +172,12 @@ impl<'a> EpisodicStore<'a> {
                 }
             }
         }
+        #[cfg(test)]
+        commit_boundary_test_hook(CommitBoundary::BeforeRawCommit, records)?;
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("episodic commit failed: {e}")))?;
+        #[cfg(test)]
+        commit_boundary_test_hook(CommitBoundary::AfterRawCommit, records)?;
         self.mutation_count
             .fetch_add(records.len() as u64, std::sync::atomic::Ordering::Relaxed);
         // The raw record is authoritative. A projection failure is returned
@@ -1182,7 +1234,9 @@ fn contains_number_word(text: &str) -> bool {
 mod tests {
     use super::*;
     use crate::MemoryStore;
+    use chrono::{DateTime, Utc};
     use tempfile::tempdir;
+    use uuid::Uuid;
     use wm_core::{EpisodicKind, Provenance, ProvenanceSource, ValidityState};
 
     fn sample_record(sequence: u64, content: &str) -> EpisodicRecord {
@@ -1213,6 +1267,216 @@ mod tests {
             content,
             Provenance::new(ProvenanceSource::Agent),
         )
+    }
+
+    // ── Q06 commit-boundary subprocess experiment ──────────────────────────
+    // Design: docs/V9_3_Q06_COMMIT_BOUNDARY_EXPERIMENT.md. One parent test plus
+    // a child branch selected by WM_Q06_CASE. The parent re-executes its own
+    // test binary, kills the child at an exact commit-boundary hook, reopens
+    // the store, and classifies the candidate. SIGKILL models abrupt process
+    // termination only — not power loss.
+
+    #[cfg(unix)]
+    fn q06_record(id: u128, sequence: u64, content: &str, created_at: &str) -> EpisodicRecord {
+        let mut record = EpisodicRecord::new(
+            None,
+            sequence,
+            EpisodicKind::Observation,
+            content,
+            Provenance::new(ProvenanceSource::User),
+        )
+        .with_id(Uuid::from_u128(id));
+        record.created_at = DateTime::parse_from_rfc3339(created_at)
+            .unwrap()
+            .with_timezone(&Utc);
+        record
+    }
+
+    #[cfg(unix)]
+    fn q06_acknowledged() -> EpisodicRecord {
+        q06_record(601, 601, "q06 acknowledged control", "2026-01-01T00:10:01Z")
+    }
+
+    #[cfg(unix)]
+    fn run_q06_child(case: &str, store_path: &std::path::Path) {
+        use std::io::Write;
+        let expected_uuid = std::env::var("WM_Q06_UUID").expect("WM_Q06_UUID");
+        let uuid = Uuid::parse_str(&expected_uuid).expect("WM_Q06_UUID must parse");
+        let (sequence, content, created_at) = match case {
+            "before_raw_commit" => (602, "q06 precommit candidate", "2026-01-01T00:10:02Z"),
+            "after_raw_commit" => (603, "q06 uncertain candidate", "2026-01-01T00:10:03Z"),
+            other => panic!("q06 child: unknown case {other}"),
+        };
+        let record = q06_record(uuid.as_u128(), sequence, content, created_at);
+        let store = MemoryStore::open_default(store_path).expect("q06 child store");
+        match store.episodic().append(&record) {
+            Ok(()) => {
+                // Only legal when the termination window was missed; the
+                // parent treats this line as a hard failure.
+                println!("WM_Q06_CALLER_ACK {uuid}");
+                let _ = std::io::stdout().flush();
+            }
+            Err(e) => {
+                eprintln!("q06 child append failed: {e}");
+                std::process::exit(2);
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    fn run_q06_killed_case(
+        test_filter: &str,
+        store_path: &std::path::Path,
+        case: &str,
+        uuid: Uuid,
+    ) -> Vec<String> {
+        use std::io::{BufRead, BufReader};
+        let exe = std::env::current_exe().expect("q06 current_exe");
+        let mut child = std::process::Command::new(exe)
+            .arg(test_filter)
+            .arg("--exact")
+            .arg("--nocapture")
+            .env("WM_Q06_CASE", case)
+            .env("WM_Q06_STORE", store_path)
+            .env("WM_Q06_UUID", uuid.to_string())
+            .stdout(std::process::Stdio::piped())
+            .stdin(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
+            .spawn()
+            .expect("q06 spawn child");
+
+        let stdout = child.stdout.take().expect("q06 child stdout");
+        let (tx, rx) = std::sync::mpsc::channel::<String>();
+        let reader = std::thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                match line {
+                    Ok(line) => {
+                        if tx.send(line).is_err() {
+                            break;
+                        }
+                    }
+                    Err(_) => break,
+                }
+            }
+        });
+
+        let expected = format!("WM_Q06_BOUNDARY {case} {uuid}");
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let mut lines = Vec::new();
+        let mut seen = false;
+        while !seen {
+            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            match rx.recv_timeout(remaining) {
+                Ok(line) if line == expected => seen = true,
+                Ok(line) => lines.push(line),
+                Err(_) => break,
+            }
+        }
+        if !seen {
+            let _ = child.kill();
+            let _ = child.wait();
+            reader.join().ok();
+            panic!("q06 case {case}: boundary {expected:?} not observed; lines={lines:?}");
+        }
+
+        child.kill().expect("q06 kill blocked child");
+        let status = child.wait().expect("q06 reap child");
+        assert!(
+            !status.success(),
+            "q06 case {case}: killed child must not exit successfully: {status:?}"
+        );
+        reader.join().ok();
+        while let Ok(line) = rx.try_recv() {
+            lines.push(line);
+        }
+        assert!(
+            !lines.iter().any(|line| line.contains("WM_Q06_CALLER_ACK")),
+            "q06 case {case}: caller acknowledgement in a killed case invalidates the experiment: {lines:?}"
+        );
+        lines
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn q06_commit_boundary_sigkill_classification() {
+        if let Ok(case) = std::env::var("WM_Q06_CASE") {
+            let store_path = std::env::var("WM_Q06_STORE").expect("WM_Q06_STORE");
+            run_q06_child(&case, std::path::Path::new(&store_path));
+            return;
+        }
+
+        let dir = tempdir().unwrap();
+        let store_path = dir.path().join("lmdb");
+        let acknowledged = q06_acknowledged();
+
+        // Acknowledged pre-state: normal append, exact read, store dropped.
+        {
+            let store = MemoryStore::open_default(&store_path).unwrap();
+            store.episodic().append(&acknowledged).unwrap();
+            let read = store
+                .episodic()
+                .get(acknowledged.id)
+                .unwrap()
+                .expect("acknowledged record");
+            assert_eq!(read, acknowledged);
+        }
+
+        let test_filter = "episodic::tests::q06_commit_boundary_sigkill_classification";
+
+        // Case A — killed immediately before the raw commit: rejected/uncommitted.
+        let candidate_before =
+            q06_record(602, 602, "q06 precommit candidate", "2026-01-01T00:10:02Z");
+        run_q06_killed_case(
+            test_filter,
+            &store_path,
+            "before_raw_commit",
+            candidate_before.id,
+        );
+        {
+            let store = MemoryStore::open_default(&store_path).unwrap();
+            assert_eq!(
+                store.episodic().get(acknowledged.id).unwrap(),
+                Some(acknowledged.clone()),
+                "acknowledged record must survive a pre-commit kill unchanged"
+            );
+            assert_eq!(
+                store.episodic().get(candidate_before.id).unwrap(),
+                None,
+                "pre-commit candidate must be absent after reopen"
+            );
+        }
+
+        // Case B — killed after the raw commit, before acknowledgement:
+        // storage committed, caller outcome uncertain.
+        let candidate_after =
+            q06_record(603, 603, "q06 uncertain candidate", "2026-01-01T00:10:03Z");
+        run_q06_killed_case(
+            test_filter,
+            &store_path,
+            "after_raw_commit",
+            candidate_after.id,
+        );
+        {
+            let store = MemoryStore::open_default(&store_path).unwrap();
+            assert_eq!(
+                store.episodic().get(acknowledged.id).unwrap(),
+                Some(acknowledged),
+                "acknowledged record must survive a post-commit kill unchanged"
+            );
+            assert_eq!(
+                store.episodic().get(candidate_before.id).unwrap(),
+                None,
+                "pre-commit candidate must stay absent"
+            );
+            assert_eq!(
+                store.episodic().get(candidate_after.id).unwrap(),
+                Some(candidate_after),
+                "post-commit candidate must be present and byte-equal after reopen"
+            );
+        }
     }
 
     #[test]
