@@ -20,6 +20,12 @@ import urllib.request
 import urllib.error
 
 TOKEN_HEADER = "Authorization"
+# Keyless discovery: MCP directory probes (Glama, mcp.so, Bazaar) and agents
+# browsing before they commit cannot send a Bearer key. These JSON-RPC methods
+# pass without auth, under a global anonymous daily cap; everything else
+# (tools/call, resource reads) still requires a key.
+DISCOVERY_METHODS = {"initialize", "notifications/initialized", "tools/list", "ping"}
+ANON_NAME = "anonymous"
 
 
 class Gateway(http.server.BaseHTTPRequestHandler):
@@ -64,12 +70,12 @@ class Gateway(http.server.BaseHTTPRequestHandler):
         self.relay("POST")
 
     def relay(self, method):
-        key_info = self.authorize()
+        length = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(length) if length else None
+        key_info = self.authorize(body)
         if key_info is None:
             return
         # forward to upstream, streaming both ways
-        length = int(self.headers.get("Content-Length") or 0)
-        body = self.rfile.read(length) if length else None
         req = urllib.request.Request(
             self.server.upstream + self.path,
             data=body,
@@ -94,27 +100,44 @@ class Gateway(http.server.BaseHTTPRequestHandler):
                 self.audit(key_info["name"], method, up.status, n)
                 self.bump(key_info["name"])
         except urllib.error.HTTPError as e:
+            body = e.read()
             self.send_response(e.code)
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(e.read())
+            self.wfile.write(body)
             self.audit(key_info["name"], method, e.code, 0, "upstream-error")
 
-    def authorize(self):
+    @staticmethod
+    def is_discovery(body):
+        if not body:
+            return False
+        try:
+            doc = json.loads(body)
+        except (ValueError, TypeError):
+            return False
+        return doc.get("method") in DISCOVERY_METHODS
+
+    def authorize(self, body=None):
         keys = self.load_keys()
         auth = self.headers.get(TOKEN_HEADER, "")
         token = auth[7:].strip() if auth.lower().startswith("bearer ") else ""
         match = next((k for k in keys["keys"] if k["token"] == token), None)
+        if match is None and self.is_discovery(body):
+            # Keyless discovery path (metadata only, globally capped).
+            match = {"name": ANON_NAME, "daily_cap": self.server.anon_daily_cap}
         if match is None:
             self.send_response(401)
             # x402 seam (phase 2): this 401 becomes a 402 challenge when the
             # request carries an X-PAYMENT-capable accept and no valid key.
             self.send_header("WWW-Authenticate", 'Bearer realm="whitemagic-hosted"')
+            self.send_header("Content-Length", "0")
             self.end_headers()
             self.audit("unknown", self.command, 401, 0)
             return None
         if self.today_count(match["name"]) >= match.get("daily_cap", 50):
             self.send_response(429)
             self.send_header("Retry-After", "86400")
+            self.send_header("Content-Length", "0")
             self.end_headers()
             self.audit(match["name"], self.command, 429, 0, "cap-reached")
             return None
@@ -126,12 +149,15 @@ def main():
     ap.add_argument("--listen", default="127.0.0.1:18790")
     ap.add_argument("--upstream", default="http://127.0.0.1:18789")
     ap.add_argument("--state", required=True)
+    ap.add_argument("--anon-daily-cap", type=int, default=2000,
+                    help="global daily cap for keyless discovery requests")
     args = ap.parse_args()
     host, port = args.listen.rsplit(":", 1)
 
     class S(http.server.ThreadingHTTPServer):
         state_dir = pathlib.Path(args.state)
         upstream = args.upstream
+        anon_daily_cap = args.anon_daily_cap
 
     pathlib.Path(args.state).mkdir(parents=True, exist_ok=True)
     print(f"authd listening on {args.listen} -> {args.upstream}", flush=True)

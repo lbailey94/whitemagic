@@ -16,7 +16,9 @@ branch inside `authorize()`, in this order:
 2. **Free discovery is never gated.** `initialize` and `tools/list` (and
    `/health`) stay free and unmetered — MCP directory probes (Glama, mcp.so,
    PulseMCP) must get a manifest, and agents must browse before they buy.
-   Only `tools/call` on the metered route can return 402.
+   Only `tools/call` on the metered route can return 402. Implemented in
+   `authd.py`: keyless `initialize`/`notifications/initialized`/`tools/list`/
+   `ping` under a global daily cap (`--anon-daily-cap`, default 2000).
 3. **Payment branch.** No key, no payment → respond **HTTP 402** with a
    `PAYMENT-REQUIRED` header (Base64 JSON: price, asset USDC, network,
    `payTo`, scheme). Client retries with `PAYMENT-SIGNATURE`; authd verifies

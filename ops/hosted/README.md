@@ -21,6 +21,9 @@ the x402 metered lane designed in (sidecar flag).
 
 1. Provision the box (runbook: site repo `docs/hetzner/SETUP.md` steps 1–2,
    but firewall = SSH + 80/443 only, no Ollama port).
+   Before paying, see `DRYRUN_2026-09-14.md` — the kit was ghosted locally
+   end-to-end (three hardening fixes landed: HTTP framing, readonly Landlock,
+   keyless discovery).
 2. Install the shipped binary (pin the release, checksum-verified):
    ```bash
    curl -fsSL https://www.whitemagic.dev/install.sh | sh
