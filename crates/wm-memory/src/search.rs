@@ -260,11 +260,15 @@ impl IndexHealth {
 /// Format the Tantivy writer-creation error with actionable lock context
 /// (backlog B1: the bare `Lockfile: LockBusy` message named neither the
 /// index path nor the likely holder, costing a debug session to isolate).
+///
+/// The lock case does not echo the raw error: Tantivy formats its lock
+/// payload as a Debug-wrapped `Some("…")`, which reads like an internal
+/// trace rather than an expected contention message (2026-09-15 audit).
 fn format_writer_lock_error(err: &str, index_path: &Path) -> String {
     let is_lock = err.contains("ock") && (err.contains("Busy") || err.contains("lock"));
     if is_lock {
         format!(
-            "Tantivy writer: {err} — the search index at {} is locked by another process. \
+            "search index lock busy — the index at {} is locked by another process. \
              A running `wm serve` or `wm daemon` on this store holds it; find it with \
              `pgrep -af wm` and stop it, or start this server with --readonly.",
             index_path.display()

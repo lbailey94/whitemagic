@@ -344,6 +344,20 @@ impl CircuitBreakerRegistry {
         }
     }
 
+    /// Remaining cooldown for an open breaker (`0` when closed or untracked).
+    /// Disclosed on the fast-fail error so callers can pace retries instead
+    /// of guessing how long "open" lasts.
+    pub fn remaining_cooldown(&self, tool_name: &str) -> std::time::Duration {
+        if let Ok(mut guard) = self.breakers.write() {
+            let breaker = guard
+                .entry(tool_name.to_string())
+                .or_insert_with(|| CircuitBreaker::new(tool_name, self.default_config.clone()));
+            breaker.remaining_cooldown()
+        } else {
+            std::time::Duration::ZERO
+        }
+    }
+
     /// Reset a specific tool's breaker.
     pub fn reset(&self, tool_name: &str) {
         if let Ok(mut guard) = self.breakers.write() {

@@ -65,4 +65,24 @@ impl CoreError {
     pub const fn is_governance(&self) -> bool {
         matches!(self, Self::Governance(_))
     }
+
+    /// Whether this error should count against a tool's circuit breaker.
+    ///
+    /// Caller-caused failures (invalid arguments, governance refusals,
+    /// not-found lookups, rate limiting) say nothing about backend health.
+    /// Counting them let a handful of bad requests trip a breaker and block
+    /// VALID requests that followed (2026-09-15 audit: five invalid-galaxy
+    /// creates fast-failed the next correct call).
+    #[must_use]
+    pub const fn counts_as_breaker_failure(&self) -> bool {
+        matches!(
+            self,
+            Self::Tool(_)
+                | Self::Memory(_)
+                | Self::Internal(_)
+                | Self::Io(_)
+                | Self::Polyglot(_)
+                | Self::Serde(_)
+        )
+    }
 }

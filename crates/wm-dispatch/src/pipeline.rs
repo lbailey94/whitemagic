@@ -473,7 +473,7 @@ impl DispatchPipeline {
             // Block write operations when confidence is low — can't trust side effects
             if !tool.effects().writes.is_empty() {
                 return Err(CoreError::Governance(format!(
-                    "tool '{}' requires write access but self-model confidence is {:.2} (minimum {:.2}) — conservative dispatch blocks writes; this is load-sensitive, retry when the host settles (deterministic runs can pin WM_HOMEOSTASIS_FROZEN=1)",
+                    "homeostasis limit (self-model confidence): tool '{}' requires write access but confidence is {:.2} (minimum {:.2}) — conservative dispatch blocks writes; this is load-sensitive, retry when the host settles (deterministic runs can pin WM_HOMEOSTASIS_FROZEN=1)",
                     tool.name(),
                     ctx.self_model_confidence,
                     CONFIDENCE_THRESHOLD
@@ -628,9 +628,14 @@ impl DispatchPipeline {
         };
 
         // 3. Rate limit
+        //
+        // Categories are named explicitly: the dispatch request-rate governor
+        // is NOT a write budget, a homeostasis limit, or a circuit breaker.
+        // Collapsing them all under "rate limited" made a healthy system look
+        // like a broken transport (2026-09-15 audit).
         if let Err(retry_after_ms) = self.rate_limiter.try_acquire(tool.name()) {
             return Err(CoreError::RateLimited(format!(
-                "{}: retry after {}ms",
+                "request rate limit (per-tool dispatch governor): '{}' — retry after {}ms",
                 tool.name(),
                 retry_after_ms
             )));
@@ -638,7 +643,15 @@ impl DispatchPipeline {
 
         // 4. Circuit breaker
         if self.circuit_breakers.is_open(tool.name()) {
-            return Err(CoreError::CircuitBreaker(tool.name().to_string()));
+            let retry_after_ms = self
+                .circuit_breakers
+                .remaining_cooldown(tool.name())
+                .as_millis();
+            return Err(CoreError::CircuitBreaker(format!(
+                "{} — repeated execution failures opened the breaker; retry after {}ms",
+                tool.name(),
+                retry_after_ms
+            )));
         }
 
         // 4b. Destructive tool confirmation — requires explicit `confirm: true` in args
@@ -975,7 +988,14 @@ impl DispatchPipeline {
             }
         } else {
             tool.stats().record_failure(elapsed);
-            self.circuit_breakers.record_failure(tool.name());
+            // Breaker health is about the BACKEND, not the caller. A malformed
+            // request that the tool correctly rejects must not fast-fail the
+            // next valid request (2026-09-15 audit).
+            if let Err(err) = &result {
+                if err.counts_as_breaker_failure() {
+                    self.circuit_breakers.record_failure(tool.name());
+                }
+            }
 
             if let Some(ref ledger) = self.karma_ledger {
                 let declared_writes = !tool.effects().writes.is_empty();
@@ -1078,6 +1098,8 @@ mod tests {
         effects: EffectRow,
         stats: ToolStats,
         should_fail: bool,
+        /// When set, `call` returns a fresh error of this class (error-class tests).
+        error: Option<fn() -> CoreError>,
         output: Option<Output>,
         /// When set, the tool secretly writes one memory into this store —
         /// used to simulate a misdeclaring tool for the write-audit journal.
@@ -1091,6 +1113,19 @@ mod tests {
                 effects,
                 stats: ToolStats::default(),
                 should_fail: false,
+                error: None,
+                output: None,
+                store: None,
+            }
+        }
+
+        fn returning_error(name: &str, error: fn() -> CoreError) -> Self {
+            Self {
+                name: name.to_string(),
+                effects: EffectRow::pure(),
+                stats: ToolStats::default(),
+                should_fail: false,
+                error: Some(error),
                 output: None,
                 store: None,
             }
@@ -1112,6 +1147,7 @@ mod tests {
                 effects: EffectRow::pure(),
                 stats: ToolStats::default(),
                 should_fail: true,
+                error: None,
                 output: None,
                 store: None,
             }
@@ -1137,7 +1173,9 @@ mod tests {
                 );
                 store.put(wm_core::Galaxy::Codex, &mem).ok();
             }
-            if self.should_fail {
+            if let Some(error) = self.error {
+                Err(error())
+            } else if self.should_fail {
                 Err(CoreError::Tool(self.name.clone()))
             } else {
                 Ok(self
@@ -1438,6 +1476,91 @@ mod tests {
             Err(CoreError::CircuitBreaker(_)) => {}
             other => panic!("Expected CircuitBreaker error, got {other:?}"),
         }
+    }
+
+    /// 2026-09-15 audit: a caller's malformed requests must not fast-fail the
+    /// next valid request — only backend/execution failures count.
+    #[tokio::test]
+    async fn client_validation_errors_do_not_trip_the_breaker() {
+        let breakers = Arc::new(CircuitBreakerRegistry::new(
+            crate::circuit_breaker::BreakerConfig {
+                failure_threshold: 3,
+                window: std::time::Duration::from_secs(10),
+                cooldown: std::time::Duration::from_secs(30),
+            },
+        ));
+        let pipeline = DispatchPipeline::new(
+            Arc::new(RateLimiter::new(10000, 100, 100)),
+            breakers.clone(),
+            Arc::new(DharmaGate::default()),
+            None,
+        );
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // Five invalid-galaxy-style caller errors: the shape that used to
+        // trip the breaker and block the next correct call.
+        let bad = TestTool::returning_error("validated_tool", || {
+            CoreError::InvalidArgs("unknown galaxy".into())
+        });
+        for _ in 0..5 {
+            let err = pipeline
+                .dispatch(&bad, &mut ctx, Args::default())
+                .await
+                .unwrap_err();
+            assert!(matches!(err, CoreError::InvalidArgs(_)));
+        }
+        assert_eq!(
+            breakers.state("validated_tool"),
+            crate::circuit_breaker::BreakerState::Closed,
+            "caller errors must not open the breaker"
+        );
+
+        // Governance refusals likewise stay caller/request-scoped.
+        let governed = TestTool::returning_error("validated_tool", || {
+            CoreError::Governance("budget exceeded for writes".into())
+        });
+        for _ in 0..5 {
+            let _ = pipeline
+                .dispatch(&governed, &mut ctx, Args::default())
+                .await;
+        }
+        assert_eq!(
+            breakers.state("validated_tool"),
+            crate::circuit_breaker::BreakerState::Closed,
+            "governance refusals must not open the breaker"
+        );
+
+        // A healthy call still succeeds immediately.
+        let good = TestTool::new("validated_tool", EffectRow::pure());
+        pipeline
+            .dispatch(&good, &mut ctx, Args::default())
+            .await
+            .expect("valid call after caller errors");
+    }
+
+    #[tokio::test]
+    async fn rate_limit_error_names_its_governor() {
+        let pipeline = DispatchPipeline::new(
+            Arc::new(RateLimiter::new(1000, 1, 0)),
+            Arc::new(CircuitBreakerRegistry::default()),
+            Arc::new(DharmaGate::default()),
+            None,
+        );
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let tool = TestTool::new("bursty_tool", EffectRow::pure());
+        pipeline
+            .dispatch(&tool, &mut ctx, Args::default())
+            .await
+            .unwrap();
+        let err = pipeline
+            .dispatch(&tool, &mut ctx, Args::default())
+            .await
+            .unwrap_err();
+        let text = err.to_string();
+        assert!(
+            text.contains("request rate limit") && text.contains("retry after"),
+            "rate limit must name its category and retry hint: {text}"
+        );
     }
 
     #[tokio::test]
