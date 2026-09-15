@@ -5,6 +5,42 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.1.7] — 2026-09-15 (trustworthiness: external-audit fixes, instrumentation, contract v0)
+
+> Released 2026-09-15. Driven by an external 9.1.6 reliability audit of the
+> musl artifact plus an independent review round of the slice; every Tier‑1
+> finding has a black-box or unit acceptance test. No surface adds network
+> egress: all new instrumentation is local and display-only.
+
+### Reliability — externally audited (Tier 1)
+- **Installer P0 fixed**: reinstall no longer truncates `~/.profile`. When the PATH line already existed, the old loop left `path_fixed=0` and the else-branch rewrote the file with `>`, destroying unrelated lines. The PATH check is now whole-line (`grep -xF`) and an existing profile is never overwritten; write failures warn. Black-box sentinel test (stub curl, no network) pins byte-preservation across a double install.
+- **Advertised phrase routing fixed**: "where were we" is all-stopwords, so tokenization emptied before the phrase table ran and the router abstained at confidence 0.0. Phrase routes now run before tokenization; a table-driven test asserts every `PHRASE_ROUTES` entry bare and with trailing content.
+- **Numeric floors fail closed**: `min_trust`, `min_importance`, `min_score`, `min_score_ratio` (and `memory.update` importance) reject out-of-range values as structured caller errors instead of silently disabling the floor (`min_trust: 2.0` used to turn the trust floor *off*). Boundary tests cover −ε/0/0.5/1/1+ε.
+- **Importance range enforced end to end**: `write_gate::parse_importance_value` range-checks (was type-check only), the update path routes through it, class policy can no longer mask an out-of-range caller value, and galaxy import/restore plus typed telemetry clamp legacy payloads into 0.0–1.0.
+- **Index health is measured, not inferred**: `wm status` classifies LMDB↔Tantivy drift against the sanitization-skip reserve instead of checking that the index directory exists. New fields `index_memories` / `index_drift` / `index_skip_reserve` / `index_detail` and a `DEGRADED` line name the galaxies that would change on rebuild. Session writes (start/checkpoint/end/record/handoff) are indexed at write time, so a live server no longer reports self-healing drift as degraded.
+- **Hidden partial success disclosed**: an episodic-mirror failure after a successful legacy write (`MDB_BAD_VALSIZE` on large content) now appears as a `warnings` entry on `memory.create`/`memory.batch_create` and session responses instead of only a server log line.
+- **npm launcher hardened**: download → temp → sha256 → chmod → atomic rename; the cached binary is re-hashed before exec and self-heals on mismatch; DNS/checksum/cache failures print one human line, never a raw Node stack.
+- **Credential redaction**: JSON-style assignments (`"api_key": "…"`) are now detected and redacted alongside `key = value` forms.
+
+### Instrumentation — local, display-only (Tier 2)
+- **Cross-process `wm stats`**: reads the persisted `mutable_tool_stats.json` (a fresh process used to show zeroed counters); `--week` estimates per-tool activity from `stats_history.jsonl` daily rollups written on checkpoint. A corrupt snapshot is reported as corrupt, not as empty.
+- **`wm telemetry schema` / `wm telemetry preview`**: publishes the record/retention/redaction contract (`docs/TELEMETRY.md`) and shows exactly what an opt-in transmission would carry from this store — display-only, no network I/O, redaction pass is fail-closed.
+- **`wm report` / `wm doctor --report`**: sanitized support bundle (`report.json` + `README.txt`) with HOME collapsed to `~`, paths narrowed, and a content-free assertion test.
+
+### Contract v0 (Tier 3)
+- **`wm contract`**: machine-checked route/schema manifest built from the exact binary revision (`--json`, `--check`, `--out`); the curated unconditional-read check runs clean. Artifact: `docs/contract/route-schema-manifest.json` (302 routes, 70 declared, 232 undeclared — family-scoped remediation follows per `V9_1_7_FULL_PROFILE_CONTRACT_BACKLOG.md`). `kg.query` now declares its required `entity`.
+
+### Error & terminology hygiene (Tier 1.5)
+- **Breaker counts backend failures only**: caller validation and governance refusals no longer trip a tool's circuit breaker (`counts_as_breaker_failure`); the open-breaker error discloses remaining cooldown, and the per-tool rate-limit error names its governor instead of collapsing every limit into "rate limited". The homeostasis refusal is likewise named.
+- **Expected contention reads like contention**: `main()` prints `Display` (no anyhow/`RUST_BACKTRACE` stack section on refusals); the second-writer lock message drops Tantivy's Debug-wrapped `Some("…")` payload.
+- **`wm grimoire`**: the release probe runs on a side thread, so first-run wall time is `max(local, probe)` instead of the serial sum; memory step renders the measured index detail.
+- **Naming**: `fully_activated` gains the honest alias `core_ready` (semantic recall stays optional and excluded); `wm seal`/`verify` help states the LMDB-core scope (use `wm backup` for whole-store recovery).
+- **`wm ingest --include-credential-files`**: explicit override for prose whose *filename* looks secret (`secrets.txt`); requires `--redact`, so credential-named documents enter with credential-shaped content scrubbed — never raw.
+
+### Release gates
+- CI gains a **host-scripts job** (installer sentinel, version truth, release manifest Python tests + npm launcher suite) so those gates no longer depend on a release ceremony.
+- Re-verified on this commit: fmt clean · clippy `--all-targets -D warnings` clean · workspace 4,552 passed / 0 failed · Python 22 OK · npm 8/8 · `wm contract --check` clean · curated smoke passed · zero-egress proof passed (network namespace with only a DOWN loopback) · all version surfaces agree.
+
 ## [9.1.6] — 2026-09-15
 
 ### Security
