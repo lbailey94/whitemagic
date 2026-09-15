@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`wm report` / `wm doctor --report`**: sanitized support bundle (`report.json` + `README.txt`) with HOME collapsed to `~`, paths narrowed, and a content-free assertion test.
 
 ### Contract v0 (Tier 3)
-- **`wm contract`**: machine-checked route/schema manifest built from the exact binary revision (`--json`, `--check`, `--out`); the curated unconditional-read check runs clean. Artifact: `docs/contract/route-schema-manifest.json` (302 routes, 70 declared, 232 undeclared — family-scoped remediation follows per `V9_1_7_FULL_PROFILE_CONTRACT_BACKLOG.md`). `kg.query` now declares its required `entity`.
+- **`wm contract`**: machine-checked route/schema manifest built from the exact binary revision (`--json`, `--check`, `--out`); the curated unconditional-read check runs clean. Artifact: `docs/contract/route-schema-manifest.json` (302 routes, 70 declared, 232 undeclared — family-scoped remediation follows per `V9_1_7_FULL_PROFILE_CONTRACT_BACKLOG.md`, which lives outside this repo in the Codex workspace `~/Documents/ChatGPT/whitemagic v9.3 development/work/release-closure-phase-a/`; the in-repo artifact is the manifest). `kg.query` now declares its required `entity`.
 
 ### Error & terminology hygiene (Tier 1.5)
 - **Breaker counts backend failures only**: caller validation and governance refusals no longer trip a tool's circuit breaker (`counts_as_breaker_failure`); the open-breaker error discloses remaining cooldown, and the per-tool rate-limit error names its governor instead of collapsing every limit into "rate limited". The homeostasis refusal is likewise named.
