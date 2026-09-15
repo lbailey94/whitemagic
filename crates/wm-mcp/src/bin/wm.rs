@@ -2212,13 +2212,11 @@ fn run_restore(
         println!("Note: pre-envelope backup (no envelope.json) — SHA256SUMS verification only.");
     }
 
-    if store_path.exists() {
-        if !force {
-            anyhow::bail!(
-                "Target store {} already exists. Use --force to overwrite (the existing store will be REPLACED).",
-                store_path.display()
-            );
-        }
+    if store_path.exists() && !force {
+        anyhow::bail!(
+            "Target store {} already exists. Use --force to overwrite (the existing store will be REPLACED).",
+            store_path.display()
+        );
     }
     if let Some(parent) = store_path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -4474,7 +4472,7 @@ mod restore_preservation_tests {
     fn forced_schema_failure_preserves_previous_target() {
         let tmp = tempfile::tempdir().unwrap();
         let target = tmp.path().join("target");
-        let store = MemoryStore::open_default(&target.join("lmdb")).unwrap();
+        let store = MemoryStore::open_default(target.join("lmdb")).unwrap();
         let mut original = Memory::new(
             wm_core::Galaxy::Codex,
             "previous acknowledged original".into(),
@@ -4501,7 +4499,7 @@ mod restore_preservation_tests {
             std::fs::read(target.join("lmdb/data.mdb")).unwrap() == before,
             "previous acknowledged LMDB changed after rejected restore"
         );
-        let reopened = MemoryStore::open_default(&target.join("lmdb")).unwrap();
+        let reopened = MemoryStore::open_default(target.join("lmdb")).unwrap();
         assert_eq!(
             reopened
                 .get(wm_core::Galaxy::Codex, original.metadata.id)
@@ -4582,7 +4580,7 @@ mod restore_preservation_tests {
         let tmp = tempfile::tempdir().unwrap();
         let source = tmp.path().join("source");
         let target = tmp.path().join("target");
-        let store = std::sync::Arc::new(MemoryStore::open_default(&source.join("lmdb")).unwrap());
+        let store = std::sync::Arc::new(MemoryStore::open_default(source.join("lmdb")).unwrap());
         let mut original = Memory::new(
             wm_core::Galaxy::Codex,
             "orchidquasar original\n完整 🪷".into(),
@@ -4611,7 +4609,7 @@ mod restore_preservation_tests {
                     original.metadata.id,
                     old,
                     new,
-                    Default::default(),
+                    wm_memory::revision::RevisionActor::default(),
                 )
                 .unwrap();
         }
@@ -4685,8 +4683,7 @@ mod restore_preservation_tests {
             restore_started.elapsed().as_secs_f64() * 1000.0
         );
         assert!(!target.join("old-target").exists());
-        let restored =
-            std::sync::Arc::new(MemoryStore::open_default(&target.join("lmdb")).unwrap());
+        let restored = std::sync::Arc::new(MemoryStore::open_default(target.join("lmdb")).unwrap());
         for memory in [&original, &private] {
             assert_eq!(
                 serde_json::to_value(
@@ -4738,7 +4735,7 @@ mod restore_preservation_tests {
         }
         let index_started = std::time::Instant::now();
         std::fs::create_dir_all(target.join("lmdb/tantivy")).unwrap();
-        let search = wm_memory::SearchEngine::open(&target.join("lmdb/tantivy")).unwrap();
+        let search = wm_memory::SearchEngine::open(target.join("lmdb/tantivy")).unwrap();
         wm_memory::rebuild_index(&restored, &search, &[]).unwrap();
         assert!(
             search

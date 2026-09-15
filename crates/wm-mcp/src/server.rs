@@ -4447,20 +4447,28 @@ mod tests {
         server.emit_sandbox_observations();
 
         {
-            let bus = server.gan_ying_bus.lock().unwrap();
-            let recent = bus.recent_events(10);
-            let hit = recent
-                .iter()
-                .find(|e| e.event_type == wm_cognitive::EventType::SandboxObservation)
-                .expect("sandbox_observation on the bus");
-            assert_eq!(hit.payload["tool"], "test.spawn");
-            assert_eq!(hit.payload["kind"], "unconfined_spawn");
+            let (tool, kind) = {
+                let bus = server.gan_ying_bus.lock().unwrap();
+                let recent = bus.recent_events(10);
+                let hit = recent
+                    .iter()
+                    .find(|e| e.event_type == wm_cognitive::EventType::SandboxObservation)
+                    .expect("sandbox_observation on the bus");
+                let values = (hit.payload["tool"].clone(), hit.payload["kind"].clone());
+                drop(recent);
+                drop(bus);
+                values
+            };
+            assert_eq!(tool, "test.spawn");
+            assert_eq!(kind, "unconfined_spawn");
         }
 
         // Exactly-once: a second drain emits nothing new.
         server.emit_sandbox_observations();
-        let bus = server.gan_ying_bus.lock().unwrap();
-        let count = bus
+        let count = server
+            .gan_ying_bus
+            .lock()
+            .unwrap()
             .recent_events(20)
             .iter()
             .filter(|e| e.event_type == wm_cognitive::EventType::SandboxObservation)
