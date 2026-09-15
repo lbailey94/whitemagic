@@ -63,9 +63,11 @@ echo "preflight ok"
 # ── version bump ─────────────────────────────────────────────────────────
 banner "VERSION BUMP → $VERSION"
 if $DRY_RUN; then
-  echo "[dry-run] python3 scripts/version_truth.py --set $VERSION (all 15 surfaces;"
-  echo "[dry-run]   Cargo.toml pins, npm package/server/MCPB, Dockerfile labels,"
-  echo "[dry-run]   server-card, CITATION, docs, install examples)"
+  echo "[dry-run] python3 scripts/version_truth.py --set $VERSION (all listed"
+  echo "[dry-run]   surfaces: Cargo.toml pins, npm package/server/MCPB, Dockerfile"
+  echo "[dry-run]   labels, CITATION, docs, skill.md, README, PRIVACY_POLICY.md,"
+  echo "[dry-run]   install examples, rust-toolchain.toml; CHANGELOG ceremony is"
+  echo "[dry-run]   checked separately)"
   echo "[dry-run] cargo check (refresh Cargo.lock); commit + push; tag v$VERSION"
 else
   python3 scripts/version_truth.py --set "$VERSION"
