@@ -319,12 +319,18 @@ pub fn register_expansion(
         .register(Arc::new(MemoryDeduplicateTool::new(store.clone(), search.clone())))
         .register(Arc::new(MemoryExportTool::new(store.clone())))
         // Session (6)
-        .register(Arc::new(SessionStartTool::new(store.clone())))
-        .register(Arc::new(SessionCheckpointTool::new(store.clone())))
+        .register(Arc::new(
+            SessionStartTool::new(store.clone()).with_search(search.clone()),
+        ))
+        .register(Arc::new(
+            SessionCheckpointTool::new(store.clone()).with_search(search.clone()),
+        ))
         .register(Arc::new(SessionVerifyTool::new(store.clone())))
         .register(Arc::new(SessionRecallTool::new(store.clone())))
         .register(Arc::new(SessionDigestTool::new(store.clone())))
-        .register(Arc::new(SessionEndTool::new(store.clone())))
+        .register(Arc::new(
+            SessionEndTool::new(store.clone()).with_search(search.clone()),
+        ))
         // Coordination (4) — advisory claim leases (Phase 2, full surface)
         ;
     let reg = register_coordination(&reg, gan_ying_bus);

@@ -110,6 +110,38 @@ pub fn num_prop(description: &str) -> serde_json::Value {
     serde_json::json!({"type": "number", "description": description})
 }
 
+/// Validate an optional numeric argument against a bounds contract.
+///
+/// Absent or explicit null → `Ok(None)`. A present value must be a finite
+/// number within `lo..=hi` (`hi = None` means no upper bound); anything else
+/// is a caller error. Floors that silently drop out-of-range values fail
+/// open — a "stricter" request quietly becomes a weaker one (2026-09-15
+/// audit: `min_trust: 2.0` disabled the trust floor instead of erroring).
+pub fn bounded_f64_arg(
+    args: &serde_json::Value,
+    key: &str,
+    lo: f64,
+    hi: Option<f64>,
+) -> Result<Option<f64>, String> {
+    let bounds = hi.map_or_else(|| format!(">= {lo}"), |h| format!("in {lo}-{h}"));
+    match args.get(key) {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Number(n)) => match n.as_f64() {
+            Some(v) if v.is_finite() && v >= lo && hi.is_none_or(|h| v <= h) => Ok(Some(v)),
+            Some(v) => Err(format!("{key} must be a number {bounds}, got: {v}")),
+            None => Err(format!("{key} must be a number {bounds}, got: {n}")),
+        },
+        // Numeric strings parse like `importance` does — one permissive input
+        // contract across the bounded floors (2026-09-15 review).
+        Some(serde_json::Value::String(raw)) => match raw.trim().parse::<f64>() {
+            Ok(v) if v.is_finite() && v >= lo && hi.is_none_or(|h| v <= h) => Ok(Some(v)),
+            Ok(v) => Err(format!("{key} must be a number {bounds}, got: {v}")),
+            Err(_) => Err(format!("{key} must be a number {bounds}, got: \"{raw}\"")),
+        },
+        Some(other) => Err(format!("{key} must be a number {bounds}, got: {other}")),
+    }
+}
+
 /// An integer property.
 #[must_use]
 pub fn int_prop(description: &str) -> serde_json::Value {

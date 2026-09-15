@@ -2442,17 +2442,15 @@ pub fn classify_with_alternative(text: &str) -> (&'static str, f64, Option<(&'st
         return ("gnosis", 0.0, None);
     }
 
-    let tokens = tokenize(&lower);
-    if tokens.is_empty() {
-        return ("gnosis", 0.0, None);
-    }
-
-    let input_tf = term_frequencies(&tokens);
-
     // Curated multi-word intentions are decisive: they are explicit enough
     // that profile scoring (which needs lexical overlap) should not veto
     // them — "what do you remember about X" shares no keywords with
     // memory.search yet is exactly a search.
+    //
+    // This check must run BEFORE tokenization: an all-stopword phrase
+    // ("where were we") reduces to zero content tokens, and the
+    // empty-token fallback below used to fire first — silently abstaining
+    // on a phrase the product advertises (9.1.6 audit finding).
     let probe = lower.trim_start();
     if let Some((_, tool, _)) = PHRASE_ROUTES
         .iter()
@@ -2460,6 +2458,13 @@ pub fn classify_with_alternative(text: &str) -> (&'static str, f64, Option<(&'st
     {
         return (tool, 1.0, None);
     }
+
+    let tokens = tokenize(&lower);
+    if tokens.is_empty() {
+        return ("gnosis", 0.0, None);
+    }
+
+    let input_tf = term_frequencies(&tokens);
 
     // Check for prefix-based routing bonus (single-word command verbs).
     let first_word = probe.split_whitespace().next().unwrap_or("");
@@ -2700,6 +2705,37 @@ mod tests {
             let (tool, conf) = classify(phrase);
             assert_eq!(tool, "session.continuity", "phrase: {phrase}");
             assert!(conf > 0.1, "phrase {phrase} confidence too low: {conf}");
+        }
+    }
+
+    #[test]
+    fn classify_bare_where_were_we_routes_to_continuity() {
+        // 9.1.6 audit regression: the bare phrase is all stopwords, so the
+        // tokenized classifier used to abstain before the phrase table ran.
+        let (tool, conf) = classify("where were we");
+        assert_eq!(tool, "session.continuity");
+        assert_eq!(conf, 1.0);
+        let (tool, conf) = classify("Where were we?");
+        assert_eq!(tool, "session.continuity");
+        assert_eq!(conf, 1.0);
+    }
+
+    #[test]
+    fn classify_every_advertised_phrase_bare_and_with_suffix() {
+        // Every phrase in the routing table is part of the product contract;
+        // each must classify as its declared tool both bare (the exact
+        // phrase a user types) and with trailing content.
+        for (phrase, tool, _) in PHRASE_ROUTES {
+            let (bare_tool, bare_conf) = classify(phrase);
+            assert_eq!(&bare_tool, tool, "bare phrase {phrase:?}");
+            assert_eq!(bare_conf, 1.0, "bare phrase {phrase:?} confidence");
+            let suffixed = format!("{phrase} tomorrow please");
+            let (suffixed_tool, suffixed_conf) = classify(&suffixed);
+            assert_eq!(&suffixed_tool, tool, "suffixed phrase {suffixed:?}");
+            assert_eq!(
+                suffixed_conf, 1.0,
+                "suffixed phrase {suffixed:?} confidence"
+            );
         }
     }
 

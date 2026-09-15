@@ -182,7 +182,9 @@ impl Tool for GalaxyImportTool {
                 .get("importance")
                 .and_then(serde_json::Value::as_f64)
             {
-                mem.metadata.importance = imp as f32;
+                // Imported/restored payloads may predate range validation;
+                // clamp to the unit interval so ranking stays well-defined.
+                mem.metadata.importance = (imp as f32).clamp(0.0, 1.0);
             }
             self.store.put(galaxy, &mem)?;
             imported += 1;
@@ -589,7 +591,9 @@ impl Tool for GalaxyRestoreTool {
                 .get("importance")
                 .and_then(serde_json::Value::as_f64)
             {
-                mem.metadata.importance = imp as f32;
+                // Imported/restored payloads may predate range validation;
+                // clamp to the unit interval so ranking stays well-defined.
+                mem.metadata.importance = (imp as f32).clamp(0.0, 1.0);
             }
             self.store.put(target_galaxy, &mem)?;
             super::common::index_memory(self.search.as_deref(), &mem);

@@ -69,21 +69,33 @@ pub fn parse_importance_value(
         None | Some(serde_json::Value::Null) => Ok(None),
         Some(serde_json::Value::Number(n)) => n
             .as_f64()
-            .map(|v| Some(v as f32))
-            .ok_or_else(|| format!("importance must be a number in 0.0-1.0, got: {n}")),
+            .ok_or_else(|| format!("importance must be a number in 0.0-1.0, got: {n}"))
+            .and_then(validate_importance),
         Some(serde_json::Value::String(s)) => {
             let trimmed = s.trim();
             if trimmed.is_empty() {
                 return Ok(None);
             }
             trimmed
-                .parse::<f32>()
-                .map(Some)
+                .parse::<f64>()
                 .map_err(|_| format!("importance must be a number in 0.0-1.0, got: \"{s}\""))
+                .and_then(validate_importance)
         }
         Some(other) => Err(format!(
             "importance must be a number in 0.0-1.0, got: {other}"
         )),
+    }
+}
+
+/// Range gate shared by every importance parse path. A value outside 0.0-1.0
+/// is a caller error, not a clamp target: rankings and write-gate ceilings are
+/// defined on the unit interval, and silently coercing (2.0, -3) corrupts
+/// ordering semantics (2026-09-15 audit).
+fn validate_importance(v: f64) -> std::result::Result<Option<f32>, String> {
+    if v.is_finite() && (0.0..=1.0).contains(&v) {
+        Ok(Some(v as f32))
+    } else {
+        Err(format!("importance must be a number in 0.0-1.0, got: {v}"))
     }
 }
 
@@ -279,10 +291,16 @@ impl WriteGate {
             return Ok(GateOutcome::default());
         };
 
-        let requested = args
-            .get("importance")
-            .and_then(serde_json::Value::as_f64)
-            .map_or(existing.metadata.importance, |v| v as f32);
+        // Range-validate the caller's value BEFORE class policy runs. Class
+        // ceilings legitimately rewrite an in-range value, but they must not
+        // mask an out-of-range caller error (a Telemetry memory + 999 used to
+        // be silently clamped to the class ceiling; 2026-09-15 review).
+        let requested = match parse_importance_value(args.get("importance"))
+            .map_err(wm_core::CoreError::InvalidArgs)?
+        {
+            Some(v) => v,
+            None => existing.metadata.importance,
+        };
         let policy = typology::apply_class_policy(class, requested);
 
         let mut disclosure = serde_json::Map::new();

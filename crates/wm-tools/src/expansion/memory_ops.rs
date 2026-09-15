@@ -543,9 +543,15 @@ impl Tool for MemoryUpdateTool {
         // Importance is applied verbatim: class ceilings/floors live in
         // the pipeline write gate (V8 S5/S11d), the single seam every
         // dispatch passes through. Direct tool calls bypass the gate by
-        // construction — same contract as the create path.
-        if let Some(importance) = args.get("importance").and_then(serde_json::Value::as_f64) {
-            mem.metadata.importance = importance as f32;
+        // construction — same contract as the create path. Range validation
+        // still applies here: out-of-interval values are caller errors.
+        if args.get("importance").is_some() && !args["importance"].is_null() {
+            let importance =
+                wm_dispatch::write_gate::parse_importance_value(args.get("importance"))
+                    .map_err(wm_core::CoreError::InvalidArgs)?;
+            if let Some(importance) = importance {
+                mem.metadata.importance = importance;
+            }
         }
         // Envelope v2 (S4): title/topic are settable and clearable
         // (explicit null clears; absent leaves untouched).
@@ -1205,26 +1211,24 @@ impl Tool for MemoryHybridRecallTool {
             .get("cold_scan_limit")
             .and_then(serde_json::Value::as_u64)
             .map_or(2048, |v| v.clamp(1, 100_000) as usize);
-        let min_importance = args
-            .get("min_importance")
-            .and_then(serde_json::Value::as_f64)
+        let min_importance = super::common::bounded_f64_arg(&args, "min_importance", 0.0, Some(1.0))
+            .map_err(wm_core::CoreError::InvalidArgs)?
             .unwrap_or(0.0) as f32;
         // Absolute BM25 floor (0 / absent = disabled). Clients that set a
-        // meaningful `minScore` finally get what they asked for.
-        let min_score = args
-            .get("min_score")
-            .and_then(serde_json::Value::as_f64)
+        // meaningful `minScore` finally get what they asked for. Negative
+        // values are a caller error, not a silently disabled floor.
+        let min_score = super::common::bounded_f64_arg(&args, "min_score", 0.0, None)
+            .map_err(wm_core::CoreError::InvalidArgs)?
             .map(|v| v as f32)
             .filter(|v| *v > 0.0);
         // Relative floor: reject hits below `ratio * top_score`.
-        // 0.0 or absent → use default 5%. Explicitly passing a value in
-        // (0, 1) overrides; passing 0.0 disables the floor entirely.
-        let min_score_ratio = args
-            .get("min_score_ratio")
-            .and_then(serde_json::Value::as_f64)
-            .map(|v| v as f32)
-            .filter(|v| *v >= 0.0 && *v < 1.0)
-            .map_or(Some(0.05), Some);
+        // 0.0 or absent → use default 5%, or disable with an explicit 0.0.
+        // Out-of-range values are caller errors (1.0+ previously fell back to
+        // the 5% default, silently relaxing a stricter request).
+        let min_score_ratio =
+            super::common::bounded_f64_arg(&args, "min_score_ratio", 0.0, Some(1.0))
+                .map_err(wm_core::CoreError::InvalidArgs)?
+                .map_or(Some(0.05), |v| Some(v as f32));
         let mut results = Vec::new();
 
         // V8.1 trust weighting (evidence-gated): 0.0 = off by default.
@@ -1624,11 +1628,11 @@ impl Tool for MemoryHybridRecallTool {
         // V8 T-b: explicit trust floor — a FILTER, not a ranking weight
         // (WM_TRUST_WEIGHT reorders; min_trust removes). Post-resolution
         // on every route: results carry `trust`, so the floor applies
-        // uniformly, including the trust-inert episodic route.
-        let min_trust = args
-            .get("min_trust")
-            .and_then(serde_json::Value::as_f64)
-            .filter(|v| (0.0..=1.0).contains(v));
+        // uniformly, including the trust-inert episodic route. Out-of-range
+        // values are caller errors — watching a "stricter" floor silently
+        // disable itself is exactly the failure this validation prevents.
+        let min_trust = super::common::bounded_f64_arg(&args, "min_trust", 0.0, Some(1.0))
+            .map_err(wm_core::CoreError::InvalidArgs)?;
         let pre_filter = results.len();
         if let Some(min) = min_trust {
             results.retain(
@@ -4856,5 +4860,90 @@ mod tests {
             .await
             .unwrap_err();
         assert!(err.to_string().contains("unknown metric"));
+    }
+
+    /// 2026-09-15 audit: bounded floors must reject out-of-range values
+    /// instead of silently dropping the filter (watching `min_trust: 2.0`
+    /// quietly disable the trust floor is the failure this pins).
+    #[tokio::test]
+    async fn hybrid_recall_rejects_out_of_range_floors() {
+        let (_dir, store, search) = hybrid_fixture();
+        let tool = MemoryHybridRecallTool::new(store, Some(search), None);
+        let mut ctx = Context::default();
+
+        for (key, value) in [
+            ("min_trust", json!(2.0)),
+            ("min_trust", json!(-0.1)),
+            ("min_importance", json!(1.5)),
+            ("min_importance", json!(-0.5)),
+            ("min_score_ratio", json!(1.5)),
+            ("min_score_ratio", json!(-1.0)),
+            ("min_score", json!(-3.0)),
+            ("min_trust", json!("2.0")),
+        ] {
+            let err = tool
+                .call(&mut ctx, json!({"query": "x", key: value}))
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains(key),
+                "{key}={value} must be rejected by name, got: {err}"
+            );
+        }
+
+        // Boundary values at the edge of the valid interval are accepted.
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "query": "x",
+                    "min_trust": 1.0,
+                    "min_importance": 0.0,
+                    "min_score_ratio": 0.0,
+                    "min_score": 0.0,
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["min_trust"], 1.0, "valid boundary floor disclosed: {v}");
+    }
+
+    /// 2026-09-15 audit: importance is defined on 0.0-1.0; out-of-range
+    /// updates are caller errors, not values stored verbatim.
+    #[tokio::test]
+    async fn memory_update_rejects_out_of_range_importance() {
+        let store = test_store();
+        let mut mem = Memory::new(Galaxy::Codex, "audit validation target".into());
+        mem.metadata.importance = 0.5;
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let id = mem.metadata.id;
+
+        let tool = MemoryUpdateTool::new(store.clone(), None);
+        let mut ctx = Context::default();
+        for bad in [json!(2.0), json!(999), json!(-0.25), json!("1.5")] {
+            let err = tool
+                .call(&mut ctx, json!({"id": id, "importance": bad}))
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains("importance"),
+                "importance={bad} must be rejected, got: {err}"
+            );
+        }
+        let stored = store.get(Galaxy::Codex, id).unwrap().unwrap();
+        assert!(
+            (stored.metadata.importance - 0.5).abs() < f32::EPSILON,
+            "rejected updates must not mutate the record: {}",
+            stored.metadata.importance
+        );
+
+        // A valid update still lands.
+        let v = tool
+            .call(&mut ctx, json!({"id": id, "importance": 0.75}))
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success", "{v}");
+        let stored = store.get(Galaxy::Codex, id).unwrap().unwrap();
+        assert!((stored.metadata.importance - 0.75).abs() < f32::EPSILON);
     }
 }

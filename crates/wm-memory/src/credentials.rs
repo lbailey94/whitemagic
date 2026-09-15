@@ -127,6 +127,8 @@ fn assignment_shaped(content: &str) -> bool {
         while let Some(pos) = lower[from..].find(key) {
             let abs = from + pos + key.len();
             let rest = lower[abs..].trim_start();
+            // JSON-style keys close the quote first: `"api_key": "..."`.
+            let rest = rest.strip_prefix('"').unwrap_or(rest).trim_start();
             let Some(delim) = rest.chars().next() else {
                 break;
             };
@@ -257,9 +259,12 @@ fn assignment_value_span(text: &str) -> Option<(usize, usize)> {
         let mut from = 0usize;
         while let Some(pos) = find_ascii_case_insensitive(text, key, from) {
             let after = pos + key.len();
-            let rest = &text[after..];
+            let rest_raw = &text[after..];
+            // JSON-style keys close their quote first: `"api_key": "..."`.
+            let quoted = rest_raw.strip_prefix('"').is_some();
+            let rest = rest_raw.strip_prefix('"').unwrap_or(rest_raw);
             let ws = rest.len() - rest.trim_start().len();
-            let delim_pos = after + ws;
+            let delim_pos = after + usize::from(quoted) + ws;
             let delim = text[delim_pos..].chars().next();
             if matches!(delim, Some(':' | '=')) {
                 let tail = &text[delim_pos + 1..];
@@ -456,6 +461,27 @@ mod tests {
         let aws = "id AKIAIOSFODNN7EXAMPLE here";
         let (redacted, _) = redact_credential_content(aws);
         assert_eq!(redacted, "id [REDACTED:aws_access_key_id] here");
+    }
+
+    /// 2026-09-15 review: JSON-style keys close their quote before the
+    /// delimiter (`"api_key": "..."`), so the assignment detector missed
+    /// them — exactly the shape a `.jsonl` credential file uses.
+    #[test]
+    fn redacts_json_style_assignment_values() {
+        let json = r#"{"api_key": "supersecretvalue12345", "note": "plain"}"#;
+        let (redacted, kinds) = redact_credential_content(json);
+        assert!(
+            kinds.contains(&"credential_assignment"),
+            "JSON assignment must be detected: {kinds:?}"
+        );
+        assert!(
+            !redacted.contains("supersecretvalue12345"),
+            "JSON assignment value must be scrubbed: {redacted}"
+        );
+        assert!(
+            redacted.contains("plain"),
+            "non-secret values stay: {redacted}"
+        );
     }
 
     #[test]

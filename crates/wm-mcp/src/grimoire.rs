@@ -73,9 +73,16 @@ pub struct Report {
     /// The restart-continuity demonstration passed.
     pub continuity_verified: bool,
     /// A real embedder is reachable (HTTP endpoint or in-process ONNX);
-    /// lexical-only installs report false honestly.
+    /// lexical-only installs report false honestly. Semantic recall is
+    /// OPTIONAL — this field never gates `core_ready`.
     pub semantic_recall_available: bool,
-    /// `substrate_ready && agent_wired && continuity_verified`.
+    /// The product core is active: `substrate_ready && agent_wired &&
+    /// continuity_verified`. This is what `fully_activated` reports;
+    /// `semantic_recall_available` is deliberately excluded because a
+    /// lexical-only install is fully usable (2026-09-15 audit: the old name
+    /// read as "everything, including semantic recall").
+    pub core_ready: bool,
+    /// Compatibility alias for [`Self::core_ready`].
     pub fully_activated: bool,
     /// Steps in execution order.
     pub steps: Vec<Step>,
@@ -369,11 +376,14 @@ fn memory_step(store: &Path) -> (Step, bool) {
             store.display(),
             report.memories,
             report.sessions,
-            if report.index_ok {
-                "healthy"
-            } else {
-                "missing"
-            }
+            report
+                .index_detail
+                .as_deref()
+                .unwrap_or(if report.index_ok {
+                    "healthy"
+                } else {
+                    "degraded"
+                })
         )
     } else {
         format!(
@@ -483,18 +493,14 @@ async fn continuity_step() -> anyhow::Result<Step> {
 /// individual steps degrade into `[FAIL]` entries instead).
 pub async fn run(opts: Options) -> anyhow::Result<Report> {
     let overall = Instant::now();
+    // The release probe is a bounded network round trip (~5s cap) while every
+    // local step finishes in milliseconds. Run it on a side thread and join
+    // at the end, so first-run wall time is max(local, probe) instead of the
+    // sum (2026-09-15 audit: 150ms of local work hid behind a serial 5s
+    // offline timeout). The step is spliced back into report order below.
+    let release_handle = opts.check_release.then(|| std::thread::spawn(release_step));
     let mut steps = vec![host_step()];
     steps.push(substrate_step().await);
-    steps.push(if opts.check_release {
-        release_step()
-    } else {
-        Step {
-            name: "release",
-            status: StepStatus::Skip,
-            detail: format!("{} (release check disabled)", env!("CARGO_PKG_VERSION")),
-            ms: 0,
-        }
-    });
     let (agent, agent_wired) = agent_step(opts.write);
     steps.push(agent);
     let (memory, semantic_recall_available) = memory_step(&opts.store);
@@ -509,6 +515,24 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
             ms: 0,
         },
     });
+
+    // Join the release probe and splice it back into report order (host,
+    // substrate, release, agent, memory, teach, continuity).
+    let release_step_result = match release_handle {
+        Some(handle) => handle.join().unwrap_or_else(|_| Step {
+            name: "release",
+            status: StepStatus::Skip,
+            detail: "release check thread panicked — local checks unaffected".to_string(),
+            ms: 0,
+        }),
+        None => Step {
+            name: "release",
+            status: StepStatus::Skip,
+            detail: format!("{} (release check disabled)", env!("CARGO_PKG_VERSION")),
+            ms: 0,
+        },
+    };
+    steps.insert(2, release_step_result);
 
     // Split readiness: "WhiteMagic works" (substrate), "I am wired to it"
     // (agent), and "continuity was proven" are different facts; the single
@@ -526,6 +550,7 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
         agent_wired,
         continuity_verified,
         semantic_recall_available,
+        core_ready: substrate_ready && agent_wired && continuity_verified,
         fully_activated: substrate_ready && agent_wired && continuity_verified,
         steps,
         total_ms: overall.elapsed().as_millis(),
@@ -668,6 +693,10 @@ mod tests {
             report.fully_activated,
             report.substrate_ready && report.agent_wired && report.continuity_verified,
             "activation must be the conjunction of the split states"
+        );
+        assert_eq!(
+            report.core_ready, report.fully_activated,
+            "core_ready is the compatibility alias for fully_activated"
         );
         // The fixture has no embedder configured unless the host environment
         // exports one; the flag is asserted for presence, not value.

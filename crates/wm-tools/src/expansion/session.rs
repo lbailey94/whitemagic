@@ -79,6 +79,7 @@ pub struct SessionStartTool {
     store: Arc<MemoryStore>,
     stats: ToolStats,
     effects: EffectRow,
+    search: Option<Arc<wm_memory::SearchEngine>>,
 }
 
 impl SessionStartTool {
@@ -90,7 +91,17 @@ impl SessionStartTool {
                 writes: vec![Resource::Galaxy("sessions".into())],
                 ..Default::default()
             },
+            search: None,
         }
+    }
+
+    /// Index writes at write time so `wm status` index health and
+    /// `memory.search` agree with canonical storage without waiting for the
+    /// next startup heal (2026-09-15 review finding).
+    #[must_use]
+    pub fn with_search(mut self, search: Option<Arc<wm_memory::SearchEngine>>) -> Self {
+        self.search = search;
+        self
     }
 }
 
@@ -141,7 +152,8 @@ impl Tool for SessionStartTool {
         mem.metadata.source = "system".to_string();
         mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
-        crate::capture_explicit_memory(
+        super::common::index_memory(self.search.as_deref(), &mem);
+        let episodic_capture_error = crate::capture_explicit_memory(
             &self.store,
             &mem,
             EpisodicKind::SystemEvent,
@@ -149,12 +161,18 @@ impl Tool for SessionStartTool {
             Some(mem.metadata.id),
             0,
         );
-        Ok(json!({
+        let mut response = json!({
             "status": "success",
             "session_id": mem.metadata.id,
             "title": title,
             "user": user,
-        }))
+        });
+        if let Some(error) = episodic_capture_error {
+            response["warnings"] = json!([format!(
+                "episodic capture failed after the session event was stored: {error}"
+            )]);
+        }
+        Ok(response)
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -166,6 +184,7 @@ pub struct SessionCheckpointTool {
     store: Arc<MemoryStore>,
     stats: ToolStats,
     effects: EffectRow,
+    search: Option<Arc<wm_memory::SearchEngine>>,
 }
 
 impl SessionCheckpointTool {
@@ -177,7 +196,17 @@ impl SessionCheckpointTool {
                 writes: vec![Resource::Galaxy("sessions".into())],
                 ..Default::default()
             },
+            search: None,
         }
+    }
+
+    /// Index writes at write time so `wm status` index health and
+    /// `memory.search` agree with canonical storage without waiting for the
+    /// next startup heal (2026-09-15 review finding).
+    #[must_use]
+    pub fn with_search(mut self, search: Option<Arc<wm_memory::SearchEngine>>) -> Self {
+        self.search = search;
+        self
     }
 }
 
@@ -277,7 +306,8 @@ impl Tool for SessionCheckpointTool {
         mem.metadata.source = "system".to_string();
         mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
-        crate::capture_explicit_memory(
+        super::common::index_memory(self.search.as_deref(), &mem);
+        let episodic_capture_error = crate::capture_explicit_memory(
             &self.store,
             &mem,
             EpisodicKind::SystemEvent,
@@ -285,13 +315,19 @@ impl Tool for SessionCheckpointTool {
             uuid::Uuid::parse_str(&session_id).ok(),
             0,
         );
-        Ok(json!({
+        let mut response = json!({
             "status": "success",
             "checkpoint_id": mem.metadata.id,
             "session_id": session_id,
             "label": label,
             "handoff": handoff,
-        }))
+        });
+        if let Some(error) = episodic_capture_error {
+            response["warnings"] = json!([format!(
+                "episodic capture failed after the checkpoint was stored: {error}"
+            )]);
+        }
+        Ok(response)
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -522,6 +558,7 @@ pub struct SessionEndTool {
     store: Arc<MemoryStore>,
     stats: ToolStats,
     effects: EffectRow,
+    search: Option<Arc<wm_memory::SearchEngine>>,
 }
 
 impl SessionEndTool {
@@ -533,7 +570,17 @@ impl SessionEndTool {
                 writes: vec![Resource::Galaxy("sessions".into())],
                 ..Default::default()
             },
+            search: None,
         }
+    }
+
+    /// Index writes at write time so `wm status` index health and
+    /// `memory.search` agree with canonical storage without waiting for the
+    /// next startup heal (2026-09-15 review finding).
+    #[must_use]
+    pub fn with_search(mut self, search: Option<Arc<wm_memory::SearchEngine>>) -> Self {
+        self.search = search;
+        self
     }
 }
 
@@ -581,7 +628,8 @@ impl Tool for SessionEndTool {
         mem.metadata.source = "system".to_string();
         mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
-        crate::capture_explicit_memory(
+        super::common::index_memory(self.search.as_deref(), &mem);
+        let episodic_capture_error = crate::capture_explicit_memory(
             &self.store,
             &mem,
             EpisodicKind::SystemEvent,
@@ -589,11 +637,17 @@ impl Tool for SessionEndTool {
             uuid::Uuid::parse_str(session_id).ok(),
             0,
         );
-        Ok(json!({
+        let mut response = json!({
             "status": "success",
             "session_id": session_id,
             "end_id": mem.metadata.id,
-        }))
+        });
+        if let Some(error) = episodic_capture_error {
+            response["warnings"] = json!([format!(
+                "episodic capture failed after the session event was stored: {error}"
+            )]);
+        }
+        Ok(response)
     }
     fn stats(&self) -> &ToolStats {
         &self.stats

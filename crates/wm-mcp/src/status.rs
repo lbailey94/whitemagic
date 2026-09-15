@@ -27,6 +27,16 @@ pub struct StatusReport {
     pub memories: u64,
     pub sessions: u64,
     pub index_ok: bool,
+    /// Live documents read from the Tantivy index (None when unreadable).
+    pub index_memories: Option<u64>,
+    /// Documents a rebuild would change (healable drift; 0 = index matches
+    /// what a rebuild of the store would produce).
+    pub index_drift: Option<i64>,
+    /// Documents intentionally not indexed by the sanitization gate — a
+    /// documented reserve, not drift.
+    pub index_skip_reserve: Option<u64>,
+    /// Why the index is degraded, or a note when it is healthy with a reserve.
+    pub index_detail: Option<String>,
     pub last_backup: Option<String>,
     pub last_backup_age_secs: Option<u64>,
     /// Backup root the nightly runner last chose (card or NVMe staging).
@@ -68,10 +78,15 @@ impl StatusReport {
         out.push(format!("Memory store       {}", self.store_path));
         out.push(format!("Memories           {}", thousands(self.memories)));
         out.push(format!("Sessions           {}", thousands(self.sessions)));
-        out.push(format!(
-            "Search index       {}",
-            if self.index_ok { "healthy" } else { "missing" }
-        ));
+        let index_line = match (&self.index_detail, self.index_ok) {
+            (_, true) => self
+                .index_detail
+                .clone()
+                .unwrap_or_else(|| "healthy".to_string()),
+            (Some(detail), false) => format!("DEGRADED — {detail}"),
+            (None, false) => "DEGRADED".to_string(),
+        };
+        out.push(format!("Search index       {index_line}"));
         if let (Some(ts), Some(age)) = (&self.last_backup, self.last_backup_age_secs) {
             out.push(format!("Last backup        {ts} ({} ago)", human_age(age)));
         } else {
@@ -236,7 +251,6 @@ pub fn collect(store_root: &Path) -> StatusReport {
     let lmdb = store_root.join("lmdb");
     let profile = std::env::var("WM_TOOL_PROFILE").unwrap_or_else(|_| "curated".to_string());
     let project = std::env::var("WM_PROJECT").ok().filter(|s| !s.is_empty());
-    let index_ok = lmdb.join("tantivy").exists();
     let home_backups = dirs_home().join("whitemagic-backups");
     let log_text = std::fs::read_to_string(backup_log_path()).ok();
     let (last_backup, last_backup_age_secs) =
@@ -254,7 +268,7 @@ pub fn collect(store_root: &Path) -> StatusReport {
     let mut memories = 0u64;
     let mut sessions = 0u64;
     let mut store_ok = false;
-    if lmdb.exists() {
+    let store = if lmdb.exists() {
         // Inspection never takes the lock file (9.1.6): read-only env opens
         // block forever against a live writer (lmdb-master falls back to a
         // blocking shared-lock wait) and against a crashed server's wedged
@@ -262,20 +276,72 @@ pub fn collect(store_root: &Path) -> StatusReport {
         // reads, immune to both. Fall back to a bounded writable open only
         // for stores inspection cannot read (pre-cold/incomplete — those are
         // never served, so no lock is held).
-        let store = MemoryStore::open_inspection(&lmdb).ok().or_else(|| {
+        MemoryStore::open_inspection(&lmdb).ok().or_else(|| {
             MemoryStore::open_default_bounded(&lmdb, INSPECTION_OPEN_TIMEOUT)
                 .ok()
                 .flatten()
-        });
-        if let Some(store) = store {
-            store_ok = true;
-            for g in wm_core::Galaxy::memory_galaxies() {
-                memories += store.count(g).unwrap_or(0) as u64;
-            }
-            sessions = store.count(wm_core::Galaxy::Sessions).unwrap_or(0) as u64;
+        })
+    } else {
+        None
+    };
+    if let Some(store) = store.as_ref() {
+        store_ok = true;
+        for g in wm_core::Galaxy::memory_galaxies() {
+            memories += store.count(g).unwrap_or(0) as u64;
         }
+        sessions = store.count(wm_core::Galaxy::Sessions).unwrap_or(0) as u64;
     }
 
+    // Index health is MEASURED, not inferred from a directory existing
+    // (2026-09-15 audit: a crashed writer left LMDB populated while the index
+    // returned zero results, and status still reported `index_ok: true`).
+    // The classification separates real drift from the documented
+    // sanitization-skip reserve, so a healthy store is not called degraded
+    // for content the gate never indexes.
+    let index_dir = lmdb.join("tantivy");
+    let mut index_ok = false;
+    let mut index_memories = None;
+    let mut index_drift = None;
+    let mut index_skip_reserve = None;
+    let mut index_detail = None;
+    if index_dir.exists() {
+        match wm_memory::search::SearchEngine::open_readonly(&index_dir) {
+            Err(e) => {
+                index_detail = Some(format!("unopenable: {e}"));
+            }
+            Ok(engine) => {
+                if let Some(store) = store.as_ref() {
+                    let class = wm_memory::reindex::classify_drift(store, &engine);
+                    index_memories =
+                        Some(class.galaxies.iter().map(|g| g.tantivy_count as u64).sum());
+                    index_drift = Some(i64::try_from(class.healable_total).unwrap_or(i64::MAX));
+                    index_skip_reserve = Some(class.skip_reserve_total as u64);
+                    if class.healable_total == 0 {
+                        index_ok = true;
+                        if class.skip_reserve_total > 0 {
+                            index_detail = Some(format!(
+                                "healthy ({} docs not indexable by design)",
+                                class.skip_reserve_total
+                            ));
+                        }
+                    } else {
+                        let named: Vec<String> = class
+                            .galaxies
+                            .iter()
+                            .filter(|g| g.healable_gap != 0)
+                            .map(|g| format!("{} ({:+})", g.galaxy, g.healable_gap))
+                            .collect();
+                        index_detail =
+                            Some(format!("drift: {} — run 'wm reindex'", named.join(", ")));
+                    }
+                } else {
+                    index_detail = Some("store unreadable — cannot verify the index".to_string());
+                }
+            }
+        }
+    } else {
+        index_detail = Some("missing — run 'wm reindex'".to_string());
+    }
     let update = read_install_json(store_root).and_then(|v| {
         let latest = v.get("latest_seen").and_then(serde_json::Value::as_str)?;
         let current = env!("CARGO_PKG_VERSION");
@@ -304,6 +370,10 @@ pub fn collect(store_root: &Path) -> StatusReport {
         memories,
         sessions,
         index_ok,
+        index_memories,
+        index_drift,
+        index_skip_reserve,
+        index_detail,
         last_backup,
         last_backup_age_secs,
         backup_target,
@@ -359,6 +429,59 @@ mod tests {
         assert!(update.contains("cargo"), "{update}");
     }
 
+    /// 2026-09-15 audit: a store whose index disagrees with canonical memory
+    /// must never report `index_ok: true` — the crash scenario that motivated
+    /// this check left LMDB populated while search returned zero results.
+    #[test]
+    fn status_reports_index_drift_as_degraded() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path().join("lmdb")).unwrap();
+        let mem = wm_memory::memory::Memory::new(wm_core::Galaxy::Codex, "drift probe".into());
+        store.put(wm_core::Galaxy::Codex, &mem).unwrap();
+
+        // Index exists (so the old directory-existence check would say
+        // healthy) but does not contain the memory: a rebuild would index it.
+        let index_dir = tmp.path().join("lmdb").join("tantivy");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let engine = wm_memory::search::SearchEngine::open(&index_dir).unwrap();
+        let mut writer = engine.writer().unwrap();
+        engine.commit(&mut writer).unwrap();
+        drop(writer);
+        drop(engine);
+
+        let r = collect(tmp.path());
+        assert!(!r.index_ok, "drift must not report healthy: {r:?}");
+        assert_eq!(r.index_drift, Some(1));
+        assert!(
+            r.index_detail.as_deref().unwrap_or("").contains("codex"),
+            "drift names the galaxy: {:?}",
+            r.index_detail
+        );
+        assert!(r.lines().iter().any(|l| l.contains("DEGRADED")));
+    }
+
+    #[test]
+    fn status_reports_consistent_index_as_healthy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path().join("lmdb")).unwrap();
+        let mem = wm_memory::memory::Memory::new(wm_core::Galaxy::Codex, "consistent probe".into());
+        store.put(wm_core::Galaxy::Codex, &mem).unwrap();
+
+        let index_dir = tmp.path().join("lmdb").join("tantivy");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let engine = wm_memory::search::SearchEngine::open(&index_dir).unwrap();
+        let mut writer = engine.writer().unwrap();
+        engine.index_memory(&mut writer, &mem).unwrap();
+        engine.commit(&mut writer).unwrap();
+        drop(writer);
+        drop(engine);
+
+        let r = collect(tmp.path());
+        assert!(r.index_ok, "consistent index must be healthy: {r:?}");
+        assert_eq!(r.index_drift, Some(0));
+        assert_eq!(r.index_memories, Some(1));
+    }
+
     #[test]
     fn backup_target_parses_card_and_staging_lines() {
         let card = "2026-09-14T13:32:19-04:00 TARGET /media/lucas/SD_CARD1/whitemagic-backups (card /media/lucas/SD_CARD1 mounted)\n";
@@ -383,6 +506,10 @@ mod tests {
             memories: 0,
             sessions: 0,
             index_ok: true,
+            index_memories: Some(0),
+            index_drift: Some(0),
+            index_skip_reserve: Some(0),
+            index_detail: None,
             last_backup: None,
             last_backup_age_secs: None,
             backup_target: Some("/media/lucas/SD_CARD1/whitemagic-backups".into()),

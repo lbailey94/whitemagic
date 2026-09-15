@@ -186,7 +186,10 @@ const NLU_ABSTENTION_THRESHOLD: f64 = 0.15;
 /// Mirror an explicit v5 memory write into the v6 episodic lane.
 ///
 /// The mirror is additive and non-fatal: a legacy memory write must not fail
-/// because the new cognitive scaffold is unavailable.
+/// because the new cognitive scaffold is unavailable. The failure is RETURNED
+/// (not only logged) so the tool response can disclose it — a create that
+/// succeeds while its episodic mirror silently drops is a hidden partial
+/// success (2026-09-15 audit: `MDB_BAD_VALSIZE` on large content).
 fn capture_explicit_memory(
     store: &MemoryStore,
     memory: &Memory,
@@ -194,16 +197,20 @@ fn capture_explicit_memory(
     source: ProvenanceSource,
     session_id: Option<uuid::Uuid>,
     sequence: u64,
-) {
+) -> Option<String> {
     let record = explicit_memory_record(memory, kind, source, session_id, sequence);
-    if let Err(error) = store
+    match store
         .episodic()
         .append_explicit(&record, EpisodicCapturePolicy::explicit_only())
     {
-        tracing::warn!(
-            memory_id = %memory.metadata.id,
-            "episodic capture failed after legacy write: {error}"
-        );
+        Ok(_) => None,
+        Err(error) => {
+            tracing::warn!(
+                memory_id = %memory.metadata.id,
+                "episodic capture failed after legacy write: {error}"
+            );
+            Some(error.to_string())
+        }
     }
 }
 
@@ -245,9 +252,9 @@ fn capture_explicit_memories(
     kind: EpisodicKind,
     source: ProvenanceSource,
     session_id: Option<uuid::Uuid>,
-) {
+) -> Option<String> {
     if memories.is_empty() {
-        return;
+        return None;
     }
     let records: Vec<EpisodicRecord> = memories
         .iter()
@@ -256,11 +263,28 @@ fn capture_explicit_memories(
             explicit_memory_record(memory, kind, source, session_id, sequence as u64)
         })
         .collect();
-    if let Err(error) = store
+    match store
         .episodic()
         .append_explicit_batch(&records, EpisodicCapturePolicy::explicit_only())
     {
-        tracing::warn!("episodic batch capture failed after legacy write: {error}");
+        Ok(_) => None,
+        Err(error) => {
+            tracing::warn!("episodic batch capture failed after legacy write: {error}");
+            Some(error.to_string())
+        }
+    }
+}
+
+/// Attach an episodic-capture failure to a tool response so partial success
+/// is disclosed instead of silently dropped (2026-09-15 audit).
+fn attach_episodic_capture_warning(response: &mut Value, error: Option<String>) {
+    let Some(error) = error else { return };
+    let message = format!(
+        "episodic capture failed after the memory was stored — episodic recall will not see it: {error}"
+    );
+    match response.get_mut("warnings").and_then(Value::as_array_mut) {
+        Some(list) => list.push(Value::String(message)),
+        None => response["warnings"] = json!([message]),
     }
 }
 
@@ -557,7 +581,7 @@ impl Tool for MemoryCreateTool {
             }
         }
 
-        capture_explicit_memory(
+        let episodic_capture_error = capture_explicit_memory(
             &self.store,
             &memory,
             EpisodicKind::Observation,
@@ -571,6 +595,9 @@ impl Tool for MemoryCreateTool {
             ctx.session_id,
             0,
         );
+        // (disclosed on the response below: hidden partial success is worse
+        // than a loud one — the primary write succeeded, but episodic-lane
+        // recall will not see it)
 
         // Track F Slice A (D5): attest the create when a node key is
         // available. Evidence, not a gate — attestation outcome never
@@ -599,6 +626,7 @@ impl Tool for MemoryCreateTool {
         if !warnings.is_empty() {
             response["warnings"] = json!(warnings);
         }
+        attach_episodic_capture_warning(&mut response, episodic_capture_error);
         Ok(response)
     }
     fn stats(&self) -> &ToolStats {
@@ -889,7 +917,7 @@ impl Tool for MemoryBatchCreateTool {
             }
         }
 
-        capture_explicit_memories(
+        let episodic_capture_error = capture_explicit_memories(
             &self.store,
             &memories,
             EpisodicKind::Observation,
@@ -924,17 +952,19 @@ impl Tool for MemoryBatchCreateTool {
             "ids": ids,
             "attested_count": attested_count,
         });
-        if !cred_kinds.is_empty() {
-            response["warnings"] = json!(
-                cred_kinds
-                    .iter()
-                    .map(|k| format!(
-                        "some items look like credentials ({k}) — {}",
-                        wm_memory::CREDENTIAL_ADVICE
-                    ))
-                    .collect::<Vec<String>>()
-            );
+        let warnings: Vec<String> = cred_kinds
+            .iter()
+            .map(|k| {
+                format!(
+                    "some items look like credentials ({k}) — {}",
+                    wm_memory::CREDENTIAL_ADVICE
+                )
+            })
+            .collect();
+        if !warnings.is_empty() {
+            response["warnings"] = json!(warnings);
         }
+        attach_episodic_capture_warning(&mut response, episodic_capture_error);
         Ok(response)
     }
     fn stats(&self) -> &ToolStats {
@@ -4128,6 +4158,10 @@ mod tests {
         let args = json!({"content": "test memory content", "galaxy": "codex"});
         let result = tool.call(&mut ctx, args).await.unwrap();
         assert_eq!(result["status"], "success");
+        assert!(
+            result.get("warnings").is_none(),
+            "a clean create discloses no episodic warning: {result}"
+        );
         let id = result["id"].as_str().unwrap();
 
         let read_tool = MemoryReadTool::new(store.clone());
@@ -4141,6 +4175,32 @@ mod tests {
             .unwrap()
             .expect("explicit memory writes mirror into episodic storage");
         assert_eq!(episodic.content, "test memory content");
+    }
+
+    /// 2026-09-15 audit: a succeeded-but-partial write must say so on the
+    /// response. This pins the disclosure mechanism itself (the LMDB
+    /// failure that motivated it — `MDB_BAD_VALSIZE` on large content — is
+    /// not reproducible with a small fixture).
+    #[test]
+    fn episodic_capture_failure_is_disclosed_on_the_response() {
+        let mut clean = json!({"status": "success"});
+        attach_episodic_capture_warning(&mut clean, None);
+        assert!(clean.get("warnings").is_none());
+
+        let mut partial = json!({"status": "success", "warnings": ["existing"]});
+        attach_episodic_capture_warning(
+            &mut partial,
+            Some("MDB_BAD_VALSIZE: value size exceeds limit".into()),
+        );
+        let warnings = partial["warnings"].as_array().unwrap();
+        assert_eq!(warnings.len(), 2, "existing warnings preserved: {partial}");
+        assert!(
+            warnings[1]
+                .as_str()
+                .unwrap()
+                .contains("episodic capture failed")
+        );
+        assert!(warnings[1].as_str().unwrap().contains("MDB_BAD_VALSIZE"));
     }
 
     #[tokio::test]

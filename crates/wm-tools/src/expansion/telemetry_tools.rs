@@ -160,7 +160,10 @@ fn store_record(
         .get("importance")
         .and_then(Value::as_f64)
         .map_or(0.3_f32, |v| v as f32);
-    memory.metadata.importance = importance.min(IMPORTANCE_CEILING);
+    // Clamp rather than reject: the typed telemetry path is machine-fed, and
+    // the contract is the class ceiling. A negative value would otherwise
+    // make the record unreachable in importance-ordered browse.
+    memory.metadata.importance = importance.clamp(0.0, IMPORTANCE_CEILING);
     memory.metadata.title = record
         .get("ts")
         .and_then(Value::as_str)

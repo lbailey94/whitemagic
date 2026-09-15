@@ -308,6 +308,7 @@ pub struct SessionRecordTool {
     store: Arc<MemoryStore>,
     stats: ToolStats,
     effects: EffectRow,
+    search: Option<Arc<wm_memory::SearchEngine>>,
 }
 
 impl SessionRecordTool {
@@ -320,7 +321,17 @@ impl SessionRecordTool {
                 writes: vec![Resource::Galaxy("sessions".into())],
                 ..Default::default()
             },
+            search: None,
         }
+    }
+
+    /// Index writes at write time so `wm status` index health and
+    /// `memory.search` agree with canonical storage without waiting for the
+    /// next startup heal (2026-09-15 review finding).
+    #[must_use]
+    pub fn with_search(mut self, search: Option<Arc<wm_memory::SearchEngine>>) -> Self {
+        self.search = search;
+        self
     }
 }
 
@@ -445,11 +456,13 @@ impl Tool for SessionRecordTool {
                 .tags
                 .push(format!("superseded-by:{}", mem.metadata.id));
             self.store.put(Galaxy::Sessions, &old)?;
+            super::common::index_memory(self.search.as_deref(), &old);
             mem.metadata.tags.push(format!("supersedes:{old_id}"));
         }
 
         mem.metadata.importance = importance as f32;
         self.store.put(Galaxy::Sessions, &mem)?;
+        super::common::index_memory(self.search.as_deref(), &mem);
         Ok(json!({
             "status": "success",
             "session_id": session_id,
@@ -1215,6 +1228,7 @@ pub struct SessionHandoffTool {
     store: Arc<MemoryStore>,
     stats: ToolStats,
     effects: EffectRow,
+    search: Option<Arc<wm_memory::SearchEngine>>,
 }
 
 impl SessionHandoffTool {
@@ -1227,7 +1241,15 @@ impl SessionHandoffTool {
                 writes: vec![Resource::Galaxy("sessions".into())],
                 ..Default::default()
             },
+            search: None,
         }
+    }
+
+    /// Index writes at write time (2026-09-15 review finding).
+    #[must_use]
+    pub fn with_search(mut self, search: Option<Arc<wm_memory::SearchEngine>>) -> Self {
+        self.search = search;
+        self
     }
 }
 
@@ -1299,6 +1321,7 @@ impl Tool for SessionHandoffTool {
                 ];
                 mem.metadata.importance = 0.8;
                 self.store.put(Galaxy::Sessions, &mem)?;
+                super::common::index_memory(self.search.as_deref(), &mem);
                 Ok(json!({
                     "status": "success",
                     "action": "transfer",
@@ -1330,6 +1353,7 @@ impl Tool for SessionHandoffTool {
                     updated.content = v.to_string();
                 }
                 self.store.put(Galaxy::Sessions, &updated)?;
+                super::common::index_memory(self.search.as_deref(), &updated);
                 Ok(json!({
                     "status": "success",
                     "action": "accept",
@@ -1697,10 +1721,14 @@ pub fn register_session_ops(
     search: Option<Arc<wm_memory::SearchEngine>>,
 ) -> wm_dispatch::ToolRegistry {
     registry
-        .register(Arc::new(SessionRecordTool::new(store.clone())))
+        .register(Arc::new(
+            SessionRecordTool::new(store.clone()).with_search(search.clone()),
+        ))
         .register(Arc::new(SessionReplayTool::new(store.clone())))
         .register(Arc::new(SessionContinuityTool::new(store.clone())))
-        .register(Arc::new(SessionHandoffTool::new(store.clone())))
+        .register(Arc::new(
+            SessionHandoffTool::new(store.clone()).with_search(search.clone()),
+        ))
         .register(Arc::new(SessionExportTool::new(store.clone())))
         .register(Arc::new(SessionImportTool::new(store.clone(), search)))
 }
@@ -2315,6 +2343,38 @@ mod tests {
         let result = tool.call(&mut ctx, json!({"jsonl": payload})).await;
         let err = format!("{:?}", result.unwrap_err());
         assert!(err.contains("newer than this build supports"), "{err}");
+    }
+
+    /// 2026-09-15 review: session writes must be indexed AT WRITE TIME, or a
+    /// live writable server accumulates index drift until the next heal and
+    /// `wm status` reports DEGRADED for a self-healing condition.
+    #[tokio::test]
+    async fn session_record_indexes_at_write_time() {
+        let dir = tempfile::tempdir().unwrap();
+        let lmdb = dir.path().join("lmdb");
+        std::fs::create_dir_all(&lmdb).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&lmdb).unwrap());
+        let tantivy = dir.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy).unwrap();
+        let search = Arc::new(wm_memory::SearchEngine::open(&tantivy).unwrap());
+
+        let sid = start_session(&store);
+        let mut ctx = Context::default();
+        SessionRecordTool::new(store.clone())
+            .with_search(Some(search.clone()))
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "turn_type": "decision", "importance": 0.7,
+                        "content": "amber lighthouse protocol engaged", "session_id": sid}),
+            )
+            .await
+            .unwrap();
+
+        let docs = search.count_docs_in_galaxy("sessions").unwrap();
+        assert!(
+            docs >= 1,
+            "session.record must index its write immediately (docs={docs})"
+        );
     }
 
     /// S4 acceptance: import through a real writable engine leaves zero
