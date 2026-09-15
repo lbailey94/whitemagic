@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Retrieval
 - **Hot-path navigation disclosure**: hybrid, episodic, FTS, and association results now declare `content_representation: "scrubbed_navigation"`, the 8,192-character bound, whether the excerpt was truncated or scrubbed, and that a complete read is available (`exact_read_available`); the importance browse path declares `verbatim`. Cold discovery already carried this contract — the disclosure now shares one implementation.
+- **Trust-floor closure and explicit abstention**: `min_trust` now fails closed (results without a stamped `trust` are excluded) and every phase stamps `trust` (association and importance included), verified by a two-verb matrix test; a query with no qualifying results returns `abstention: {status: "insufficient_evidence", scope: "retrieval"}` instead of a silent empty set.
 
 ### Preservation & verification
 - Readonly inspection is proven non-mutating at byte level: `wm doctor` on a live store leaves LMDB, the Tantivy index and every store file untouched (new bin test `doctor_readonly_inspection_preserves_store_and_index`), and a strict read-only open of a pre-cold store leaves `data.mdb` and the directory listing unchanged when it refuses (strengthened `ensure_schema_completes_a_pre_cold_store`).
