@@ -61,18 +61,39 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
             let resolved = uuid::Uuid::parse_str(&id)
                 .ok()
                 .and_then(|key| resolve_memory_across_galaxies(store, key));
-            let (source_time, visibility) = match &resolved {
-                Some((_, mem)) => (
-                    json!({"created_at": mem.metadata.created_at, "basis": "recorded_at"}),
-                    json!({
-                        "private": mem.metadata.is_private,
-                        "model_exclude": mem.metadata.model_exclude,
-                    }),
-                ),
+            let (source_time, visibility, history) = match &resolved {
+                Some((_, mem)) => {
+                    let revisions = store
+                        .revisions(mem.metadata.galaxy, mem.metadata.id)
+                        .unwrap_or_default();
+                    let chain_valid =
+                        wm_memory::revision::verify_chain(&revisions, &mem.metadata.content_hash)
+                            .valid;
+                    (
+                        json!({
+                            "created_at": mem.metadata.created_at,
+                            "basis": "recorded_at",
+                            "event_time": serde_json::Value::Null,
+                            "event_time_basis": "not_tracked",
+                        }),
+                        json!({
+                            "private": mem.metadata.is_private,
+                            "model_exclude": mem.metadata.model_exclude,
+                        }),
+                        json!({
+                            "revision_count": revisions.len(),
+                            "superseded": !revisions.is_empty(),
+                            "chain_valid": chain_valid,
+                            "current": true,
+                        }),
+                    )
+                }
                 None => (
                     json!({
                         "created_at": serde_json::Value::Null,
                         "basis": "unavailable_cold_record",
+                        "event_time": serde_json::Value::Null,
+                        "event_time_basis": "not_tracked",
                     }),
                     json!({
                         "private": false,
@@ -80,6 +101,13 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                             .get("model_visible")
                             .and_then(serde_json::Value::as_bool)
                             .unwrap_or(false),
+                    }),
+                    json!({
+                        "revision_count": 0,
+                        "superseded": false,
+                        "chain_valid": serde_json::Value::Null,
+                        "current": true,
+                        "basis": "unavailable_cold_record",
                     }),
                 ),
             };
@@ -98,6 +126,7 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                 "galaxy": galaxy,
                 "retrieval": retrieval,
                 "source_time": source_time,
+                "history": history,
                 "integrity": r
                     .get("integrity")
                     .cloned()
@@ -120,7 +149,37 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
             })
         })
         .collect();
-    json!({"version": "v0", "count": entries.len(), "entries": entries})
+    let shims: Vec<wm_memory::episodic::EpisodicSearchResult> = results
+        .iter()
+        .filter_map(|r| {
+            let id = r.get("id").and_then(serde_json::Value::as_str)?;
+            let key = uuid::Uuid::parse_str(id).ok()?;
+            let record = store.episodic().get(key).ok().flatten()?;
+            Some(wm_memory::episodic::EpisodicSearchResult {
+                record,
+                score: 0.0,
+                matched_terms: 0,
+            })
+        })
+        .collect();
+    let conflicts = detect_conflicts(&shims);
+    let pairs: Vec<serde_json::Value> = conflicts
+        .iter()
+        .map(|c| {
+            json!({
+                "later": c.later_record.to_string(),
+                "earlier": c.earlier_record.to_string(),
+                "marker": c.marker,
+                "shared_terms": c.shared_terms,
+            })
+        })
+        .collect();
+    json!({
+        "version": "v0",
+        "count": entries.len(),
+        "entries": entries,
+        "conflicts": {"count": pairs.len(), "pairs": pairs},
+    })
 }
 
 /// Resolve a memory id across all memory galaxies. Associations may point at
