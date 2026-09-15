@@ -1330,6 +1330,7 @@ impl Tool for MemoryHybridRecallTool {
                     "id": mem.metadata.id,
                     "content": &mem.content,
                     "importance": mem.metadata.importance,
+                    "trust": mem.metadata.source_trust,
                     "score": mem.metadata.importance,
                     "source": "importance",
                     "content_representation": "verbatim",
@@ -1433,6 +1434,7 @@ impl Tool for MemoryHybridRecallTool {
                             "id": mem.metadata.id,
                             "content": navigation,
                             "importance": mem.metadata.importance,
+                            "trust": mem.metadata.source_trust,
                             "score": score,
                             "weight": weight,
                             "link_type": link_type,
@@ -1467,7 +1469,7 @@ impl Tool for MemoryHybridRecallTool {
             results.retain(
                 |r| match r.get("trust").and_then(serde_json::Value::as_f64) {
                     Some(t) => (t as f32) >= min as f32,
-                    None => true,
+                    None => false,
                 },
             );
         }
@@ -1605,6 +1607,13 @@ impl Tool for MemoryHybridRecallTool {
         }
         if let Some(cd) = cold_discovery {
             out["cold_discovery"] = cd;
+        }
+        if !query.is_empty() && results.is_empty() {
+            out["abstention"] = json!({
+                "status": "insufficient_evidence",
+                "reason": "no_results_above_floors",
+                "scope": "retrieval",
+            });
         }
         Ok(out)
     }
