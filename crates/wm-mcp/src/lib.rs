@@ -12,6 +12,7 @@
 
 pub mod anchor;
 pub mod config;
+pub mod contract;
 pub mod cyberbrain;
 pub mod daemon;
 pub mod gateway;
@@ -23,13 +24,16 @@ pub mod manifest;
 pub mod migrate;
 pub mod network_audit;
 pub mod opencode;
+pub mod report;
 pub mod resources;
 pub mod seal;
 pub mod selftest;
 pub mod server;
 pub mod setup;
+pub mod stats_view;
 pub mod status;
 pub mod store_busy;
+pub mod telemetry_view;
 pub mod trust_admin;
 pub mod update;
 

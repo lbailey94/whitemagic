@@ -15,7 +15,7 @@ use std::sync::Arc;
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
 use wm_memory::{Association, AssociationStore, LinkType, MemoryStore};
 
-use super::common::{galaxy_name, parse_galaxy};
+use super::common::{galaxy_name, parse_galaxy, schema};
 
 /// Simple entity extraction: capitalized words and multi-word phrases.
 ///
@@ -322,6 +322,19 @@ impl Tool for KgQueryTool {
     }
     fn effects(&self) -> &EffectRow {
         &self.effects
+    }
+    /// `entity` is read unconditionally by `call` (2026-09-15 contract
+    /// backlog: the schema omitted it, so discovery could not know the
+    /// requirement and callers had to reverse-engineer it from an error).
+    fn input_schema(&self) -> Value {
+        schema(
+            &json!({
+                "entity": super::common::str_prop("Entity name to query (required)"),
+                "galaxy": super::common::str_prop("Galaxy filter (default: codex)"),
+                "limit": super::common::int_prop("Maximum results (default 50)"),
+            }),
+            &["entity"],
+        )
     }
     fn description(&self) -> &str {
         "Query the knowledge graph for an entity (find memories and associations)"

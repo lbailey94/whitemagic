@@ -544,6 +544,7 @@ fn collect_files(
     files: &mut Vec<PathBuf>,
     skipped: &mut Vec<(String, String)>,
     limit: usize,
+    include_credential_files: bool,
 ) {
     if files.len() >= limit {
         return;
@@ -566,7 +567,7 @@ fn collect_files(
             if EXCLUDED_DIR_NAMES.iter().any(|d| *d == name) {
                 continue;
             }
-            collect_files(&path, files, skipped, limit);
+            collect_files(&path, files, skipped, limit, include_credential_files);
             continue;
         }
         if !file_type.is_file() {
@@ -575,10 +576,11 @@ fn collect_files(
         if name == "ingest_ledger.jsonl" {
             continue;
         }
-        if is_credential_file(&name) {
+        if is_credential_file(&name) && !include_credential_files {
             skipped.push((
                 path.display().to_string(),
-                "credential-shaped filename".into(),
+                "credential-shaped filename (override: --include-credential-files with --redact)"
+                    .into(),
             ));
             continue;
         }
@@ -901,7 +903,19 @@ pub fn run_ingest(
     galaxy_override: Option<&str>,
     redact: bool,
     wait_secs: u64,
+    include_credential_files: bool,
 ) -> anyhow::Result<IngestReport> {
+    // The filename guard is the last line of defense for credentials; the
+    // explicit override exists for prose files whose NAME looks secret
+    // (`secrets.txt`) but is only allowed together with span redaction, so
+    // the store never receives raw credential text either way.
+    if include_credential_files && !redact {
+        anyhow::bail!(
+            "--include-credential-files requires --redact: the override exists to ingest \
+             credential-NAMED documents with their credential-shaped content scrubbed, \
+             never to store raw secrets"
+        );
+    }
     let limit = if limit == 0 { usize::MAX } else { limit };
     println!("=== WhiteMagic Knowledge Ingest ===");
     println!();
@@ -914,7 +928,13 @@ pub fn run_ingest(
 
     let mut files = Vec::new();
     let mut skipped: Vec<(String, String)> = Vec::new();
-    collect_files(source, &mut files, &mut skipped, limit);
+    collect_files(
+        source,
+        &mut files,
+        &mut skipped,
+        limit,
+        include_credential_files,
+    );
 
     let ledger_path = store_path.join("ingest_ledger.jsonl");
     let mut ledger = IngestLedger::load(&ledger_path)?;
@@ -1525,14 +1545,14 @@ mod tests {
         write_tree(root);
         let store_path = tmp.path().join("store");
 
-        let first = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
+        let first = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
         assert_eq!(first.files_found, 3, "md + jsonl + txt (env excluded)");
         assert_eq!(first.files_ingested, 3);
         assert!(first.chunks_written >= 3);
         assert!(first.skipped.iter().any(|(p, _)| p.contains(".env")));
 
         // Second run: everything unchanged → no-op.
-        let second = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
+        let second = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
         assert_eq!(second.files_unchanged, 3);
         assert_eq!(second.files_ingested, 0);
         assert_eq!(second.chunks_written, 0);
@@ -1559,13 +1579,13 @@ mod tests {
         fs::write(&f, "# One\n\nFirst version paragraph of some length here.").unwrap();
         let store_path = tmp.path().join("store");
 
-        let first = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
+        let first = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
         assert_eq!(first.chunks_written, 1);
 
         // New version: two long sections → two chunks (different id set).
         let long = "A long second section here. ".repeat(200);
         fs::write(&f, format!("# One\n\nRevised version.\n\n# Two\n\n{long}")).unwrap();
-        let second = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
+        let second = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
         assert_eq!(second.files_ingested, 1);
         assert_eq!(second.chunks_written, 2);
 
@@ -1586,7 +1606,7 @@ mod tests {
 
         // Dry-run must not create a store.
         let dry_store = tmp.path().join("never-created");
-        let report = run_ingest(root, &dry_store, true, 0, None, false, 0).unwrap();
+        let report = run_ingest(root, &dry_store, true, 0, None, false, 0, false).unwrap();
         assert!(report.files_ingested >= 1);
         assert!(!dry_store.exists(), "dry run must not create the store");
     }
@@ -1605,7 +1625,7 @@ mod tests {
         let store_path = tmp.path().join("store");
 
         // Default posture: credential-bearing content is skipped.
-        let strict = run_ingest(root, &store_path, false, 0, None, false, 0).unwrap();
+        let strict = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
         assert_eq!(strict.files_ingested, 0);
         assert!(
             strict
@@ -1615,7 +1635,7 @@ mod tests {
         );
 
         // --redact: ingested with secrets replaced by markers.
-        let scrubbed = run_ingest(root, &store_path, false, 0, None, true, 0).unwrap();
+        let scrubbed = run_ingest(root, &store_path, false, 0, None, true, 0, false).unwrap();
         assert_eq!(scrubbed.files_ingested, 1);
         assert_eq!(scrubbed.redactions, 1);
 
@@ -1632,6 +1652,61 @@ mod tests {
             !joined.contains("MIIEowSECRET")
                 && !joined.contains("sk-proj0123456789abcdefghijklmnopqrstuv"),
             "no secret material may reach the store"
+        );
+    }
+
+    /// 2026-09-15 audit: prose documents whose FILE NAME looks secret
+    /// (`secrets.txt`) were skipped with no safe path in. The override is
+    /// explicit and redaction-bound — never a raw-secret door.
+    #[test]
+    fn credential_named_files_are_skipped_unless_redaction_override_is_explicit() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root).unwrap();
+        // Assembled at runtime (repo convention) so the raw shape never
+        // appears contiguously in source for scanners.
+        let fixture_key = format!("sk-{}{}", "proj", "0123456789abcdefghijklmnopqrstuv");
+        fs::write(
+            root.join("secrets.txt"),
+            format!("Research notes on secrets management.\nTest fixture key: {fixture_key}\n"),
+        )
+        .unwrap();
+        let store_path = tmp.path().join("store");
+
+        // Default: never ingested.
+        let strict = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        assert_eq!(strict.files_ingested, 0);
+        assert!(
+            strict
+                .skipped
+                .iter()
+                .any(|(_, reason)| reason.contains("credential-shaped filename")
+                    && reason.contains("--include-credential-files"))
+        );
+
+        // Override without redaction is refused outright.
+        let err = run_ingest(root, &store_path, true, 0, None, false, 0, true).unwrap_err();
+        assert!(
+            err.to_string().contains("--redact"),
+            "override must be redaction-bound: {err}"
+        );
+
+        // Override + redaction: ingested, secrets scrubbed.
+        let scrubbed = run_ingest(root, &store_path, false, 0, None, true, 0, true).unwrap();
+        assert_eq!(scrubbed.files_ingested, 1);
+        assert_eq!(scrubbed.redactions, 1);
+        let store = MemoryStore::open_default(store_path.join("lmdb")).unwrap();
+        let joined: String = store
+            .scan_all(Galaxy::Research)
+            .unwrap()
+            .iter()
+            .map(|m| m.content.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(joined.contains("Research notes on secrets management"));
+        assert!(
+            !joined.contains(&fixture_key),
+            "override must still scrub credential-shaped content"
         );
     }
 }

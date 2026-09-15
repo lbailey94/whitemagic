@@ -243,6 +243,51 @@ enum Commands {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
         store: Option<PathBuf>,
+        /// Show estimated per-tool activity for the last 7 daily rollups
+        /// (persisted; accumulates one row per service day) instead of the
+        /// all-time persisted table
+        #[arg(long)]
+        week: bool,
+    },
+    /// Telemetry schema and display-only transmission preview
+    ///
+    /// Records are local; nothing is transmitted. `schema` publishes the
+    /// record/retention/redaction contract; `preview` shows exactly what a
+    /// future opt-in transmission would carry from this store.
+    Telemetry {
+        #[command(subcommand)]
+        command: TelemetryCommands,
+    },
+    /// Emit the machine-checked route/schema contract catalog
+    ///
+    /// Builds the full registry from this exact binary revision and reports
+    /// each route's declared input schema; `--check` verifies the curated
+    /// unconditional-read list (v0 of the P1 `wm-contract` work).
+    Contract {
+        /// Machine-readable JSON (the full manifest)
+        #[arg(long)]
+        json: bool,
+        /// Verify the curated unconditional-read list; exit 1 on violations
+        #[arg(long)]
+        check: bool,
+        /// Write the manifest JSON to this path (implies building the full manifest)
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Write a sanitized local support bundle (report.json + README.txt)
+    ///
+    /// Read-only: memory content, queries, credentials, and raw paths are
+    /// excluded; nothing is transmitted.
+    Report {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Output directory (default: ./wm-report-<UTC date>)
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Print the report JSON to stdout instead of writing a bundle
+        #[arg(long)]
+        json: bool,
     },
     /// Show polyglot acceleration status
     Polyglot,
@@ -358,6 +403,11 @@ enum Commands {
         /// Wait up to N seconds for a busy store (live serve) before failing
         #[arg(long, default_value_t = 0)]
         wait: u64,
+        /// Ingest files whose NAME looks credential-bearing (secrets.txt)
+        /// instead of skipping them; requires --redact so credential-shaped
+        /// content is scrubbed before storage
+        #[arg(long)]
+        include_credential_files: bool,
     },
     /// Bridge opencode session data into whitemagic (digest or export)
     ///
@@ -372,9 +422,11 @@ enum Commands {
         #[command(subcommand)]
         command: OpencodeCommands,
     },
-    /// Seal the store directory with an HMAC-SHA256 integrity manifest
+    /// Seal the LMDB store core with an HMAC-SHA256 integrity manifest
     ///
-    /// Computes a digest for every file in the store and writes `seal.json`.
+    /// Computes a digest for every file in the LMDB data tree and writes
+    /// `seal.json`. Files added under the store ROOT (outside `lmdb/`) are
+    /// not covered — use `wm backup` for whole-store recovery.
     /// A per-install secret key is generated at `.seal_key` on first use.
     /// Run `wm verify` afterwards to detect tampering or corruption.
     ///
@@ -385,10 +437,13 @@ enum Commands {
         #[arg(long)]
         store: Option<PathBuf>,
     },
-    /// Verify the store directory against a previously written seal manifest
+    /// Verify the LMDB store core against a previously written seal manifest
     ///
-    /// Recomputes HMAC digests and reports any mismatched, missing, or extra
-    /// files. Exits with code 1 if verification fails.
+    /// Recomputes HMAC digests over the LMDB data tree and reports
+    /// mismatched, missing, or extra files THERE — it is a store-core
+    /// integrity seal, not a whole-store-root guarantee (`wm backup` is the
+    /// full-store disaster-recovery mechanism). Exits with code 1 if
+    /// verification fails.
     Verify {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -530,6 +585,29 @@ enum Commands {
         store: Option<PathBuf>,
         #[command(subcommand)]
         command: TrustCommand,
+    },
+}
+
+#[derive(clap::Subcommand)]
+enum TelemetryCommands {
+    /// Publish the telemetry record/retention/redaction contract
+    Schema {
+        /// Machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show what an opt-in transmission would carry from this store
+    /// (display-only; no network I/O, nothing written)
+    Preview {
+        /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Maximum records to preview
+        #[arg(long, default_value_t = 5)]
+        limit: usize,
+        /// Machine-readable JSON
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -826,7 +904,39 @@ enum UpdateAction {
     Rollback,
 }
 
-fn main() -> anyhow::Result<()> {
+/// Print persisted tool-usage rows (calls, success rate, latency) in a
+/// stable, human-scannable table.
+fn print_usage_rows(rows: &[wm_mcp::stats_view::ToolUsageRow]) {
+    println!(
+        "  {:<28} {:>8} {:>9} {:>10} {:>10}",
+        "tool", "calls", "success", "avg ms", "peak ms"
+    );
+    for row in rows {
+        let success_rate = if row.calls == 0 {
+            0.0
+        } else {
+            (row.successes as f64 / row.calls as f64) * 100.0
+        };
+        println!(
+            "  {:<28} {:>8} {:>8.1}% {:>10.2} {:>10.2}",
+            row.name, row.calls, success_rate, row.avg_ms, row.peak_ms
+        );
+    }
+}
+
+fn main() {
+    if let Err(err) = run() {
+        // Display, not Debug: expected refusals (store lock held by another
+        // process, malformed args) must stay a single human line. The
+        // default anyhow termination prints `{:?}`, which appends a
+        // "Stack backtrace" section whenever RUST_BACKTRACE is set —
+        // expected contention must never look like a crash (2026-09-15 audit).
+        eprintln!("Error: {err}");
+        std::process::exit(1);
+    }
+}
+
+fn run() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging (only to stderr — stdout is for JSON-RPC).
@@ -1599,7 +1709,7 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Commands::Stats { store } => {
+        Commands::Stats { store, week } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             let lmdb_path = store_path.join("lmdb");
             if !lmdb_path.exists() {
@@ -1655,7 +1765,130 @@ fn main() -> anyhow::Result<()> {
             println!("Cycles completed: {}", dream.cycles_completed());
             println!("Consolidated: {}", dream.consolidation.consolidated());
             println!("Skipped: {}", dream.consolidation.skipped());
+            println!();
+            // Cross-process usage: the persisted snapshot, not this fresh
+            // process's zeroed counters (P1, 2026-09-15).
+            if week {
+                let history = wm_mcp::stats_view::load_history(&lmdb_path);
+                let rows = wm_mcp::stats_view::weekly_deltas(&history, 7);
+                println!("=== Tool Usage (last ~7 daily rollups) ===");
+                if history.is_empty() {
+                    println!("No daily rollups yet — history accumulates one row per service day.");
+                } else if rows.is_empty() {
+                    println!("No tool calls recorded across {} rollup(s).", history.len());
+                } else {
+                    print_usage_rows(&rows);
+                    println!(
+                        "Estimated from the last {} of {} daily rollup(s); counter resets at each server restart are counted from zero.",
+                        history.len().min(7),
+                        history.len()
+                    );
+                }
+            } else {
+                println!("=== Tool Usage (persisted, cumulative) ===");
+                match wm_mcp::stats_view::load_tool_stats_checked(&lmdb_path) {
+                    Err(error) => println!("Persisted usage {error}"),
+                    Ok(rows) if rows.is_empty() => {
+                        println!(
+                            "No persisted usage yet — call some tools, then let the server checkpoint or stop it cleanly."
+                        );
+                    }
+                    Ok(rows) => print_usage_rows(&rows),
+                }
+            }
         }
+        Commands::Contract { json, check, out } => {
+            let tmp = std::env::temp_dir().join(format!("wm-contract-{}", std::process::id()));
+            let lmdb = tmp.join("lmdb");
+            std::fs::create_dir_all(&lmdb)?;
+            let manifest = {
+                let server = wm_mcp::McpServer::with_defaults(&lmdb)?;
+                wm_mcp::contract::build_manifest(server.registry(), env!("CARGO_PKG_VERSION"))
+            };
+            let _ = std::fs::remove_dir_all(&tmp);
+            let violations = wm_mcp::contract::check_known_unconditional_reads(&manifest);
+            if let Some(path) = out {
+                std::fs::write(&path, serde_json::to_string_pretty(&manifest)?)?;
+                println!("Manifest written to {}", path.display());
+            }
+            if json {
+                println!("{}", serde_json::to_string_pretty(&manifest)?);
+            } else if !check || !violations.is_empty() {
+                println!(
+                    "Route schema manifest: {} routes ({} declared, {} undeclared)",
+                    manifest["counts"]["routes"],
+                    manifest["counts"]["declared"],
+                    manifest["counts"]["undeclared"]
+                );
+                if violations.is_empty() {
+                    println!("Curated unconditional-read check: clean");
+                } else {
+                    for violation in &violations {
+                        println!("  [FAIL] {violation}");
+                    }
+                }
+            }
+            if check && !violations.is_empty() {
+                std::process::exit(1);
+            }
+        }
+        Commands::Report { store, out, json } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            let rt = tokio::runtime::Runtime::new()?;
+            if json {
+                let report = rt.block_on(wm_mcp::report::build(&store_path));
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                let out_dir = out.unwrap_or_else(|| {
+                    PathBuf::from(format!(
+                        "wm-report-{}",
+                        chrono::Utc::now().format("%Y-%m-%d")
+                    ))
+                });
+                let path = rt.block_on(wm_mcp::report::write_bundle(&store_path, &out_dir))?;
+                println!("Sanitized support bundle written to {}", path.display());
+                println!(
+                    "  report.json  — version, platform, store health, index drift, selftest, env allowlist"
+                );
+                println!("  README.txt   — what is included and what is excluded");
+                println!("Nothing was transmitted; review the bundle before sharing it.");
+            }
+        }
+        Commands::Telemetry { command } => match command {
+            TelemetryCommands::Schema { json } => {
+                if json {
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&wm_mcp::telemetry_view::schema_json())?
+                    );
+                } else {
+                    for line in wm_mcp::telemetry_view::schema_lines() {
+                        println!("{line}");
+                    }
+                }
+            }
+            TelemetryCommands::Preview { store, limit, json } => {
+                let store_path = store.unwrap_or_else(|| wm_config.store_path());
+                let lmdb_path = store_path.join("lmdb");
+                let records = wm_mcp::telemetry_view::load_recent_telemetry(&lmdb_path, limit);
+                let (payload, redactions) = wm_mcp::telemetry_view::build_preview(&records);
+                if !json {
+                    println!("=== Telemetry Preview (display-only; nothing is sent) ===");
+                    println!("Store: {}", lmdb_path.display());
+                    println!("Records: {}", records.len());
+                    if redactions.is_empty() {
+                        println!("Redaction pass: clean (no credential-shaped spans found)");
+                    } else {
+                        println!(
+                            "Redaction pass: scrubbed {} credential-span class(es) — a firing redaction inside content-free telemetry is itself a finding",
+                            redactions.len()
+                        );
+                    }
+                    println!();
+                }
+                println!("{}", serde_json::to_string_pretty(&payload)?);
+            }
+        },
         Commands::Polyglot => {
             run_polyglot();
         }
@@ -1877,6 +2110,7 @@ fn main() -> anyhow::Result<()> {
             galaxy,
             redact,
             wait,
+            include_credential_files,
         } => {
             let store_path = store.unwrap_or_else(default_store_path);
             wm_mcp::ingest::run_ingest(
@@ -1887,6 +2121,7 @@ fn main() -> anyhow::Result<()> {
                 galaxy.as_deref(),
                 redact,
                 wait,
+                include_credential_files,
             )?;
         }
         Commands::Opencode { command } => match command {

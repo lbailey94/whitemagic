@@ -2486,6 +2486,14 @@ impl McpServer {
                     }
                     Err(e) => tracing::warn!(error = %e, "Failed to serialize tool usage stats"),
                 }
+                // P1 (2026-09-15): one daily rollup row beside the snapshot so
+                // `wm stats --week` can estimate per-tool activity across
+                // restarts without a live process (at most one row per day).
+                let date = chrono::Utc::now().format("%Y-%m-%d").to_string();
+                if let Err(e) = crate::stats_view::append_daily_rollup(store_dir, &date, &snapshots)
+                {
+                    tracing::warn!(error = %e, "Failed to append the daily usage rollup");
+                }
             }
         }
 

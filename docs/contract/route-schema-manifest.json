@@ -1,0 +1,3121 @@
+{
+  "counts": {
+    "declared": 70,
+    "routes": 302,
+    "undeclared": 232
+  },
+  "format_version": 1,
+  "generated_by": "wm contract --json",
+  "kind": "whitemagic-route-schema-manifest",
+  "known_unconditional_reads": [
+    {
+      "arg": "entity",
+      "route": "kg.query"
+    }
+  ],
+  "source": "running binary registry (one exact revision)",
+  "tools": [
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "actuator.command"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "actuator.estop"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "actuator.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.capabilities"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.deregister"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.descriptions"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.heartbeat"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.heartbeat.history"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.register"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "agent.trust"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "anomaly.detect"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "anti_loop.check"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "apotheosis.check"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "archaeology.search"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "army.deploy"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "association.mine"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bagua.dispatch"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bicameral.reason"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bicameral.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "boundary.enforce"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.evidence.package"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.evidence.taxonomy"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.import"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.ledger.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.ledger.record"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.ledger.stats"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.ledger.update"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bounty.scan"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "all": {
+          "description": "Reset every tracked breaker",
+          "type": "boolean"
+        },
+        "confirm": {
+          "description": "Must be true — explicit operator recovery",
+          "type": "boolean"
+        },
+        "tool": {
+          "description": "Tool route whose breaker to reset (e.g. code.community)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "confirm"
+      ],
+      "route": "breaker.reset"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "breaker.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bus.emit"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bus.recent"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "bus.stats"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "captain.deploy"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "citta.coherence"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "citta.history"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "citta.reflect"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "citta.status"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "action": {
+          "description": "add | resolve | status | list | calibration (default status)",
+          "type": "string"
+        },
+        "claim_id": {
+          "description": "resolve: claim identifier",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "add: 0-1 confidence",
+          "type": "number"
+        },
+        "domain": {
+          "description": "add: domain",
+          "type": "string"
+        },
+        "event": {
+          "description": "resolve: what happened",
+          "type": "string"
+        },
+        "event_date": {
+          "description": "resolve: YYYY-MM-DD",
+          "type": "string"
+        },
+        "falsification_criteria": {
+          "description": "add: how this claim could be falsified",
+          "type": "string"
+        },
+        "predicted_outcome": {
+          "description": "add: predicted outcome",
+          "type": "string"
+        },
+        "source_date": {
+          "description": "add: YYYY-MM-DD",
+          "type": "string"
+        },
+        "statement": {
+          "description": "add: claim statement",
+          "type": "string"
+        },
+        "validated": {
+          "description": "resolve: did the claim validate?",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "route": "claims"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "confidence": {
+          "description": "0-1 confidence",
+          "type": "number"
+        },
+        "domain": {
+          "description": "Domain",
+          "type": "string"
+        },
+        "falsification_criteria": {
+          "description": "How this claim could be falsified",
+          "type": "string"
+        },
+        "predicted_outcome": {
+          "description": "Predicted outcome",
+          "type": "string"
+        },
+        "source_date": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        },
+        "statement": {
+          "description": "Claim statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "source_date",
+        "predicted_outcome",
+        "falsification_criteria"
+      ],
+      "route": "claims.add"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "claims.calibration"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "domain": {
+          "description": "Filter by domain",
+          "type": "string"
+        },
+        "status": {
+          "description": "Filter: validated | falsified | pending",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "claims.list"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "claim_id": {
+          "description": "Claim identifier",
+          "type": "string"
+        },
+        "event": {
+          "description": "What happened",
+          "type": "string"
+        },
+        "event_date": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        },
+        "validated": {
+          "description": "Did the claim validate?",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "claim_id",
+        "validated",
+        "event",
+        "event_date"
+      ],
+      "route": "claims.resolve"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "claims.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "code.affected_by"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "root": {
+          "description": "Repository root (default: WM_PROJECT_ROOT env)",
+          "type": "string"
+        },
+        "scope": {
+          "description": "Scope to check",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope"
+      ],
+      "route": "code.check"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "intent": {
+          "description": "Why this scope is claimed (mandatory — surfaced to conflicting agents)",
+          "type": "string"
+        },
+        "owner_session": {
+          "description": "Claiming session id (session.start result) or stable agent label",
+          "type": "string"
+        },
+        "root": {
+          "description": "Repository root (default: WM_PROJECT_ROOT env)",
+          "type": "string"
+        },
+        "scope": {
+          "description": "Scope to claim — path, subtree, or resource label (e.g. 'src/expansion/')",
+          "type": "string"
+        },
+        "ttl_secs": {
+          "description": "Lease TTL in seconds (default 3600, max 86400; expired claims free themselves)",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "scope",
+        "intent",
+        "owner_session"
+      ],
+      "route": "code.claim"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "code.graph"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "include_expired": {
+          "description": "Include expired leases in the listing (default false)",
+          "type": "boolean"
+        },
+        "root": {
+          "description": "Repository root (default: WM_PROJECT_ROOT env)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "code.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "code.query"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "owner_session": {
+          "description": "Releasing session id — must match the claim's owner",
+          "type": "string"
+        },
+        "root": {
+          "description": "Repository root (default: WM_PROJECT_ROOT env)",
+          "type": "string"
+        },
+        "scope": {
+          "description": "Scope to release (the claim's lease_id)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scope",
+        "owner_session"
+      ],
+      "route": "code.release"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.export"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.fit_classifier"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.fit_regressor"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.import"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.monitor"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.predict_interval"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.predict_set"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "conformal.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "consciousness.depth"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "consolidation.compress"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "consolidation.connect"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "constellation.detect"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "constellation.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "correlation.analyze"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "council.deliberate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.acs"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.audit"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.escalate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.profiles"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.resolve_review"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.review_queue"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.rules"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dharma.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dream.analyze"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dream.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "dream.trigger"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "drive.event"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "drive.snapshot"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "emergence.report"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "emergence.scan"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "explain"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "fragment.search"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "friction.auto_log"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "friction.log"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "friction.resolve"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "friction.review"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.backup"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.cold_rotate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.dashboard"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.export"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.health"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.import"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.merge"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.purge"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.restore"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.snapshot"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.stats"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.taxonomy"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.transfer"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "galaxy.triage_sweep"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "geneseed.mine"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "geneseed.stats"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "gnosis"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "args_hash": {
+          "description": "Hash of the arguments under evaluation",
+          "type": "string"
+        },
+        "has_purpose": {
+          "description": "Claim: the invocation carries a purpose",
+          "type": "boolean"
+        },
+        "is_network": {
+          "description": "Claim: the invocation uses the network",
+          "type": "boolean"
+        },
+        "is_spawn": {
+          "description": "Claim: the invocation spawns a process",
+          "type": "boolean"
+        },
+        "is_write": {
+          "description": "Claim: the invocation writes",
+          "type": "boolean"
+        },
+        "tool_name": {
+          "description": "Tool name to explain",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "gnosis.explain"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "limit": {
+          "description": "Maximum history entries (default 20)",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "route": "gnosis.history"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "gnosis.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "god.nodes"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "graph.community"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "graph.propagate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "graph.walk"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "harmony.history"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "harmony.vector"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "hermit.mediate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "hermit.resolve"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "hermit.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "hermit.withdraw"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "hologram.query"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "hologram.rebalance"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "homeostasis.adjust"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "homeostasis.alerts"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "homeostasis.check"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "homeostasis.history"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "imagine.predict"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "imagine.reflect"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "imagine.scenario"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "improve.active_proposals"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "improve.proposals"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "kaizen.correlate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "karma.anchor"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "karma.clear"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "karma.history"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "karma.report"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "karma.verify_chain"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "kg.extract"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "entity": {
+          "description": "Entity name to query (required)",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy filter (default: codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum results (default 50)",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "entity"
+      ],
+      "route": "kg.query"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "kg.top"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "learning.pattern"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "learning.suggest"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "mc.optimize"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "mc.rare_event"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "mc.sde"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "mc.superforecaster"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "mc.surrogate"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "limit": {
+          "description": "Maximum candidates considered (default 50)",
+          "type": "integer"
+        },
+        "metric": {
+          "description": "Aggregate metric: count | session_count | session_span",
+          "type": "string"
+        },
+        "query": {
+          "description": "Full-text query selecting the memories to aggregate over",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query",
+        "metric"
+      ],
+      "route": "memory.aggregate"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "source": {
+          "description": "Source memory UUID",
+          "type": "string"
+        },
+        "target": {
+          "description": "Target memory UUID",
+          "type": "string"
+        },
+        "type": {
+          "description": "Link type (default: related)",
+          "type": "string"
+        },
+        "weight": {
+          "description": "Association weight (default 1.0)",
+          "type": "number"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "route": "memory.associate"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy to mine (optional; default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum memories to mine (default 50)",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "route": "memory.associate_mine"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "direction": {
+          "description": "Direction: from | to | both (default: both)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to inspect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "memory.associations"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "items": {
+          "description": "Array of {content, galaxy?, tags?} objects",
+          "items": {
+            "properties": {
+              "content": {
+                "description": "Memory content (text)",
+                "type": "string"
+              },
+              "galaxy": {
+                "description": "Target galaxy (default codex)",
+                "type": "string"
+              },
+              "importance": {
+                "description": "Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)",
+                "type": "number"
+              },
+              "tags": {
+                "description": "Optional tags",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "content"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "route": "memory.batch_create"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "confirm": {
+          "description": "Required — memory.batch_delete is destructive",
+          "type": "boolean"
+        },
+        "ids": {
+          "description": "Memory UUIDs to delete (max 200000)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "ids",
+        "confirm"
+      ],
+      "route": "memory.batch_delete"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "ids": {
+          "description": "Memory UUIDs to read",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "ids"
+      ],
+      "route": "memory.batch_read"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Optional galaxy filter",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum results",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Conversational query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "route": "memory.chat"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy to consolidate (optional; default codex)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "memory.consolidate"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "id": {
+          "description": "Memory UUID to corroborate",
+          "type": "string"
+        },
+        "session": {
+          "description": "Corroborating session UUID (defaults to the dispatch session; required when the dispatch carries none)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "memory.corroborate"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy to count (optional; all memory galaxies when absent)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "memory.count"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "content": {
+          "description": "Memory content (text)",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Target galaxy (default codex)",
+          "type": "string"
+        },
+        "importance": {
+          "description": "Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)",
+          "type": "number"
+        },
+        "source": {
+          "description": "Authorship claim: user (user-dictated content, trust 1.0) | agent (default, trust 0.7) | other free-form class (trust 0.7)",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Optional tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "description": "Optional human-readable title (envelope v2)",
+          "type": "string"
+        },
+        "topic": {
+          "description": "Optional topic label for subject-scoped retrieval (envelope v2)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "route": "memory.create"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "decay_factor": {
+          "description": "Multiplier applied to importance (0-1)",
+          "type": "number"
+        },
+        "galaxy": {
+          "description": "Galaxy to decay (optional; default codex)",
+          "type": "string"
+        },
+        "importance_threshold": {
+          "description": "Decay memories below this importance (0-1)",
+          "type": "number"
+        }
+      },
+      "required": [],
+      "route": "memory.decay"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "dry_run": {
+          "description": "Preview only (default: true)",
+          "type": "boolean"
+        },
+        "galaxy": {
+          "description": "Galaxy to deduplicate",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries to scan",
+          "type": "integer"
+        },
+        "mode": {
+          "description": "Strategy: hash | similarity (default: hash)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "galaxy"
+      ],
+      "route": "memory.deduplicate"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "confirm": {
+          "description": "Required — memory.delete is destructive",
+          "type": "boolean"
+        },
+        "galaxy": {
+          "description": "Galaxy containing the memory (optional; when omitted the id is resolved across all memory galaxies)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "confirm"
+      ],
+      "route": "memory.delete"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "candidate_limit": {
+          "description": "Maximum candidates to score (default 2x limit)",
+          "type": "integer"
+        },
+        "include_historical": {
+          "description": "Include superseded, revoked, and archived records",
+          "type": "boolean"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "min_coverage": {
+          "description": "Minimum query-term coverage ratio (0.0-1.0); results with lower coverage are dropped. E.g. 0.5 requires at least half the query terms to match. Default 0.0 (no threshold)",
+          "type": "number"
+        },
+        "min_score": {
+          "description": "Minimum score threshold; results below this are dropped (abstention). Default 0.0 (no threshold)",
+          "type": "number"
+        },
+        "query": {
+          "description": "Full-text query",
+          "type": "string"
+        },
+        "rerank": {
+          "description": "Enable vector reranking (requires embedder, default false)",
+          "type": "boolean"
+        },
+        "rerank_alpha": {
+          "description": "Rerank mode selector (default 0.7): <1.0 hybrid blend weight; >=1.0 near-tie cosine tiebreaker; >=2.0 protected top-K full cosine reorder (recall@limit preserved by construction)",
+          "type": "number"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "route": "memory.episodic_search"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "format": {
+          "description": "Export format: json | jsonl | markdown",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy to export (optional; default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries to export",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "route": "memory.export"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "created_after": {
+          "description": "Filter: only memories created at or after this RFC 3339 timestamp (e.g. 2026-08-01T00:00:00Z)",
+          "type": "string"
+        },
+        "created_before": {
+          "description": "Filter: only memories created at or before this RFC 3339 timestamp",
+          "type": "string"
+        },
+        "exclude_tags": {
+          "description": "Filter: drop memories carrying any of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "galaxy": {
+          "description": "Galaxy to filter (default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 50)",
+          "type": "integer"
+        },
+        "max_importance": {
+          "description": "Filter: maximum importance (0-1)",
+          "type": "number"
+        },
+        "min_importance": {
+          "description": "Filter: minimum importance (0-1)",
+          "type": "number"
+        },
+        "offset": {
+          "description": "Skip this many matching entries before returning (default 0)",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Filter: every whitespace-separated term must appear (case-insensitive) in the content or title",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Filter: memories with all of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "route": "memory.filter"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "cold_scan_limit": {
+          "description": "Maximum cold records to scan when include_cold is set (default 2048)",
+          "type": "integer"
+        },
+        "galaxy": {
+          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled; \"all\" is accepted as an alias for the unfiltered default)",
+          "type": "string"
+        },
+        "include_cold": {
+          "description": "Opt-in unranked cold recovery (no thaw). Trust/importance floors apply; BM25 floors do not apply to unscored recovery. Search content is scrubbed navigation capped at 8192 characters; read by id/galaxy for the exact original.",
+          "type": "boolean"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "min_importance": {
+          "description": "Minimum memory importance (0-1)",
+          "type": "number"
+        },
+        "min_score": {
+          "description": "Absolute BM25 score floor",
+          "type": "number"
+        },
+        "min_score_ratio": {
+          "description": "Relative floor: reject hits below this fraction of the top score",
+          "type": "number"
+        },
+        "min_trust": {
+          "description": "Minimum source_trust (0-1): drop results below this trust floor",
+          "type": "number"
+        },
+        "query": {
+          "description": "Full-text query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "route": "memory.hybrid_recall"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "exclude_tags": {
+          "description": "Drop memories carrying any of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "galaxy": {
+          "description": "Galaxy to list (default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 20)",
+          "type": "integer"
+        },
+        "offset": {
+          "description": "Skip this many matching entries before returning (default 0)",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "route": "memory.list"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Query text to locate in 5D space",
+          "type": "string"
+        },
+        "radius": {
+          "description": "Spatial radius cutoff (optional)",
+          "type": "number"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "route": "memory.nearby"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "created_after": {
+          "description": "Filter: only memories created at or after this RFC 3339 timestamp (e.g. 2026-08-01T00:00:00Z)",
+          "type": "string"
+        },
+        "created_before": {
+          "description": "Filter: only memories created at or before this RFC 3339 timestamp",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy to query (default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 50)",
+          "type": "integer"
+        },
+        "max_importance": {
+          "description": "Filter: maximum importance (0-1)",
+          "type": "number"
+        },
+        "min_importance": {
+          "description": "Filter: minimum importance (0-1)",
+          "type": "number"
+        },
+        "query": {
+          "description": "Case-insensitive substring filter over content (literal match). For tokenized, ranked full-text retrieval use memory.search",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Filter: memories with all of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "route": "memory.query"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy containing the memory (default codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "memory.read"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "relevant": {
+          "description": "Single-sample relevance label",
+          "type": "boolean"
+        },
+        "samples": {
+          "description": "Feedback samples: [{score: 0-1 fused score, relevant: bool}]",
+          "type": "array"
+        },
+        "score": {
+          "description": "Single-sample fused score (0-1)",
+          "type": "number"
+        }
+      },
+      "required": [],
+      "route": "memory.recall_feedback"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "dry_run": {
+          "description": "Plan only, no writes (default true)",
+          "type": "boolean"
+        },
+        "galaxy": {
+          "description": "Only this galaxy (optional; default: all memory galaxies)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum vectors to embed this pass (default 200; 0 = no cap)",
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "route": "memory.reembed"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "action": {
+          "description": "relate (default) | derive_follows | derive_mentions | derive_at",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "derive_mentions / derive_at: galaxy to scan (default codex)",
+          "type": "string"
+        },
+        "link_type": {
+          "description": "related | extends | contradicts | supersedes | temporal | causal | cascade | follows (default related; follows = temporal + follows marker)",
+          "type": "string"
+        },
+        "source": {
+          "description": "Source memory UUID (relate action)",
+          "type": "string"
+        },
+        "target": {
+          "description": "Target memory UUID (relate action)",
+          "type": "string"
+        },
+        "weight": {
+          "description": "Edge weight 0.0-1.0 (default 0.6; follows derivation derives it from shared tags)",
+          "type": "string"
+        },
+        "workspace_tag": {
+          "description": "derive_follows: only link sessions carrying this tag",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "memory.relate"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "action": {
+          "description": "Action: list (default) | verify",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to inspect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "memory.revisions"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "cold_scan_limit": {
+          "description": "Maximum cold records to scan when include_cold is set (default 2048)",
+          "type": "integer"
+        },
+        "galaxy": {
+          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled; \"all\" is accepted as an alias for the unfiltered default)",
+          "type": "string"
+        },
+        "include_cold": {
+          "description": "Opt-in unranked cold recovery (no thaw). Trust/importance floors apply; BM25 floors do not apply to unscored recovery. Search content is scrubbed navigation capped at 8192 characters; read by id/galaxy for the exact original.",
+          "type": "boolean"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "min_importance": {
+          "description": "Minimum memory importance (0-1)",
+          "type": "number"
+        },
+        "min_score": {
+          "description": "Absolute BM25 score floor",
+          "type": "number"
+        },
+        "min_score_ratio": {
+          "description": "Relative floor: reject hits below this fraction of the top score",
+          "type": "number"
+        },
+        "min_trust": {
+          "description": "Minimum source_trust (0-1): drop results below this trust floor",
+          "type": "number"
+        },
+        "query": {
+          "description": "Full-text query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "route": "memory.search"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy to sort (optional; default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 50)",
+          "type": "integer"
+        },
+        "order": {
+          "description": "Order: asc | desc (default desc)",
+          "type": "string"
+        },
+        "sort_by": {
+          "description": "Sort key: importance | created_at | accessed_at | access_count",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "memory.sort"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy to summarize (optional; default codex)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "memory.stats"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "action": {
+          "description": "Action: add (default) | remove",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to tag",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags to apply",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "tags"
+      ],
+      "route": "memory.tag"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy whose tags to list (optional; default codex)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "memory.tags"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "content": {
+          "description": "New content (optional)",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to update",
+          "type": "string"
+        },
+        "importance": {
+          "description": "New importance 0.0-1.0 (optional)",
+          "type": "number"
+        },
+        "tags": {
+          "description": "Replacement tags (optional)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "description": "New title (optional)",
+          "type": "string"
+        },
+        "topic": {
+          "description": "New topic label (optional)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "memory.update"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "embedding": {
+          "description": "Raw embedding vector (alternative to memory_id)",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "galaxy": {
+          "description": "Galaxy filter (optional)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "memory_id": {
+          "description": "Memory UUID whose stored embedding is the query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id"
+      ],
+      "route": "memory.vector.search"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "meta.enhance"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "meta.stats"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "model.sign"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "model.verify"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "network.centrality"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "network.clusters"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "network.stats"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "nlu.shadow_report"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "oss.bounty.scan"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "oss.bounty.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "pattern.detect"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "pattern.search"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "pipeline.create"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "pipeline.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "pipeline.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "reasoning.bicameral"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "redteam.coverage_report"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "redteam.from_friction"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "redteam.proposals"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "reflex.add"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "reflex.dispatch"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "reflex.evaluate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "reflex.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "reflex.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "research.rabbit_hole"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "research.repo"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "research.topic"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "retention.prune"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "salience.spotlight"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sandbox.limits"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sandbox.set_limits"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.chat"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.discover"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.locks"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.mesh.chat"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.mesh.join"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.mesh.mail"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.mesh.quarantine"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.mesh.read"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.mesh.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.peers"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.quarantine"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sangha.signal"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "security.breaker.alerts"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "security.breaker.record"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "security.breaker.reset"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "security.breaker.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "security.probe.evaluate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "security.probe.library"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "security.probe.plan"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "selfmodel.alerts"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "selfmodel.forecast"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "selfmodel.gnosis"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "selfmodel.snapshot"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "selfplay.export"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "selfplay.run"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "selfplay.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sensor.history"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sensor.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sensor.poll"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sensor.read"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sensorimotor.scan"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "serendipity.surface"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "branch": {
+          "description": "Manual branch name (auto-captured when git is available)",
+          "type": "string"
+        },
+        "commit": {
+          "description": "Manual commit hash (auto-captured from git when root/WM_PROJECT_ROOT is set)",
+          "type": "string"
+        },
+        "data": {
+          "description": "Legacy free-form passthrough stored beside the handoff.",
+          "type": "object"
+        },
+        "label": {
+          "description": "Checkpoint label (default 'checkpoint')",
+          "type": "string"
+        },
+        "lease_id": {
+          "description": "Claimed scope (code.claim lease_id) that remains held at this handoff",
+          "type": "string"
+        },
+        "next_queue": {
+          "description": "Ordered next-step strings for the next session.",
+          "type": "array"
+        },
+        "open_flags": {
+          "description": "Open concerns/flags worth surfacing on resume.",
+          "type": "array"
+        },
+        "root": {
+          "description": "Repository root for auto git-capture (default: WM_PROJECT_ROOT env)",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Target session (default: most recent session)",
+          "type": "string"
+        },
+        "tests_green": {
+          "description": "Whether the test suite was green at checkpoint time.",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "route": "session.checkpoint"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "current_session_id": {
+          "description": "Session to exclude (optional)",
+          "type": "string"
+        },
+        "n": {
+          "description": "Number of prior turns (default 10)",
+          "type": "integer"
+        },
+        "since": {
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        },
+        "until": {
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.continuity"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "include_checkpoint": {
+          "description": "Append the latest checkpoint's git/handoff state (default true).",
+          "type": "boolean"
+        },
+        "min_importance": {
+          "description": "Importance floor (default 0.5)",
+          "type": "number"
+        },
+        "session_id": {
+          "description": "Session to digest (default: most recent)",
+          "type": "string"
+        },
+        "since": {
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        },
+        "until": {
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.digest"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "session_id": {
+          "description": "Session UUID to end (start-memory id)",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Optional closing summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "route": "session.end"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "path": {
+          "description": "Write JSONL to this file instead of returning inline",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Session to export (default: most recent)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.export"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "action": {
+          "description": "transfer | accept | list",
+          "type": "string"
+        },
+        "handoff_id": {
+          "description": "accept: handoff to accept",
+          "type": "string"
+        },
+        "message": {
+          "description": "transfer: handoff note",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "transfer: session to hand off",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "route": "session.handoff"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "jsonl": {
+          "description": "Or pass the export payload inline",
+          "type": "string"
+        },
+        "path": {
+          "description": "Read JSONL from this file",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.import"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "sequence": {
+          "description": "Filter by start sequence number",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Filter by session UUID",
+          "type": "string"
+        },
+        "title": {
+          "description": "Filter by title substring",
+          "type": "string"
+        },
+        "type": {
+          "description": "Filter by session type",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.list"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "limit": {
+          "description": "Maximum turns to return (default 50)",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Session UUID to recall (defaults to the most recent session)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.recall"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "content": {
+          "description": "Turn content",
+          "type": "string"
+        },
+        "importance": {
+          "description": "0-1 importance (default 0.5)",
+          "type": "number"
+        },
+        "role": {
+          "description": "user | ai (default user)",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Target session (default: most recent session)",
+          "type": "string"
+        },
+        "supersedes": {
+          "description": "Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)",
+          "type": "string"
+        },
+        "turn_type": {
+          "description": "message, decision, breakthrough, question, answer, code_change, error, summary, context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "route": "session.record"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "cursor": {
+          "description": "Lossless mode opaque placement cursor",
+          "type": "string"
+        },
+        "include_superseded": {
+          "description": "Also return turns replaced via supersedes (default false).",
+          "type": "boolean"
+        },
+        "max_wire_bytes": {
+          "description": "Lossless mode serialized JSON ceiling (1024-49152)",
+          "type": "integer"
+        },
+        "min_importance": {
+          "description": "Selective mode floor (default 0.7)",
+          "type": "number"
+        },
+        "mode": {
+          "description": "full | selective | progressive | lossless (default full)",
+          "type": "string"
+        },
+        "n": {
+          "description": "Maximum turns (default 50)",
+          "type": "integer"
+        },
+        "page_size": {
+          "description": "Lossless mode records per page (1-64, default 16)",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Target session (required explicit UUID for lossless; otherwise default most recent)",
+          "type": "string"
+        },
+        "since": {
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        },
+        "token_budget": {
+          "description": "Progressive mode token budget (default 2000)",
+          "type": "integer"
+        },
+        "turn_types": {
+          "description": "Selective mode: turn types to keep",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "until": {
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.replay"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "title": {
+          "description": "Session title",
+          "type": "string"
+        },
+        "user": {
+          "description": "User identifier (default 'default')",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.start"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "root": {
+          "description": "Repository root to verify against (default: WM_PROJECT_ROOT env)",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Session whose latest checkpoint to verify (default: most recent session)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.verify"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sim.counterfactual"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sim.forecast"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "sim.mc"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "simulation.calibrate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "skill.invoke"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "skill.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "smarana.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "smarana.trace"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "speculative.decode"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "speculative.stats"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "spiral.report"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "label": {
+          "description": "State snapshot label to compare",
+          "type": "string"
+        },
+        "snapshot_id": {
+          "description": "Exact state snapshot UUID to compare",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "state.revert"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "state.snapshot"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "system.config"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "dry_run": {
+          "description": "Preview only (default true) — count without deleting",
+          "type": "boolean"
+        },
+        "galaxy": {
+          "description": "Scope the flush to one galaxy (e.g. 'codex')",
+          "type": "string"
+        },
+        "store_wide": {
+          "description": "Acknowledge a store-wide flush across all galaxies",
+          "type": "boolean"
+        },
+        "threshold": {
+          "description": "Flush memories below this importance (default 0.05)",
+          "type": "number"
+        }
+      },
+      "required": [],
+      "route": "system.flush"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "system.health"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "agent_id": {
+          "description": "Requested assignee label; not a verified or contacted agent",
+          "type": "string"
+        },
+        "task": {
+          "description": "Non-empty task description to record",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task"
+      ],
+      "route": "task.distribute"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "task_id": {
+          "description": "Optional exact task memo UUID",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "task.status"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "dry_run": {
+          "description": "report without deleting (default true)",
+          "type": "boolean"
+        },
+        "limit": {
+          "description": "max records to inspect, 0 = all",
+          "type": "number"
+        },
+        "rollups_older_than_days": {
+          "description": "rollup horizon in days (default 90)",
+          "type": "number"
+        },
+        "windows_older_than_days": {
+          "description": "window horizon in days (default 7)",
+          "type": "number"
+        }
+      },
+      "required": [],
+      "route": "telemetry.prune"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "importance": {
+          "description": "0-1, capped to the telemetry class ceiling 0.40",
+          "type": "number"
+        },
+        "record": {
+          "description": "telemetry.window | telemetry.rollup record (required)",
+          "type": "object"
+        },
+        "source": {
+          "description": "producer label (default 'agent')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "record"
+      ],
+      "route": "telemetry.record"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "rollups_older_than_days": {
+          "description": "rollup horizon to project (default 90)",
+          "type": "number"
+        },
+        "windows_older_than_days": {
+          "description": "window horizon to project (default 7)",
+          "type": "number"
+        }
+      },
+      "required": [],
+      "route": "telemetry.retention"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "dry_run": {
+          "description": "report without writing (default false)",
+          "type": "boolean"
+        },
+        "hours": {
+          "description": "how far back to scan (default 24)",
+          "type": "number"
+        },
+        "include_current": {
+          "description": "include the in-progress hour (default false)",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "route": "telemetry.rollup"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "think"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "timescale.hooks"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "timescale.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "tools.effectiveness_report"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "tools.list"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "tools.retire"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "limit": {
+          "description": "Maximum number of tools to return (default: 25, 0 = all)",
+          "type": "integer"
+        },
+        "min_calls": {
+          "description": "Only include tools with at least this many calls (default: 0)",
+          "type": "integer"
+        },
+        "retire_candidates_only": {
+          "description": "Only include tools flagged for retirement (>= 10 calls, effectiveness < 0.2)",
+          "type": "boolean"
+        },
+        "sort": {
+          "description": "Sort key (default: calls, descending; effectiveness ascending — worst first; latency descending — slowest first)",
+          "enum": [
+            "calls",
+            "effectiveness",
+            "latency"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "tools.usage_report"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "transaction.begin"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "transaction.commit"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "confirm": {
+          "description": "Required — transaction.rollback is destructive",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "confirm"
+      ],
+      "route": "transaction.rollback"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "tx_firewall.set_policy"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "tx_firewall.status"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "violet.engagement.issue"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "violet.engagement.revoke"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "violet.engagement.validate"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "web.deep_fetch"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "web.fetch"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "web.search"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "web.search_and_read"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "whitemagic"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "args": {
+          "description": "Arguments passed through to the target tool",
+          "type": "object"
+        },
+        "route": {
+          "description": "Explicit canonical route, e.g. \"memory.search\" (preferred for agents)",
+          "type": "string"
+        },
+        "thought": {
+          "description": "Natural-language convenience routing (least reliable; prefer route)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "wm"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "workspace.events"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "workspace.publish"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "workspace.spotlight"
+    },
+    {
+      "declared": false,
+      "properties": {},
+      "required": [],
+      "route": "workspace.stats"
+    }
+  ],
+  "version": "9.1.6"
+}
