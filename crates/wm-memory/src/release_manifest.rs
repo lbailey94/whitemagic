@@ -14,9 +14,13 @@
 //!
 //! CI wiring (release.yml) is the operator's lane: the private key lives
 //! in CI secrets, the manifest rides the release alongside SHA256SUMS,
-//! and the release public key is pinned in `scripts/install.sh`. This
-//! module is the sign/verify core plus tests; it mints no keys and reads
-//! no environment — key custody stays out of the library by design.
+//! and the release public key is pinned at build time from the repository
+//! variable `WM_RELEASE_PUBKEY` (workflow env → `option_env!` in the
+//! `wm-mcp` update path, with a runtime `WM_RELEASE_PUBKEY` override and
+//! `--insecure-checksum` as the only escape). `scripts/install.sh` verifies
+//! artifact checksums only. This module is the sign/verify core plus tests;
+//! it mints no keys and reads no environment — key custody stays out of the
+//! library by design.
 
 use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
