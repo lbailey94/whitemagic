@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Release gates
 - CI gains a **host-scripts job** (installer sentinel, version truth, release manifest Python tests + npm launcher suite) so those gates no longer depend on a release ceremony.
 - Re-verified on this commit: fmt clean · clippy `--all-targets -D warnings` clean · workspace 4,552 passed / 0 failed · Python 22 OK · npm 8/8 · `wm contract --check` clean · curated smoke passed · zero-egress proof passed (network namespace with only a DOWN loopback) · all version surfaces agree.
+- **Test-count note (2026-09-15):** the 4,552 above is the local pre-release gate run; the tagged-commit CI job (`cargo test --all-targets`, Linux) counted **4,542 passed / 0 failed / 2 ignored** — the figure `release-manifest.json` records. Quote the manifest figure for release claims.
 
 ## [9.1.6] — 2026-09-15
 
