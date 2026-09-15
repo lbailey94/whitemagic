@@ -41,6 +41,88 @@ fn with_navigation_disclosure(mut result: serde_json::Value, original: &str) -> 
     result
 }
 
+/// Compact per-result evidence bundle (v0): exact identity, retrieval reason,
+/// source time, integrity, visibility, and coverage. Cold-only records report
+/// their time as unavailable rather than guessing.
+fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> serde_json::Value {
+    let entries: Vec<serde_json::Value> = results
+        .iter()
+        .map(|r| {
+            let id = r
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let galaxy = r
+                .get("galaxy")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let resolved = uuid::Uuid::parse_str(&id)
+                .ok()
+                .and_then(|key| resolve_memory_across_galaxies(store, key));
+            let (source_time, visibility) = match &resolved {
+                Some((_, mem)) => (
+                    json!({"created_at": mem.metadata.created_at, "basis": "recorded_at"}),
+                    json!({
+                        "private": mem.metadata.is_private,
+                        "model_exclude": mem.metadata.model_exclude,
+                    }),
+                ),
+                None => (
+                    json!({
+                        "created_at": serde_json::Value::Null,
+                        "basis": "unavailable_cold_record",
+                    }),
+                    json!({
+                        "private": false,
+                        "model_exclude": !r
+                            .get("model_visible")
+                            .and_then(serde_json::Value::as_bool)
+                            .unwrap_or(false),
+                    }),
+                ),
+            };
+            let mut retrieval = json!({
+                "route": r.get("source").cloned().unwrap_or(serde_json::Value::Null),
+                "score": r.get("score").cloned().unwrap_or(serde_json::Value::Null),
+            });
+            if let Some(terms) = r.get("matched_terms") {
+                retrieval["matched_terms"] = terms.clone();
+            }
+            if let Some(via) = r.get("via") {
+                retrieval["via"] = via.clone();
+            }
+            json!({
+                "id": id,
+                "galaxy": galaxy,
+                "retrieval": retrieval,
+                "source_time": source_time,
+                "integrity": r
+                    .get("integrity")
+                    .cloned()
+                    .unwrap_or_else(|| json!("source_read")),
+                "visibility": visibility,
+                "coverage": {
+                    "representation": r
+                        .get("content_representation")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null),
+                    "truncated": r
+                        .get("content_truncated")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null),
+                    "exact_read_available": r
+                        .get("exact_read_available")
+                        .cloned()
+                        .unwrap_or(json!(false)),
+                },
+            })
+        })
+        .collect();
+    json!({"version": "v0", "count": entries.len(), "entries": entries})
+}
+
 /// Resolve a memory id across all memory galaxies. Associations may point at
 /// records in any galaxy; callers should not have to guess which one.
 fn resolve_memory_across_galaxies(
@@ -1566,6 +1648,7 @@ impl Tool for MemoryHybridRecallTool {
         } else {
             None
         };
+        let evidence_bundle = build_evidence_bundle(&self.store, &results);
         let hint = if results.is_empty() && !query.is_empty() {
             Some(if galaxy_explicit {
                 empty_result_hint(&self.store, galaxy)
@@ -1608,6 +1691,7 @@ impl Tool for MemoryHybridRecallTool {
         if let Some(cd) = cold_discovery {
             out["cold_discovery"] = cd;
         }
+        out["evidence_bundle"] = evidence_bundle;
         if !query.is_empty() && results.is_empty() {
             out["abstention"] = json!({
                 "status": "insufficient_evidence",
