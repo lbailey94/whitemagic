@@ -1316,6 +1316,14 @@ fn main() -> anyhow::Result<()> {
             println!(
                 "Contract: explicit routes are the contract — call the wm meta-tool with route=\"...\" for dependable behavior."
             );
+            let failed = outcomes
+                .iter()
+                .filter(|o| matches!(o.action, wm_mcp::setup::ConnectAction::Failed(_)))
+                .count();
+            if failed > 0 {
+                eprintln!("\n\u{2716} {failed} client(s) failed to configure — exiting non-zero.");
+                std::process::exit(1);
+            }
         }
         Commands::Update { action } => match action {
             UpdateAction::Check {

@@ -59,8 +59,24 @@ pub struct Step {
 pub struct Report {
     /// Binary version under test.
     pub version: String,
-    /// True when no step failed (warnings and skips are still "ready").
+    /// True when no step failed (compatibility aggregate; prefer the split
+    /// fields below — "WhiteMagic works" and "I am wired to WhiteMagic" are
+    /// different facts).
     pub ready: bool,
+    /// Host, substrate, and memory steps did not fail: the substrate is
+    /// functional on this machine.
+    pub substrate_ready: bool,
+    /// At least one MCP client is wired and no detected client failed to
+    /// configure. False when none was detected, only proposed (dry run), or
+    /// any write failed.
+    pub agent_wired: bool,
+    /// The restart-continuity demonstration passed.
+    pub continuity_verified: bool,
+    /// A real embedder is reachable (HTTP endpoint or in-process ONNX);
+    /// lexical-only installs report false honestly.
+    pub semantic_recall_available: bool,
+    /// `substrate_ready && agent_wired && continuity_verified`.
+    pub fully_activated: bool,
     /// Steps in execution order.
     pub steps: Vec<Step>,
     /// Total wall time.
@@ -207,7 +223,7 @@ fn release_step() -> Step {
     }
 }
 
-fn agent_step(write: bool) -> Step {
+fn agent_step(write: bool) -> (Step, bool) {
     let t = Instant::now();
     let detected: Vec<_> = crate::setup::specs()
         .into_iter()
@@ -215,21 +231,27 @@ fn agent_step(write: bool) -> Step {
         .collect();
 
     if detected.is_empty() {
-        return step(
-            "agent",
-            StepStatus::Warn,
-            "no MCP client config detected — wire one with 'wm connect --write' or 'wm setup <client>'"
-                .to_string(),
-            t,
+        return (
+            step(
+                "agent",
+                StepStatus::Warn,
+                "no MCP client config detected — wire one with 'wm connect --write' or 'wm setup <client>'"
+                    .to_string(),
+                t,
+            ),
+            false,
         );
     }
 
     let Some(exe) = std::env::current_exe().ok() else {
-        return step(
-            "agent",
-            StepStatus::Warn,
-            "cannot resolve this binary for client wiring".to_string(),
-            t,
+        return (
+            step(
+                "agent",
+                StepStatus::Warn,
+                "cannot resolve this binary for client wiring".to_string(),
+                t,
+            ),
+            false,
         );
     };
 
@@ -237,12 +259,16 @@ fn agent_step(write: bool) -> Step {
     let outcomes = crate::setup::connect_with(&detected, &exe, write);
     let mut parts = Vec::new();
     let mut status = StepStatus::Ok;
+    let mut wired = 0usize;
+    let mut failed = false;
     for outcome in &outcomes {
         match &outcome.action {
             crate::setup::ConnectAction::Configured => {
+                wired += 1;
                 parts.push(format!("{}: configured", outcome.id));
             }
             crate::setup::ConnectAction::Written => {
+                wired += 1;
                 parts.push(format!("{}: wired (backup saved)", outcome.id));
             }
             crate::setup::ConnectAction::Proposed => {
@@ -250,6 +276,7 @@ fn agent_step(write: bool) -> Step {
             }
             crate::setup::ConnectAction::Failed(e) => {
                 status = StepStatus::Warn;
+                failed = true;
                 parts.push(format!("{}: write failed: {e}", outcome.id));
             }
         }
@@ -257,7 +284,10 @@ fn agent_step(write: bool) -> Step {
     if crate::setup::read_only_note().is_some() {
         parts.push("entries read-only (store held by a running serve/daemon)".to_string());
     }
-    step("agent", status, parts.join("; "), t)
+    // Wired means: at least one client configured AND no detected client
+    // failed — a partial connect is not an activation.
+    let agent_wired = wired > 0 && !failed;
+    (step("agent", status, parts.join("; "), t), agent_wired)
 }
 
 fn probe_endpoint(addr: SocketAddr) -> bool {
@@ -276,14 +306,17 @@ fn endpoint_host_port(url: &str) -> Option<SocketAddr> {
 }
 
 /// Report the embedder posture honestly: reachable when configured, lexical
-/// when not, and a warning when configured but unreachable.
-fn probe_embedder() -> (StepStatus, String) {
+/// when not, and a warning when configured but unreachable. The trailing bool
+/// is `semantic recall available` (a real embedder — HTTP or in-process ONNX
+/// — as opposed to the lexical fallback).
+fn probe_embedder() -> (StepStatus, String, bool) {
     if let Ok(endpoint) = std::env::var("WM_EMBEDDER_ENDPOINT") {
         let endpoint = endpoint.trim();
         if endpoint.is_empty() {
             return (
                 StepStatus::Ok,
                 "lexical search (no model needed)".to_string(),
+                false,
             );
         }
         return match endpoint_host_port(endpoint) {
@@ -292,6 +325,7 @@ fn probe_embedder() -> (StepStatus, String) {
                     (
                         StepStatus::Ok,
                         format!("local embeddings reachable at {addr}"),
+                        true,
                     )
                 } else {
                     (
@@ -299,12 +333,14 @@ fn probe_embedder() -> (StepStatus, String) {
                         format!(
                             "embedder endpoint {addr} configured but unreachable — lexical fallback"
                         ),
+                        false,
                     )
                 }
             }
             None => (
                 StepStatus::Warn,
                 format!("embedder endpoint unparseable: {endpoint}"),
+                false,
             ),
         };
     }
@@ -312,18 +348,20 @@ fn probe_embedder() -> (StepStatus, String) {
         return (
             StepStatus::Ok,
             "local ONNX embeddings (in-process)".to_string(),
+            true,
         );
     }
     (
         StepStatus::Ok,
         "lexical search (no model needed)".to_string(),
+        false,
     )
 }
 
-fn memory_step(store: &Path) -> Step {
+fn memory_step(store: &Path) -> (Step, bool) {
     let t = Instant::now();
     let report = crate::status::collect(store);
-    let (embed_status, embedder) = probe_embedder();
+    let (embed_status, embedder, semantic) = probe_embedder();
 
     let detail = if report.store_ok {
         format!(
@@ -354,7 +392,7 @@ fn memory_step(store: &Path) -> Step {
     } else {
         store_status
     };
-    step("memory", status, detail, t)
+    (step("memory", status, detail, t), semantic)
 }
 
 /// The core habits an arriving agent should internalize. The contract is
@@ -457,8 +495,10 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
             ms: 0,
         }
     });
-    steps.push(agent_step(opts.write));
-    steps.push(memory_step(&opts.store));
+    let (agent, agent_wired) = agent_step(opts.write);
+    steps.push(agent);
+    let (memory, semantic_recall_available) = memory_step(&opts.store);
+    steps.push(memory);
     steps.push(teach_step());
     steps.push(match continuity_step().await {
         Ok(s) => s,
@@ -470,10 +510,23 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
         },
     });
 
+    // Split readiness: "WhiteMagic works" (substrate), "I am wired to it"
+    // (agent), and "continuity was proven" are different facts; the single
+    // `ready` aggregate stays for compatibility.
+    let status_of = |name: &str| steps.iter().find(|s| s.name == name).map(|s| s.status);
+    let substrate_ready = ["host", "substrate", "memory"]
+        .iter()
+        .all(|name| !matches!(status_of(name), Some(StepStatus::Fail)));
+    let continuity_verified = matches!(status_of("continuity"), Some(StepStatus::Ok));
     let ready = steps.iter().all(|s| s.status != StepStatus::Fail);
     Ok(Report {
         version: env!("CARGO_PKG_VERSION").to_string(),
         ready,
+        substrate_ready,
+        agent_wired,
+        continuity_verified,
+        semantic_recall_available,
+        fully_activated: substrate_ready && agent_wired && continuity_verified,
         steps,
         total_ms: overall.elapsed().as_millis(),
     })
@@ -495,9 +548,12 @@ mod tests {
     #[test]
     fn memory_step_is_calm_on_a_fresh_install() {
         let tmp = tempfile::tempdir().unwrap();
-        let s = memory_step(tmp.path());
+        let (s, semantic) = memory_step(tmp.path());
         assert_eq!(s.status, StepStatus::Ok);
         assert!(s.detail.contains("no store yet"));
+        // Semantic availability depends on the host environment; presence is
+        // the contract here.
+        let _ = semantic;
     }
 
     #[test]
@@ -600,6 +656,22 @@ mod tests {
         .await
         .expect("grimoire infrastructure");
         assert!(report.ready, "grimoire must be ready: {report:?}");
+        assert!(
+            report.substrate_ready,
+            "substrate must be ready: {report:?}"
+        );
+        assert!(
+            report.continuity_verified,
+            "continuity demonstration must pass: {report:?}"
+        );
+        assert_eq!(
+            report.fully_activated,
+            report.substrate_ready && report.agent_wired && report.continuity_verified,
+            "activation must be the conjunction of the split states"
+        );
+        // The fixture has no embedder configured unless the host environment
+        // exports one; the flag is asserted for presence, not value.
+        let _ = report.semantic_recall_available;
         let names: Vec<_> = report.steps.iter().map(|s| s.name).collect();
         assert_eq!(
             names,

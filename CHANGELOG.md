@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sandbox executor deadline (Landlock v1)**: the scoped-thread pathway now enforces `WM_DISPATCH_TIMEOUT_MS` inside the confined thread — a timed-out tool future is dropped and reported, mirroring the normal dispatch path; `with_timeout` overrides per executor and timeouts are counted.
 - **`sandbox.set_limits` input validation**: all six fields are validated before any is applied; wrong-typed, negative, or out-of-range values are rejected with the field named (no silent `u32` truncation, no partial application). Behavior tests cover acceptance, atomic rejection, and effective write/spawn/network budget enforcement.
 
+### Setup & onboarding
+- **Split readiness states**: `wm grimoire --json` now reports `substrate_ready`, `agent_wired`, `continuity_verified`, `semantic_recall_available`, and `fully_activated` alongside the compatibility `ready` aggregate — a fresh machine with no client reports `ready: true, agent_wired: false, fully_activated: false` instead of a single coarse boolean. `wm connect --write` exits non-zero when any detected client fails to configure (partial connect is not activation).
+
 ### Telemetry
 - **Unified evidence ceiling**: RSI auto-friction writes (`friction.auto_log` regression paths and anomalies) now clamp importance to the shared `IMPORTANCE_CEILING` (0.40) used by the typed telemetry path, instead of writing 0.5–0.95; severity remains visible in `rsi:severity:*` tags. Manual `friction.log` (Codex) is unchanged.
 
