@@ -3179,6 +3179,10 @@ impl McpServer {
                 "description": description,
                 "inputSchema": {
                     "type": "object",
+                    "anyOf": [
+                        { "required": ["thought"] },
+                        { "required": ["route"] },
+                    ],
                     "properties": {
                         "thought": {
                             "type": "string",
@@ -4929,6 +4933,14 @@ mod tests {
             Some("memory.hybrid_recall")
         );
         assert!(tools[0]["inputSchema"].is_object());
+        assert_eq!(
+            tools[0]["inputSchema"]["anyOf"],
+            json!([
+                { "required": ["thought"] },
+                { "required": ["route"] },
+            ]),
+            "wm discovery must disclose the dispatcher's unconditional thought-or-route requirement"
+        );
         // Discovery metadata: every catalog entry carries annotations and
         // an outputSchema (Smithery/Glama tool-quality surface).
         for t in &tools {
