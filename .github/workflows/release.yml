@@ -233,7 +233,7 @@ jobs:
             while [ -z "$done_pkg" ]; do
               if cargo publish -p "$c" > /tmp/pub.log 2>&1; then
                 echo "PUBLISHED: $c"; done_pkg=1; sleep 20
-              elif grep -aq "already exists" /tmp/pub.log; then
+              elif grep -aqE "already exists|already uploaded" /tmp/pub.log; then
                 echo "SKIP (already live): $c"; done_pkg=1
               elif grep -aq "429 Too Many" /tmp/pub.log; then
                 after=$(grep -aoP "try again after \K.*?GMT" /tmp/pub.log | head -n1)

@@ -193,7 +193,7 @@ for c in $CRATES; do
   while [ -z "$published" ]; do
     if $DRY_RUN; then echo "[dry-run] cargo publish -p $c"; published=1; break; fi
     if cargo publish -p "$c" > "/tmp/pub-$c.log" 2>&1; then echo "PUBLISHED: $c"; published=1; sleep 20; break; fi
-    if grep -aq "already exists" "/tmp/pub-$c.log"; then echo "SKIP (already live): $c"; published=1; break; fi
+    if grep -aqE "already exists|already uploaded" "/tmp/pub-$c.log"; then echo "SKIP (already live): $c"; published=1; break; fi
     if grep -aq "429 Too Many" "/tmp/pub-$c.log"; then
       after=$(grep -aoP "try again after \K.*?GMT" "/tmp/pub-$c.log" | head -n 1)
       wait=$(( $(date -d "$after" +%s 2>/dev/null || echo 0) - $(date +%s) + 15 ))
