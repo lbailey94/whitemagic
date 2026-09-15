@@ -3008,6 +3008,25 @@ fn run_network_audit() -> u32 {
     issues
 }
 
+/// Collector sent-log feed summary: `(records, age_seconds)`, or `None` when
+/// the ring is absent. The collector only runs for instrumented captures, so
+/// absence is disclosure (INFO), never an issue.
+fn yama_feed_summary(path: &std::path::Path) -> Option<(usize, u64)> {
+    let meta = std::fs::metadata(path).ok()?;
+    let age = meta
+        .modified()
+        .ok()
+        .and_then(|m| m.elapsed().ok())
+        .map_or(0, |d| d.as_secs());
+    let records = std::fs::read_to_string(path).map_or(0, |body| {
+        body.lines().filter(|l| !l.trim().is_empty()).count()
+    });
+    Some((records, age))
+}
+
+/// A collector feed older than this is disclosed as stale (15 minutes).
+const YAMA_FEED_STALE_SECONDS: u64 = 900;
+
 #[allow(clippy::fn_params_excessive_bools)] // doctor flags are naturally booleans
 fn run_doctor(
     store: Option<PathBuf>,
@@ -3815,6 +3834,33 @@ fn run_doctor(
         None => println!(
             "[INFO] Subprocess sandbox: no runner resolved (set WM_SANDBOX_RUNNER or install \
              mandala-sandbox on PATH) — declared spawns run unconfined"
+        ),
+    }
+
+    // 11d-3. Yama bridge (observe) — the collector's sent-log ring is the
+    //        local feed Lakshmi reads mirror-first. Absence is disclosure
+    //        (the collector only runs for instrumented S4-style captures),
+    //        never an issue; a stale ring is called stale, not healthy.
+    println!();
+    let feed_path = std::env::var("WM_YAMA_FEED_PATH").map_or_else(
+        |_| {
+            PathBuf::from(std::env::var("HOME").unwrap_or_default())
+                .join(".local/share/yama-collector/sent.jsonl")
+        },
+        PathBuf::from,
+    );
+    match yama_feed_summary(&feed_path) {
+        Some((records, age)) if age <= YAMA_FEED_STALE_SECONDS => println!(
+            "[OK]   Yama bridge: collector feed {records} record(s), last write {age}s ago ({})",
+            feed_path.display()
+        ),
+        Some((records, age)) => println!(
+            "[INFO] Yama bridge: collector feed stale — {records} record(s), last write {age}s ago ({})",
+            feed_path.display()
+        ),
+        None => println!(
+            "[INFO] Yama bridge: no collector feed at {} (collector not running — observation records land only during instrumented runs)",
+            feed_path.display()
         ),
     }
 
@@ -4865,6 +4911,17 @@ mod readonly_startup_tests {
             result, 0,
             "doctor graded a clean readonly store as unhealthy"
         );
+    }
+
+    #[test]
+    fn yama_feed_summary_reports_records_and_age() {
+        let tmp = tempfile::tempdir().unwrap();
+        let feed = tmp.path().join("sent.jsonl");
+        assert!(yama_feed_summary(&feed).is_none());
+        std::fs::write(&feed, "{\"a\":1}\n\n{\"b\":2}\n").unwrap();
+        let (records, age) = yama_feed_summary(&feed).unwrap();
+        assert_eq!(records, 2);
+        assert!(age < 60, "fresh feed should report an age under a minute");
     }
 
     #[test]
