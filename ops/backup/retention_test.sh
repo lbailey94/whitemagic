@@ -71,4 +71,37 @@ grep -q 'EVIDENCE-MISSING trust manifest ' "$fixture/guard/guard.log"
 grep -q 'EVIDENCE-MISSING OTS proof ' "$fixture/guard/guard.log"
 grep -q 'EVIDENCE-MISSING RFC3161 response ' "$fixture/guard/guard.log"
 grep -q 'EVIDENCE-SUMMARY 3 item(s) missing' "$fixture/guard/guard.log"
-echo 'PASS: positive retention, repeated run, evidence, dated trust evidence, unknown paths, spaces, symlinks, invalid keep, evidence guard'
+# Per-store keep overrides + a separate (longer) seal keep: big stores stay
+# lean, small stores keep their history, seal evidence keeps its own window.
+mkdir -p "$fixture/over/big" "$fixture/over/small"
+for day in 01 02 03 04; do
+  mkdir -p "$fixture/over/big/whitemagic-backup-202609${day}T000000Z"
+  mkdir -p "$fixture/over/small/whitemagic-backup-202609${day}T000000Z"
+  mkdir -p "$fixture/over/seals/big/2026-09-${day}"
+  mkdir -p "$fixture/over/seals/small/2026-09-${day}"
+done
+prune_backup_retention "$fixture/over" 2 "small:4" 3
+for day in 03 04; do test -d "$fixture/over/big/whitemagic-backup-202609${day}T000000Z"; done
+test ! -e "$fixture/over/big/whitemagic-backup-20260901T000000Z"
+for day in 01 02 03 04; do test -d "$fixture/over/small/whitemagic-backup-202609${day}T000000Z"; done
+for day in 02 03 04; do test -d "$fixture/over/seals/big/2026-09-${day}"; done
+test ! -e "$fixture/over/seals/big/2026-09-01"
+test -d "$fixture/over/seals/small/2026-09-04"
+# Canonical-volume decision helper: only the stored UUID counts.
+canon_fn="$(sed -n '/^is_canonical_volume() {/,/^}$/p' "$runner")"
+test -n "$canon_fn"
+printf 'set -u\n%s\nis_canonical_volume "SD_CARD1/FA99-F6E6" "FA99-F6E6"\n' "$canon_fn" > "$fixture/canon-ok.sh"
+bash "$fixture/canon-ok.sh"
+printf 'set -u\n%s\nis_canonical_volume "SD_CARD1/FEEC-FCE2" "FA99-F6E6"\n' "$canon_fn" > "$fixture/canon-bad.sh"
+if bash "$fixture/canon-bad.sh"; then exit 1; fi
+printf 'set -u\n%s\nis_canonical_volume "" "FA99-F6E6"\n' "$canon_fn" > "$fixture/canon-empty.sh"
+if bash "$fixture/canon-empty.sh"; then exit 1; fi
+# Day-gap scan: with TRUST_ONLY=false and a store that has a seals dir but no
+# dated entries, EVIDENCE-GAP lines must appear (informational, not failing).
+mkdir -p "$fixture/gap/trust" "$fixture/gap/seals/store"
+printf 'digest only\n' > "$fixture/gap/trust/trust-$(date -u +%Y%m%d).json.sha256"
+printf 'set -u\nTRUST="$1/trust"\nSEALS="$1/seals"\nRW_STORES="$1/store"\nRO_STORES=""\nTRUST_ONLY=false\nLOG="$1/gap.log"\nEVIDENCE_MISSING=0\n%s\nverify_evidence_presence\n' "$guard_fn" > "$fixture/gap.sh"
+bash "$fixture/gap.sh" "$fixture/gap" 2>/dev/null
+grep -q 'EVIDENCE-GAP seal store ' "$fixture/gap/gap.log"
+grep -q '7d gaps: ' "$fixture/gap/gap.log"
+echo 'PASS: positive retention, repeated run, evidence, dated trust evidence, unknown paths, spaces, symlinks, invalid keep, evidence guard, keep overrides, canonical guard, day-gap scan'

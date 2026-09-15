@@ -20,16 +20,27 @@ prune_dated_directories() {
 }
 
 prune_backup_retention() {
-  local root="$1" keep="$2" store
+  local root="$1" keep="$2" overrides="${3:-}" seal_keep="${4:-$2}" store name sk
   [[ "$keep" =~ ^[0-9]+$ ]] && [ "$keep" -gt 0 ] || return 2
+  [[ "$seal_keep" =~ ^[0-9]+$ ]] && [ "$seal_keep" -gt 0 ] || return 2
   [ -d "$root" ] && [ ! -L "$root" ] || return 0
   for store in "$root"/*; do
     [ -d "$store" ] && [ ! -L "$store" ] || continue
     case "${store##*/}" in anchors|seals|trust) continue ;; esac
-    prune_dated_directories "$store" "$keep" '^whitemagic-backup-[0-9]{8}T[0-9]{6}Z$' || return
+    # Per-store override ("name:keep,name:keep"): big stores stay lean, small
+    # stores keep a longer history (their snapshots are megabytes, not GBs).
+    sk="$keep"
+    if [ -n "$overrides" ]; then
+      local pair
+      for pair in $(printf '%s' "$overrides" | tr ',' ' '); do
+        [ "${pair%%:*}" = "${store##*/}" ] && sk="${pair##*:}"
+      done
+    fi
+    [[ "$sk" =~ ^[0-9]+$ ]] || sk="$keep"
+    prune_dated_directories "$store" "$sk" '^whitemagic-backup-[0-9]{8}T[0-9]{6}Z$' || return
   done
   [ -d "$root/seals" ] && [ ! -L "$root/seals" ] || return 0
   for store in "$root"/seals/*; do
-    prune_dated_directories "$store" "$keep" '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' || return
+    prune_dated_directories "$store" "$seal_keep" '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' || return
   done
 }

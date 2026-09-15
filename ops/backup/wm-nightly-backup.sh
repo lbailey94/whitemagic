@@ -34,6 +34,12 @@ set -u
 WM="$HOME/.local/bin/wm"
 BASE="$HOME/Desktop/WHITEMAGIC/data/WMdata/projects"
 KEEP=7
+# Small stores keep a longer snapshot history (their days are megabytes, not
+# GBs) so the folded early-September chapters survive retention; big stores
+# (live, vault, wmv9) stay lean at KEEP. Seal snapshots are tiny evidence,
+# so all stores keep at least SEAL_KEEP days of them.
+SEAL_KEEP=30
+STORE_KEEP_OVERRIDES="neon:30,planning:30,whitemagic-site:30,wmv5:30,opencode:30,default:30"
 # --trust-only: run only the trust manifest + external stamping pass against
 # the existing backup root (no store passes, no unit stops). Used to repair
 # evidence after a TSA or builder outage without re-copying stores.
@@ -60,6 +66,23 @@ LEGACY="$HOME/whitemagic-backups"
 FALLBACK="$LEGACY/nvme-fallback"
 LOG="$LEGACY/backup.log"
 
+# Canonical backup volume UUID. Only this volume is a valid target; a
+# different mounted medium (three cards have shared the SD_CARD1 label) is a
+# rotation accident, so the run stages on NVMe instead and never folds into
+# the wrong card (2026-09-14 forensics: history split across cards exactly
+# this way). Override with WM_CANONICAL_VOLUME_UUID when intentionally
+# replacing the medium.
+CANONICAL_VOLUME_UUID="${WM_CANONICAL_VOLUME_UUID:-FA99-F6E6}"
+
+# Pure decision helper (kept top-level so tests can extract it): is the
+# "LABEL/UUID" identity string the canonical volume?
+is_canonical_volume() {
+  case "$1" in
+    */"$2") return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 mkdir -p "$LEGACY"
 
 if [ ! -x "$WM" ]; then
@@ -67,33 +90,35 @@ if [ ! -x "$WM" ]; then
   exit 1
 fi
 
-# Target: the SD card when mounted, the NVMe staging path with a loud WARN
-# when it is not. Never skip the backup; never fall back silently; never let
-# the fallback become a second history.
+# Target: the canonical SD card when mounted, the NVMe staging path with a
+# loud WARN when it is not (or when a non-canonical volume is mounted).
+# Never skip the backup; never fall back silently; never let the fallback
+# become a second history; never split history across rotating media.
 if [ -n "$EXTERNAL_DISK" ]; then
-  BACKUP_ROOT="$EXTERNAL"
-  mkdir -p "$BACKUP_ROOT"
-  # Volume identity (label/uuid) so card rotation is visible in history rather
-  # than silently splitting evidence across cards. 2026-09-14 forensics: the
-  # Sep 9/10 seals went to a different SD_CARD1-labeled volume, Sep 11 to
-  # 4198-16FD, and the current card (FA99-F6E6) was seeded fresh by the fold —
-  # the "missing seals" were never pruned, they are on other media.
   vol=""
   if command -v findmnt >/dev/null 2>&1 && command -v lsblk >/dev/null 2>&1; then
-    vsrc="$(findmnt -n -o SOURCE --target "$BACKUP_ROOT" 2>/dev/null || true)"
+    vsrc="$(findmnt -n -o SOURCE --target "$EXTERNAL_DISK" 2>/dev/null || true)"
     if [ -n "$vsrc" ]; then
       vol="$(lsblk -n -o LABEL,UUID "$vsrc" 2>/dev/null | tr -s ' ' '/' | sed 's|/$||')"
     fi
   fi
-  echo "$(date -Is) TARGET $BACKUP_ROOT (card $EXTERNAL_DISK mounted; volume ${vol:-unknown})" >>"$LOG"
-  if [ -d "$FALLBACK" ] && [ -n "$(ls -A "$FALLBACK" 2>/dev/null)" ]; then
-    echo "$(date -Is) CATCHUP folding NVMe fallback into $BACKUP_ROOT" >>"$LOG"
-    if rsync -a "$FALLBACK/" "$BACKUP_ROOT/" >>"$LOG" 2>&1; then
-      rm -rf "$FALLBACK"
-      echo "$(date -Is) CATCHUP-OK fallback folded and cleared" >>"$LOG"
-    else
-      echo "$(date -Is) CATCHUP-FAIL fallback left in place (retry next card run)" >>"$LOG"
+  if is_canonical_volume "$vol" "$CANONICAL_VOLUME_UUID"; then
+    BACKUP_ROOT="$EXTERNAL"
+    mkdir -p "$BACKUP_ROOT"
+    echo "$(date -Is) TARGET $BACKUP_ROOT (card $EXTERNAL_DISK mounted; volume ${vol}; canonical)" >>"$LOG"
+    if [ -d "$FALLBACK" ] && [ -n "$(ls -A "$FALLBACK" 2>/dev/null)" ]; then
+      echo "$(date -Is) CATCHUP folding NVMe fallback into $BACKUP_ROOT" >>"$LOG"
+      if rsync -a "$FALLBACK/" "$BACKUP_ROOT/" >>"$LOG" 2>&1; then
+        rm -rf "$FALLBACK"
+        echo "$(date -Is) CATCHUP-OK fallback folded and cleared" >>"$LOG"
+      else
+        echo "$(date -Is) CATCHUP-FAIL fallback left in place (retry next card run)" >>"$LOG"
+      fi
     fi
+  else
+    BACKUP_ROOT="$FALLBACK"
+    mkdir -p "$BACKUP_ROOT"
+    echo "$(date -Is) WARN non-canonical volume mounted at $EXTERNAL_DISK (volume ${vol:-unknown}, canonical UUID $CANONICAL_VOLUME_UUID) — staging on NVMe; no fold, no split." >>"$LOG"
   fi
 else
   BACKUP_ROOT="$FALLBACK"
@@ -366,7 +391,7 @@ fi
 # per-store dirs whose retention is either unbounded by design (anchor
 # chains are the evidence) or handled by the dedicated seal loop below.
 if source "$(dirname "${BASH_SOURCE[0]}")/retention.sh"; then
-  prune_backup_retention "$BACKUP_ROOT" "$KEEP" \
+  prune_backup_retention "$BACKUP_ROOT" "$KEEP" "$STORE_KEEP_OVERRIDES" "$SEAL_KEEP" \
     || echo "$(date -Is) RETENTION-FAIL (invalid retention or removal failure)" >>"$LOG"
 else
   echo "$(date -Is) RETENTION-FAIL (sibling retention.sh unavailable; pruning refused)" >>"$LOG"
@@ -402,11 +427,27 @@ verify_evidence_presence() {
       name="$(basename "$store")"
       evidence_require "$SEALS/$name/$dayd" "seal snapshot $name/$dayd"
     done
+    # Informational day-gap scan (last 7 days): a missing seal on a day the
+    # runner did not execute is expected (laptop asleep / staging), but an
+    # unexplained gap next to run days is the class the 2026-09-14 split
+    # produced. Gaps are logged, they never fail the run.
+    local i gap_day gaps=0
+    for i in 6 5 4 3 2 1 0; do
+      gap_day="$(date -u -d "-$i day" +%Y-%m-%d)"
+      for store in $RW_STORES $RO_STORES; do
+        name="$(basename "$store")"
+        if [ -d "$SEALS/$name" ] && [ ! -d "$SEALS/$name/$gap_day" ]; then
+          echo "$(date -Is) EVIDENCE-GAP seal $name $gap_day (no seal snapshot that day)" >>"$LOG"
+          gaps=$((gaps + 1))
+        fi
+      done
+    done
+    scope="$scope; 7d gaps: $gaps"
   fi
   if [ "$EVIDENCE_MISSING" -eq 0 ]; then
     echo "$(date -Is) EVIDENCE-OK ($scope)" >>"$LOG"
   else
-    echo "$(date -Is) EVIDENCE-SUMMARY $EVIDENCE_MISSING item(s) missing — see EVIDENCE-MISSING lines above" >>"$LOG"
+    echo "$(date -Is) EVIDENCE-SUMMARY $EVIDENCE_MISSING item(s) missing ($scope) — see EVIDENCE-MISSING lines above" >>"$LOG"
   fi
 }
 verify_evidence_presence

@@ -28,4 +28,24 @@ together and re-run `retention_test.sh` against the source.
 The end of every nightly run asserts the day's evidence exists
 (`EVIDENCE-OK` / `EVIDENCE-MISSING` / `EVIDENCE-SUMMARY` in `backup.log`):
 trust manifest + digest + OTS proof + RFC3161 response, and one dated seal
-snapshot per store. Missing evidence is logged loudly, never silent.
+snapshot per store. Missing evidence is logged loudly, never silent. A
+7-day informational scan (`EVIDENCE-GAP`) lists seal days with no snapshot
+so rotation/anomaly gaps are visible without failing the run.
+
+## Canonical volume rule (2026-09-14)
+
+Only the volume whose UUID matches `CANONICAL_VOLUME_UUID` (default
+`FA99-F6E6`) is a valid backup target; when any other medium is mounted the
+run stages on NVMe with a loud WARN and never folds or splits history.
+Override with `WM_CANONICAL_VOLUME_UUID` when intentionally replacing the
+medium. Rationale: three different cards have shared the `SD_CARD1` label
+and early-September history split across them (recovered from the TB drive
+on 2026-09-14).
+
+## Retention policy
+
+Big stores keep `KEEP` (7) snapshots; small stores (`neon`, `planning`,
+`whitemagic-site`, `wmv5`, `opencode`, `default`) keep 30 via
+`STORE_KEEP_OVERRIDES` — their days are megabytes, so history is cheap.
+Seal snapshots are tiny evidence and keep `SEAL_KEEP` (30) days for all
+stores. Overrides and seal keep are validated by `retention_test.sh`.
