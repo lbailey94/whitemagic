@@ -1088,6 +1088,16 @@ impl Tool for MemoryReembedTool {
     }
 }
 
+/// Telemetry is evidence, not cognition: unfiltered recall must never surface
+/// it, while an explicit galaxy filter (including `galaxy: "telemetry"`) stays
+/// the only door. Applies to every retrieval phase — hybrid, episodic, FTS,
+/// association expansion, and cold discovery. Regression: v9.1.5 default
+/// `memory.search("invalid UUID")` returned RSI friction records from the
+/// telemetry galaxy alongside project memory.
+fn recall_visible(galaxy: Galaxy, galaxy_explicit: bool) -> bool {
+    galaxy_explicit || galaxy != Galaxy::Telemetry
+}
+
 /// Build the empty-result guidance message: name where the content actually
 /// lives so callers do not hit the "silent zero" class of failure (e.g.
 /// stores whose memories live in `sessions`/`research`, not the default
@@ -1258,6 +1268,9 @@ impl Tool for MemoryHybridRecallTool {
                     galaxy_explicit.then_some(galaxy),
                 );
                 for hr in hybrid_results {
+                    if !recall_visible(hr.galaxy, galaxy_explicit) {
+                        continue;
+                    }
                     if let Ok(Some(mem)) = self.store.get(hr.galaxy, hr.memory_id) {
                         if mem.metadata.importance >= min_importance
                             && crate::expansion::common::mcp_visible(&mem)
@@ -1355,6 +1368,9 @@ impl Tool for MemoryHybridRecallTool {
                 if galaxy_explicit && hit_galaxy != galaxy {
                     continue;
                 }
+                if !recall_visible(hit_galaxy, galaxy_explicit) {
+                    continue;
+                }
                 if mem.metadata.importance < min_importance
                     || !crate::expansion::common::mcp_visible(&mem)
                     || !crate::expansion::common::validity_visible(&mem)
@@ -1416,6 +1432,9 @@ impl Tool for MemoryHybridRecallTool {
                             let Some(hit_galaxy) = hit_galaxy else {
                                 continue;
                             };
+                            if !recall_visible(hit_galaxy, galaxy_explicit) {
+                                continue;
+                            }
                             if let Ok(Some(mem)) = self.store.get(hit_galaxy, id) {
                                 if mem.metadata.importance >= min_importance
                                     && crate::expansion::common::mcp_visible(&mem)
@@ -1565,6 +1584,9 @@ impl Tool for MemoryHybridRecallTool {
                     else {
                         continue;
                     };
+                    if !recall_visible(mem.metadata.galaxy, galaxy_explicit) {
+                        continue;
+                    }
                     if mem.metadata.importance < min_importance
                         || !crate::expansion::common::mcp_visible(&mem)
                         || !crate::expansion::common::validity_visible(&mem)
@@ -1650,7 +1672,8 @@ impl Tool for MemoryHybridRecallTool {
                     remaining,
                     cold_scan_limit,
                     |mem| {
-                        mem.metadata.importance >= min_importance
+                        recall_visible(mem.metadata.galaxy, galaxy_explicit)
+                            && mem.metadata.importance >= min_importance
                             && min_trust
                                 .is_none_or(|floor| f64::from(mem.metadata.source_trust) >= floor)
                             && !existing.contains(&mem.metadata.id.to_string())
@@ -3387,6 +3410,45 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(v2["count"], 2, "got: {v2}");
+    }
+
+    #[tokio::test]
+    async fn unfiltered_search_excludes_telemetry_unless_explicit() {
+        // P0 regression (v9.1.5): default `memory.search` returned RSI
+        // friction records from the telemetry galaxy when the query text
+        // happened to match. Telemetry is evidence, not cognition: only an
+        // explicit galaxy filter may reach it.
+        let (_dir, store, search) = hybrid_fixture();
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Codex,
+            "telemetry probe project note",
+        );
+        index_memory(
+            &store,
+            &search,
+            Galaxy::Telemetry,
+            "telemetry probe diagnostic record",
+        );
+        let tool = MemoryHybridRecallTool::new(store, Some(search), None);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"query": "telemetry probe", "limit": 10}))
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 1, "unfiltered search must skip telemetry: {v}");
+        assert_eq!(v["results"][0]["galaxy"], "codex");
+
+        let v2 = tool
+            .call(
+                &mut ctx,
+                json!({"query": "telemetry probe", "galaxy": "telemetry", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v2["count"], 1, "explicit telemetry must still work: {v2}");
+        assert_eq!(v2["results"][0]["galaxy"], "telemetry");
     }
 
     #[tokio::test]
