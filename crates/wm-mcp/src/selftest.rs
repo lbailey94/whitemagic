@@ -172,7 +172,7 @@ pub async fn run() -> anyhow::Result<Report> {
         checks.push(check(
             "registry",
             count > 0,
-            format!("{count} routes registered"),
+            format!("{count} routes in the tool catalog"),
             t,
         ));
     }

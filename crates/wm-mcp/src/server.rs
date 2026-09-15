@@ -6,8 +6,12 @@
 //!   catalog (memory.*, session.*) for registry/agent discovery
 //! - `tools/call`: dispatches any registered tool through the governance pipeline
 //!
-//! The `wm` meta-tool routes natural language to 229 tools via TF-IDF NLU
-//! classification, or accepts an explicit `route` parameter for direct dispatch.
+//! The `wm` meta-tool routes natural language to the runtime tool catalog via
+//! TF-IDF NLU classification, or accepts an explicit `route` parameter for
+//! direct dispatch. Counts are runtime/profile-defined — the canonical
+//! accounting (registry entries → full-profile routes → active-profile
+//! routes → MCP tools → meta-router) comes from `capabilities/manifest`
+//! (`counts` object); do not hardcode them in prose.
 //! Use `wm(thought="list tools")` or `wm(route="tools.list")` to discover tools.
 
 use std::io::Write;

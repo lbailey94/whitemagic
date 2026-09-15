@@ -3302,10 +3302,32 @@ fn run_doctor(
         dream.consolidation.skipped()
     );
 
-    // 8. Tool registry
-    let registry = server.registry();
-    let all_tools = registry.all();
-    println!("[OK]   Tool registry: {} tools registered", all_tools.len());
+    // 8. Tool surface — one canonical accounting from the capability
+    // manifest (registry entries → full-profile routes → active-profile
+    // routes → MCP tools); keeps doctor, selftest, and tools/list from
+    // disagreeing about what a "tool" is.
+    let manifest = server.capability_manifest();
+    let count = |key: &str| {
+        manifest["counts"]
+            .get(key)
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0)
+    };
+    let profile = manifest["configuration"]["profile"]
+        .as_str()
+        .unwrap_or("active");
+    let entrypoints = count("mcp_entrypoints");
+    let mcp = if entrypoints > 0 {
+        entrypoints.to_string()
+    } else {
+        "handshake-time".to_string()
+    };
+    println!(
+        "[OK]   Tool surface: {} registry entries → {} full-profile routes → {} active-profile routes ({profile}) → {mcp} MCP tools; +1 meta-router",
+        count("boundary_registry_including_meta"),
+        count("full_pre_profile"),
+        count("profile_pre_meta"),
+    );
 
     // 9. Karma chain integrity — deep verification (recomputes payload hashes)
     let karma_path = lmdb_path.join("data.mdb");
@@ -4820,7 +4842,10 @@ mod readonly_startup_tests {
             after, before,
             "readonly doctor inspection mutated the store or index"
         );
-        assert_eq!(result, 0, "doctor graded a clean readonly store as unhealthy");
+        assert_eq!(
+            result, 0,
+            "doctor graded a clean readonly store as unhealthy"
+        );
     }
 
     #[test]
