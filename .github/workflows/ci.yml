@@ -34,6 +34,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-targets -- -D warnings
 
+  host-scripts:
+    timeout-minutes: 10
+    name: Host Scripts (installer, version truth, npm launcher)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python tests (installer sentinel, version truth, release manifest)
+        run: python3 -m unittest scripts.tests.test_install_sh scripts.tests.test_version_truth scripts.tests.test_release_manifest
+      - name: npm launcher tests
+        working-directory: npm/whitemagic-mcp
+        run: node --test
+
   test-linux:
     timeout-minutes: 20
     name: Tests (Linux)

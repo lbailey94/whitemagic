@@ -30,5 +30,8 @@
   },
   "homepage": "https://whitemagic.dev",
   "bugs": "https://github.com/lbailey94/whitemagic/issues",
-  "mcpName": "io.github.lbailey94/whitemagic-mcp"
+  "mcpName": "io.github.lbailey94/whitemagic-mcp",
+  "scripts": {
+    "test": "node --test"
+  }
 }
