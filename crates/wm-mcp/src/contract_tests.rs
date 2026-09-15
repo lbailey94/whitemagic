@@ -131,6 +131,75 @@ fn meta_required_arg_table_matches_tool_schemas() {
     );
 }
 
+/// Family-scoped declaration ratchet (`agent.*`, 2026-09-15): the agent
+/// family's call bodies read these args unconditionally, so the declared
+/// schemas must say so, and the meta-tool's hardcoded required-arg table must
+/// agree with the schemas it pre-checks. The global full-profile coverage
+/// ratchet is deliberately NOT flipped here — the remaining families
+/// (galaxy.* et al.) land in later bounded batches.
+#[test]
+fn agent_family_schemas_match_their_calls_and_meta_table() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let server = crate::McpServer::with_defaults(tmp.path()).expect("full server builds");
+    let registry = server.registry();
+
+    // route -> required args the call body reads unconditionally.
+    let expected: &[(&str, &[&str])] = &[
+        ("agent.register", &["name"]),
+        ("agent.list", &[]),
+        ("agent.heartbeat", &[]),
+        ("agent.trust", &["agent_id"]),
+        ("agent.descriptions", &["agent_id"]),
+        ("agent.capabilities", &["agent_id"]),
+        ("agent.heartbeat.history", &["agent_id"]),
+        ("agent.deregister", &["agent_id"]),
+    ];
+    let mut problems: Vec<String> = Vec::new();
+    for (route, expected_required) in expected {
+        let Some(tool) = registry.get(route) else {
+            problems.push(format!("'{route}' is absent from the full registry"));
+            continue;
+        };
+        let schema = tool.input_schema();
+        if schema["type"] != "object" {
+            problems.push(format!("'{route}' has no object schema"));
+            continue;
+        }
+        if schema["properties"]
+            .as_object()
+            .is_none_or(|props| props.is_empty())
+        {
+            problems.push(format!("'{route}' declares no properties"));
+        }
+        let mut required: Vec<&str> = schema["required"]
+            .as_array()
+            .map(|list| list.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
+        required.sort_unstable();
+        let mut expected_required = expected_required.to_vec();
+        expected_required.sort_unstable();
+        if required != expected_required {
+            problems.push(format!(
+                "'{route}' declares required {required:?}, expected {expected_required:?}"
+            ));
+        }
+        // The meta-tool pre-check must never demand an arg the schema omits.
+        if let Some(meta) = wm_tools::required_arg_for(route) {
+            if !required.contains(&meta) {
+                problems.push(format!(
+                    "meta table demands '{meta}' for '{route}' — schema does not declare it"
+                ));
+            }
+        }
+    }
+    assert!(
+        problems.is_empty(),
+        "agent family schema drift ({}):\n  {}",
+        problems.len(),
+        problems.join("\n  ")
+    );
+}
+
 #[test]
 fn curated_profile_tools_all_resolve() {
     let (_tmp, server) = full_server();

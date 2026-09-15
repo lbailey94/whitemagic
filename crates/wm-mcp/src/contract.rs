@@ -14,7 +14,15 @@ use wm_dispatch::ToolRegistry;
 
 /// Arguments read unconditionally by `call` that MUST appear in the declared
 /// schema. Grows one family-scoped commit at a time — never a bulk rewrite.
-pub const KNOWN_UNCONDITIONAL_READS: &[(&str, &str)] = &[("kg.query", "entity")];
+pub const KNOWN_UNCONDITIONAL_READS: &[(&str, &str)] = &[
+    ("kg.query", "entity"),
+    ("agent.register", "name"),
+    ("agent.trust", "agent_id"),
+    ("agent.descriptions", "agent_id"),
+    ("agent.capabilities", "agent_id"),
+    ("agent.heartbeat.history", "agent_id"),
+    ("agent.deregister", "agent_id"),
+];
 
 /// The declared contract of one tool, normalized for the manifest.
 #[must_use]
@@ -138,11 +146,28 @@ mod tests {
 
     #[test]
     fn check_reports_a_missing_declaration() {
-        let manifest = json!({
-            "tools": [
-                {"route": "kg.query", "declared": true, "required": [], "properties": {"entity": {}}}
-            ]
-        });
+        // Derive the fixture from the live list so the test never drifts;
+        // every route declares its arg except `kg.query`, which must be
+        // reported as a violation.
+        let tools: Vec<Value> = KNOWN_UNCONDITIONAL_READS
+            .iter()
+            .map(|(route, arg)| {
+                let mut properties = serde_json::Map::new();
+                properties.insert((*arg).to_string(), json!({}));
+                let required = if *route == "kg.query" {
+                    json!([])
+                } else {
+                    json!([arg])
+                };
+                json!({
+                    "route": route,
+                    "declared": true,
+                    "required": required,
+                    "properties": properties,
+                })
+            })
+            .collect();
+        let manifest = json!({ "tools": tools });
         let violations = check_known_unconditional_reads(&manifest);
         assert_eq!(violations.len(), 1);
         assert!(violations[0].contains("kg.query"));

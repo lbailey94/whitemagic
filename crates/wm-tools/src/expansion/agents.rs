@@ -30,6 +30,15 @@ impl AgentRegisterTool {
 
 #[async_trait]
 impl Tool for AgentRegisterTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "name": super::common::str_prop("Agent name to register (required; recorded in the Substrate galaxy)"),
+                "capabilities": super::common::str_array_prop("Capabilities to record for the agent (optional; default empty)"),
+            }),
+            &["name"],
+        )
+    }
     fn name(&self) -> &str {
         "agent.register"
     }
@@ -43,10 +52,18 @@ impl Tool for AgentRegisterTool {
         "Register a new agent in the Substrate galaxy"
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        // Fail closed: the meta-tool table already promises `name` required
+        // for this route, and an "unnamed" registration is not addressable
+        // by any read/update route (they look up by name or id).
         let name = args
             .get("name")
             .and_then(|v| v.as_str())
-            .unwrap_or("unnamed");
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| {
+                wm_core::CoreError::InvalidArgs(
+                    "Missing 'name' parameter — agent.register requires a non-empty name".into(),
+                )
+            })?;
         let capabilities = args.get("capabilities").cloned().unwrap_or(json!([]));
         let mut mem = Memory::new(
             Galaxy::Substrate,
@@ -90,6 +107,14 @@ impl AgentListTool {
 
 #[async_trait]
 impl Tool for AgentListTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "limit": super::common::int_prop("Maximum Substrate registrations to scan (optional; default 500, clamped 1-500)"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "agent.list"
     }
@@ -102,8 +127,13 @@ impl Tool for AgentListTool {
     fn description(&self) -> &str {
         "List all registered agents"
     }
-    async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
-        let memories = self.store.scan(Galaxy::Substrate, 500)?;
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let limit = args
+            .get("limit")
+            .and_then(Value::as_u64)
+            .unwrap_or(500)
+            .clamp(1, 500) as usize;
+        let memories = self.store.scan(Galaxy::Substrate, limit)?;
         let agents: Vec<Value> = memories
             .iter()
             .filter(|m| m.metadata.tags.contains(&"agent".to_string()))
@@ -148,6 +178,15 @@ impl AgentHeartbeatTool {
 
 #[async_trait]
 impl Tool for AgentHeartbeatTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "agent_id": super::common::str_prop("Agent identifier to record the heartbeat for (optional; an empty value records an anonymous heartbeat)"),
+                "status": super::common::str_prop("Status string to record (optional; default 'alive')"),
+            }),
+            &[],
+        )
+    }
     fn name(&self) -> &str {
         "agent.heartbeat"
     }
@@ -213,6 +252,15 @@ impl AgentTrustTool {
 
 #[async_trait]
 impl Tool for AgentTrustTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "agent_id": super::common::str_prop("Agent UUID or registered name to look up (required)"),
+                "trust_level": super::common::num_prop("Trust level to set (0.0-1.0); omit to read the current level"),
+            }),
+            &["agent_id"],
+        )
+    }
     fn name(&self) -> &str {
         "agent.trust"
     }
@@ -308,6 +356,15 @@ impl AgentDescriptionsTool {
 
 #[async_trait]
 impl Tool for AgentDescriptionsTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "agent_id": super::common::str_prop("Agent UUID or registered name to look up (required)"),
+                "description": super::common::str_prop("Description to set; omit to read the current description"),
+            }),
+            &["agent_id"],
+        )
+    }
     fn name(&self) -> &str {
         "agent.descriptions"
     }
@@ -402,6 +459,15 @@ impl AgentCapabilitiesTool {
 
 #[async_trait]
 impl Tool for AgentCapabilitiesTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "agent_id": super::common::str_prop("Agent UUID or registered name to look up (required)"),
+                "capabilities": super::common::str_array_prop("Capabilities to set; omit to read the current capabilities"),
+            }),
+            &["agent_id"],
+        )
+    }
     fn name(&self) -> &str {
         "agent.capabilities"
     }
@@ -489,6 +555,15 @@ impl AgentHeartbeatHistoryTool {
 
 #[async_trait]
 impl Tool for AgentHeartbeatHistoryTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "agent_id": super::common::str_prop("Agent identifier whose heartbeats to list (required)"),
+                "limit": super::common::int_prop("Maximum heartbeats to return (optional; default 50)"),
+            }),
+            &["agent_id"],
+        )
+    }
     fn name(&self) -> &str {
         "agent.heartbeat.history"
     }
@@ -571,6 +646,14 @@ impl AgentDeregisterTool {
 
 #[async_trait]
 impl Tool for AgentDeregisterTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "agent_id": super::common::str_prop("Agent UUID or registered name to deregister (required)"),
+            }),
+            &["agent_id"],
+        )
+    }
     fn name(&self) -> &str {
         "agent.deregister"
     }
@@ -755,6 +838,26 @@ mod tests {
         let result = list.call(&mut ctx, json!({})).await;
         let v = result.unwrap();
         assert_eq!(v["count"], 0);
+    }
+
+    #[tokio::test]
+    async fn agent_register_requires_name() {
+        let store = test_store();
+        let tool = AgentRegisterTool::new(store);
+        let mut ctx = Context::default();
+
+        let err = tool
+            .call(&mut ctx, json!({}))
+            .await
+            .expect_err("register without a name must fail closed");
+        assert!(matches!(err, wm_core::CoreError::InvalidArgs(_)));
+        assert!(
+            format!("{err}").contains("name"),
+            "the typed error names the missing argument: {err}"
+        );
+
+        let empty = tool.call(&mut ctx, json!({"name": ""})).await;
+        assert!(empty.is_err(), "empty name must fail closed too");
     }
 
     #[tokio::test]
