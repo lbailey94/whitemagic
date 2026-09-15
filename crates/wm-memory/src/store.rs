@@ -203,6 +203,46 @@ pub struct MemoryStore {
 }
 
 impl MemoryStore {
+    /// Probe whether another process holds the LMDB writer lock on this store.
+    ///
+    /// LMDB's write env-open falls back to a blocking *shared* lock when the
+    /// exclusive writer lock is held, then opens `data.mdb` for writing
+    /// anyway and wedges on its internal mutex — `wm grimoire`/`wm status`
+    /// hung forever against a live store until a SIGKILL (9.1.6). Callers
+    /// that need exclusive access probe first and fail loudly instead of
+    /// deadlocking.
+    ///
+    /// The probe is a non-blocking `fcntl(F_SETLK, F_WRLCK)` over the whole
+    /// `lock.mdb` (record locks overlap LMDB's byte-range writer lock), so
+    /// it never blocks and never mutates the store.
+    ///
+    /// Returns `Ok(())` when the writer lock is free, `Err(WouldBlock)`
+    /// when another process holds it.
+    #[cfg(unix)]
+    pub fn probe_write_lock(store_root: &Path) -> std::io::Result<()> {
+        use rustix::fs::{FlockOperation, fcntl_lock};
+        let lock_path = store_root.join("lmdb").join("lock.mdb");
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&lock_path)?;
+        match fcntl_lock(&file, FlockOperation::NonBlockingLockExclusive) {
+            Ok(()) => Ok(()),
+            Err(rustix::io::Errno::AGAIN | rustix::io::Errno::ACCESS) => Err(std::io::Error::new(
+                std::io::ErrorKind::WouldBlock,
+                "LMDB writer lock held by another process",
+            )),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// Non-unix: LMDB locking differs (LockFileEx on Windows); the probe is
+    /// best-effort there and reports the lock as free.
+    #[cfg(not(unix))]
+    pub fn probe_write_lock(_store_root: &Path) -> std::io::Result<()> {
+        Ok(())
+    }
+
     /// Open or create an LMDB store at the given path.
     ///
     /// On Unix, the store directory is created with mode 0o700 (owner-only
@@ -306,6 +346,50 @@ impl MemoryStore {
         })
     }
 
+    /// Bounded env open for inspection paths (9.1.6).
+    ///
+    /// LMDB env opens can block forever: against a live writer the
+    /// exclusive-lock fallback wedges on an internal mutex, and a crashed
+    /// server can leave the lock file's in-file mutex locked so even
+    /// read-only opens hang. Inspection callers (status, doctor, grimoire)
+    /// must never hang — run the open on a worker thread and give up after
+    /// `timeout`, returning `Ok(None)` so the caller degrades loudly
+    /// instead of deadlocking.
+    pub fn open_readonly_bounded(
+        path: impl AsRef<Path>,
+        timeout: std::time::Duration,
+    ) -> Result<Option<Self>> {
+        let path = path.as_ref().to_path_buf();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let result = Self::open_readonly(&path);
+            let _ = tx.send(result);
+        });
+        match rx.recv_timeout(timeout) {
+            Ok(result) => result.map(Some),
+            Err(_) => Ok(None),
+        }
+    }
+
+    /// Bounded writable env open for exclusive-access paths (9.1.6).
+    /// See [`Self::open_readonly_bounded`] for the wedge rationale; write
+    /// paths bail with an actionable message on timeout instead of hanging.
+    pub fn open_default_bounded(
+        path: impl AsRef<Path>,
+        timeout: std::time::Duration,
+    ) -> Result<Option<Self>> {
+        let path = path.as_ref().to_path_buf();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let result = Self::open_default(&path);
+            let _ = tx.send(result);
+        });
+        match rx.recv_timeout(timeout) {
+            Ok(result) => result.map(Some),
+            Err(_) => Ok(None),
+        }
+    }
+
     /// Open with the default map size.
     ///
     /// 4 GB on Unix: LMDB truncates the data file sparsely (ftruncate), so
@@ -402,6 +486,73 @@ impl MemoryStore {
         crate::attestation::ATTESTATIONS_DB,
         "cold_storage",
     ];
+
+    /// Open an existing store for inspection without taking any lock
+    /// (`MDB_NOLOCK | MDB_RDONLY`), 9.1.6.
+    ///
+    /// Read-only env opens still block forever in two real situations:
+    /// a live writer holds the exclusive lock (lmdb-master falls back to a
+    /// blocking shared-lock wait), and a crashed server can leave the lock
+    /// file's in-file mutex wedged so every open hangs. Inspection paths
+    /// (status, doctor, grimoire) never need the lock file — no locks, no
+    /// reader slots, no mutex — just an mmap read of the store. The store
+    /// must exist and be schema-complete (same strict refusal as
+    /// [`Self::open_readonly`]); torn-meta-page reads are theoretically
+    /// possible mid-write and acceptable for display counts.
+    pub fn open_inspection(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref().to_path_buf();
+        if !path.is_dir() {
+            return Err(CoreError::Memory(format!(
+                "Read-only LMDB store directory does not exist: {}",
+                path.display()
+            )));
+        }
+        if !path.join("data.mdb").is_file() {
+            return Err(CoreError::Memory(format!(
+                "Read-only LMDB store is missing data.mdb: {}",
+                path.display()
+            )));
+        }
+
+        let env = Environment::new()
+            .set_max_dbs(32)
+            .set_flags(EnvironmentFlags::READ_ONLY | EnvironmentFlags::NO_LOCK)
+            .open(&path)
+            .map_err(|e| CoreError::Memory(format!("Inspection LMDB open failed: {e}")))?;
+
+        let index_dbs = IndexDbs::open(&env)?;
+        let open_named = |name: &str| {
+            env.open_db(Some(name)).map_err(|e| {
+                CoreError::Memory(format!("Inspection LMDB missing database {name}: {e}"))
+            })
+        };
+        let episodic_db = open_named("episodic_records")?;
+        let episodic_terms_v2_db = open_named("episodic_terms_v2")?;
+        let embedding_cache_db = open_named("embedding_cache")?;
+        let revisions_db = open_named("revisions")?;
+        let attestations_db = open_named(crate::attestation::ATTESTATIONS_DB)?;
+        let cold_storage_db = open_named("cold_storage")?;
+
+        Ok(Self {
+            path,
+            env,
+            index_dbs,
+            semantic_encoder: SemanticEncoder::new(),
+            max_entries_per_galaxy: None,
+            mutation_count: AtomicU64::new(0),
+            episodic_db,
+            episodic_terms_v2_db,
+            embedding_cache_db,
+            revisions_db,
+            attestations_db,
+            cold_storage_db,
+            episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
+            episodic_embedder: std::sync::OnceLock::new(),
+            episodic_sidecar_ensured: std::sync::OnceLock::new(),
+            episodic_aliases: std::sync::OnceLock::new(),
+            episodic_enrichment: std::sync::OnceLock::new(),
+        })
+    }
 
     /// Complete a store's schema in place: create any galaxy, index, or named
     /// database this build expects but an older store lacks, then let the

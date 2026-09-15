@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Release gates
 - `scripts/curated_smoke_test.py` extended: claims annotation truthfulness (add/resolve write-capable, reads read-only), `claims.add` write path, and NLU routing checks (resume/continuity phrases → `session.continuity`, "remember..." → `memory.create`) — the process-level gate now covers the 9.1.6 governance/routing changes end to end.
 
+### Lock hygiene — no more hangs on live or wedged stores (9.1.6)
+- **Inspection never touches the lock file**: `MemoryStore::open_inspection` (MDB_NOLOCK | MDB_RDONLY) powers `wm status`, `wm doctor`, and `wm grimoire`. Read-only env opens previously blocked forever in two real situations: a live writer holds the exclusive lock (lmdb-master falls back to a blocking shared-lock wait), and a crashed server leaves the lock file's in-file mutex wedged so *every* open hangs — `wm grimoire`/`wm status`/`wm doctor` against a served store hung until SIGKILL, and a crashed unit (observed: OOM under load) bricked the store for all opens until `lock.mdb` was manually removed. Inspection is now immune to both: pure mmap reads, no fcntl, no reader slots.
+- **Write-intent paths fail fast instead of deadlocking**: `wm trust`, `wm backup`, `wm anchor` probe the writer lock with a non-blocking `fcntl(F_SETLK, F_WRLCK)` first and refuse with the documented "a server may be running" message (previously the same lmdb fallback made them hang forever; the error text was aspirational).
+- **Network timeouts actually bound**: `fetch_manifest_text`/`download_to` set `timeout_connect` in addition to the global deadline — under network saturation the global timeout did not fire while the connect phase rotated candidate IPs (grimoire's release step hung past its 5s cap; now caps at 5s and degrades to the offline step).
+- Recovery path documented in `AGENTS.md`: stop the store's `wm-serve` unit, remove `lmdb/lock.mdb`, restart (LMDB recreates it; safe when no process holds the store).
+- Regression test: `status_live_store.rs` — a spawned `wm serve` holds the writer lock across processes; `status::collect` completes promptly, the probe reports the held lock, and the lock is free after the server exits.
+
 ## [9.1.5] — 2026-09-14 (agent-first onboarding, telemetry retention, signed releases)
 
 > Released 2026-09-14. The canonical record is the signed

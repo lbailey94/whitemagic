@@ -745,7 +745,11 @@ impl McpServer {
             anyhow::bail!("preservation readonly mode requires readonly startup");
         }
         let store = std::sync::Arc::new(if readonly {
-            MemoryStore::open_readonly(store_path)?
+            // Inspection open (9.1.6): MDB_NOLOCK|MDB_RDONLY — never touches
+            // the lock file, so it cannot block on a live writer or a
+            // crashed server's wedged lock. Diagnostic servers must never
+            // hang.
+            MemoryStore::open_inspection(store_path)?
         } else {
             MemoryStore::open_default(store_path)?
         });

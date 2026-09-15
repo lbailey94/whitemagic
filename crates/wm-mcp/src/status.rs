@@ -9,10 +9,16 @@
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use wm_memory::MemoryStore;
 
-/// Status report (stable shape; `--json` for agents).
+/// Inspection env-open cap (9.1.6): a live writer or a crashed server's
+/// wedged lock file can make LMDB env opens block forever; inspection
+/// reports `store_busy` instead of hanging.
+const INSPECTION_OPEN_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// Human-facing health summary for a store root.
 #[derive(Debug, Clone, Serialize)]
 pub struct StatusReport {
     pub version: String,
@@ -249,7 +255,19 @@ pub fn collect(store_root: &Path) -> StatusReport {
     let mut sessions = 0u64;
     let mut store_ok = false;
     if lmdb.exists() {
-        if let Ok(store) = MemoryStore::open_default(&lmdb) {
+        // Inspection never takes the lock file (9.1.6): read-only env opens
+        // block forever against a live writer (lmdb-master falls back to a
+        // blocking shared-lock wait) and against a crashed server's wedged
+        // lock file. `open_inspection` is MDB_NOLOCK|MDB_RDONLY — pure mmap
+        // reads, immune to both. Fall back to a bounded writable open only
+        // for stores inspection cannot read (pre-cold/incomplete — those are
+        // never served, so no lock is held).
+        let store = MemoryStore::open_inspection(&lmdb).ok().or_else(|| {
+            MemoryStore::open_default_bounded(&lmdb, INSPECTION_OPEN_TIMEOUT)
+                .ok()
+                .flatten()
+        });
+        if let Some(store) = store {
             store_ok = true;
             for g in wm_core::Galaxy::memory_galaxies() {
                 memories += store.count(g).unwrap_or(0) as u64;

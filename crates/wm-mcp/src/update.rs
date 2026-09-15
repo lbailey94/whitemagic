@@ -110,8 +110,13 @@ pub fn write_install_state(store_root: &Path, state: &InstallState) -> anyhow::R
 /// # Errors
 /// Network or HTTP failure.
 pub fn fetch_manifest_text(url: &str, timeout: Duration) -> anyhow::Result<String> {
+    // timeout_connect caps the TCP/TLS connect phase explicitly: under
+    // network saturation the global deadline does not fire while connect
+    // rotates candidate IPs (observed 9.1.6: grimoire's release step hung
+    // past its 5s global timeout against a saturated link).
     let agent = ureq::config::Config::builder()
         .timeout_global(Some(timeout))
+        .timeout_connect(Some(timeout))
         .build()
         .new_agent();
     let response = agent
@@ -217,6 +222,7 @@ pub fn sha256_file(path: &Path) -> anyhow::Result<String> {
 pub fn download_to(url: &str, dest: &Path, timeout: Duration) -> anyhow::Result<u64> {
     let agent = ureq::config::Config::builder()
         .timeout_global(Some(timeout))
+        .timeout_connect(Some(timeout))
         .build()
         .new_agent();
     let response = agent

@@ -1955,6 +1955,16 @@ fn run_trust(store_path: &std::path::Path, command: TrustCommand) -> anyhow::Res
     if !lmdb_path.join("data.mdb").exists() {
         anyhow::bail!("No LMDB data found at {}.", lmdb_path.display());
     }
+    // The write env-open does not fail on a held lock — it wedges on an
+    // internal mutex (9.1.6). Probe non-blocking first so the documented
+    // "a server may be running" refusal actually fires.
+    if let Err(e) = wm_memory::MemoryStore::probe_write_lock(store_path) {
+        anyhow::bail!(
+            "Could not take the LMDB lock at {} — a server may be running \
+             (stop the store's wm-serve unit first). Underlying: {e}",
+            lmdb_path.display()
+        );
+    }
     let store = wm_memory::MemoryStore::open_default(&lmdb_path).map_err(|e| {
         anyhow::anyhow!(
             "Could not take the LMDB lock at {} — a server may be running \
@@ -2023,6 +2033,17 @@ fn run_backup(
     if !lmdb_path.join("data.mdb").exists() {
         anyhow::bail!(
             "No LMDB data found at {}. Stop the server, then retry.",
+            lmdb_path.display()
+        );
+    }
+
+    // The write env-open does not fail on a held lock — it wedges on an
+    // internal mutex (9.1.6). Probe non-blocking first so the documented
+    // "a server may be running" refusal actually fires.
+    if let Err(e) = wm_memory::MemoryStore::probe_write_lock(store_path) {
+        anyhow::bail!(
+            "Could not take the LMDB lock at {} — a server may be running. \
+             Stop it before backing up. Underlying: {e}",
             lmdb_path.display()
         );
     }
@@ -2416,6 +2437,16 @@ fn run_anchor(
     let lmdb_path = store_path.join("lmdb");
     if !lmdb_path.join("data.mdb").exists() {
         anyhow::bail!("No LMDB data found at {}.", lmdb_path.display());
+    }
+    // The write env-open does not fail on a held lock — it wedges on an
+    // internal mutex (9.1.6). Probe non-blocking first so the documented
+    // "a server may be running" refusal actually fires.
+    if let Err(e) = wm_memory::MemoryStore::probe_write_lock(store_path) {
+        anyhow::bail!(
+            "Could not take the LMDB lock at {} — a server may be running \
+             (stop the store's wm-serve unit first). Underlying: {e}",
+            lmdb_path.display()
+        );
     }
     let store = wm_memory::MemoryStore::open_default(&lmdb_path).map_err(|e| {
         anyhow::anyhow!(
