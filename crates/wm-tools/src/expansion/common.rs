@@ -232,8 +232,10 @@ pub fn parse_galaxy_or(s: Option<&str>, default: Galaxy) -> wm_core::Result<Gala
 }
 
 /// Normalize an optional galaxy argument for verbs that support an unfiltered
-/// search. `None`, empty, and `"all"` (case-insensitive) all mean "every
-/// memory galaxy, results labeled"; anything else is passed through for
+/// search.
+///
+/// `None`, empty, and `"all"` (case-insensitive) all mean "every memory
+/// galaxy, results labeled"; anything else is passed through for
 /// [`parse_galaxy`] to validate. WhiteMagic emits `"galaxy": "all"` on
 /// unfiltered responses, so accepting it back is required for round-trips.
 #[must_use]

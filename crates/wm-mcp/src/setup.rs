@@ -813,8 +813,10 @@ pub fn connect_with(list: &[ClientSpec], exe: &Path, apply: bool) -> Vec<Connect
 
 /// End-to-end connection proof: spawn `binary serve --profile curated` in a
 /// throwaway HOME and perform a real MCP handshake (`initialize` →
-/// `tools/list`). Returns the exposed tool count. The isolated HOME means the
-/// check can never create or mutate the user's store.
+/// `tools/list`).
+///
+/// Returns the exposed tool count. The isolated HOME means the check can
+/// never create or mutate the user's store.
 pub fn verify_mcp_session(binary: &Path) -> Result<usize, String> {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};

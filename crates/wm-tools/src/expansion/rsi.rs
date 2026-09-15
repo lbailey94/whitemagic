@@ -112,11 +112,12 @@ pub fn friction_hash_exists(store: &MemoryStore, hash_tag: &str) -> bool {
 }
 
 /// Clamp an importance destined for the Telemetry galaxy to the shared
-/// evidence ceiling ([`IMPORTANCE_CEILING`]): evidence never outranks
-/// cognition. Severity stays visible through `rsi:severity:*` tags rather
-/// than by escaping the ceiling.
+/// evidence ceiling ([`IMPORTANCE_CEILING`]).
+///
+/// Evidence never outranks cognition; severity stays visible through
+/// `rsi:severity:*` tags rather than by escaping the ceiling.
 #[must_use]
-pub fn telemetry_importance(value: f32) -> f32 {
+pub const fn telemetry_importance(value: f32) -> f32 {
     value.clamp(0.0, IMPORTANCE_CEILING)
 }
 

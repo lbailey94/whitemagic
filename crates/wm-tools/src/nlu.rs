@@ -2430,9 +2430,11 @@ pub fn classify(text: &str) -> (&'static str, f64) {
 }
 
 /// Like [`classify`], but also returns the runner-up candidate when one
-/// exists (score > 0 and a different tool). Callers disclose it as a
-/// `suggested_route` when the top guess is weak, so a low-confidence
-/// dispatch can be confirmed explicitly instead of silently trusted.
+/// exists (score > 0 and a different tool).
+///
+/// Callers disclose it as a `suggested_route` when the top guess is weak, so
+/// a low-confidence dispatch can be confirmed explicitly instead of silently
+/// trusted.
 #[must_use]
 pub fn classify_with_alternative(text: &str) -> (&'static str, f64, Option<(&'static str, f64)>) {
     let lower = text.to_lowercase();
