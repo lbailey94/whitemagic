@@ -356,6 +356,11 @@ pub enum EventType {
     /// (`wm-dispatch` registry → bus). Payload carries
     /// `{tool, kind, counts, ts_ms}` — kind is `degraded` | `unconfined_spawn`.
     SandboxObservation = 235,
+    /// A Yama ladder step-1 notify action (Lakshmi actuator router → bus;
+    /// observe-only contract in `design/ACTUATOR_CONTRACT_2026-09-15.md`).
+    /// Payload carries `{policy_id, version, subject, metric, value, state,
+    /// step, actuator, reason, evidence}` — the reason is plain language.
+    ActuationNotify = 236,
 }
 
 impl EventType {
@@ -379,6 +384,8 @@ impl EventType {
             234 => EventCategory::Harmony,
             // Sandbox drift is the same OS-telemetry family (Yama v0 bridge).
             235 => EventCategory::Harmony,
+            // Ladder notify actions stay in the harmony family as well.
+            236 => EventCategory::Harmony,
             _ => EventCategory::System, // unreachable
         }
     }
@@ -634,6 +641,7 @@ impl EventType {
             // OS telemetry
             Self::OsTelemetryThreshold => "os_telemetry_threshold",
             Self::SandboxObservation => "sandbox_observation",
+            Self::ActuationNotify => "actuation_notify",
         }
     }
 
@@ -646,14 +654,14 @@ impl EventType {
             .collect()
     }
 
-    /// All 236 event types in canonical order.
+    /// All 237 event types in canonical order.
     #[must_use]
     pub fn all() -> Vec<Self> {
-        (0..=235u16).map(Self::from_id).collect()
+        (0..=236u16).map(Self::from_id).collect()
     }
 
     /// Total number of event types.
-    pub const COUNT: usize = 236;
+    pub const COUNT: usize = 237;
 
     /// Convert from u16 id.
     #[must_use]
@@ -895,6 +903,7 @@ impl EventType {
             233 => Self::PatternDetected,
             234 => Self::OsTelemetryThreshold,
             235 => Self::SandboxObservation,
+            236 => Self::ActuationNotify,
             _ => Self::SystemStartup, // unreachable
         }
     }
@@ -913,9 +922,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn event_count_is_236() {
-        assert_eq!(EventType::all().len(), 236);
-        assert_eq!(EventType::COUNT, 236);
+    fn event_count_is_237() {
+        assert_eq!(EventType::all().len(), 237);
+        assert_eq!(EventType::COUNT, 237);
     }
 
     #[test]
@@ -1019,7 +1028,7 @@ mod tests {
             25
         );
         assert_eq!(EventType::in_category(EventCategory::Drive).len(), 25);
-        assert_eq!(EventType::in_category(EventCategory::Harmony).len(), 27);
+        assert_eq!(EventType::in_category(EventCategory::Harmony).len(), 28);
         assert_eq!(EventType::in_category(EventCategory::Governance).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Tool).len(), 25);
         assert_eq!(EventType::in_category(EventCategory::Agent).len(), 25);

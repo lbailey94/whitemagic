@@ -184,7 +184,8 @@ impl NervousSubsystem {
             | EventType::CerebellarMotorMemoryRecalled
             | EventType::PatternDetected
             | EventType::OsTelemetryThreshold
-            | EventType::SandboxObservation => Self::Sensory,
+            | EventType::SandboxObservation
+            | EventType::ActuationNotify => Self::Sensory,
 
             // Motor — output, action
             EventType::MemoryCreated
