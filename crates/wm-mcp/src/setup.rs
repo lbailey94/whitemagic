@@ -811,6 +811,123 @@ pub fn connect_with(list: &[ClientSpec], exe: &Path, apply: bool) -> Vec<Connect
         .collect()
 }
 
+/// End-to-end connection proof: spawn `binary serve --profile curated` in a
+/// throwaway HOME and perform a real MCP handshake (`initialize` →
+/// `tools/list`). Returns the exposed tool count. The isolated HOME means the
+/// check can never create or mutate the user's store.
+pub fn verify_mcp_session(binary: &Path) -> Result<usize, String> {
+    use std::io::{BufRead, BufReader};
+    use std::process::{Command, Stdio};
+    use std::sync::mpsc;
+    use std::thread;
+
+    let home = tempfile::tempdir().map_err(|e| format!("temp home: {e}"))?;
+    let mut child = Command::new(binary)
+        .args(["serve", "--profile", "curated"])
+        .env("HOME", home.path())
+        .env("XDG_DATA_HOME", home.path().join(".local/share"))
+        .env("XDG_CONFIG_HOME", home.path().join(".config"))
+        .env("RUST_LOG", "error")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("spawn {}: {e}", binary.display()))?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "no stdout pipe".to_string())?;
+    let (tx, rx) = mpsc::channel::<String>();
+    let reader = thread::spawn(move || {
+        for line in BufReader::new(stdout).lines() {
+            let Ok(line) = line else { break };
+            if tx.send(line).is_err() {
+                break;
+            }
+        }
+    });
+
+    let session = run_session(&mut child, &rx);
+
+    let _ = child.kill();
+    let _ = child.wait();
+    let _ = reader.join();
+    session
+}
+
+/// Drive the handshake on a spawned server; split out so `child` stays a
+/// plain `&mut` (a captured closure cannot move `stdin` out of it).
+fn run_session(
+    child: &mut std::process::Child,
+    rx: &std::sync::mpsc::Receiver<String>,
+) -> Result<usize, String> {
+    use std::io::Write;
+    use std::time::Duration;
+
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "no stdin pipe".to_string())?;
+    let init = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "wm-connect-verify", "version": env!("CARGO_PKG_VERSION")}
+        }
+    });
+    writeln!(stdin, "{init}").map_err(|e| format!("initialize write: {e}"))?;
+    stdin
+        .flush()
+        .map_err(|e| format!("initialize flush: {e}"))?;
+    wait_for_id(rx, 1, Duration::from_secs(10))?;
+
+    writeln!(
+        stdin,
+        r#"{{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{{}}}}"#
+    )
+    .map_err(|e| format!("tools/list write: {e}"))?;
+    stdin
+        .flush()
+        .map_err(|e| format!("tools/list flush: {e}"))?;
+    let line = wait_for_id(rx, 2, Duration::from_secs(10))?;
+    let value: Value = serde_json::from_str(&line).map_err(|e| format!("tools/list parse: {e}"))?;
+    let count = value["result"]["tools"].as_array().map_or(0, Vec::len);
+    if count == 0 {
+        return Err(format!(
+            "handshake succeeded but tools/list was empty: {value}"
+        ));
+    }
+    Ok(count)
+}
+
+/// Wait for a JSON-RPC line carrying `id`, skipping log noise and
+/// notifications; bounded so a wedged server cannot hang the caller.
+fn wait_for_id(
+    rx: &std::sync::mpsc::Receiver<String>,
+    id: u64,
+    timeout: std::time::Duration,
+) -> Result<String, String> {
+    let deadline = std::time::Instant::now() + timeout;
+    loop {
+        let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+        if remaining.is_zero() {
+            return Err(format!("timed out waiting for response id {id}"));
+        }
+        let line = rx
+            .recv_timeout(remaining)
+            .map_err(|_| format!("timed out waiting for response id {id}"))?;
+        if let Ok(value) = serde_json::from_str::<Value>(&line) {
+            if value.get("id").and_then(Value::as_u64) == Some(id) {
+                return Ok(line);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

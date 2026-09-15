@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Setup & onboarding
 - **Split readiness states**: `wm grimoire --json` now reports `substrate_ready`, `agent_wired`, `continuity_verified`, `semantic_recall_available`, and `fully_activated` alongside the compatibility `ready` aggregate — a fresh machine with no client reports `ready: true, agent_wired: false, fully_activated: false` instead of a single coarse boolean. `wm connect --write` exits non-zero when any detected client fails to configure (partial connect is not activation).
+- **Tested connections**: after `wm connect --write`, WhiteMagic now proves the wired command actually serves — it spawns the configured binary in a throwaway HOME and performs a real MCP handshake (`initialize` + `tools/list`), reporting the exposed tool count or exiting non-zero on failure. Config-parse checks remain necessary but are no longer sufficient.
 
 ### Telemetry
 - **Unified evidence ceiling**: RSI auto-friction writes (`friction.auto_log` regression paths and anomalies) now clamp importance to the shared `IMPORTANCE_CEILING` (0.40) used by the typed telemetry path, instead of writing 0.5–0.95; severity remains visible in `rsi:severity:*` tags. Manual `friction.log` (Codex) is unchanged.

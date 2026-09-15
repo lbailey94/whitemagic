@@ -1324,6 +1324,20 @@ fn main() -> anyhow::Result<()> {
                 eprintln!("\n\u{2716} {failed} client(s) failed to configure — exiting non-zero.");
                 std::process::exit(1);
             }
+            if write {
+                // Config parses are necessary but not sufficient: prove the
+                // wired command actually serves (initialize + tools/list) in
+                // an isolated HOME, so "connected" is a tested claim.
+                match wm_mcp::setup::verify_mcp_session(&exe) {
+                    Ok(tools) => println!(
+                        "Connection test passed — initialize + tools/list OK ({tools} tools exposed)."
+                    ),
+                    Err(e) => {
+                        eprintln!("Connection test FAILED — {e}");
+                        std::process::exit(1);
+                    }
+                }
+            }
         }
         Commands::Update { action } => match action {
             UpdateAction::Check {
