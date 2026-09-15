@@ -5,7 +5,7 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — 9.1.6 (in progress)
+## [9.1.6] — 2026-09-15
 
 ### Security
 - **Credential redaction coverage**: `wm ingest --redact` now detects and redacts AWS secret access keys and compound assignment keys (`secret_access_key`, `aws_secret_access_key`, `secret_key`, `client_secret`, `private_key`, `auth_token`, `refresh_token`); detection and redaction share one key list and the redacted forms are idempotent.
