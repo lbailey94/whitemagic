@@ -172,15 +172,27 @@ if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
     # stranger should never see "wm: not found" right after installing.
     path_line="export PATH=\"${INSTALL_DIR}:\$PATH\""
     path_fixed=0
+    profile_found=0
     for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
         [ -f "$rc" ] || continue
-        if ! grep -qs "${INSTALL_DIR}" "$rc"; then
-            printf '\n# Added by the WhiteMagic installer\n%s\n' "$path_line" >> "$rc"
-            path_fixed=1
+        profile_found=1
+        # Whole-line match only: a commented or stale mention of the path
+        # must not count as "already wired" (2026-09-15 review).
+        if ! grep -qsxF "$path_line" "$rc"; then
+            if printf '\n# Added by the WhiteMagic installer\n%s\n' "$path_line" >> "$rc"; then
+                path_fixed=1
+            else
+                echo "warning: could not write the PATH line to $rc" >&2
+            fi
         fi
     done
     if [ "$path_fixed" = "1" ]; then
         echo "PATH wired into your shell profile — open a new terminal, or run now:"
+    elif [ "$profile_found" = "1" ]; then
+        # A profile exists and already exports the path: never rewrite it.
+        # (Reinstall case — the old logic overwrote ~/.profile with `>` here,
+        # destroying every unrelated line.)
+        echo "PATH already wired in your shell profile — open a new terminal, or run now:"
     else
         # No profile file existed (minimal containers/boxes) — create ~/.profile,
         # which POSIX login shells read.
