@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] — 9.1.6 (in progress)
 
 ### Security
+- **Credential redaction coverage**: `wm ingest --redact` now detects and redacts AWS secret access keys and compound assignment keys (`secret_access_key`, `aws_secret_access_key`, `secret_key`, `client_secret`, `private_key`, `auth_token`, `refresh_token`); detection and redaction share one key list and the redacted forms are idempotent.
 - **Sandbox executor deadline (Landlock v1)**: the scoped-thread pathway now enforces `WM_DISPATCH_TIMEOUT_MS` inside the confined thread — a timed-out tool future is dropped and reported, mirroring the normal dispatch path; `with_timeout` overrides per executor and timeouts are counted.
 - **`sandbox.set_limits` input validation**: all six fields are validated before any is applied; wrong-typed, negative, or out-of-range values are rejected with the field named (no silent `u32` truncation, no partial application). Behavior tests cover acceptance, atomic rejection, and effective write/spawn/network budget enforcement.
 

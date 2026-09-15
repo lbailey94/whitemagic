@@ -97,20 +97,32 @@ fn token_after(
     false
 }
 
+/// Assignment-key names (case-insensitive) whose `=`/`:` value is treated as
+/// a secret. Compound keys are listed explicitly because the delimiter must
+/// immediately follow the key name: `secret` alone never matches
+/// `AWS_SECRET_ACCESS_KEY=...` (the `_` blocks the delimiter check).
+const ASSIGNMENT_KEYS: &[&str] = &[
+    "password",
+    "passwd",
+    "api_key",
+    "api-key",
+    "apikey",
+    "secret",
+    "access_token",
+    "secret_access_key",
+    "aws_secret_access_key",
+    "secret_key",
+    "client_secret",
+    "private_key",
+    "auth_token",
+    "refresh_token",
+];
+
 /// Case-insensitive `password = "..."` / `api_key: ...` detection with a
 /// 16+ character non-space value.
 fn assignment_shaped(content: &str) -> bool {
-    const KEYS: &[&str] = &[
-        "password",
-        "passwd",
-        "api_key",
-        "api-key",
-        "apikey",
-        "secret",
-        "access_token",
-    ];
     let lower = content.to_lowercase();
-    for key in KEYS {
+    for key in ASSIGNMENT_KEYS {
         let mut from = 0usize;
         while let Some(pos) = lower[from..].find(key) {
             let abs = from + pos + key.len();
@@ -241,16 +253,7 @@ fn pem_block_span(text: &str) -> Option<(usize, usize)> {
 
 /// Span of the first assignment *value* (the 16+ char secret, not the key).
 fn assignment_value_span(text: &str) -> Option<(usize, usize)> {
-    const KEYS: &[&str] = &[
-        "password",
-        "passwd",
-        "api_key",
-        "api-key",
-        "apikey",
-        "secret",
-        "access_token",
-    ];
-    for key in KEYS {
+    for key in ASSIGNMENT_KEYS {
         let mut from = 0usize;
         while let Some(pos) = find_ascii_case_insensitive(text, key, from) {
             let after = pos + key.len();
@@ -362,6 +365,51 @@ mod tests {
         assert_eq!(
             credential_shaped_content(assign),
             vec!["credential_assignment"]
+        );
+    }
+
+    #[test]
+    fn detects_aws_secret_and_compound_assignment_keys() {
+        // Regression (P0, 2026-09-14): in AWS_SECRET_ACCESS_KEY the `secret`
+        // key name is followed by `_`, so the delimiter check never fired and
+        // the secret survived `wm ingest --redact`. Compound keys now need
+        // no special-casing at the call sites — they are listed explicitly.
+        let aws = "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+        assert_eq!(
+            credential_shaped_content(aws),
+            vec!["credential_assignment"]
+        );
+        let (redacted, kinds) = redact_credential_content(aws);
+        assert!(kinds.contains(&"credential_assignment"));
+        assert_eq!(
+            redacted,
+            "AWS_SECRET_ACCESS_KEY=[REDACTED:credential_assignment]"
+        );
+        assert!(
+            credential_shaped_content(&redacted).is_empty(),
+            "redacted AWS secret must read clean: {redacted}"
+        );
+        let (twice, _) = redact_credential_content(&redacted);
+        assert_eq!(redacted, twice);
+
+        // Compound keys with identifier suffixes need explicit listing.
+        for text in [
+            "secret_access_key=0123456789abcdef",
+            "secret_key: 0123456789abcdef",
+            "refresh_token=0123456789abcdef",
+            "auth_token=0123456789abcdef",
+        ] {
+            assert_eq!(
+                credential_shaped_content(text),
+                vec!["credential_assignment"],
+                "{text}"
+            );
+        }
+
+        // Prose naming the key without an assignment stays clean.
+        assert!(
+            credential_shaped_content("the aws secret access key rotation policy was updated")
+                .is_empty()
         );
     }
 
