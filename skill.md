@@ -4,7 +4,7 @@ Operational quickstart for AI agents that cloned this repository. Goal: from clo
 
 ## What this is
 
-Local-first memory and session continuity for coding agents, exposed over MCP. A single Rust binary (`wm`) runs a stdio JSON-RPC server your MCP client talks to. Memory is stored on-device; there is no telemetry and no required cloud service. Optional model/embedding backends degrade truthfully when absent.
+Local-first memory and session continuity for coding agents, exposed over MCP. A single Rust binary (`wm`) runs a stdio JSON-RPC server your MCP client talks to. Memory is stored on-device; no usage telemetry, prompts, or memories are transmitted off-device by default. WhiteMagic does keep local diagnostic evidence on-device (e.g., RSI friction records), and update checks fetch a public, static release manifest. Optional model/embedding backends degrade truthfully when absent.
 
 ## Install and verify
 

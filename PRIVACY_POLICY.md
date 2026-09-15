@@ -1,23 +1,30 @@
 # WhiteMagic Privacy Policy
 
 **Effective Date**: 2026-08-13
-**Version**: 9.1.2
+**Version**: 9.1.5
 
 ## Summary
 
 WhiteMagic is a **local-first** memory and session-continuity server for AI
 agents. The summary is simple: your data stays on your machine. There is no
-account, no cloud backend, and no telemetry.
+account, no cloud backend, and no telemetry transmitted off-device. Local
+diagnostic evidence (e.g., RSI friction records) is recorded on-device and
+stays there unless you explicitly share it.
 
 ## What We Collect
 
-Nothing. WhiteMagic does not send any data off your machine:
+Nothing is uploaded by default. WhiteMagic does not send your data off your
+machine:
 
-- **No telemetry.** No usage statistics, crash reports, or analytics leave the
-  process.
+- **No telemetry transmitted.** No usage statistics, crash reports, prompts,
+  memories, or analytics are sent to us or to any third party. WhiteMagic does
+  keep local diagnostic evidence on-device for its own self-observation; it
+  never leaves the machine unless you explicitly opt in to sharing.
 - **No accounts.** There is no sign-up, no email collection, no API keys
   managed by us.
-- **No network calls by default.** The server makes outbound network requests
+- **Update checks are the only default outbound request.** `wm grimoire` and
+  `wm update check` fetch a public, static release manifest; no identifiers,
+  memories, or usage data are attached. All other outbound requests happen
   only when you explicitly use a network tool (`web.*`, `research.*`) or
   configure an optional embedding/LLM endpoint (`WM_EMBEDDER_ENDPOINT`,
   `WM_LLAMA_ENDPOINT`, `WM_LLM_ENDPOINT`). Those requests go to the endpoints
