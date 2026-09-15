@@ -13,8 +13,18 @@ permissions:
   id-token: write
 
 jobs:
+  truth:
+    name: Version truth gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version surfaces + changelog ceremony
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 scripts/version_truth.py --check --version "${GITHUB_REF_NAME#v}"
+
   build:
     name: Build ${{ matrix.target }}
+    needs: [truth]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

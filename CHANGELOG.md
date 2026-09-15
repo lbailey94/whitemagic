@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NLU routing gains `session.continuity` and `session.record` profiles, decisive phrase routes ("where were we", "what did we decide last", "continue from", "pick up where", "where did we leave off") and a `resume` prefix route — resume intentions now land on `session.continuity` instead of `gnosis`/`session.recall` (verified live at confidence 1.0; classifier regression tests cover 5 phrasings).
 
 ### Release gates
+- **Release-ceremony gate**: `scripts/version_truth.py` now also checks `CHANGELOG.md` — the target version must not still sit under `[Unreleased]` and must have a dated `## [x.y.z]` section (the v9.1.5 tag shipped with a draft heading) — and covers `PRIVACY_POLICY.md` as a version surface. The release workflow runs the gate as its first job and blocks the tag build on drift.
 - `scripts/curated_smoke_test.py` extended: claims annotation truthfulness (add/resolve write-capable, reads read-only), `claims.add` write path, and NLU routing checks (resume/continuity phrases → `session.continuity`, "remember..." → `memory.create`) — the process-level gate now covers the 9.1.6 governance/routing changes end to end.
 
 ### Lock hygiene — no more hangs on live or wedged stores (9.1.6)

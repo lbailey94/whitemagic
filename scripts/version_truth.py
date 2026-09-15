@@ -7,8 +7,10 @@ this by hand (the "version-truth pass"), and `scripts/release.sh` only bumped
 three of the fifteen surfaces — leaving Docker labels, the MCPB manifest, the
 hosted server card, CITATION, docs and install examples to drift.
 
-CHANGELOG.md is deliberately excluded: its version strings are historical
-records, not version truth.
+CHANGELOG.md is not a version surface (its strings are historical records),
+but the release-ceremony gate checks it separately: the target version must
+not still sit under `[Unreleased]`, and it must have a dated `## [x.y.z]`
+section — the v9.1.5 tag shipped with an "unreleased (draft)" heading.
 
 Usage:
     version_truth.py --check [--version X]
@@ -46,6 +48,7 @@ SURFACES = [
     "docs/DOCKER_HUB_RUNBOOK.md",
     "skill.md",
     "README.md",
+    "PRIVACY_POLICY.md",
     "scripts/install.sh",
     "SECURITY.md",
     "rust-toolchain.toml",
@@ -54,6 +57,11 @@ SURFACES = [
 VERSION_RE = re.compile(r"\bv?9\.\d+\.\d+\b")
 WORKSPACE_RE = re.compile(r'(?m)^version = "(\d+\.\d+\.\d+)"')
 SEMVER_RE = re.compile(r"\d+\.\d+\.\d+")
+
+CHANGELOG = "CHANGELOG.md"
+UNRELEASED_RE = re.compile(r"(?m)^## \[Unreleased\][^\n]*?(\d+\.\d+\.\d+)")
+RELEASED_HEADING_RE = re.compile(r"^## \[(\d+\.\d+\.\d+)\][^\n]*$")
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Historical version mentions that must never count as drift or be rewritten
 # (they describe past releases, not current version truth).
@@ -108,6 +116,38 @@ def scan(root: Path) -> list[tuple[str, list[str]]]:
     return found
 
 
+def check_ceremony(root: Path, target: str) -> bool:
+    """Ceremony checks the flat version scan cannot express.
+
+    Fails when the changelog still marks the target version `[Unreleased]`
+    (the v9.1.5 tag shipped with a draft heading) or lacks a dated
+    `## [target]` section.
+    """
+    path = root / CHANGELOG
+    if not path.exists():
+        print(f"  {CHANGELOG:<42} MISSING: cannot verify the release ceremony")
+        return False
+    text = path.read_text(encoding="utf-8")
+    ok = True
+    unreleased = UNRELEASED_RE.search(text)
+    if unreleased and unreleased.group(1) == target:
+        print(f"  {CHANGELOG:<42} DRIFT: {target} is still under [Unreleased]")
+        ok = False
+    section: str | None = None
+    for line in text.splitlines():
+        match = RELEASED_HEADING_RE.match(line)
+        if match and match.group(1) == target:
+            section = line
+            break
+    if section is None:
+        print(f"  {CHANGELOG:<42} DRIFT: no '## [{target}]' section")
+        ok = False
+    elif not DATE_RE.search(section):
+        print(f"  {CHANGELOG:<42} DRIFT: '## [{target}]' has no date")
+        ok = False
+    return ok
+
+
 def check(root: Path, expected: str | None) -> int:
     target = expected or workspace_version(root)
     rows = scan(root)
@@ -123,8 +163,9 @@ def check(root: Path, expected: str | None) -> int:
         else:
             status = "ok"
         print(f"  {rel:<42} {len(versions):>2} reference(s)  {status}")
-    if drift:
-        print(f"\nREFUSING: at least one surface disagrees with {target}")
+    ceremony_ok = check_ceremony(root, target)
+    if drift or not ceremony_ok:
+        print(f"\nREFUSING: version truth is not green for {target}")
         return 1
     print(f"\nall surfaces agree on {target}")
     return 0

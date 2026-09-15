@@ -28,6 +28,8 @@ def make_tree(version: str = "9.1.4") -> tuple[tempfile.TemporaryDirectory, Path
             path.write_text(f"version: {version}\n", encoding="utf-8")
         elif rel == "scripts/install.sh":
             path.write_text(f"# install: sh -s -- --version v{version}\n", encoding="utf-8")
+        elif rel == "PRIVACY_POLICY.md":
+            path.write_text(f"# Privacy\n\n**Version**: {version}\n", encoding="utf-8")
         elif rel == "SECURITY.md":
             path.write_text(
                 f"> the fleet runs {version} (the pinned 9.0.0 runtime was removed)\n",
@@ -35,6 +37,10 @@ def make_tree(version: str = "9.1.4") -> tuple[tempfile.TemporaryDirectory, Path
             )
         else:
             path.write_text(f"# doc\nwm --version  # wm {version}\n", encoding="utf-8")
+    (root / "CHANGELOG.md").write_text(
+        f"# Changelog\n\n## [Unreleased]\n\n## [{version}] — 2026-09-01\n",
+        encoding="utf-8",
+    )
     return tmp, root
 
 
@@ -75,6 +81,12 @@ class VersionTruthTest(unittest.TestCase):
             self.assertIn("v9.1.5", (root / "scripts/install.sh").read_text())
             # Idempotent.
             self.assertEqual(vt.set_version(root, "9.1.5", dry_run=False), 0)
+            # The ceremony step finalizes the changelog (never a version
+            # surface — historical strings are records, not truth).
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [Unreleased]\n\n## [9.1.5] — 2026-09-01\n",
+                encoding="utf-8",
+            )
             self.assertEqual(vt.check(root, None), 0)
 
     def test_historical_versions_are_exempt(self) -> None:
@@ -108,6 +120,45 @@ class VersionTruthTest(unittest.TestCase):
         with tmp:
             with self.assertRaises(SystemExit):
                 vt.set_version(root, "banana", dry_run=False)
+
+    def test_ceremony_flags_unreleased_target(self) -> None:
+        # The v9.1.5 tag shipped with `## [Unreleased] — 9.1.5 (in progress)`.
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [Unreleased] — 9.1.4 (in progress)\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 1)
+
+    def test_ceremony_requires_dated_release_section(self) -> None:
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [Unreleased]\n\n## [9.1.4]\n", encoding="utf-8"
+            )
+            self.assertEqual(vt.check(root, None), 1)
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [Unreleased]\n\n## [9.1.4] — 2026-09-01\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 0)
+
+    def test_ceremony_ignores_unreleased_other_versions(self) -> None:
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [Unreleased] — 9.1.5 (in progress)\n\n"
+                "## [9.1.4] — 2026-09-01\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.check(root, None), 0)
+
+    def test_ceremony_missing_changelog_is_drift(self) -> None:
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            (root / "CHANGELOG.md").unlink()
+            self.assertEqual(vt.check(root, None), 1)
 
 
 if __name__ == "__main__":
