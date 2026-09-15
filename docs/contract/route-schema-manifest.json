@@ -1,8 +1,8 @@
 {
   "counts": {
-    "declared": 70,
+    "declared": 78,
     "routes": 302,
-    "undeclared": 232
+    "undeclared": 224
   },
   "format_version": 1,
   "generated_by": "wm contract --json",
@@ -11,6 +11,30 @@
     {
       "arg": "entity",
       "route": "kg.query"
+    },
+    {
+      "arg": "name",
+      "route": "agent.register"
+    },
+    {
+      "arg": "agent_id",
+      "route": "agent.trust"
+    },
+    {
+      "arg": "agent_id",
+      "route": "agent.descriptions"
+    },
+    {
+      "arg": "agent_id",
+      "route": "agent.capabilities"
+    },
+    {
+      "arg": "agent_id",
+      "route": "agent.heartbeat.history"
+    },
+    {
+      "arg": "agent_id",
+      "route": "agent.deregister"
     }
   ],
   "source": "running binary registry (one exact revision)",
@@ -34,51 +58,133 @@
       "route": "actuator.list"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "agent_id": {
+          "description": "Agent UUID or registered name to look up (required)",
+          "type": "string"
+        },
+        "capabilities": {
+          "description": "Capabilities to set; omit to read the current capabilities",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
       "route": "agent.capabilities"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "agent_id": {
+          "description": "Agent UUID or registered name to deregister (required)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
       "route": "agent.deregister"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "agent_id": {
+          "description": "Agent UUID or registered name to look up (required)",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description to set; omit to read the current description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
       "route": "agent.descriptions"
     },
     {
-      "declared": false,
-      "properties": {},
+      "declared": true,
+      "properties": {
+        "agent_id": {
+          "description": "Agent identifier to record the heartbeat for (optional; an empty value records an anonymous heartbeat)",
+          "type": "string"
+        },
+        "status": {
+          "description": "Status string to record (optional; default 'alive')",
+          "type": "string"
+        }
+      },
       "required": [],
       "route": "agent.heartbeat"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "agent_id": {
+          "description": "Agent identifier whose heartbeats to list (required)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum heartbeats to return (optional; default 50)",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
       "route": "agent.heartbeat.history"
     },
     {
-      "declared": false,
-      "properties": {},
+      "declared": true,
+      "properties": {
+        "limit": {
+          "description": "Maximum Substrate registrations to scan (optional; default 500, clamped 1-500)",
+          "type": "integer"
+        }
+      },
       "required": [],
       "route": "agent.list"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "capabilities": {
+          "description": "Capabilities to record for the agent (optional; default empty)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "Agent name to register (required; recorded in the Substrate galaxy)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
       "route": "agent.register"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "agent_id": {
+          "description": "Agent UUID or registered name to look up (required)",
+          "type": "string"
+        },
+        "trust_level": {
+          "description": "Trust level to set (0.0-1.0); omit to read the current level",
+          "type": "number"
+        }
+      },
+      "required": [
+        "agent_id"
+      ],
       "route": "agent.trust"
     },
     {
