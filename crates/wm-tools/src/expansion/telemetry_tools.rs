@@ -39,7 +39,7 @@ const RECORD_KINDS: [&str; 3] = [
     "telemetry.rollup",
     "telemetry.observation",
 ];
-const IMPORTANCE_CEILING: f32 = 0.40;
+pub(crate) const IMPORTANCE_CEILING: f32 = 0.40;
 const SOURCE_TRUST: f32 = 0.7;
 
 fn telemetry_effects(destructive: bool, writes: bool) -> EffectRow {

@@ -31,6 +31,8 @@ use wm_governance::KarmaLedger;
 use wm_memory::{Memory, MemoryStore, SearchEngine};
 use wm_workspace::{CoreId, EventType, GlobalWorkspace};
 
+use super::telemetry_tools::IMPORTANCE_CEILING;
+
 // ── DispatchTelemetry: Rich friction envelope (WS-1) ───────────────────
 
 /// Telemetry captured from the dispatch path for rich friction logging.
@@ -107,6 +109,15 @@ pub fn friction_hash_exists(store: &MemoryStore, hash_tag: &str) -> bool {
         .any(|galaxy| {
             find_existing_friction(store, *galaxy, hash_tag).is_ok_and(|opt| opt.is_some())
         })
+}
+
+/// Clamp an importance destined for the Telemetry galaxy to the shared
+/// evidence ceiling ([`IMPORTANCE_CEILING`]): evidence never outranks
+/// cognition. Severity stays visible through `rsi:severity:*` tags rather
+/// than by escaping the ceiling.
+#[must_use]
+pub fn telemetry_importance(value: f32) -> f32 {
+    value.clamp(0.0, IMPORTANCE_CEILING)
 }
 
 /// Scan `galaxy` for an existing friction entry with the given hash tag.
@@ -628,7 +639,7 @@ impl FrictionAutoLogTool {
                 ];
                 memory.metadata.source = "auto".to_string();
                 memory.metadata.source_trust = 0.9;
-                memory.metadata.importance = 0.95;
+                memory.metadata.importance = telemetry_importance(0.95);
                 let id = memory.metadata.id;
                 self.store.put(wm_core::Galaxy::Telemetry, &memory)?;
 
@@ -695,11 +706,11 @@ impl FrictionAutoLogTool {
         ];
         memory.metadata.source = "auto".to_string();
         memory.metadata.source_trust = 0.8;
-        memory.metadata.importance = match severity {
+        memory.metadata.importance = telemetry_importance(match severity {
             "high" => 0.9,
             "medium" => 0.6,
             _ => 0.3,
-        };
+        });
 
         let id = memory.metadata.id;
         self.store.put(wm_core::Galaxy::Telemetry, &memory)?;
@@ -765,7 +776,7 @@ impl FrictionAutoLogTool {
         ];
         memory.metadata.source = "auto".to_string();
         memory.metadata.source_trust = 0.7;
-        memory.metadata.importance = 0.5;
+        memory.metadata.importance = telemetry_importance(0.5);
 
         let id = memory.metadata.id;
         self.store.put(wm_core::Galaxy::Telemetry, &memory)?;
@@ -1784,6 +1795,11 @@ mod tests {
         );
         assert_eq!(memories[0].metadata.source, "auto");
         assert!((memories[0].metadata.source_trust - 0.8).abs() < 0.01);
+        assert!(
+            memories[0].metadata.importance <= IMPORTANCE_CEILING + f32::EPSILON,
+            "telemetry evidence must stay at/below the shared ceiling: {}",
+            memories[0].metadata.importance
+        );
 
         // Verify telemetry JSON is embedded in content
         assert!(memories[0].content.contains("```json"));
@@ -2031,6 +2047,11 @@ mod tests {
                 .contains(&"rsi:category:performance".to_string())
         );
         assert_eq!(memories[0].metadata.source, "auto");
+        assert!(
+            memories[0].metadata.importance <= IMPORTANCE_CEILING + f32::EPSILON,
+            "anomaly evidence must stay at/below the shared ceiling: {}",
+            memories[0].metadata.importance
+        );
     }
 
     #[tokio::test]

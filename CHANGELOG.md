@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sandbox executor deadline (Landlock v1)**: the scoped-thread pathway now enforces `WM_DISPATCH_TIMEOUT_MS` inside the confined thread — a timed-out tool future is dropped and reported, mirroring the normal dispatch path; `with_timeout` overrides per executor and timeouts are counted.
 - **`sandbox.set_limits` input validation**: all six fields are validated before any is applied; wrong-typed, negative, or out-of-range values are rejected with the field named (no silent `u32` truncation, no partial application). Behavior tests cover acceptance, atomic rejection, and effective write/spawn/network budget enforcement.
 
+### Telemetry
+- **Unified evidence ceiling**: RSI auto-friction writes (`friction.auto_log` regression paths and anomalies) now clamp importance to the shared `IMPORTANCE_CEILING` (0.40) used by the typed telemetry path, instead of writing 0.5–0.95; severity remains visible in `rsi:severity:*` tags. Manual `friction.log` (Codex) is unchanged.
+
 ### Retrieval
 - **Unfiltered-search round-trip**: `memory.search` / `memory.hybrid_recall` accept `galaxy: "all"` (case-insensitive) as an alias for the all-galaxies default their own responses emit, instead of failing with "Unknown galaxy: 'all'".
 - **Telemetry is evidence, not cognition**: unfiltered `memory.search` / `memory.hybrid_recall` no longer surfaces telemetry-galaxy records — the exclusion is enforced in the hybrid, episodic, FTS, association, and cold phases — while an explicit `galaxy: "telemetry"` filter remains the only door. Regression: v9.1.5 default search returned RSI friction records when the query text matched.
