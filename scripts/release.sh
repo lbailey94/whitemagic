@@ -161,20 +161,28 @@ else
     ext=""; [ "$target" = "x86_64-unknown-linux-musl" ] && ext="-musl"
     cp "target/$target/release/wm" "release-assets/wm-linux-x86_64$ext"
   done
-  for f in release-assets/wm-linux-*; do sha256sum "$f" | awk '{print $1}' > "$f.sha256"; done
+  # Checksum files must be in `sha256sum -c` format (`<hash>  <filename>`) —
+  # bare digests break the Dockerfile's verification (2026-09-15 incident).
+  sha_file() { ( cd "$(dirname "$1")" && sha256sum "$(basename "$1")" ) > "$1.sha256"; }
+  for f in release-assets/wm-linux-*; do
+    case "$f" in *.sha256) continue ;; esac
+    sha_file "$f"
+  done
   # include pre-built mac/win assets if the operator dropped them here
   for f in release-assets/wm-macos-* release-assets/wm-windows-*.exe; do
     [ -f "$f" ] || continue
     case "$f" in *.sha256) continue ;; esac
-    sha256sum "$f" | awk '{print $1}' > "$f.sha256"
+    sha_file "$f"
   done
   # The repo's release.yml workflow auto-creates the release from the tag and
   # builds all 5 binaries (linux gnu+musl, macos x2, windows). Only create
   # here if the workflow hasn't (draft/manual runs); upload extra assets if
   # the operator dropped mac/win builds in release-assets/.
   if gh release view "v$VERSION" >/dev/null 2>&1; then
-    echo "release v$VERSION already exists (release.yml) — uploading extras only"
-    ls release-assets/wm-* >/dev/null 2>&1 && gh release upload "v$VERSION" release-assets/wm-* --clobber
+    echo "release v$VERSION already exists — release.yml owns the assets."
+    echo "  NOT uploading local builds: the signed release-manifest covers the"
+    echo "  CI-built binaries, and a local upload desyncs provenance"
+    echo "  (learned 2026-09-15: bare-hash checksums also broke Docker)."
   else
     gh release create "v$VERSION" --title "WhiteMagic v$VERSION" --generate-notes
     gh release upload "v$VERSION" release-assets/wm-* --clobber
