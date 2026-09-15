@@ -1,8 +1,8 @@
 {
   "counts": {
-    "declared": 78,
+    "declared": 85,
     "routes": 302,
-    "undeclared": 224
+    "undeclared": 217
   },
   "format_version": 1,
   "generated_by": "wm contract --json",
@@ -35,6 +35,34 @@
     {
       "arg": "agent_id",
       "route": "agent.deregister"
+    },
+    {
+      "arg": "url",
+      "route": "web.fetch"
+    },
+    {
+      "arg": "url",
+      "route": "web.deep_fetch"
+    },
+    {
+      "arg": "query",
+      "route": "web.search"
+    },
+    {
+      "arg": "query",
+      "route": "web.search_and_read"
+    },
+    {
+      "arg": "project_root",
+      "route": "code.graph"
+    },
+    {
+      "arg": "query",
+      "route": "code.query"
+    },
+    {
+      "arg": "symbol",
+      "route": "code.affected_by"
     }
   ],
   "source": "running binary registry (one exact revision)",
@@ -515,9 +543,20 @@
       "route": "claims.status"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "max_depth": {
+          "description": "Reverse call-graph BFS depth, clamped 1-10 (optional; default 3)",
+          "type": "integer"
+        },
+        "symbol": {
+          "description": "Symbol whose change to trace (required)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
       "route": "code.affected_by"
     },
     {
@@ -569,9 +608,20 @@
       "route": "code.claim"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "max_files": {
+          "description": "Maximum files to scan (optional; default 50000)",
+          "type": "integer"
+        },
+        "project_root": {
+          "description": "Project root directory to scan (required)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "project_root"
+      ],
       "route": "code.graph"
     },
     {
@@ -590,9 +640,20 @@
       "route": "code.list"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "limit": {
+          "description": "Maximum results per section (optional; default 20)",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Natural-language query — 'what calls X', 'what does X call', 'path from A to B', 'explain X', 'god nodes', 'stats', or a symbol search (required)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
       "route": "code.query"
     },
     {
@@ -3150,27 +3211,95 @@
       "route": "violet.engagement.validate"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "max_chars": {
+          "description": "Maximum characters of stripped text to return (optional; default 200000)",
+          "type": "integer"
+        },
+        "timeout_secs": {
+          "description": "Per-hop timeout in seconds, clamped 0-300 (optional; default 30)",
+          "type": "number"
+        },
+        "url": {
+          "description": "URL to fetch (required; SSRF-checked on every redirect hop)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
       "route": "web.deep_fetch"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "max_chars": {
+          "description": "Maximum characters of stripped text to return (optional; default 30000)",
+          "type": "integer"
+        },
+        "timeout_secs": {
+          "description": "Per-hop timeout in seconds, clamped 0-300 (optional; default 15)",
+          "type": "number"
+        },
+        "url": {
+          "description": "URL to fetch (required; SSRF-checked on every redirect hop)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
       "route": "web.fetch"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "num_results": {
+          "description": "Maximum results to return (optional; default 8)",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Search query (required)",
+          "type": "string"
+        },
+        "timeout_secs": {
+          "description": "Search timeout in seconds, clamped 0-300 (optional; default 10)",
+          "type": "number"
+        }
+      },
+      "required": [
+        "query"
+      ],
       "route": "web.search"
     },
     {
-      "declared": false,
-      "properties": {},
-      "required": [],
+      "declared": true,
+      "properties": {
+        "max_chars_per_page": {
+          "description": "Maximum characters of stripped text per fetched page (optional; default 15000)",
+          "type": "integer"
+        },
+        "max_fetch": {
+          "description": "Maximum top results to fetch content for (optional; default 3)",
+          "type": "integer"
+        },
+        "num_results": {
+          "description": "Maximum search results to return (optional; default 5)",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Search query (required)",
+          "type": "string"
+        },
+        "timeout_secs": {
+          "description": "Search/fetch timeout in seconds, clamped 0-300 (optional; default 15)",
+          "type": "number"
+        }
+      },
+      "required": [
+        "query"
+      ],
       "route": "web.search_and_read"
     },
     {
