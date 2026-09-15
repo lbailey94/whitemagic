@@ -39,7 +39,6 @@ SURFACES = [
     "npm/whitemagic-mcp/package.json",
     "npm/whitemagic-mcp/server.json",
     "npm/whitemagic-mcp/mcpb/manifest.json",
-    "ops/hosted/server-card.json",
     "CITATION.cff",
     "Dockerfile",
     "docs/QUICKSTART.md",

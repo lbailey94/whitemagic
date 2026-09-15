@@ -153,6 +153,7 @@ wm-leases.json
 !/scripts/memorastrict_bench.py
 !/scripts/eval_protocol.py
 !/scripts/public_surface_check.sh
+!/scripts/zero_egress_test.sh
 !/scripts/tests/
 !/scripts/tests/test_eval_protocol.py
 !/scripts/tests/test_version_truth.py

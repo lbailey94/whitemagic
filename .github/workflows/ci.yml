@@ -189,12 +189,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --bin wm
       - name: Proof run (namespace with lo DOWN, create + recall)
-        run: ops/trust/zero_egress_test.sh | tee zero-egress-proof.txt
+        run: scripts/zero_egress_test.sh | tee zero-egress-proof.txt
         env:
           WM: ${{ github.workspace }}/target/release/wm
       - name: Negative control (the harness must be able to fail)
         run: |
-          if ops/trust/zero_egress_test.sh; then
+          if scripts/zero_egress_test.sh; then
             echo "NEGATIVE CONTROL FAILED: the harness passed with a broken binary — it cannot fail, so it proves nothing"
             exit 1
           fi
