@@ -2425,14 +2425,24 @@ pub const PHRASE_ROUTES: &[(&str, &str, f64)] = &[
 /// with confidence 0.0.
 #[must_use]
 pub fn classify(text: &str) -> (&'static str, f64) {
+    let (tool, confidence, _) = classify_with_alternative(text);
+    (tool, confidence)
+}
+
+/// Like [`classify`], but also returns the runner-up candidate when one
+/// exists (score > 0 and a different tool). Callers disclose it as a
+/// `suggested_route` when the top guess is weak, so a low-confidence
+/// dispatch can be confirmed explicitly instead of silently trusted.
+#[must_use]
+pub fn classify_with_alternative(text: &str) -> (&'static str, f64, Option<(&'static str, f64)>) {
     let lower = text.to_lowercase();
     if lower.trim().is_empty() {
-        return ("gnosis", 0.0);
+        return ("gnosis", 0.0, None);
     }
 
     let tokens = tokenize(&lower);
     if tokens.is_empty() {
-        return ("gnosis", 0.0);
+        return ("gnosis", 0.0, None);
     }
 
     let input_tf = term_frequencies(&tokens);
@@ -2446,7 +2456,7 @@ pub fn classify(text: &str) -> (&'static str, f64) {
         .iter()
         .find(|(phrase, _, _)| probe.starts_with(phrase))
     {
-        return (tool, 1.0);
+        return (tool, 1.0, None);
     }
 
     // Check for prefix-based routing bonus (single-word command verbs).
@@ -2458,6 +2468,7 @@ pub fn classify(text: &str) -> (&'static str, f64) {
 
     let mut best_tool = "gnosis";
     let mut best_score = 0.0;
+    let mut second: Option<(&'static str, f64)> = None;
 
     for profile in TOOL_PROFILES {
         let mut score = cosine_similarity(&input_tf, profile);
@@ -2471,18 +2482,33 @@ pub fn classify(text: &str) -> (&'static str, f64) {
             }
         }
         if score > best_score {
+            if best_score > 0.0 {
+                second = Some((best_tool, best_score));
+            }
             best_score = score;
             best_tool = profile.tool_name;
+        } else if score > 0.0
+            && profile.tool_name != best_tool
+            && second.is_none_or(|(_, s)| score > s)
+        {
+            second = Some((profile.tool_name, score));
         }
     }
 
-    // Minimum confidence threshold — below this, fall back to gnosis
+    // Minimum confidence threshold — below this, fall back to gnosis. The
+    // weak top candidate is still disclosed as an alternative so callers
+    // see "did you mean X?" instead of a bare failure.
     const MIN_THRESHOLD: f64 = 0.10;
     if best_score < MIN_THRESHOLD {
-        return ("gnosis", 0.0);
+        let alternative = (best_score > 0.0).then_some((best_tool, best_score));
+        return ("gnosis", 0.0, alternative);
     }
 
-    (best_tool, best_score)
+    (
+        best_tool,
+        best_score,
+        second.filter(|(tool, _)| *tool != best_tool),
+    )
 }
 
 #[cfg(test)]
@@ -2505,6 +2531,34 @@ mod tests {
         let (tool, conf) = classify("");
         assert_eq!(tool, "gnosis");
         assert_eq!(conf, 0.0);
+    }
+
+    #[test]
+    fn classify_alternative_discloses_a_runner_up() {
+        // Contract: when candidates compete, the runner-up is disclosed
+        // (score > 0, different tool) rather than silently dropped; the
+        // alternative never outranks the top candidate.
+        let (tool, confidence, alternative) =
+            classify_with_alternative("recall beta quartz submarine design notes");
+        assert!(confidence > 0.0, "expected a scored candidate: {tool}");
+        if let Some((alt_tool, alt_confidence)) = alternative {
+            assert_ne!(alt_tool, tool, "alternative must be a different tool");
+            assert!(
+                alt_confidence <= confidence,
+                "alternative {alt_tool} ({alt_confidence}) beat {tool} ({confidence})"
+            );
+        }
+    }
+
+    #[test]
+    fn classify_unknown_offers_no_alternative() {
+        let (tool, confidence, alternative) = classify_with_alternative("zzzqqx vvbnm");
+        assert_eq!(tool, "gnosis");
+        assert_eq!(confidence, 0.0);
+        assert!(
+            alternative.is_none(),
+            "no candidate should surface for pure noise: {alternative:?}"
+        );
     }
 
     #[test]

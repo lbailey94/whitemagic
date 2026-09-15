@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `claims.add` / `claims.resolve` declare the ledger write in their `EffectRow` — the tools/list `readOnlyHint` annotation and write-budget accounting now treat them as writes; read-only claims actions (status/list/calibration) stay read-only.
 
 ### Routing
+- **Confidence-aware disclosure**: NLU abstentions now name the weak top candidate as `suggested_route` (with `suggested_confidence`), and dispatches below 0.30 confidence carry `low_confidence: true` plus the runner-up `alternative_route` — behavior is unchanged (no new abstentions), but a weak guess is confirmable instead of silently trusted.
 - NLU routing gains `session.continuity` and `session.record` profiles, decisive phrase routes ("where were we", "what did we decide last", "continue from", "pick up where", "where did we leave off") and a `resume` prefix route — resume intentions now land on `session.continuity` instead of `gnosis`/`session.recall` (verified live at confidence 1.0; classifier regression tests cover 5 phrasings).
 
 ### Release gates

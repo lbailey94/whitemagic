@@ -177,6 +177,10 @@ pub fn encode_glyph(route: &str, args: &Value) -> Value {
 /// abstains and returns an error suggesting explicit routing instead of
 /// dispatching to the wrong tool. Only applies to `thought=` (NLU) routing,
 /// not explicit `route=`.
+/// Below this confidence an NLU dispatch still runs, but the response
+/// discloses `low_confidence` plus the runner-up `alternative_route` so
+/// callers can confirm with an explicit route instead of trusting a guess.
+const NLU_LOW_CONFIDENCE: f64 = 0.30;
 const NLU_ABSTENTION_THRESHOLD: f64 = 0.15;
 
 /// Mirror an explicit v5 memory write into the v6 episodic lane.
@@ -3540,15 +3544,41 @@ impl Tool for WmMetaTool {
         // NLU abstention: when the router returns gnosis (the fallback) with
         // low confidence, the query didn't match any tool description well
         // enough. Rather than dispatch to the wrong tool, return an error
-        // suggesting the user try explicit routing.
+        // suggesting the user try explicit routing — with the weak top
+        // candidate named as `suggested_route` when one exists.
         if route.is_none() && tool_name == "gnosis" && confidence < NLU_ABSTENTION_THRESHOLD {
+            let alternative = crate::nlu::classify_with_alternative(thought).2;
+            let mut meta = json!({
+                "tool": tool_name,
+                "confidence": confidence,
+                "abstained": true
+            });
+            if let Some((alt_tool, alt_confidence)) = alternative {
+                meta["suggested_route"] = json!(alt_tool);
+                meta["suggested_confidence"] = json!(alt_confidence);
+            }
             return Ok(json!({
                 "status": "error",
                 "message": "Could not confidently match your request to a tool.",
                 "confidence": confidence,
                 "hint": "Use explicit routing: wm(route='tool.name', args={...}). Use wm(route='tools.list') to see available tools.",
-                "_wm_route": { "tool": tool_name, "confidence": confidence, "abstained": true }
+                "_wm_route": meta
             }));
+        }
+
+        // Routing disclosure carried on every NLU response. A low-confidence
+        // dispatch still runs (behavior is unchanged) but names the runner-up
+        // so callers can confirm an explicit route instead of trusting a weak
+        // guess — the safer half of confidence-aware routing.
+        let mut route_meta = json!({ "tool": tool_name, "confidence": confidence });
+        if route.is_none() && confidence < NLU_LOW_CONFIDENCE {
+            route_meta["low_confidence"] = json!(true);
+            if let (_, _, Some((alt_tool, alt_confidence))) =
+                crate::nlu::classify_with_alternative(thought)
+            {
+                route_meta["alternative_route"] = json!(alt_tool);
+                route_meta["alternative_confidence"] = json!(alt_confidence);
+            }
         }
 
         // Build args for the target tool
@@ -3588,7 +3618,7 @@ impl Tool for WmMetaTool {
                         "message": format!(
                             "tool '{tool_name}' is destructive and cannot be reached via natural language — use wm(route='{tool_name}', args={{...}}) with \"confirm\": true"
                         ),
-                        "_wm_route": { "tool": tool_name, "confidence": confidence },
+                        "_wm_route": route_meta.clone(),
                     }));
                 }
 
@@ -3604,7 +3634,7 @@ impl Tool for WmMetaTool {
                             "status": "error",
                             "message": format!("Missing required argument: '{required}' for tool '{tool_name}'"),
                             "hint": Self::missing_arg_hint(&tool_name, required),
-                            "_wm_route": { "tool": tool_name, "confidence": confidence },
+                            "_wm_route": route_meta.clone(),
                         }));
                     }
                 }
@@ -3641,28 +3671,23 @@ impl Tool for WmMetaTool {
                     Ok(mut output) => {
                         // Augment with routing metadata
                         if let Value::Object(ref mut map) = output {
-                            map.insert(
-                                "_wm_route".into(),
-                                json!({
-                                    "input": thought.chars().take(200).collect::<String>(),
-                                    "tool": tool_name,
-                                    "confidence": confidence,
-                                }),
-                            );
+                            let mut meta = route_meta.clone();
+                            meta["input"] = json!(thought.chars().take(200).collect::<String>());
+                            map.insert("_wm_route".into(), meta);
                         }
                         Ok(output)
                     }
                     Err(e) => Ok(json!({
                         "status": "error",
                         "error": e.to_string(),
-                        "_wm_route": { "tool": tool_name, "confidence": confidence },
+                        "_wm_route": route_meta.clone(),
                     })),
                 }
             }
             None => Ok(json!({
                 "status": "error",
                 "message": format!("Unknown tool: '{tool_name}'"),
-                "_wm_route": { "tool": tool_name, "confidence": confidence },
+                "_wm_route": route_meta.clone(),
             })),
         }
     }
