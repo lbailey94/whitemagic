@@ -44,7 +44,7 @@ docker run --rm lbailey94/whitemagic:9 --version   # wm 9.1.6
 
 The README lives only on the Hub (Manage Repository → Description), so
 the source of truth for its text is the block below — paste it, bump
-the version line on each release:
+the `Current release:` line on each release:
 
 > **WhiteMagic** — local-first memory and session continuity for AI
 > coding agents, over MCP. Single static Rust binary, no telemetry, no
@@ -54,12 +54,16 @@ the version line on each release:
 > - Source: https://github.com/lbailey94/whitemagic
 > - Image `9.x`/`latest`: v9 Rust binary (`wm`) — run
 >   `docker run -i lbailey94/whitemagic:9 serve --profile curated`
+> - Current release: v9.1.6 (2026-09-15) —
+>   https://github.com/lbailey94/whitemagic/releases/tag/v9.1.6
 > - Tags `2.x` (2.1.0–2.3.1, Nov 2025): the historical Python MCP
 >   stack, kept for provenance — not the current product.
 >
 > Store your data in a mounted volume; memory never leaves the machine.
 
-**API alternative** (no web UI): with a Hub access token,
+**API alternative** (no web UI): with a Hub **PAT scoped read/write/delete**
+(the token stored by `docker login` is registry-scoped only and returns
+403 `insufficient scope` on the description API — verified 2026-09-15),
 ```bash
 JWT=$(curl -s -H "Content-Type: application/json" \
   -d '{"username":"lbailey94","password":"<HUB_PAT>"}' \
