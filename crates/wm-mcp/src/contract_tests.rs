@@ -131,29 +131,22 @@ fn meta_required_arg_table_matches_tool_schemas() {
     );
 }
 
-/// Family-scoped declaration ratchet (`agent.*`, 2026-09-15): the agent
-/// family's call bodies read these args unconditionally, so the declared
-/// schemas must say so, and the meta-tool's hardcoded required-arg table must
-/// agree with the schemas it pre-checks. The global full-profile coverage
-/// ratchet is deliberately NOT flipped here — the remaining families
-/// (galaxy.* et al.) land in later bounded batches.
-#[test]
-fn agent_family_schemas_match_their_calls_and_meta_table() {
+/// The full registry: family-scoped declaration checks below are not gated by
+/// the curated schema ratchet, so they read the full profile explicitly.
+fn full_registry_server() -> (tempfile::TempDir, crate::McpServer) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let server = crate::McpServer::with_defaults(tmp.path()).expect("full server builds");
-    let registry = server.registry();
+    (tmp, server)
+}
 
-    // route -> required args the call body reads unconditionally.
-    let expected: &[(&str, &[&str])] = &[
-        ("agent.register", &["name"]),
-        ("agent.list", &[]),
-        ("agent.heartbeat", &[]),
-        ("agent.trust", &["agent_id"]),
-        ("agent.descriptions", &["agent_id"]),
-        ("agent.capabilities", &["agent_id"]),
-        ("agent.heartbeat.history", &["agent_id"]),
-        ("agent.deregister", &["agent_id"]),
-    ];
+/// Shared checker for family-scoped declaration ratchets: every route must be
+/// registered with an object schema, non-empty properties, exactly the
+/// expected required args, and no meta-tool pre-check may demand an arg the
+/// schema omits.
+fn family_schema_problems(
+    registry: &wm_dispatch::ToolRegistry,
+    expected: &[(&str, &[&str])],
+) -> Vec<String> {
     let mut problems: Vec<String> = Vec::new();
     for (route, expected_required) in expected {
         let Some(tool) = registry.get(route) else {
@@ -167,7 +160,7 @@ fn agent_family_schemas_match_their_calls_and_meta_table() {
         }
         if schema["properties"]
             .as_object()
-            .is_none_or(|props| props.is_empty())
+            .is_none_or(serde_json::Map::is_empty)
         {
             problems.push(format!("'{route}' declares no properties"));
         }
@@ -192,9 +185,57 @@ fn agent_family_schemas_match_their_calls_and_meta_table() {
             }
         }
     }
+    problems
+}
+
+/// Family-scoped declaration ratchet (`agent.*`, 2026-09-15): the agent
+/// family's call bodies read these args unconditionally, so the declared
+/// schemas must say so, and the meta-tool's hardcoded required-arg table must
+/// agree with the schemas it pre-checks. The global full-profile coverage
+/// ratchet is deliberately NOT flipped here — the remaining families
+/// (galaxy.* et al.) land in later bounded batches.
+#[test]
+fn agent_family_schemas_match_their_calls_and_meta_table() {
+    let (_tmp, server) = full_registry_server();
+    // route -> required args the call body reads unconditionally.
+    let expected: &[(&str, &[&str])] = &[
+        ("agent.register", &["name"]),
+        ("agent.list", &[]),
+        ("agent.heartbeat", &[]),
+        ("agent.trust", &["agent_id"]),
+        ("agent.descriptions", &["agent_id"]),
+        ("agent.capabilities", &["agent_id"]),
+        ("agent.heartbeat.history", &["agent_id"]),
+        ("agent.deregister", &["agent_id"]),
+    ];
+    let problems = family_schema_problems(server.registry(), expected);
     assert!(
         problems.is_empty(),
         "agent family schema drift ({}):\n  {}",
+        problems.len(),
+        problems.join("\n  ")
+    );
+}
+
+/// Family-scoped declaration ratchet (`web.*` + `code.graph/query/affected_by`,
+/// 2026-09-15): same method as the agent family — declare what the call
+/// bodies read, one family per bounded batch.
+#[test]
+fn web_and_code_family_schemas_match_their_calls() {
+    let (_tmp, server) = full_registry_server();
+    let expected: &[(&str, &[&str])] = &[
+        ("web.fetch", &["url"]),
+        ("web.deep_fetch", &["url"]),
+        ("web.search", &["query"]),
+        ("web.search_and_read", &["query"]),
+        ("code.graph", &["project_root"]),
+        ("code.query", &["query"]),
+        ("code.affected_by", &["symbol"]),
+    ];
+    let problems = family_schema_problems(server.registry(), expected);
+    assert!(
+        problems.is_empty(),
+        "web/code family schema drift ({}):\n  {}",
         problems.len(),
         problems.join("\n  ")
     );

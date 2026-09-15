@@ -22,6 +22,13 @@ pub const KNOWN_UNCONDITIONAL_READS: &[(&str, &str)] = &[
     ("agent.capabilities", "agent_id"),
     ("agent.heartbeat.history", "agent_id"),
     ("agent.deregister", "agent_id"),
+    ("web.fetch", "url"),
+    ("web.deep_fetch", "url"),
+    ("web.search", "query"),
+    ("web.search_and_read", "query"),
+    ("code.graph", "project_root"),
+    ("code.query", "query"),
+    ("code.affected_by", "symbol"),
 ];
 
 /// The declared contract of one tool, normalized for the manifest.

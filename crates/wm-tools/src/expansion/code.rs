@@ -885,6 +885,15 @@ impl CodeGraphTool {
 
 #[async_trait]
 impl Tool for CodeGraphTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "project_root": super::common::str_prop("Project root directory to scan (required)"),
+                "max_files": super::common::int_prop("Maximum files to scan (optional; default 50000)"),
+            }),
+            &["project_root"],
+        )
+    }
     fn name(&self) -> &str {
         "code.graph"
     }
@@ -951,6 +960,15 @@ impl CodeQueryTool {
 
 #[async_trait]
 impl Tool for CodeQueryTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "query": super::common::str_prop("Natural-language query — 'what calls X', 'what does X call', 'path from A to B', 'explain X', 'god nodes', 'stats', or a symbol search (required)"),
+                "limit": super::common::int_prop("Maximum results per section (optional; default 20)"),
+            }),
+            &["query"],
+        )
+    }
     fn name(&self) -> &str {
         "code.query"
     }
@@ -1038,6 +1056,15 @@ impl CodeAffectedByTool {
 
 #[async_trait]
 impl Tool for CodeAffectedByTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "symbol": super::common::str_prop("Symbol whose change to trace (required)"),
+                "max_depth": super::common::int_prop("Reverse call-graph BFS depth, clamped 1-10 (optional; default 3)"),
+            }),
+            &["symbol"],
+        )
+    }
     fn name(&self) -> &str {
         "code.affected_by"
     }

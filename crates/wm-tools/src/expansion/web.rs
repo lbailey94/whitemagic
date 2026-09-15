@@ -597,6 +597,16 @@ impl Default for WebFetchTool {
 
 #[async_trait]
 impl Tool for WebFetchTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "url": super::common::str_prop("URL to fetch (required; SSRF-checked on every redirect hop)"),
+                "max_chars": super::common::int_prop("Maximum characters of stripped text to return (optional; default 30000)"),
+                "timeout_secs": super::common::num_prop("Per-hop timeout in seconds, clamped 0-300 (optional; default 15)"),
+            }),
+            &["url"],
+        )
+    }
     fn name(&self) -> &str {
         "web.fetch"
     }
@@ -664,6 +674,16 @@ impl Default for WebDeepFetchTool {
 
 #[async_trait]
 impl Tool for WebDeepFetchTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "url": super::common::str_prop("URL to fetch (required; SSRF-checked on every redirect hop)"),
+                "max_chars": super::common::int_prop("Maximum characters of stripped text to return (optional; default 200000)"),
+                "timeout_secs": super::common::num_prop("Per-hop timeout in seconds, clamped 0-300 (optional; default 30)"),
+            }),
+            &["url"],
+        )
+    }
     fn name(&self) -> &str {
         "web.deep_fetch"
     }
@@ -729,6 +749,16 @@ impl Default for WebSearchTool {
 
 #[async_trait]
 impl Tool for WebSearchTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "query": super::common::str_prop("Search query (required)"),
+                "num_results": super::common::int_prop("Maximum results to return (optional; default 8)"),
+                "timeout_secs": super::common::num_prop("Search timeout in seconds, clamped 0-300 (optional; default 10)"),
+            }),
+            &["query"],
+        )
+    }
     fn name(&self) -> &str {
         "web.search"
     }
@@ -805,6 +835,18 @@ impl Default for WebSearchAndReadTool {
 
 #[async_trait]
 impl Tool for WebSearchAndReadTool {
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "query": super::common::str_prop("Search query (required)"),
+                "num_results": super::common::int_prop("Maximum search results to return (optional; default 5)"),
+                "max_fetch": super::common::int_prop("Maximum top results to fetch content for (optional; default 3)"),
+                "max_chars_per_page": super::common::int_prop("Maximum characters of stripped text per fetched page (optional; default 15000)"),
+                "timeout_secs": super::common::num_prop("Search/fetch timeout in seconds, clamped 0-300 (optional; default 15)"),
+            }),
+            &["query"],
+        )
+    }
     fn name(&self) -> &str {
         "web.search_and_read"
     }
