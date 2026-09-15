@@ -14,7 +14,8 @@ use wm_memory::{
 };
 
 use super::common::{
-    bool_prop, galaxy_name, int_prop, num_prop, parse_galaxy, parse_galaxy_or, schema, str_prop,
+    bool_prop, galaxy_name, galaxy_search_arg, int_prop, num_prop, parse_galaxy, parse_galaxy_or,
+    schema, str_prop,
 };
 
 /// Attach the navigation disclosure to a scrubbed excerpt result. The source
@@ -1165,7 +1166,7 @@ impl Tool for MemoryHybridRecallTool {
         schema(
             &json!({
                 "query": str_prop("Full-text query"),
-                "galaxy": str_prop("Galaxy filter (optional; default: search all memory galaxies, results labeled)"),
+                "galaxy": str_prop("Galaxy filter (optional; default: search all memory galaxies, results labeled; \"all\" is accepted as an alias for the unfiltered default)"),
                 "limit": int_prop("Maximum results (default 10)"),
                 "min_importance": num_prop("Minimum memory importance (0-1)"),
                 "min_score": num_prop("Absolute BM25 score floor"),
@@ -1178,8 +1179,9 @@ impl Tool for MemoryHybridRecallTool {
         )
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        let galaxy_explicit = args.get("galaxy").and_then(|v| v.as_str()).is_some();
-        let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
+        let galaxy_arg = galaxy_search_arg(args.get("galaxy").and_then(|v| v.as_str()));
+        let galaxy_explicit = galaxy_arg.is_some();
+        let galaxy = parse_galaxy_or(galaxy_arg, Galaxy::Codex)?;
         let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
         let limit = args
             .get("limit")
@@ -3346,6 +3348,45 @@ mod tests {
             .unwrap();
         assert_eq!(v2["count"], 1, "got: {v2}");
         assert_eq!(v2["results"][0]["galaxy"], "dreams");
+    }
+
+    #[tokio::test]
+    async fn galaxy_all_alias_matches_unfiltered_search() {
+        // P0 round-trip fix (2026-09-14): unfiltered responses emit
+        // `"galaxy": "all"`; echoing that value back must behave exactly
+        // like omitting the argument instead of "Unknown galaxy: 'all'".
+        let (_dir, store, search) = hybrid_fixture();
+        index_memory(&store, &search, Galaxy::Sessions, "alias probe session");
+        index_memory(&store, &search, Galaxy::Dreams, "alias probe dream");
+        let tool = MemoryHybridRecallTool::new(store, Some(search), None);
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "alias probe", "galaxy": "all", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["count"], 2, "got: {v}");
+        assert_eq!(v["galaxy"], "all");
+        let galaxies: Vec<&str> = v["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["galaxy"].as_str().unwrap())
+            .collect();
+        assert!(galaxies.contains(&"sessions"), "got: {galaxies:?}");
+        assert!(galaxies.contains(&"dreams"), "got: {galaxies:?}");
+
+        // Mixed case normalizes the same way.
+        let v2 = tool
+            .call(
+                &mut ctx,
+                json!({"query": "alias probe", "galaxy": "ALL", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v2["count"], 2, "got: {v2}");
     }
 
     #[tokio::test]
