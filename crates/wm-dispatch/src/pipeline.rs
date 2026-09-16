@@ -1311,6 +1311,76 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn pipeline_strict_refusal_is_typed_and_distinct_from_starvation() {
+        // Governance refusal (strict mode via system stress, Beta brain wave
+        // so the availability gate admits the call): coordination lease
+        // acquisition is refused with the typed AHIMSA violation.
+        let pipeline = DispatchPipeline::with_defaults();
+        pipeline
+            .dharma_gate()
+            .update_homeostasis(wm_governance::Homeostasis {
+                cpu_load: 0.95,
+                memory_pressure: 0.95,
+                active: true,
+            });
+        let mut ctx = Context::new(BrainWave::Beta);
+        let tool = TestTool::new(
+            "stress_probe",
+            EffectRow {
+                reads: vec![wm_core::Resource::Filesystem],
+                writes: vec![wm_core::Resource::CoordinationLease],
+                ..Default::default()
+            },
+        );
+        let governance = pipeline
+            .dispatch(&tool, &mut ctx, Args::default())
+            .await
+            .expect_err("strict mode must refuse coordination lease acquisition");
+        let text = governance.to_string();
+        assert!(text.contains("VIOLATION_AHIMSA"), "{text}");
+
+        // First-run starvation: low self-model confidence refuses writes with
+        // the typed homeostasis-limit error naming the frozen pin — a
+        // different class from the governance refusal, and reads stay open.
+        let pipeline = DispatchPipeline::with_defaults();
+        let mut ctx = Context::new(BrainWave::Gamma);
+        ctx.self_model_confidence = 0.3;
+        let write_tool = TestTool::new(
+            "stress_probe",
+            EffectRow {
+                writes: vec![wm_core::Resource::Galaxy("codex".into())],
+                ..Default::default()
+            },
+        );
+        let starvation = pipeline
+            .dispatch(&write_tool, &mut ctx, Args::default())
+            .await
+            .expect_err("low confidence must refuse writes");
+        let text = starvation.to_string();
+        assert!(text.contains("self-model confidence"), "{text}");
+        assert!(text.contains("WM_HOMEOSTASIS_FROZEN"), "{text}");
+        assert!(
+            !text.contains("VIOLATION_AHIMSA"),
+            "refusal classes must be distinguishable: {text}"
+        );
+
+        let read_tool = TestTool::new(
+            "stress_probe_read",
+            EffectRow {
+                reads: vec![wm_core::Resource::Galaxy("codex".into())],
+                ..Default::default()
+            },
+        );
+        assert!(
+            pipeline
+                .dispatch(&read_tool, &mut ctx, Args::default())
+                .await
+                .is_ok(),
+            "starvation must not block reads"
+        );
+    }
+
+    #[tokio::test]
     async fn pipeline_dharma_confirm_passes_brain_wave_strict_for_destructive() {
         // 9.1.6: explicit `confirm: true` (deliberate operator intent)
         // passes the Theta/Delta brain-wave strict arm; stressed

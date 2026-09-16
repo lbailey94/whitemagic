@@ -4749,6 +4749,79 @@ mod restore_preservation_tests {
             .path()
     }
 
+    /// Q07 residual: tombstone / backup-expiry semantics.
+    ///
+    /// Whitemagic has no tombstone propagation: a backup is a **point-in-time**
+    /// snapshot. Restoring a pre-deletion snapshot legitimately resurrects the
+    /// deleted record; a snapshot taken after the deletion does not contain it.
+    /// This test pins that documented semantics (and `run_restore`'s clean
+    /// refusal on a missing/expired snapshot dir) instead of leaving the
+    /// behavior untested.
+    #[test]
+    fn backup_restore_has_point_in_time_tombstone_semantics() {
+        let tmp = tempfile::tempdir().unwrap();
+        let source = tmp.path().join("source");
+        let store = MemoryStore::open_default(source.join("lmdb")).unwrap();
+        let mut record = Memory::new(
+            wm_core::Galaxy::Codex,
+            "pre-deletion acknowledged record".into(),
+        );
+        record.metadata.id = uuid::Uuid::from_u128(0x9A1);
+        store.put(wm_core::Galaxy::Codex, &record).unwrap();
+        drop(store);
+
+        let pre_deletion = backup_fixture(&source, &tmp.path().join("backups-pre"));
+
+        // Delete after the snapshot; the live store no longer has it.
+        let store = MemoryStore::open_default(source.join("lmdb")).unwrap();
+        assert!(
+            store
+                .delete(wm_core::Galaxy::Codex, record.metadata.id)
+                .unwrap()
+        );
+        assert!(
+            store
+                .get(wm_core::Galaxy::Codex, record.metadata.id)
+                .unwrap()
+                .is_none(),
+            "record must be gone from the live store"
+        );
+        drop(store);
+
+        let post_deletion = backup_fixture(&source, &tmp.path().join("backups-post"));
+
+        // Point-in-time restore of the pre-deletion snapshot resurrects it.
+        let target_pre = tmp.path().join("restored-pre");
+        run_restore(&pre_deletion, &target_pre, true).unwrap();
+        let restored = MemoryStore::open_default(target_pre.join("lmdb")).unwrap();
+        assert!(
+            restored
+                .get(wm_core::Galaxy::Codex, record.metadata.id)
+                .unwrap()
+                .is_some(),
+            "pre-deletion snapshot restore is point-in-time (no tombstone propagation) — documented semantics"
+        );
+
+        // The post-deletion snapshot reflects the deletion.
+        let target_post = tmp.path().join("restored-post");
+        run_restore(&post_deletion, &target_post, true).unwrap();
+        let restored = MemoryStore::open_default(target_post.join("lmdb")).unwrap();
+        assert!(
+            restored
+                .get(wm_core::Galaxy::Codex, record.metadata.id)
+                .unwrap()
+                .is_none(),
+            "post-deletion snapshot must not contain the deleted record"
+        );
+
+        // An expired/pruned snapshot path refuses cleanly (backup-expiry).
+        let missing = tmp.path().join("pruned-by-retention");
+        assert!(
+            run_restore(&missing, &tmp.path().join("restored-missing"), true).is_err(),
+            "restore of a pruned/expired snapshot must refuse cleanly"
+        );
+    }
+
     #[test]
     fn forced_schema_failure_preserves_previous_target() {
         let tmp = tempfile::tempdir().unwrap();
