@@ -5,6 +5,49 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 9.1.8 in progress (2026-09-15)
+
+### Security — coordination truth-up (AHIMSA Target A)
+- **Dedicated coordination effects:** `Resource::CoordinationLease`
+  (claim/renew) and `Resource::CoordinationRelease` (exact-owner cleanup)
+  replace the generic filesystem declaration. Strict mode refuses lease
+  acquisition/renewals with a typed `VIOLATION_AHIMSA` so system stress
+  cannot trap new work; exact-owner release stays admitted so a held lease
+  can always be freed. Nothing here is a filesystem or process exception.
+- **`code.check`/`code.list` are genuinely read-only:** a
+  `snapshot_readonly` path reads and filters the ledger without creating a
+  lock or temporary file and without persisting expiry pruning (expired
+  leases are logically absent and still reportable).
+- **`code.release` root binding:** when a configured repository is known
+  (`WM_PROJECT_ROOT`), an alternate/escaping `root` is refused — owner
+  cleanup may act only on the configured repository's fixed ledger.
+- **No-discovery checkpoint:** new `session.checkpoint_nodiscovery` stores
+  exactly the supplied handoff fields (commit, branch, tests_green,
+  next_queue, open_flags, lease_id) with no repository discovery, no
+  filesystem reads, and no subprocesses — available under strict mode. The
+  git-capturing `session.checkpoint` now truthfully declares its filesystem
+  reads and subprocess spawns and is refused there.
+- **Startup-under-stress fixtures:** a spawned-binary healthy-start fixture
+  (fresh store under frozen settings creates + reads back), plus in-process
+  fixtures that keep the governance refusal (`VIOLATION_AHIMSA`) and
+  first-run starvation (typed homeostasis limit disclosing
+  `WM_HOMEOSTASIS_FROZEN`) distinct and reads open under starvation.
+
+### Security — mesh ingest hardening (phase 1)
+- **Signed-only discovery:** `PeerAnnounce` beacons carry the signer's public
+  key and bind it in the signed payload (`peer_id:tcp_addr:timestamp:key`).
+  Ingest verifies signatures, enforces a `2 × interval` freshness window and a
+  per-source rate limit, and records only signature-verified
+  `(peer_id, timestamp)` observations in a bounded replay cache — a forged
+  beacon can no longer consume the genuine beacon's replay slot. First sight
+  TOFU-binds the announced key; a later key change for a bound peer is refused
+  (address unchanged). Legacy keyless beacons remain address hints.
+- **Key separation:** `WM_MESH_KEY` now derives purpose-scoped subkeys with
+  HKDF-SHA256 — `wm/mesh-identity/v1` (mesh identity) and
+  `wm/record-attestation/v1` (record attestations); `wm/release-signing/v1`
+  is reserved. One-release dual-verify keeps the legacy XOR-fold identity and
+  the legacy beacon payload accepted during migration.
+
 ## [9.1.7] — 2026-09-15 (trustworthiness: external-audit fixes, instrumentation, contract v0)
 
 > Released 2026-09-15. Driven by an external 9.1.6 reliability audit of the
@@ -25,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Instrumentation — local, display-only (Tier 2)
 - **Cross-process `wm stats`**: reads the persisted `mutable_tool_stats.json` (a fresh process used to show zeroed counters); `--week` estimates per-tool activity from `stats_history.jsonl` daily rollups written on checkpoint. A corrupt snapshot is reported as corrupt, not as empty.
 - **`wm telemetry schema` / `wm telemetry preview`**: publishes the record/retention/redaction contract (`docs/TELEMETRY.md`) and shows exactly what an opt-in transmission would carry from this store — display-only, no network I/O, redaction pass is fail-closed.
-- **`wm report` / `wm doctor --report`**: sanitized support bundle (`report.json` + `README.txt`) with HOME collapsed to `~`, paths narrowed, and a content-free assertion test.
+- **`wm report`**: sanitized support bundle (`report.json` + `README.txt`) with HOME collapsed to `~`, paths narrowed, and a content-free assertion test. (Correction, 2026-09-15: a `wm doctor --report` alias was described here but never landed; `wm doctor` has no `--report` flag. The alias is queued for the next patch.)
 
 ### Contract v0 (Tier 3)
 - **`wm contract`**: machine-checked route/schema manifest built from the exact binary revision (`--json`, `--check`, `--out`); the curated unconditional-read check runs clean. Artifact: `docs/contract/route-schema-manifest.json` (302 routes, 70 declared, 232 undeclared — family-scoped remediation follows per `V9_1_7_FULL_PROFILE_CONTRACT_BACKLOG.md`, which lives outside this repo in the Codex workspace `~/Documents/ChatGPT/whitemagic v9.3 development/work/release-closure-phase-a/`; the in-repo artifact is the manifest). `kg.query` now declares its required `entity`.
