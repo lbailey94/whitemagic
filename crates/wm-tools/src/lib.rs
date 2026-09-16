@@ -338,7 +338,7 @@ fn attest_created_memory(
         timestamp,
     );
     let Some((public_key_hex, signature_hex)) =
-        wm_memory::attestation::sign_attestation(&payload, key_hex)
+        wm_memory::attestation::sign_attestation_from_root(&payload, key_hex)
     else {
         tracing::warn!("creation attestation skipped for memory {id}: key material invalid");
         return (false, Some("node key invalid".to_string()));

@@ -4291,12 +4291,21 @@ impl McpServer {
 /// Build the node's Sangha signing keypair.
 ///
 /// Seeded from `WM_MESH_KEY` when set (stable node identity across restarts).
+///
+/// Derivation is HKDF-SHA256 (`info = "wm/mesh-identity/v1"`, S9 §2.1) over
+/// the canonical root bytes since 9.1.8 ([`wm_core::kdf::root_bytes`] —
+/// 64-hex material decoded, other material raw), the same root the record
+/// attestations derive their subkey from; [`wm_sangha::MeshKeyPair::accepts_identity`]
+/// keeps the legacy XOR-fold identity accepted for the one-release
+/// dual-verify migration.
 /// When unset, a random per-process key is used — the node appears as a fresh
 /// identity each restart, but a hardcoded default would be shared by every
 /// WhiteMagic node, letting anyone impersonate another node's messages.
 pub fn mesh_signing_key() -> wm_sangha::MeshKeyPair {
     match std::env::var("WM_MESH_KEY") {
-        Ok(key) if !key.is_empty() => wm_sangha::MeshKeyPair::from_seed(key.as_bytes()),
+        Ok(key) if !key.is_empty() => {
+            wm_sangha::MeshKeyPair::derive_identity(&wm_core::kdf::root_bytes(&key))
+        }
         _ => {
             tracing::warn!(
                 "WM_MESH_KEY not set — using a random per-process Sangha identity; \

@@ -34,16 +34,30 @@ configuration, and this protocol starts at season 2. See
   `release_lock`, `sync_hologram`. Unknown methods fail with an error —
   never silence.
 
-## 3. Discovery — beacons are addresses, not identity
+## 3. Discovery — signed beacons, bound on first sight
 
 Every `beacon_interval_sec` (default 5, `WM_MESH_INTERVAL`) a node
-multicasts a `PeerAnnounce { peer_id, tcp_addr, capabilities, timestamp }`
-to `224.0.0.69:7369`. Beacons are **unsigned**: they carry *where* a peer
-can be reached, never *who it is*. A received beacon puts the address in
-the discovery registry — nothing more. Trust comes only from the signed
-handshake (§4); the auto-join loop (or an explicit `sangha.mesh.join`)
-dials beaconed addresses and upgrades them into bound identities.
-Quarantined peers are never auto-dialed.
+multicasts a `PeerAnnounce { peer_id, tcp_addr, capabilities, timestamp,
+signature, public_key_hex }` to `224.0.0.69:7369`. Since 9.1.8 beacons are
+**signed and carry the signer's public key**; the signed payload binds all
+fields (`peer_id:tcp_addr:timestamp:public_key_hex`), so a captured beacon
+cannot be relocated or re-keyed. Ingest policy:
+
+- **Freshness:** `|now − timestamp| ≤ 2 × interval`; stale beacons are dropped.
+- **Rate limit:** a per-source budget (8 per interval) suppresses floods.
+- **Replay:** a bounded replay cache records verified `(peer_id, timestamp)`
+  observations; a replay inside the window is dropped. Only
+  signature-verified observations are recorded — a forged beacon cannot
+  consume the replay slot of the genuine one.
+- **Binding:** a signed beacon is **TOFU-bound** to its peer ID on first
+  sight; a later beacon for the same ID announcing a different key is
+  refused as identity theft (the binding follows stale eviction, so an
+  upgraded node rebinds after its old entry ages out).
+- **Legacy beacons** without a key remain address hints (for peers whose key
+  is already bound, they must be signed by that key). Trust still comes from
+  the signed handshake (§4); the auto-join loop dials beaconed addresses and
+  upgrades them into bound identities. Quarantined peers are never
+  auto-dialed.
 
 ## 4. Join — the signed heartbeat binds identity
 
@@ -69,11 +83,23 @@ via the auto-join loop on each node's beacons).
 
 ## 5. Keys
 
-- `WM_MESH_KEY` (any non-empty string) seeds the node's Ed25519 keypair;
-  set it for a **stable identity across restarts**. Unset → a random
-  per-process key + a loud warning (a hardcoded default would be shared
-  by every WhiteMagic node — an impersonation primitive, not a
-  convenience).
+- `WM_MESH_KEY` (64 hex chars recommended) is **root key material**: since
+  9.1.8, purpose-scoped subkeys are derived with HKDF-SHA256
+  (`info = "wm/mesh-identity/v1"` for the mesh identity,
+  `"wm/record-attestation/v1"` for creation attestations; the release
+  manifest reserves `"wm/release-signing/v1"`). The canonical root is the
+  hex-decoded key; creation attestations require that canonical form (a
+  non-hex key yields a mesh identity only — an honest negative, never an
+  off-contract root). Set it for a **stable
+  identity across restarts**. Unset → a random per-process key + a loud
+  warning (a hardcoded default would be shared by every WhiteMagic node —
+  an impersonation primitive, not a convenience).
+- **Migration (one release, dual-verify):** the pre-9.1.8 XOR-fold identity
+  derivation is still accepted (`MeshKeyPair::accepts_identity`,
+  `verify_signature_all_eras`); beacons advertise the derived key. A peer
+  that has not upgraded keeps working; a peer that upgrades rebinds after
+  its old registry entry ages out (or is re-joined). The legacy arm drops
+  in the release after 9.1.8.
 - Peer ID default: `wm-` + first 12 hex chars of the public key.
   `WM_MESH_PEER_ID` overrides with a readable name; identity binding
   still keys on the public key, so names are labels, not credentials.
@@ -132,6 +158,24 @@ the transport can run but the tools are filtered out — start mesh servers
 with `--profile full`.
 
 ## 9. Verified behavior (evidence)
+
+### 9.1.8 mesh ingest hardening (2026-09-15)
+
+- **Signed-only discovery:** `PeerAnnounce` carries the signer's public key;
+  the signed payload binds it. Unit tests: stale beacon dropped; TOFU binding
+  of the announced key; key change for a bound peer refused (address
+  unchanged); per-source flood rate-limited; replay of a verified
+  `(peer_id, timestamp)` dropped; migration-tolerant verification accepts the
+  legacy payload shape.
+- **Replay cache:** `ReplayCache` (bounded, windowed) + `IngestGuard`
+  (freshness + per-source rate + verified-only replay recording); the
+  same-second denial-of-service (forged beacon blocking the genuine one) is
+  pinned by test.
+- **Key separation:** HKDF-SHA256 with versioned info strings; RFC 5869
+  vector test; domain-separation test (`derive(mesh) ≠ derive(attestation)`);
+  attestation subkey signs and verifies against its recorded pubkey.
+- **No regression:** the existing two-process e2e
+  (`mesh_serve_e2e.rs`) passes unchanged; full `wm-sangha` suite green.
 
 - **Unit (`wm-sangha`, `mesh_node` tests):** join binds both registries;
   signed chat delivered and verified; quarantine refuses chat + rejoin,
@@ -237,6 +281,7 @@ Honest list, so nobody assumes otherwise: no encryption in transit (TLS
 is a V8+ item; the wire is readable by a local passive observer), no
 relay/multi-hop or NAT traversal, no peer discovery across subnets
 (multicast is link-local), no revocation lists (quarantine is per-node,
-by design), and key management is a shared-secret-free but unmanaged
-file/env surface pending B7. Each of these is a gate on Gate 2 cohort
-use, not a silent gap.
+by design), key management is a shared-secret-free but unmanaged
+file/env surface pending B7, and the replay cache covers **beacon ingest**
+(phase 1); heartbeat/chat replay wiring is phase 2 (9.1.9, Q26). Each of
+these is a gate on Gate 2 cohort use, not a silent gap.

@@ -15,6 +15,7 @@ pub mod episodic;
 pub mod error;
 pub mod galaxy;
 pub mod gana;
+pub mod kdf;
 pub mod mutable;
 pub mod sandbox;
 pub mod security;

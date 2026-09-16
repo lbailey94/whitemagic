@@ -4,17 +4,18 @@
 //! Every `memory.create` with a node key available appends one attestation
 //! to the `attestations` DBI, keyed `att:{galaxy}:{memory_id}`. The entry
 //! binds the memory's content hash to the creating agent and node via an
-//! Ed25519 signature — the same algorithm (and, by default, the same key
-//! material) as the Sangha mesh identity, so signatures verify against the
-//! peer keys the fleet already binds.
+//! Ed25519 signature — the same algorithm as the Sangha mesh identity and
+//! its own HKDF-SHA256 purpose subkey (`wm/record-attestation/v1`) derived
+//! from the same canonical 64-hex root (`wm_core::kdf::root_bytes`; S9 §2.1 /
+//! Q39 §2), so identity and attestation keys never cross.
 //!
 //! Payload domain separation: the signed bytes begin with
 //! `ATTESTATION_DOMAIN` (`wm-record-attestation/v1`), so a record
 //! attestation can never verify as a mesh heartbeat/chat payload or vice
-//! versa, even though the key is shared. The choice of mesh-key reuse vs a
-//! domain-separated attestation seed is a security-review decision (key/KDF plans);
-//! this default is documented for overrule — re-keying means new
-//! attestations only, old ones keep verifying under the recorded pubkey.
+//! versa, even though both subkeys share one root. The 9.1.8 KDF split
+//! (S9 §2.1) rules new attestations onto the derived subkey; pre-9.1.8 rows
+//! keep verifying against their recorded pubkey, so no re-key of history is
+//! needed.
 //!
 //! Why the sign/verify helper lives here instead of reusing
 //! `wm_sangha::crypto`: `wm-memory` must stay free of `wm-sangha` (mesh is
@@ -32,6 +33,7 @@ use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use wm_core::Galaxy;
+use wm_core::kdf::{RECORD_ATTESTATION_INFO, hkdf32};
 
 use crate::memory::MemoryId;
 
@@ -164,6 +166,32 @@ pub fn sign_attestation(payload: &str, secret_hex: &str) -> Option<(String, Stri
     ))
 }
 
+/// Derive the record-attestation signing key (hex) from node root material.
+///
+/// HKDF-SHA256 with `info = "wm/record-attestation/v1"` (S9 §2.1 / Q39 §2)
+/// over the **canonical** root: a 64-hex-char `WM_MESH_KEY` decoded to its 32
+/// bytes — the same root the mesh identity derives from. Non-canonical
+/// material derives no attestation subkey (honest negative at the call site;
+/// the mesh identity alone tolerates legacy/test material via
+/// [`wm_core::kdf::root_bytes`]). The legacy hex-decoded lineage stays
+/// accepted during the one-release migration: each attestation stores its
+/// signer pubkey, so old rows verify against their recorded key regardless of
+/// lineage.
+#[must_use]
+pub fn derive_attestation_key_hex(root_hex: &str) -> Option<String> {
+    let root = decode_key_hex(root_hex.trim())?;
+    Some(hex_of(&hkdf32(&root, RECORD_ATTESTATION_INFO)))
+}
+
+/// Sign an attestation payload with the HKDF-derived attestation subkey from
+/// root material. Returns `(public_key_hex, signature_hex)`; the lineage of
+/// the returned key is `wm/record-attestation/v1`.
+#[must_use]
+pub fn sign_attestation_from_root(payload: &str, root_hex: &str) -> Option<(String, String)> {
+    let key = derive_attestation_key_hex(root_hex)?;
+    sign_attestation(payload, &key)
+}
+
 fn hex_of(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
@@ -276,6 +304,46 @@ mod tests {
         assert_eq!(a, b);
         assert!(a.starts_with("wm-record-attestation/v1|"));
         assert_ne!(a, attestation_payload("codex", "m", "h", "a", 2));
+    }
+
+    #[test]
+    fn hkdf_attestation_subkey_is_domain_separated_and_verifies() {
+        let derived = derive_attestation_key_hex(TEST_KEY).expect("valid root material");
+        assert_eq!(derived.len(), 64);
+        assert_eq!(derive_attestation_key_hex(TEST_KEY).unwrap(), derived);
+
+        let payload = attestation_payload("codex", "mem-1", "hash-1", "ses-1", 1_700_000_000);
+        let (pk, sig) = sign_attestation_from_root(&payload, TEST_KEY).unwrap();
+        // Deterministic signing; distinct from the legacy hex-decode lineage.
+        assert_eq!(
+            sign_attestation_from_root(&payload, TEST_KEY).unwrap(),
+            (pk.clone(), sig.clone())
+        );
+        assert_ne!(pk, sign_attestation(&payload, TEST_KEY).unwrap().0);
+
+        let mut att = test_attestation();
+        att.public_key_hex = pk;
+        att.signature_hex = sig;
+        assert!(
+            verify_attestation(&att),
+            "a derived-lineage attestation must verify against its recorded pubkey"
+        );
+    }
+
+    #[test]
+    fn attestation_key_follows_the_canonical_root_convention() {
+        // 64-hex material is decoded before derivation (S9 §2.1 canonical
+        // form) — the raw-ASCII interpretation is NOT the root.
+        let canonical = derive_attestation_key_hex(TEST_KEY).unwrap();
+        let raw_lineage = hex_of(&hkdf32(TEST_KEY.as_bytes(), RECORD_ATTESTATION_INFO));
+        assert_ne!(
+            canonical, raw_lineage,
+            "64-hex root material must be hex-decoded, not read as ASCII"
+        );
+
+        // Attestations require canonical root material: non-hex input is an
+        // honest negative (the mesh identity alone tolerates legacy material).
+        assert!(derive_attestation_key_hex("short-legacy-test-key").is_none());
     }
 
     #[test]

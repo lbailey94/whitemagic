@@ -652,6 +652,17 @@ impl PeerDiscovery {
                 peer.id
             ));
         }
+        self.discover_verified(peer)
+    }
+
+    /// Bind an already-verified signed identity to `peer`.
+    ///
+    /// The caller has verified the signature over its own wire format (e.g.
+    /// the beacon ingest seam); this applies the binding policy only:
+    /// quarantined peers are refused, and an already-bound peer ID may not
+    /// change its public key (identity theft). Used by the beacon path so the
+    /// signature is not re-verified against a different payload shape.
+    pub fn discover_verified(&mut self, peer: PeerInfo) -> Result<(), String> {
         if let Some(existing) = self.peers.get(&peer.id) {
             if existing.quarantined {
                 return Err(format!(

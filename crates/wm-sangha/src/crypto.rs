@@ -13,6 +13,7 @@
 
 use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey};
 use std::fmt;
+use wm_core::kdf::{MESH_IDENTITY_INFO, hkdf32};
 
 /// A peer's signing keypair (secret + public). Secret keys are zeroized on
 /// drop (zeroize feature of ed25519-dalek).
@@ -37,8 +38,35 @@ impl Clone for MeshKeyPair {
 }
 
 impl MeshKeyPair {
+    /// Derive the canonical (9.1.8+) mesh identity from node root material:
+    /// HKDF-SHA256 with `info = "wm/mesh-identity/v1"` (S9 §2.1 / Q39 §2).
+    /// `root` is the canonical root bytes ([`wm_core::kdf::root_bytes`] —
+    /// 64-hex material decoded, other material raw); the attestation subkey
+    /// derives from the same root. This is the key the node advertises; use
+    /// [`Self::from_seed`] only for the one-release dual-verify migration and
+    /// legacy fixtures.
+    #[must_use]
+    pub fn derive_identity(root: &[u8]) -> Self {
+        Self::from_secret(hkdf32(root, MESH_IDENTITY_INFO))
+    }
+
+    /// True when `pubkey_hex` is a valid identity for this root in either era.
+    ///
+    /// Covers both the HKDF-derived key and the legacy XOR-fold key — the
+    /// one-release migration seam. Drop the legacy arm after the migration
+    /// release (S9 §2.1).
+    #[must_use]
+    pub fn accepts_identity(pubkey_hex: &str, root: &[u8]) -> bool {
+        pubkey_hex == Self::derive_identity(root).public_key_hex()
+            || pubkey_hex == Self::from_seed(root).public_key_hex()
+    }
+
     /// Generate a fresh keypair from a 32-byte seed (deterministic for
     /// reproducible tests; production should derive from a secret).
+    ///
+    /// **Legacy derivation (pre-9.1.8):** raw seed bytes XOR-folded into 32
+    /// bytes — kept for the dual-verify migration and historical fixtures;
+    /// new code derives with [`Self::derive_identity`].
     #[must_use]
     pub fn from_seed(seed: &[u8]) -> Self {
         let mut bytes = [0u8; 32];
@@ -180,5 +208,42 @@ mod tests {
         assert_eq!(hex_decode(&hex).unwrap(), bytes);
         assert!(hex_decode("abc").is_none());
         assert!(hex_decode("zz").is_none());
+    }
+
+    #[test]
+    fn kdf_migration_eras_are_deterministic_and_distinct() {
+        let root = b"643232...not-hex-but-raw-env-material";
+        let derived_a = MeshKeyPair::derive_identity(root);
+        let derived_b = MeshKeyPair::derive_identity(root);
+        let legacy = MeshKeyPair::from_seed(root);
+        assert_eq!(derived_a.public_key_hex(), derived_b.public_key_hex());
+        assert_ne!(
+            derived_a.public_key_hex(),
+            legacy.public_key_hex(),
+            "HKDF identity must differ from the legacy XOR-fold identity"
+        );
+
+        // The derived key signs and verifies like any other identity.
+        let payload = "beacon:node-1:127.0.0.1:7369:42";
+        let sig = derived_a.sign_hex(payload);
+        assert!(MeshKeyPair::verify_hex(
+            payload,
+            &sig,
+            &derived_a.public_key_hex()
+        ));
+    }
+
+    #[test]
+    fn accepts_identity_covers_both_migration_eras() {
+        let root = b"legacy-or-derived-roots";
+        let derived = MeshKeyPair::derive_identity(root).public_key_hex();
+        let legacy = MeshKeyPair::from_seed(root).public_key_hex();
+        assert!(MeshKeyPair::accepts_identity(&derived, root));
+        assert!(MeshKeyPair::accepts_identity(&legacy, root));
+        assert!(!MeshKeyPair::accepts_identity(
+            &MeshKeyPair::derive_identity(b"other-root").public_key_hex(),
+            root
+        ));
+        assert!(!MeshKeyPair::accepts_identity("not-hex", root));
     }
 }

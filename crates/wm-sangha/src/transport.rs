@@ -48,6 +48,7 @@ use crate::chat::SanghaChat;
 use crate::hologram::HologramSync;
 use crate::lock::ResourceLockManager;
 use crate::peer::{PeerDiscovery, PeerId, PeerInfo};
+use crate::replay::{IngestGuard, ReplayVerdict};
 use crate::signal::SignalBroadcast;
 
 // ── Constants ─────────────────────────────────────────────────────────
@@ -120,6 +121,11 @@ pub struct PeerAnnounce {
     /// Optional Ed25519 signature in hex format.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signature: Option<String>,
+    /// Optional Ed25519 public key (lowercase hex) — present on 9.1.8+
+    /// beacons so the announcement can be verified at ingest (signed-only
+    /// discovery, S9 §2.2a). Absent on older beacons, which stay hint-only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub public_key_hex: Option<String>,
 }
 
 impl PeerAnnounce {
@@ -132,19 +138,37 @@ impl PeerAnnounce {
             capabilities: Vec::new(),
             timestamp: chrono::Utc::now().timestamp(),
             signature: None,
+            public_key_hex: None,
         }
     }
 
     /// Compute signing payload for this announcement.
+    ///
+    /// 9.1.8+ beacons carry the signer's public key and bind it into the
+    /// payload (`peer_id:tcp_addr:timestamp:public_key_hex`) so an attacker
+    /// can neither swap the key nor relocate the peer. Legacy beacons (no
+    /// key) keep the three-field payload for the migration release.
     #[must_use]
     pub fn signing_payload(&self) -> String {
-        format!("{}:{}:{}", self.peer_id, self.tcp_addr, self.timestamp)
+        match &self.public_key_hex {
+            Some(pk) => format!(
+                "{}:{}:{}:{}",
+                self.peer_id, self.tcp_addr, self.timestamp, pk
+            ),
+            None => format!("{}:{}:{}", self.peer_id, self.tcp_addr, self.timestamp),
+        }
     }
 
     /// Sign this announcement with an Ed25519 mesh keypair.
     pub fn sign(&mut self, keypair: &crate::crypto::MeshKeyPair) {
         let payload = self.signing_payload();
         self.signature = Some(keypair.sign_hex(&payload));
+    }
+
+    /// Advertise the signer's identity and sign (signed-only discovery).
+    pub fn sign_with_identity(&mut self, keypair: &crate::crypto::MeshKeyPair) {
+        self.public_key_hex = Some(keypair.public_key_hex());
+        self.sign(keypair);
     }
 
     /// Verify signature if present against an Ed25519 public key in hex format.
@@ -154,6 +178,22 @@ impl PeerAnnounce {
             let payload = self.signing_payload();
             crate::crypto::MeshKeyPair::verify_hex(&payload, sig, public_key_hex)
         })
+    }
+
+    /// Migration-tolerant verification: accept a signature over the current
+    /// payload shape or over the legacy three-field payload.
+    #[must_use]
+    pub fn verify_signature_all_eras(&self, public_key_hex: &str) -> bool {
+        if self.verify_signature(public_key_hex) {
+            return true;
+        }
+        if self.public_key_hex.is_some() {
+            let legacy = format!("{}:{}:{}", self.peer_id, self.tcp_addr, self.timestamp);
+            return self.signature.as_ref().is_some_and(|sig| {
+                crate::crypto::MeshKeyPair::verify_hex(&legacy, sig, public_key_hex)
+            });
+        }
+        false
     }
 
     /// Serialize to JSON bytes.
@@ -286,6 +326,9 @@ pub struct SanghaState {
     /// (`WM_SANGHA_REQUIRE_TOKENS=1` at construction, or
     /// [`SanghaState::set_require_tokens`]).
     require_tokens: AtomicBool,
+    /// Beacon ingest guard: freshness window, per-source rate limit, replay
+    /// cache (S9 §2.2–2.3).
+    pub ingest_guard: Mutex<IngestGuard>,
 }
 
 impl SanghaState {
@@ -336,6 +379,7 @@ impl SanghaState {
             require_tokens: AtomicBool::new(
                 std::env::var("WM_SANGHA_REQUIRE_TOKENS").is_ok_and(|v| v == "1"),
             ),
+            ingest_guard: Mutex::new(IngestGuard::new(4096, 8)),
         }
     }
 
@@ -1013,7 +1057,7 @@ async fn run_discovery_beacon(state: Arc<SanghaState>, config: &TransportConfig)
 /// without a live multicast socket.
 fn build_signed_announce(state: &SanghaState) -> Vec<u8> {
     let mut announce = PeerAnnounce::new(&state.peer_id, &state.tcp_addr);
-    announce.sign(&state.keypair);
+    announce.sign_with_identity(&state.keypair);
     announce.to_bytes()
 }
 
@@ -1074,11 +1118,12 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
     );
 
     let mut buf = vec![0u8; 4096];
+    let interval = std::time::Duration::from_secs(config.heartbeat_interval_sec.max(1));
     loop {
         match sock.recv_from(&mut buf).await {
-            Ok((len, _addr)) => {
+            Ok((len, addr)) => {
                 if let Some(announce) = PeerAnnounce::from_bytes(&buf[..len]) {
-                    ingest_beacon(&state, &announce).await;
+                    ingest_beacon(&state, &announce, addr, interval).await;
                 }
             }
             Err(e) => {
@@ -1090,37 +1135,114 @@ pub async fn listen_for_beacons(state: Arc<SanghaState>, config: &TransportConfi
 
 /// Ingest one received beacon into the discovery registry.
 ///
-/// A node must never register itself: multicast loopback (`IP_MULTICAST_LOOP`
-/// defaults to enabled) delivers a node's own beacon back to its listener,
-/// and a self-entry would pollute peer counts and make the auto-join loop
-/// see a phantom peer.
-///
-/// Unknown peers are address hints — identity binds at the signed join.
-/// For peers whose key is already bound, the beacon must be signed by that
-/// key; otherwise any LAN peer could redirect connections for a known peer
-/// ID to an arbitrary address (PLAN_F F-4).
-async fn ingest_beacon(state: &SanghaState, announce: &PeerAnnounce) {
+/// Policy (S9 §2.2, 9.1.8+):
+/// - a node never registers itself (multicast loopback would otherwise make
+///   the auto-join loop see a phantom peer);
+/// - freshness: `|now - timestamp| <= 2 × heartbeat interval`;
+/// - per-source rate limit and a bounded replay cache guard the registry
+///   against floods and captured-beacon replay;
+/// - a beacon carrying a public key must verify under that key and is
+///   TOFU-bound to the peer ID (a later key change is refused — identity
+///   theft), which is the signed-only discovery end-state;
+/// - a legacy beacon without a key stays an address hint, but for a peer
+///   whose key is already bound it must be signed by that key; otherwise any
+///   LAN peer could redirect connections for a known peer ID (PLAN_F F-4).
+async fn ingest_beacon(
+    state: &SanghaState,
+    announce: &PeerAnnounce,
+    source: std::net::SocketAddr,
+    interval: std::time::Duration,
+) {
     if announce.peer_id == state.peer_id {
         tracing::debug!("ignoring own beacon (multicast loopback)");
         return;
     }
+
+    let now = std::time::Instant::now();
+    let now_unix = chrono::Utc::now().timestamp().max(0) as u64;
+    let timestamp = announce.timestamp.max(0) as u64;
+    let pre_check =
+        state
+            .ingest_guard
+            .lock()
+            .await
+            .pre_check(source.ip(), timestamp, now, now_unix, interval);
+    if let Err(verdict) = pre_check {
+        tracing::debug!(
+            "dropping beacon from {} at {source} ({verdict:?})",
+            announce.peer_id
+        );
+        return;
+    }
+
     let bound_key = state.peers.lock().await.bound_public_key(&announce.peer_id);
-    if let Some(key) = bound_key {
-        if !key.is_empty() && !announce.verify_signature(&key) {
+    if let Some(public_key) = announce.public_key_hex.as_deref() {
+        if !announce.verify_signature_all_eras(public_key) {
             tracing::warn!(
-                "dropping beacon for known peer {} — missing or invalid signature",
+                "dropping signed beacon from {} — signature does not verify under its announced key",
                 announce.peer_id
             );
             return;
         }
+        if let Some(bound) = bound_key.filter(|k| !k.is_empty()) {
+            if bound != public_key {
+                tracing::warn!(
+                    "dropping beacon for known peer {} — announced key differs from the bound key",
+                    announce.peer_id
+                );
+                return;
+            }
+        }
+        let replay = state.ingest_guard.lock().await.record_verified(
+            &announce.peer_id,
+            timestamp,
+            now,
+            now_unix,
+            interval,
+        );
+        if replay != ReplayVerdict::Fresh {
+            tracing::debug!("dropping replayed beacon from {}", announce.peer_id);
+            return;
+        }
+        let mut peer = PeerInfo::new(&announce.peer_id, &announce.tcp_addr);
+        peer.public_key = public_key.to_string();
+        peer.signature = announce.signature.clone().unwrap_or_default();
+        let binding = state.peers.lock().await.discover_verified(peer);
+        match binding {
+            Ok(()) => tracing::debug!("bound signed beacon: {}", announce.peer_id),
+            Err(reason) => tracing::warn!("beacon binding refused: {reason}"),
+        }
+    } else {
+        if let Some(key) = bound_key.filter(|k| !k.is_empty()) {
+            if !announce.verify_signature_all_eras(&key) {
+                tracing::warn!(
+                    "dropping beacon for known peer {} — missing or invalid signature",
+                    announce.peer_id
+                );
+                return;
+            }
+            // Only signature-verified observations enter the replay cache
+            // (an unsigned hint must not block the genuine signed beacon).
+            if state.ingest_guard.lock().await.record_verified(
+                &announce.peer_id,
+                timestamp,
+                now,
+                now_unix,
+                interval,
+            ) != ReplayVerdict::Fresh
+            {
+                tracing::debug!("dropping replayed beacon from {}", announce.peer_id);
+                return;
+            }
+        }
+        tracing::debug!(
+            "Discovered peer: {} at {}",
+            announce.peer_id,
+            announce.tcp_addr
+        );
+        let peer_info = PeerInfo::new(&announce.peer_id, &announce.tcp_addr);
+        state.peers.lock().await.discover(peer_info);
     }
-    tracing::debug!(
-        "Discovered peer: {} at {}",
-        announce.peer_id,
-        announce.tcp_addr
-    );
-    let peer_info = PeerInfo::new(&announce.peer_id, &announce.tcp_addr);
-    state.peers.lock().await.discover(peer_info);
 }
 
 /// Generate a random RPC ID.
@@ -1151,10 +1273,12 @@ mod tests {
     #[tokio::test]
     async fn beacon_ingest_ignores_own_loopback_beacon() {
         let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        let source: std::net::SocketAddr = "127.0.0.1:5000".parse().unwrap();
+        let interval = std::time::Duration::from_secs(5);
         // Multicast loopback delivers the node's own beacon back to its
         // listener — it must never register itself.
         let own = PeerAnnounce::new("self-node", "127.0.0.1:7369");
-        ingest_beacon(&state, &own).await;
+        ingest_beacon(&state, &own, source, interval).await;
         assert_eq!(
             state.peers.lock().await.summary()["peer_count"],
             0,
@@ -1162,7 +1286,7 @@ mod tests {
         );
 
         let other = PeerAnnounce::new("other-node", "127.0.0.1:7370");
-        ingest_beacon(&state, &other).await;
+        ingest_beacon(&state, &other, source, interval).await;
         let summary = state.peers.lock().await.summary();
         assert_eq!(summary["peer_count"], 1);
         assert_eq!(summary["peers"][0]["id"], "other-node");
@@ -2185,8 +2309,125 @@ mod containment_tests {
         assert_eq!(announce.peer_id, "sender-node");
         assert_eq!(announce.tcp_addr, "127.0.0.1:7369");
         assert!(
+            announce.public_key_hex.is_some(),
+            "9.1.8+ beacons advertise the signer's public key"
+        );
+        assert!(
             announce.verify_signature(&state.keypair.public_key_hex()),
             "broadcast announce must verify against the sender's bound key"
+        );
+    }
+
+    #[tokio::test]
+    async fn ingest_beacon_enforces_freshness_and_replay() {
+        let state = SanghaState::with_keypair(
+            "listener",
+            "127.0.0.1:1",
+            MeshKeyPair::from_seed(b"listener"),
+        );
+        let source: std::net::SocketAddr = "127.0.0.1:5000".parse().unwrap();
+        let interval = std::time::Duration::from_secs(5);
+        let now_ts = chrono::Utc::now().timestamp();
+
+        // Stale beacon (1 hour old) is dropped before registration.
+        let mut stale = PeerAnnounce::new("stale-peer", "127.0.0.1:7001");
+        stale.timestamp = now_ts - 3600;
+        stale.sign_with_identity(&MeshKeyPair::derive_identity(b"stale-peer"));
+        ingest_beacon(&state, &stale, source, interval).await;
+        assert!(
+            state.peers.lock().await.get("stale-peer").is_none(),
+            "stale beacon must not register"
+        );
+
+        // Fresh signed beacon binds its identity (TOFU).
+        let peer_key = MeshKeyPair::derive_identity(b"fresh-peer-root");
+        let mut fresh = PeerAnnounce::new("fresh-peer", "127.0.0.1:7002");
+        fresh.timestamp = now_ts;
+        fresh.sign_with_identity(&peer_key);
+        ingest_beacon(&state, &fresh, source, interval).await;
+        assert_eq!(
+            state
+                .peers
+                .lock()
+                .await
+                .bound_public_key("fresh-peer")
+                .as_deref(),
+            Some(peer_key.public_key_hex().as_str()),
+            "signed beacon must bind the announced key"
+        );
+
+        // Replay at the same (peer, ts) with a new address must not move it.
+        let mut replay = PeerAnnounce::new("fresh-peer", "127.0.0.1:7999");
+        replay.timestamp = now_ts;
+        replay.sign_with_identity(&peer_key);
+        ingest_beacon(&state, &replay, source, interval).await;
+        assert_eq!(
+            state.peers.lock().await.get("fresh-peer").unwrap().address,
+            "127.0.0.1:7002",
+            "replayed beacon must not update the registry"
+        );
+    }
+
+    #[tokio::test]
+    async fn ingest_beacon_rate_limits_one_source() {
+        let state = SanghaState::with_keypair(
+            "listener",
+            "127.0.0.1:1",
+            MeshKeyPair::from_seed(b"listener"),
+        );
+        let source: std::net::SocketAddr = "127.0.0.1:5001".parse().unwrap();
+        let interval = std::time::Duration::from_secs(5);
+        let now_ts = chrono::Utc::now().timestamp();
+        let mut discovered = 0usize;
+        for i in 0..20u32 {
+            let id = format!("flood-{i:02}");
+            let mut a = PeerAnnounce::new(&id, format!("127.0.0.1:{}", 6000 + i));
+            a.timestamp = now_ts;
+            a.sign_with_identity(&MeshKeyPair::derive_identity(id.as_bytes()));
+            ingest_beacon(&state, &a, source, interval).await;
+            if state.peers.lock().await.get(&id).is_some() {
+                discovered += 1;
+            }
+        }
+        assert_eq!(
+            discovered, 8,
+            "per-source budget admits 8 beacons per interval; the flood is suppressed"
+        );
+    }
+
+    #[tokio::test]
+    async fn signed_beacon_key_change_is_refused() {
+        let state = SanghaState::with_keypair(
+            "listener",
+            "127.0.0.1:1",
+            MeshKeyPair::from_seed(b"listener"),
+        );
+        let source: std::net::SocketAddr = "127.0.0.1:5002".parse().unwrap();
+        let interval = std::time::Duration::from_secs(5);
+        let now_ts = chrono::Utc::now().timestamp();
+
+        let good = MeshKeyPair::derive_identity(b"rotation-good-root");
+        let mut first = PeerAnnounce::new("rotation-peer", "127.0.0.1:7100");
+        first.timestamp = now_ts;
+        first.sign_with_identity(&good);
+        ingest_beacon(&state, &first, source, interval).await;
+
+        let attacker = MeshKeyPair::derive_identity(b"rotation-attacker-root");
+        let mut theft = PeerAnnounce::new("rotation-peer", "127.0.0.1:7101");
+        theft.timestamp = now_ts + 1; // distinct ts: not a replay drop
+        theft.sign_with_identity(&attacker);
+        ingest_beacon(&state, &theft, source, interval).await;
+
+        let peers = state.peers.lock().await;
+        assert_eq!(
+            peers.bound_public_key("rotation-peer").as_deref(),
+            Some(good.public_key_hex().as_str()),
+            "key change for a bound peer must be refused"
+        );
+        assert_eq!(
+            peers.get("rotation-peer").unwrap().address,
+            "127.0.0.1:7100",
+            "refused beacon must not redirect the bound peer"
         );
     }
 
