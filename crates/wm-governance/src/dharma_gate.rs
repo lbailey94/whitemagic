@@ -263,6 +263,19 @@ impl DharmaGate {
             }
         }
 
+        // AHIMSA Target A (9.1.8): coordination lease acquisition/renewal is
+        // refused in strict mode — stress must not trap new work, and the TTL
+        // frees existing leases. Only two coordination shapes are admitted
+        // under strict mode, by construction: exact-owner cleanup
+        // (`Resource::CoordinationRelease`) and the no-discovery checkpoint
+        // (a single Sessions write). Nothing here is a filesystem or process
+        // exception.
+        if strict && effects.acquires_coordination_lease() {
+            return ActionVerdict::Panic(
+                "VIOLATION_AHIMSA: coordination lease acquisition/renewal is refused in strict mode — release held leases explicitly or wait for TTL expiry".into(),
+            );
+        }
+
         // Sutra 2: Satya (truth) — prevent memory fabrication
         // Tools that write to Citta galaxy without reading are fabricating
         let writes_citta = effects
@@ -367,6 +380,88 @@ mod tests {
         let verdict = gate.evaluate(&effects, &ctx);
         assert!(verdict.blocks());
         assert!(matches!(verdict, ActionVerdict::Panic(_)));
+    }
+
+    #[test]
+    fn coordination_lease_acquisition_refused_in_strict_mode() {
+        let gate = DharmaGate::new();
+        let mut ctx = Context::new(BrainWave::Theta);
+        ctx.karma_debt = 0.0;
+        ctx.intent_score = 1.0;
+        let effects = EffectRow {
+            reads: vec![Resource::Filesystem],
+            writes: vec![Resource::CoordinationLease],
+            ..Default::default()
+        };
+        assert!(effects.acquires_coordination_lease());
+        let verdict = gate.evaluate(&effects, &ctx);
+        assert!(matches!(verdict, ActionVerdict::Panic(_)), "{verdict:?}");
+    }
+
+    #[test]
+    fn coordination_lease_refused_under_stress_with_normal_brain_wave() {
+        let gate = DharmaGate::new();
+        gate.update_homeostasis(Homeostasis {
+            cpu_load: 0.95,
+            memory_pressure: 0.95,
+            active: true,
+        });
+        let mut ctx = Context::new(BrainWave::Beta);
+        ctx.karma_debt = 0.0;
+        ctx.intent_score = 1.0;
+        let effects = EffectRow {
+            writes: vec![Resource::CoordinationLease],
+            ..Default::default()
+        };
+        let verdict = gate.evaluate(&effects, &ctx);
+        assert!(matches!(verdict, ActionVerdict::Panic(_)), "{verdict:?}");
+    }
+
+    #[test]
+    fn coordination_cleanup_and_nodiscovery_checkpoint_admitted_in_strict_mode() {
+        let gate = DharmaGate::new();
+        let mut ctx = Context::new(BrainWave::Theta);
+        ctx.karma_debt = 0.0;
+        ctx.intent_score = 1.0;
+
+        let cleanup = EffectRow {
+            reads: vec![Resource::Filesystem],
+            writes: vec![Resource::CoordinationRelease],
+            ..Default::default()
+        };
+        assert!(cleanup.is_coordination_cleanup());
+        let verdict = gate.evaluate(&cleanup, &ctx);
+        assert!(
+            !verdict.blocks(),
+            "owner cleanup must stay available under stress: {verdict:?}"
+        );
+
+        let nodiscovery = EffectRow {
+            writes: vec![Resource::Galaxy("sessions".into())],
+            ..Default::default()
+        };
+        assert!(nodiscovery.is_no_discovery_checkpoint());
+        let verdict = gate.evaluate(&nodiscovery, &ctx);
+        assert!(
+            !verdict.blocks(),
+            "no-discovery checkpoint must stay available under stress: {verdict:?}"
+        );
+    }
+
+    #[test]
+    fn rich_checkpoint_spawns_are_refused_in_strict_mode() {
+        let gate = DharmaGate::new();
+        let mut ctx = Context::new(BrainWave::Theta);
+        ctx.karma_debt = 0.0;
+        ctx.intent_score = 1.0;
+        let effects = EffectRow {
+            reads: vec![Resource::Filesystem],
+            writes: vec![Resource::Galaxy("sessions".into())],
+            spawns: true,
+            ..Default::default()
+        };
+        let verdict = gate.evaluate(&effects, &ctx);
+        assert!(matches!(verdict, ActionVerdict::Panic(_)), "{verdict:?}");
     }
 
     #[test]

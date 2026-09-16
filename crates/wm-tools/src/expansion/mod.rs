@@ -200,7 +200,8 @@ pub use sensorimotor_tools::{
     ReflexListTool, SensorHistoryTool, SensorListTool, SensorPollTool, SensorReadTool,
 };
 pub use session::{
-    SessionCheckpointTool, SessionEndTool, SessionRecallTool, SessionStartTool, SessionVerifyTool,
+    SessionCheckpointNodiscoveryTool, SessionCheckpointTool, SessionEndTool, SessionRecallTool,
+    SessionStartTool, SessionVerifyTool,
 };
 pub use session_ops::{
     SessionContinuityTool, SessionDigestTool, SessionExportTool, SessionHandoffTool,
@@ -324,6 +325,9 @@ pub fn register_expansion(
         ))
         .register(Arc::new(
             SessionCheckpointTool::new(store.clone()).with_search(search.clone()),
+        ))
+        .register(Arc::new(
+            SessionCheckpointNodiscoveryTool::new(store.clone()).with_search(search.clone()),
         ))
         .register(Arc::new(SessionVerifyTool::new(store.clone())))
         .register(Arc::new(SessionRecallTool::new(store.clone())))

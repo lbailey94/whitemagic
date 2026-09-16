@@ -32,6 +32,14 @@ pub enum Resource {
     Session,
     /// The Gan Ying event bus (persisted to a JSONL log when enabled)
     EventBus,
+    /// The coordination lease ledger's acquire/renew path (fixed
+    /// `<git-common-dir>/wm-leases.json`): strict mode refuses new claims and
+    /// renewals so system stress cannot trap new work (AHIMSA Target A, 9.1.8).
+    CoordinationLease,
+    /// Owner cleanup of one coordination lease (exact owner + exact scope,
+    /// fixed ledger only): the single coordination mutation strict mode
+    /// admits (AHIMSA Target A, 9.1.8).
+    CoordinationRelease,
 }
 
 /// A capability that a tool may invoke.
@@ -163,6 +171,40 @@ impl EffectRow {
             Theta => !self.cost.expensive && self.writes.is_empty() && !self.spawns,
             Delta => false, // Delta: no tools available, only wake on event
         }
+    }
+
+    /// True when this row mutates the coordination lease ledger (claim or
+    /// same-owner renewal). Strict mode refuses acquisition/renewal so system
+    /// stress cannot trap new work (AHIMSA Target A, 9.1.8).
+    #[must_use]
+    pub fn acquires_coordination_lease(&self) -> bool {
+        self.writes
+            .iter()
+            .any(|r| matches!(r, Resource::CoordinationLease))
+    }
+
+    /// True when this row is exactly the coordination owner-cleanup effect:
+    /// one `CoordinationRelease` write, no spawns, not destructive. The strict
+    /// gate admits this shape (and only this shape) so an already-held lease
+    /// can always be released under stress.
+    #[must_use]
+    pub fn is_coordination_cleanup(&self) -> bool {
+        !self.spawns
+            && !self.destructive
+            && self.writes.len() == 1
+            && matches!(self.writes[0], Resource::CoordinationRelease)
+    }
+
+    /// True when this row is exactly the no-discovery checkpoint shape: one
+    /// Sessions-galaxy write, no spawns, not destructive. The strict gate
+    /// admits this shape so a checkpoint can be stored under stress without
+    /// repository discovery, filesystem reads, or subprocesses.
+    #[must_use]
+    pub fn is_no_discovery_checkpoint(&self) -> bool {
+        !self.spawns
+            && !self.destructive
+            && self.writes.len() == 1
+            && matches!(&self.writes[0], Resource::Galaxy(g) if g == "sessions")
     }
 
     /// Check if this effect row conflicts with another (for parallel execution)

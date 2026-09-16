@@ -231,8 +231,30 @@ impl LeaseLedger {
     }
 
     /// Active leases plus anything that expired since the last write.
+    ///
+    /// Mutate-based (prunes on read): retained for tests that exercise the
+    /// observation-transition semantics; production reads use
+    /// [`Self::snapshot_readonly`] so strict-mode `check`/`list` never mutate.
+    #[cfg(test)]
     pub(crate) fn snapshot(&self) -> wm_core::Result<(Vec<Lease>, Vec<Lease>)> {
         self.mutate(|active, expired| Ok((active.clone(), expired.to_vec())))
+    }
+
+    /// Read-only snapshot (AHIMSA Target A, regression 3): reads and filters
+    /// the ledger without creating a lock or temporary file and without
+    /// persisting expiry pruning. Expired leases are logically absent (they
+    /// are still returned in the second vec for observability); physical
+    /// pruning waits for the next permitted mutation.
+    pub(crate) fn snapshot_readonly(&self) -> wm_core::Result<(Vec<Lease>, Vec<Lease>)> {
+        let now = Utc::now();
+        let all = self.parse_file();
+        let (active, expired): (Vec<Lease>, Vec<Lease>) =
+            all.into_iter()
+                .partition(|l| match DateTime::parse_from_rfc3339(&l.expires_at) {
+                    Ok(exp) => exp.with_timezone(&Utc) > now,
+                    Err(_) => false, // unparseable expiry = expired
+                });
+        Ok((active, expired))
     }
 
     // ── Bridge API (F-1): mesh-side scope coordination ────────────────
@@ -408,10 +430,12 @@ impl CodeClaimTool {
             // lookup is the same trust class as checkpoint's git capture,
             // and declaring spawns would push every coordination call
             // against the Yama spawn budget (found live: a two-agent
-            // negotiation burst exceeds 6 spawns/min).
+            // negotiation burst exceeds 6 spawns/min). The lease effect is
+            // strict-denied (AHIMSA Target A): stress refuses new claims and
+            // renewals; the TTL frees held ones.
             effects: EffectRow {
                 reads: vec![Resource::Filesystem],
-                writes: vec![Resource::Filesystem],
+                writes: vec![Resource::CoordinationLease],
                 ..Default::default()
             },
             gan_ying,
@@ -596,11 +620,10 @@ impl Tool for CodeCheckTool {
         let root = resolve_root(&args)?;
         let ledger = LeaseLedger::discover(&root)?;
 
-        let mut newly_expired: Vec<Lease> = Vec::new();
-        let holder = ledger.mutate(|leases, expired| {
-            newly_expired = expired.to_vec();
-            Ok(leases.iter().find(|l| l.scope == scope).map(lease_json))
-        })?;
+        // True read-only snapshot (AHIMSA Target A, regression 3): no lock
+        // file, no temporary file, no persisted pruning.
+        let (active, newly_expired) = ledger.snapshot_readonly()?;
+        let holder = active.iter().find(|l| l.scope == scope).map(lease_json);
 
         for lease in &newly_expired {
             emit(
@@ -639,6 +662,11 @@ pub struct CodeReleaseTool {
     stats: ToolStats,
     effects: EffectRow,
     gan_ying: Option<Arc<Mutex<GanYingBus>>>,
+    /// The configured repository for the strict-mode cleanup exception
+    /// (`WM_PROJECT_ROOT` at construction). When set, an alternate `root`
+    /// argument is refused: only the configured repository's fixed ledger is
+    /// eligible (AHIMSA Target A, regression 4).
+    configured_root: Option<PathBuf>,
 }
 
 impl CodeReleaseTool {
@@ -646,19 +674,29 @@ impl CodeReleaseTool {
     pub fn new(gan_ying: Option<Arc<Mutex<GanYingBus>>>) -> Self {
         Self {
             stats: ToolStats::default(),
-            // EffectRow declares data-plane effects (the ledger file), per
-            // the session-tools precedent: the fixed-argv `git rev-parse`
-            // lookup is the same trust class as checkpoint's git capture,
-            // and declaring spawns would push every coordination call
-            // against the Yama spawn budget (found live: a two-agent
-            // negotiation burst exceeds 6 spawns/min).
+            // Owner cleanup declares the dedicated release effect (never a
+            // generic filesystem write): strict mode admits exactly this
+            // shape so stress cannot trap a held lease (AHIMSA Target A).
             effects: EffectRow {
                 reads: vec![Resource::Filesystem],
-                writes: vec![Resource::Filesystem],
+                writes: vec![Resource::CoordinationRelease],
                 ..Default::default()
             },
             gan_ying,
+            configured_root: std::env::var("WM_PROJECT_ROOT")
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from),
         }
+    }
+
+    /// Inject the configured repository (tests / embedders). `None` restores
+    /// legacy behavior: the supplied root is honored as-is.
+    #[must_use]
+    pub fn with_configured_root(mut self, root: Option<PathBuf>) -> Self {
+        self.configured_root = root;
+        self
     }
 }
 
@@ -691,6 +729,20 @@ impl Tool for CodeReleaseTool {
         let owner = require_str(&args, "owner_session")?;
         let root = resolve_root(&args)?;
         let ledger = LeaseLedger::discover(&root)?;
+        // AHIMSA Target A, regression 4: owner cleanup may act only on the
+        // configured repository's fixed ledger. When a configured root is
+        // known (WM_PROJECT_ROOT, or injected), an alternate root that
+        // resolves to a different git common dir is refused.
+        if let Some(configured) = &self.configured_root {
+            if let Ok(configured_ledger) = LeaseLedger::discover(configured) {
+                if configured_ledger.path() != ledger.path() {
+                    return Err(CoreError::Tool(format!(
+                        "code.release refuses an alternate root — cleanup is permitted only against the configured repository's ledger {}",
+                        configured_ledger.path().display()
+                    )));
+                }
+            }
+        }
 
         let outcome = ledger.mutate(|leases, _expired| {
             let Some(pos) = leases.iter().position(|l| l.scope == scope) else {
@@ -792,7 +844,9 @@ impl Tool for CodeListTool {
             .unwrap_or(false);
         let root = resolve_root(&args)?;
         let ledger = LeaseLedger::discover(&root)?;
-        let (active, expired) = ledger.snapshot()?;
+        // True read-only snapshot: expired leases are logically absent and
+        // nothing is persisted (AHIMSA Target A, regression 3).
+        let (active, expired) = ledger.snapshot_readonly()?;
         let mut leases: Vec<Value> = active.iter().map(lease_json).collect();
         if include_expired {
             let mut expired_json: Vec<Value> = expired
@@ -1260,5 +1314,162 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(default_list["count"], 0, "expired leases hidden by default");
+    }
+
+    #[test]
+    fn coordination_effect_shapes_are_dedicated() {
+        let claim = CodeClaimTool::new(None);
+        assert!(claim.effects().acquires_coordination_lease());
+        assert!(!claim.effects().is_coordination_cleanup());
+        assert!(
+            !claim.effects().destructive,
+            "claims must not be confirm-gated"
+        );
+
+        let release = CodeReleaseTool::new(None);
+        assert!(release.effects().is_coordination_cleanup());
+        assert!(!release.effects().acquires_coordination_lease());
+        assert!(
+            !release.effects().destructive,
+            "cleanup must not be confirm-gated"
+        );
+
+        // Observations stay read-only.
+        let check = CodeCheckTool::new(None);
+        assert!(check.effects().writes.is_empty());
+        assert!(check.effects().is_available_in(wm_core::BrainWave::Gamma));
+        let list = CodeListTool::new();
+        assert!(list.effects().writes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn strict_snapshot_is_read_only_and_leaves_no_lock_or_tmp_files() {
+        let (_guard, root) = git_repo();
+        let claim = CodeClaimTool::new(None);
+        let mut ctx = Context::default();
+        claim
+            .call(
+                &mut ctx,
+                json!({"scope": "readonly/", "intent": "t", "owner_session": "owner-a", "root": root_str(&root)}),
+            )
+            .await
+            .unwrap();
+
+        // Add one logically expired lease without any tool call.
+        let ledger_path = LeaseLedger::discover(&root).unwrap().path().to_path_buf();
+        let raw = std::fs::read_to_string(&ledger_path).unwrap();
+        let mut file: LeaseFile = serde_json::from_str(&raw).unwrap();
+        file.leases.push(Lease {
+            scope: "expired/".into(),
+            intent: "old".into(),
+            owner_session: "owner-b".into(),
+            claimed_at: "2020-01-01T00:00:00Z".into(),
+            expires_at: "2020-01-01T00:00:01Z".into(),
+            ttl_secs: 1,
+        });
+        std::fs::write(&ledger_path, serde_json::to_string(&file).unwrap()).unwrap();
+
+        let before = std::fs::read(&ledger_path).unwrap();
+        let before_mtime = std::fs::metadata(&ledger_path).unwrap().modified().unwrap();
+
+        let check = CodeCheckTool::new(None);
+        let r = check
+            .call(
+                &mut ctx,
+                json!({"scope": "expired/", "root": root_str(&root)}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            r["state"], "free",
+            "expired leases are logically absent: {r}"
+        );
+
+        let list = CodeListTool::new();
+        let r = list
+            .call(&mut ctx, json!({"root": root_str(&root)}))
+            .await
+            .unwrap();
+        assert_eq!(r["count"], 1, "only the active lease is listed: {r}");
+        let r = list
+            .call(
+                &mut ctx,
+                json!({"root": root_str(&root), "include_expired": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(r["count"], 2, "expired leases stay reportable: {r}");
+
+        assert_eq!(
+            std::fs::read(&ledger_path).unwrap(),
+            before,
+            "check/list must not rewrite the ledger"
+        );
+        assert_eq!(
+            std::fs::metadata(&ledger_path).unwrap().modified().unwrap(),
+            before_mtime,
+            "check/list must not touch the ledger mtime"
+        );
+        assert!(
+            !std::fs::read_dir(ledger_path.parent().unwrap())
+                .unwrap()
+                .any(|e| {
+                    let name = e.unwrap().file_name().to_string_lossy().to_string();
+                    name.contains("wm-leases.json.lock") || name.contains("wm-leases.json.tmp")
+                }),
+            "read-only snapshot must not create lock or temp files"
+        );
+    }
+
+    #[tokio::test]
+    async fn release_refuses_alternate_root_when_configured() {
+        let (_guard_a, root_a) = git_repo();
+        let (_guard_b, root_b) = git_repo();
+        let mut ctx = Context::default();
+
+        let claim = CodeClaimTool::new(None);
+        claim
+            .call(
+                &mut ctx,
+                json!({"scope": "cleanup/", "intent": "t", "owner_session": "owner-a", "root": root_str(&root_a)}),
+            )
+            .await
+            .unwrap();
+        claim
+            .call(
+                &mut ctx,
+                json!({"scope": "cleanup/", "intent": "t", "owner_session": "owner-a", "root": root_str(&root_b)}),
+            )
+            .await
+            .unwrap();
+
+        let release = CodeReleaseTool::new(None).with_configured_root(Some(root_a.clone()));
+        let refused = release
+            .call(
+                &mut ctx,
+                json!({"scope": "cleanup/", "owner_session": "owner-a", "root": root_str(&root_b)}),
+            )
+            .await;
+        let err = refused.unwrap_err().to_string();
+        assert!(err.contains("alternate root"), "{err}");
+        let (active_b, _) = LeaseLedger::discover(&root_b)
+            .unwrap()
+            .snapshot_readonly()
+            .unwrap();
+        assert_eq!(
+            active_b.len(),
+            1,
+            "a refused alternate-root cleanup must not mutate the other ledger"
+        );
+
+        // The configured repository's fixed ledger is eligible.
+        let ok = release
+            .call(
+                &mut ctx,
+                json!({"scope": "cleanup/", "owner_session": "owner-a", "root": root_str(&root_a)}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(ok["state"], "released");
     }
 }

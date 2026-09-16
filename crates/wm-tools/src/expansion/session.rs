@@ -179,6 +179,58 @@ impl Tool for SessionStartTool {
     }
 }
 
+/// Shared checkpoint write path: store the record, index it, mirror to
+/// episodic, and build the response. Both checkpoint variants use it so
+/// their persistence semantics stay identical.
+fn store_checkpoint_record(
+    store: &MemoryStore,
+    search: Option<&wm_memory::SearchEngine>,
+    session_id: &str,
+    label: &str,
+    data: &Value,
+    handoff: &Value,
+) -> wm_core::Result<Value> {
+    let mut mem = Memory::new(
+        Galaxy::Sessions,
+        json!({
+            "type": "checkpoint",
+            "session_id": session_id,
+            "label": label,
+            "data": data,
+            "handoff": handoff,
+        })
+        .to_string(),
+    );
+    mem.metadata.tags = vec!["session".into(), "checkpoint".into()];
+    mem.metadata.importance = 0.5;
+    // Machine-captured event — claims system provenance, never user.
+    mem.metadata.source = "system".to_string();
+    mem.metadata.source_trust = 0.7;
+    store.put(Galaxy::Sessions, &mem)?;
+    super::common::index_memory(search, &mem);
+    let episodic_capture_error = crate::capture_explicit_memory(
+        store,
+        &mem,
+        EpisodicKind::SystemEvent,
+        ProvenanceSource::System,
+        uuid::Uuid::parse_str(session_id).ok(),
+        0,
+    );
+    let mut response = json!({
+        "status": "success",
+        "checkpoint_id": mem.metadata.id,
+        "session_id": session_id,
+        "label": label,
+        "handoff": handoff,
+    });
+    if let Some(error) = episodic_capture_error {
+        response["warnings"] = json!([format!(
+            "episodic capture failed after the checkpoint was stored: {error}"
+        )]);
+    }
+    Ok(response)
+}
+
 /// `session.checkpoint` — save a checkpoint in a session.
 pub struct SessionCheckpointTool {
     store: Arc<MemoryStore>,
@@ -192,8 +244,17 @@ impl SessionCheckpointTool {
         Self {
             store,
             stats: ToolStats::default(),
+            // Truthful declaration (AHIMSA Target A, 9.1.8): the git capture
+            // reads the filesystem and spawns fixed `git` subprocesses, so the
+            // rich checkpoint declares both (Process satisfies the effect
+            // audit's spawn requirement). Strict mode refuses it; the
+            // no-discovery variant (`session.checkpoint_nodiscovery`) is the
+            // form available under stress. Writes already gate Alpha/Theta,
+            // so the spawn declaration adds no availability cost.
             effects: EffectRow {
+                reads: vec![Resource::Filesystem, Resource::Process],
                 writes: vec![Resource::Galaxy("sessions".into())],
+                spawns: true,
                 ..Default::default()
             },
             search: None,
@@ -289,45 +350,141 @@ impl Tool for SessionCheckpointTool {
             }
         }
 
-        let mut mem = Memory::new(
-            Galaxy::Sessions,
-            json!({
-                "type": "checkpoint",
-                "session_id": session_id,
-                "label": label,
-                "data": data,
-                "handoff": handoff,
-            })
-            .to_string(),
-        );
-        mem.metadata.tags = vec!["session".into(), "checkpoint".into()];
-        mem.metadata.importance = 0.5;
-        // Machine-captured event — claims system provenance, never user.
-        mem.metadata.source = "system".to_string();
-        mem.metadata.source_trust = 0.7;
-        self.store.put(Galaxy::Sessions, &mem)?;
-        super::common::index_memory(self.search.as_deref(), &mem);
-        let episodic_capture_error = crate::capture_explicit_memory(
+        store_checkpoint_record(
             &self.store,
-            &mem,
-            EpisodicKind::SystemEvent,
-            ProvenanceSource::System,
-            uuid::Uuid::parse_str(&session_id).ok(),
-            0,
-        );
-        let mut response = json!({
-            "status": "success",
-            "checkpoint_id": mem.metadata.id,
-            "session_id": session_id,
-            "label": label,
-            "handoff": handoff,
-        });
-        if let Some(error) = episodic_capture_error {
-            response["warnings"] = json!([format!(
-                "episodic capture failed after the checkpoint was stored: {error}"
-            )]);
+            self.search.as_deref(),
+            &session_id,
+            label,
+            &data,
+            &handoff,
+        )
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
+/// `session.checkpoint_nodiscovery` — the AHIMSA no-discovery checkpoint.
+///
+/// Stores exactly the caller-supplied handoff fields (commit, branch,
+/// tests_green, next_queue, open_flags, lease_id): no repository discovery,
+/// no filesystem read, no subprocess spawn. Strict mode admits this operation
+/// so continuity survives system stress; the git-capturing
+/// `session.checkpoint` declares its spawns truthfully and is refused there.
+/// Checkpoint and release are independent tools: failure of either does not
+/// block the other.
+pub struct SessionCheckpointNodiscoveryTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+    search: Option<Arc<wm_memory::SearchEngine>>,
+}
+
+impl SessionCheckpointNodiscoveryTool {
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            // Exactly one Sessions write; no reads, no spawns — this is the
+            // only checkpoint shape the strict gate admits.
+            effects: EffectRow {
+                writes: vec![Resource::Galaxy("sessions".into())],
+                ..Default::default()
+            },
+            search: None,
         }
-        Ok(response)
+    }
+
+    /// Attach the search engine so the checkpoint is indexed at write time.
+    #[must_use]
+    pub fn with_search(mut self, search: Option<Arc<wm_memory::SearchEngine>>) -> Self {
+        self.search = search;
+        self
+    }
+}
+
+#[async_trait]
+impl Tool for SessionCheckpointNodiscoveryTool {
+    fn name(&self) -> &str {
+        "session.checkpoint_nodiscovery"
+    }
+    fn gana(&self) -> Gana {
+        Gana::StraddlingLegs
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "session_id": super::common::str_prop("Target session (default: most recent session)"),
+                "label": super::common::str_prop("Checkpoint label (default 'checkpoint')"),
+                "commit": super::common::str_prop("Caller-supplied commit hash (no discovery is performed)"),
+                "branch": super::common::str_prop("Caller-supplied branch name"),
+                "tests_green": {
+                    "type": "boolean",
+                    "description": "Whether the test suite was green at checkpoint time."
+                },
+                "next_queue": {
+                    "type": "array",
+                    "description": "Ordered next-step strings for the next session."
+                },
+                "open_flags": {
+                    "type": "array",
+                    "description": "Open concerns/flags worth surfacing on resume."
+                },
+                "lease_id": super::common::str_prop("Claimed scope (code.claim lease_id) that remains held at this handoff"),
+                "data": {
+                    "type": "object",
+                    "description": "Legacy free-form passthrough stored beside the handoff."
+                },
+            }),
+            &[],
+        )
+    }
+    fn description(&self) -> &str {
+        "Store a no-discovery session checkpoint: exactly the supplied handoff fields — no repository discovery, no filesystem read, no subprocess. Available under AHIMSA strict mode; git auto-capture is deliberately absent (use session.checkpoint when git capture is wanted and allowed)."
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let session_id = match args.get("session_id").and_then(|v| v.as_str()) {
+            Some(sid) if !sid.is_empty() => sid.to_string(),
+            _ => latest_session_start(&self.store).ok_or_else(|| {
+                wm_core::CoreError::Tool("no session found — run session.start first".into())
+            })?,
+        };
+        let label = args
+            .get("label")
+            .and_then(|v| v.as_str())
+            .unwrap_or("checkpoint");
+        let data = args.get("data").cloned().unwrap_or_else(|| json!({}));
+
+        // Caller-supplied fields only — no resolve_project_root, no
+        // capture_git_state, no filesystem/subprocess access of any kind.
+        let mut handoff = json!({});
+        {
+            let h = handoff.as_object_mut().expect("just created");
+            for (key, value) in [
+                ("commit", args.get("commit")),
+                ("branch", args.get("branch")),
+                ("tests_green", args.get("tests_green")),
+                ("next_queue", args.get("next_queue")),
+                ("open_flags", args.get("open_flags")),
+                ("lease_id", args.get("lease_id")),
+            ] {
+                if value.is_some() {
+                    h.insert(key.to_string(), value.cloned().expect("checked above"));
+                }
+            }
+        }
+
+        store_checkpoint_record(
+            &self.store,
+            self.search.as_deref(),
+            &session_id,
+            label,
+            &data,
+            &handoff,
+        )
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -832,6 +989,57 @@ mod tests {
 
         assert_eq!(r["status"], "success");
         assert_eq!(r["handoff"]["lease_id"], "src/expansion/");
+    }
+
+    #[tokio::test]
+    async fn nodiscovery_checkpoint_stores_exactly_the_supplied_fields() {
+        let store = test_store();
+        let sid = start_session(&store);
+
+        // Effect shape: no reads, no spawns — the strict-mode-admitted form.
+        let tool = SessionCheckpointNodiscoveryTool::new(store.clone());
+        assert!(tool.effects().reads.is_empty());
+        assert!(!tool.effects().spawns);
+        assert!(tool.effects().is_no_discovery_checkpoint());
+
+        // The rich checkpoint truthfully declares its git reads/spawns.
+        let rich = SessionCheckpointTool::new(store.clone());
+        assert!(rich.effects().spawns, "git capture must declare its spawns");
+        assert!(rich.effects().reads.contains(&Resource::Filesystem));
+        assert!(
+            rich.effects().reads.contains(&Resource::Process),
+            "spawning tools must declare the Process resource (effect audit)"
+        );
+
+        let mut ctx = Context::default();
+        let r = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "session_id": sid,
+                    "label": "stress",
+                    "commit": "abc1234",
+                    "branch": "main",
+                    "tests_green": true,
+                    "next_queue": ["finish A"],
+                    "open_flags": ["gate"],
+                    "lease_id": "scope/x"
+                }),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(r["status"], "success");
+        assert_eq!(r["handoff"]["commit"], "abc1234");
+        assert_eq!(r["handoff"]["branch"], "main");
+        assert_eq!(r["handoff"]["tests_green"], true);
+        assert_eq!(r["handoff"]["next_queue"][0], "finish A");
+        assert_eq!(r["handoff"]["open_flags"][0], "gate");
+        assert_eq!(r["handoff"]["lease_id"], "scope/x");
+        assert!(
+            r["handoff"].get("git").is_none(),
+            "no-discovery checkpoint must never contain captured git state: {r}"
+        );
     }
 
     #[tokio::test]
