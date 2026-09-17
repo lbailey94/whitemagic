@@ -80,7 +80,7 @@ grew without any website CTA — the substrate chooses its own doors.
 Verify the installation and see the product work end to end:
 
 ```bash
-wm --version    # wm 9.1.7
+wm --version    # wm 9.1.8
 wm quickstart   # 30-second two-process continuity demo (isolated store)
 wm grimoire     # guided first-run: host, substrate, agent wiring, vocabulary, continuity
 ```
