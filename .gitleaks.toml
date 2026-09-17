@@ -7,14 +7,23 @@
 # assembled at runtime so the raw shape never appears in source. Nothing
 # here is a real credential; gitleaks findings scoped to these two paths
 # are false positives by construction.
+#
+# 2026-09-17: crates/wm-core/src/kdf.rs carries the PUBLISHED RFC 5869
+# HKDF test vector (hex_key = 001122…ff — zero-entropy, straight from the
+# RFC) as the KDF conformance proof; the generic-api-key rule flags it.
+# Scanned finding allowlisted by exact value (not by path — kdf.rs stays
+# under the scanner for real findings).
 [extend]
 useDefault = true
 
 [allowlist]
-description = "credential-detector test fixtures (placeholder shapes only)"
+description = "credential-detector test fixtures (placeholder shapes only) + the RFC 5869 HKDF test vector"
 paths = [
     '''(^|/)crates/wm-memory/src/credentials\.rs$''',
     '''(^|/)scripts/mine_opencode_corpus\.py$''',
     '''(^|/)crates/wm-governance/src/decoy_shell\.rs$''',
     '''(^|/)crates/wm-governance/src/canary_tokens\.rs$''',
+]
+regexes = [
+    '''00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff''',
 ]
