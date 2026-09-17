@@ -59,9 +59,15 @@ pub struct Step {
 pub struct Report {
     /// Binary version under test.
     pub version: String,
-    /// True when no step failed (compatibility aggregate; prefer the split
-    /// fields below — "WhiteMagic works" and "I am wired to WhiteMagic" are
-    /// different facts).
+    /// True when no step failed: the environment can run WhiteMagic. This
+    /// says nothing about activation — check `core_ready` for "wired and
+    /// proven". Named for the fact it reports; the old name `ready` sits
+    /// next to `core_ready` and read as contradictory to integration
+    /// authors (2026-09-17 reviewer finding). `ready` remains as a
+    /// one-release compatibility alias.
+    pub environment_ok: bool,
+    /// Compatibility alias for [`Self::environment_ok`] (pre-9.1.9 field
+    /// name).
     pub ready: bool,
     /// Host, substrate, and memory steps did not fail: the substrate is
     /// functional on this machine.
@@ -194,12 +200,33 @@ async fn substrate_step() -> Step {
     }
 }
 
+/// Total budget for the best-effort release probe.
+///
+/// The probe is optional, and offline hosts pay the whole budget in wall
+/// time — the old 5 s cap dominated first-run wall time on a machine where
+/// every local check finishes in milliseconds (2026-09-17 reviewer finding:
+/// offline grimoire waited ~5 s). Slow networks can raise it with
+/// `WM_GRIMOIRE_RELEASE_TIMEOUT_MS`.
+fn release_probe_timeout_from(override_ms: Option<&str>) -> Duration {
+    override_ms
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .map_or(Duration::from_millis(1200), Duration::from_millis)
+}
+
+fn release_probe_timeout() -> Duration {
+    release_probe_timeout_from(
+        std::env::var("WM_GRIMOIRE_RELEASE_TIMEOUT_MS")
+            .ok()
+            .as_deref(),
+    )
+}
+
 fn release_step() -> Step {
     let t = Instant::now();
     let current = env!("CARGO_PKG_VERSION");
     match crate::update::fetch_manifest_text(
         crate::update::DEFAULT_MANIFEST_URL,
-        Duration::from_secs(5),
+        release_probe_timeout(),
     ) {
         Ok(text) => match serde_json::from_str::<crate::update::ReleaseManifest>(&text) {
             Ok(m) if m.version == current => {
@@ -571,17 +598,18 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
     steps.insert(2, release_step_result);
 
     // Split readiness: "WhiteMagic works" (substrate), "I am wired to it"
-    // (agent), and "continuity was proven" are different facts; the single
-    // `ready` aggregate stays for compatibility.
+    // (agent), and "continuity was proven" are different facts; `ready`
+    // remains as a compatibility alias for `environment_ok`.
     let status_of = |name: &str| steps.iter().find(|s| s.name == name).map(|s| s.status);
     let substrate_ready = ["host", "substrate", "memory"]
         .iter()
         .all(|name| !matches!(status_of(name), Some(StepStatus::Fail)));
     let continuity_verified = matches!(status_of("continuity"), Some(StepStatus::Ok));
-    let ready = steps.iter().all(|s| s.status != StepStatus::Fail);
+    let environment_ok = steps.iter().all(|s| s.status != StepStatus::Fail);
     Ok(Report {
         version: env!("CARGO_PKG_VERSION").to_string(),
-        ready,
+        environment_ok,
+        ready: environment_ok,
         substrate_ready,
         agent_wired,
         continuity_verified,
@@ -638,6 +666,24 @@ mod tests {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
         assert!(probe_endpoint(addr));
+    }
+
+    #[test]
+    fn release_probe_budget_is_short_and_overridable() {
+        assert_eq!(
+            release_probe_timeout_from(None),
+            Duration::from_millis(1200),
+            "offline first-run must not wait seconds on an optional probe"
+        );
+        assert_eq!(
+            release_probe_timeout_from(Some("250")),
+            Duration::from_millis(250)
+        );
+        assert_eq!(
+            release_probe_timeout_from(Some("nonsense")),
+            Duration::from_millis(1200),
+            "a malformed override falls back to the default, not an error"
+        );
     }
 
     #[test]
@@ -746,6 +792,11 @@ mod tests {
         })
         .await
         .expect("grimoire infrastructure");
+        assert!(report.environment_ok, "grimoire must be ok: {report:?}");
+        assert_eq!(
+            report.environment_ok, report.ready,
+            "ready is the compatibility alias for environment_ok"
+        );
         assert!(report.ready, "grimoire must be ready: {report:?}");
         assert!(
             report.substrate_ready,

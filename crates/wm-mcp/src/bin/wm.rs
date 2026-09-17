@@ -50,7 +50,12 @@ static WRITABLE_RECOVERY_CALLS: std::sync::atomic::AtomicUsize =
     std::sync::atomic::AtomicUsize::new(0);
 
 #[derive(Parser)]
-#[command(name = "wm", version = env!("CARGO_PKG_VERSION"), about = "WhiteMagic — local-first memory and session continuity for coding agents")]
+#[command(
+    name = "wm",
+    version = env!("CARGO_PKG_VERSION"),
+    about = "WhiteMagic — local-first memory and session continuity for coding agents",
+    after_help = "Lab & advanced commands (geneseed, daemon, polyglot, seal, verify, anchor, trust, migrate, …) are hidden from this list but fully runnable — see 'wm help --all'."
+)]
 struct Cli {
     /// Path to a TOML config file. Overrides default config location.
     #[arg(long, global = true)]
@@ -224,6 +229,7 @@ enum Commands {
         deep: bool,
     },
     /// Analyze git history and mine codebase patterns with longevity scores (read-only)
+    #[command(hide = true)]
     Geneseed {
         /// Path to the git repository (default: current directory)
         #[arg(long, default_value = ".")]
@@ -290,8 +296,10 @@ enum Commands {
         json: bool,
     },
     /// Show polyglot acceleration status
+    #[command(hide = true)]
     Polyglot,
     /// Export collected training data for LoRA fine-tuning
+    #[command(hide = true)]
     ExportTrainingData {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -307,6 +315,7 @@ enum Commands {
         include_negative: bool,
     },
     /// Run as a persistent daemon — always-on consciousness with autonomous cycles
+    #[command(hide = true)]
     Daemon {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -346,12 +355,14 @@ enum Commands {
         watchdog_audit_interval: Option<u64>,
     },
     /// Show current brain-wave state (shorthand for stats)
+    #[command(hide = true)]
     BrainWave {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
         store: Option<PathBuf>,
     },
     /// Migrate legacy v26 SQLite memories into the v5 LMDB store
+    #[command(hide = true)]
     Migrate {
         /// Path to v26 galaxies directory (containing per-galaxy subdirs with whitemagic.db)
         #[arg(long)]
@@ -418,6 +429,7 @@ enum Commands {
     /// single deferred read transaction keeps scans consistent against a
     /// live opencode without blocking it. Ids are UUIDv5-deterministic, so
     /// re-importing an export is an idempotent upsert.
+    #[command(hide = true)]
     Opencode {
         #[command(subcommand)]
         command: OpencodeCommands,
@@ -432,6 +444,7 @@ enum Commands {
     ///
     /// This is corruption / casual-tamper detection, not a root of trust.
     /// An adversary who can replace both `.seal_key` and `seal.json` wins.
+    #[command(hide = true)]
     Seal {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -444,6 +457,7 @@ enum Commands {
     /// integrity seal, not a whole-store-root guarantee (`wm backup` is the
     /// full-store disaster-recovery mechanism). Exits with code 1 if
     /// verification fails.
+    #[command(hide = true)]
     Verify {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -462,6 +476,7 @@ enum Commands {
     /// Takes the LMDB lock — stop the store's server unit first (same
     /// posture as `wm trust`). Exits with code 1 when any signature is
     /// invalid: tamper evidence is loud, never advisory.
+    #[command(hide = true)]
     Anchor {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -529,6 +544,7 @@ enum Commands {
     /// Majority-binary content is left untouched (the documented permanent
     /// reserve). DRY-RUN by default — take a `wm backup` before --apply;
     /// this rewrites LMDB rows.
+    #[command(hide = true)]
     RepairContent {
         /// Path to the store root directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -548,6 +564,7 @@ enum Commands {
     /// rows with `[REDACTED:<kind>]` markers, chaining the revision history
     /// and reindexing them. DRY-RUN by default — a `--tag` filter scopes the
     /// pass (e.g. `source:convo-harvest-20260911`).
+    #[command(hide = true)]
     RedactContent {
         /// Path to the store root directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -579,6 +596,7 @@ enum Commands {
     /// neutral, lower = unverified. Heritage ingests carry the defaults
     /// (user/1.0) and over-state trust — survey first, then correct a
     /// reviewed population before enabling WM_TRUST_WEIGHT.
+    #[command(hide = true)]
     Trust {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -936,7 +954,50 @@ fn main() {
     }
 }
 
+/// Hidden lab/advanced commands (name, one-line about) as clap knows them.
+fn lab_commands() -> Vec<(String, String)> {
+    use clap::CommandFactory;
+    Cli::command()
+        .get_subcommands()
+        .filter(|c| c.is_hide_set())
+        .map(|c| {
+            (
+                c.get_name().to_string(),
+                c.get_about().map(ToString::to_string).unwrap_or_default(),
+            )
+        })
+        .collect()
+}
+
+/// `wm help --all` — the default help plus the hidden lab/advanced surface.
+///
+/// The existence of complexity does not mean complexity needs to be
+/// presented: the default `wm --help` shows the product loop, and this door
+/// keeps the laboratory one command away (2026-09-17 reviewer finding).
+fn print_full_help() {
+    use clap::CommandFactory;
+    let mut cmd = Cli::command();
+    let _ = cmd.print_help();
+    let lab = lab_commands();
+    println!("\nLab & advanced (hidden above; all runnable):\n");
+    let width = lab.iter().map(|(name, _)| name.len()).max().unwrap_or(0);
+    for (name, about) in &lab {
+        println!("  {name:<width$}  {about}");
+    }
+    println!("\nThe product loop is: install → grimoire → connect → work → resume.");
+}
+
 fn run() -> anyhow::Result<()> {
+    // `wm help --all`: clap's own help subcommand takes no flags, and the
+    // lab/advanced commands are hidden from the default listing. Pre-parsed
+    // so the full surface stays one command away.
+    let argv: Vec<String> = std::env::args().collect();
+    if argv.get(1).map(String::as_str) == Some("help")
+        && argv.get(2).map(String::as_str) == Some("--all")
+    {
+        print_full_help();
+        return Ok(());
+    }
     let cli = Cli::parse();
 
     // Initialize logging (only to stderr — stdout is for JSON-RPC).
@@ -1291,8 +1352,19 @@ fn run() -> anyhow::Result<()> {
                     println!("  {phrase:<42} {route}");
                 }
                 println!();
-                if report.ready {
-                    println!("WhiteMagic ready. Elapsed: {} ms.", report.total_ms);
+                if report.environment_ok {
+                    if report.core_ready {
+                        println!(
+                            "WhiteMagic ready and wired. Elapsed: {} ms.",
+                            report.total_ms
+                        );
+                    } else {
+                        println!(
+                            "Environment OK — no step failed. Not fully activated yet: \
+                             wire a client with 'wm connect --write'. Elapsed: {} ms.",
+                            report.total_ms
+                        );
+                    }
                 } else {
                     println!(
                         "WhiteMagic needs attention (see [FAIL] steps). Elapsed: {} ms.",
@@ -1300,7 +1372,7 @@ fn run() -> anyhow::Result<()> {
                     );
                 }
             }
-            if !report.ready {
+            if !report.environment_ok {
                 std::process::exit(1);
             }
         }
@@ -5422,6 +5494,90 @@ mod session_cli_tests {
         assert!(
             docs >= 1,
             "CLI session write must be indexed immediately (docs={docs})"
+        );
+    }
+}
+
+#[cfg(test)]
+mod help_surface_tests {
+    use super::*;
+    use clap::CommandFactory;
+
+    /// Reviewer finding (2026-09-17): `wm --help` presented the Gen1/lab
+    /// machinery (geneseed, daemon, brain waves, anchoring, trust, …) with
+    /// the same weight as the product loop. The lab is hidden from the
+    /// default listing but stays fully runnable and listed by `wm help --all`.
+    #[test]
+    fn lab_commands_are_hidden_from_help_but_still_runnable() {
+        let cmd = Cli::command();
+        for name in [
+            "geneseed",
+            "polyglot",
+            "export-training-data",
+            "daemon",
+            "brain-wave",
+            "migrate",
+            "opencode",
+            "seal",
+            "verify",
+            "anchor",
+            "repair-content",
+            "redact-content",
+            "trust",
+        ] {
+            let sub = cmd
+                .find_subcommand(name)
+                .unwrap_or_else(|| panic!("{name} must stay runnable"));
+            assert!(
+                sub.is_hide_set(),
+                "{name} must be hidden from the default help"
+            );
+        }
+        for name in [
+            "serve",
+            "grimoire",
+            "connect",
+            "session",
+            "ingest",
+            "backup",
+            "restore",
+            "status",
+            "quickstart",
+            "selftest",
+            "doctor",
+            "update",
+            "setup",
+            "report",
+            "reindex",
+        ] {
+            let sub = cmd
+                .find_subcommand(name)
+                .unwrap_or_else(|| panic!("{name} must stay visible"));
+            assert!(
+                !sub.is_hide_set(),
+                "{name} is product surface and must not be hidden"
+            );
+        }
+    }
+
+    #[test]
+    fn help_all_lists_every_hidden_command_with_an_about() {
+        let lab = lab_commands();
+        assert!(
+            lab.iter().any(|(name, _)| name == "geneseed"),
+            "the lab list must include geneseed"
+        );
+        assert!(
+            lab.iter().any(|(name, _)| name == "trust"),
+            "the lab list must include trust"
+        );
+        assert!(
+            lab.iter().all(|(_, about)| !about.is_empty()),
+            "every hidden command needs a one-line about for 'wm help --all'"
+        );
+        assert!(
+            lab.len() >= 13,
+            "the hidden lab surface shrank unexpectedly: {lab:?}"
         );
     }
 }
