@@ -5,6 +5,28 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 9.1.9 in progress (2026-09-17)
+
+### Coordination truth (F3)
+- **`code.*` resolves the git common dir without spawning a subprocess:**
+  `LeaseLedger::discover` walks the filesystem (`.git` directory, worktree
+  `.git` file + `commondir`, bare repo) instead of running
+  `git rev-parse --git-common-dir`. The spawn was undeclared in the tools'
+  effect rows; declaring it would have made reads spawn-class (refused under
+  AHIMSA strict mode, against the 9.1.8 admission design) and charged the
+  Yama spawn budget. Behaviour is unchanged for every layout; resolution is
+  canonicalized so all worktrees share one ledger.
+
+### Release tooling (F4)
+- **`scripts/release.sh` is orchestration + verification:** the tag-triggered
+  `release.yml` owns the five channels (assets + crates.io/npm/Docker/MCP
+  registry); the script now watches that workflow, verifies the release
+  assets (count + `sha256sum -c` spot check), probes crates.io/npm/Docker
+  until they report the version, probes the MCP registry (advisory), and
+  waits for `release-health` (fails loudly if red). The local build/publish
+  stages were removed (double-publish risk); local tool requirements shrink
+  to `gh`, `cargo`, `python3`, `jq`, `curl`.
+
 ## [9.1.8] — 2026-09-17 (coordination truth-up, mesh ingest hardening, startup fixtures, onboarding)
 
 ### Onboarding — load your data
