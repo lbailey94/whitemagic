@@ -117,6 +117,31 @@ fn load_turns(
     Ok(turns)
 }
 
+/// Latest checkpoint handoff for a session: `(checkpoint_id, created_at,
+/// handoff)`. Shared by `session.digest` and `session.continuity` so the
+/// structured handoff (next_queue, open_flags, git, tests_green, lease_id)
+/// surfaces wherever "where were we?" resolves.
+fn latest_checkpoint_handoff(
+    store: &MemoryStore,
+    session_id: &str,
+) -> wm_core::Result<Option<(String, DateTime<Utc>, Value)>> {
+    Ok(store
+        .scan_all(Galaxy::Sessions)?
+        .iter()
+        .filter(|m| {
+            m.metadata.tags.contains(&"checkpoint".to_string()) && m.content.contains(session_id)
+        })
+        .filter_map(|m| {
+            let parsed: Value = serde_json::from_str(&m.content).ok()?;
+            parsed
+                .get("handoff")
+                .filter(|h| !h.is_null())
+                .cloned()
+                .map(|h| (m.metadata.id.to_string(), m.metadata.created_at, h))
+        })
+        .max_by_key(|(_, created_at, _)| *created_at))
+}
+
 fn format_turn(v: &Value, full: bool) -> Value {
     let role = v.get("role").and_then(Value::as_str).unwrap_or("?");
     let content = v.get("content").and_then(Value::as_str).unwrap_or("");
@@ -905,7 +930,7 @@ impl Tool for SessionContinuityTool {
         )
     }
     fn description(&self) -> &str {
-        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off'). Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD)."
+        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off') plus that session's latest checkpoint handoff (next_queue, open_flags, git state, tests_green, lease_id) when one exists. Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD)."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let current = args.get("current_session_id").and_then(Value::as_str);
@@ -975,11 +1000,23 @@ impl Tool for SessionContinuityTool {
             .iter()
             .map(|(_, v)| format_turn(v, true))
             .collect();
+        // The previous session's latest checkpoint handoff is the most
+        // actionable part of "where were we?" — the server's own instructions
+        // tell agents to hand off through these fields (next_queue,
+        // open_flags, git, tests_green, lease_id), so continuity must surface
+        // them or the handoff is write-only (2026-09-17 reviewer finding).
+        // Same key and shape as session.digest's checkpoint state.
+        let (checkpoint, checkpoint_id) = match latest_checkpoint_handoff(&self.store, &prev_id)? {
+            Some((id, _, handoff)) => (handoff, Value::String(id)),
+            None => (Value::Null, Value::Null),
+        };
         Ok(json!({
             "status": "success",
             "previous_session": prev_id,
             "count": tail.len(),
             "turns": tail,
+            "checkpoint": checkpoint,
+            "checkpoint_id": checkpoint_id,
         }))
     }
     fn stats(&self) -> &ToolStats {
@@ -1126,25 +1163,7 @@ impl Tool for SessionDigestTool {
         // Latest verifiable checkpoint state, if any.
         let mut checkpoint_state = Value::Null;
         if include_checkpoint {
-            if let Some(cp) = self
-                .store
-                .scan_all(Galaxy::Sessions)?
-                .iter()
-                .filter(|m| {
-                    m.metadata.tags.contains(&"checkpoint".to_string())
-                        && m.content.contains(&session_id)
-                })
-                .filter_map(|m| {
-                    let parsed: Value = serde_json::from_str(&m.content).ok()?;
-                    parsed
-                        .get("handoff")
-                        .filter(|h| !h.is_null())
-                        .cloned()
-                        .map(|h| (m.metadata.created_at, h))
-                })
-                .max_by_key(|(created_at, _)| *created_at)
-                .map(|(_, handoff)| handoff)
-            {
+            if let Some((_, _, cp)) = latest_checkpoint_handoff(&self.store, &session_id)? {
                 digest.push_str("\n## Checkpoint state\n");
                 if let Some(git) = cp.get("git") {
                     writeln!(
@@ -2567,6 +2586,81 @@ mod tests {
             v.get("hint").is_none(),
             "non-empty continuity must not carry the scoping hint"
         );
+        assert!(
+            v["checkpoint"].is_null() && v["checkpoint_id"].is_null(),
+            "no checkpoint recorded — the fields must be present but null: {v}"
+        );
+    }
+
+    #[tokio::test]
+    async fn continuity_surfaces_latest_checkpoint_handoff() {
+        // Reviewer finding (2026-09-17): session.checkpoint's structured
+        // handoff was write-only — continuity returned the summary turn but
+        // dropped next_queue/open_flags, the most actionable part of the
+        // handoff. The latest checkpoint for the previous session must ride
+        // along with the turn tail.
+        let store = test_store();
+        let sid1 = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+        record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "turn_type": "summary", "importance": 0.9,
+                        "content": "seam work done", "session_id": sid1}),
+            )
+            .await
+            .unwrap();
+
+        let seed_checkpoint = |handoff: Value, age_secs: i64| {
+            let mut cp = Memory::new(
+                Galaxy::Sessions,
+                json!({
+                    "type": "checkpoint",
+                    "session_id": sid1,
+                    "label": "wrap",
+                    "data": {},
+                    "handoff": handoff,
+                })
+                .to_string(),
+            );
+            cp.metadata.tags = vec!["session".into(), "checkpoint".into()];
+            cp.metadata.created_at = Utc::now() - chrono::Duration::seconds(age_secs);
+            store.put(Galaxy::Sessions, &cp).unwrap();
+            cp.metadata.id.to_string()
+        };
+        seed_checkpoint(
+            json!({"next_queue": ["stale task"], "open_flags": ["stale flag"]}),
+            120,
+        );
+        let newest_id = seed_checkpoint(
+            json!({
+                "git": {"commit": "abc1234", "branch": "main", "dirty_count": 0},
+                "tests_green": true,
+                "next_queue": ["fuzz malformed headers", "verify seal"],
+                "open_flags": ["header length cap unresolved"],
+            }),
+            0,
+        );
+
+        let sid2 = start_session(&store);
+        let continuity = SessionContinuityTool::new(store);
+        let v = continuity
+            .call(&mut ctx, json!({"current_session_id": sid2}))
+            .await
+            .unwrap();
+        assert_eq!(v["previous_session"], sid1);
+        assert_eq!(
+            v["checkpoint"]["next_queue"][0], "fuzz malformed headers",
+            "the latest checkpoint must win over an older one: {v}"
+        );
+        assert_eq!(
+            v["checkpoint"]["open_flags"][0], "header length cap unresolved",
+            "open flags must survive the handoff through continuity: {v}"
+        );
+        assert_eq!(v["checkpoint"]["git"]["commit"], "abc1234");
+        assert_eq!(v["checkpoint"]["tests_green"], true);
+        assert_eq!(v["checkpoint_id"].as_str().unwrap(), newest_id);
     }
 
     #[tokio::test]
