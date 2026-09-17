@@ -1,7 +1,7 @@
 {
   "counts": {
-    "declared": 85,
-    "routes": 302,
+    "declared": 86,
+    "routes": 303,
     "undeclared": 217
   },
   "format_version": 1,
@@ -2585,6 +2585,49 @@
     {
       "declared": true,
       "properties": {
+        "branch": {
+          "description": "Caller-supplied branch name",
+          "type": "string"
+        },
+        "commit": {
+          "description": "Caller-supplied commit hash (no discovery is performed)",
+          "type": "string"
+        },
+        "data": {
+          "description": "Legacy free-form passthrough stored beside the handoff.",
+          "type": "object"
+        },
+        "label": {
+          "description": "Checkpoint label (default 'checkpoint')",
+          "type": "string"
+        },
+        "lease_id": {
+          "description": "Claimed scope (code.claim lease_id) that remains held at this handoff",
+          "type": "string"
+        },
+        "next_queue": {
+          "description": "Ordered next-step strings for the next session.",
+          "type": "array"
+        },
+        "open_flags": {
+          "description": "Open concerns/flags worth surfacing on resume.",
+          "type": "array"
+        },
+        "session_id": {
+          "description": "Target session (default: most recent session)",
+          "type": "string"
+        },
+        "tests_green": {
+          "description": "Whether the test suite was green at checkpoint time.",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "route": "session.checkpoint_nodiscovery"
+    },
+    {
+      "declared": true,
+      "properties": {
         "current_session_id": {
           "description": "Session to exclude (optional)",
           "type": "string"
@@ -3352,5 +3395,5 @@
       "route": "workspace.stats"
     }
   ],
-  "version": "9.1.7"
+  "version": "9.1.8"
 }
