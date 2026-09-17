@@ -77,33 +77,21 @@ impl LeaseLedger {
     /// Discover the ledger for a repository root. Requires a git checkout
     /// (worktree or bare-adjacent): the common dir is what makes leases
     /// visible across all worktrees.
+    ///
+    /// Resolution is pure filesystem — no subprocess (F3, 9.1.9): walk up to
+    /// the repository (`.git` directory, `.git` file for worktrees, or a bare
+    /// repo dir), then follow the worktree layout (`<gitdir>/commondir`).
+    /// The earlier `git rev-parse --git-common-dir` spawn was undeclared in
+    /// the tools' effect rows (and declaring it would have pushed every
+    /// coordination call against the Yama spawn budget and refused reads
+    /// under strict mode). Removing the spawn makes the data-plane
+    /// declarations true as written.
     pub fn discover(root: &Path) -> wm_core::Result<Self> {
-        let out = std::process::Command::new("git")
-            .args(["rev-parse", "--git-common-dir"])
-            .current_dir(root)
-            .output()
-            .map_err(|e| {
-                CoreError::Tool(format!(
-                    "code.claim could not run git ({e}) — pass root=<repo path> or set WM_PROJECT_ROOT to a git checkout"
-                ))
-            })?;
-        if !out.status.success() {
-            return Err(CoreError::Tool(
+        let common = git_common_dir(root).ok_or_else(|| {
+            CoreError::Tool(
                 "code.claim requires a git repository — pass root=<repo path> (or set WM_PROJECT_ROOT) pointing at a checkout; leases live in <git-common-dir>/wm-leases.json".into(),
-            ));
-        }
-        let dir = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        if dir.is_empty() {
-            return Err(CoreError::Tool(
-                "git rev-parse --git-common-dir returned nothing for this root".into(),
-            ));
-        }
-        let common = PathBuf::from(&dir);
-        let common = if common.is_absolute() {
-            common
-        } else {
-            root.join(common)
-        };
+            )
+        })?;
         Ok(Self {
             path: common.join("wm-leases.json"),
         })
@@ -369,6 +357,74 @@ pub(crate) fn require_str(args: &Value, key: &str) -> wm_core::Result<String> {
         })
 }
 
+/// Resolve the git common dir for `root` without spawning git.
+///
+/// Walks upward looking for a repository marker, then resolves the shared
+/// directory the way git lays it out:
+/// - `<repo>/.git` directory → that directory;
+/// - `<repo>/.git` file (`gitdir: <path>`, worktrees/submodules) → the
+///   pointed-at git dir, or `<gitdir>/commondir` when present (worktrees
+///   share the main checkout's `.git`);
+/// - a bare repository directory (`HEAD` + `objects/`).
+///
+/// `root` may be any path inside the repository. Returns `None` when no
+/// repository exists on the walk up to the filesystem root. The result is
+/// canonicalized when possible so every worktree resolves to one ledger path.
+fn git_common_dir(root: &Path) -> Option<PathBuf> {
+    let start = if root.is_absolute() {
+        root.to_path_buf()
+    } else {
+        std::env::current_dir().ok()?.join(root)
+    };
+    let mut dir = start.as_path();
+    loop {
+        let dot_git = dir.join(".git");
+        if dot_git.is_dir() {
+            return Some(canonical_or(dot_git));
+        }
+        if dot_git.is_file() {
+            let text = std::fs::read_to_string(&dot_git).ok()?;
+            let target = text.lines().find_map(|l| l.strip_prefix("gitdir:"))?.trim();
+            if target.is_empty() {
+                return None;
+            }
+            let target_path = Path::new(target);
+            let gitdir = if target_path.is_absolute() {
+                target_path.to_path_buf()
+            } else {
+                dir.join(target_path)
+            };
+            let commondir_file = gitdir.join("commondir");
+            let common = match std::fs::read_to_string(&commondir_file) {
+                Ok(text) => {
+                    let target = text.trim();
+                    if target.is_empty() {
+                        return None;
+                    }
+                    let p = Path::new(target);
+                    if p.is_absolute() {
+                        p.to_path_buf()
+                    } else {
+                        gitdir.join(p)
+                    }
+                }
+                Err(_) => gitdir,
+            };
+            return Some(canonical_or(common));
+        }
+        if dir.join("HEAD").is_file() && dir.join("objects").is_dir() {
+            return Some(canonical_or(dir.to_path_buf()));
+        }
+        dir = dir.parent()?;
+    }
+}
+
+/// Canonicalize when the path exists; otherwise return it unchanged (the
+/// caller reports the repository error, not a canonicalize error).
+fn canonical_or(path: PathBuf) -> PathBuf {
+    std::fs::canonicalize(&path).unwrap_or(path)
+}
+
 pub(crate) fn resolve_root(args: &Value) -> wm_core::Result<PathBuf> {
     args.get("root")
         .and_then(|v| v.as_str())
@@ -425,14 +481,11 @@ impl CodeClaimTool {
     pub fn new(gan_ying: Option<Arc<Mutex<GanYingBus>>>) -> Self {
         Self {
             stats: ToolStats::default(),
-            // EffectRow declares data-plane effects (the ledger file), per
-            // the session-tools precedent: the fixed-argv `git rev-parse`
-            // lookup is the same trust class as checkpoint's git capture,
-            // and declaring spawns would push every coordination call
-            // against the Yama spawn budget (found live: a two-agent
-            // negotiation burst exceeds 6 spawns/min). The lease effect is
-            // strict-denied (AHIMSA Target A): stress refuses new claims and
-            // renewals; the TTL frees held ones.
+            // EffectRow declares data-plane effects (the ledger file). Root
+            // and common-dir resolution is pure filesystem since 9.1.9 (F3):
+            // no subprocess, so the declarations are true as written. The
+            // lease effect is strict-denied (AHIMSA Target A): stress refuses
+            // new claims and renewals; the TTL frees held ones.
             effects: EffectRow {
                 reads: vec![Resource::Filesystem],
                 writes: vec![Resource::CoordinationLease],
@@ -913,6 +966,62 @@ mod tests {
 
     fn root_str(root: &Path) -> Value {
         json!(root.display().to_string())
+    }
+
+    /// Pure-filesystem repo layout — no `git` binary involved (F3 regression:
+    /// discovery must not spawn a subprocess).
+    fn fake_repo(root: &Path) {
+        std::fs::create_dir_all(root.join(".git/objects")).unwrap();
+        std::fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").unwrap();
+    }
+
+    #[test]
+    fn discover_walks_up_without_spawning_git() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = dir.path().join("repo");
+        fake_repo(&repo);
+        let nested = repo.join("crates/inner/src");
+        std::fs::create_dir_all(&nested).unwrap();
+
+        let from_root = LeaseLedger::discover(&repo).unwrap().path().to_path_buf();
+        let from_nested = LeaseLedger::discover(&nested).unwrap().path().to_path_buf();
+        assert!(from_root.ends_with(".git/wm-leases.json"), "{from_root:?}");
+        assert_eq!(
+            from_root, from_nested,
+            "any path inside the repo resolves to one ledger"
+        );
+    }
+
+    #[test]
+    fn discover_follows_worktree_commondir() {
+        let dir = tempfile::tempdir().unwrap();
+        let main = dir.path().join("main");
+        fake_repo(&main);
+        let wt = dir.path().join("worktree");
+        std::fs::create_dir_all(&wt).unwrap();
+        let wt_gitdir = main.join(".git/worktrees/wt");
+        std::fs::create_dir_all(&wt_gitdir).unwrap();
+        std::fs::write(wt_gitdir.join("commondir"), "../..\n").unwrap();
+        std::fs::write(
+            wt.join(".git"),
+            format!("gitdir: {}\n", wt_gitdir.display()),
+        )
+        .unwrap();
+
+        let main_ledger = LeaseLedger::discover(&main).unwrap().path().to_path_buf();
+        let wt_ledger = LeaseLedger::discover(&wt).unwrap().path().to_path_buf();
+        assert_eq!(
+            main_ledger, wt_ledger,
+            "worktree leases share the main checkout's ledger"
+        );
+        assert!(wt_ledger.ends_with(".git/wm-leases.json"), "{wt_ledger:?}");
+    }
+
+    #[test]
+    fn discover_rejects_paths_outside_a_repository() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = LeaseLedger::discover(dir.path()).unwrap_err().to_string();
+        assert!(err.contains("requires a git repository"), "{err}");
     }
 
     #[tokio::test]
