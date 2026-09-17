@@ -36,6 +36,10 @@ pub struct ClaimsTool {
     ledger: Arc<Mutex<ClaimsLedger>>,
     stats: ToolStats,
     effects: EffectRow,
+    /// Write-through path: when set, every successful `add`/`resolve`
+    /// persists the ledger immediately. `None` = shutdown-only (tests,
+    /// embedded uses).
+    persist_path: Option<Arc<std::path::PathBuf>>,
 }
 
 impl ClaimsTool {
@@ -45,6 +49,36 @@ impl ClaimsTool {
             ledger,
             stats: ToolStats::default(),
             effects: EffectRow::read_only(vec![Resource::Galaxy("simulation".into())]),
+            persist_path: None,
+        }
+    }
+
+    /// Attach write-through persistence (usually `<store-root>/claims_ledger.json`).
+    ///
+    /// The 2026-09-17 ledger-loss incident: JSON stores flushed only on
+    /// graceful shutdown, so ungraceful instance replacement lost every claim
+    /// registered since the last flush. Write-through makes the durable record
+    /// independent of shutdown behaviour.
+    #[must_use]
+    pub fn with_persist_path(mut self, path: Option<Arc<std::path::PathBuf>>) -> Self {
+        self.persist_path = path;
+        self
+    }
+
+    /// Best-effort write-through after a mutation. Failures are loud but never
+    /// fail the tool call — persistence health is observable, mutation
+    /// semantics are unchanged.
+    fn persist(&self, ledger: &ClaimsLedger) {
+        let Some(path) = &self.persist_path else {
+            return;
+        };
+        match serde_json::to_string_pretty(&ledger.to_json()) {
+            Ok(json) => {
+                if let Err(e) = std::fs::write(path.as_path(), json) {
+                    tracing::warn!(path = %path.display(), error = %e, "claims write-through failed");
+                }
+            }
+            Err(e) => tracing::warn!(error = %e, "claims write-through serialize failed"),
         }
     }
 }
@@ -152,6 +186,7 @@ impl Tool for ClaimsTool {
                     confidence,
                     falsification_criteria,
                 );
+                self.persist(&ledger);
                 Ok(json!({
                     "status": "success",
                     "claim_id": claim.id,
@@ -192,6 +227,7 @@ impl Tool for ClaimsTool {
                 let claim = ledger
                     .resolve(claim_id, validated, event, event_date, source)
                     .map_err(wm_core::CoreError::Tool)?;
+                self.persist(&ledger);
                 Ok(json!({
                     "status": "success",
                     "claim_id": claim.id,
@@ -273,14 +309,19 @@ impl Tool for ClaimsTool {
 pub fn register_claims(
     registry: &wm_dispatch::ToolRegistry,
     ledger: Option<Arc<Mutex<ClaimsLedger>>>,
+    persist_path: Option<std::path::PathBuf>,
 ) -> wm_dispatch::ToolRegistry {
     let ledger = ledger.unwrap_or_else(|| Arc::new(Mutex::new(ClaimsLedger::new())));
-    let mut reg = registry.register(Arc::new(ClaimsTool::new(Arc::clone(&ledger))));
+    let persist = persist_path.map(Arc::new);
+    let mut reg = registry.register(Arc::new(
+        ClaimsTool::new(Arc::clone(&ledger)).with_persist_path(persist.clone()),
+    ));
     for (name, action) in CLAIMS_ALIASES {
         reg = reg.register(Arc::new(ClaimsAliasTool::new(
             name,
             action,
             Arc::clone(&ledger),
+            persist.clone(),
         )));
     }
     reg
@@ -304,7 +345,12 @@ pub struct ClaimsAliasTool {
 }
 
 impl ClaimsAliasTool {
-    pub fn new(name: &'static str, action: &'static str, ledger: Arc<Mutex<ClaimsLedger>>) -> Self {
+    pub fn new(
+        name: &'static str,
+        action: &'static str,
+        ledger: Arc<Mutex<ClaimsLedger>>,
+        persist_path: Option<Arc<std::path::PathBuf>>,
+    ) -> Self {
         // add/resolve mutate the ledger (persisted to claims_ledger.json) —
         // they must declare the write so annotations/readOnlyHint and the
         // write budget treat them as writes (9.1.6). Read actions stay
@@ -316,7 +362,7 @@ impl ClaimsAliasTool {
         Self {
             name,
             action,
-            inner: ClaimsTool::new(ledger),
+            inner: ClaimsTool::new(ledger).with_persist_path(persist_path),
             effects,
         }
     }
@@ -658,7 +704,7 @@ mod tests {
         let ledger = Arc::new(Mutex::new(ClaimsLedger::new()));
         let aliases: Vec<ClaimsAliasTool> = CLAIMS_ALIASES
             .iter()
-            .map(|(name, action)| ClaimsAliasTool::new(name, action, Arc::clone(&ledger)))
+            .map(|(name, action)| ClaimsAliasTool::new(name, action, Arc::clone(&ledger), None))
             .collect();
         let names: Vec<&str> = aliases.iter().map(wm_core::Tool::name).collect();
         assert_eq!(
@@ -728,5 +774,68 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(summary["pending"], 1);
+    }
+
+    #[tokio::test]
+    async fn claims_write_through_persists_on_every_mutation() {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        let dir = std::env::temp_dir().join(format!(
+            "wm-claims-write-through-{}-{stamp}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("claims_ledger.json");
+
+        let ledger = Arc::new(Mutex::new(ClaimsLedger::new()));
+        let tool =
+            ClaimsTool::new(Arc::clone(&ledger)).with_persist_path(Some(Arc::new(path.clone())));
+        let mut ctx = Context::default();
+
+        let recorded = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "action": "add",
+                    "statement": "Write-through test claim",
+                    "domain": "test",
+                    "source_date": "2026-09-17",
+                    "predicted_outcome": "Y",
+                    "confidence": 0.7,
+                    "falsification_criteria": "not Y"
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(recorded["status"], "success");
+
+        let on_disk: Value = serde_json::from_str(
+            &std::fs::read_to_string(&path).expect("add must persist immediately"),
+        )
+        .unwrap();
+        assert_eq!(on_disk["claims"].as_array().map(Vec::len), Some(1));
+
+        let claim_id = recorded["claim_id"].as_str().unwrap().to_string();
+        tool.call(
+            &mut ctx,
+            json!({
+                "action": "resolve",
+                "claim_id": claim_id,
+                "validated": true,
+                "event": "resolved in test",
+                "event_date": "2026-09-17"
+            }),
+        )
+        .await
+        .unwrap();
+
+        let on_disk: Value = serde_json::from_str(
+            &std::fs::read_to_string(&path).expect("resolve must persist immediately"),
+        )
+        .unwrap();
+        assert_eq!(on_disk["claims"][0]["status"], "validated");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -145,8 +145,9 @@ pub struct McpServer {
     /// Brier calibration store (shared with simulation.calibrate) — persisted
     /// to `<store>/calibration_store.json` on shutdown.
     calibration_store: Option<Arc<std::sync::Mutex<wm_simulation::CalibrationStore>>>,
-    /// Prescience claims ledger (shared with claims.*) — persisted to
-    /// `<store>/claims_ledger.json` on shutdown.
+    /// Prescience claims ledger (shared with claims.*) — write-through to
+    /// `<store>/claims_ledger.json` on every add/resolve, and again on
+    /// shutdown.
     claims_ledger: Option<Arc<std::sync::Mutex<wm_simulation::ClaimsLedger>>>,
     /// Dharma escalation review queue (shared with dharma.escalate and
     /// friends) — persisted to `<store>/escalation_queue.json`.
@@ -1127,9 +1128,18 @@ impl McpServer {
             Some(Arc::clone(&self_model)),
         );
         let claims_ledger = Arc::new(std::sync::Mutex::new(wm_simulation::ClaimsLedger::new()));
+        // Write-through persistence: every successful add/resolve rewrites
+        // <store-root>/claims_ledger.json, so the durable record no longer
+        // depends on a graceful shutdown (2026-09-17 ledger-loss incident).
         let registry = wm_tools::expansion::claims_tools::register_claims(
             &registry,
             Some(Arc::clone(&claims_ledger)),
+            Some(
+                store_path
+                    .parent()
+                    .unwrap_or(store_path)
+                    .join("claims_ledger.json"),
+            ),
         );
         let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
@@ -4738,6 +4748,7 @@ mod tests {
         let registry = wm_tools::expansion::claims_tools::register_claims(
             &registry,
             Some(Arc::clone(&claims_ledger)),
+            None,
         );
         let registry = wm_tools::expansion::bayesian_tools::register_bayesian(&registry);
 
