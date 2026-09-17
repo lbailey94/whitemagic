@@ -27,6 +27,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stages were removed (double-publish risk); local tool requirements shrink
   to `gh`, `cargo`, `python3`, `jq`, `curl`.
 
+### Continuity handoff (F5)
+- **`session.continuity` surfaces the checkpoint handoff:** resume returns
+  the previous session's latest checkpoint as `checkpoint` (plus
+  `checkpoint_id`) — the structured `next_queue`/`open_flags`/git/
+  `tests_green`/`lease_id` fields the server instructs agents to hand off
+  with were write-only before (continuity replayed turns and dropped them;
+  `session.digest` already surfaced them). Same key and shape as digest,
+  lookup shared by both tools; additive response field.
+
+### CLI parity (F6)
+- **`wm session` bootstraps an explicit fresh store:** `wm session start
+  --store <new>` no longer refuses with "LMDB store not found … pass
+  --store" while receiving `--store`; writes auto-initialize the store the
+  way MCP does on serve start. Continuity (a read) stays side-effect-free
+  and answers truthfully with an initialization hint.
+- **CLI session writes are indexed at write time:** the CLI path attached
+  no search engine, so the first `wm status` after `session start` /
+  `record` / `checkpoint` reported index drift (DEGRADED, sessions (+N))
+  until `wm reindex`. It now attaches the index like the server; a live
+  serve holding the Tantivy writer lock is probed first (a blind open
+  blocks) and the degraded case is disclosed on stderr.
+
+### First-run polish (F7)
+- **Grimoire release probe budget 5 s → 1.2 s** (default; override with
+  `WM_GRIMOIRE_RELEASE_TIMEOUT_MS`): the optional network check no longer
+  dominates offline first-run wall time.
+- **`wm grimoire --json` readiness naming:** the canonical aggregate is now
+  `environment_ok` ("no step failed"); `ready` remains as a one-release
+  compatibility alias so it no longer reads as contradictory next to
+  `core_ready`. The human summary distinguishes "ready and wired" from
+  "environment OK — not fully activated yet".
+
+### Help surface (F8)
+- **`wm --help` shows the product, not the laboratory:** lab/advanced
+  commands (geneseed, daemon, polyglot, seal/verify/anchor, trust, migrate,
+  repair/redact-content, brain-wave, export-training-data, opencode bridge)
+  are hidden from the default listing but fully runnable and listed by the
+  new `wm help --all`.
+
 ## [9.1.8] — 2026-09-17 (coordination truth-up, mesh ingest hardening, startup fixtures, onboarding)
 
 ### Onboarding — load your data
