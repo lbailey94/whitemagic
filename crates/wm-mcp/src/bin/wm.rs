@@ -3045,6 +3045,41 @@ fn format_bytes(bytes: u64) -> String {
     }
 }
 
+/// Attach write-time indexing to the CLI session path (2026-09-17 reviewer
+/// finding): the MCP server indexes every session write immediately; the CLI
+/// must do the same or `wm status` reports the very next write as index
+/// drift. A live server holds the Tantivy writer lock and a blind open blocks
+/// behind it, so probe first and disclose the degraded case honestly.
+fn open_session_search(
+    store_root: &Path,
+    lmdb_path: &Path,
+) -> Option<std::sync::Arc<wm_memory::SearchEngine>> {
+    if !wm_mcp::store_busy::store_holders(store_root).is_empty() {
+        eprintln!(
+            "note: a live server holds this store's search index — records will not be \
+             indexed until it restarts; run 'wm reindex' if search misses them"
+        );
+        return None;
+    }
+    let tantivy_path = wm_memory::reindex::tantivy_path_for(lmdb_path);
+    if let Err(e) = std::fs::create_dir_all(&tantivy_path) {
+        eprintln!(
+            "warning: search index directory not creatable ({e}) — records will not be indexed"
+        );
+        return None;
+    }
+    match wm_memory::SearchEngine::open(&tantivy_path) {
+        Ok(engine) => Some(std::sync::Arc::new(engine)),
+        Err(e) => {
+            eprintln!(
+                "warning: search index not opened ({e}) — records will not be indexed; \
+                 run 'wm reindex' once the store is free"
+            );
+            None
+        }
+    }
+}
+
 /// `wm session` — CLI parity for the MCP session routes (board item 1).
 /// The Mac had to hand-roll JSON-RPC over stdio to keep continuity alive
 /// when MCP dropped twice in one session; these subcommands share the exact
@@ -3068,15 +3103,37 @@ fn run_session_command(command: SessionCommands) -> anyhow::Result<()> {
     };
     let lmdb_path = store_root.join("lmdb");
     if !lmdb_path.exists() {
-        anyhow::bail!(
-            "LMDB store not found at {} — pass --store or start 'wm serve' first",
-            lmdb_path.display()
-        );
+        // CLI parity (2026-09-17 reviewer finding): `--store <fresh-path>` is
+        // an explicit instruction, and the MCP path initializes a store when
+        // the server starts — the CLI must not refuse what the transport
+        // accepts. Reads stay side-effect-free: continuity on an
+        // uninitialized store answers truthfully without creating anything.
+        if let SessionCommands::Continuity { .. } = &command {
+            let hint = format!(
+                "store not initialized at {} — run 'wm session start --store <path>' \
+                 or start 'wm serve' first",
+                lmdb_path.display()
+            );
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "status": "success",
+                    "previous_session": null,
+                    "turns": [],
+                    "count": 0,
+                    "message": "no previous session found",
+                    "hint": hint,
+                }))?
+            );
+            return Ok(());
+        }
+        eprintln!("initializing new store at {}", store_root.display());
     }
     let store = std::sync::Arc::new(wm_memory::MemoryStore::open(
         &lmdb_path,
         4 * 1024 * 1024 * 1024,
     )?);
+    let search = open_session_search(&store_root, &lmdb_path);
 
     let rt = tokio::runtime::Runtime::new()?;
     let result = rt.block_on(async {
@@ -3084,6 +3141,7 @@ fn run_session_command(command: SessionCommands) -> anyhow::Result<()> {
         match command {
             SessionCommands::Start { title, user, .. } => {
                 SessionStartTool::new(store)
+                    .with_search(search)
                     .call(&mut ctx, serde_json::json!({"title": title, "user": user}))
                     .await
             }
@@ -3108,7 +3166,10 @@ fn run_session_command(command: SessionCommands) -> anyhow::Result<()> {
                 if let Some(old) = supersedes {
                     args["supersedes"] = serde_json::json!(old);
                 }
-                SessionRecordTool::new(store).call(&mut ctx, args).await
+                SessionRecordTool::new(store)
+                    .with_search(search)
+                    .call(&mut ctx, args)
+                    .await
             }
             SessionCommands::Checkpoint {
                 session_id,
@@ -3149,7 +3210,10 @@ fn run_session_command(command: SessionCommands) -> anyhow::Result<()> {
                 if let Some(v) = lease_id {
                     args["lease_id"] = serde_json::json!(v);
                 }
-                SessionCheckpointTool::new(store).call(&mut ctx, args).await
+                SessionCheckpointTool::new(store)
+                    .with_search(search)
+                    .call(&mut ctx, args)
+                    .await
             }
             SessionCommands::Continuity {
                 n,
@@ -5270,5 +5334,94 @@ mod offline_update_tests {
         assert!(msg.contains("WhiteMagic 9.1.4 remains unchanged"));
         assert!(!msg.to_lowercase().contains("backtrace"));
         assert!(!msg.contains("Error:"));
+    }
+}
+
+#[cfg(test)]
+mod session_cli_tests {
+    use super::*;
+    use wm_core::Galaxy;
+
+    fn fresh_store_root(tmp: &std::path::Path) -> std::path::PathBuf {
+        tmp.join("fresh-store")
+    }
+
+    /// Reviewer finding (2026-09-17): the CLI refused `--store <fresh>` with
+    /// an LMDB-not-found error even though the flag was explicitly passed and
+    /// the MCP path initializes stores implicitly. Session writes auto-init.
+    #[test]
+    fn session_cli_initializes_explicit_fresh_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = fresh_store_root(tmp.path());
+        run_session_command(SessionCommands::Start {
+            title: "first run".into(),
+            user: "tester".into(),
+            store: Some(root.clone()),
+        })
+        .unwrap();
+
+        let lmdb = root.join("lmdb");
+        assert!(lmdb.exists(), "session start must initialize the store");
+        let store = wm_memory::MemoryStore::open_default(&lmdb).unwrap();
+        let starts = store
+            .scan_all(Galaxy::Sessions)
+            .unwrap()
+            .iter()
+            .filter(|m| m.metadata.tags.contains(&"start".to_string()))
+            .count();
+        assert_eq!(starts, 1, "the session marker must be stored");
+    }
+
+    /// Reads stay side-effect-free: continuity on an uninitialized store
+    /// answers truthfully and creates nothing.
+    #[test]
+    fn session_cli_continuity_on_missing_store_creates_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = fresh_store_root(tmp.path());
+        run_session_command(SessionCommands::Continuity {
+            n: 10,
+            session_id: None,
+            since: None,
+            until: None,
+            store: Some(root.clone()),
+        })
+        .unwrap();
+        assert!(
+            !root.exists(),
+            "continuity on a missing store must not create one: {root:?}"
+        );
+    }
+
+    /// Reviewer finding (2026-09-17): CLI session writes skipped write-time
+    /// indexing, so `wm status` reported index drift right after a supported
+    /// workflow. The CLI now attaches the search engine like the server does.
+    #[test]
+    fn session_cli_writes_are_indexed_at_write_time() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = fresh_store_root(tmp.path());
+        run_session_command(SessionCommands::Start {
+            title: "index parity".into(),
+            user: "tester".into(),
+            store: Some(root.clone()),
+        })
+        .unwrap();
+        run_session_command(SessionCommands::Record {
+            content: "amber lighthouse protocol engaged".into(),
+            role: "ai".into(),
+            turn_type: "decision".into(),
+            importance: 0.7,
+            session_id: None,
+            supersedes: None,
+            store: Some(root.clone()),
+        })
+        .unwrap();
+
+        let tantivy = wm_memory::reindex::tantivy_path_for(&root.join("lmdb"));
+        let search = wm_memory::SearchEngine::open_readonly(&tantivy).unwrap();
+        let docs = search.count_docs_in_galaxy("sessions").unwrap();
+        assert!(
+            docs >= 1,
+            "CLI session write must be indexed immediately (docs={docs})"
+        );
     }
 }
