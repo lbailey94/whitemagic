@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
-# WhiteMagic release script — one command, five channels.
+# WhiteMagic release script — orchestration + verification (F4, 9.1.9).
 #
 # Usage:
 #   scripts/release.sh <version> [--dry-run] [--skip-ci-wait]
 #
 # Example:
-#   scripts/release.sh 9.1.0
-#   scripts/release.sh 9.1.0 --dry-run
+#   scripts/release.sh 9.1.9
+#   scripts/release.sh 9.1.9 --dry-run
 #
-# Channels: git tag + GitHub release (with binaries) → crates.io (ordered
-# publish) → npm → Docker Hub (tag + latest) → official MCP registry.
-# Site + Hub README get printed reminders (site is a separate repo; Hub
-# README via API needs HUB_TOKEN in the environment).
+# Division of labor (9.1.8 lesson): the tag-triggered `release.yml` workflow
+# owns the five channels — it builds the 5-platform binaries, signs the
+# manifest, generates SBOMs, and publishes crates.io → npm → Docker Hub →
+# MCP registry (its `registries` job). This script orchestrates the release
+# and then VERIFIES every channel:
+#
+#   bump → release commit → push → CI gate → signed tag → [release.yml] →
+#   assets + checksum + registries + release-health verification.
+#
+# The pre-9.1.9 script also built binaries and published registries locally;
+# that duplicated the workflow (double-publish risk) and was retired. The
+# manual fallback is re-running the workflow itself — never a hand-upload
+# (provenance lesson, 2026-09-15: local assets desynced the signed manifest).
 #
 # Ordering: the release commit is pushed first, CI on that commit is watched
 # to green, and only then is the signed tag created and pushed — release.yml
@@ -20,7 +29,7 @@
 #
 # Conventions kept:
 #   - workspace version = npm package version = server.json version
-#   - image tags: vX.Y.Z + major tag (X) flipped to latest
+#   - image tags: vX.Y.Z + major tag (X) flipped to latest (by the workflow)
 #   - registry identifier: docker.io/lbailey94/whitemagic:X (major)
 set -euo pipefail
 
@@ -33,14 +42,11 @@ for arg in "${@:2}"; do
     *) echo "unknown flag: $arg"; exit 1 ;;
   esac
 done
-MAJOR="${VERSION%%.*}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
-NPM_DIR="npm/whitemagic-mcp"
 UA="whitemagic-release/1.0 (lbailey94@protonmail.com)"
 
 banner() { echo; echo "━━━━ $* ━━━"; }
-run() { if $DRY_RUN; then echo "[dry-run] $*"; else "$@"; fi; }
 
 # ── preflight ────────────────────────────────────────────────────────────
 banner "PREFLIGHT"
@@ -52,10 +58,8 @@ CUR=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
 echo "workspace: $CUR → $VERSION"
 python3 scripts/version_truth.py --check \
   || { echo "ERROR: version-truth drift — every surface must agree before a release"; exit 1; }
-for tool in gh cargo npm docker; do command -v "$tool" >/dev/null || { echo "ERROR: $tool missing"; exit 1; }; done
+for tool in gh cargo python3 jq curl; do command -v "$tool" >/dev/null || { echo "ERROR: $tool missing"; exit 1; }; done
 if ! $DRY_RUN; then
-  npm whoami >/dev/null 2>&1 || { echo "ERROR: npm not logged in (npm login)"; exit 1; }
-  [ -f ~/.cargo/credentials.toml ] || { echo "ERROR: cargo not logged in (cargo login)"; exit 1; }
   gh auth status >/dev/null 2>&1 || { echo "ERROR: gh not authed"; exit 1; }
 fi
 echo "preflight ok"
@@ -145,103 +149,124 @@ else
   if [ "$tag_ok" = "0" ]; then
     git tag -a "v$VERSION" -m "WhiteMagic v$VERSION"
   fi
+  TAG_PUSH_AT=$(date +%s)
   git push origin "v$VERSION"
 fi
 
-# ── build assets + GitHub release ────────────────────────────────────────
-banner "ASSETS + GITHUB RELEASE"
+# ── release workflow (assets + registries) ───────────────────────────────
+banner "RELEASE WORKFLOW (assets + registries)"
 if $DRY_RUN; then
-  echo "[dry-run] build linux gnu+musl, sha256 each; include prebuilt mac/win from release-assets/ if present"
-  echo "[dry-run] gh release create v$VERSION --title 'WhiteMagic v$VERSION' --generate-notes + assets"
+  echo "[dry-run] gh run watch the tag-triggered Release workflow: 5-platform"
+  echo "[dry-run]   binaries + cosign bundles + SBOMs + signed manifest, then its"
+  echo "[dry-run]   registries job: crates.io → npm → Docker Hub → MCP registry"
 else
-  mkdir -p release-assets
-  for target in x86_64-unknown-linux-gnu x86_64-unknown-linux-musl; do
-    rustup target add "$target" 2>/dev/null || true
-    cargo build --release --target "$target" -p whitemagic --bin wm
-    ext=""; [ "$target" = "x86_64-unknown-linux-musl" ] && ext="-musl"
-    cp "target/$target/release/wm" "release-assets/wm-linux-x86_64$ext"
+  RUN_ID=""
+  for _ in $(seq 1 30); do
+    RUN_ID=$(gh run list --workflow Release --limit 10 \
+      --json databaseId,headBranch \
+      --jq ".[] | select(.headBranch == \"v$VERSION\") | .databaseId" | head -n1)
+    [ -n "$RUN_ID" ] && break
+    sleep 10
   done
-  # Checksum files must be in `sha256sum -c` format (`<hash>  <filename>`) —
-  # bare digests break the Dockerfile's verification (2026-09-15 incident).
-  sha_file() { ( cd "$(dirname "$1")" && sha256sum "$(basename "$1")" ) > "$1.sha256"; }
-  for f in release-assets/wm-linux-*; do
-    case "$f" in *.sha256) continue ;; esac
-    sha_file "$f"
-  done
-  # include pre-built mac/win assets if the operator dropped them here
-  for f in release-assets/wm-macos-* release-assets/wm-windows-*.exe; do
-    [ -f "$f" ] || continue
-    case "$f" in *.sha256) continue ;; esac
-    sha_file "$f"
-  done
-  # The repo's release.yml workflow auto-creates the release from the tag and
-  # builds all 5 binaries (linux gnu+musl, macos x2, windows). Only create
-  # here if the workflow hasn't (draft/manual runs); upload extra assets if
-  # the operator dropped mac/win builds in release-assets/.
-  if gh release view "v$VERSION" >/dev/null 2>&1; then
-    echo "release v$VERSION already exists — release.yml owns the assets."
-    echo "  NOT uploading local builds: the signed release-manifest covers the"
-    echo "  CI-built binaries, and a local upload desyncs provenance"
-    echo "  (learned 2026-09-15: bare-hash checksums also broke Docker)."
-  else
-    gh release create "v$VERSION" --title "WhiteMagic v$VERSION" --generate-notes
-    gh release upload "v$VERSION" release-assets/wm-* --clobber
+  if [ -z "$RUN_ID" ]; then
+    echo "ERROR: no Release workflow run found for v$VERSION after 5 minutes."
+    echo "       (tag pushed? Actions outage?) Inspect: gh run list --workflow Release"
+    exit 1
   fi
-  echo "release v$VERSION published with $(ls release-assets/wm-* | grep -vc sha256) binaries"
+  echo "watching Release run $RUN_ID ..."
+  gh run watch "$RUN_ID" --exit-status \
+    || { echo "ERROR: Release workflow FAILED ($RUN_ID) — assets/registries may be partial."; \
+         echo "       Inspect: gh run view $RUN_ID --log-failed"; exit 1; }
+  echo "Release workflow green — assets + registries published by the workflow."
 fi
 
-# ── crates.io (ordered; rides 429 windows if any) ────────────────────────
-banner "CRATES.IO"
-# Derived from cargo metadata (same source as release.yml) so the order can
-# never drift from the actual dependency graph.
-CRATES="$(python3 scripts/crates_publish_order.py)"
-for c in $CRATES; do
-  published=""
-  lag=0
-  while [ -z "$published" ]; do
-    if $DRY_RUN; then echo "[dry-run] cargo publish -p $c"; published=1; break; fi
-    if cargo publish -p "$c" > "/tmp/pub-$c.log" 2>&1; then echo "PUBLISHED: $c"; published=1; sleep 20; break; fi
-    if grep -aqE "already exists|already uploaded" "/tmp/pub-$c.log"; then echo "SKIP (already live): $c"; published=1; break; fi
-    if grep -aq "429 Too Many" "/tmp/pub-$c.log"; then
-      after=$(grep -aoP "try again after \K.*?GMT" "/tmp/pub-$c.log" | head -n 1)
-      wait=$(( $(date -d "$after" +%s 2>/dev/null || echo 0) - $(date +%s) + 15 ))
-      [ "$wait" -lt 15 ] && wait=300
-      echo "rate-limited on $c — sleeping ${wait}s"; sleep "$wait"; continue
-    fi
-    if grep -aqE "no matching package|failed to select" "/tmp/pub-$c.log"; then
-      lag=$((lag+1)); [ "$lag" -gt 6 ] && { echo "FAILED (index lag): $c"; exit 1; }
-      echo "index lag on $c — retry $lag"; sleep 30; continue
-    fi
-    echo "FAILED: $c"; grep -a -m1 "^error" "/tmp/pub-$c.log"; exit 1
+# ── release assets verification ──────────────────────────────────────────
+banner "RELEASE ASSETS"
+if $DRY_RUN; then
+  echo "[dry-run] gh release view v$VERSION --json assets (expect >= 28: 5 binaries,"
+  echo "[dry-run]   5 sha256, 5 cosign bundles, 15 SBOMs, manifest + .sig)"
+  echo "[dry-run] download wm-linux-x86_64 + .sha256; sha256sum -c"
+else
+  ASSET_COUNT=$(gh release view "v$VERSION" --json assets --jq '.assets | length')
+  echo "assets: $ASSET_COUNT"
+  if [ "$ASSET_COUNT" -lt 28 ]; then
+    echo "ERROR: release assets look incomplete (<28) — inspect the Release workflow."; exit 1
+  fi
+  # Checksum spot check in the exact format the Dockerfile consumes
+  # (`sha256sum -c`; bare-hash files broke Docker on 2026-09-15).
+  TMP="$(mktemp -d)"
+  trap 'rm -rf "$TMP"' EXIT
+  gh release download "v$VERSION" -p 'wm-linux-x86_64' -p 'wm-linux-x86_64.sha256' -D "$TMP" >/dev/null
+  if ( cd "$TMP" && sha256sum -c wm-linux-x86_64.sha256 >/dev/null ); then
+    echo "checksum: wm-linux-x86_64 OK (sha256sum -c format)"
+  else
+    echo "ERROR: checksum verification failed for wm-linux-x86_64"; exit 1
+  fi
+fi
+
+# ── registries verification (published by the workflow) ──────────────────
+banner "REGISTRIES"
+probe_version() { # <label> <url> <jq-expr> [tries]
+  local label="$1" url="$2" expr="$3" tries="${4:-40}" got="" i
+  for i in $(seq 1 "$tries"); do
+    got=$(curl -fsS -m 20 -A "$UA" "$url" 2>/dev/null | jq -r "$expr" 2>/dev/null || true)
+    if [ "$got" = "$VERSION" ]; then echo "  $label: $got"; return 0; fi
+    if [ "$i" -lt "$tries" ]; then sleep 15; fi
   done
-done
-
-# ── npm ──────────────────────────────────────────────────────────────────
-banner "NPM"
-if $DRY_RUN; then echo "[dry-run] (cd npm/whitemagic-mcp && npm publish --access public)"; else
-  ( cd "$NPM_DIR" && npm publish --access public )
+  echo "ERROR: $label reports '${got:-nothing}' (want $VERSION)"; return 1
+}
+if $DRY_RUN; then
+  echo "[dry-run] probe crates.io / npm / Docker Hub until they report $VERSION"
+else
+  probe_version "crates.io (whitemagic)" "https://crates.io/api/v1/crates/whitemagic" '.crate.max_version' 40
+  probe_version "npm (whitemagic-mcp)" "https://registry.npmjs.org/whitemagic-mcp/latest" '.version' 24
+  probe_version "Docker Hub (tag ${VERSION})" "https://hub.docker.com/v2/repositories/lbailey94/whitemagic/tags/${VERSION}" '.name' 20
 fi
 
-# ── docker ───────────────────────────────────────────────────────────────
-banner "DOCKER"
+# The MCP registry search index lags the publish; the publish itself is in the
+# workflow log. Probe briefly, then report honestly (advisory, not a gate).
+banner "MCP REGISTRY (advisory)"
 if $DRY_RUN; then
-  echo "[dry-run] docker build --build-arg WM_VERSION=v$VERSION -t lbailey94/whitemagic:$MAJOR ."
-  echo "[dry-run] push :$MAJOR + :$VERSION + flip :latest"
+  echo "[dry-run] advisory probe: registry.modelcontextprotocol.io search for $VERSION"
 else
-  docker build --build-arg "WM_VERSION=v$VERSION" -t "lbailey94/whitemagic:$MAJOR" -t "lbailey94/whitemagic:$VERSION" .
-  docker push "lbailey94/whitemagic:$VERSION"
-  docker push "lbailey94/whitemagic:$MAJOR"
-  docker tag "lbailey94/whitemagic:$MAJOR" "lbailey94/whitemagic:latest"
-  docker push "lbailey94/whitemagic:latest"
+  found=""
+  for _ in $(seq 1 10); do
+    if curl -fsS -m 20 "https://registry.modelcontextprotocol.io/v0/servers?search=whitemagic" 2>/dev/null \
+      | jq -r '.servers[].server.version' 2>/dev/null | grep -qx "$VERSION"; then
+      found=1; break
+    fi
+    sleep 15
+  done
+  if [ -n "$found" ]; then
+    echo "  MCP registry: $VERSION visible"
+  else
+    echo "  WARN: MCP registry index did not show $VERSION within the probe window."
+    echo "        The workflow reported the publish; confirm with:"
+    echo "        gh run view $RUN_ID --log | grep -A2 -i 'mcp registry'"
+  fi
 fi
 
-# ── official MCP registry ────────────────────────────────────────────────
-banner "MCP REGISTRY"
+# ── release health (canonical channel reconciliation) ────────────────────
+banner "RELEASE HEALTH"
 if $DRY_RUN; then
-  echo "[dry-run] mcp-publisher publish $NPM_DIR/server.json (login token must be fresh — mcp-publisher login github)"
+  echo "[dry-run] wait for the tag-triggered Release health run; fail loudly if red"
 else
-  ( cd "$NPM_DIR" && mcp-publisher publish server.json ) \
-    || { echo "publish failed — if 401, run: mcp-publisher login github, then rerun this stage"; exit 1; }
+  HRUN=""
+  for _ in $(seq 1 30); do
+    HRUN=$(gh run list --workflow release-health.yml --limit 5 \
+      --json databaseId,createdAt \
+      --jq "[.[] | select((.createdAt | fromdateiso8601) >= ($TAG_PUSH_AT - 120))] | .[0].databaseId // empty" \
+      2>/dev/null || true)
+    [ -n "$HRUN" ] && break
+    sleep 10
+  done
+  if [ -n "$HRUN" ]; then
+    gh run watch "$HRUN" --exit-status \
+      && echo "release-health: green ($HRUN)" \
+      || { echo "ERROR: release-health failed ($HRUN) — inspect gh run view $HRUN"; exit 1; }
+  else
+    echo "WARN: no release-health run appeared for v$VERSION yet — the scheduled run will reconcile."
+  fi
 fi
 
 # ── hub README (optional: needs HUB_TOKEN) ───────────────────────────────
@@ -256,12 +281,13 @@ else
   echo "HUB_TOKEN not set — remember to bump the version line in the Hub README (docs/DOCKER_HUB_RUNBOOK.md block)"
 fi
 
-# ── manual tail ──────────────────────────────────────────────────────────
-banner "MANUAL TAIL (not automatable tonight)"
+# ── manual tail (separate lanes) ─────────────────────────────────────────
+banner "MANUAL TAIL (separate lanes)"
 cat <<'EOF'
- 1. site: bump lib/facts.ts version + verifiedDate, regenerate manifests if the tool surface changed, push master
- 2. CHANGELOG.md entry (if not covered by --generate-notes)
- 3. llms.txt / agent surfaces: version references if they hardcode a version
- 4. announce: repo-as-funnel surfaces auto-picked-up; consider a changelog note on whitemagic.dev
+ 1. site: npm run sync-facts:refresh → check-facts/check-surfaces → push master
+    (regenerate the capability manifest counts when the tool surface moved)
+ 2. contract manifest: run `wm contract --json --out docs/contract/route-schema-manifest.json`
+    from the released binary and commit (standing post-release item)
+ 3. announce: repo-as-funnel surfaces auto-pick-up; consider a site changelog note
 EOF
-banner "DONE — v$VERSION on all channels"
+banner "DONE — v$VERSION verified on all channels"
