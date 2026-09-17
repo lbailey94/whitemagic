@@ -54,7 +54,7 @@ the `Current release:` line on each release:
 > - Source: https://github.com/lbailey94/whitemagic
 > - Image `9.x`/`latest`: v9 Rust binary (`wm`) — run
 >   `docker run -i lbailey94/whitemagic:9 serve --profile curated`
-> - Current release: v9.1.8 (2026-09-15) —
+> - Current release: v9.1.8 (2026-09-17) —
 >   https://github.com/lbailey94/whitemagic/releases/tag/v9.1.8
 > - Tags `2.x` (2.1.0–2.3.1, Nov 2025): the historical Python MCP
 >   stack, kept for provenance — not the current product.
