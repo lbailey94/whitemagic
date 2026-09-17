@@ -7,7 +7,7 @@
 //! docs:
 //!
 //! ```text
-//! host → substrate → release → agent → memory → teach → continuity
+//! host → substrate → release → agent → memory → load → teach → continuity
 //! ```
 //!
 //! Two audiences, one run: humans get stable `[OK]/[WARN]/[SKIP]/[FAIL]`
@@ -405,6 +405,41 @@ fn memory_step(store: &Path) -> (Step, bool) {
     (step("memory", status, detail, t), semantic)
 }
 
+/// Report the load-your-data posture from the ingest ledger. Loading is
+/// optional and never gates readiness: a fresh install reports the path
+/// forward, a loaded store reports what is in it.
+fn load_step(store: &Path) -> Step {
+    let t = Instant::now();
+    let ledger_path = store.join("ingest_ledger.jsonl");
+    match crate::ingest::IngestLedger::load(&ledger_path) {
+        Ok(ledger) if !ledger.entries.is_empty() => {
+            let files = ledger.entries.len();
+            let chunks: usize = ledger.entries.values().map(|e| e.chunks).sum();
+            step(
+                "load",
+                StepStatus::Ok,
+                format!(
+                    "{files} file(s), {chunks} chunk(s) loaded — ledger at {}",
+                    ledger_path.display()
+                ),
+                t,
+            )
+        }
+        Ok(_) => step(
+            "load",
+            StepStatus::Ok,
+            "no documents loaded yet (optional) — 'wm ingest --source <folder> --dry-run', then 'wm ingest --source <folder> --redact'".to_string(),
+            t,
+        ),
+        Err(e) => step(
+            "load",
+            StepStatus::Warn,
+            format!("ingest ledger unreadable ({e}) — re-run 'wm ingest' to restore it"),
+            t,
+        ),
+    }
+}
+
 /// The core habits an arriving agent should internalize. The contract is
 /// explicit `route=` dispatch; these are the mappings worth teaching first.
 pub const VOCABULARY: &[(&str, &str)] = &[
@@ -505,6 +540,7 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
     steps.push(agent);
     let (memory, semantic_recall_available) = memory_step(&opts.store);
     steps.push(memory);
+    steps.push(load_step(&opts.store));
     steps.push(teach_step());
     steps.push(match continuity_step().await {
         Ok(s) => s,
@@ -517,7 +553,7 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
     });
 
     // Join the release probe and splice it back into report order (host,
-    // substrate, release, agent, memory, teach, continuity).
+    // substrate, release, agent, memory, load, teach, continuity).
     let release_step_result = match release_handle {
         Some(handle) => handle.join().unwrap_or_else(|_| Step {
             name: "release",
@@ -602,6 +638,36 @@ mod tests {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
         assert!(probe_endpoint(addr));
+    }
+
+    #[test]
+    fn load_step_guides_a_fresh_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        let s = load_step(tmp.path());
+        assert_eq!(s.name, "load");
+        assert_eq!(
+            s.status,
+            StepStatus::Ok,
+            "not-loaded is optional, not a failure"
+        );
+        assert!(s.detail.contains("wm ingest --source <folder> --dry-run"));
+    }
+
+    #[test]
+    fn load_step_counts_ledger_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("ingest_ledger.jsonl"),
+            "{\"path\":\"notes/a.md\",\"sha256\":\"aa\",\"kind\":\"document\",\"chunks\":3,\"bytes\":10,\"ingested_at\":\"2026-09-17T00:00:00Z\"}\n",
+        )
+        .unwrap();
+        let s = load_step(tmp.path());
+        assert_eq!(s.status, StepStatus::Ok);
+        assert!(
+            s.detail.contains("1 file(s), 3 chunk(s)"),
+            "detail: {}",
+            s.detail
+        );
     }
 
     #[test]
@@ -710,6 +776,7 @@ mod tests {
                 "release",
                 "agent",
                 "memory",
+                "load",
                 "teach",
                 "continuity"
             ]

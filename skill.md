@@ -17,6 +17,7 @@ wm quickstart        # throwaway demo store — a decision survives a restart
 wm selftest --json   # 8 end-to-end invariants on a throwaway store
 wm connect --write   # detect installed MCP clients and wire each (dry-run first: wm connect)
 wm setup             # per-client view: wm setup <client> [--write]
+wm ingest --source <folder> --dry-run   # preview: walk notes/docs into a galaxy (local-only)
 ```
 
 `wm doctor` is the troubleshooting tool — run it when something misbehaves, not on a healthy fresh install.
@@ -48,6 +49,9 @@ The `curated` profile is the supported surface: explicit, dependable routes inst
 3. **Checkpoint at the end of real work** — sessions support record,
    replay, and cross-session continuity, so the next session resumes
    from evidence instead of re-reading everything.
+4. **Load your documents when you have them** — `wm ingest` is
+   dry-run-first, scrubs credential-shaped content with `--redact`, and
+   resumes on re-run (per-file SHA-256 ledger; nothing leaves the machine).
 
 ## Vocabulary (explicit routes are the contract)
 

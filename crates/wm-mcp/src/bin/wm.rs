@@ -1249,6 +1249,10 @@ fn run() -> anyhow::Result<()> {
                     println!("Wire an MCP client:");
                     println!("  wm connect            # wire every detected client");
                     println!("  wm setup              # list clients / per-client setup");
+                    println!();
+                    println!("Load your data (optional, local-only, idempotent):");
+                    println!("  wm ingest --source <folder> --dry-run   # preview files");
+                    println!("  wm ingest --source <folder> --redact    # write; re-runs resume");
                 }
             }
         }
@@ -4623,6 +4627,8 @@ async fn run_quickstart() -> anyhow::Result<()> {
     println!("  3. Before each new session, ask for continuity.");
     println!("  4. Back up the whole store directory regularly.");
     println!("  5. If something looks wrong, run 'wm doctor --deep' for the full gate.");
+    println!("  6. Load notes, docs, or transcripts: 'wm ingest --source <folder>' —");
+    println!("     dry-run first; --redact scrubs credential-shaped content; local-only.");
 
     Ok(())
 }

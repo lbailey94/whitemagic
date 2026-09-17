@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 9.1.8 in progress (2026-09-15)
 
+### Onboarding — load your data
+- **`wm grimoire` gains a `load` step:** reads the ingest ledger and either
+  reports what is loaded (files, chunks, ledger path) or points at the
+  load-your-data path — `wm ingest --source <folder> --dry-run`, then
+  `--redact` to write. Loading stays optional and never gates readiness.
+- **The same first-run path is surfaced at startup:** `wm quickstart`'s next
+  steps, the fresh-install `wm status` block, the MCP server instructions,
+  and `skill.md` all name the ingest route (dry-run first; local-only;
+  idempotent via the per-file SHA-256 ledger).
+
 ### Security — coordination truth-up (AHIMSA Target A)
 - **Dedicated coordination effects:** `Resource::CoordinationLease`
   (claim/renew) and `Resource::CoordinationRelease` (exact-owner cleanup)
