@@ -139,7 +139,9 @@ fn git_root_of(start: &std::path::Path) -> Option<std::path::PathBuf> {
 }
 
 /// True when the repository root carries its own project-scoped whitemagic
-/// wiring (so the client-global entries are not the only scope).
+/// wiring (so the client-global entries are not the only scope). `wmv9` is
+/// the dev checkout's gateway entry name — a repo wired to the local
+/// gateway is project-wired even though the key does not say "whitemagic".
 fn project_wired(root: &std::path::Path) -> bool {
     [
         root.join("opencode.jsonc"),
@@ -147,7 +149,12 @@ fn project_wired(root: &std::path::Path) -> bool {
         root.join(".mcp.json"),
     ]
     .iter()
-    .any(|p| std::fs::read_to_string(p).is_ok_and(|t| t.contains("whitemagic")))
+    .any(|p| {
+        std::fs::read_to_string(p).is_ok_and(|t| {
+            let lower = t.to_lowercase();
+            lower.contains("whitemagic") || lower.contains("wmv")
+        })
+    })
 }
 
 /// Warning for the easy onboarding path: client-global wiring points every
@@ -581,8 +588,20 @@ fn upsert_member(text: &str, open: usize, close: usize, key: &str, value: &Value
             ind
         }
     };
-    let member_indent =
-        last_key_start.map_or_else(|| format!("{close_indent}  "), |k| line_indent(text, k));
+    // Indent the new member like the last one, but fall back to one level
+    // inside the braces when the last member sits inline (`{ "other": {} }`):
+    // matching it would land the new member at column zero.
+    let member_indent = last_key_start.map_or_else(
+        || format!("{close_indent}  "),
+        |k| {
+            let indent = line_indent(text, k);
+            if indent.is_empty() && !text[..k].ends_with('\n') {
+                format!("{close_indent}  ")
+            } else {
+                indent
+            }
+        },
+    );
     let (from, separator) = match last_value_end {
         Some(ve) => (ve, ","),
         None => (skip_trivia(text, open + 1), ""),
@@ -1435,6 +1454,39 @@ mod tests {
         // A project-wired repo is left alone (opencode.jsonc names whitemagic).
         std::fs::write(repo.join("opencode.jsonc"), r#"{"mcp":{"whitemagic":{}}}"#).unwrap();
         assert!(project_isolation_note(&repo).is_none());
+
+        // A repo wired to the local gateway (`wmv9`) counts as wired too.
+        std::fs::write(
+            repo.join("opencode.jsonc"),
+            r#"{"mcp":{"wmv9":{"type":"remote","url":"http://127.0.0.1:18795/mcp"}}}"#,
+        )
+        .unwrap();
+        assert!(project_isolation_note(&repo).is_none());
+    }
+
+    #[test]
+    fn jsonc_upsert_indents_after_an_inline_member() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("opencode.jsonc");
+        std::fs::write(
+            &path,
+            "{ // keep comment\n  \"mcp\": { \"other\": { \"type\": \"local\", \"command\": [\"other\"] } }\n}\n",
+        )
+        .unwrap();
+        let spec = spec(Kind::OpencodeJsonc, path.clone());
+        let (msg, backup) = write_opencode_jsonc(&spec, Path::new("/opt/wm")).unwrap();
+        assert!(msg.contains("updated"), "{msg}");
+        assert!(backup.unwrap().exists());
+
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("// keep comment"), "{text}");
+        assert!(
+            text.contains("\n    \"whitemagic\""),
+            "the appended member must be indented a level inside the braces: {text}"
+        );
+        let parsed = parse_jsonc(&text).unwrap();
+        assert_eq!(parsed["mcp"]["other"]["type"], "local");
+        assert_eq!(parsed["mcp"]["whitemagic"]["command"][0], "/opt/wm");
     }
 
     #[test]
