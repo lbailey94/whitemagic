@@ -147,6 +147,7 @@ wm-leases.json
 !/scripts/release_manifest.py
 !/scripts/release_health.py
 !/scripts/version_truth.py
+!/scripts/check_site_counts.py
 !/scripts/curated_smoke_test.py
 !/scripts/longmemeval_bench.py
 !/scripts/memorastrict_bench.py

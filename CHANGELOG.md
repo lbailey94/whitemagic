@@ -5,6 +5,40 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 9.2.0 in progress (2026-09-18)
+
+### Autonomous release pipeline
+- **CHANGELOG ceremony is automatic:** `scripts/version_truth.py
+  --open-changelog <version>` turns the `[Unreleased]` heading into the dated
+  `[version]` heading the ceremony gate requires (theme text after the
+  standard `— X.Y.Z in progress (date)` clause is preserved), and
+  `scripts/release.sh` runs it in the bump stage — forgetting that edit was a
+  pre-tag CI stall waiting to happen.
+- **Contract manifest is a pipeline stage:** release.sh regenerates
+  `docs/contract/route-schema-manifest.json` with `wm contract --json --out`
+  from the downloaded release binary and commits/pushes it only when it
+  changed.
+- **Site sync is a pipeline stage:** release.sh verifies the site's
+  capability counts against the released binary's runtime manifest
+  (`scripts/check_site_counts.py`: authored/callable = `full_pre_profile` − 1,
+  curated = `profile_pre_meta`, mesh = `sangha.mesh.*` routes), refreshes the
+  site facts, runs the site gates + tsc + build, and pushes master. Count
+  drift stops the sync with the exact numbers instead of publishing stale
+  counts.
+- **Hub description sync is a pipeline stage:** release.sh dispatches
+  `hub-description.yml`, which dates the `Current release:` line from the
+  signed manifest (`published`) and PATCHes it with the scoped
+  `DOCKERHUB_TOKEN`; advisory — a failed description sync never fails the
+  release. The runbook documents the token-scope lesson (registry-scoped
+  tokens 403 on the description API).
+- **`scripts/release.sh --tail-only`:** rehearsal mode that runs every
+  post-release stage against an already-published version; used to prove the
+  9.1.9 tail end-to-end (all stages idempotent no-ops).
+- **Site facts refresh carries the capability manifest version:**
+  `sync_release_facts.py --refresh` patches `public/api/manifest.json`
+  version/date/generator (counts stay until verified) and accepts
+  `WM_SITE_GENERATOR_NOTE` provenance from the release pipeline.
+
 ## [9.1.9] — 2026-09-18 (recovery hardening, onboarding truth, continuity handoff, calm surfaces)
 
 ### Coordination truth (F3)

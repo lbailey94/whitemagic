@@ -160,6 +160,52 @@ class VersionTruthTest(unittest.TestCase):
             (root / "CHANGELOG.md").unlink()
             self.assertEqual(vt.check(root, None), 1)
 
+    def test_open_changelog_dates_the_unreleased_heading(self) -> None:
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [Unreleased] — 9.1.5 in progress (2026-09-01)\n"
+                "\n### Stuff\n\n## [9.1.4] — 2026-09-01\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.open_changelog(root, "9.1.5", dry_run=False), 0)
+            text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+            self.assertIn("## [9.1.5] — ", text)
+            self.assertNotIn("[Unreleased]", text)
+            self.assertEqual(vt.check(root, None), 0)
+            # Idempotent once the dated section exists.
+            self.assertEqual(vt.open_changelog(root, "9.1.5", dry_run=False), 0)
+
+    def test_open_changelog_preserves_theme_text(self) -> None:
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [Unreleased] — 9.1.5 in progress (2026-09-01)"
+                " (themes, kept)\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(vt.open_changelog(root, "9.1.5", dry_run=False), 0)
+            self.assertIn(
+                "(themes, kept)", (root / "CHANGELOG.md").read_text(encoding="utf-8")
+            )
+
+    def test_open_changelog_dry_run_writes_nothing(self) -> None:
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            before = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+            self.assertEqual(vt.open_changelog(root, "9.1.5", dry_run=True), 0)
+            self.assertEqual(
+                (root / "CHANGELOG.md").read_text(encoding="utf-8"), before
+            )
+
+    def test_open_changelog_missing_unreleased_is_error(self) -> None:
+        tmp, root = make_tree("9.1.4")
+        with tmp:
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [9.1.4] — 2026-09-01\n", encoding="utf-8"
+            )
+            self.assertEqual(vt.open_changelog(root, "9.1.5", dry_run=False), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

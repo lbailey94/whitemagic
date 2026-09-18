@@ -2,11 +2,12 @@
 # WhiteMagic release script — orchestration + verification (F4, 9.1.9).
 #
 # Usage:
-#   scripts/release.sh <version> [--dry-run] [--skip-ci-wait]
+#   scripts/release.sh <version> [--dry-run] [--skip-ci-wait] [--tail-only]
 #
 # Example:
 #   scripts/release.sh 9.1.9
 #   scripts/release.sh 9.1.9 --dry-run
+#   scripts/release.sh 9.1.9 --tail-only   # rehearsal against a published release
 #
 # Division of labor (9.1.8 lesson): the tag-triggered `release.yml` workflow
 # owns the five channels — it builds the 5-platform binaries, signs the
@@ -15,7 +16,11 @@
 # and then VERIFIES every channel:
 #
 #   bump → release commit → push → CI gate → signed tag → [release.yml] →
-#   assets + checksum + registries + release-health verification.
+#   assets + checksum + registries + release-health verification
+#   → contract manifest → site sync → Hub README.
+#
+# The tail stages (contract, site, Hub) are idempotent and verify-by-default:
+# `--tail-only` runs them against an already-published version as a rehearsal.
 #
 # The pre-9.1.9 script also built binaries and published registries locally;
 # that duplicated the workflow (double-publish risk) and was retired. The
@@ -33,12 +38,13 @@
 #   - registry identifier: docker.io/lbailey94/whitemagic:X (major)
 set -euo pipefail
 
-VERSION="${1:?usage: scripts/release.sh <version> [--dry-run] [--skip-ci-wait]}"
-DRY_RUN=false; SKIP_CI_WAIT=false
+VERSION="${1:?usage: scripts/release.sh <version> [--dry-run] [--skip-ci-wait] [--tail-only]}"
+DRY_RUN=false; SKIP_CI_WAIT=false; TAIL_ONLY=false
 for arg in "${@:2}"; do
   case "$arg" in
     --dry-run) DRY_RUN=true ;;
     --skip-ci-wait) SKIP_CI_WAIT=true ;;
+    --tail-only) TAIL_ONLY=true ;;
     *) echo "unknown flag: $arg"; exit 1 ;;
   esac
 done
@@ -48,6 +54,29 @@ UA="whitemagic-release/1.0 (lbailey94@protonmail.com)"
 
 banner() { echo; echo "━━━━ $* ━━━"; }
 
+runtime_manifest() { # <output-file> — read RELEASED_BIN's capability manifest
+  local out="$1" port="" store="" pid="" i rc=0 p
+  for p in $(seq 19140 19260); do
+    if ! ss -tln 2>/dev/null | grep -q ":$p "; then port="$p"; break; fi
+  done
+  [ -n "$port" ] || { echo "no free port for the runtime manifest" >&2; return 1; }
+  store="$(mktemp -d)"
+  RUST_LOG=error "$RELEASED_BIN" serve --profile curated --store "$store" \
+    --transport sse --bind "127.0.0.1:$port" >/dev/null 2>&1 &
+  pid=$!
+  for i in $(seq 1 30); do
+    if ss -tln 2>/dev/null | grep -q ":$port "; then break; fi
+    sleep 0.5
+  done
+  if ! "$RELEASED_BIN" manifest --endpoint "http://127.0.0.1:$port" > "$out" 2>/dev/null; then
+    rc=1
+  fi
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  rm -rf "$store"
+  return $rc
+}
+
 # ── preflight ────────────────────────────────────────────────────────────
 banner "PREFLIGHT"
 [ -z "$(git status --porcelain)" ] || { echo "ERROR: dirty tree — commit or stash first"; exit 1; }
@@ -56,17 +85,30 @@ git fetch origin main --quiet
 [ -z "$(git rev-list HEAD..origin/main)" ] || { echo "ERROR: local main is behind origin — pull first"; exit 1; }
 CUR=$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
 echo "workspace: $CUR → $VERSION"
-python3 scripts/version_truth.py --check \
-  || { echo "ERROR: version-truth drift — every surface must agree before a release"; exit 1; }
+if $TAIL_ONLY; then
+  python3 scripts/version_truth.py --check --version "$VERSION" \
+    || { echo "ERROR: version-truth drift for $VERSION"; exit 1; }
+else
+  python3 scripts/version_truth.py --check \
+    || { echo "ERROR: version-truth drift — every surface must agree before a release"; exit 1; }
+fi
 for tool in gh cargo python3 jq curl; do command -v "$tool" >/dev/null || { echo "ERROR: $tool missing"; exit 1; }; done
 if ! $DRY_RUN; then
   gh auth status >/dev/null 2>&1 || { echo "ERROR: gh not authed"; exit 1; }
 fi
 echo "preflight ok"
 
+if $TAIL_ONLY; then
+  banner "TAIL-ONLY — post-release stages for an already-published v$VERSION"
+  echo "skipping: version bump, CI gate, signed tag, Release workflow."
+  echo "running: assets, registries, release health, contract manifest, site sync, Hub README."
+  TAG_PUSH_AT=$(date +%s)
+else
+
 # ── version bump ─────────────────────────────────────────────────────────
 banner "VERSION BUMP → $VERSION"
 if $DRY_RUN; then
+  echo "[dry-run] python3 scripts/version_truth.py --open-changelog $VERSION"
   echo "[dry-run] python3 scripts/version_truth.py --set $VERSION (all listed"
   echo "[dry-run]   surfaces: Cargo.toml pins, npm package/server/MCPB, Dockerfile"
   echo "[dry-run]   labels, CITATION, docs, skill.md, README, PRIVACY_POLICY.md,"
@@ -74,6 +116,7 @@ if $DRY_RUN; then
   echo "[dry-run]   checked separately)"
   echo "[dry-run] cargo check (refresh Cargo.lock); commit + push; tag v$VERSION"
 else
+  python3 scripts/version_truth.py --open-changelog "$VERSION"
   python3 scripts/version_truth.py --set "$VERSION"
   cargo check --workspace --quiet 2>/dev/null || cargo check -p wm-core --quiet   # refresh Cargo.lock
   git add -A
@@ -179,9 +222,12 @@ else
          echo "       Inspect: gh run view $RUN_ID --log-failed"; exit 1; }
   echo "Release workflow green — assets + registries published by the workflow."
 fi
+fi
 
 # ── release assets verification ──────────────────────────────────────────
 banner "RELEASE ASSETS"
+TMP=""
+RELEASED_BIN=""
 if $DRY_RUN; then
   echo "[dry-run] gh release view v$VERSION --json assets (expect >= 28: 5 binaries,"
   echo "[dry-run]   5 sha256, 5 cosign bundles, 15 SBOMs, manifest + .sig)"
@@ -201,6 +247,12 @@ else
     echo "checksum: wm-linux-x86_64 OK (sha256sum -c format)"
   else
     echo "ERROR: checksum verification failed for wm-linux-x86_64"; exit 1
+  fi
+  if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
+    RELEASED_BIN="$TMP/wm-linux-x86_64"
+    echo "released binary: $RELEASED_BIN (kept for the tail stages)"
+  else
+    echo "WARN: host is $(uname -s)/$(uname -m) — the released Linux binary cannot run here"
   fi
 fi
 
@@ -269,6 +321,100 @@ else
   fi
 fi
 
+# ── contract manifest (regenerated from the released binary) ─────────────
+banner "CONTRACT MANIFEST"
+if $DRY_RUN; then
+  echo "[dry-run] wm contract --json --out docs/contract/route-schema-manifest.json"
+  echo "[dry-run]   from the released binary; commit + push only when it changed"
+elif [ -n "$RELEASED_BIN" ] && [ -x "$RELEASED_BIN" ]; then
+  if "$RELEASED_BIN" contract --json --out docs/contract/route-schema-manifest.json; then
+    if [ -n "$(git status --porcelain docs/contract/route-schema-manifest.json)" ]; then
+      git add docs/contract/route-schema-manifest.json
+      git commit -m "chore(contract): regenerate route schema manifest at $VERSION"
+      git push origin main
+      echo "contract manifest: regenerated and pushed"
+    else
+      echo "contract manifest: unchanged"
+    fi
+  else
+    echo "WARN: contract regeneration failed — run it manually from the released binary"
+  fi
+else
+  echo "WARN: released binary unavailable on this host — regenerate the contract manifest manually"
+fi
+
+# ── site sync (facts, gates, push master) ────────────────────────────────
+banner "SITE SYNC"
+SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/WHITEMAGIC/whitemagic-site}"
+if $DRY_RUN; then
+  echo "[dry-run] in $SITE_DIR: verify capability counts vs the released binary,"
+  echo "[dry-run]   npm run sync-facts:refresh → check-* / tsc / build → commit + push master"
+elif [ ! -d "$SITE_DIR/.git" ]; then
+  echo "WARN: site repo not found at $SITE_DIR — sync the site manually"
+elif [ ! -d "$SITE_DIR/node_modules" ]; then
+  echo "WARN: site dependencies missing (run npm install) — sync the site manually"
+else
+  (
+    cd "$SITE_DIR" || exit 0
+    if [ -n "$(git status --porcelain)" ]; then
+      echo "WARN: site tree is dirty — sync the site manually after resolving"
+      exit 0
+    fi
+    if [ "$(git branch --show-current)" != "master" ]; then
+      echo "WARN: site repo is on '$(git branch --show-current)', not master — sync manually"
+      exit 0
+    fi
+    git fetch origin master --quiet || { echo "WARN: site fetch failed"; exit 0; }
+    git pull --ff-only origin master --quiet || { echo "WARN: site pull failed"; exit 0; }
+
+    COUNTS_OK=1
+    if [ -n "$RELEASED_BIN" ] && [ -x "$RELEASED_BIN" ]; then
+      RUNTIME_JSON="$(mktemp)"
+      if runtime_manifest "$RUNTIME_JSON"; then
+        python3 "$REPO_ROOT/scripts/check_site_counts.py" \
+          --runtime-manifest "$RUNTIME_JSON" \
+          --site-manifest public/api/manifest.json || COUNTS_OK=0
+      else
+        echo "WARN: could not read the released binary's runtime manifest — counts not verified"
+        COUNTS_OK=0
+      fi
+      rm -f "$RUNTIME_JSON"
+    else
+      echo "WARN: released binary unavailable — counts not verified"
+      COUNTS_OK=0
+    fi
+    if [ "$COUNTS_OK" = "0" ]; then
+      echo "site NOT synced: review public/api/manifest.json counts (see above), then:"
+      echo "  cd $SITE_DIR && npm run sync-facts:refresh && npm run check-facts \\"
+      echo "    && git add -A && git commit -m 'release(site): sync facts to v$VERSION' && git push origin master"
+      exit 0
+    fi
+
+    RELEASE_COMMIT="$(git -C "$REPO_ROOT" rev-list -n1 "v$VERSION" | cut -c1-7)"
+    export WM_SITE_GENERATOR_NOTE="capability counts verified via \`wm manifest\` against the v$VERSION release binary ($RELEASE_COMMIT)"
+    npm run sync-facts:refresh || { echo "WARN: site fact refresh failed"; exit 0; }
+    if ! { npm run check-facts && npm run check-build-truth && npm run check-surfaces && npx tsc --noEmit; }; then
+      echo "WARN: site gates failed — site NOT pushed; inspect $SITE_DIR"
+      exit 0
+    fi
+    SITE_LOG="$(mktemp)"
+    if ! npm run build >"$SITE_LOG" 2>&1; then
+      echo "WARN: site build failed — site NOT pushed; see $SITE_LOG"
+      tail -20 "$SITE_LOG"
+      exit 0
+    fi
+    rm -f "$SITE_LOG"
+    if [ -n "$(git status --porcelain)" ]; then
+      git add -A
+      git commit -m "release(site): sync facts to v$VERSION"
+      git push origin master
+      echo "site: facts synced and pushed (Vercel deploys on push)"
+    else
+      echo "site: already current — nothing to push"
+    fi
+  ) || echo "WARN: site sync subshell exited non-zero — inspect $SITE_DIR"
+fi
+
 # ── hub README (dispatch the description workflow; advisory) ─────────────
 banner "HUB README"
 if $DRY_RUN; then
@@ -300,12 +446,10 @@ else
 fi
 
 # ── manual tail (separate lanes) ─────────────────────────────────────────
-banner "MANUAL TAIL (separate lanes)"
+banner "MANUAL TAIL"
 cat <<'EOF'
- 1. site: npm run sync-facts:refresh → check-facts/check-surfaces → push master
-    (regenerate the capability manifest counts when the tool surface moved)
- 2. contract manifest: run `wm contract --json --out docs/contract/route-schema-manifest.json`
-    from the released binary and commit (standing post-release item)
- 3. announce: repo-as-funnel surfaces auto-pick-up; consider a site changelog note
+ 1. announce: repo-as-funnel surfaces auto-pick-up; consider a site changelog note
+ 2. if any WARN above fired (site counts moved, binary unavailable, Hub dispatch
+    failed), resolve it before the next release
 EOF
 banner "DONE — v$VERSION verified on all channels"

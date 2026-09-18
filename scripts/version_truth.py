@@ -15,11 +15,14 @@ section — the v9.1.5 tag shipped with an "unreleased (draft)" heading.
 Usage:
     version_truth.py --check [--version X]
     version_truth.py --set X [--dry-run]
+    version_truth.py --open-changelog X [--dry-run]
 
     --check compares every surface with the workspace version (or --version X
     when the bump already happened but the tag has not).
     --set replaces every 9.x.y reference on the curated surfaces; run
     `cargo check` afterwards to refresh Cargo.lock.
+    --open-changelog turns the `[Unreleased]` heading into the dated target
+    heading the ceremony gate requires (release morning used to hand-edit it).
 
 Exit codes:
     0  every surface agrees (check) / rewrite completed (set)
@@ -31,6 +34,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 # Surfaces that carry the product version. Keep in sync with reality:
@@ -203,13 +207,60 @@ def set_version(root: Path, target: str, dry_run: bool) -> int:
     return 0
 
 
+def open_changelog(root: Path, target: str, dry_run: bool) -> int:
+    """Replace the `[Unreleased]` heading with a dated `[target]` heading.
+
+    Release morning used to hand-edit this heading, and forgetting it fails
+    CI's version-truth gate (the v9.1.5 lesson) — after the tag-triggered
+    workflow has already started. Theme text after the standard
+    `— X.Y.Z in progress (date)` clause is preserved.
+    """
+    if not SEMVER_RE.fullmatch(target):
+        raise SystemExit(f"not a semantic version: {target!r}")
+    path = root / CHANGELOG
+    text = path.read_text(encoding="utf-8")
+    unreleased = re.search(r"(?m)^## \[Unreleased\][^\n]*$", text)
+    if unreleased is None:
+        if re.search(
+            rf"(?m)^## \[{re.escape(target)}\][^\n]*\d{{4}}-\d{{2}}-\d{{2}}", text
+        ):
+            print(f"  {CHANGELOG:<42} [{target}] already open")
+            return 0
+        print(
+            f"  {CHANGELOG:<42} MISSING: no [Unreleased] heading to open",
+            file=sys.stderr,
+        )
+        return 1
+    tail = unreleased.group(0)[len("## [Unreleased]") :]
+    stripped = re.sub(
+        r"^\s*—\s*\d+\.\d+\.\d+\s+in progress\s*\(\d{4}-\d{2}-\d{2}\)\s*", "", tail
+    ).strip()
+    heading = f"## [{target}] — {date.today().isoformat()}"
+    if stripped:
+        heading += f" {stripped}"
+    if dry_run:
+        print(f"  {CHANGELOG:<42} would open: {heading}")
+        return 0
+    text = text[: unreleased.start()] + heading + text[unreleased.end() :]
+    path.write_text(text, encoding="utf-8")
+    print(f"  {CHANGELOG:<42} opened: {heading}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="report drift, write nothing")
     mode.add_argument("--set", metavar="VERSION", help="rewrite every surface")
+    mode.add_argument(
+        "--open-changelog",
+        metavar="VERSION",
+        help="turn the [Unreleased] heading into a dated [VERSION] heading",
+    )
     parser.add_argument("--version", default=None, help="expected version for --check")
-    parser.add_argument("--dry-run", action="store_true", help="with --set: print only")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="with --set/--open-changelog: print only"
+    )
     parser.add_argument(
         "--root",
         default=str(Path(__file__).resolve().parents[1]),
@@ -220,6 +271,8 @@ def main() -> int:
     root = Path(args.root).resolve()
     if args.check:
         return check(root, args.version)
+    if args.open_changelog:
+        return open_changelog(root, args.open_changelog, args.dry_run)
     return set_version(root, args.set, args.dry_run)
 
 
