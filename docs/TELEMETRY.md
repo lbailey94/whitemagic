@@ -26,7 +26,8 @@ arbitrary content. Treat the producer's discipline as the first line.
 ## Install funnel (local layer, scope 1)
 
 `telemetry.funnel` rows are milestones, not metrics. `wm` emits them once per
-store, on-device, with no consent surface and no transmission path:
+store, on-device; scope 2 adds the explicitly consented sharing path below
+(the local layer itself needs no consent and transmits nothing):
 
 | milestone | trigger | fields |
 |---|---|---|
@@ -68,12 +69,23 @@ content-free telemetry is itself a finding and is disclosed by `preview`.
 
 ## Transport
 
-`mode: none`. `wm telemetry preview` is display-only: it reads the local
-telemetry galaxy through read-only inspection, applies the redaction pass,
-and prints the exact payload a future opt-in transmission would carry. It
-performs no network I/O and writes nothing. Any future transmission is a
-separate, explicitly authorized phase.
+`mode: opt-in` (`wm telemetry schema --json`). Nothing is sent until
+`wm telemetry enable --share` prints the exact `funnel/1` payload and a human
+confirms (non-TTY runs require the explicit `--yes` flag and still print the
+payload). `wm telemetry disable` stops sending; `wm telemetry reset-id`
+rotates the random uuidv4 install id. The local consent ledger is
+`<store-root>/funnel_share.json`; one offline envelope is spooled to
+`<store-root>/funnel_pending.json`, retried once, then dropped.
+`WM_FUNNEL_ENDPOINT` overrides the endpoint (tests/self-hosters).
 
-Scope 1 funnel records are strictly local: no transport, no consent surface,
-no install-id, and `wm telemetry status` says so in its output ("Transport:
-none — records stay on-device; no share command exists in this build").
+The envelope is content-free: install id, version/os/arch, channel (+ ref),
+first-launch timestamp, milestone names, active day offsets, and raw
+session/memory counts — no memory text, prompts, paths, hostnames, or IPs.
+The install id is an identifier; the consent text says so (2026-09-18
+decisions: raw counts and raw active-day offsets, 180-day per-install
+server retention, npm launcher forwards `WM_INSTALL_REF`).
+
+`wm telemetry preview` remains display-only: it reads the local telemetry
+galaxy through read-only inspection, applies the redaction pass, and prints
+the exact payload a transmission would carry; it performs no network I/O and
+writes nothing. Redaction also guards the funnel envelope path.

@@ -29,13 +29,29 @@ export function releaseTag(pkgVersion, env = process.env) {
 }
 
 /**
+ * Sanitize an install ref exactly as `scripts/install.sh` and the site
+ * middleware do: lowercase, `[a-z0-9_-]`, capped at 24 chars. Anything that
+ * sanitizes to empty means "no ref".
+ */
+export function sanitizeRef(raw) {
+  if (typeof raw !== "string") return "";
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 24);
+}
+
+/**
  * Environment for the spawned `wm` child. Marks the install channel so the
  * binary's local install funnel can attribute this launch (recorded
- * on-device only — scope 1 has no transport). Returns a copy: the caller's
- * environment is never mutated.
+ * on-device only). A `WM_INSTALL_REF` in the caller's environment rides the
+ * channel (`npm:<ref>`) so wrapper scripts and directory listings can tag
+ * npm installs the same way `install.sh?ref=` does.
+ * Returns a copy: the caller's environment is never mutated.
  */
 export function childEnvironment(env = process.env) {
-  return { ...env, WM_INSTALL_CHANNEL: "npm" };
+  const ref = sanitizeRef(env.WM_INSTALL_REF ?? "");
+  return { ...env, WM_INSTALL_CHANNEL: ref ? `npm:${ref}` : "npm" };
 }
 
 export function assetFor(p = platform(), a = arch()) {

@@ -1,27 +1,44 @@
 # WhiteMagic Privacy Policy
 
 **Effective Date**: 2026-08-13
+**Last updated**: 2026-09-18 (optional install funnel disclosed)
 **Version**: 9.1.9
 
 ## Summary
 
 WhiteMagic is a **local-first** memory and session-continuity server for AI
 agents. The summary is simple: your data stays on your machine. There is no
-account, no cloud backend, and no telemetry transmitted off-device. Local
-diagnostic evidence (e.g., RSI friction records) is recorded on-device and
-stays there unless you explicitly share it.
+account, no cloud backend, and no telemetry transmitted off-device by
+default. Local diagnostic evidence (e.g., RSI friction records) is recorded
+on-device and stays there unless you explicitly share it. The one optional
+form of sharing — an install-funnel activation report — is off by default and
+described below.
 
 ## What We Collect
 
 Nothing is uploaded by default. WhiteMagic does not send your data off your
 machine:
 
-- **No telemetry transmitted.** No usage statistics, crash reports, prompts,
-  memories, or analytics are sent to us or to any third party. WhiteMagic does
-  keep local diagnostic evidence on-device for its own self-observation; it
-  never leaves the machine unless you explicitly opt in to sharing.
+- **No telemetry transmitted by default.** No usage statistics, crash
+  reports, prompts, memories, or analytics are sent to us or to any third
+  party. WhiteMagic does keep local diagnostic evidence on-device for its
+  own self-observation; it never leaves the machine unless you explicitly
+  opt in to sharing (the optional install funnel below is the only such
+  path).
 - **No accounts.** There is no sign-up, no email collection, no API keys
   managed by us.
+- **Optional install funnel (off by default).** `wm telemetry enable --share`
+  prints the exact payload and requires a human confirmation before anything
+  is sent; `wm telemetry disable` stops sending immediately and
+  `wm telemetry reset-id` rotates the identifier. When enabled, the payload
+  (`funnel/1`) is: a random install id (uuidv4, not derived from hardware or
+  network), product version, OS, CPU architecture, install channel and
+  optional ref, the first-launch timestamp, milestone names
+  (`first_launch`, `init_ok`, `first_memory`, `first_resume`, `active_dN`),
+  active day offsets, and raw session/memory counts. It carries no memory
+  text, prompts, session content, file paths, hostnames, usernames, or IPs.
+  The install id is an identifier; it is rotatable and the server expires
+  per-install records after 180 days. All other telemetry stays on-device.
 - **Update checks are the only default outbound request.** `wm grimoire` and
   `wm update check` fetch a public, static release manifest; no identifiers,
   memories, or usage data are attached. All other outbound requests happen

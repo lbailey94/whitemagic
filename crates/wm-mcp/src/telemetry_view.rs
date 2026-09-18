@@ -32,8 +32,22 @@ pub fn schema_json() -> Value {
     json!({
         "schema_version": SCHEMA_VERSION,
         "transport": {
-            "mode": "none",
-            "detail": "Records stay on-device. No transmission path exists in this build; `wm telemetry preview` is display-only.",
+            "mode": "opt-in",
+            "detail": "Nothing is sent until `wm telemetry enable --share` prints the exact funnel/1 payload and a human confirms. `wm telemetry disable` stops sending; `wm telemetry reset-id` rotates the install id. One offline envelope is spooled and retried once.",
+            "envelope": {
+                "schema": "funnel/1",
+                "fields": [
+                    "install_id (random uuidv4, rotatable)",
+                    "version", "os", "arch",
+                    "channel (install_sh|binary|npm|docker|cargo|source|unknown) + optional ref",
+                    "first_launch (RFC 3339 timestamp)",
+                    "milestones (first_launch|init_ok|first_memory|first_resume|active_dN)",
+                    "active_days (day offsets)",
+                    "counts { sessions, memories }",
+                ],
+                "excludes": "memory text, prompts, session content, file paths, hostnames, usernames, IPs — the install_id is an identifier and the consent text says so",
+                "endpoint": "https://www.whitemagic.dev/api/funnel",
+            },
         },
         "content_posture": "content-free by producer convention: records carry timestamps, metric names/values, policy identity, and harmony dimensions. The typed path does not enforce a field allowlist, so a caller could add extra keys; preview applies credential redaction but does not strip paths or arbitrary content",
         "redaction": {
@@ -111,7 +125,9 @@ pub fn schema_lines() -> Vec<String> {
             .to_string(),
         "deletes windows/rollups only — reset funnel evidence explicitly).".to_string(),
         String::new(),
-        "Transport: none — display-only until an explicit opt-in phase exists.".to_string(),
+        "Transport: opt-in — nothing is sent until `wm telemetry enable --share` prints the".to_string(),
+        "exact funnel/1 payload and a human confirms; disable stops sending, reset-id rotates".to_string(),
+        "the install id. One offline envelope is spooled and retried once, then dropped.".to_string(),
         format!(
             "Install funnel: wm telemetry status shows local activation evidence; {}",
             wm_tools::expansion::funnel::TRANSPORT_LINE
@@ -191,7 +207,7 @@ mod tests {
     #[test]
     fn schema_covers_every_record_kind_and_retention() {
         let schema = schema_json();
-        assert_eq!(schema["transport"]["mode"], "none");
+        assert_eq!(schema["transport"]["mode"], "opt-in");
         for kind in RECORD_KINDS {
             assert!(
                 schema["records"]
@@ -225,9 +241,10 @@ mod tests {
             status["transport"]
                 .as_str()
                 .unwrap_or("")
-                .contains("no share command exists"),
+                .contains("opt-in"),
             "the CLI status must disclose the transport posture: {status}"
         );
+        assert_eq!(status["share"]["enabled"], false);
     }
 
     #[test]

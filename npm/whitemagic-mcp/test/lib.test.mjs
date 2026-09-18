@@ -16,6 +16,7 @@ import {
   childEnvironment,
   ensureBinary,
   releaseTag,
+  sanitizeRef,
 } from "../bin/lib.mjs";
 
 const TAG = "v9.9.9";
@@ -65,6 +66,26 @@ test("childEnvironment marks the npm install channel without mutating the caller
   assert.notEqual(child, base, "returns a copy");
   // The npm launcher always tells the truth about its own channel.
   assert.equal(childEnvironment({ WM_INSTALL_CHANNEL: "docker" }).WM_INSTALL_CHANNEL, "npm");
+});
+
+test("childEnvironment forwards a sanitized install ref through the channel", () => {
+  assert.equal(childEnvironment({ WM_INSTALL_REF: "Glama" }).WM_INSTALL_CHANNEL, "npm:glama");
+  assert.equal(
+    childEnvironment({ WM_INSTALL_REF: "pulse!!mcp" }).WM_INSTALL_CHANNEL,
+    "npm:pulsemcp",
+  );
+  assert.equal(
+    childEnvironment({ WM_INSTALL_REF: "a".repeat(40) }).WM_INSTALL_CHANNEL,
+    `npm:${"a".repeat(24)}`,
+    "refs are capped like the installer and site middleware",
+  );
+  assert.equal(
+    childEnvironment({ WM_INSTALL_REF: "!!!" }).WM_INSTALL_CHANNEL,
+    "npm",
+    "an unsalvageable ref degrades to the bare channel",
+  );
+  assert.equal(sanitizeRef("Smithery_2"), "smithery_2");
+  assert.equal(sanitizeRef(undefined), "");
 });
 
 test("ensureBinary downloads, verifies, and caches", async () => {

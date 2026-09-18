@@ -3,6 +3,7 @@
 //! Entry point for the `WhiteMagic` v5 CLI tool.
 
 use clap::{Parser, Subcommand};
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 /// Open the server for `wm serve`. Read-only operation is intentionally a
@@ -645,6 +646,32 @@ enum TelemetryCommands {
         /// Machine-readable JSON
         #[arg(long)]
         json: bool,
+    },
+    /// Opt in to sharing the local install funnel — prints the exact funnel/1
+    /// payload first; nothing is sent without that confirmation
+    Enable {
+        /// The explicit opt-in signal (required: consent must be deliberate)
+        #[arg(long)]
+        share: bool,
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Skip the interactive confirmation (non-TTY scripts; the payload
+        /// is still printed)
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Stop sending the install funnel (local milestone recording continues)
+    Disable {
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Rotate the install id (the old id is retired)
+    ResetId {
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
     },
 }
 
@@ -2085,6 +2112,111 @@ fn run() -> anyhow::Result<()> {
                     println!();
                 }
                 println!("{}", serde_json::to_string_pretty(&payload)?);
+            }
+            TelemetryCommands::Enable { share, store, yes } => {
+                if !share {
+                    eprintln!(
+                        "Refusing to enable: pass --share to opt in (consent must be deliberate). Nothing was sent."
+                    );
+                    return Ok(());
+                }
+                let store_path = store.unwrap_or_else(default_store_path);
+                let mut share = wm_tools::expansion::funnel_share::read_share(&store_path);
+                if share.install_id.is_none() {
+                    share.install_id = Some(wm_tools::expansion::funnel_share::new_install_id());
+                }
+                let state =
+                    wm_tools::expansion::funnel::read_state(&store_path).unwrap_or_default();
+                let counts = wm_memory::MemoryStore::open_inspection(store_path.join("lmdb"))
+                    .map(|opened| wm_tools::expansion::funnel_share::local_counts(&opened))
+                    .unwrap_or_default();
+                let Some(envelope) = wm_tools::expansion::funnel_share::build_envelope(
+                    &store_path,
+                    &state,
+                    &share,
+                    counts,
+                ) else {
+                    eprintln!("Could not build the funnel/1 payload (no install id).");
+                    return Ok(());
+                };
+                println!("=== Install-funnel sharing (opt-in) ===");
+                println!("This is the exact payload sent when milestones change:");
+                println!("{}", serde_json::to_string_pretty(&envelope)?);
+                println!();
+                println!("Content-free: no memory text, prompts, paths, hostnames, or IPs. The");
+                println!("install_id is a random identifier — `wm telemetry reset-id` rotates it,");
+                println!("`wm telemetry disable` stops sending.");
+                println!(
+                    "Endpoint: {}",
+                    wm_tools::expansion::funnel_share::endpoint()
+                );
+                let confirmed = if yes {
+                    true
+                } else if std::io::stdin().is_terminal() {
+                    print!("Type 'yes' to opt in: ");
+                    std::io::Write::flush(&mut std::io::stdout())?;
+                    let mut line = String::new();
+                    std::io::stdin().read_line(&mut line)?;
+                    line.trim().eq_ignore_ascii_case("yes")
+                } else {
+                    eprintln!(
+                        "Refusing to enable from a non-interactive shell without --yes: an agent may not consent for a human."
+                    );
+                    return Ok(());
+                };
+                if !confirmed {
+                    println!("Not enabled — nothing was sent.");
+                    return Ok(());
+                }
+                let enabled = wm_tools::expansion::funnel_share::enable_with(
+                    &store_path,
+                    share.install_id.take(),
+                )?;
+                let Some(envelope) = wm_tools::expansion::funnel_share::build_envelope(
+                    &store_path,
+                    &state,
+                    &enabled,
+                    counts,
+                ) else {
+                    return Ok(());
+                };
+                let result = wm_tools::expansion::funnel_share::send_envelope(
+                    &store_path,
+                    &envelope,
+                    &wm_tools::expansion::funnel_share::UreqPoster,
+                );
+                if result == "ok" {
+                    println!("Sharing enabled — first payload sent.");
+                } else {
+                    println!(
+                        "Sharing enabled — first send did not complete ({result}); the payload is spooled and retried once on the next launch."
+                    );
+                }
+                if let Some(id) = enabled.install_id.as_deref() {
+                    println!("Install id: {id}");
+                }
+            }
+            TelemetryCommands::Disable { store } => {
+                let store_path = store.unwrap_or_else(default_store_path);
+                let state = wm_tools::expansion::funnel_share::disable(&store_path)?;
+                println!("Install-funnel sharing disabled. No further payloads will be sent.");
+                println!("Local milestone recording continues (WM_FUNNEL_DISABLED=1 stops that too).");
+                if let Some(id) = state.install_id.as_deref() {
+                    println!("Install id retained: {id} (rotate with `wm telemetry reset-id`)");
+                }
+            }
+            TelemetryCommands::ResetId { store } => {
+                let store_path = store.unwrap_or_else(default_store_path);
+                let previous =
+                    wm_tools::expansion::funnel_share::read_share(&store_path).install_id;
+                let state = wm_tools::expansion::funnel_share::reset_id(&store_path)?;
+                println!("Install id rotated — the previous id is retired.");
+                if let Some(previous) = previous {
+                    println!("Previous: {previous}");
+                }
+                if let Some(next) = state.install_id.as_deref() {
+                    println!("Current:  {next}");
+                }
             }
         },
         Commands::Polyglot => {

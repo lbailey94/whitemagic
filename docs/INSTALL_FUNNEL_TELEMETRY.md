@@ -3,9 +3,16 @@
 **Status**: scope 1 (local funnel layer) implemented 2026-09-18 — typed
 `telemetry.funnel` milestones, `<store-root>/funnel_state.json`,
 `<store-root>/install_channel`, `install.sh --ref`, npm/docker channel
-markers, and the read-only `wm telemetry status`. Scope 2 (consent surface,
-transport, install-id) remains design; **no transmission path exists in this
-build**.
+markers, and the read-only `wm telemetry status`. **Scope 2 (consent
+surface, transport, install-id) implemented 2026-09-18 evening**:
+`wm telemetry enable --share` / `disable` / `reset-id`,
+`<store-root>/funnel_share.json`, the `funnel/1` envelope over
+`POST https://www.whitemagic.dev/api/funnel`, and a one-envelope spool
+(`funnel_pending.json`, retried once then dropped). Lucas's decisions,
+recorded 2026-09-18: **raw** session/memory counts, **raw** active-day
+offsets, 180-day per-install-id server retention, npm launcher forwards
+`WM_INSTALL_REF`. Local milestones remain on-device either way;
+`PRIVACY_POLICY.md` carries the disclosure.
 **Related**: `wm telemetry schema` / `wm telemetry status` / `wm telemetry
 preview` (P1/P2, 2026-09-15/18), `docs/TELEMETRY.md`,
 `docs/EDGE_GALAXY_TELEMETRY.md`, site `lib/analytics.ts`,
@@ -83,13 +90,14 @@ No install-id is needed locally — records are per-store. `wm telemetry
 status` (`--store`, `--json`) shows the local funnel read-only, even with no
 store.
 
-### 2. Opt-in sharing (the part that needs a decision)
+### 2. Opt-in sharing (implemented 2026-09-18)
 
-Commands:
+Commands (live):
 
 - `wm telemetry status` — local funnel counts + share state;
-- `wm telemetry enable --share` — human-facing; prints `wm telemetry
-  preview` first and requires confirmation;
+- `wm telemetry enable --share` — human-facing; prints the exact `funnel/1`
+  payload and requires typed `yes` (non-TTY requires `--yes` and still
+  prints the payload: an agent may not consent for a human);
 - `wm telemetry disable` — immediate, stops all further sends;
 - `wm telemetry reset-id` — rotates the install-id (old one retired).
 
@@ -120,15 +128,17 @@ Transport: HTTPS POST to `https://www.whitemagic.dev/api/funnel`
 best-effort, never on the critical path. Offline: one pending envelope is
 spooled and retried once, then dropped. The server aggregates per day and
 keeps day-keyed actives per install-id (so d2/d7 can be computed); it
-stores no raw IPs. Retention: 180 days.
+stores no raw IPs. Retention: 180 days per install-id (per-day aggregates
+outlive the id records). `WM_FUNNEL_ENDPOINT` overrides the endpoint for
+tests and self-hosters.
 
 ### 3. Disclosure updates (required with the transport)
 
-- `PRIVACY_POLICY.md`: new "optional install funnel" section with the
-  envelope above.
-- Site FAQ + `/whitemagic`: "no telemetry off-device by default" stays
-  true; add the opt-in description.
-- `wm telemetry schema`: transport becomes `opt-in`, envelope documented.
+- `PRIVACY_POLICY.md`: "optional install funnel (off by default)" bullet
+  with the envelope above — done 2026-09-18.
+- Site copy: `WM_TELEMETRY_POLICY.full` names the opt-in path; "no telemetry
+  off-device by default" stays true.
+- `wm telemetry schema`: transport is `opt-in` with the envelope documented.
 
 ## Non-goals
 
@@ -145,21 +155,20 @@ stores no raw IPs. Retention: 180 days.
    `WM_INSTALL_REF`), npm/docker channel markers, `wm telemetry status`, and
    the `Installed via` line in `wm status`. Read-only/preservation servers
    write nothing; `WM_FUNNEL_DISABLED=1` disables emission.
-2. **Consent surface + transport + site endpoint + docs updates — not
-   implemented** (scope 2; requires the explicit opt-in decision below).
+2. **Consent surface + transport + site endpoint + docs updates — done
+   2026-09-18**: `funnel_share.rs` (consent ledger, `funnel/1` envelope,
+   spooled one-shot retry), CLI enable/disable/reset-id, site
+   `/api/funnel` ingest (strict allowlist, 180 d), npm ref pass-through,
+   privacy + schema disclosures.
 3. **First analysis** once a meaningful number of install-ids exists, with
-   a pre-registered read (activation rate by channel, d2/d7) — blocked on
-   step 2, but the local milestone ledger already supports on-device reads
-   via `wm telemetry status`.
+   a pre-registered read (activation rate by channel, d2/d7) — unblocked;
+   the local milestone ledger additionally supports on-device reads via
+   `wm telemetry status`.
 
-## Open questions for Lucas
+## Decisions (resolved 2026-09-18)
 
-1. Counts: bucketed (`1-5`, `6-50`, `50+`) or raw integers? Bucketing is
-   more private, less useful. (Scope 2 — local layer stores no counts.)
-2. Day actives: local scope 1 records one `active_dN` milestone per offset
-   (`day_offset` field); the scope-2 envelope can still choose `active_days`
-   vs only `d2`/`d7` booleans.
-3. Server retention 180 days — enough?
-4. Should the npm launcher pass an install ref through? Scope 1 answer: the
-   launcher sets `WM_INSTALL_CHANNEL=npm` only; refs stay install.sh-side
-   until a scope-2 decision.
+1. Counts: **raw integers** (engaged installs need the resolution).
+2. Day actives: **raw `active_days` offsets** alongside milestones.
+3. Server retention: **180 days per install-id** (aggregates outlive it).
+4. npm launcher: **forwards `WM_INSTALL_REF`** through the channel
+   (`npm:<ref>`, sanitized to the installer/middleware rule).

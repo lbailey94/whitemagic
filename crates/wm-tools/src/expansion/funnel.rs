@@ -7,8 +7,10 @@
 //! `<store-root>/funnel_state.json` (atomic rename on write, mirroring
 //! `profile_contract.json` / `landlock_state.json`).
 //!
-//! Scope 1 only: no transport, no consent surface, no install-id. Nothing
-//! leaves the device; `wm telemetry status` is display-only and read-only.
+//! Scope 1 records locally; scope 2 (`funnel_share`) adds the explicit
+//! opt-in transmission path (`wm telemetry enable --share`, `funnel/1`
+//! envelope). Nothing leaves the device without that consent;
+//! `wm telemetry status` stays read-only.
 //!
 //! - `record_launch` — first writable server init on a store: `first_launch`,
 //!   `init_ok`, and `active_dN` for calendar day N ≥ 1 after the first launch
@@ -38,6 +40,7 @@ use wm_memory::MemoryQuery;
 use wm_memory::MemoryStore;
 use wm_memory::search::SearchEngine;
 
+use super::funnel_share;
 use super::telemetry_tools;
 
 /// Record kind for funnel milestone rows.
@@ -58,8 +61,7 @@ pub const M_FIRST_MEMORY: &str = "first_memory";
 pub const M_FIRST_RESUME: &str = "first_resume";
 
 /// Transport disclosure shared by the CLI status output and the schema text.
-pub const TRANSPORT_LINE: &str =
-    "none — records stay on-device; no share command exists in this build";
+pub const TRANSPORT_LINE: &str = "opt-in — nothing is sent until `wm telemetry enable --share` prints the exact payload and a human confirms";
 
 /// Installation channel vocabulary — identical to the site's
 /// `INSTALL_CHANNELS` set.
@@ -538,6 +540,7 @@ pub fn record_launch(
     if let Err(e) = save_state(store_root, &state) {
         tracing::warn!(error = %e, "funnel state could not be persisted");
     }
+    funnel_share::maybe_spawn(store_root, &state, funnel_share::local_counts(store));
     emitted
 }
 
@@ -590,6 +593,7 @@ pub fn record_tool_milestone(
         if let Err(e) = save_state(store_root, &state) {
             tracing::warn!(error = %e, "funnel state could not be persisted");
         }
+        funnel_share::maybe_spawn(store_root, &state, funnel_share::local_counts(store));
         usize::from(!deduplicated)
     } else {
         0
@@ -638,6 +642,7 @@ pub fn status_report(store_root: &Path) -> Value {
         channel_ref = reference;
     }
 
+    let share = funnel_share::read_share(store_root);
     json!({
         "status": "success",
         "read_only": true,
@@ -650,6 +655,14 @@ pub fn status_report(store_root: &Path) -> Value {
         "active_days": active_days,
         "state_file": state.is_some(),
         "transport": TRANSPORT_LINE,
+        "share": {
+            "enabled": share.enabled,
+            "install_id": share.install_id,
+            "enabled_at": share.enabled_at,
+            "last_sent_at": share.last_sent_at,
+            "last_result": share.last_result,
+            "pending": store_root.join(funnel_share::PENDING_FILE).exists(),
+        },
     })
 }
 
@@ -919,9 +932,10 @@ mod tests {
         assert_eq!(report["first_launch"], Value::Null);
         assert_eq!(report["state_file"], false);
         assert!(
-            report["transport"].as_str().unwrap().starts_with("none"),
+            report["transport"].as_str().unwrap().starts_with("opt-in"),
             "transport posture must be disclosed: {report}"
         );
+        assert_eq!(report["share"]["enabled"], false, "opt-in by default");
         assert!(
             !root.join("lmdb").exists(),
             "status must not create the store"
