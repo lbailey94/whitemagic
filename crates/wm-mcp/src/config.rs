@@ -853,6 +853,58 @@ llama_endpoint = "http://localhost:8080"
         assert_eq!(cfg.daemon.cycle_interval_secs, 300);
     }
 
+    /// 9.1.9 tester finding: `--sample-full` must contain the research
+    /// surface the changelog promises — hemispheres, cloud LLM, and the
+    /// daemon/dream/RSI/self-play schedules. Parsed through `WmConfig` so
+    /// the test pins live settings, not just prose.
+    #[test]
+    fn sample_full_json_contains_research_sections() {
+        let full = WmConfig::sample_toml_full();
+        let cfg: WmConfig = toml::from_str(&full).unwrap();
+        let json = serde_json::to_value(&cfg).unwrap();
+
+        // Cloud LLM (right hemisphere) is wired, not commented out.
+        assert_eq!(
+            json["llm"]["llm_endpoint"],
+            "https://api.openai.com/v1/chat/completions"
+        );
+        assert_eq!(json["llm"]["llm_model"], "gpt-4o-mini");
+        assert!(json["llm"]["llm_api_key"].is_string());
+        // Local llama.cpp (left hemisphere) + embedder.
+        assert_eq!(json["llm"]["llama_endpoint"], "http://localhost:8080");
+        assert_eq!(json["embedder"]["endpoint"], "http://localhost:8080");
+        // Daemon schedules: dream, research, self-play, RSI codegen.
+        assert_eq!(json["daemon"]["dream_interval_secs"], 600);
+        assert_eq!(json["daemon"]["research_interval_secs"], 0);
+        assert_eq!(json["daemon"]["selfplay_interval_secs"], 0);
+        assert_eq!(json["daemon"]["codegen_interval_secs"], 0);
+        // Hemisphere material is documented in the sample text.
+        assert!(
+            full.contains("left hemisphere") && full.contains("right hemisphere"),
+            "full sample must explain the hemisphere split: {full}"
+        );
+    }
+
+    #[test]
+    fn small_sample_json_excludes_research_sections() {
+        let small = WmConfig::sample_toml();
+        let cfg: WmConfig = toml::from_str(&small).unwrap();
+        let json = serde_json::to_value(&cfg).unwrap();
+        // Every research setting is absent/commented: parsing only yields
+        // defaults, and the text never wires a model server.
+        assert!(json["llm"]["llama_endpoint"].is_null());
+        assert!(json["llm"]["llm_api_key"].is_null());
+        assert!(json["embedder"]["endpoint"].is_null());
+        assert!(
+            !small.contains("[daemon]"),
+            "small sample adds no schedules"
+        );
+        assert!(
+            !small.contains("left hemisphere"),
+            "small sample adds no research prose (it only points at --sample-full)"
+        );
+    }
+
     #[test]
     fn store_path_uses_config_when_set() {
         let cfg = WmConfig {

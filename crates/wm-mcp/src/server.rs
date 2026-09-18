@@ -260,11 +260,18 @@ impl McpServer {
         }
 
         if self.loop_count >= LOOP_ESCALATION_THRESHOLD {
+            // The fingerprint is (tool, error text), NOT the arguments — say
+            // so. Different arguments that fail the same way (whitespace/NUL/
+            // control-heavy payloads rejected by the same gate) still trip
+            // this counter, and telling the caller "this exact call" was a
+            // lie (9.1.9 tester finding).
             format!(
-                "{error} ⚠ RETRY LOOP: this exact call has failed {} times in a row — \
-                 retrying unchanged will not change the outcome. Stop; diagnose instead \
-                 (bash: `wm doctor --store <store-path>`, check whether the MCP server \
-                 process is still alive), fix the cause, or take a different approach.",
+                "{error} ⚠ RETRY LOOP: tool '{tool}' returned this same error {} times in a \
+                 row (fingerprint: route + error text — arguments are not part of it). \
+                 Repeating the call — even with different arguments that fail the same way — \
+                 will not change the outcome. Stop; diagnose instead (bash: \
+                 `wm doctor --store <store-path>`, check whether the MCP server process is \
+                 still alive), fix the cause, or take a different approach.",
                 self.loop_count
             )
         } else {
@@ -5222,6 +5229,46 @@ mod tests {
                 "different failure must not inherit escalation, got: {msg}"
             );
         }
+    }
+
+    /// 9.1.9 tester finding: different arguments (whitespace/NUL/control-
+    /// heavy payloads) tripped the loop counter and the warning claimed
+    /// "this exact call". The fingerprint is (tool, error text) — the
+    /// escalation must say that instead.
+    #[tokio::test]
+    async fn loop_warning_names_the_route_and_error_not_arguments() {
+        let mut server = test_server();
+        server.readonly = true;
+        let call = |id: i32, title: &str| RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(id)),
+            method: "tools/call".into(),
+            params: json!({
+                "name": "wm",
+                "arguments": {"route": "session.start", "args": {"title": title}}
+            }),
+        };
+
+        let mut last = String::new();
+        for (id, title) in [(1, "payload A"), (2, "payload B"), (3, "payload C")] {
+            let resp = server.handle(&call(id, title)).await;
+            let payload: Value =
+                serde_json::from_str(resp.result.unwrap()["content"][0]["text"].as_str().unwrap())
+                    .unwrap();
+            last = payload["error"].as_str().unwrap().to_string();
+        }
+        assert!(
+            last.contains("RETRY LOOP") && last.contains("3 times"),
+            "third same-error failure must escalate, got: {last}"
+        );
+        assert!(
+            !last.contains("this exact call"),
+            "the fingerprint excludes arguments — the warning must not claim otherwise: {last}"
+        );
+        assert!(
+            last.contains("session.start") && last.contains("arguments are not part of it"),
+            "the warning must name what is actually fingerprinted: {last}"
+        );
     }
 
     #[tokio::test]

@@ -3,9 +3,11 @@
 //! Assembles a shareable-by-choice snapshot of system state for support:
 //! version/platform, store health counts, index-drift state, selftest
 //! results, and a safe env-knob allowlist. Deliberately EXCLUDED: memory
-//! content, queries, credentials, raw paths (the home directory is collapsed
-//! to `~`), and anything outside the allowlist. Nothing is transmitted —
-//! the bundle is written locally and the operator decides whether to share.
+//! content, queries, credentials, raw paths (the store root becomes
+//! `<store>` — keeping its relative shape, the home directory `~`, and every
+//! other absolute path `<path>`), and anything outside the allowlist.
+//! Nothing is transmitted — the bundle is written locally and the operator
+//! decides whether to share.
 
 use std::path::{Path, PathBuf};
 
@@ -53,6 +55,127 @@ pub fn sanitize_text(text: &str) -> String {
     redacted
 }
 
+/// True for characters that can appear inside a filesystem path token.
+fn is_path_char(c: char) -> bool {
+    !c.is_whitespace()
+        && !matches!(
+            c,
+            '"' | '\''
+                | '`'
+                | '('
+                | ')'
+                | '['
+                | ']'
+                | '{'
+                | '}'
+                | '<'
+                | '>'
+                | ','
+                | ';'
+                | ':'
+                | '='
+                | '|'
+        )
+}
+
+/// Replace absolute filesystem paths with `<path>` while preserving URL
+/// scheme slashes (`https://…`), the home shorthand (`~/…`), and the
+/// relative tail of an already-substituted `<store>` prefix.
+#[must_use]
+pub fn scrub_absolute_paths(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while !rest.is_empty() {
+        // Keep `<store>` and the relative shape that follows it, so a store
+        // subpath reports as `<store>/lmdb` instead of an opaque `<path>`.
+        if let Some(tail) = rest.strip_prefix("<store>") {
+            out.push_str("<store>");
+            let keep = tail
+                .char_indices()
+                .find(|(_, c)| !is_path_char(*c))
+                .map_or(tail.len(), |(i, _)| i);
+            out.push_str(&tail[..keep]);
+            rest = &tail[keep..];
+            continue;
+        }
+        // Windows drive paths (`C:\Users\…`). The drive letter must start a
+        // token — otherwise the tail of a URL scheme (`https://…`) reads as
+        // `s:/…`.
+        let bytes = rest.as_bytes();
+        let at_token_start = out
+            .chars()
+            .next_back()
+            .is_none_or(|prev| !prev.is_alphanumeric());
+        if at_token_start
+            && bytes.len() >= 3
+            && bytes[0].is_ascii_alphabetic()
+            && bytes[1] == b':'
+            && matches!(bytes[2], b'\\' | b'/')
+        {
+            let keep = rest
+                .char_indices()
+                .skip(3)
+                .find(|(_, c)| !is_path_char(*c))
+                .map_or(rest.len(), |(i, _)| i);
+            out.push_str("<path>");
+            rest = &rest[keep..];
+            continue;
+        }
+        let c = rest.chars().next().expect("rest is non-empty");
+        let starts_path = c == '/'
+            && !rest.starts_with("//")
+            && out.chars().next_back().is_none_or(|prev| {
+                !prev.is_alphanumeric() && !matches!(prev, '_' | '~' | '.' | '/')
+            });
+        if starts_path {
+            let keep = rest
+                .char_indices()
+                .skip(1)
+                .find(|(_, c)| !is_path_char(*c))
+                .map_or(rest.len(), |(i, _)| i);
+            out.push_str("<path>");
+            rest = &rest[keep..];
+            continue;
+        }
+        out.push(c);
+        rest = &rest[c.len_utf8()..];
+    }
+    out
+}
+
+/// Sanitize one report string: the store root first (before the home
+/// collapse, so a store inside HOME still becomes `<store>`), then HOME,
+/// credentials, and any remaining absolute path.
+fn sanitize_report_text(text: &str, store_root: &Path) -> String {
+    let root = store_root.to_string_lossy();
+    let replaced = if root.len() > 1 {
+        text.replace(root.as_ref(), "<store>")
+    } else {
+        text.to_string()
+    };
+    scrub_absolute_paths(&sanitize_text(&replaced))
+}
+
+/// Apply [`sanitize_report_text`] to every string in the report tree — a
+/// path that rides in through an error message or a future field cannot
+/// escape on the way to the bundle.
+fn sanitize_report_value(value: &mut Value, store_root: &Path) {
+    match value {
+        Value::String(s) => *s = sanitize_report_text(s, store_root),
+        Value::Array(items) => {
+            for item in items {
+                sanitize_report_value(item, store_root);
+            }
+        }
+        Value::Object(map) => {
+            for item in map.values_mut() {
+                sanitize_report_value(item, store_root);
+            }
+        }
+        Value::Null | Value::Bool(_) | Value::Number(_) => {}
+    }
+}
+
 fn env_posture() -> Value {
     let mut map = serde_json::Map::new();
     for key in ENV_ALLOWLIST {
@@ -94,9 +217,9 @@ pub async fn build(store_root: &Path) -> Value {
                 })).collect::<Vec<_>>(),
             })
         }
-        Err(err) => json!({"error": sanitize_text(&err.to_string())}),
+        Err(err) => json!({"error": err.to_string()}),
     };
-    json!({
+    let mut report = json!({
         "kind": "whitemagic-support-report",
         "format_version": 1,
         "generated_at": chrono::Utc::now().to_rfc3339(),
@@ -108,7 +231,7 @@ pub async fn build(store_root: &Path) -> Value {
         },
         "profile": status.profile,
         "store": {
-            "display_path": sanitize_text(&status.store_path),
+            "display_path": status.store_path,
             "store_ok": status.store_ok,
             "memories": status.memories,
             "sessions": status.sessions,
@@ -116,7 +239,7 @@ pub async fn build(store_root: &Path) -> Value {
             "index_memories": status.index_memories,
             "index_drift": status.index_drift,
             "index_skip_reserve": status.index_skip_reserve,
-            "index_detail": status.index_detail.as_deref().map(sanitize_text),
+            "index_detail": status.index_detail,
         },
         "backup": {
             "last_backup": status.last_backup,
@@ -130,10 +253,12 @@ pub async fn build(store_root: &Path) -> Value {
         "excluded": [
             "memory content and queries",
             "credentials and tokens",
-            "raw filesystem paths (HOME collapsed to ~)",
+            "raw filesystem paths (store root -> <store>, HOME -> ~, other absolute paths -> <path>)",
             "environment variables outside the allowlist",
         ],
-    })
+    });
+    sanitize_report_value(&mut report, store_root);
+    report
 }
 
 const README: &str = "\
@@ -147,8 +272,10 @@ What this is
 
 What was deliberately excluded
   Memory content and queries, credentials and tokens (a redaction pass runs
-  over every string), the home directory (collapsed to ~ — paths outside HOME
-  may still appear), and any environment variable outside the allowlist.
+  over every string), and every raw filesystem path: the store root is
+  replaced by <store> (subpaths keep their relative shape, e.g.
+  <store>/lmdb), the home directory by ~, and any other absolute path by
+  <path>. Environment variables outside the allowlist are not included.
 
 Sharing
   Nothing has been transmitted. Read report.json, then share it (or not) —
@@ -201,6 +328,66 @@ mod tests {
                 "raw home path must be collapsed to ~: {text}"
             );
         }
+    }
+
+    /// The scrubber keeps URL schemes, `~` shorthand, and `<store>` relative
+    /// tails while replacing every other absolute path.
+    #[test]
+    fn scrub_absolute_paths_replaces_roots_and_keeps_shapes() {
+        let text = "index <store>/lmdb/tantivy failed; error at /mnt/private/client-A/x.sqlite: \
+                    disk full; see https://example.com/a/b and ~/notes; win C:\\Users\\client-A\\cfg";
+        assert_eq!(
+            scrub_absolute_paths(text),
+            "index <store>/lmdb/tantivy failed; error at <path>: \
+             disk full; see https://example.com/a/b and ~/notes; win <path>"
+        );
+    }
+
+    /// P1 privacy regression (9.1.9 tester): a store at a hostile path —
+    /// deep, spaces, unicode, a private client name — must not leak any raw
+    /// path substring, and the `<store>` placeholder must be present.
+    #[tokio::test]
+    async fn report_never_leaks_hostile_store_paths() {
+        let tmp = tempfile::tempdir().unwrap();
+        let hostile = tmp
+            .path()
+            .join("private-client-A")
+            .join("クライアント ストア")
+            .join("deep path with spaces");
+        let store = wm_memory::MemoryStore::open_default(hostile.join("lmdb")).unwrap();
+        let mem = wm_memory::Memory::new(Galaxy::Codex, "hostile path probe".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let report = build(&hostile).await;
+        let text = serde_json::to_string_pretty(&report).unwrap();
+        for needle in [
+            hostile.display().to_string(),
+            "private-client-A".to_string(),
+            "クライアント".to_string(),
+            tmp.path().display().to_string(),
+        ] {
+            assert!(
+                !text.contains(&needle),
+                "raw path fragment {needle:?} leaked into the report: {text}"
+            );
+        }
+        assert!(
+            text.contains("<store>"),
+            "sanitized <store> placeholder missing: {text}"
+        );
+        // Every JSON string is free of an absolute path.
+        fn assert_clean(value: &Value) {
+            match value {
+                Value::String(s) => {
+                    assert!(!s.starts_with('/'), "absolute path escaped: {s:?}");
+                    assert!(!s.contains(":/"), "absolute path escaped: {s:?}");
+                }
+                Value::Array(items) => items.iter().for_each(assert_clean),
+                Value::Object(map) => map.values().for_each(assert_clean),
+                _ => {}
+            }
+        }
+        assert_clean(&report);
     }
 
     #[test]

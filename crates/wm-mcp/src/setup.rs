@@ -238,9 +238,52 @@ pub fn proposal(spec: &ClientSpec, exe: &Path) -> String {
     }
 }
 
-fn backup_path(path: &Path) -> PathBuf {
-    let ts = chrono::Utc::now().format("%Y%m%d%H%M%S");
-    PathBuf::from(format!("{}.bak-{ts}", path.display()))
+/// Write a timestamped backup of `path` and return the backup path.
+///
+/// Collision-safe: two mutations inside the same second must not share a
+/// name (the second used to overwrite the first). The candidate is claimed
+/// with an exclusive create (`create_new`), so a name can be taken only
+/// once; when `<path>.bak-<ts>` exists the next free `-1`, `-2`, … suffix
+/// is used. A failed copy removes the partial claim.
+fn create_backup(path: &Path) -> anyhow::Result<PathBuf> {
+    create_backup_at(path, &chrono::Utc::now().format("%Y%m%d%H%M%S").to_string())
+}
+
+/// [`create_backup`] with an explicit timestamp — the seam that lets tests
+/// pin two backups into the same second deterministically.
+fn create_backup_at(path: &Path, ts: &str) -> anyhow::Result<PathBuf> {
+    let base = format!("{}.bak-{ts}", path.display());
+    for attempt in 0u32.. {
+        let candidate = if attempt == 0 {
+            PathBuf::from(&base)
+        } else {
+            PathBuf::from(format!("{base}-{attempt}"))
+        };
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(mut dest) => {
+                let result = (|| -> std::io::Result<()> {
+                    let mut src = std::fs::File::open(path)?;
+                    std::io::copy(&mut src, &mut dest)?;
+                    let permissions = src.metadata()?.permissions();
+                    drop(src);
+                    std::fs::set_permissions(&candidate, permissions)
+                })();
+                if let Err(e) = result {
+                    let _ = std::fs::remove_file(&candidate);
+                    return Err(e.into());
+                }
+                return Ok(candidate);
+            }
+            // Name taken — fall through to the next suffix.
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(e) => return Err(e.into()),
+        }
+    }
+    unreachable!("a free backup suffix exists within u32 attempts")
 }
 
 fn ensure_parent(path: &Path) -> anyhow::Result<()> {
@@ -292,9 +335,7 @@ pub fn write_mcp_servers_json(
     servers.insert("whitemagic".to_string(), desired);
 
     let backup = if existing {
-        let bak = backup_path(&spec.config_path);
-        std::fs::copy(&spec.config_path, &bak)?;
-        Some(bak)
+        Some(create_backup(&spec.config_path)?)
     } else {
         ensure_parent(&spec.config_path)?;
         None
@@ -797,8 +838,7 @@ pub fn write_opencode_jsonc(
         anyhow::bail!("internal error: edited JSONC does not round-trip to the intended value");
     }
 
-    let backup = backup_path(&spec.config_path);
-    std::fs::copy(&spec.config_path, &backup)?;
+    let backup = create_backup(&spec.config_path)?;
     std::fs::write(&spec.config_path, &edited)?;
     let verify = std::fs::read_to_string(&spec.config_path)?;
     parse_jsonc(&verify).map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
@@ -885,9 +925,7 @@ pub fn write_codex_toml(
         .map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
 
     let backup = if existing {
-        let bak = backup_path(&spec.config_path);
-        std::fs::copy(&spec.config_path, &bak)?;
-        Some(bak)
+        Some(create_backup(&spec.config_path)?)
     } else {
         ensure_parent(&spec.config_path)?;
         None
@@ -933,8 +971,7 @@ pub fn remove(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
 }
 
 fn backup_and_write(spec: &ClientSpec, text: &str) -> anyhow::Result<PathBuf> {
-    let backup = backup_path(&spec.config_path);
-    std::fs::copy(&spec.config_path, &backup)?;
+    let backup = create_backup(&spec.config_path)?;
     std::fs::write(&spec.config_path, text)?;
     Ok(backup)
 }
@@ -1270,6 +1307,45 @@ mod tests {
             config_path: path,
             kind,
         }
+    }
+
+    /// 9.1.9 tester finding: two backups inside one second shared
+    /// `.bak-<ts>` and the second silently overwrote the first. Names are
+    /// now claimed exclusively and suffixed `-1`, `-2`, … on collision.
+    #[test]
+    fn backups_within_one_second_never_collide() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config = tmp.path().join("mcp.json");
+        std::fs::write(&config, "original").unwrap();
+
+        let ts = "20260918120000";
+        let first = create_backup_at(&config, ts).unwrap();
+        assert_eq!(
+            first.file_name().unwrap().to_string_lossy(),
+            "mcp.json.bak-20260918120000"
+        );
+        std::fs::write(&config, "mutated").unwrap();
+        let second = create_backup_at(&config, ts).unwrap();
+
+        assert_ne!(first, second, "same-second backups must not share a name");
+        assert_eq!(
+            second.file_name().unwrap().to_string_lossy(),
+            "mcp.json.bak-20260918120000-1"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&first).unwrap(),
+            "original",
+            "the first backup must survive the second"
+        );
+        assert_eq!(std::fs::read_to_string(&second).unwrap(), "mutated");
+
+        // A third collision keeps counting instead of clobbering either.
+        let third = create_backup_at(&config, ts).unwrap();
+        assert_eq!(
+            third.file_name().unwrap().to_string_lossy(),
+            "mcp.json.bak-20260918120000-2"
+        );
+        assert!(first.exists() && second.exists() && third.exists());
     }
 
     #[test]

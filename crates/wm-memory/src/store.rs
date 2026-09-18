@@ -1017,6 +1017,21 @@ impl MemoryStore {
         Ok(count)
     }
 
+    /// Count entries in a galaxy carrying a tag, using the tag index (no
+    /// record decoding). `wm status` uses this to report logical sessions
+    /// (records tagged `start`) instead of every turn/checkpoint record
+    /// stored in the Sessions galaxy.
+    pub fn count_by_tag(&self, galaxy: Galaxy, tag: &str) -> Result<usize> {
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let ids = self.index_dbs.find_by_tag(&tx, galaxy, tag)?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(ids.len())
+    }
+
     /// Clear all memories from a galaxy in a single transaction.
     /// Returns the number of entries cleared.
     /// Also removes all secondary index entries.
@@ -2621,6 +2636,32 @@ mod tests {
         }
 
         assert_eq!(store.count(Galaxy::Codex).unwrap(), 3);
+    }
+
+    /// `count_by_tag` uses the tag index and counts distinct records — the
+    /// status surface reports logical sessions with it (one `start` tag per
+    /// session, ignoring turns/checkpoints).
+    #[test]
+    fn count_by_tag_counts_indexed_records() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+        assert_eq!(store.count_by_tag(Galaxy::Sessions, "start").unwrap(), 0);
+
+        let mut start = Memory::new(Galaxy::Sessions, "{\"type\":\"session_start\"}".into());
+        start.metadata.tags = vec!["session".into(), "start".into()];
+        store.put(Galaxy::Sessions, &start).unwrap();
+        for i in 0..2 {
+            let mut turn =
+                Memory::new(Galaxy::Sessions, format!("{{\"type\":\"turn\",\"i\":{i}}}"));
+            turn.metadata.tags = vec!["session".into(), "turn".into()];
+            store.put(Galaxy::Sessions, &turn).unwrap();
+        }
+
+        assert_eq!(store.count(Galaxy::Sessions).unwrap(), 3);
+        assert_eq!(store.count_by_tag(Galaxy::Sessions, "start").unwrap(), 1);
+        assert_eq!(store.count_by_tag(Galaxy::Sessions, "turn").unwrap(), 2);
+        assert_eq!(store.count_by_tag(Galaxy::Sessions, "absent").unwrap(), 0);
     }
 
     #[test]

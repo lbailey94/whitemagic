@@ -115,6 +115,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `WM_AT_REST_MODE` fails closed; root-key and key-file read buffers are
   zeroized; funnel state rebuild queries by tag instead of a key-order cap.
 
+### Tester-report fixes (9.1.9 post-release review)
+- **`wm report` path privacy (P1):** every string in the bundle is scrubbed —
+  the store root becomes `<store>` (subpaths keep their shape, e.g.
+  `<store>/lmdb`), the home directory `~`, and any other absolute path
+  `<path>`; errors and selftest text can no longer carry a raw filesystem
+  path into a shared bundle. README/help/`excluded` wording now matches.
+- **Collision-safe backups (P2):** `wm setup`/`connect` backups are claimed
+  exclusively and suffixed `-1`, `-2`, … on a same-second collision instead
+  of overwriting the earlier backup; `wm reindex --backup` directory claims
+  follow the same rule.
+- **`wm status` sessions truth (P2):** the `Sessions` count is now logical
+  sessions (Sessions-galaxy records tagged `start`), not every
+  turn/checkpoint/end record (`count_by_tag` on the tag index).
+- **Calm fresh-install JSON (P3):** `wm status --json` reports
+  `index_detail: "not created yet (first run)"` before a store exists; an
+  initialized store with a missing index keeps the actionable
+  `missing — run 'wm reindex'`.
+- **Retry-loop wording (P3):** the escalation names the actual fingerprint
+  (route + error text, arguments excluded) instead of claiming "this exact
+  call has failed" when different arguments failed the same way.
+- **`wm config --sample-full` (DOC/CLAIM):** the flag now prints the research
+  sample (hemispheres, cloud LLM, daemon schedules) as the changelog
+  promised; previously only `--sample` was honored on the print path and
+  `--sample-full` fell through to the effective-config dump. `--init
+  --sample-full` behavior is unchanged.
+
 ## [9.1.9] — 2026-09-18 (recovery hardening, onboarding truth, continuity handoff, calm surfaces)
 
 ### Coordination truth (F3)

@@ -29,6 +29,8 @@ pub struct StatusReport {
     pub state: String,
     pub store_ok: bool,
     pub memories: u64,
+    /// Logical sessions — Sessions-galaxy records tagged `start` (one per
+    /// `session.start`), not every turn/checkpoint/end record stored there.
     pub sessions: u64,
     pub index_ok: bool,
     /// Live documents read from the Tantivy index (None when unreadable).
@@ -345,7 +347,11 @@ pub fn collect(store_root: &Path) -> StatusReport {
         for g in wm_core::Galaxy::memory_galaxies() {
             memories += store.count(g).unwrap_or(0) as u64;
         }
-        sessions = store.count(wm_core::Galaxy::Sessions).unwrap_or(0) as u64;
+        // Logical sessions, not raw Sessions-galaxy records: one
+        // `session.start` is one session; turns/checkpoints/ends are not.
+        sessions = store
+            .count_by_tag(wm_core::Galaxy::Sessions, "start")
+            .unwrap_or(0) as u64;
     }
 
     // Index health is MEASURED, not inferred from a directory existing
@@ -395,8 +401,15 @@ pub fn collect(store_root: &Path) -> StatusReport {
                 }
             }
         }
-    } else {
+    } else if initialized {
+        // A store exists but its index does not: this is repairable drift,
+        // so point at the repair.
         index_detail = Some("missing — run 'wm reindex'".to_string());
+    } else {
+        // Fresh install: no store, no index. A state, not a repair job
+        // (calm-surfaces discipline, F12) — the JSON says the same thing
+        // the human line does.
+        index_detail = Some("not created yet (first run)".to_string());
     }
     let update = read_install_json(store_root).and_then(|v| {
         let latest = v.get("latest_seen").and_then(serde_json::Value::as_str)?;
@@ -487,6 +500,84 @@ mod tests {
                 .iter()
                 .any(|l| l.contains("Search index") && l.contains("not created yet")),
             "index line must name the fresh state: {lines:?}"
+        );
+        // The machine surface must agree with the human line: a fresh install
+        // has no index to repair, so `index_detail` must not say "reindex".
+        assert_eq!(
+            r.index_detail.as_deref(),
+            Some("not created yet (first run)"),
+            "fresh JSON must not imply a broken index: {r:?}"
+        );
+        assert!(
+            !r.index_detail.as_deref().unwrap().contains("reindex"),
+            "fresh JSON must not tell the operator to repair anything"
+        );
+    }
+
+    /// 9.1.9 tester finding: `Sessions` reported every record in the
+    /// Sessions galaxy (4 for one session + two turns + a checkpoint). It
+    /// now reports logical session starts.
+    #[test]
+    fn sessions_counts_logical_starts_not_session_records() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path().join("lmdb")).unwrap();
+
+        let mut start = wm_memory::memory::Memory::new(
+            wm_core::Galaxy::Sessions,
+            "{\"type\":\"session_start\"}".into(),
+        );
+        start.metadata.tags = vec!["session".into(), "start".into()];
+        store.put(wm_core::Galaxy::Sessions, &start).unwrap();
+        for i in 0..2 {
+            let mut turn = wm_memory::memory::Memory::new(
+                wm_core::Galaxy::Sessions,
+                format!("{{\"type\":\"session_turn\",\"sequence\":{i}}}"),
+            );
+            turn.metadata.tags = vec!["session".into(), "turn".into()];
+            store.put(wm_core::Galaxy::Sessions, &turn).unwrap();
+        }
+        let mut checkpoint = wm_memory::memory::Memory::new(
+            wm_core::Galaxy::Sessions,
+            "{\"type\":\"checkpoint\"}".into(),
+        );
+        checkpoint.metadata.tags = vec!["session".into(), "checkpoint".into()];
+        store.put(wm_core::Galaxy::Sessions, &checkpoint).unwrap();
+
+        assert_eq!(store.count(wm_core::Galaxy::Sessions).unwrap(), 4);
+        let r = collect(tmp.path());
+        assert_eq!(
+            r.sessions, 1,
+            "one session start is one session, got: {r:?}"
+        );
+
+        let mut second = wm_memory::memory::Memory::new(
+            wm_core::Galaxy::Sessions,
+            "{\"type\":\"session_start\"}".into(),
+        );
+        second.metadata.tags = vec!["session".into(), "start".into()];
+        store.put(wm_core::Galaxy::Sessions, &second).unwrap();
+        assert_eq!(collect(tmp.path()).sessions, 2);
+    }
+
+    /// A store whose index is genuinely absent keeps the actionable wording.
+    #[test]
+    fn missing_index_on_initialized_store_stays_actionable() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path().join("lmdb")).unwrap();
+        let mem = wm_memory::memory::Memory::new(wm_core::Galaxy::Codex, "indexed probe".into());
+        store.put(wm_core::Galaxy::Codex, &mem).unwrap();
+        drop(store);
+        assert!(
+            !tmp.path().join("lmdb").join("tantivy").exists(),
+            "fixture must not have an index"
+        );
+
+        let r = collect(tmp.path());
+        assert_eq!(r.state, "attention");
+        assert_eq!(
+            r.index_detail.as_deref(),
+            Some("missing — run 'wm reindex'"),
+            "an initialized store with no index is repairable drift: {r:?}"
         );
     }
 

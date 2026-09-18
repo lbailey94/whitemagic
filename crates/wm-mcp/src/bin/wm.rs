@@ -2180,6 +2180,14 @@ fn run() -> anyhow::Result<()> {
                 }
                 return Ok(());
             }
+            // `--sample-full` prints the research sample (the 9.1.9 tester
+            // found it fell through to the effective-config dump because
+            // only `--sample` was checked). `--init --sample-full` is handled
+            // above — init wins when both are present.
+            if sample_full {
+                print!("{}", sample_text());
+                return Ok(());
+            }
             // No flags: show current effective config
             println!("# Effective WhiteMagic Configuration");
             println!("# (config file + env var overrides)\n");
@@ -2988,8 +2996,23 @@ fn run_reindex(
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| anyhow::anyhow!("clock error: {e}"))?
             .as_secs();
-        let backup_path = lmdb_path.join(format!("tantivy.bak.{ts}"));
-        std::fs::create_dir_all(&backup_path)?;
+        // Collision-safe: claim the directory exclusively so two reindexes
+        // in the same second cannot silently merge into one backup (the
+        // second would overwrite the first's files). On a taken name the
+        // suffix counts up: tantivy.bak.<ts>-1, -2, …
+        let mut attempt = 0u32;
+        let backup_path = loop {
+            let candidate = if attempt == 0 {
+                lmdb_path.join(format!("tantivy.bak.{ts}"))
+            } else {
+                lmdb_path.join(format!("tantivy.bak.{ts}-{attempt}"))
+            };
+            match std::fs::create_dir(&candidate) {
+                Ok(()) => break candidate,
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => attempt += 1,
+                Err(e) => return Err(e.into()),
+            }
+        };
         copy_dir(&tantivy_path, &backup_path)?;
         println!("Backup written to {}", backup_path.display());
     }
