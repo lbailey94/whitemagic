@@ -9,7 +9,7 @@ WhiteMagic gives an AI coding agent durable project memory: explicit MCP routes,
 One-line installer (resolves the latest release, verifies the checksum):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-llms | sh
 ```
 
 Or download the binary from the [latest release](https://github.com/lbailey94/whitemagic/releases), verify with `sha256sum -c`, and move it to `~/.local/bin/wm`.
