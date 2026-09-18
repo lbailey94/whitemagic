@@ -56,7 +56,6 @@ FORBIDDEN_PATHS=(
     "docs/MCP_REGISTRY_LISTING.md"
     "docs/MIGRATION.md"
     "docs/MODEL_GUIDE.md"
-    "docs/MULTI_PROJECT_MEMORY.md"
     "docs/OPERATIONS.md"
     "docs/OWASP_LLM_TOP10_MAPPING.md"
     "docs/PET_HARDENING.md"
