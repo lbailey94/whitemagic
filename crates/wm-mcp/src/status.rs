@@ -23,6 +23,10 @@ const INSPECTION_OPEN_TIMEOUT: Duration = Duration::from_secs(5);
 pub struct StatusReport {
     pub version: String,
     pub store_path: String,
+    /// `not_initialized` (fresh install — no store yet), `ready`, or
+    /// `attention`. A fresh install is a state, not a failure: it must not
+    /// read as `needs attention` / `DEGRADED` (review round 2).
+    pub state: String,
     pub store_ok: bool,
     pub memories: u64,
     pub sessions: u64,
@@ -69,22 +73,33 @@ impl StatusReport {
     /// Human-readable lines (no ANSI; the CLI adds presentation).
     #[must_use]
     pub fn lines(&self) -> Vec<String> {
-        let ready = self.store_ok && self.index_ok;
+        let initialized = self.state != "not_initialized";
+        let ready = initialized && self.store_ok && self.index_ok;
         let mut out = vec![format!(
             "WhiteMagic {}  {}",
             self.version,
-            if ready { "ready" } else { "needs attention" }
+            if !initialized {
+                "not initialized (fresh install)"
+            } else if ready {
+                "ready"
+            } else {
+                "needs attention"
+            }
         )];
         out.push(format!("Memory store       {}", self.store_path));
         out.push(format!("Memories           {}", thousands(self.memories)));
         out.push(format!("Sessions           {}", thousands(self.sessions)));
-        let index_line = match (&self.index_detail, self.index_ok) {
-            (_, true) => self
-                .index_detail
-                .clone()
-                .unwrap_or_else(|| "healthy".to_string()),
-            (Some(detail), false) => format!("DEGRADED — {detail}"),
-            (None, false) => "DEGRADED".to_string(),
+        let index_line = if initialized {
+            match (&self.index_detail, self.index_ok) {
+                (_, true) => self
+                    .index_detail
+                    .clone()
+                    .unwrap_or_else(|| "healthy".to_string()),
+                (Some(detail), false) => format!("DEGRADED — {detail}"),
+                (None, false) => "DEGRADED".to_string(),
+            }
+        } else {
+            "not created yet (first run)".to_string()
         };
         out.push(format!("Search index       {index_line}"));
         if let (Some(ts), Some(age)) = (&self.last_backup, self.last_backup_age_secs) {
@@ -268,6 +283,9 @@ pub fn collect(store_root: &Path) -> StatusReport {
     let mut memories = 0u64;
     let mut sessions = 0u64;
     let mut store_ok = false;
+    // A store exists once LMDB has written its data file. A missing store is
+    // the fresh-install state, not degradation (review round 2).
+    let initialized = lmdb.join("data.mdb").exists();
     let store = if lmdb.exists() {
         // Inspection never takes the lock file (9.1.6): read-only env opens
         // block forever against a live writer (lmdb-master falls back to a
@@ -363,9 +381,18 @@ pub fn collect(store_root: &Path) -> StatusReport {
         }
     });
 
+    let state = if !initialized {
+        "not_initialized"
+    } else if store_ok && index_ok {
+        "ready"
+    } else {
+        "attention"
+    };
+
     StatusReport {
         version: env!("CARGO_PKG_VERSION").to_string(),
         store_path: store_root.display().to_string(),
+        state: state.to_string(),
         store_ok,
         memories,
         sessions,
@@ -396,10 +423,26 @@ mod tests {
         let r = collect(tmp.path());
         assert!(!r.store_ok);
         assert!(!r.index_ok);
+        assert_eq!(r.state, "not_initialized");
         assert_eq!(r.memories, 0);
         let lines = r.lines();
-        assert!(lines[0].contains("WhiteMagic"));
-        assert!(lines.iter().any(|l| l.contains("Search index")));
+        assert!(lines[0].contains("WhiteMagic"), "{lines:?}");
+        assert!(
+            lines[0].contains("not initialized"),
+            "a fresh install is a state, not a failure: {lines:?}"
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|l| !l.contains("DEGRADED") && !l.contains("needs attention")),
+            "a fresh install must not read as degraded: {lines:?}"
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("Search index") && l.contains("not created yet")),
+            "index line must name the fresh state: {lines:?}"
+        );
     }
 
     #[test]
@@ -502,6 +545,7 @@ mod tests {
         let report = StatusReport {
             version: "test".into(),
             store_path: "/tmp/store".into(),
+            state: "ready".into(),
             store_ok: true,
             memories: 0,
             sessions: 0,

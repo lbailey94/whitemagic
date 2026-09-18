@@ -590,9 +590,50 @@ impl WmConfig {
         }
     }
 
-    /// Generate a sample `config.toml` string.
+    /// Generate the product `config.toml` sample (the default for `--sample`
+    /// and `--init`): the small Gen2 surface — store path plus the two
+    /// optional endpoints. The research/daemon surface lives in
+    /// [`Self::sample_toml_full`] (`wm config --sample-full`), so a new
+    /// install does not open onto hemispheres, dream cycles, or RSI
+    /// schedules it has no use for yet (review round 2).
     #[must_use]
     pub fn sample_toml() -> String {
+        r#"# WhiteMagic Configuration File
+#
+# Place this file at:
+#   ~/.local/share/whitemagic/config.toml
+# Or write it with: wm config --init
+#
+# Environment variables override these values; CLI flags override everything.
+# Every available option (daemon schedules, hemispheres, cloud LLM): wm config --sample-full
+
+[store]
+# Path to the LMDB store directory.
+# Default: ~/.local/share/whitemagic
+# Env: WM_STORE_PATH
+# path = "~/.local/share/whitemagic"
+
+[embedder]
+# Optional: local embeddings via llama-server /v1/embeddings.
+# Without one, search runs on BM25 full-text — no model required.
+# Env: WM_EMBEDDER_ENDPOINT
+# endpoint = "http://localhost:8080"
+# Env: WM_EMBEDDER_MODEL
+# model = "local"
+
+[llm]
+# Optional: local llama.cpp server for reasoning features.
+# Env: WM_LLAMA_ENDPOINT
+# llama_endpoint = "http://localhost:8080"
+"#
+        .to_string()
+    }
+
+    /// Generate the full sample `config.toml` (`wm config --sample-full`):
+    /// the research surface — hemisphere model selection, cloud LLM, and
+    /// daemon/dream/RSI/self-play schedules.
+    #[must_use]
+    pub fn sample_toml_full() -> String {
         r#"# WhiteMagic Configuration File
 #
 # Place this file at:
@@ -601,6 +642,10 @@ impl WmConfig {
 #
 # Environment variables override these values.
 # CLI flags override everything.
+#
+# This is the full sample: hemisphere model selection, cloud LLM, and the
+# daemon/dream/RSI/self-play schedules. For the small product config (store
+# path + optional endpoints), use: wm config --sample
 
 [store]
 # Path to the LMDB store directory.
@@ -788,6 +833,20 @@ llama_endpoint = "http://localhost:8080"
     #[test]
     fn sample_toml_is_valid() {
         let sample = WmConfig::sample_toml();
+        let cfg: WmConfig = toml::from_str(&sample).unwrap();
+        assert!(
+            cfg.llm.llama_endpoint.is_none(),
+            "the product sample must not pre-wire a model server"
+        );
+        assert!(
+            !sample.contains("[daemon]"),
+            "the product sample stays on the small product surface"
+        );
+    }
+
+    #[test]
+    fn sample_toml_full_is_valid() {
+        let sample = WmConfig::sample_toml_full();
         let cfg: WmConfig = toml::from_str(&sample).unwrap();
         assert!(cfg.llm.llama_endpoint.is_some());
         assert!(cfg.embedder.endpoint.is_some());

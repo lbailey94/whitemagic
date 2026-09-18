@@ -127,9 +127,12 @@ enum Commands {
     },
     /// Generate or show configuration
     Config {
-        /// Print a sample config.toml to stdout
+        /// Print the product sample config.toml to stdout
         #[arg(long)]
         sample: bool,
+        /// Print the full sample (daemon schedules, hemispheres, cloud LLM)
+        #[arg(long)]
+        sample_full: bool,
         /// Write a sample config.toml to the default config path
         #[arg(long)]
         init: bool,
@@ -184,6 +187,9 @@ enum Commands {
         /// Apply the change (JSON/JSONC/TOML; timestamped backup first)
         #[arg(long)]
         write: bool,
+        /// Remove WhiteMagic's own entry from the client config (backup first)
+        #[arg(long)]
+        remove: bool,
         /// Path written into the client config (default: this executable)
         #[arg(long)]
         binary: Option<PathBuf>,
@@ -198,7 +204,9 @@ enum Commands {
         #[arg(long)]
         binary: Option<PathBuf>,
     },
-    /// Update operations (notify-only; GitHub Releases are canonical)
+    /// Update against GitHub Releases (canonical): `check` is notify-only
+    /// (no installation), `install` downloads, verifies, and swaps the
+    /// binary, `rollback` restores the previous one.
     Update {
         #[command(subcommand)]
         action: UpdateAction,
@@ -1015,6 +1023,17 @@ fn run() -> anyhow::Result<()> {
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
         }
+        // Machine modes: stdout is the JSON contract, so stderr stays
+        // errors-only. Unrelated subsystem warnings (mesh/Sangha identity,
+        // Tantivy probes) belong in human runs (review round 2). Selftest
+        // and Grimoire are covered by the quiet arms above (--verbose is the
+        // only opt-in there).
+        Commands::Status { json: true, .. }
+        | Commands::Contract { json: true, .. }
+        | Commands::Report { json: true, .. }
+        | Commands::Update {
+            action: UpdateAction::Check { json: true, .. },
+        } => tracing_subscriber::EnvFilter::new("error"),
         _ => tracing_subscriber::EnvFilter::from_default_env(),
     };
     tracing_subscriber::fmt()
@@ -1297,7 +1316,7 @@ fn run() -> anyhow::Result<()> {
                 for line in report.lines() {
                     println!("{line}");
                 }
-                if !report.store_ok {
+                if report.state == "not_initialized" {
                     println!();
                     println!("No working store yet — this is a fresh install.");
                     println!();
@@ -1314,6 +1333,13 @@ fn run() -> anyhow::Result<()> {
                     println!("Load your data (optional, local-only, idempotent):");
                     println!("  wm ingest --source <folder> --dry-run   # preview files");
                     println!("  wm ingest --source <folder> --redact    # write; re-runs resume");
+                } else if !report.store_ok {
+                    println!();
+                    println!(
+                        "The store at {} exists but could not be read — run 'wm doctor' \
+                         for a diagnosis.",
+                        report.store_path
+                    );
                 }
             }
         }
@@ -1379,6 +1405,7 @@ fn run() -> anyhow::Result<()> {
         Commands::Setup {
             client,
             write,
+            remove,
             binary,
         } => {
             let exe = match binary {
@@ -1405,7 +1432,7 @@ fn run() -> anyhow::Result<()> {
                     }
                     println!();
                     println!(
-                        "Usage: wm setup <client> [--write]  (binary: {})",
+                        "Usage: wm setup <client> [--write] [--remove]  (binary: {})",
                         exe.display()
                     );
                     println!(
@@ -1420,6 +1447,14 @@ fn run() -> anyhow::Result<()> {
                         "unknown client '{id}' (expected: opencode, claude, cursor, windsurf, codex)"
                     ),
                     Some(spec) => {
+                        if remove {
+                            let (msg, backup) = wm_mcp::setup::remove(&spec)?;
+                            println!("{msg}");
+                            if let Some(b) = backup {
+                                println!("backup:  {}", b.display());
+                            }
+                            return Ok(());
+                        }
                         println!("{} ({})", spec.label, spec.id);
                         println!("  config:  {}", spec.config_path.display());
                         println!("  binary:  {}", exe.display());
@@ -1437,6 +1472,13 @@ fn run() -> anyhow::Result<()> {
                         println!();
                         if let Some(note) = wm_mcp::setup::read_only_note() {
                             println!("Note: {note}");
+                            println!();
+                        }
+                        if let Some(note) = std::env::current_dir()
+                            .ok()
+                            .and_then(|cwd| wm_mcp::setup::project_isolation_note(&cwd))
+                        {
+                            println!("Warning: {note}");
                             println!();
                         }
                         if write {
@@ -1491,6 +1533,13 @@ fn run() -> anyhow::Result<()> {
                 if let Some(note) = wm_mcp::setup::read_only_note() {
                     println!();
                     println!("Note: {note}");
+                }
+                if let Some(note) = std::env::current_dir()
+                    .ok()
+                    .and_then(|cwd| wm_mcp::setup::project_isolation_note(&cwd))
+                {
+                    println!();
+                    println!("Warning: {note}");
                 }
                 println!();
                 if write {
@@ -2029,11 +2078,19 @@ fn run() -> anyhow::Result<()> {
         }
         Commands::Config {
             sample,
+            sample_full,
             init,
             store,
         } => {
+            let sample_text = || {
+                if sample_full {
+                    wm_mcp::config::WmConfig::sample_toml_full()
+                } else {
+                    wm_mcp::config::WmConfig::sample_toml()
+                }
+            };
             if sample {
-                print!("{}", wm_mcp::config::WmConfig::sample_toml());
+                print!("{}", sample_text());
                 return Ok(());
             }
             if init {
@@ -2044,9 +2101,16 @@ fn run() -> anyhow::Result<()> {
                     println!("Config already exists at {}", config_path.display());
                     return Ok(());
                 }
-                std::fs::write(&config_path, wm_mcp::config::WmConfig::sample_toml())?;
+                std::fs::write(&config_path, sample_text())?;
                 println!("Created sample config at {}", config_path.display());
-                println!("Edit it to configure LLM endpoints, embedder, and daemon schedules.");
+                if sample_full {
+                    println!("Full sample: daemon schedules, hemisphere and cloud LLM settings.");
+                } else {
+                    println!(
+                        "Edit it to set the store path, embedder, or LLM endpoint — \
+                         'wm config --sample-full' shows every option."
+                    );
+                }
                 return Ok(());
             }
             // No flags: show current effective config
@@ -2523,6 +2587,27 @@ fn run_restore(
         println!("Note: pre-envelope backup (no envelope.json) — SHA256SUMS verification only.");
     }
 
+    // Store ownership is not negotiable: `--force` overwrites an existing
+    // *idle* store, it never overrides a live writer. Same non-blocking
+    // probe as backup/trust (9.1.6): swapping the store root underneath a
+    // running server replaces LMDB/Tantivy files while the process still
+    // holds mappings, which is how a "successful" restore corrupts the
+    // search index (independent review, 2026-09-17).
+    if store_path.join("lmdb").join("data.mdb").exists() {
+        if let Err(e) = wm_memory::MemoryStore::probe_write_lock(store_path) {
+            // A missing lock file means no live LMDB writer exists to hold it.
+            if e.kind() != std::io::ErrorKind::NotFound {
+                anyhow::bail!(
+                    "Refusing to restore over {} — a server (or another writer) owns the \
+                     store. Stop it first (e.g. systemctl --user stop wm-serve@<name>). \
+                     --force overwrites an existing idle store; it never overrides store \
+                     ownership. Underlying: {e}",
+                    store_path.display()
+                );
+            }
+        }
+    }
+
     if store_path.exists() && !force {
         anyhow::bail!(
             "Target store {} already exists. Use --force to overwrite (the existing store will be REPLACED).",
@@ -2820,6 +2905,17 @@ fn run_reindex(
         return Err(wm_memory::reindex::missing_index_error(&lmdb_path).into());
     }
 
+    // Same non-blocking guard as backup/trust: a live server owns the store
+    // and its search index, so reindexing under it would wedge on the LMDB
+    // open and race the writer lock.
+    if let Err(e) = wm_memory::MemoryStore::probe_write_lock(store_path) {
+        anyhow::bail!(
+            "Could not take the LMDB lock at {} — a server may be running \
+             (stop the store's wm-serve unit first). Underlying: {e}",
+            lmdb_path.display()
+        );
+    }
+
     if backup && !dry_run {
         let ts = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -2865,11 +2961,10 @@ fn run_reindex(
         return Ok(());
     }
 
-    let search = wm_memory::SearchEngine::open(&tantivy_path)?;
     println!(
         "Rebuilding Tantivy index from LMDB ({scope}) — this can take a minute on large stores..."
     );
-    let report = wm_memory::rebuild_index(&store, &search, galaxy_filter)?;
+    let report = rebuild_index_recovering(&store, &tantivy_path, galaxy_filter)?;
     println!(
         "Rebuild complete: scanned={} indexed={} skipped={}",
         report.scanned, report.indexed, report.skipped
@@ -2883,6 +2978,72 @@ fn run_reindex(
         }
     }
     Ok(())
+}
+
+/// Rebuild the search index from LMDB, recovering from an index that cannot
+/// be opened (or opens but cannot be rebuilt): quarantine it, create a fresh
+/// index, rebuild, and verify against the canonical LMDB store.
+///
+/// The LMDB store is canonical; the search index is a disposable
+/// accelerator. This is the shared recovery path for `wm reindex` and
+/// `wm doctor --repair` (review round 2, 2026-09-17).
+fn rebuild_index_recovering(
+    store: &wm_memory::MemoryStore,
+    tantivy_path: &std::path::Path,
+    galaxy_filter: &[String],
+) -> anyhow::Result<wm_memory::IndexRebuildReport> {
+    let (mut search, quarantined) = wm_memory::reindex::open_or_quarantine(tantivy_path)?;
+    if let Some(path) = quarantined {
+        println!(
+            "Index could not be opened — quarantined to {}",
+            path.display()
+        );
+    }
+    let report = match wm_memory::rebuild_index(store, &search, galaxy_filter) {
+        Ok(report) => report,
+        Err(error) => {
+            // An index can open and still be unusable (e.g. meta.json
+            // references a segment file that is missing — the failure lands
+            // at commit). Quarantine and retry once on a fresh index.
+            drop(search);
+            let quarantine = wm_memory::reindex::quarantine_and_recreate(tantivy_path)?;
+            println!(
+                "Rebuild against the open index failed ({error}); quarantined {} and \
+                 retrying on a fresh index.",
+                quarantine.display()
+            );
+            search = wm_memory::SearchEngine::open(tantivy_path)?;
+            wm_memory::rebuild_index(store, &search, galaxy_filter)?
+        }
+    };
+
+    // Verify: the index must now match what a rebuild would produce. A
+    // remaining gap inside the sanitization-skip reserve is documented
+    // behaviour, not drift.
+    let consistency = wm_memory::check_consistency(store, &search);
+    let class = wm_memory::classify_drift(store, &search);
+    if class.healable_total > 0 {
+        anyhow::bail!(
+            "Rebuild finished but verification found healable drift: LMDB={} Tantivy={} \
+             (healable={}). The LMDB store is canonical and intact; report this as a bug.",
+            consistency.total_lmdb,
+            consistency.total_tantivy,
+            class.healable_total
+        );
+    }
+    if class.skip_reserve_total > 0 {
+        println!(
+            "Verified: LMDB={} Tantivy={} — no healable drift ({} docs in the \
+             sanitization-skip reserve)",
+            consistency.total_lmdb, consistency.total_tantivy, class.skip_reserve_total
+        );
+    } else {
+        println!(
+            "Verified: LMDB={} Tantivy={} — no drift",
+            consistency.total_lmdb, consistency.total_tantivy
+        );
+    }
+    Ok(report)
 }
 
 /// Run the content-repair pass (`wm repair-content`).
@@ -3437,7 +3598,37 @@ fn run_doctor(
     }
     println!("[OK]   LMDB store: {}", lmdb_path.display());
 
-    // 1a. Integrity check (if requested)
+    // 1a. Search-index open check / recovery: a Tantivy index that cannot be
+    // opened used to fail every doctor run (the readonly server open) before
+    // it could diagnose or repair anything. LMDB is canonical — with
+    // --repair, quarantine the broken index and rebuild from LMDB.
+    let tantivy_path = lmdb_path.join("tantivy");
+    if tantivy_path.exists() {
+        if let Err(open_error) = wm_memory::SearchEngine::open_readonly(&tantivy_path) {
+            println!();
+            println!("--- Search Index ---");
+            println!(
+                "[WARN] Tantivy index at {} cannot be opened: {open_error}",
+                tantivy_path.display()
+            );
+            if repair {
+                let store = wm_memory::MemoryStore::open_inspection(&lmdb_path)?;
+                let report = rebuild_index_recovering(&store, &tantivy_path, &[])?;
+                println!(
+                    "Index rebuilt from canonical LMDB: scanned={} indexed={} skipped={}",
+                    report.scanned, report.indexed, report.skipped
+                );
+            } else {
+                println!(
+                    "       Run 'wm reindex --store {}' (or 'wm doctor --repair') to \
+                     rebuild it from the canonical LMDB store.",
+                    store_path.display()
+                );
+            }
+        }
+    }
+
+    // 1b. Integrity check (if requested)
     if check_integrity || repair {
         println!();
         println!("--- Integrity Check ---");

@@ -448,6 +448,7 @@ impl Tool for MemoryCreateTool {
             .get("content")
             .and_then(|v| v.as_str())
             .ok_or_else(|| wm_core::CoreError::InvalidArgs("content (string) required".into()))?;
+        content_admission_gate(content).map_err(wm_core::CoreError::InvalidArgs)?;
         let galaxy_str = args
             .get("galaxy")
             .and_then(|v| v.as_str())
@@ -760,13 +761,16 @@ impl Tool for MemoryBatchCreateTool {
         // Collect memories for batch processing
         let mut memories: Vec<(Galaxy, Memory)> = Vec::new();
 
-        for item in items {
+        for (index, item) in items.iter().enumerate() {
             let content = item
                 .get("content")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| {
                     wm_core::CoreError::InvalidArgs("each item needs content (string)".into())
                 })?;
+            content_admission_gate(content).map_err(|reason| {
+                wm_core::CoreError::InvalidArgs(format!("items[{index}]: {reason}"))
+            })?;
             let galaxy_str = item
                 .get("galaxy")
                 .and_then(|v| v.as_str())
@@ -3743,6 +3747,23 @@ fn parse_galaxy(s: &str) -> wm_core::Result<Galaxy> {
     expansion::common::parse_galaxy(s)
 }
 
+/// Admission gate for new memory content (9.1.9, review round 2).
+///
+/// Uses the index gate's definition of "a memory, not debris": non-empty
+/// printable text, no NUL bytes, control-character ratio below the index
+/// threshold. Empty/whitespace content, NUL-containing payloads, and
+/// binary blobs used to be accepted and silently parked in the
+/// never-indexed reserve.
+fn content_admission_gate(content: &str) -> Result<(), String> {
+    if wm_memory::sanitize_content_for_index(content).is_some() {
+        Ok(())
+    } else {
+        Err("content must be non-empty printable text \
+             (no NUL bytes or control-character-heavy payloads)"
+            .into())
+    }
+}
+
 /// Register all base tools into a registry.
 ///
 /// `search`, `karma`, and `dharma` are optional — pass `None` if those
@@ -4060,6 +4081,54 @@ mod tests {
         let mut snapshot = BTreeMap::new();
         visit(root, root, &mut snapshot);
         snapshot
+    }
+
+    #[tokio::test]
+    async fn memory_create_rejects_empty_and_binary_content() {
+        let store = test_store();
+        let tool = MemoryCreateTool::new(store, None, None);
+        let mut ctx = Context::default();
+
+        for content in ["", "   ", "\n\t  \n"] {
+            let err = tool
+                .call(&mut ctx, json!({ "content": content }))
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains("non-empty printable text"),
+                "blank content must be refused: {err}"
+            );
+        }
+
+        // NUL bytes (binary serialization artifact) are debris, not memories.
+        let err = tool
+            .call(&mut ctx, json!({"content": "ok\u{0}but binary"}))
+            .await
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("non-empty printable text"),
+            "NUL content must be refused: {err}"
+        );
+
+        // Control-character-heavy payloads fail the same gate.
+        let err = tool
+            .call(
+                &mut ctx,
+                json!({"content": "\u{1}\u{2}\u{3}\u{4}\u{5}\u{6}"}),
+            )
+            .await
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("non-empty printable text"),
+            "{err}"
+        );
+
+        // Ordinary prose still lands.
+        let ok = tool
+            .call(&mut ctx, json!({"content": "a perfectly ordinary memory"}))
+            .await
+            .unwrap();
+        assert_eq!(ok["status"], "success", "{ok}");
     }
 
     #[tokio::test]

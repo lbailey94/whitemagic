@@ -318,6 +318,12 @@ fn agent_step(write: bool) -> (Step, bool) {
     if crate::setup::read_only_note().is_some() {
         parts.push("entries read-only (store held by a running serve/daemon)".to_string());
     }
+    if let Some(short) = std::env::current_dir()
+        .ok()
+        .and_then(|cwd| crate::setup::project_isolation_short(&cwd))
+    {
+        parts.push(short);
+    }
     // Wired means: at least one client configured AND no detected client
     // failed — a partial connect is not an activation.
     let agent_wired = wired > 0 && !failed;

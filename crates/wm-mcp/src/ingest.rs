@@ -1018,6 +1018,15 @@ pub fn run_ingest(
                 continue;
             }
         };
+        // Admission gate (9.1.9, review round 2): a binary payload renamed
+        // to .md used to be stored in LMDB and only excluded later at the
+        // index gate. Report it as skipped before any write instead.
+        if binary_content(&bytes) {
+            report
+                .skipped
+                .push((rel.clone(), "binary or non-text content".into()));
+            continue;
+        }
         let sha = sha256_hex(&bytes);
         let raw_text = String::from_utf8_lossy(&bytes);
 
@@ -1292,6 +1301,26 @@ fn head_for_detection(text: &str) -> &str {
     let end = text.len().min(4096);
     let boundary = (0..=end).rev().find(|&i| text.is_char_boundary(i));
     &text[..boundary.unwrap_or(0)]
+}
+
+/// Byte-level admission gate mirroring [`wm_memory::sanitize_content_for_index`].
+///
+/// NUL bytes or more than 10% control bytes (excluding tab/newline/carriage
+/// return) over the first 8 KB mean binary, not a document.
+#[must_use]
+pub fn binary_content(bytes: &[u8]) -> bool {
+    if bytes.contains(&0) {
+        return true;
+    }
+    let sample = &bytes[..bytes.len().min(8192)];
+    if sample.is_empty() {
+        return false;
+    }
+    let control = sample
+        .iter()
+        .filter(|&&b| b < 0x20 && !matches!(b, b'\t' | b'\n' | b'\r'))
+        .count();
+    control * 10 > sample.len()
 }
 
 /// Hex-encode a SHA-256 digest (stable across versions of the `sha2` crate).
@@ -1707,6 +1736,56 @@ mod tests {
         assert!(
             !joined.contains(&fixture_key),
             "override must still scrub credential-shaped content"
+        );
+    }
+
+    #[test]
+    fn binary_detection_matches_the_index_gate() {
+        assert!(!binary_content(b"plain text\nwith two lines\ttabbed"));
+        assert!(!binary_content(
+            "café — unicode prose stays text".as_bytes()
+        ));
+        assert!(binary_content(b"has\x00nul"));
+        let mut noisy = vec![b'a'; 89];
+        noisy.extend_from_slice(&[0x01; 11]);
+        assert!(binary_content(&noisy), "10%+ control bytes is binary");
+    }
+
+    #[test]
+    fn binary_content_is_skipped_before_lmdb_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root).unwrap();
+        // A binary payload renamed to .md (review round 2 fixture).
+        fs::write(
+            root.join("garbage.md"),
+            b"\x00\x01\x02BINARYMARKER\xff\xfe\x03\x04",
+        )
+        .unwrap();
+        fs::write(
+            root.join("real.md"),
+            "# Real\n\nActual prose content lives here.",
+        )
+        .unwrap();
+        let store_path = tmp.path().join("store");
+
+        let report = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        assert_eq!(report.files_ingested, 1);
+        assert!(
+            report
+                .skipped
+                .iter()
+                .any(|(f, why)| f.contains("garbage") && why.contains("binary")),
+            "binary file must be reported skipped: {:?}",
+            report.skipped
+        );
+
+        // Only the real document reached LMDB.
+        let store = MemoryStore::open_default(store_path.join("lmdb")).unwrap();
+        let all = store.scan_all(Galaxy::Research).unwrap();
+        assert!(
+            !all.iter().any(|m| m.content.contains("BINARYMARKER")),
+            "binary payload must never be stored"
         );
     }
 }

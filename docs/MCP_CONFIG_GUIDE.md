@@ -2,9 +2,11 @@
 
 **Version**: 9.1.8
 
-The release binary is a single executable: `wm` (dynamically linked; requires
-glibc 2.39+). The MCP server is the `serve` subcommand. The curated profile
-is the supported surface.
+The release binary is a single executable: `wm`. The release installer picks
+the **static musl build on Linux x86-64** (no glibc requirement); macOS and
+Windows assets are static within their platform's conventions. A binary built
+from source follows the host toolchain instead. The MCP server is the `serve`
+subcommand. The curated profile is the supported surface.
 
 ## Native (recommended)
 

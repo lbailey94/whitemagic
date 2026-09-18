@@ -126,6 +126,68 @@ pub fn read_only_note() -> Option<String> {
     })
 }
 
+/// Walk up from `start` looking for a `.git` directory or worktree file.
+fn git_root_of(start: &std::path::Path) -> Option<std::path::PathBuf> {
+    let mut dir = Some(start);
+    while let Some(d) = dir {
+        if d.join(".git").exists() {
+            return Some(d.to_path_buf());
+        }
+        dir = d.parent();
+    }
+    None
+}
+
+/// True when the repository root carries its own project-scoped whitemagic
+/// wiring (so the client-global entries are not the only scope).
+fn project_wired(root: &std::path::Path) -> bool {
+    [
+        root.join("opencode.jsonc"),
+        root.join(".opencode").join("opencode.jsonc"),
+        root.join(".mcp.json"),
+    ]
+    .iter()
+    .any(|p| std::fs::read_to_string(p).is_ok_and(|t| t.contains("whitemagic")))
+}
+
+/// Warning for the easy onboarding path: client-global wiring points every
+/// project at the same store, so sessions and memories cross projects silently.
+///
+/// `wm connect` / `wm setup <client>` call this with the working directory:
+/// inside a git repository without project-scoped wiring it names the repo
+/// and the remedy. Returns `None` outside a repository and inside one that is
+/// already project-wired.
+#[must_use]
+pub fn project_isolation_note(cwd: &std::path::Path) -> Option<String> {
+    let root = git_root_of(cwd)?;
+    if project_wired(&root) {
+        return None;
+    }
+    Some(format!(
+        "Project detected: {}\n\
+         These client entries use the global store ({}), so sessions from every project \
+         share it — continuity can return another project's memories. If you work across \
+         projects, prefer a project-scoped store: one store per project \
+         (see docs/MULTI_PROJECT_MEMORY.md).",
+        root.display(),
+        crate::config::WmConfig::default_store_root().display()
+    ))
+}
+
+/// One-line variant of [`project_isolation_note`] for summaries such as
+/// `wm grimoire`.
+#[must_use]
+pub fn project_isolation_short(cwd: &std::path::Path) -> Option<String> {
+    project_isolation_note(cwd).map(|_| {
+        format!(
+            "project detected ({}) — global-store wiring mixes projects; see docs/MULTI_PROJECT_MEMORY.md",
+            git_root_of(cwd)
+                .map(|r| r.display().to_string())
+                .unwrap_or_default()
+        )
+    })
+}
+
 /// The standard `mcpServers` entry for this binary.
 #[must_use]
 pub fn entry(exe: &Path) -> Value {
@@ -560,6 +622,102 @@ fn jsonc_upsert_whitemagic(text: &str, entry: &Value) -> anyhow::Result<String> 
     }
 }
 
+/// Remove `key` from the object `text[open..close]`, preserving comments
+/// elsewhere. Returns `None` when the key is absent.
+fn remove_member(text: &str, open: usize, close: usize, key: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut j = skip_trivia(text, open + 1);
+    let mut prev_value_end: Option<usize> = None;
+    while j < close {
+        if bytes.get(j) != Some(&b'"') {
+            return None;
+        }
+        let key_end = string_end(text, j)?;
+        let member_key = &text[j + 1..key_end - 1];
+        let colon = skip_trivia(text, key_end);
+        if bytes.get(colon) != Some(&b':') {
+            return None;
+        }
+        let value_start = skip_trivia(text, colon + 1);
+        let value_end = value_end(text, value_start)?;
+        if member_key == key {
+            return Some(splice_member_out(text, j, value_end, prev_value_end));
+        }
+        prev_value_end = Some(value_end);
+        j = skip_trivia(text, value_end);
+        if bytes.get(j) == Some(&b',') {
+            j = skip_trivia(text, j + 1);
+        }
+    }
+    None
+}
+
+/// Splice one member out of a JSONC object: the member's own line, plus the
+/// comma that binds it to its neighbors (the trailing one when present, the
+/// preceding one when the member is last). Comments outside the member span
+/// survive.
+fn splice_member_out(
+    text: &str,
+    key_start: usize,
+    value_end: usize,
+    prev_value_end: Option<usize>,
+) -> String {
+    let line_start = text[..key_start].rfind('\n').map_or(0, |nl| nl + 1);
+    let from = if text[line_start..key_start]
+        .chars()
+        .all(|c| c == ' ' || c == '\t')
+    {
+        line_start
+    } else {
+        key_start
+    };
+    let after = skip_trivia(text, value_end);
+    if text.as_bytes().get(after) == Some(&b',') {
+        // Not the last member: the comma and the rest of the line go too.
+        let end = text[after..]
+            .find('\n')
+            .map_or(text.len(), |nl| after + nl + 1);
+        let mut out = String::with_capacity(text.len());
+        out.push_str(&text[..from]);
+        out.push_str(&text[end..]);
+        return out;
+    }
+    if let Some(pve) = prev_value_end {
+        let comma = skip_trivia(text, pve);
+        if text.as_bytes().get(comma) == Some(&b',') {
+            // Last member: drop the preceding member's trailing comma.
+            let mut out = String::with_capacity(text.len().saturating_sub(value_end - from + 1));
+            out.push_str(&text[..comma]);
+            out.push_str(&text[comma + 1..from]);
+            out.push_str(&text[value_end..]);
+            return out;
+        }
+    }
+    let mut out = String::with_capacity(text.len());
+    out.push_str(&text[..from]);
+    out.push_str(&text[value_end..]);
+    out
+}
+
+/// Structural removal of `mcp.whitemagic` in an OpenCode JSONC document.
+/// Returns `None` when the entry is absent; the `mcp` object itself (and
+/// any comments) is left in place.
+fn jsonc_remove_whitemagic(text: &str) -> anyhow::Result<Option<String>> {
+    let root_open = skip_trivia(text, 0);
+    if text.as_bytes().get(root_open) != Some(&b'{') {
+        anyhow::bail!("config root is not an object");
+    }
+    let root_close = matching_delim(text, root_open, b'{', b'}')
+        .ok_or_else(|| anyhow::anyhow!("unbalanced braces in config"))?;
+    let Some((mcp_start, mcp_end)) = find_member(text, root_open, root_close, "mcp") else {
+        return Ok(None);
+    };
+    if text.as_bytes().get(mcp_start) != Some(&b'{') {
+        anyhow::bail!("existing \"mcp\" is not an object");
+    }
+    Ok(remove_member(text, mcp_start, mcp_end, "whitemagic"))
+}
+
 /// Patch OpenCode's `opencode.jsonc`, preserving comments and formatting.
 ///
 /// # Errors
@@ -737,6 +895,121 @@ pub fn write(spec: &ClientSpec, exe: &Path) -> anyhow::Result<(String, Option<Pa
     }
 }
 
+/// Remove WhiteMagic's own entry from a client config (`wm setup <client>
+/// --remove`) — the reversible counterpart of [`write`].
+///
+/// Only the `whitemagic` member is removed: unrelated servers, settings,
+/// and comments survive, and a timestamped backup is written before any
+/// change. A config that is not wired returns "not configured" without
+/// touching the file.
+///
+/// # Errors
+/// Any IO or parse failure; the original file is never modified on error.
+pub fn remove(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
+    match spec.kind {
+        Kind::McpServersJson => remove_mcp_servers_json(spec),
+        Kind::OpencodeJsonc => remove_opencode_jsonc(spec),
+        Kind::CodexToml => remove_codex_toml(spec),
+    }
+}
+
+fn backup_and_write(spec: &ClientSpec, text: &str) -> anyhow::Result<PathBuf> {
+    let backup = backup_path(&spec.config_path);
+    std::fs::copy(&spec.config_path, &backup)?;
+    std::fs::write(&spec.config_path, text)?;
+    Ok(backup)
+}
+
+fn remove_mcp_servers_json(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
+    let text = std::fs::read_to_string(&spec.config_path)?;
+    let mut config: Value = serde_json::from_str(&text).map_err(|e| {
+        anyhow::anyhow!(
+            "existing config is not valid JSON ({}): {e}",
+            spec.config_path.display()
+        )
+    })?;
+    let Some(servers) = config.get_mut("mcpServers").and_then(Value::as_object_mut) else {
+        return Ok(("not configured".to_string(), None));
+    };
+    if servers.remove("whitemagic").is_none() {
+        return Ok(("not configured".to_string(), None));
+    }
+    let rendered = format!("{}\n", serde_json::to_string_pretty(&config)?);
+    let backup = backup_and_write(spec, &rendered)?;
+    let verify = std::fs::read_to_string(&spec.config_path)?;
+    serde_json::from_str::<Value>(&verify)
+        .map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
+    Ok((
+        format!("removed from {}", spec.config_path.display()),
+        Some(backup),
+    ))
+}
+
+fn remove_opencode_jsonc(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
+    let text = std::fs::read_to_string(&spec.config_path)?;
+    let parsed = parse_jsonc(&text).map_err(|e| {
+        anyhow::anyhow!(
+            "existing config is not valid JSONC ({}): {e}",
+            spec.config_path.display()
+        )
+    })?;
+    let mut merged = parsed;
+    let present = merged
+        .get_mut("mcp")
+        .and_then(Value::as_object_mut)
+        .and_then(|mcp| mcp.remove("whitemagic"))
+        .is_some();
+    if !present {
+        return Ok(("not configured".to_string(), None));
+    }
+    let edited = if has_comments(&text) {
+        jsonc_remove_whitemagic(&text)?.ok_or_else(|| {
+            anyhow::anyhow!("internal error: entry present but not found structurally")
+        })?
+    } else {
+        format!("{}\n", serde_json::to_string_pretty(&merged)?)
+    };
+    let check = parse_jsonc(&edited)
+        .map_err(|e| anyhow::anyhow!("internal error: edited JSONC does not parse: {e}"))?;
+    if check != merged {
+        anyhow::bail!("internal error: edited JSONC does not round-trip to the intended value");
+    }
+    let backup = backup_and_write(spec, &edited)?;
+    let verify = std::fs::read_to_string(&spec.config_path)?;
+    parse_jsonc(&verify).map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
+    Ok((
+        format!("removed from {}", spec.config_path.display()),
+        Some(backup),
+    ))
+}
+
+fn remove_codex_toml(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
+    let text = std::fs::read_to_string(&spec.config_path)?;
+    let mut doc: toml_edit::DocumentMut = text.parse().map_err(|e| {
+        anyhow::anyhow!(
+            "existing config is not valid TOML ({}): {e}",
+            spec.config_path.display()
+        )
+    })?;
+    let Some(servers) = doc
+        .get_mut("mcp_servers")
+        .and_then(toml_edit::Item::as_table_mut)
+    else {
+        return Ok(("not configured".to_string(), None));
+    };
+    if servers.remove("whitemagic").is_none() {
+        return Ok(("not configured".to_string(), None));
+    }
+    let rendered = doc.to_string();
+    toml::from_str::<toml::Value>(&rendered)
+        .map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
+    let backup = backup_and_write(spec, &rendered)?;
+    Ok((
+        format!("removed from {}", spec.config_path.display()),
+        Some(backup),
+    ))
+}
+
 /// What `connect` did (or would do) for one detected client.
 #[derive(Debug, Clone)]
 pub enum ConnectAction {
@@ -776,7 +1049,44 @@ pub fn configured(spec: &ClientSpec) -> bool {
     std::fs::read_to_string(&spec.config_path).is_ok_and(|t| t.contains("whitemagic"))
 }
 
-/// Wire every detected client that is not already configured.
+/// True when the client's whitemagic entry is exactly what this binary would
+/// write right now — args included.
+///
+/// `configured` alone only proves the text mentions whitemagic; it cannot see
+/// a stale `--readonly` (written while another writer held the store) or an
+/// old binary path. `connect` reconciles on this predicate so a client that
+/// was wired read-only becomes writable again once the holder stops, and an
+/// entry that is already current never grows a backup.
+#[must_use]
+pub fn entry_matches(spec: &ClientSpec, exe: &Path) -> bool {
+    match spec.kind {
+        Kind::McpServersJson => std::fs::read_to_string(&spec.config_path)
+            .ok()
+            .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+            .is_some_and(|v| v["mcpServers"]["whitemagic"] == entry(exe)),
+        Kind::OpencodeJsonc => std::fs::read_to_string(&spec.config_path)
+            .ok()
+            .and_then(|t| parse_jsonc(&t).ok())
+            .is_some_and(|v| v["mcp"]["whitemagic"] == opencode_entry(exe)),
+        Kind::CodexToml => std::fs::read_to_string(&spec.config_path)
+            .ok()
+            .and_then(|t| t.parse::<toml_edit::DocumentMut>().ok())
+            .and_then(|doc| {
+                doc.get("mcp_servers")
+                    .and_then(|servers| servers.get("whitemagic"))
+                    .map(|item| codex_entry_matches(item, exe))
+            })
+            .unwrap_or(false),
+    }
+}
+
+/// Wire every detected client, reconciling entries that drifted.
+///
+/// A client whose entry already matches this binary exactly is left alone;
+/// a client that references whitemagic with a stale entry (for example a
+/// `--readonly` written while another writer held the store, or an old
+/// binary path) is rewritten to the current entry — the comparison is at
+/// entry level, not `text.contains("whitemagic")`.
 ///
 /// Dry run (`apply == false`) never touches a file; apply mode uses the
 /// same backup + read-back path as `wm setup <client> --write`.
@@ -797,7 +1107,7 @@ pub fn connect_with(list: &[ClientSpec], exe: &Path, apply: bool) -> Vec<Connect
                 action,
                 backup,
             };
-            if configured(spec) {
+            if entry_matches(spec, exe) {
                 return outcome(ConnectAction::Configured, None);
             }
             if !apply {
@@ -1013,6 +1323,190 @@ mod tests {
 
         let again = connect_with(&list, exe, false);
         assert!(matches!(again[0].action, ConnectAction::Configured));
+    }
+
+    /// The review-round-2 bug: `connect` used `text.contains("whitemagic")`,
+    /// so an entry wired `--readonly` while another writer held the store
+    /// was reported "already configured" forever. Reconciliation is now at
+    /// entry level for all three client shapes.
+    #[test]
+    fn connect_reconciles_stale_entries_at_entry_level() {
+        let tmp = tempfile::tempdir().unwrap();
+        let exe = Path::new("/opt/wm");
+
+        let json_path = tmp.path().join("cursor/mcp.json");
+        std::fs::create_dir_all(json_path.parent().unwrap()).unwrap();
+        let mut stale_json = entry(exe);
+        stale_json["args"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!("--readonly"));
+        std::fs::write(
+            &json_path,
+            serde_json::json!({"mcpServers": {"whitemagic": stale_json}}).to_string(),
+        )
+        .unwrap();
+        let json_spec = spec(Kind::McpServersJson, json_path.clone());
+
+        let jsonc_path = tmp.path().join("opencode.jsonc");
+        let mut stale_jsonc = opencode_entry(exe);
+        stale_jsonc["command"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!("--readonly"));
+        std::fs::write(
+            &jsonc_path,
+            serde_json::json!({"mcp": {"whitemagic": stale_jsonc}}).to_string(),
+        )
+        .unwrap();
+        let jsonc_spec = spec(Kind::OpencodeJsonc, jsonc_path);
+
+        let toml_path = tmp.path().join("codex/config.toml");
+        std::fs::create_dir_all(toml_path.parent().unwrap()).unwrap();
+        std::fs::write(
+            &toml_path,
+            "[mcp_servers.whitemagic]\ncommand = \"/opt/wm\"\n\
+             args = [\"serve\", \"--profile\", \"curated\", \"--marker\"]\n",
+        )
+        .unwrap();
+        let toml_spec = spec(Kind::CodexToml, toml_path);
+
+        let list = vec![json_spec.clone(), jsonc_spec.clone(), toml_spec.clone()];
+
+        // Dry run proposes the reconciliation and changes nothing.
+        let dry = connect_with(&list, exe, false);
+        assert!(
+            dry.iter()
+                .all(|o| matches!(o.action, ConnectAction::Proposed)),
+            "{dry:?}"
+        );
+        assert!(
+            std::fs::read_to_string(&json_path)
+                .unwrap()
+                .contains("--readonly")
+        );
+
+        // Apply rewrites every entry to the current shape, with backups.
+        let applied = connect_with(&list, exe, true);
+        assert!(
+            applied
+                .iter()
+                .all(|o| matches!(o.action, ConnectAction::Written)),
+            "{applied:?}"
+        );
+        assert!(
+            applied
+                .iter()
+                .all(|o| o.backup.as_ref().is_some_and(|b| b.exists()))
+        );
+        assert!(entry_matches(&json_spec, exe));
+        assert!(entry_matches(&jsonc_spec, exe));
+        assert!(entry_matches(&toml_spec, exe));
+
+        // Second pass: exact entries are left alone, no backup spam.
+        let again = connect_with(&list, exe, false);
+        assert!(
+            again
+                .iter()
+                .all(|o| matches!(o.action, ConnectAction::Configured)),
+            "{again:?}"
+        );
+    }
+
+    #[test]
+    fn project_isolation_note_fires_only_for_unwired_repos() {
+        let tmp = tempfile::tempdir().unwrap();
+
+        // Outside a repository: nothing to warn about.
+        assert!(project_isolation_note(tmp.path()).is_none());
+
+        // A repository without project-scoped wiring gets the warning.
+        let repo = tmp.path().join("repo");
+        std::fs::create_dir_all(repo.join(".git")).unwrap();
+        let note = project_isolation_note(&repo).expect("unwired repo must warn");
+        assert!(note.contains("project-scoped store"), "{note}");
+        assert!(note.contains("MULTI_PROJECT_MEMORY"), "{note}");
+
+        // Nested directories resolve to the repository root.
+        let nested = repo.join("crates/deep");
+        std::fs::create_dir_all(&nested).unwrap();
+        assert!(project_isolation_note(&nested).is_some());
+
+        // A project-wired repo is left alone (opencode.jsonc names whitemagic).
+        std::fs::write(repo.join("opencode.jsonc"), r#"{"mcp":{"whitemagic":{}}}"#).unwrap();
+        assert!(project_isolation_note(&repo).is_none());
+    }
+
+    #[test]
+    fn remove_strips_only_whitemagic_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let exe = Path::new("/opt/wm");
+
+        // JSON: sibling server survives.
+        let json_path = tmp.path().join("mcp.json");
+        let mut wired = entry(exe);
+        wired["args"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!("--marker"));
+        std::fs::write(
+            &json_path,
+            serde_json::json!({
+                "mcpServers": {"whitemagic": wired, "other": {"command": "x"}}
+            })
+            .to_string(),
+        )
+        .unwrap();
+        let json_spec = spec(Kind::McpServersJson, json_path.clone());
+        let (msg, backup) = remove(&json_spec).unwrap();
+        assert!(msg.contains("removed from"), "{msg}");
+        assert!(backup.unwrap().exists(), "removal takes a backup");
+        let v: Value = serde_json::from_str(&std::fs::read_to_string(&json_path).unwrap()).unwrap();
+        assert!(v["mcpServers"].get("whitemagic").is_none());
+        assert_eq!(v["mcpServers"]["other"]["command"], "x");
+        assert_eq!(remove(&json_spec).unwrap().0, "not configured");
+
+        // JSONC with comments: sibling member and comments survive.
+        let jsonc_path = tmp.path().join("opencode.jsonc");
+        std::fs::write(
+            &jsonc_path,
+            "{\n  // editor\n  \"mcp\": {\n    \"other\": { \"type\": \"local\" },\n    \
+             \"whitemagic\": { \"type\": \"local\", \"command\": [\"/opt/wm\", \"serve\"] }\n  },\n  \
+             \"theme\": \"dark\"\n}\n",
+        )
+        .unwrap();
+        let jsonc_spec = spec(Kind::OpencodeJsonc, jsonc_path.clone());
+        let (msg, backup) = remove(&jsonc_spec).unwrap();
+        assert!(msg.contains("removed from"), "{msg}");
+        assert!(backup.unwrap().exists());
+        let text = std::fs::read_to_string(&jsonc_path).unwrap();
+        assert!(!text.contains("whitemagic"), "{text}");
+        assert!(text.contains("// editor"), "{text}");
+        assert!(text.contains("\"other\""), "{text}");
+        assert!(text.contains("theme"), "{text}");
+        let parsed = parse_jsonc(&text).unwrap();
+        assert_eq!(parsed["theme"], "dark");
+        assert_eq!(parsed["mcp"]["other"]["type"], "local");
+        assert_eq!(remove(&jsonc_spec).unwrap().0, "not configured");
+
+        // TOML: unrelated settings and comments survive.
+        let toml_path = tmp.path().join("config.toml");
+        std::fs::write(
+            &toml_path,
+            "# codex\nmodel = \"o3\"\n\n[mcp_servers.whitemagic]\ncommand = \"/opt/wm\"\n\
+             \n[mcp_servers.other]\ncommand = \"x\"\n",
+        )
+        .unwrap();
+        let toml_spec = spec(Kind::CodexToml, toml_path.clone());
+        let (msg, backup) = remove(&toml_spec).unwrap();
+        assert!(msg.contains("removed from"), "{msg}");
+        assert!(backup.unwrap().exists());
+        let text = std::fs::read_to_string(&toml_path).unwrap();
+        assert!(!text.contains("whitemagic"), "{text}");
+        assert!(text.contains("# codex"), "{text}");
+        assert!(text.contains("model = \"o3\""), "{text}");
+        assert!(text.contains("[mcp_servers.other]"), "{text}");
+        assert_eq!(remove(&toml_spec).unwrap().0, "not configured");
     }
 
     #[test]

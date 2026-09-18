@@ -550,6 +550,88 @@ pub fn missing_index_error(store_path: &std::path::Path) -> CoreError {
     ))
 }
 
+/// Move an unopenable index directory aside and recreate an empty directory
+/// at the original path, ready for a fresh index.
+///
+/// The LMDB store is canonical; a search index is a disposable accelerator.
+/// Quarantine (never delete) keeps the failed artifact available for
+/// inspection while a fresh index is rebuilt from LMDB.
+///
+/// # Errors
+/// Any filesystem failure from the rename or recreation (the original index
+/// stays in place and is never modified on rename failure).
+pub fn quarantine_and_recreate(tantivy_path: &std::path::Path) -> Result<std::path::PathBuf> {
+    let quarantine = quarantine_index(tantivy_path)?;
+    std::fs::create_dir_all(tantivy_path).map_err(|e| {
+        CoreError::Memory(format!(
+            "Index quarantine — recreate {}: {e} (the old index is at {})",
+            tantivy_path.display(),
+            quarantine.display()
+        ))
+    })?;
+    Ok(quarantine)
+}
+
+/// Move an unopenable index directory aside: `<dir>` → `<dir>.corrupt.<ts>`.
+///
+/// # Errors
+/// Any filesystem failure from the rename (the original index stays in
+/// place and is never modified on error).
+pub fn quarantine_index(tantivy_path: &std::path::Path) -> Result<std::path::PathBuf> {
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis());
+    let file_name = tantivy_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("tantivy");
+    let quarantine = tantivy_path.with_file_name(format!("{file_name}.corrupt.{ts}"));
+    std::fs::rename(tantivy_path, &quarantine).map_err(|e| {
+        CoreError::Memory(format!(
+            "Index quarantine — rename {} to {}: {e}",
+            tantivy_path.display(),
+            quarantine.display()
+        ))
+    })?;
+    Ok(quarantine)
+}
+
+/// Open the index, quarantining it first when it cannot be opened.
+///
+/// Returns the engine plus the quarantine path when the on-disk index was
+/// moved aside (the engine then points at a freshly created, empty index
+/// that the caller must rebuild from LMDB).
+///
+/// A held Tantivy writer lock (`LockBusy`) is NOT corruption: a live server
+/// owns a healthy index, so the error is returned unchanged.
+///
+/// # Errors
+/// The original open error when it is a lock conflict, and any error from
+/// the quarantine rename or the fresh open (the returned message names the
+/// quarantine path so callers can report where the old index went).
+pub fn open_or_quarantine(
+    tantivy_path: &std::path::Path,
+) -> Result<(SearchEngine, Option<std::path::PathBuf>)> {
+    match SearchEngine::open(tantivy_path) {
+        Ok(engine) => Ok((engine, None)),
+        Err(error) => {
+            if error.to_string().contains("LockBusy") {
+                return Err(error);
+            }
+            let quarantine = quarantine_and_recreate(tantivy_path)?;
+            let engine = SearchEngine::open(tantivy_path).map_err(|e| {
+                CoreError::Memory(format!(
+                    "Index at {} could not be opened ({error}); the old index was moved to {} \
+                     but creating a fresh index failed: {e}",
+                    tantivy_path.display(),
+                    quarantine.display()
+                ))
+            })?;
+            Ok((engine, Some(quarantine)))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1100,5 +1182,32 @@ mod tests {
             "idempotent re-run must not append"
         );
         drop(tmp);
+    }
+
+    #[test]
+    fn open_or_quarantine_recovers_an_unopenable_index() {
+        let tmp = tempdir().unwrap();
+        let index_dir = tmp.path().join("tantivy");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        drop(SearchEngine::open(&index_dir).unwrap());
+
+        // Corrupt the index metadata: Tantivy cannot open this directory.
+        std::fs::write(index_dir.join("meta.json"), b"{ not json").unwrap();
+
+        let (engine, quarantine) = open_or_quarantine(&index_dir).unwrap();
+        let quarantine = quarantine.expect("an unopenable index must be quarantined");
+        assert!(quarantine.join("meta.json").exists(), "{quarantine:?}");
+        assert!(
+            quarantine
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .contains(".corrupt."),
+            "quarantine keeps the old index beside the fresh one: {quarantine:?}"
+        );
+        // The returned engine points at a fresh, empty index.
+        assert_eq!(engine.count_docs_in_galaxy("codex").unwrap(), 0);
+        drop(engine);
+        assert!(index_dir.exists(), "a fresh index directory is created");
     }
 }

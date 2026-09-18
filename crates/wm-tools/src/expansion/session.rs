@@ -133,6 +133,11 @@ impl Tool for SessionStartTool {
             .get("title")
             .and_then(|v| v.as_str())
             .unwrap_or("Untitled Session");
+        if title.trim().is_empty() {
+            return Err(wm_core::CoreError::InvalidArgs(
+                "title must be non-empty text (omit it for the default 'Untitled Session')".into(),
+            ));
+        }
         let user = args
             .get("user")
             .and_then(|v| v.as_str())
@@ -873,6 +878,29 @@ mod tests {
             .expect("start present");
         assert_eq!(mem.metadata.source, "system");
         assert!((mem.metadata.source_trust - 0.7).abs() < 1e-5);
+    }
+
+    /// Review round 2: blank titles used to create unnamed sessions.
+    #[tokio::test]
+    async fn start_rejects_blank_titles() {
+        let store = test_store();
+        let tool = SessionStartTool::new(store.clone());
+        let mut ctx = Context::default();
+
+        for title in ["", "   ", "\n\t"] {
+            let err = tool
+                .call(&mut ctx, json!({"title": title}))
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains("non-empty text"),
+                "blank title must be refused: {err}"
+            );
+        }
+
+        // Omitted title keeps the documented default.
+        let out = tool.call(&mut ctx, json!({})).await.unwrap();
+        assert_eq!(out["title"], "Untitled Session");
     }
 
     #[tokio::test]

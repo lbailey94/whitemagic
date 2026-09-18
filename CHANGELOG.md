@@ -66,6 +66,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are hidden from the default listing but fully runnable and listed by the
   new `wm help --all`.
 
+### Recovery hardening (F9, second independent review)
+- **`wm restore` never overrides store ownership:** the same non-blocking
+  writer-lock probe `wm backup` has always taken now guards restore. A
+  `--force` restore under a live `wm serve` used to replace the store root
+  underneath the running process (healthy LMDB, broken search index —
+  reproduced against 9.1.8). `--force` overwrites an existing *idle* store;
+  a held lock refuses with the ownership rule stated. E2E:
+  `restore_refuses_while_a_server_owns_the_store`.
+- **A broken index no longer blocks its own repair:** when Tantivy will not
+  open, `wm reindex` and `wm doctor --repair` quarantine it to
+  `<index>.corrupt.<ts>`, create a fresh index, rebuild from the canonical
+  LMDB store, and verify (`LMDB=N Tantivy=M — no drift`). An index that
+  opens but fails mid-rebuild is quarantined and retried once. `wm reindex`
+  also takes the LMDB probe first (a live server refuses cleanly instead of
+  wedging). Shared helper `wm_memory::reindex::open_or_quarantine` keeps a
+  held Tantivy lock (a healthy live writer) from being mistaken for
+  corruption. E2E: `index_recovery_guards`.
+
+### Onboarding truth (F10)
+- **`wm connect` reconciles entries at entry level:** the old check was
+  `text.contains("whitemagic")`, so an entry wired `--readonly` while
+  another writer held the store stayed read-only forever after the holder
+  stopped. `connect` now compares the full entry (args included) for JSON,
+  JSONC, and TOML clients: stale entries are rewritten with a backup, exact
+  entries are left alone (no backup spam).
+- **Project-isolation warning on the easy path:** when `wm connect` /
+  `wm setup <client>` / `wm grimoire` run inside a git repository without
+  project-scoped wiring, they say so and point at one-store-per-project.
+  `docs/MULTI_PROJECT_MEMORY.md` is now a published (sanitized) template
+  instead of a gitignored local note referenced by a dead link.
+- **Reversible configuration:** `wm setup <client> --remove` strips only
+  WhiteMagic's own entry (backup first; unrelated servers, settings, and
+  comments survive) — the counterpart automated setup was missing.
+
+### Content admission gates (F11)
+- **`memory.create` / `memory.batch_create` refuse debris:** empty or
+  whitespace-only content, NUL bytes, and control-character-heavy payloads
+  are rejected at the boundary instead of being stored and silently parked
+  in the never-indexed reserve.
+- **`session.start` requires a non-blank title** (omitted title keeps the
+  documented `Untitled Session` default).
+- **`wm ingest` detects binary content before writing:** a binary payload
+  renamed to `.md` is reported `skipped: binary or non-text content`
+  instead of becoming an LMDB record.
+
+### Calm surfaces (F12)
+- **Fresh installs read as a state, not a failure:** `wm status` (and
+  `--json`) reports `state: "not_initialized"` with
+  `Search index  not created yet (first run)` instead of
+  `needs attention` / `DEGRADED` before a store exists.
+- **`wm config --sample` is the small product config** (store path +
+  optional embedder/LLM endpoints); the research sample (daemon schedules,
+  hemispheres, cloud LLM) moved to `--sample-full` and `--init --sample-full`.
+- **`--json` commands keep stderr to errors only:** unrelated
+  mesh/Sangha/Tantivy warnings no longer bleed into machine output.
+- **Docs/wording:** MCP guide no longer claims a glibc 2.39+ requirement
+  (the installer selects the static musl build); `wm update` help describes
+  its check/install/rollback family accurately; README states the 9 MCP
+  tools are client-visible schemas over a ~60-route curated catalog.
+
 ## [9.1.8] — 2026-09-17 (coordination truth-up, mesh ingest hardening, startup fixtures, onboarding)
 
 ### Onboarding — load your data
