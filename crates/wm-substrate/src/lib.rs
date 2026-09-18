@@ -1,4 +1,4 @@
-//! wm-substrate — Hardware awareness for WhiteMagic v5 (Lakshmi / Harmony Vector).
+//! wm-substrate — hardware awareness for WhiteMagic (Lakshmi / Harmony Vector).
 //!
 //! Reads real system metrics from `/proc` and `/sys` on Linux, providing
 //! a [`HarmonyVector`] that feeds into the governance pipeline via

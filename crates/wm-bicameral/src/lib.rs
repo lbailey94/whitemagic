@@ -1,4 +1,4 @@
-//! wm-bicameral — Bicameral reasoning for WhiteMagic v5 (Phase R5).
+//! wm-bicameral — bicameral reasoning for WhiteMagic.
 //!
 //! Dual-hemisphere reasoning system:
 //! - **Left hemisphere**: deterministic Rust logic (evidence-based analysis)

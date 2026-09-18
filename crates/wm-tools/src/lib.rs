@@ -1,4 +1,4 @@
-//! WhiteMagic v5 Tools — 229 tools + fractal meta-tool
+//! WhiteMagic tools — tool implementations + the `wm` meta-tool
 //!
 //! Tools: memory.create, memory.read, memory.list, memory.delete,
 //! memory.query, memory.search, memory.associate, memory.associations,

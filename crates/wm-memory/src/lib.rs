@@ -1,4 +1,4 @@
-//! `WhiteMagic` v4 Memory — LMDB + Tantivy + `LanceDB`
+//! `WhiteMagic` memory — LMDB + Tantivy + `LanceDB`
 //!
 //! Replaces the v2 `SQLite` + FTS5 + Python HNSW stack with:
 //! - LMDB for key-value storage (mmap'd, zero-copy reads)

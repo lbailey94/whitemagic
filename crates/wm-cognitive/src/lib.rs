@@ -1,4 +1,4 @@
-//! WhiteMagic v5 Cognitive — unified consciousness, reflex, timescale, drive, resonance, autonomic.
+//! WhiteMagic cognitive — unified consciousness, reflex, timescale, drive, resonance, autonomic.
 //!
 //! Merges v4's wm-consciousness + wm-reflex + wm-timescale + wm-drive + wm-resonance + wm-autonomic
 //! into a single crate to reduce cross-crate dependency friction for cognitive changes.

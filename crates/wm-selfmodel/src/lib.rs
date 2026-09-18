@@ -1,4 +1,4 @@
-//! wm-selfmodel — Predictive introspection for WhiteMagic v5 (Phase R4).
+//! wm-selfmodel — predictive introspection for WhiteMagic.
 //!
 //! Tracks per-subsystem metrics over time, forecasts threshold crossings,
 //! and feeds confidence signals back into the dispatch pipeline.

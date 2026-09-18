@@ -1,4 +1,4 @@
-//! WhiteMagic v5 MCP — Model Context Protocol server
+//! WhiteMagic MCP — model context protocol server
 //!
 //! Pure Rust JSON-RPC over stdio. Exposes a single `wm` fractal tool
 //! that auto-routes to all internal tools.

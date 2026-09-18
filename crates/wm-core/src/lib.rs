@@ -1,4 +1,4 @@
-//! `WhiteMagic` v4 Core — Types, Traits, and Gana Taxonomy
+//! `WhiteMagic` core — types, traits, and the Gana taxonomy
 //!
 //! This crate defines the foundational types shared across all `WhiteMagic`
 //! subsystems: the 28 Gana enum, effect rows, tool traits, brain-wave states,

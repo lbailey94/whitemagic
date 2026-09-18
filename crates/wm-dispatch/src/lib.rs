@@ -1,4 +1,4 @@
-//! WhiteMagic v5 Dispatch — Tool routing pipeline
+//! WhiteMagic dispatch — tool routing pipeline
 //!
 //! Replaces the v2 Python 22-stage middleware chain (~200µs/call)
 //! with a Rust trait-based pipeline (~2µs/call).

@@ -1,4 +1,4 @@
-//! `WhiteMagic` v4 wm-governance — Dharma gate and karma ledger.
+//! `WhiteMagic` governance — Dharma gate and karma ledger.
 //!
 //! Ethical governance for tool dispatch: evaluates actions against
 //! Dharma principles and tracks karma debt via a SHA-256 hash chain
