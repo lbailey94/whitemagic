@@ -28,13 +28,13 @@ opencode) at:
 Or try it directly:
 
 ```bash
-npx whitemagic-mcp --version   # wm 9.0.0
+npx whitemagic-mcp --version   # wm 9.1.8
 npx whitemagic-mcp doctor      # environment health check
 ```
 
 The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 (respects `XDG_CACHE_HOME`); the package version's major tracks the
-release tag (9.0.0 → `v9`). Pin a different release with
+release tag (the `v9` tag line). Pin a different release with
 `WHITEMAGIC_RELEASE`.
 
 ## Platforms
