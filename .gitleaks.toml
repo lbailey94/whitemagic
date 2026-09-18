@@ -13,11 +13,16 @@
 # RFC) as the KDF conformance proof; the generic-api-key rule flags it.
 # Scanned finding allowlisted by exact value (not by path — kdf.rs stays
 # under the scanner for real findings).
+#
+# 2026-09-18: the Q39 at-rest keyring meta records its key source as the
+# mode label "argon2id_passphrase"; the generic-api-key rule reads the
+# `key_source:` field name plus that value as an assignment. Exact-value
+# allowlist again — crates/wm-memory/src/at_rest.rs stays scanned.
 [extend]
 useDefault = true
 
 [allowlist]
-description = "credential-detector test fixtures (placeholder shapes only) + the RFC 5869 HKDF test vector"
+description = "credential-detector test fixtures (placeholder shapes only) + RFC 5869 HKDF vector + at-rest mode label"
 paths = [
     '''(^|/)crates/wm-memory/src/credentials\.rs$''',
     '''(^|/)scripts/mine_opencode_corpus\.py$''',
@@ -26,4 +31,5 @@ paths = [
 ]
 regexes = [
     '''00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff''',
+    '''argon2id_passphrase''',
 ]
