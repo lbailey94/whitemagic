@@ -440,11 +440,16 @@ mod tests {
                 multicast_group: wm_sangha::transport::MULTICAST_GROUP.to_string(),
                 agent_away_secs: 300,
                 state_dir: None,
+                authority: wm_sangha::MeshAuthorityPolicy::default(),
+                authority_file: None,
             };
             MeshNode::start(config, keypair)
         };
         let a = spawn("tool-node-a", 17_621).await.expect("a");
         let b = spawn("tool-node-b", 17_622).await.expect("b");
+        // Action-class traffic is provisioned explicitly (default-deny):
+        // B must grant A before A's chat can be accepted.
+        b.grant_authority("tool-node-a", None, wm_sangha::PeerAuthority::full());
 
         let slot = MeshSlot::new();
         slot.set(Arc::clone(&a));

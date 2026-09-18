@@ -54,10 +54,14 @@ cannot be relocated or re-keyed. Ingest policy:
   refused as identity theft (the binding follows stale eviction, so an
   upgraded node rebinds after its old entry ages out).
 - **Legacy beacons** without a key remain address hints (for peers whose key
-  is already bound, they must be signed by that key). Trust still comes from
-  the signed handshake (§4); the auto-join loop dials beaconed addresses and
-  upgrades them into bound identities. Quarantined peers are never
-  auto-dialed.
+  is already bound, they must be signed by that key). **Unbound address
+  hints are discovery input, not identity:** they expire on the shorter hint
+  TTL (`hint_ttl_sec`, default 120 s; bound peers keep the heartbeat
+  timeout), are capped (`max_hint_peers`, default 64 — a signed identity
+  may displace the oldest hint), and are **never auto-dialed** (HG-S1-7:
+  a spoofed unsigned announcement must not turn a node into a dialer).
+  Signed beacons bind identities directly; an explicit join by address
+  remains available. Quarantined peers are never auto-dialed.
 
 ## 4. Join — the signed heartbeat binds identity
 
@@ -138,8 +142,8 @@ sender to be identity-bound** (no `is_none_or` fallback), verifies the
 message signature against the bound key, checks freshness (a message more
 than 5 minutes from the receiver's clock is refused `stale chat
 rejected`), refuses quarantined senders at ingest (§7), and enforces the
-stored `PeerAuthority::can_execute` bit before the message enters the
-channel log. **Unsigned relay over mesh TCP is refused** — there is no
+**locally provisioned** `can_execute` authority before the message enters
+the channel log. **Unsigned relay over mesh TCP is refused** — there is no
 unsigned path on the mesh transport.
 
 **Envelope id (S1 phase 2):** every chat sent by a node carries an
@@ -160,29 +164,54 @@ legacy entry without one mints a fallback at flush and persists it for
 retry reuse), and reused across flush retries.
 
 Locks (`acquire_lock`/`release_lock`) are TTL-bounded and per-peer; after
-the engagement-token check they gate on the holder's stored
-`can_execute` authority, and a quarantined holder is refused outright. A
-quarantine revokes the bad apple's locks so the community is never held
-hostage by its resources. Signals (`broadcast_signal`) gate on the
-stored authority of `signal.source` and refuse a quarantined source.
+the engagement-token check they gate on the holder's **local authority
+grant**, and a quarantined holder is refused outright. A quarantine revokes
+the bad apple's locks so the community is never held hostage by its
+resources. Signals (`broadcast_signal`) gate on the effective authority of
+`signal.source` and refuse a quarantined source.
 
-**Authority honesty (read this before trusting a gate):**
-`PeerAuthority` is **peer-declared** — it travels inside the peer's own
-self-signed `PeerInfo`, so it is integrity-protected but *not*
-independently provisioned. There is no local-authority provisioning or
-administrative authorization boundary yet (**queued** for the V9.2
-compartment/authority work): whatever a peer announces about itself is
-what the registry enforces. Concretely, locks and signals are
-**claimed-identity** checks in permissive mode (`WM_SANGHA_REQUIRE_TOKENS`
-unset): `holder` and `source` are strings on the wire, and the gate
-enforces the stored authority of the peer the frame *claims* to be —
-only an engagement token, when required, cryptographically binds the
-holder (token issuer key must equal the holder's bound mesh key).
-**Signal caveat (unchanged):** signals carry no signature at all, so
-`source` is a claim; the gate does not prove who sent the frame.
-Hologram sync merges coordinate entries with importance-wins conflict
-resolution and is **not yet gated** (read-class merge, deliberately
-deferred).
+**Authority is locally provisioned (W1, 2026-09-18):** `PeerAuthority`
+inside a heartbeat is **peer-declared** — integrity-protected by the
+sender's own signature, but not a boundary. The boundary is this node's
+grant table in `<store>/mesh_authority.json` (path override
+`WM_MESH_AUTHORITY_FILE`; mode override `WM_MESH_AUTHORITY=enforce|advisory`):
+
+- a bound peer with **no local grant is denied** action-class traffic
+  (chat, signals, locks) — *default-deny*. Discovery still works: hints and
+  binds are not authority;
+- a grant may pin `public_key` (applies only while the bound key matches)
+  or omit it (the grant follows the TOFU binding);
+- `mode: "advisory"` restores the legacy peer-declared behavior for a
+  migration window; it is logged loudly at start and disclosed in
+  `/status` under `authority.mode`;
+- the file is read at node start (edit + restart to change policy); a
+  malformed file **fails closed** (enforce, no grants) with an error log.
+
+Gate errors name the class: `not identity-bound` (no signed heartbeat bound
+a key), `not provisioned on this node` (default-deny), or `provisioned
+without can_execute authority`. Locks and signals are still
+**claimed-identity** checks in one respect — `holder` and `source` are wire
+strings, and the gate enforces the *claimed* peer's effective authority;
+only an engagement token, when required, cryptographically binds the holder
+(token issuer key must equal the holder's bound mesh key). **Signal caveat
+(unchanged):** signals carry no signature at all, so `source` is a claim;
+the gate does not prove who sent the frame. Hologram sync merges coordinate
+entries with importance-wins conflict resolution and is **not yet gated**
+(read-class merge, deliberately deferred).
+
+```json
+{
+  "mode": "enforce",
+  "grants": {
+    "wm-0a1b2c3d4e5f": {
+      "public_key": "…hex…",
+      "can_execute": true,
+      "can_write_memory": false,
+      "can_delegate": false
+    }
+  }
+}
+```
 
 ## 7. Quarantine — the bad-apple rule
 

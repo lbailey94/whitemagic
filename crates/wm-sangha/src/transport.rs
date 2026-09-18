@@ -44,6 +44,7 @@ use tokio::net::{TcpListener, TcpStream, UdpSocket};
 use tokio::sync::{Mutex, Notify, RwLock};
 use wm_core::Result;
 
+use crate::authority::{AuthoritySource, MeshAuthorityPolicy};
 use crate::chat::SanghaChat;
 use crate::hologram::HologramSync;
 use crate::lock::ResourceLockManager;
@@ -339,6 +340,10 @@ pub struct SanghaState {
     /// freshness window. Only signature-verified observations enter —
     /// a forged heartbeat must not consume the genuine one's slot.
     pub heartbeat_replay: Mutex<ReplayCache>,
+    /// Local authority policy (default-deny): what each peer may do on THIS
+    /// node. Peer-declared authority is advisory input, never the boundary —
+    /// see [`crate::authority`]. Read via [`SanghaState::with_authority`].
+    pub authority: std::sync::RwLock<MeshAuthorityPolicy>,
 }
 
 impl SanghaState {
@@ -391,7 +396,26 @@ impl SanghaState {
             ),
             ingest_guard: Mutex::new(IngestGuard::new(4096, 8)),
             heartbeat_replay: Mutex::new(ReplayCache::new(4096)),
+            authority: std::sync::RwLock::new(MeshAuthorityPolicy::from_env()),
         }
+    }
+
+    /// Install the local authority policy (side-map loaded by
+    /// `MeshNode::start`); without it, env mode + no grants.
+    #[must_use]
+    pub fn with_authority_policy(mut self, policy: MeshAuthorityPolicy) -> Self {
+        self.authority = std::sync::RwLock::new(policy);
+        self
+    }
+
+    /// Run `f` against the live authority policy. Poison-recovering: a
+    /// panicked writer must not take the gate down with it.
+    pub fn with_authority<R>(&self, f: impl FnOnce(&MeshAuthorityPolicy) -> R) -> R {
+        let guard = self
+            .authority
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        f(&guard)
     }
 
     /// Whether privileged RPC methods require an engagement credential.
@@ -849,31 +873,47 @@ async fn enforce_lock_engagement(
     .map_err(|e| format!("engagement rejected: {e}"))
 }
 
-/// Enforce the stored peer authority's `can_execute` bit for a claimed
-/// sender/holder identity on the live transport (S1 mesh phase 2).
+/// Enforce the LOCAL authority policy's `can_execute` bit for a claimed
+/// sender/holder identity on the live transport (S1 mesh phase 2 + W1
+/// provisioning).
 ///
-/// Errors distinguish the two failure classes the community needs:
-/// an unknown/unbound claimant is **not identity-bound** (no signed
-/// heartbeat ever bound a key), while a known, bound peer whose declared
-/// authority withholds execution **lacks can_execute authority**.
+/// A peer's own `PeerAuthority` is peer-declared; the boundary is this
+/// node's grant table ([`crate::authority`]), default-deny. Errors name the
+/// failure class: unknown/unbound (no signed heartbeat ever bound a key),
+/// bound but **unprovisioned** (default-deny), or provisioned without
+/// `can_execute`.
 async fn require_can_execute(
     state: &SanghaState,
     peer_id: &str,
 ) -> std::result::Result<(), String> {
-    let (bound, can_execute) = {
+    let (bound_key, declared) = {
         let peers = state.peers.lock().await;
         match peers.get(peer_id) {
-            Some(p) => (!p.public_key.is_empty(), p.authority.can_execute),
-            None => (false, false),
+            Some(p) => (p.public_key.clone(), p.authority.clone()),
+            None => (String::new(), crate::peer::PeerAuthority::none()),
         }
     };
-    if !bound {
+    if bound_key.is_empty() {
         return Err(format!("peer '{peer_id}' is not identity-bound"));
     }
-    if !can_execute {
-        return Err(format!("peer '{peer_id}' lacks can_execute authority"));
+    let effective =
+        state.with_authority(|policy| policy.authority_for(peer_id, &bound_key, &declared));
+    if effective.authority.can_execute {
+        return Ok(());
     }
-    Ok(())
+    Err(match effective.source {
+        AuthoritySource::Provisioned => {
+            format!("peer '{peer_id}' is provisioned without can_execute authority")
+        }
+        AuthoritySource::DefaultDenied => format!(
+            "peer '{peer_id}' is not provisioned on this node (mesh authority is \
+             default-deny) — add a grant to mesh_authority.json to allow action-class \
+             traffic"
+        ),
+        AuthoritySource::AdvisoryDeclared => {
+            format!("peer '{peer_id}' lacks can_execute authority")
+        }
+    })
 }
 
 /// Handle a single RPC request.
@@ -1473,7 +1513,9 @@ mod tests {
     use super::*;
     use crate::crypto::MeshKeyPair;
 
-    /// Bind a signed test peer into the registry (first-sight TOFU).
+    /// Bind a signed test peer into the registry (first-sight TOFU) **and
+    /// provision it** — enforce mode, full local authority. Action-class
+    /// tests exercise the real operator flow (bind, then grant).
     async fn bind_signed_peer(state: &SanghaState, peer_id: &str, seed: &[u8]) -> MeshKeyPair {
         let keypair = MeshKeyPair::from_seed(seed);
         state
@@ -1482,6 +1524,13 @@ mod tests {
             .await
             .discover_signed(PeerInfo::new(peer_id, "127.0.0.1:9000").signed(&keypair))
             .expect("test peer binds");
+        state.authority.write().expect("authority lock").grant(
+            peer_id,
+            crate::authority::AuthorityGrant {
+                public_key: None,
+                authority: crate::peer::PeerAuthority::full(),
+            },
+        );
         keypair
     }
 
@@ -1740,6 +1789,13 @@ mod tests {
             .await
             .discover_signed(PeerInfo::new("holder-a", "127.0.0.1:9999").signed(&mesh_kp))
             .expect("holder binds");
+        state.authority.write().expect("authority lock").grant(
+            "holder-a",
+            crate::authority::AuthorityGrant {
+                public_key: None,
+                authority: crate::peer::PeerAuthority::read_only(),
+            },
+        );
         let issuer = wm_governance::engagement_tokens::EngagementIssuer::with_keypair(
             wm_governance::network_profile::AgentKeypair::from_seed(seed),
         );
@@ -2247,6 +2303,15 @@ mod tests {
             .await
             .discover_signed(no_exec.signed(&keypair))
             .expect("authority-none peer binds");
+        // Provisioned without execution rights: the local grant is the
+        // boundary, not the peer's own claim.
+        state.authority.write().expect("authority lock").grant(
+            "no-exec",
+            crate::authority::AuthorityGrant {
+                public_key: None,
+                authority: crate::peer::PeerAuthority::none(),
+            },
+        );
         // The stored record still verifies; only the gate refuses.
         assert!(state.peers.lock().await.verify_peer("no-exec"));
 
@@ -2264,7 +2329,41 @@ mod tests {
         };
         let resp = handle_rpc_request(&req, &state).await;
         let err = resp.error.expect("authority gate must refuse");
-        assert!(err.contains("lacks can_execute authority"), "{err}");
+        assert!(
+            err.contains("provisioned without can_execute authority"),
+            "{err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn unprovisioned_bound_peer_is_default_denied() {
+        // W1: a bound peer with no local grant is denied action-class
+        // traffic (default-deny), and the refusal names the provisioning
+        // surface.
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = MeshKeyPair::from_seed(b"stranger-seed");
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("stranger", "127.0.0.1:9002").signed(&keypair))
+            .expect("stranger binds");
+        let req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: signed_chat_params(
+                &keypair,
+                "stranger",
+                "general",
+                "let me in",
+                "env-stranger",
+                chrono::Utc::now().timestamp_millis(),
+            ),
+            id: 41,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        let err = resp.error.expect("default-deny must refuse");
+        assert!(err.contains("not provisioned on this node"), "{err}");
+        assert!(err.contains("mesh_authority.json"), "{err}");
     }
 
     #[tokio::test]
@@ -2289,7 +2388,7 @@ mod tests {
         let err = resp.error.expect("unbound signal refused");
         assert!(err.contains("not identity-bound"), "{err}");
 
-        // Bound but authority withheld.
+        // Bound and provisioned, but the local grant withholds execution.
         let mut no_exec = PeerInfo::new("no-exec", "127.0.0.1:9001");
         no_exec.authority = crate::peer::PeerAuthority::none();
         state
@@ -2298,6 +2397,13 @@ mod tests {
             .await
             .discover_signed(no_exec.signed(&MeshKeyPair::from_seed(b"no-exec-signal-seed")))
             .expect("bind");
+        state.authority.write().expect("authority lock").grant(
+            "no-exec",
+            crate::authority::AuthorityGrant {
+                public_key: None,
+                authority: crate::peer::PeerAuthority::none(),
+            },
+        );
         let signal = crate::signal::Signal::new(
             crate::signal::SignalType::PeerStatus,
             "no-exec",
@@ -2313,7 +2419,10 @@ mod tests {
         )
         .await;
         let err = resp.error.expect("authority gate must refuse");
-        assert!(err.contains("lacks can_execute authority"), "{err}");
+        assert!(
+            err.contains("provisioned without can_execute authority"),
+            "{err}"
+        );
     }
 
     #[tokio::test]
@@ -2327,6 +2436,13 @@ mod tests {
             .await
             .discover_signed(no_exec.signed(&MeshKeyPair::from_seed(b"no-exec-lock-seed")))
             .expect("bind");
+        state.authority.write().expect("authority lock").grant(
+            "no-exec",
+            crate::authority::AuthorityGrant {
+                public_key: None,
+                authority: crate::peer::PeerAuthority::none(),
+            },
+        );
 
         let acquire = RpcRequest {
             method: "acquire_lock".to_string(),
@@ -2339,7 +2455,10 @@ mod tests {
         };
         let resp = handle_rpc_request(&acquire, &state).await;
         let err = resp.error.expect("authority gate must refuse");
-        assert!(err.contains("lacks can_execute authority"), "{err}");
+        assert!(
+            err.contains("provisioned without can_execute authority"),
+            "{err}"
+        );
 
         let release = RpcRequest {
             method: "release_lock".to_string(),
@@ -2351,7 +2470,10 @@ mod tests {
         };
         let resp = handle_rpc_request(&release, &state).await;
         let err = resp.error.expect("authority gate must refuse");
-        assert!(err.contains("lacks can_execute authority"), "{err}");
+        assert!(
+            err.contains("provisioned without can_execute authority"),
+            "{err}"
+        );
     }
 
     #[tokio::test]
@@ -2631,6 +2753,15 @@ mod tests {
         let bound_addr = listener.local_addr().unwrap();
 
         let state = Arc::new(SanghaState::new("server", bound_addr.to_string()));
+        // Provision the client (default-deny: a bound peer needs a grant
+        // before action-class traffic is accepted).
+        state.authority.write().expect("authority lock").grant(
+            "client-1",
+            crate::authority::AuthorityGrant {
+                public_key: None,
+                authority: crate::peer::PeerAuthority::full(),
+            },
+        );
 
         let server_state = Arc::clone(&state);
         tokio::spawn(async move {
@@ -2904,6 +3035,15 @@ mod containment_tests {
         // through A's transport but signs with its own keypair.
         let (a, addr_a) = spawn_node("node-a", 17_401).await;
         let (b, addr_b) = spawn_node("node-b", 17_402).await;
+        // B provisions A (default-deny): the operator grant — not A's own
+        // claim — is the boundary for action-class traffic.
+        b.state.authority.write().expect("authority lock").grant(
+            "node-a",
+            crate::authority::AuthorityGrant {
+                public_key: None,
+                authority: crate::peer::PeerAuthority::full(),
+            },
+        );
         let b_conn = format!("remote:{addr_b}");
         let _a_conn = format!("remote:{addr_a}");
 

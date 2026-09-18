@@ -273,6 +273,28 @@ impl RawMeshStream {
 }
 
 /// A deterministic raw-frame client identity.
+/// Write the per-store authority side map. Mesh action-class traffic is
+/// default-deny (W1), so each node must provision the peers it accepts.
+fn provision(store_root: &std::path::Path, grants: &[(&str, bool)]) {
+    let mut map = serde_json::Map::new();
+    for (peer, can_execute) in grants {
+        map.insert(
+            (*peer).to_string(),
+            serde_json::json!({
+                "can_execute": can_execute,
+                "can_write_memory": false,
+                "can_delegate": false,
+            }),
+        );
+    }
+    let policy = serde_json::json!({"mode": "enforce", "grants": map});
+    std::fs::write(
+        store_root.join("mesh_authority.json"),
+        serde_json::to_vec_pretty(&policy).expect("serialize authority"),
+    )
+    .expect("write mesh_authority.json");
+}
+
 fn raw_client(peer_id: &str) -> MeshKeyPair {
     MeshKeyPair::from_seed(format!("raw-client-{peer_id}").as_bytes())
 }
@@ -329,6 +351,7 @@ fn raw_chat(
 #[test]
 fn raw_frame_heartbeat_replay_and_chat_dedup() {
     let store = tempfile::tempdir().expect("store");
+    provision(store.path(), &[("raw-alpha", true)]);
     let _node = ServeProcess::spawn(store.path(), "raw-node-a", 17_415);
     let mut mesh = RawMeshStream::connect(17_415);
     let kp = raw_client("alpha");
@@ -388,6 +411,9 @@ fn raw_frame_heartbeat_replay_and_chat_dedup() {
 #[test]
 fn raw_frame_binding_and_authority_gates() {
     let store = tempfile::tempdir().expect("store");
+    // raw-noexec is provisioned WITHOUT execution rights: the local grant,
+    // not the peer's self-declaration, is the boundary.
+    provision(store.path(), &[("raw-noexec", false)]);
     let _node = ServeProcess::spawn(store.path(), "raw-node-b", 17_416);
     let mut mesh = RawMeshStream::connect(17_416);
     let now = chrono::Utc::now().timestamp_millis();
@@ -400,7 +426,7 @@ fn raw_frame_binding_and_authority_gates() {
     assert!(err.contains("not identity-bound"), "{resp}");
 
     // A peer that self-declares `PeerAuthority::none()` binds fine, but
-    // every execution-class path refuses it with the authority error.
+    // every execution-class path refuses it: provisioned without rights.
     let no_exec = raw_client("noexec");
     let heartbeat = raw_heartbeat(&no_exec, "raw-noexec", PeerAuthority::none());
     let resp = mesh.call("heartbeat", &heartbeat, 2);
@@ -416,7 +442,10 @@ fn raw_frame_binding_and_authority_gates() {
     );
     let resp = mesh.call("send_chat", &chat, 3);
     let err = resp["error"].as_str().unwrap_or_default().to_string();
-    assert!(err.contains("lacks can_execute authority"), "{resp}");
+    assert!(
+        err.contains("provisioned without can_execute authority"),
+        "{resp}"
+    );
 
     let lock = serde_json::json!({
         "resource": "memory:galaxy:codex",
@@ -425,7 +454,10 @@ fn raw_frame_binding_and_authority_gates() {
     });
     let resp = mesh.call("acquire_lock", &lock, 4);
     let err = resp["error"].as_str().unwrap_or_default().to_string();
-    assert!(err.contains("lacks can_execute authority"), "{resp}");
+    assert!(
+        err.contains("provisioned without can_execute authority"),
+        "{resp}"
+    );
 
     // Signals carry no signature: the gate enforces the CLAIMED source's
     // stored authority (an unbound claim is still refused).
@@ -453,6 +485,14 @@ fn raw_frame_binding_and_authority_gates() {
 fn two_serve_nodes_discover_chat_and_quarantine() {
     let store_a = tempfile::tempdir().expect("store a");
     let store_b = tempfile::tempdir().expect("store b");
+    provision(
+        store_a.path(),
+        &[("e2e-node-a", true), ("e2e-node-b", true)],
+    );
+    provision(
+        store_b.path(),
+        &[("e2e-node-a", true), ("e2e-node-b", true)],
+    );
     let mut a = ServeProcess::spawn(store_a.path(), "e2e-node-a", 17_411);
     let mut b = ServeProcess::spawn(store_b.path(), "e2e-node-b", 17_412);
     handshake(&mut a, "mesh-e2e-a", 1);
@@ -617,6 +657,14 @@ fn two_serve_nodes_discover_chat_and_quarantine() {
 fn dead_peer_connection_does_not_poison_rejoin() {
     let store_a = tempfile::tempdir().expect("store survivor");
     let store_b = tempfile::tempdir().expect("store victim");
+    provision(
+        store_a.path(),
+        &[("e2e-survivor", true), ("e2e-victim", true)],
+    );
+    provision(
+        store_b.path(),
+        &[("e2e-survivor", true), ("e2e-victim", true)],
+    );
     let mut a = ServeProcess::spawn(store_a.path(), "e2e-survivor", 17_413);
     let mut b = ServeProcess::spawn(store_b.path(), "e2e-victim", 17_414);
     handshake(&mut a, "mesh-e2e-retest-a", 1);

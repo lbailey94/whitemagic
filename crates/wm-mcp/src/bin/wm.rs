@@ -1247,7 +1247,13 @@ fn run() -> anyhow::Result<()> {
             // as long as the process.
             if mesh || wm_sangha::mesh_node::env_requested() {
                 let keypair = wm_mcp::server::mesh_signing_key();
-                let config = wm_sangha::MeshNodeConfig::from_env(mesh_bind.as_deref(), &keypair);
+                let mut config =
+                    wm_sangha::MeshNodeConfig::from_env(mesh_bind.as_deref(), &keypair);
+                if config.authority_file.is_none() {
+                    // Per-store authority side map: action-class mesh traffic
+                    // is default-deny until a grant is provisioned here.
+                    config.authority_file = Some(store_path.join("mesh_authority.json"));
+                }
                 match rt.block_on(wm_sangha::MeshNode::start(config, keypair)) {
                     Ok(node) => {
                         tracing::info!(

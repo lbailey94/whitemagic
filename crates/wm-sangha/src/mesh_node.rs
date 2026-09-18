@@ -49,6 +49,9 @@ pub const ENV_MESH_INTERVAL: &str = "WM_MESH_INTERVAL";
 /// `WM_MESH_AGENT_AWAY_SECS` — how long after the last agent request the
 /// node still counts its agent as present (default 300).
 pub const ENV_MESH_AGENT_AWAY_SECS: &str = "WM_MESH_AGENT_AWAY_SECS";
+/// `WM_MESH_AUTHORITY_FILE` — local authority grant side-map (default
+/// `<store>/mesh_authority.json`; see [`crate::authority`]).
+pub const ENV_MESH_AUTHORITY_FILE: &str = "WM_MESH_AUTHORITY_FILE";
 
 /// Whether the mesh transport was requested: `WM_MESH=1` (strict).
 #[must_use]
@@ -129,6 +132,14 @@ pub struct MeshNodeConfig {
     /// (`mesh_chat_log.json`) live here and survive restarts. `None` =
     /// in-memory only (tests, throwaway nodes).
     pub state_dir: Option<std::path::PathBuf>,
+    /// Local authority policy used when `authority_file` is unset
+    /// (default: enforce, no grants). Tests and embedders set this
+    /// directly; `from_env` derives it from the environment.
+    pub authority: crate::authority::MeshAuthorityPolicy,
+    /// Authority grant side-map path. When set, the file wins at start
+    /// (malformed → loud fail-closed). The CLI defaults it to
+    /// `<store>/mesh_authority.json`; `WM_MESH_AUTHORITY_FILE` overrides.
+    pub authority_file: Option<std::path::PathBuf>,
 }
 
 impl MeshNodeConfig {
@@ -163,6 +174,11 @@ impl MeshNodeConfig {
                 .filter(|v| *v > 0)
                 .unwrap_or(300),
             state_dir: None,
+            authority: crate::authority::MeshAuthorityPolicy::from_env(),
+            authority_file: std::env::var(ENV_MESH_AUTHORITY_FILE)
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+                .map(std::path::PathBuf::from),
         }
     }
 
@@ -244,12 +260,28 @@ impl MeshNode {
             .state_dir
             .as_ref()
             .map(|d| d.join("mesh_chat_log.json"));
-        let state = Arc::new(SanghaState::with_persistence(
-            config.peer_id.clone(),
-            config.announce_addr(),
-            keypair,
-            chat_log_path,
-        ));
+        // Authority policy: the side-map (when configured) wins over the
+        // in-config default; a malformed file fails closed loudly.
+        let authority = if let Some(path) = &config.authority_file {
+            crate::authority::MeshAuthorityPolicy::resolve(Some(path))
+        } else {
+            config.authority.clone()
+        };
+        if authority.is_advisory() {
+            tracing::warn!(
+                "mesh authority is ADVISORY — peer-declared authority is honored; \
+                 provision grants and set WM_MESH_AUTHORITY=enforce for the real boundary"
+            );
+        }
+        let state = Arc::new(
+            SanghaState::with_persistence(
+                config.peer_id.clone(),
+                config.announce_addr(),
+                keypair,
+                chat_log_path,
+            )
+            .with_authority_policy(authority),
+        );
         let transport = Arc::new(SanghaTransport::new(
             transport_config.clone(),
             Arc::clone(&state),
@@ -332,6 +364,44 @@ impl MeshNode {
             .agent_activity
             .lock()
             .expect("agent activity lock poisoned") = Some(std::time::Instant::now());
+    }
+
+    /// Provision (or replace) a local authority grant (in-memory; persist
+    /// by editing `mesh_authority.json`).
+    pub fn grant_authority(
+        &self,
+        peer_id: &str,
+        public_key: Option<String>,
+        authority: crate::peer::PeerAuthority,
+    ) -> Value {
+        let mut policy = self
+            .state
+            .authority
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        policy.grant(
+            peer_id,
+            crate::authority::AuthorityGrant {
+                public_key,
+                authority,
+            },
+        );
+        json!({
+            "status": "ok",
+            "granted": peer_id,
+            "authority": policy.status_summary(),
+        })
+    }
+
+    /// Revoke a local authority grant.
+    pub fn revoke_authority(&self, peer_id: &str) -> Value {
+        let removed = self
+            .state
+            .authority
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .revoke(peer_id);
+        json!({"status": "ok", "revoked": removed, "peer_id": peer_id})
     }
 
     /// Whether this node's agent is present: a request was seen within
@@ -810,6 +880,9 @@ impl MeshNode {
             "peers": unwrap_or_null(peers),
             "chat": unwrap_or_null(chat),
             "locks": unwrap_or_null(locks),
+            "authority": self
+                .state
+                .with_authority(crate::authority::MeshAuthorityPolicy::status_summary),
             "mail": self.mail_summary(),
         })
     }
@@ -911,7 +984,15 @@ async fn auto_join_loop(node: Arc<MeshNode>, interval: std::time::Duration) {
             peers
                 .alive_peers()
                 .into_iter()
-                .filter(|p| !p.quarantined && p.address != node.config.announce_addr())
+                // HG-S1-7: unbound address hints are never auto-dialed —
+                // a spoofed unsigned announcement must not turn this node
+                // into a dialer. Signed beacons bind directly; an explicit
+                // join by address remains available.
+                .filter(|p| {
+                    !p.quarantined
+                        && !p.is_hint()
+                        && p.address != node.config.announce_addr()
+                })
                 .map(|p| p.address.clone())
                 .collect()
         };
@@ -969,6 +1050,12 @@ mod tests {
             multicast_group: group.to_string(),
             agent_away_secs: away_secs,
             state_dir: None,
+            // Transport integration tests exercise discovery/chat/presence;
+            // the authority boundary itself is covered by the transport
+            // unit tests and the provisioned raw-frame e2e. Advisory here
+            // keeps this helper focused (the migration mode is legal).
+            authority: crate::authority::MeshAuthorityPolicy::advisory(),
+            authority_file: None,
         };
         MeshNode::start(config, keypair)
             .await
@@ -1007,6 +1094,8 @@ mod tests {
             multicast_group: crate::transport::MULTICAST_GROUP.to_string(),
             agent_away_secs: 300,
             state_dir: None,
+            authority: crate::authority::MeshAuthorityPolicy::enforce(),
+            authority_file: None,
         };
         assert_eq!(config.announce_addr(), "127.0.0.1:7369");
         let explicit = MeshNodeConfig {
@@ -1296,6 +1385,8 @@ mod tests {
             multicast_group: TEST_GROUP_B.to_string(),
             agent_away_secs: 300,
             state_dir: Some(dir.to_path_buf()),
+            authority: crate::authority::MeshAuthorityPolicy::advisory(),
+            authority_file: None,
         };
 
         // Generation 1: A queues mail to a dead peer; B receives a live chat.

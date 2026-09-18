@@ -31,6 +31,9 @@ pub mod replay;
 pub mod signal;
 
 #[cfg(feature = "transport")]
+pub mod authority;
+
+#[cfg(feature = "transport")]
 pub mod transport;
 
 #[cfg(feature = "transport")]
@@ -50,6 +53,10 @@ pub use radiant::{
 };
 pub use signal::{Signal, SignalBroadcast, SignalType};
 
+#[cfg(feature = "transport")]
+pub use authority::{
+    AuthorityGrant, AuthorityMode, AuthoritySource, EffectiveAuthority, MeshAuthorityPolicy,
+};
 #[cfg(feature = "transport")]
 pub use transport::{
     PeerAnnounce, RpcRequest, RpcResponse, SanghaState, SanghaTransport, TransportConfig,

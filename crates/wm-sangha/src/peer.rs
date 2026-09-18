@@ -334,6 +334,14 @@ impl PeerInfo {
         self.trust_score >= threshold && self.authority.can_write_memory
     }
 
+    /// Whether this entry is an unbound **address hint** (no identity key
+    /// ever bound). Hints expire on the shorter hint TTL, are never
+    /// auto-dialed, and cannot displace bound peers.
+    #[must_use]
+    pub fn is_hint(&self) -> bool {
+        self.public_key.is_empty()
+    }
+
     /// Set authority for this peer.
     pub fn set_authority(&mut self, authority: PeerAuthority) {
         self.authority = authority;
@@ -388,10 +396,30 @@ impl PeerInfo {
 /// Configuration for peer discovery.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeerDiscoveryConfig {
-    /// Heartbeat timeout in seconds — peers not seen for this long are evicted.
+    /// Heartbeat timeout in seconds — **bound** peers not seen for this long
+    /// are evicted.
     pub heartbeat_timeout_sec: i64,
     /// Maximum number of peers to track.
     pub max_peers: usize,
+    /// Address-hint TTL in seconds (HG-S1-7): **unbound** entries (unsigned
+    /// beacons/heartbeats from never-bound peers) expire this long after the
+    /// last receiver-observed announcement. Hints are discovery input, not
+    /// identity — bounding their lifetime bounds hint poisoning.
+    #[serde(default = "default_hint_ttl_sec")]
+    pub hint_ttl_sec: i64,
+    /// Maximum number of unbound address hints tracked at once. Beyond this
+    /// cap, new hints are refused (a flood cannot crowd the registry); a
+    /// signed identity can evict the oldest hint to make room.
+    #[serde(default = "default_max_hint_peers")]
+    pub max_hint_peers: usize,
+}
+
+const fn default_hint_ttl_sec() -> i64 {
+    120
+}
+
+const fn default_max_hint_peers() -> usize {
+    64
 }
 
 impl Default for PeerDiscoveryConfig {
@@ -399,6 +427,8 @@ impl Default for PeerDiscoveryConfig {
         Self {
             heartbeat_timeout_sec: 30,
             max_peers: 100,
+            hint_ttl_sec: default_hint_ttl_sec(),
+            max_hint_peers: default_max_hint_peers(),
         }
     }
 }
@@ -625,14 +655,59 @@ impl PeerDiscovery {
                 return;
             }
         }
-        if !self.peers.contains_key(&peer.id) {
+        let is_new = !self.peers.contains_key(&peer.id);
+        if is_new {
             self.total_discovered += 1;
-        }
-        if self.peers.len() >= self.config.max_peers && !self.peers.contains_key(&peer.id) {
-            return; // At capacity
+            let is_hint = peer.is_hint();
+            // Hint population cap (HG-S1-7): a spoofed-hint flood cannot
+            // crowd the registry or starve identity binds.
+            if is_hint && self.hint_count() >= self.config.max_hint_peers {
+                tracing::debug!("address-hint cap reached — dropping hint {}", peer.id);
+                return;
+            }
+            if self.peers.len() >= self.config.max_peers {
+                if is_hint {
+                    tracing::debug!("peer registry at capacity — dropping hint {}", peer.id);
+                    return;
+                }
+                // A bound identity may displace the oldest hint; if every
+                // slot is a bound peer, the registry stays full.
+                if !self.evict_oldest_hint() {
+                    tracing::debug!(
+                        "peer registry at capacity with no hints to evict — refusing {}",
+                        peer.id
+                    );
+                    return;
+                }
+            }
         }
         self.observed.insert(peer.id.clone(), now);
         self.peers.insert(peer.id.clone(), peer);
+    }
+
+    /// Number of unbound address hints currently tracked.
+    #[must_use]
+    pub fn hint_count(&self) -> usize {
+        self.peers.values().filter(|p| p.is_hint()).count()
+    }
+
+    /// Evict the oldest unbound address hint (receiver-observed age,
+    /// quarantined entries spared). Returns whether one was evicted.
+    fn evict_oldest_hint(&mut self) -> bool {
+        let victim = self
+            .peers
+            .iter()
+            .filter(|(_, p)| p.is_hint() && !p.quarantined)
+            .min_by_key(|(id, p)| self.observed.get(*id).copied().unwrap_or(p.last_seen))
+            .map(|(id, _)| id.clone());
+        if let Some(id) = victim {
+            self.peers.remove(&id);
+            self.observed.remove(&id);
+            self.announced_agent_present.remove(&id);
+            tracing::debug!("evicted oldest address hint {id} for a signed identity");
+            return true;
+        }
+        false
     }
 
     /// Discover a peer whose identity is self-signed with its own Ed25519
@@ -801,12 +876,12 @@ impl PeerDiscovery {
     }
 
     /// Evict peers whose **receiver-observed** liveness is staler than the
-    /// timeout. Quarantined peers are **spared** — the bad-apple record
-    /// must survive decay, or silence would launder a quarantine into a
-    /// clean slate. Returns the number of peers evicted.
+    /// timeout — bound peers on the heartbeat timeout, unbound address hints
+    /// on the shorter hint TTL (HG-S1-7). Quarantined peers are **spared** —
+    /// the bad-apple record must survive decay, or silence would launder a
+    /// quarantine into a clean slate. Returns the number of peers evicted.
     pub fn evict_stale(&mut self) -> usize {
         let now = chrono::Utc::now().timestamp();
-        let timeout = self.config.heartbeat_timeout_sec;
         let to_evict: Vec<PeerId> = self
             .peers
             .iter()
@@ -815,6 +890,11 @@ impl PeerDiscovery {
                     return false;
                 }
                 let last = self.observed.get(*id).copied().unwrap_or(p.last_seen);
+                let timeout = if p.is_hint() {
+                    self.config.hint_ttl_sec
+                } else {
+                    self.config.heartbeat_timeout_sec
+                };
                 now - last > timeout
             })
             .map(|(id, _)| id.clone())
@@ -920,6 +1000,7 @@ impl PeerDiscovery {
                     "id": p.id,
                     "address": p.address,
                     "alive": p.alive,
+                    "hint": p.is_hint(),
                     "presence": presence,
                     "agent_present": agent_present,
                     "capabilities": p.capabilities.iter().map(PeerCapability::as_str).collect::<Vec<_>>(),
@@ -1211,6 +1292,7 @@ mod tests {
         let pd = PeerDiscovery::new(PeerDiscoveryConfig {
             heartbeat_timeout_sec: 45,
             max_peers: 10,
+            ..PeerDiscoveryConfig::default()
         });
         assert_eq!(pd.heartbeat_timeout_secs(), 45);
     }
@@ -1292,6 +1374,8 @@ mod tests {
         let mut pd = PeerDiscovery::new(PeerDiscoveryConfig {
             heartbeat_timeout_sec: 0, // Immediate timeout
             max_peers: 100,
+            hint_ttl_sec: 0, // hints expire immediately too (HG-S1-7)
+            ..PeerDiscoveryConfig::default()
         });
         pd.discover(PeerInfo::new("node-1", "127.0.0.1:8080"));
         pd.discover(PeerInfo::new("node-2", "127.0.0.1:8081"));
@@ -1307,6 +1391,8 @@ mod tests {
         let mut pd = PeerDiscovery::new(PeerDiscoveryConfig {
             heartbeat_timeout_sec: 0, // Immediate timeout
             max_peers: 100,
+            hint_ttl_sec: 0, // hints expire immediately too (HG-S1-7)
+            ..PeerDiscoveryConfig::default()
         });
         pd.discover(PeerInfo::new("free-1", "127.0.0.1:8080"));
         pd.discover(PeerInfo::new("bad-apple", "127.0.0.1:8081"));
@@ -1354,6 +1440,7 @@ mod tests {
         let mut pd = PeerDiscovery::new(PeerDiscoveryConfig {
             heartbeat_timeout_sec: 30,
             max_peers: 100,
+            ..PeerDiscoveryConfig::default()
         });
         let mut online = PeerInfo::new("p-online", "a1");
         online.agent_present = true;
@@ -1408,12 +1495,83 @@ mod tests {
         let mut pd = PeerDiscovery::new(PeerDiscoveryConfig {
             heartbeat_timeout_sec: 30,
             max_peers: 2,
+            ..PeerDiscoveryConfig::default()
         });
         pd.discover(PeerInfo::new("node-1", "addr1"));
         pd.discover(PeerInfo::new("node-2", "addr2"));
         pd.discover(PeerInfo::new("node-3", "addr3")); // Should be rejected
 
         assert_eq!(pd.peer_count(), 2);
+    }
+
+    #[test]
+    fn hint_ttl_is_shorter_than_heartbeat_timeout() {
+        // HG-S1-7: unbound address hints expire on their own TTL; bound
+        // peers keep the heartbeat timeout.
+        let mut pd = PeerDiscovery::new(PeerDiscoveryConfig {
+            heartbeat_timeout_sec: 3600,
+            max_peers: 100,
+            hint_ttl_sec: 0,
+            max_hint_peers: 64,
+        });
+        pd.discover(PeerInfo::new("hint-1", "addr1"));
+        let bound = PeerInfo::new("bound-1", "addr2")
+            .signed(&crate::crypto::MeshKeyPair::from_seed(b"bound-1"));
+        pd.discover_signed(bound).expect("bound peer registers");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        let evicted = pd.evict_stale();
+        assert_eq!(evicted, 1, "only the hint is evicted");
+        assert!(pd.get("hint-1").is_none());
+        assert!(pd.get("bound-1").is_some(), "bound peer stays");
+    }
+
+    #[test]
+    fn hint_population_is_capped() {
+        let mut pd = PeerDiscovery::new(PeerDiscoveryConfig {
+            heartbeat_timeout_sec: 30,
+            max_peers: 100,
+            hint_ttl_sec: 120,
+            max_hint_peers: 2,
+        });
+        pd.discover(PeerInfo::new("hint-1", "a1"));
+        pd.discover(PeerInfo::new("hint-2", "a2"));
+        pd.discover(PeerInfo::new("hint-3", "a3"));
+        assert_eq!(pd.peer_count(), 2, "hint cap refused the third hint");
+        assert_eq!(pd.hint_count(), 2);
+    }
+
+    #[test]
+    fn bound_identity_displaces_oldest_hint_at_capacity() {
+        let mut pd = PeerDiscovery::new(PeerDiscoveryConfig {
+            heartbeat_timeout_sec: 30,
+            max_peers: 2,
+            hint_ttl_sec: 120,
+            max_hint_peers: 64,
+        });
+        pd.discover(PeerInfo::new("hint-old", "a1"));
+        pd.discover(PeerInfo::new("hint-new", "a2"));
+        assert_eq!(pd.peer_count(), 2);
+        // Deterministic ages (observed timestamps are second-resolution).
+        let now = chrono::Utc::now().timestamp();
+        pd.observed.insert("hint-old".to_string(), now - 10);
+        pd.observed.insert("hint-new".to_string(), now);
+
+        let bound = PeerInfo::new("bound-1", "a3")
+            .signed(&crate::crypto::MeshKeyPair::from_seed(b"bound-x"));
+        pd.discover_signed(bound).expect("bound identity registers");
+        assert_eq!(pd.peer_count(), 2, "bound peer took a slot");
+        assert!(pd.get("bound-1").is_some());
+        assert!(pd.get("hint-old").is_none(), "oldest hint was displaced");
+        assert!(pd.get("hint-new").is_some());
+    }
+
+    #[test]
+    fn hint_flag_is_disclosed_in_summary() {
+        let mut pd = PeerDiscovery::default();
+        pd.discover(PeerInfo::new("hint-1", "a1"));
+        let s = pd.summary();
+        assert_eq!(s["peers"][0]["hint"], true);
     }
 
     #[test]

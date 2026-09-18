@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 9.2.0 in progress (2026-09-18)
 
+### Mesh authority provisioning + hint expiry (W1)
+- **Peer-declared mesh authority is no longer the boundary.** A node now
+  enforces its own grant table (`<store>/mesh_authority.json`; env
+  `WM_MESH_AUTHORITY_FILE`, mode `WM_MESH_AUTHORITY=enforce|advisory`):
+  action-class traffic (chat, signals, locks) is **default-deny** — a bound
+  peer needs a local grant, optionally pinned to its Ed25519 key. Gate
+  errors name the class (`not identity-bound` / `not provisioned on this
+  node` / `provisioned without can_execute authority`), a malformed policy
+  file fails closed, `sangha.mesh.status` discloses `authority.{mode,grants}`,
+  and `mode: "advisory"` is the loud, documented migration escape hatch.
+  `wm serve --mesh` defaults the file to the store root — fleet nodes must
+  be provisioned before chat/locks work between them.
+- **Address-hint expiry (HG-S1-7).** Unbound hints from unsigned
+  announcements now expire on a shorter TTL (`hint_ttl_sec`, default 120 s),
+  are capped (`max_hint_peers`, 64), and are **never auto-dialed** — a
+  spoofed unsigned heartbeat can no longer aim the auto-join loop or crowd
+  the registry; signed beacons bind directly and an explicit join by address
+  still works.
+
 ### Autonomous release pipeline
 - **CHANGELOG ceremony is automatic:** `scripts/version_truth.py
   --open-changelog <version>` turns the `[Unreleased]` heading into the dated
