@@ -128,9 +128,10 @@ Transport: HTTPS POST to `https://www.whitemagic.dev/api/funnel`
 best-effort, never on the critical path. Offline: one pending envelope is
 spooled and retried once, then dropped. The server aggregates per day and
 keeps day-keyed actives per install-id (so d2/d7 can be computed); it
-stores no raw IPs. Retention: 180 days per install-id (per-day aggregates
-outlive the id records). `WM_FUNNEL_ENDPOINT` overrides the endpoint for
-tests and self-hosters.
+stores no raw IPs — abuse is bounded by a per-install-id daily cap and a
+global daily payload cap. Retention: 180 days per install-id (per-day
+aggregates outlive the id records). `WM_FUNNEL_ENDPOINT` overrides the
+endpoint for tests and self-hosters.
 
 ### 3. Disclosure updates (required with the transport)
 
