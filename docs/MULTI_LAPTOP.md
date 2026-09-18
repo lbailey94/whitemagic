@@ -56,7 +56,7 @@ mechanism.
 ## Install on the new machine
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-multi-laptop | sh
 wm --version   # matches the release page
 wm doctor      # environment health check before restoring any store
 ```

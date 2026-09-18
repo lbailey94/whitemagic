@@ -52,6 +52,7 @@ the `Current release:` line on each release:
 > cloud service. MIT.
 >
 > - Docs & installer: https://whitemagic.dev
+> - Host installer (Linux x86-64, static): `curl -fsSL https://www.whitemagic.dev/install.sh?ref=dockerhub | sh`
 > - Source: https://github.com/lbailey94/whitemagic
 > - Image `9.x`/`latest`: v9 Rust binary (`wm`) — run
 >   `docker run -i lbailey94/whitemagic:9 serve --profile curated`

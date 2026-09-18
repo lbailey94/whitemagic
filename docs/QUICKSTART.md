@@ -22,7 +22,7 @@ process stop/start and be recovered by the next session. That is the product.
 ### From a release
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
+curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-quickstart | sh
 ```
 
 This downloads the latest release, verifies its SHA256 checksum, and installs
