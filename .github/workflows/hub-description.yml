@@ -1,0 +1,76 @@
+name: Hub description
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: PATCH full_description from the runbook block
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract the README block from docs/DOCKER_HUB_RUNBOOK.md
+        run: |
+          python3 - <<'PY' > /tmp/hub-description.md
+          from pathlib import Path
+          lines = Path('docs/DOCKER_HUB_RUNBOOK.md').read_text().splitlines()
+          start = next(i for i, l in enumerate(lines) if l.startswith('> **WhiteMagic**'))
+          end = next(i for i, l in enumerate(lines) if l.startswith('> Store your data'))
+          block = []
+          for l in lines[start:end + 1]:
+              if l.startswith('> '):
+                  block.append(l[2:])
+              elif l == '>':
+                  block.append('')
+              else:
+                  block.append(l)
+          out = []
+          for l in block:
+              if out and l.startswith('  ') and out[-1] != '':
+                  out[-1] = out[-1] + ' ' + l.strip()
+              elif out and out[-1] != '' and not out[-1].startswith('- ') \
+                      and not l.startswith('- ') and l != '':
+                  out[-1] = out[-1] + ' ' + l
+              else:
+                  out.append(l)
+          print('\n'.join(out).rstrip())
+          PY
+          grep -q 'Current release: v' /tmp/hub-description.md \
+            || { echo "runbook block carries no Current release line"; exit 1; }
+          wc -c /tmp/hub-description.md
+
+      - name: Log in and PATCH the description
+        env:
+          HUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          HUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          [ -n "$HUB_TOKEN" ] || { echo "DOCKERHUB_TOKEN not set"; exit 1; }
+          JWT=$(curl -fsS -H "Content-Type: application/json" \
+            -d "$(jq -n --arg u "$HUB_USER" --arg p "$HUB_TOKEN" '{username:$u,password:$p}')" \
+            https://hub.docker.com/v2/users/login | jq -r '.token // empty')
+          [ -n "$JWT" ] || { echo "Hub login failed"; exit 1; }
+          echo "::add-mask::$JWT"
+          jq -n --rawfile d /tmp/hub-description.md '{full_description:$d}' > /tmp/hub-patch.json
+          CODE=$(curl -s -o /tmp/hub-response.json -w '%{http_code}' -X PATCH \
+            -H "Authorization: Bearer $JWT" -H "Content-Type: application/json" \
+            --data @/tmp/hub-patch.json \
+            https://hub.docker.com/v2/repositories/lbailey94/whitemagic/)
+          echo "PATCH http $CODE"
+          if [ "$CODE" != "200" ]; then
+            echo "Hub API refused the description update (needs a PAT scoped read/write/delete):"
+            head -c 300 /tmp/hub-response.json
+            exit 1
+          fi
+
+      - name: Verify the public description
+        run: |
+          WANT=$(grep -oE 'Current release: v[0-9]+\.[0-9]+\.[0-9]+' /tmp/hub-description.md | head -1)
+          GOT=$(curl -fsS https://hub.docker.com/v2/repositories/lbailey94/whitemagic/ \
+            | jq -r '.full_description' \
+            | grep -oE 'Current release: v[0-9]+\.[0-9]+\.[0-9]+' || true)
+          echo "want: $WANT"; echo "got:  $GOT"
+          [ "$GOT" = "$WANT" ]
