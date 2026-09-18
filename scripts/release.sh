@@ -250,6 +250,7 @@ else
   fi
   if [ "$(uname -s)" = "Linux" ] && [ "$(uname -m)" = "x86_64" ]; then
     RELEASED_BIN="$TMP/wm-linux-x86_64"
+    chmod +x "$RELEASED_BIN"
     echo "released binary: $RELEASED_BIN (kept for the tail stages)"
   else
     echo "WARN: host is $(uname -s)/$(uname -m) — the released Linux binary cannot run here"
