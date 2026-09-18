@@ -325,10 +325,13 @@ fi
 # ── contract manifest (regenerated from the released binary) ─────────────
 banner "CONTRACT MANIFEST"
 if $DRY_RUN; then
-  echo "[dry-run] wm contract --json --out docs/contract/route-schema-manifest.json"
+  echo "[dry-run] wm contract --out docs/contract/route-schema-manifest.json"
   echo "[dry-run]   from the released binary; commit + push only when it changed"
 elif [ -n "$RELEASED_BIN" ] && [ -x "$RELEASED_BIN" ]; then
-  if "$RELEASED_BIN" contract --json --out docs/contract/route-schema-manifest.json; then
+  CONTRACT_TMP="$(mktemp)"
+  if "$RELEASED_BIN" contract --out "$CONTRACT_TMP" >/dev/null && [ -s "$CONTRACT_TMP" ]; then
+    cp "$CONTRACT_TMP" docs/contract/route-schema-manifest.json
+    rm -f "$CONTRACT_TMP"
     if [ -n "$(git status --porcelain docs/contract/route-schema-manifest.json)" ]; then
       git add docs/contract/route-schema-manifest.json
       git commit -m "chore(contract): regenerate route schema manifest at $VERSION"
@@ -338,6 +341,7 @@ elif [ -n "$RELEASED_BIN" ] && [ -x "$RELEASED_BIN" ]; then
       echo "contract manifest: unchanged"
     fi
   else
+    rm -f "$CONTRACT_TMP"
     echo "WARN: contract regeneration failed — run it manually from the released binary"
   fi
 else
