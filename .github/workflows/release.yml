@@ -189,7 +189,11 @@ jobs:
           if [ -f ci-facts/bench/benchmark_results.txt ]; then
             FACT_ARGS="$FACT_ARGS --benchmarks-file ci-facts/bench/benchmark_results.txt"
           fi
+          # Channel is an evidence claim, not a version milestone — see
+          # docs/RELEASE_CADENCE.md §Channel labels. 9.2.0 ships open alpha;
+          # changing this line is the deliberate act that moves the channel.
           python3 scripts/release_manifest.py --version "${GITHUB_REF_NAME#v}" \
+            --channel "open alpha" \
             --out artifacts/release-manifest.json $FACT_ARGS
           if [ -n "${RELEASE_SIGNING_KEY:-}" ]; then
             printf '%s' "$RELEASE_SIGNING_KEY" > /tmp/wm-release-key.pem

@@ -12,13 +12,18 @@ platforms, artifact sizes, install-gated targets, crate count, and optional
 test/benchmark snapshots live here and are consumed, never re-typed.
 
 Usage:
-    release_manifest.py --version 9.1.4 [--channel stable]
+    release_manifest.py --version 9.1.4 --channel "open alpha"
                         [--artifacts-dir artifacts]
                         [--notes-file NOTES.md]
                         [--minimum-store-schema 7]
                         [--tests-json tests.json]
                         [--benchmarks-file benchmark_results.txt]
                         [--install-gated linux-x86_64]
+
+`--channel` is required: it is an evidence-tied label
+(`docs/RELEASE_CADENCE.md` §Channel labels), recorded in the signed manifest.
+It has no default on purpose — a silent `stable` would contradict the
+current channel.
 
 Additive fields keep `schema: 1`; the updater's `ReleaseManifest` uses
 `#[serde(default)]` and ignores unknown fields, so older clients are safe.
@@ -90,7 +95,12 @@ def load_benchmarks(path: Path | None) -> dict | None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--version", required=True)
-    ap.add_argument("--channel", default="stable")
+    ap.add_argument(
+        "--channel",
+        required=True,
+        help="evidence-tied release channel label (e.g. 'open alpha'); recorded "
+        "in the signed manifest — see docs/RELEASE_CADENCE.md §Channel labels",
+    )
     ap.add_argument("--repo", default="lbailey94/whitemagic")
     ap.add_argument("--artifacts-dir", default="artifacts")
     ap.add_argument("--out", default=None)

@@ -23,7 +23,10 @@ next session — without sending your memory store to any hosted service.
 
 ## Status
 
-**WhiteMagic v9.** Public alpha for AI coding agents.
+**WhiteMagic v9.** Release channel: **open alpha** — public alpha for AI
+coding agents. The version number is a compatibility signal; the channel is
+an evidence claim (beta and stable each require their own exit conditions,
+not a version milestone).
 
 - **Install path: Linux x86-64** — fully static (musl) build, no glibc or distribution requirements. macOS and Windows binaries are published in every release but are not yet install-gated.
 - **Support window:** the current minor and the previous minor on the Linux x86-64 line receive fixes; older minors are archival. macOS and Windows remain published but unsupported — see [`SECURITY.md`](SECURITY.md).

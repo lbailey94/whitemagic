@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import contextlib
 import importlib.util
+import io
 import json
 import sys
 import tempfile
@@ -50,6 +52,22 @@ class ReleaseManifestFactsTest(unittest.TestCase):
                 rm.sha256_file(path),
                 "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             )
+
+    def test_channel_is_required(self) -> None:
+        old_argv = sys.argv
+        sys.argv = ["release_manifest.py", "--version", "9.2.0"]
+        try:
+            with self.assertRaises(SystemExit) as ctx:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    rm.main()
+            self.assertEqual(ctx.exception.code, 2)
+        finally:
+            sys.argv = old_argv
+
+    def test_release_workflow_passes_channel(self) -> None:
+        workflow = SCRIPTS.parent / ".github" / "workflows" / "release.yml"
+        text = workflow.read_text(encoding="utf-8")
+        self.assertIn("--channel", text)
 
 
 if __name__ == "__main__":
