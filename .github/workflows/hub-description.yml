@@ -43,6 +43,35 @@ jobs:
             || { echo "runbook block carries no Current release line"; exit 1; }
           wc -c /tmp/hub-description.md
 
+      - name: Date the Current release line from the signed manifest
+        run: |
+          LINE=$(grep -m1 'Current release: v' /tmp/hub-description.md)
+          VERSION=$(printf '%s' "$LINE" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1 | sed 's/^v//')
+          [ -n "$VERSION" ] || { echo "cannot parse a version from: $LINE"; exit 1; }
+          curl -fsSL "https://github.com/lbailey94/whitemagic/releases/download/v${VERSION}/release-manifest.json" \
+            -o /tmp/release-manifest.json
+          MV=$(jq -r '.version // empty' /tmp/release-manifest.json)
+          PUB=$(jq -r '.published // empty' /tmp/release-manifest.json)
+          DATE=${PUB%%T*}
+          [ "$MV" = "$VERSION" ] || { echo "manifest version '$MV' != description version '$VERSION'"; exit 1; }
+          [ -n "$DATE" ] || { echo "manifest for v$VERSION carries no published timestamp"; exit 1; }
+          python3 - "$VERSION" "$DATE" <<'PY'
+          import sys
+          version, date = sys.argv[1], sys.argv[2]
+          path = '/tmp/hub-description.md'
+          want = (f"- Current release: v{version} ({date}) — "
+                  f"https://github.com/lbailey94/whitemagic/releases/tag/v{version}")
+          lines = open(path).read().splitlines()
+          for i, line in enumerate(lines):
+              if line.startswith('- Current release: v'):
+                  lines[i] = want
+                  break
+          else:
+              raise SystemExit('no Current release line to rewrite')
+          open(path, 'w').write('\n'.join(lines) + '\n')
+          print('rewrote:', want)
+          PY
+
       - name: Log in and PATCH the description
         env:
           HUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -68,9 +97,9 @@ jobs:
 
       - name: Verify the public description
         run: |
-          WANT=$(grep -oE 'Current release: v[0-9]+\.[0-9]+\.[0-9]+' /tmp/hub-description.md | head -1)
+          WANT=$(grep -m1 '^- Current release: v' /tmp/hub-description.md)
           GOT=$(curl -fsS https://hub.docker.com/v2/repositories/lbailey94/whitemagic/ \
             | jq -r '.full_description' \
-            | grep -oE 'Current release: v[0-9]+\.[0-9]+\.[0-9]+' || true)
+            | grep -m1 '^- Current release: v' || true)
           echo "want: $WANT"; echo "got:  $GOT"
           [ "$GOT" = "$WANT" ]

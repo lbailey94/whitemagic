@@ -74,9 +74,11 @@ The secret must be a PAT with **Read + Write + Delete** permissions: the
 `docker login` credential in `~/.docker/config.json` and a registry-only PAT
 both log in but return 403 `insufficient scope` on the description API
 (re-verified against both on 2026-09-18); the scoped PAT replaced the CI
-secret that day. The `Current release:` date in the block is still
-hand-typed — correct it on release day before dispatching (the version
-string itself is auto-bumped by `scripts/release.sh`).
+secret that day. The workflow dates the `Current release:` line from the
+signed manifest's `published` timestamp at run time, so the hand-typed date
+in the block only matters for manual pastes (the version comes from the
+block, which `scripts/release.sh` auto-bumps and hands to the workflow
+after the release workflow completes).
 
 **API alternative** (no web UI): with a Hub **PAT scoped read/write/delete**
 (the token stored by `docker login` is registry-scoped only and returns

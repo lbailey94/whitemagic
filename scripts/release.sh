@@ -269,17 +269,34 @@ else
   fi
 fi
 
-# ── hub README (optional: needs HUB_TOKEN) ───────────────────────────────
+# ── hub README (dispatch the description workflow; advisory) ─────────────
 banner "HUB README"
-if [ -n "${HUB_TOKEN:-}" ]; then
-  if $DRY_RUN; then echo "[dry-run] PATCH full_description with version line $VERSION"
-  else
-    JWT=$(curl -s -H "Content-Type: application/json" -d "{\"username\":\"lbailey94\",\"password\":\"$HUB_TOKEN\"}" https://hub.docker.com/v2/users/login | jq -r '.token // empty')
-    [ -n "$JWT" ] && echo "HUB_TOKEN accepted — update the version line in the Hub description manually or extend this stage with the runbook block"
-  fi
+if $DRY_RUN; then
+  echo "[dry-run] gh workflow run hub-description.yml: extracts the runbook block,"
+  echo "[dry-run]   dates the Current release line from the signed manifest, PATCHes"
+  echo "[dry-run]   full_description with the DOCKERHUB_TOKEN secret; advisory."
 else
-  echo "HUB_TOKEN not set — sync the Hub README with: gh workflow run hub-description.yml"
-  echo "  (source of truth: docs/DOCKER_HUB_RUNBOOK.md block; the PAT needs read/write/delete)"
+  PREV_RUN=$(gh run list --workflow hub-description.yml --limit 1 \
+    --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null || true)
+  if gh workflow run hub-description.yml >/dev/null 2>&1; then
+    HUB_RUN=""
+    for _ in $(seq 1 24); do
+      CUR_RUN=$(gh run list --workflow hub-description.yml --limit 1 \
+        --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null || true)
+      if [ -n "$CUR_RUN" ] && [ "$CUR_RUN" != "$PREV_RUN" ]; then HUB_RUN="$CUR_RUN"; break; fi
+      sleep 5
+    done
+    if [ -n "$HUB_RUN" ]; then
+      gh run watch "$HUB_RUN" --exit-status >/dev/null 2>&1 \
+        && echo "hub-description: green ($HUB_RUN) — Hub README synced from the runbook block" \
+        || echo "WARN: hub-description run $HUB_RUN failed — sync the Hub README manually (docs/DOCKER_HUB_RUNBOOK.md)"
+    else
+      echo "WARN: hub-description.yml dispatched but no run appeared — check gh run list"
+    fi
+  else
+    echo "WARN: could not dispatch hub-description.yml — sync the Hub README manually"
+    echo "      (source of truth: docs/DOCKER_HUB_RUNBOOK.md block)"
+  fi
 fi
 
 # ── manual tail (separate lanes) ─────────────────────────────────────────
