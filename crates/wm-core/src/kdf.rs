@@ -14,6 +14,21 @@ pub const MESH_IDENTITY_INFO: &str = "wm/mesh-identity/v1";
 /// Record-attestation signer subkey (`wm/record-attestation/v1`).
 pub const RECORD_ATTESTATION_INFO: &str = "wm/record-attestation/v1";
 
+/// Galaxy DEK-wrap KEK info-string prefix (`wm/galaxy-dek/v1`, Q39 §2/§3).
+///
+/// One KEK per galaxy derives from the store root key as
+/// `hkdf32(rk, galaxy_dek_info(<galaxy-db-name>))`; the full info string is
+/// also the wrapping AEAD's AAD, so a wrapped DEK cannot be transplanted
+/// between galaxies. Declared in `docs/Q39_CRYPTO_ERASURE_DESIGN.md`.
+pub const GALAXY_DEK_INFO_PREFIX: &str = "wm/galaxy-dek/v1";
+
+/// Info string (and AEAD AAD) binding a galaxy DEK wrap to its galaxy:
+/// `wm/galaxy-dek/v1/<galaxy-db-name>`.
+#[must_use]
+pub fn galaxy_dek_info(galaxy_db_name: &str) -> String {
+    format!("{GALAXY_DEK_INFO_PREFIX}/{galaxy_db_name}")
+}
+
 /// Release-artifact signing subkey (`wm/release-signing/v1`) — reserved, not yet wired.
 ///
 /// The CI release manifest still signs with the hex-decoded lineage key and
@@ -131,6 +146,21 @@ mod tests {
         );
         assert_ne!(mesh_a, hkdf32(root, "wm/beacon/v1"));
         assert_ne!(mesh_a, hkdf32(b"another-root", MESH_IDENTITY_INFO));
+    }
+
+    #[test]
+    fn galaxy_dek_info_is_versioned_and_per_galaxy() {
+        assert_eq!(galaxy_dek_info("codex"), "wm/galaxy-dek/v1/codex");
+        assert_eq!(
+            galaxy_dek_info("codex"),
+            format!("{GALAXY_DEK_INFO_PREFIX}/codex")
+        );
+        assert_ne!(galaxy_dek_info("codex"), galaxy_dek_info("sessions"));
+        assert_ne!(
+            galaxy_dek_info("codex"),
+            RECORD_ATTESTATION_INFO,
+            "DEK wrapping must never share purpose space with signers"
+        );
     }
 
     #[test]

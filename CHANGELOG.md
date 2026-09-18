@@ -83,6 +83,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   snapshot 60→61; AGENTS.md workspace line 9.1.8→9.1.9. Q04/Q05 remain open
   (honesty guards unchanged).
 
+### At-rest keyring scaffold (S4 / Q39 Slice A)
+- **Keyring DBI + wrapped galaxy DEKs, dark by default:** `WM_AT_REST_MODE`
+  (`off` | `keyfile` | `passphrase`, default `off`) opens a `keyring` DBI and
+  wraps one random 256-bit DEK per galaxy with XChaCha20-Poly1305 under an
+  HKDF-SHA256 KEK (`wm/galaxy-dek/v1/<galaxy>` AAD); an `rk:check` row
+  discriminates wrong keys, and mode C derives the RK with Argon2id (params
+  stored in the store's keyring meta). The generated key file lives at the
+  store root (`.at_rest_key`, 0600, next to `.seal_key`); explicit
+  `WM_AT_REST_ROOT_KEY` / `WM_AT_REST_KEY_FILE` override.
+- **Fail-closed semantics:** a writable `off` open of a keyring store, or a
+  mode/key mismatch, is refused; read-only inspection still reports status,
+  and `wm doctor` section 11i discloses mode, wrapped-DEK count, and key
+  source without resolving the key. Records remain plaintext — record AEAD is
+  Q39 Slice B, and no mode advertises crypto-erasure.
+
 ## [9.1.9] — 2026-09-18 (recovery hardening, onboarding truth, continuity handoff, calm surfaces)
 
 ### Coordination truth (F3)

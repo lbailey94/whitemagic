@@ -189,6 +189,12 @@ pub struct MemoryStore {
     attestations_db: Database,
     /// Dedicated database for compressed cold-stored memories.
     pub(crate) cold_storage_db: Database,
+    /// Optional at-rest keyring DBI (Q39 slice A). `Some` when the store has
+    /// a keyring; read-only paths open it optionally and never create it.
+    keyring_db: Option<Database>,
+    /// Unlocked galaxy DEKs for writable at-rest stores (slice A verifies
+    /// them at open; record AEAD is slice B). `None` for plaintext stores.
+    at_rest: Option<crate::at_rest::AtRestState>,
     /// Warm term-posting cache shared by episodic search views.
     episodic_term_cache: std::sync::Arc<RwLock<HashMap<String, Vec<uuid::Uuid>>>>,
     /// Optional embedder for episodic vector reranking.
@@ -245,10 +251,28 @@ impl MemoryStore {
 
     /// Open or create an LMDB store at the given path.
     ///
+    /// At-rest mode comes from the environment (`WM_AT_REST_MODE`, default
+    /// `off`) — see [`Self::open_with_at_rest`]. `off` is a provable no-op:
+    /// no keyring DBI is created and no key files are written.
+    ///
     /// On Unix, the store directory is created with mode 0o700 (owner-only
     /// access) if it does not already exist. Existing directories are
     /// left untouched.
     pub fn open(path: impl AsRef<Path>, map_size: usize) -> Result<Self> {
+        Self::open_with_at_rest(path, map_size, &crate::at_rest::AtRestConfig::from_env())
+    }
+
+    /// Open or create an LMDB store with an explicit at-rest configuration.
+    ///
+    /// Q39 slice A: when the mode is `keyfile`/`passphrase`, the store's
+    /// keyring DBI is read (or initialized as `meta` + `rk:check` + 16
+    /// wrapped galaxy DEKs, all in one transaction) and the DEKs are
+    /// unwrapped at open. Records stay plaintext in slice A.
+    pub fn open_with_at_rest(
+        path: impl AsRef<Path>,
+        map_size: usize,
+        at_rest_config: &crate::at_rest::AtRestConfig,
+    ) -> Result<Self> {
         let path = path.as_ref().to_path_buf();
 
         // Ensure the directory exists with restrictive permissions.
@@ -325,6 +349,7 @@ impl MemoryStore {
             .map_err(|e| {
                 CoreError::Memory(format!("LMDB create_db failed for cold_storage: {e}"))
             })?;
+        let (keyring_db, at_rest) = crate::at_rest::open_at_rest(&env, &path, at_rest_config)?;
         Ok(Self {
             path,
             env,
@@ -338,12 +363,35 @@ impl MemoryStore {
             revisions_db,
             attestations_db,
             cold_storage_db,
+            keyring_db,
+            at_rest,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
             episodic_aliases: std::sync::OnceLock::new(),
             episodic_enrichment: std::sync::OnceLock::new(),
         })
+    }
+
+    /// At-rest disclosure status (Q39 slice A): keyring meta only — the RK is
+    /// never resolved here, and nothing is created or written. `Absent` means
+    /// plaintext pass-through.
+    #[must_use]
+    pub fn at_rest_status(&self) -> crate::at_rest::AtRestStatus {
+        if let Some(state) = &self.at_rest {
+            return crate::at_rest::AtRestStatus::Present(state.status());
+        }
+        match &self.keyring_db {
+            None => crate::at_rest::AtRestStatus::Absent,
+            Some(db) => crate::at_rest::read_status(&self.env, *db, &self.path),
+        }
+    }
+
+    /// Unlocked keyring state for a writable at-rest store (slice B seam);
+    /// `None` for plaintext-pass-through stores and all read paths.
+    #[must_use]
+    pub const fn at_rest_state(&self) -> Option<&crate::at_rest::AtRestState> {
+        self.at_rest.as_ref()
     }
 
     /// Bounded env open for inspection paths (9.1.6).
@@ -454,6 +502,9 @@ impl MemoryStore {
         let revisions_db = open_named("revisions")?;
         let attestations_db = open_named(crate::attestation::ATTESTATIONS_DB)?;
         let cold_storage_db = open_named("cold_storage")?;
+        // The at-rest keyring is optional on read paths: opened when present,
+        // never created, and its RK is never resolved here (status only).
+        let keyring_db = crate::at_rest::open_keyring_optional(&env)?;
 
         Ok(Self {
             path,
@@ -468,6 +519,8 @@ impl MemoryStore {
             revisions_db,
             attestations_db,
             cold_storage_db,
+            keyring_db,
+            at_rest: None,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
@@ -532,6 +585,9 @@ impl MemoryStore {
         let revisions_db = open_named("revisions")?;
         let attestations_db = open_named(crate::attestation::ATTESTATIONS_DB)?;
         let cold_storage_db = open_named("cold_storage")?;
+        // The at-rest keyring is optional on read paths: opened when present,
+        // never created, and its RK is never resolved here (status only).
+        let keyring_db = crate::at_rest::open_keyring_optional(&env)?;
 
         Ok(Self {
             path,
@@ -546,6 +602,8 @@ impl MemoryStore {
             revisions_db,
             attestations_db,
             cold_storage_db,
+            keyring_db,
+            at_rest: None,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
             episodic_embedder: std::sync::OnceLock::new(),
             episodic_sidecar_ensured: std::sync::OnceLock::new(),
@@ -562,6 +620,10 @@ impl MemoryStore {
     /// 2026-09-14: a 9.0.0 backup lacked `cold_storage`). This is the only
     /// in-place repair path; `open_readonly` deliberately stays strict so
     /// preservation callers see an incomplete store instead of a silent fix.
+    ///
+    /// The at-rest `keyring` DBI is **not** required schema (Q39 slice A
+    /// decision): legacy stores and strict reads stay working, and this
+    /// function neither creates nor repairs a keyring.
     pub fn ensure_schema(path: impl AsRef<Path>) -> Result<Vec<String>> {
         let path = path.as_ref().to_path_buf();
         if !path.is_dir() {

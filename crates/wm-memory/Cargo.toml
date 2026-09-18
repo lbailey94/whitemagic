@@ -36,6 +36,13 @@ hmac = "0.12"
 # stays free of wm-sangha (mesh is a transport over stores, never a
 # store dependency).
 ed25519-dalek = "3.0.0"
+# Q39 at-rest keyring (slice A): RustCrypto AEAD for wrapped galaxy DEKs,
+# Argon2id for passphrase-mode root keys, zeroization for secrets, and the
+# OS entropy source (fail-closed — no time/PID fallback here).
+chacha20poly1305 = "0.10"
+argon2 = "0.5"
+zeroize = { version = "1", features = ["derive"] }
+getrandom = "0.3"
 ureq = { workspace = true }
 # Safe fcntl(2) record-lock probe (fs feature): detects a held LMDB writer
 # lock without unsafe code (wm-memory forbids unsafe).

@@ -3630,6 +3630,93 @@ fn yama_feed_summary(path: &std::path::Path) -> Option<(usize, u64)> {
 /// A collector feed older than this is disclosed as stale (15 minutes).
 const YAMA_FEED_STALE_SECONDS: u64 = 900;
 
+/// Rendered `wm doctor` at-rest disclosure (pure: data in, text out — no I/O).
+struct AtRestDisclosure {
+    /// Complete text including the `[OK]/[INFO]/[WARN]` prefix and detail
+    /// lines (trailing newline included).
+    text: String,
+    /// True when the disclosure is an issue the doctor must count.
+    issue: bool,
+}
+
+/// Format the section-11i at-rest disclosure for a keyring status (Q39
+/// slice A). Records are still plaintext in slice A — every rendered line
+/// says so, and mode B never claims crypto-erasure.
+fn format_at_rest_disclosure(
+    status: &wm_memory::AtRestStatus,
+    store_root: &Path,
+) -> AtRestDisclosure {
+    use wm_memory::{AtRestMode, AtRestStatus};
+    let keyring_path = store_root.join("lmdb");
+    match status {
+        AtRestStatus::Absent => AtRestDisclosure {
+            text: "[INFO] At-rest: plaintext pass-through (WM_AT_REST_MODE=off) — records are \
+                   NOT encrypted;\n       at-rest protection is filesystem permissions only. \
+                   Enable keyfile/passphrase mode with the WM_AT_REST_* knobs (AGENTS.md).\n"
+                .to_string(),
+            issue: false,
+        },
+        AtRestStatus::Present(present) => match present.meta.mode {
+            AtRestMode::Keyfile => {
+                let source = present.key_file.as_ref().map_or_else(
+                    || "RK source: external key source recorded in keyring meta".to_string(),
+                    |path| format!("RK source: key file {}", path.display()),
+                );
+                AtRestDisclosure {
+                    text: format!(
+                        "[OK]   At-rest: mode B (keyfile) — {}/{} galaxy DEKs wrapped \
+                         (keyring: {})\n       {source}\n       Physical-purge only — never \
+                         crypto-erasure on mode B; record encryption ships with Q39 slice B.\n",
+                        present.wrapped_deks,
+                        present.galaxies,
+                        keyring_path.display()
+                    ),
+                    issue: false,
+                }
+            }
+            AtRestMode::Passphrase => {
+                let argon = present.meta.argon2.as_ref().map_or_else(
+                    || "argon2id parameters missing from meta".to_string(),
+                    |a| {
+                        format!(
+                            "argon2id m={} KiB, t={}, p={}, v={}",
+                            a.m_cost_kib, a.t_cost, a.p_cost, a.version
+                        )
+                    },
+                );
+                AtRestDisclosure {
+                    text: format!(
+                        "[OK]   At-rest: mode C (passphrase) — {}/{} galaxy DEKs wrapped \
+                         (keyring: {})\n       {argon}\n       Passphrase crypto-erasure is \
+                         not yet advertised — record encryption ships with Q39 slice B.\n",
+                        present.wrapped_deks,
+                        present.galaxies,
+                        keyring_path.display()
+                    ),
+                    issue: false,
+                }
+            }
+            AtRestMode::Off => AtRestDisclosure {
+                text: format!(
+                    "[WARN] At-rest: keyring present at {} but its meta records mode 'off' — \
+                     malformed; writable opens refuse (fail-closed).\n",
+                    keyring_path.display()
+                ),
+                issue: true,
+            },
+        },
+        AtRestStatus::Malformed { reason } => AtRestDisclosure {
+            text: format!(
+                "[WARN] At-rest: keyring present at {} but its meta is malformed: {reason}\n       \
+                 Fail-closed: writable opens refuse until the keyring is repaired (read-only \
+                 inspection still works).\n",
+                keyring_path.display()
+            ),
+            issue: true,
+        },
+    }
+}
+
 #[allow(clippy::fn_params_excessive_bools)] // doctor flags are naturally booleans
 fn run_doctor(
     store: Option<PathBuf>,
@@ -4652,6 +4739,20 @@ fn run_doctor(
             println!(
                 "[WARN] Firebreak: DISARMED (WM_FIREBREAK=0) — forbidden-command veto and bulk-scope law off; {forbidden}/{dangerous}/{caution} patterns compiled but not enforcing"
             );
+            issues += 1;
+        }
+    }
+
+    // 11i. At-rest key mode (Q39 slice A) — per-store disclosure of the
+    //      keyring mode: off is honestly plaintext, mode B is physical-purge
+    //      only, mode C is not yet advertised, and a malformed keyring is an
+    //      issue. Read-only: the status reads the keyring meta row only; the
+    //      RK is never resolved and nothing is created or written here.
+    println!();
+    {
+        let disclosure = format_at_rest_disclosure(&server.store().at_rest_status(), &store_path);
+        print!("{}", disclosure.text);
+        if disclosure.issue {
             issues += 1;
         }
     }
@@ -5836,6 +5937,190 @@ mod help_surface_tests {
         assert!(
             lab.len() >= 13,
             "the hidden lab surface shrank unexpectedly: {lab:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod at_rest_doctor_tests {
+    use super::*;
+    use wm_memory::{Argon2Params, AtRestMode, AtRestStatus, AtRestStatusPresent, KeyringMeta};
+
+    fn present(mode: AtRestMode, argon2: Option<Argon2Params>) -> AtRestStatus {
+        AtRestStatus::Present(AtRestStatusPresent {
+            meta: KeyringMeta {
+                format_version: wm_memory::KEYRING_FORMAT_VERSION,
+                mode,
+                key_source: "generated_key_file".to_string(),
+                created_at: "2026-09-18T00:00:00Z".to_string(),
+                argon2,
+            },
+            wrapped_deks: 16,
+            galaxies: 16,
+            key_file: Some(std::path::PathBuf::from("/store/.at_rest_key")),
+        })
+    }
+
+    #[test]
+    fn formatter_off_is_honest_plaintext() {
+        let disclosure = format_at_rest_disclosure(&AtRestStatus::Absent, Path::new("/store"));
+        assert!(disclosure.text.starts_with("[INFO]"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("plaintext pass-through"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("NOT encrypted"),
+            "{}",
+            disclosure.text
+        );
+        assert!(!disclosure.issue);
+    }
+
+    #[test]
+    fn formatter_keyfile_discloses_mode_b_and_no_crypto_erasure() {
+        let disclosure =
+            format_at_rest_disclosure(&present(AtRestMode::Keyfile, None), Path::new("/store"));
+        assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("mode B (keyfile)"),
+            "{}",
+            disclosure.text
+        );
+        assert!(disclosure.text.contains("16/16"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("never crypto-erasure on mode B"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("Physical-purge only"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("Q39 slice B"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("/store/.at_rest_key"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            !disclosure.text.contains("/store/lmdb/.at_rest_key"),
+            "generated key file is disclosed at the store root, not inside lmdb: {}",
+            disclosure.text
+        );
+        assert!(!disclosure.issue);
+    }
+
+    #[test]
+    fn formatter_passphrase_discloses_argon2_and_not_advertised() {
+        let argon = Argon2Params {
+            m_cost_kib: 19_456,
+            t_cost: 2,
+            p_cost: 1,
+            version: 0x13,
+            salt_hex: "00".repeat(16),
+        };
+        let disclosure = format_at_rest_disclosure(
+            &present(AtRestMode::Passphrase, Some(argon)),
+            Path::new("/store"),
+        );
+        assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("mode C (passphrase)"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("argon2id m=19456"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("not yet advertised"),
+            "{}",
+            disclosure.text
+        );
+        assert!(!disclosure.issue);
+    }
+
+    #[test]
+    fn formatter_malformed_warns_and_is_an_issue() {
+        let disclosure = format_at_rest_disclosure(
+            &AtRestStatus::Malformed {
+                reason: "meta row does not parse".to_string(),
+            },
+            Path::new("/store"),
+        );
+        assert!(disclosure.text.starts_with("[WARN]"), "{}", disclosure.text);
+        assert!(disclosure.text.contains("malformed"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("meta row does not parse"),
+            "{}",
+            disclosure.text
+        );
+        assert!(disclosure.issue);
+    }
+
+    /// The doctor must read an at-rest store without resolving the RK on the
+    /// read path, without mutating the store (including the key file), and
+    /// without grading a healthy keyfile store as an issue.
+    #[test]
+    fn doctor_preserves_an_at_rest_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = tmp.path().join("store");
+        let lmdb = store.join("lmdb");
+        // Full schema (galaxies, indexes, Tantivy) first, then initialize the
+        // keyring on a writable at-rest open — the doctor opens inspection-only.
+        drop(open_server_for_serve(&lmdb, false, false).unwrap());
+        drop(
+            wm_memory::MemoryStore::open_with_at_rest(
+                &lmdb,
+                16 * 1024 * 1024,
+                &wm_memory::AtRestConfig::keyfile(),
+            )
+            .unwrap(),
+        );
+
+        fn snapshot(
+            dir: &std::path::Path,
+            base: &std::path::Path,
+        ) -> Vec<(String, Option<Vec<u8>>)> {
+            let mut out = Vec::new();
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    out.extend(snapshot(&path, base));
+                } else {
+                    let rel = path.strip_prefix(base).unwrap().display().to_string();
+                    let bytes = if rel.ends_with("lock.mdb") {
+                        None
+                    } else {
+                        Some(std::fs::read(&path).unwrap())
+                    };
+                    out.push((rel, bytes));
+                }
+            }
+            out.sort();
+            out
+        }
+
+        let before = snapshot(&store, &store);
+        let result = run_doctor(Some(store.clone()), false, false, false, false).unwrap();
+        let after = snapshot(&store, &store);
+
+        assert_eq!(
+            result, 0,
+            "a healthy mode-B keyring store must not be graded as an issue"
+        );
+        assert_eq!(
+            after, before,
+            "read-only doctor inspection mutated an at-rest store or its key file"
         );
     }
 }

@@ -8,6 +8,7 @@
 #![forbid(unsafe_code)]
 
 pub mod associations;
+pub mod at_rest;
 pub mod attestation;
 mod codec;
 pub mod cold_storage;
@@ -41,6 +42,11 @@ pub mod validator;
 pub mod vector;
 
 pub use associations::{Association, AssociationStore, LinkType};
+pub use at_rest::{
+    AT_REST_KEY_FILE, Argon2Params, AtRestConfig, AtRestMode, AtRestState, AtRestStatus,
+    AtRestStatusPresent, DEK_KEY_PREFIX, KEYRING_DB, KEYRING_FORMAT_VERSION, KEYRING_META_KEY,
+    KeyringMeta, RK_CHECK_INFO, RK_CHECK_KEY, RK_CHECK_PLAINTEXT, generated_key_path,
+};
 pub use attestation::{
     ATTESTATION_DOMAIN, ATTESTATION_KEY_ENV, ATTESTATIONS_DB, AttestationReport, RecordAttestation,
     anchor_leaf_input, attestation_key, attestation_payload, attestation_prefix, merkle_root_hex,
