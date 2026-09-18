@@ -1,6 +1,6 @@
 # WhiteMagic Quickstart
 
-**Version**: 9.1.8
+**Version**: 9.1.9
 **Install path**: Linux x86-64 (static musl). macOS and Windows binaries ship
 in every release but their install paths are not gated yet.
 
@@ -56,7 +56,7 @@ mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ## 2. Verify
 
 ```bash
-wm --version   # wm 9.1.8
+wm --version   # wm 9.1.9
 wm doctor      # store, index, registry health check
 ```
 
