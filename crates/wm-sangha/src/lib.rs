@@ -39,7 +39,7 @@ pub mod mail_slot;
 #[cfg(feature = "transport")]
 pub mod mesh_node;
 
-pub use chat::{ChatChannel, ChatMessage, SanghaChat, VerificationReport};
+pub use chat::{ChatChannel, ChatMessage, InjectOutcome, SanghaChat, VerificationReport};
 pub use containment::{ContainmentReport, ContainmentResult, run, simulate_mesh_containment};
 pub use crypto::{MeshKeyPair, hex_decode, hex_encode};
 pub use hologram::{ConstellationMerge, HologramEntry, HologramSync};

@@ -10,11 +10,15 @@
 #![forbid(unsafe_code)]
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
 
 use crate::crypto::MeshKeyPair;
 use crate::peer::PeerId;
+
+/// Monotonic sequence for envelope-id minting within one process.
+static ENVELOPE_SEQ: AtomicU64 = AtomicU64::new(1);
 
 // ── Chat Channel ──────────────────────────────────────────────────────
 
@@ -68,9 +72,42 @@ pub struct ChatMessage {
     /// must verify against, and which the community binds to the peer ID.
     #[serde(default)]
     pub public_key: String,
+    /// Envelope id for receiver-side dedup (S1 mesh phase 2). Minted once
+    /// per logical send and reused across retries/queued redelivery, so a
+    /// lost ack cannot store the same message twice. Empty on legacy
+    /// messages, and skipped in serialization when empty — the signing
+    /// payload of an envelope-less message is byte-for-byte the legacy
+    /// one, so pre-envelope signatures still verify.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub envelope_id: String,
+}
+
+/// Outcome of injecting a signed message into the channel log.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InjectOutcome {
+    /// The message was appended to the channel log.
+    Stored,
+    /// A message with the same non-empty `envelope_id` already exists in
+    /// the target channel — the payload was not stored again.
+    Duplicate,
 }
 
 impl ChatMessage {
+    /// Mint a fresh envelope id for one logical chat send.
+    ///
+    /// `sender` namespaces the id; the wall clock orders it; the process
+    /// static sequence makes ids unique when several are minted in the
+    /// same millisecond. No new dependencies — same shape as the mail-slot
+    /// ids.
+    #[must_use]
+    pub fn new_envelope_id(sender: &str) -> String {
+        let seq = ENVELOPE_SEQ.fetch_add(1, Ordering::Relaxed);
+        format!(
+            "{sender}:{}:{seq:016x}",
+            chrono::Utc::now().timestamp_millis()
+        )
+    }
+
     /// Convert to JSON.
     #[must_use]
     pub fn to_json(&self) -> serde_json::Value {
@@ -82,6 +119,7 @@ impl ChatMessage {
             "timestamp": self.timestamp,
             "signature": self.signature,
             "public_key": self.public_key,
+            "envelope_id": self.envelope_id,
         })
     }
 
@@ -254,6 +292,7 @@ impl SanghaChat {
             timestamp: chrono::Utc::now().timestamp_millis(),
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: ChatMessage::new_envelope_id(sender),
         };
         if let Some(keypair) = &self.signing_key {
             msg = msg.signed(keypair);
@@ -298,6 +337,7 @@ impl SanghaChat {
             timestamp: chrono::Utc::now().timestamp_millis(),
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: ChatMessage::new_envelope_id(sender),
         }
         .signed(keypair);
         self.next_msg_id += 1;
@@ -362,7 +402,21 @@ impl SanghaChat {
     /// The signature is preserved so verification passes later can judge
     /// it against the sender's bound public key (unlike [`send`], which
     /// signs with this node's own keypair).
-    pub fn inject_signed(&mut self, msg: ChatMessage) {
+    ///
+    /// Receiver-side dedup (S1 mesh phase 2): when the message carries a
+    /// non-empty `envelope_id` that already exists in the target channel
+    /// log, the payload is not stored again — a lost ack plus retry does
+    /// not duplicate the message. Empty envelope ids (legacy messages)
+    /// are never deduped.
+    pub fn inject_signed(&mut self, msg: ChatMessage) -> InjectOutcome {
+        if !msg.envelope_id.is_empty()
+            && self
+                .channels
+                .get(&msg.channel)
+                .is_some_and(|msgs| msgs.iter().any(|m| m.envelope_id == msg.envelope_id))
+        {
+            return InjectOutcome::Duplicate;
+        }
         self.next_msg_id = self.next_msg_id.max(msg.id + 1);
         self.total_messages += 1;
         let msgs = self.channels.entry(msg.channel.clone()).or_default();
@@ -371,6 +425,7 @@ impl SanghaChat {
         }
         msgs.push(msg);
         self.persist_now();
+        InjectOutcome::Stored
     }
 
     /// Purge every message sent by a peer from the log — used when the
@@ -760,11 +815,108 @@ mod tests {
             timestamp: 12345,
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: "env-1".to_string(),
         };
         let json = msg.to_json();
         assert_eq!(json["id"], 1);
         assert_eq!(json["channel"], "test");
         assert_eq!(json["content"], "hello");
+        assert_eq!(json["envelope_id"], "env-1");
+    }
+
+    #[test]
+    fn envelope_id_minting_is_unique_and_namespaced() {
+        let a = ChatMessage::new_envelope_id("node-1");
+        let b = ChatMessage::new_envelope_id("node-1");
+        assert_ne!(a, b, "two envelopes in the same millisecond must differ");
+        assert!(a.starts_with("node-1:"), "{a}");
+        assert!(
+            !ChatMessage::new_envelope_id("node-2").starts_with("node-1:"),
+            "sender namespaces the envelope id"
+        );
+    }
+
+    #[test]
+    fn empty_envelope_serializes_like_the_legacy_payload() {
+        // Old signatures must keep verifying: an envelope-less message
+        // serializes without the field (skip_serializing_if), so the
+        // signing payload is byte-for-byte the pre-envelope shape.
+        let kp = MeshKeyPair::from_seed(b"legacy-node-seed");
+        let msg = ChatMessage {
+            id: 7,
+            channel: "gana:1".to_string(),
+            sender: "legacy-node".to_string(),
+            content: "old signature".to_string(),
+            timestamp: 12345,
+            signature: String::new(),
+            public_key: String::new(),
+            envelope_id: String::new(),
+        };
+        assert!(
+            !msg.signing_payload().contains("envelope_id"),
+            "empty envelope id must not enter the signing payload"
+        );
+        let signed = msg.signed(&kp);
+        assert!(signed.verify_signature());
+
+        // A legacy message restored from a pre-envelope log (no field at
+        // all) deserializes to an empty id and still verifies.
+        let legacy_json = serde_json::json!({
+            "id": signed.id,
+            "channel": signed.channel,
+            "sender": signed.sender,
+            "content": signed.content,
+            "timestamp": signed.timestamp,
+            "signature": signed.signature,
+            "public_key": signed.public_key,
+        });
+        let restored: ChatMessage = serde_json::from_value(legacy_json).unwrap();
+        assert!(restored.envelope_id.is_empty());
+        assert!(restored.verify_signature());
+        assert_eq!(restored.signing_payload(), signed.signing_payload());
+    }
+
+    #[test]
+    fn send_mints_an_envelope_id() {
+        let mut chat = SanghaChat::default();
+        let msg = chat.send("ch", "n1", "hello");
+        assert!(!msg.envelope_id.is_empty());
+        // Two sends get distinct envelopes.
+        let msg2 = chat.send("ch", "n1", "hello again");
+        assert_ne!(msg.envelope_id, msg2.envelope_id);
+    }
+
+    #[test]
+    fn inject_signed_dedups_by_envelope_id() {
+        let kp = MeshKeyPair::from_seed(b"dedup-node-seed");
+        let mut chat = SanghaChat::default();
+        let msg = ChatMessage {
+            id: 1,
+            channel: "gana:1".to_string(),
+            sender: "dedup-node".to_string(),
+            content: "exactly once".to_string(),
+            timestamp: 12345,
+            signature: String::new(),
+            public_key: String::new(),
+            envelope_id: "env-dup".to_string(),
+        }
+        .signed(&kp);
+
+        assert_eq!(chat.inject_signed(msg.clone()), InjectOutcome::Stored);
+        assert_eq!(chat.inject_signed(msg.clone()), InjectOutcome::Duplicate);
+        assert_eq!(chat.channel_message_count("gana:1"), 1);
+        assert_eq!(chat.total_messages(), 1);
+        // A different envelope of the same content is NOT a duplicate.
+        let mut other = msg.clone();
+        other.envelope_id = "env-other".to_string();
+        assert_eq!(chat.inject_signed(other), InjectOutcome::Stored);
+        assert_eq!(chat.channel_message_count("gana:1"), 2);
+        // Empty envelope ids are legacy: never deduped.
+        let mut empty = msg;
+        empty.envelope_id = String::new();
+        assert_eq!(chat.inject_signed(empty.clone()), InjectOutcome::Stored);
+        assert_eq!(chat.inject_signed(empty), InjectOutcome::Stored);
+        assert_eq!(chat.channel_message_count("gana:1"), 4);
     }
 
     #[test]
@@ -778,6 +930,7 @@ mod tests {
             timestamp: 12345,
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: String::new(),
         };
         let signed = msg.signed(&kp);
         assert!(!signed.signature.is_empty());
@@ -809,6 +962,7 @@ mod tests {
             timestamp: 12345,
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: String::new(),
         };
         assert!(!unsigned.verify_signature());
     }
@@ -841,6 +995,7 @@ mod tests {
             timestamp: 1,
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: String::new(),
         }
         .signed(&MeshKeyPair::from_seed(b"attacker-seed"));
         chat.channels.get_mut("gana:1").unwrap().push(forged);

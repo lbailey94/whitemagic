@@ -68,11 +68,25 @@ cannot be relocated or re-keyed. Ingest policy:
    JSON of the record minus signature and public key; the public key
    travels inside the record.
 3. **Bind.** The receiver verifies the signature and binds the public key
-   to the peer ID **on first sight** (`discover_signed`). From then on:
+   to the peer ID **on first sight** (`discover_verified` after
+   `verify_identity`). From then on:
    - a later announcement claiming the same ID with a **different key is
      refused as identity theft**;
-   - unsigned or wrongly-signed announcements are refused (the legacy
-     unsigned path exists only for in-process, non-mesh use);
+   - **freshness + replay (S1 phase 2):** the signed heartbeat is windowed
+     to the registry heartbeat timeout (`heartbeat_timeout_sec`, default
+     30 s) and replay-cached by `(peer_id, last_seen)`. A stale record is
+     refused (`stale heartbeat rejected`); a fresh-verified record is
+     bound; a replay inside the window is answered
+     `{"status":"ok","replayed":true}` **without** binding or refreshing
+     liveness (a captured heartbeat cannot move an address or fake
+     presence). The binding policy still applies to a replay: an identity
+     change or a quarantined peer is refused, never acknowledged.
+     `last_seen` is second-resolution, so two heartbeats from the same
+     peer in the same second count as one observation;
+   - **unsigned announcements are address hints for unknown peers only** —
+     an unsigned heartbeat for an already-bound peer is refused
+     (`unsigned heartbeat rejected`), so it cannot relocate a bound
+     identity;
    - a **quarantined** peer's re-registration is refused until released.
 4. **Read back.** The joiner's `sangha.mesh.join` response carries the
    remote's registry summary after the bind — the proof the other side
@@ -112,13 +126,38 @@ via the auto-join loop on each node's beacons).
 
 ## 6. Conversation — chat, locks, signals
 
-Signed chat flows over the bound connection: the receiver verifies the
-message signature, checks the sender binding, and refuses quarantined
-senders at ingest (§7). Unsigned relay over mesh TCP is refused in the
-same handler. Locks (`acquire_lock`/`release_lock`) are TTL-bounded and
-per-peer; a quarantine revokes the bad apple's locks so the community is
-never held hostage by its resources. Hologram sync merges coordinate
-entries with importance-wins conflict resolution.
+Signed chat flows over the bound connection: the receiver **requires the
+sender to be identity-bound** (no `is_none_or` fallback), verifies the
+message signature against the bound key, checks freshness (a message more
+than 5 minutes from the receiver's clock is refused `stale chat
+rejected`), refuses quarantined senders at ingest (§7), and enforces the
+stored `PeerAuthority::can_execute` bit before the message enters the
+channel log. **Unsigned relay over mesh TCP is refused** — there is no
+unsigned path on the mesh transport.
+
+**Envelope id (S1 phase 2):** every chat sent by a node carries an
+`envelope_id` (sender + millisecond + process sequence) beside the
+signature. The field is skipped in serialization when empty, so the
+signing payload of an envelope-less message is byte-for-byte the legacy
+shape and pre-envelope signatures still verify (**one-way wire note:** an
+upgraded receiver accepts old messages unchanged; an old receiver simply
+ignores the extra field). The receiver stores a non-empty envelope once
+and answers a repeat with `{"status":"ok","duplicate":true,...}` — the
+sender's flush treats that as delivery, so a lost ack plus retry cannot
+store a message twice (at-least-once delivery, at-most-once storage). The
+id is minted once per logical chat, persisted with the mail-slot entry,
+and reused across flush retries.
+
+Locks (`acquire_lock`/`release_lock`) are TTL-bounded and per-peer; after
+the engagement-token check they gate on the holder's stored
+`can_execute` authority. A quarantine revokes the bad apple's locks so
+the community is never held hostage by its resources. Signals
+(`broadcast_signal`) gate on the stored authority of `signal.source` —
+**caveat:** signals carry no signature, so `source` is a *claim*: the
+gate enforces the claimed peer's stored authority, it does not prove who
+sent the frame. Hologram sync merges coordinate entries with
+importance-wins conflict resolution and is **not yet gated** (read-class
+merge, deliberately deferred).
 
 ## 7. Quarantine — the bad-apple rule
 
@@ -158,6 +197,37 @@ the transport can run but the tools are filtered out — start mesh servers
 with `--profile full`.
 
 ## 9. Verified behavior (evidence)
+
+### S1 mesh phase 2 (2026-09-18)
+
+- **Heartbeat replay + signed-only binding:** `PeerDiscovery::verify_identity`
+  is the verification seam; a bound peer's unsigned heartbeat is refused;
+  signed heartbeats are freshness-windowed to `heartbeat_timeout_sec` and
+  replay-cached by `(peer_id, last_seen)`. Unit tests:
+  `heartbeat_unsigned_for_bound_peer_is_rejected`,
+  `heartbeat_replay_is_acknowledged_without_rebinding` (a replay cannot move
+  the address), `heartbeat_stale_signed_is_rejected`,
+  `signed_heartbeat_identity_rejection_is_labelled`.
+- **Chat ingest gates:** unsigned chat refused; unbound sender refused as
+  `not identity-bound`; signature + bound-key verification; quarantine
+  unchanged; `can_execute` authority gate; ±5-minute freshness. Unit tests:
+  `chat_unsigned_is_rejected_over_the_mesh_transport`,
+  `chat_from_unbound_sender_is_rejected`, `chat_stale_is_rejected`,
+  `chat_authority_is_enforced`, `signal_authority_is_enforced`,
+  `lock_authority_is_enforced`, and the TCP round-trip
+  `e2e_tcp_chat_and_signal` (bind → signed chat → envelope dedup → signal).
+- **Envelope-id dedup:** signing payload unchanged for empty ids (legacy
+  signatures verify); `inject_signed` returns `Stored`/`Duplicate`; the mail
+  slot persists the id and the flush reuses it. Unit tests:
+  `empty_envelope_serializes_like_the_legacy_payload`,
+  `inject_signed_dedups_by_envelope_id`,
+  `envelope_id_roundtrips_and_legacy_entries_default_empty`,
+  `mail_envelope_id_survives_queue_and_flush`.
+- **Raw-frame E2E (`wm-mcp/tests/mesh_serve_e2e.rs`, unix):**
+  `raw_frame_heartbeat_replay_and_chat_dedup` (replay ack, stale refusal,
+  unsigned refusal, duplicate:true) and `raw_frame_binding_and_authority_gates`
+  (not-bound vs lacks-authority, lock + signal gates) against a real
+  `wm serve --mesh` listener over the length-prefixed TCP framing.
 
 ### 9.1.8 mesh ingest hardening (2026-09-15)
 
@@ -254,9 +324,14 @@ with `--profile full`.
 - **Persistence:** both halves survive restart via `MeshNodeConfig.state_dir`
   — the outbound slot (`mesh_mail_slot.json`) and the delivered-chat log
   (`mesh_chat_log.json`), atomic tmp-rename writes. Restore re-verifies
-  signatures (validate-on-dequeue); invalid ones are dropped. Known v0
-  gap: no receiver replay cache yet — a lost-ack retry can duplicate a
-  message (at-least-once); dedup lands with envelope v2 (S4/S9).
+  signatures (validate-on-dequeue); invalid ones are dropped.
+- **Envelope dedup (S1 phase 2):** each queued entry carries the chat's
+  `envelope_id` across restarts; the receiver's channel log drops a
+  repeated non-empty envelope id (`duplicate:true` in the RPC response,
+  which the flush counts as delivered) — so a lost ack plus retry lands
+  once. Entries restored from a pre-envelope file have no id and mint a
+  fallback at flush time. `sangha.mesh.mail list` discloses each entry's
+  `envelope_id`.
 
 ## 10. Threat-model mapping (MAESTRO)
 
@@ -282,6 +357,12 @@ is a V8+ item; the wire is readable by a local passive observer), no
 relay/multi-hop or NAT traversal, no peer discovery across subnets
 (multicast is link-local), no revocation lists (quarantine is per-node,
 by design), key management is a shared-secret-free but unmanaged
-file/env surface pending B7, and the replay cache covers **beacon ingest**
-(phase 1); heartbeat/chat replay wiring is phase 2 (9.1.9, Q26). Each of
-these is a gate on Gate 2 cohort use, not a silent gap.
+file/env surface pending B7, and signed chat is freshness-windowed to
+±5 minutes with envelope-id storage dedup (S1 phase 2, 9.1.10) — the live
+replay cache covers **beacon ingest** (phase 1) and **signed heartbeats**
+(phase 2), while chat is covered by freshness plus envelope dedup rather
+than a timestamp replay cache. Signals are not signed (source is a
+claim), hologram sync is not gated, and only `can_execute` is enforced
+live (`allowed_tools` / `can_write_memory` / `can_delegate` remain
+declarative). Each of these is a gate on Gate 2 cohort use, not a silent
+gap.

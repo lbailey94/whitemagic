@@ -432,20 +432,36 @@ impl MeshNode {
                 )));
             }
         }
+        // One envelope id per logical chat (S1 mesh phase 2): minted before
+        // any send attempt and reused by the mail slot and every flush
+        // retry, so a lost ack cannot duplicate the message on the receiver.
+        let envelope_id = crate::chat::ChatMessage::new_envelope_id(&self.config.peer_id);
         let key = conn_key(&addr);
         if !self.transport.connected_peers().await.contains(&key) {
             // A failed join is either availability (queue the message) or
             // refusal (propagate — e.g. we are quarantined on the remote).
             if let Err(e) = self.join(&addr).await {
                 if !is_refusal(&e.to_string()) {
-                    return self.queue_mail(&addr, peer_id.as_deref(), channel, content);
+                    return self.queue_mail(
+                        &addr,
+                        peer_id.as_deref(),
+                        channel,
+                        content,
+                        &envelope_id,
+                    );
                 }
                 return Err(e);
             }
         }
         match self
             .transport
-            .send_chat_remote(&key, channel, &self.config.peer_id, content)
+            .send_chat_remote_with_envelope(
+                &key,
+                channel,
+                &self.config.peer_id,
+                content,
+                &envelope_id,
+            )
             .await
         {
             Ok(_) => Ok(json!({
@@ -454,11 +470,18 @@ impl MeshNode {
                 "to": addr,
                 "peer_id": peer_id,
                 "channel": channel,
+                "envelope_id": envelope_id,
                 "signed_by": self.config.peer_id,
             })),
             Err(e) => {
                 if !is_refusal(&e.to_string()) {
-                    return self.queue_mail(&addr, peer_id.as_deref(), channel, content);
+                    return self.queue_mail(
+                        &addr,
+                        peer_id.as_deref(),
+                        channel,
+                        content,
+                        &envelope_id,
+                    );
                 }
                 Err(e)
             }
@@ -475,10 +498,17 @@ impl MeshNode {
         peer_id: Option<&str>,
         channel: &str,
         content: &str,
+        envelope_id: &str,
     ) -> Result<Value> {
         let (id, depth, bounds) = {
             let mut slot = self.mail_slot.lock().expect("mail slot lock poisoned");
-            match slot.enqueue(addr, channel, &self.config.peer_id, content) {
+            match slot.enqueue_with_envelope(
+                addr,
+                channel,
+                &self.config.peer_id,
+                content,
+                envelope_id,
+            ) {
                 Ok(id) => (id, slot.total(), slot.bounds()),
                 Err(full) => {
                     tracing::warn!(peer = %addr, kind = ?full.kind, "mesh mail slot full — message not stored");
@@ -498,6 +528,7 @@ impl MeshNode {
             "to": addr,
             "peer_id": peer_id,
             "channel": channel,
+            "envelope_id": envelope_id,
             "reason_code": "agent_asleep",
             "reason": "peer unreachable — stored for delivery on rejoin (FIFO, bounded, TTL)",
             "queue_depth": depth,
@@ -523,9 +554,23 @@ impl MeshNode {
         let mut delivered_ids: Vec<String> = Vec::new();
         let mut dropped_ids: Vec<String> = Vec::new();
         for msg in &pending {
+            // Reuse the stored envelope so a redelivery after a lost ack is
+            // deduped on the receiver; entries restored from a pre-envelope
+            // file have none, so mint a fallback for this flush.
+            let envelope_id = if msg.envelope_id.is_empty() {
+                crate::chat::ChatMessage::new_envelope_id(&msg.sender)
+            } else {
+                msg.envelope_id.clone()
+            };
             match self
                 .transport
-                .send_chat_remote(&key, &msg.channel, &msg.sender, &msg.content)
+                .send_chat_remote_with_envelope(
+                    &key,
+                    &msg.channel,
+                    &msg.sender,
+                    &msg.content,
+                    &envelope_id,
+                )
                 .await
             {
                 Ok(_) => delivered_ids.push(msg.id.clone()),
@@ -572,6 +617,7 @@ impl MeshNode {
                 .map(|m| {
                     json!({
                         "id": m.id,
+                        "envelope_id": m.envelope_id,
                         "peer": m.peer,
                         "channel": m.channel,
                         "sender": m.sender,
@@ -1295,6 +1341,51 @@ mod tests {
             assert_eq!(inbox["messages"][0]["content"], "delivered live");
             assert_eq!(inbox["messages"][0]["sender"], "mp-node-a");
         }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[tokio::test]
+    async fn mail_envelope_id_survives_queue_and_flush() {
+        // One envelope id per logical chat (S1 mesh phase 2): the queued
+        // entry carries it, and the delivery flushed after rejoin stores
+        // the exact same id on the receiver — the dedup key that stops a
+        // lost-ack retry from duplicating the message.
+        let a = spawn_node_with("env-node-a", 17_631, false, TEST_GROUP_A, 300).await;
+        let queued = within(
+            "chat to offline peer",
+            a.chat("127.0.0.1:17632", "general", "envelope through the slot"),
+        )
+        .await
+        .expect("chat must queue");
+        assert_eq!(queued["queued"], true, "{queued}");
+        let envelope = queued["envelope_id"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        assert!(!envelope.is_empty(), "{queued}");
+        let mail = a.mail_list();
+        assert_eq!(mail["entries"][0]["envelope_id"], envelope, "{mail}");
+
+        let b = spawn_node_with("env-node-b", 17_632, false, TEST_GROUP_A, 300).await;
+        let report = within("a join b (flush)", a.join("127.0.0.1:17632"))
+            .await
+            .expect("a join b");
+        assert_eq!(report["mail_flushed"], 1, "{report}");
+        assert_eq!(a.mail_summary()["queued_total"], 0);
+
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        let inbox = loop {
+            let inbox = b.read_chat("general", 10).await.expect("b read");
+            if inbox["count"].as_u64().is_some_and(|c| c >= 1) {
+                break inbox;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "queued mail was never delivered: {inbox}"
+            );
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        };
+        assert_eq!(inbox["messages"][0]["envelope_id"], envelope, "{inbox}");
     }
 
     #[tokio::test]

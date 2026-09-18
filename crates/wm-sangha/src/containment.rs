@@ -162,6 +162,7 @@ pub fn run(legit_peers: usize, adversarial_peers: usize) -> ContainmentReport {
             timestamp: 1,
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: String::new(),
         }
         .signed(&crate::crypto::MeshKeyPair::from_seed(b"attacker-seed"));
         chat.inject(forged);
@@ -174,6 +175,7 @@ pub fn run(legit_peers: usize, adversarial_peers: usize) -> ContainmentReport {
             timestamp: 2,
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: String::new(),
         };
         chat.inject(unsigned);
 
@@ -411,6 +413,7 @@ pub fn run(legit_peers: usize, adversarial_peers: usize) -> ContainmentReport {
                 timestamp: i64::try_from(attempt).unwrap_or(0),
                 signature: String::new(),
                 public_key: String::new(),
+                envelope_id: String::new(),
             }
             .signed(&crate::crypto::MeshKeyPair::from_seed(b"attacker-seed"));
             // The forged message fails the binding check against the

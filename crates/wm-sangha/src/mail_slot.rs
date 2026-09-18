@@ -43,6 +43,12 @@ pub struct QueuedMessage {
     pub queued_at: i64,
     /// Delivery attempts so far (failed flushes increment).
     pub attempts: u32,
+    /// Chat envelope id carried with the message (S1 mesh phase 2) so the
+    /// receiver can dedup a redelivery after a lost ack, and the sender
+    /// keeps the same id across flush retries. Empty on legacy entries
+    /// restored from pre-envelope files; the flush mints a fallback.
+    #[serde(default)]
+    pub envelope_id: String,
 }
 
 /// Which bound rejected an enqueue (IETF `asleep_queue_full` `kind`).
@@ -145,6 +151,10 @@ impl MailSlot {
     /// Enqueue a message for `peer`. Applies bounds AFTER purging expired
     /// entries; returns the mail id or the bound that rejected it.
     ///
+    /// Envelope-less form (legacy callers): the stored entry carries an
+    /// empty envelope id. Use [`Self::enqueue_with_envelope`] when the
+    /// sender has already minted one for dedup across retries.
+    ///
     /// # Errors
     /// [`QueueFull`] when any published bound would be exceeded.
     pub fn enqueue(
@@ -153,6 +163,23 @@ impl MailSlot {
         channel: &str,
         sender: &str,
         content: &str,
+    ) -> Result<String, QueueFull> {
+        self.enqueue_with_envelope(peer, channel, sender, content, "")
+    }
+
+    /// Enqueue a message carrying an envelope id. Applies bounds AFTER
+    /// purging expired entries; returns the mail id or the bound that
+    /// rejected it.
+    ///
+    /// # Errors
+    /// [`QueueFull`] when any published bound would be exceeded.
+    pub fn enqueue_with_envelope(
+        &mut self,
+        peer: &str,
+        channel: &str,
+        sender: &str,
+        content: &str,
+        envelope_id: &str,
     ) -> Result<String, QueueFull> {
         self.purge_expired();
 
@@ -186,6 +213,7 @@ impl MailSlot {
             content: content.to_string(),
             queued_at: chrono::Utc::now().timestamp(),
             attempts: 0,
+            envelope_id: envelope_id.to_string(),
         });
         self.persist();
         Ok(self
@@ -447,6 +475,44 @@ mod tests {
             s.entries_for("10.0.0.9:7369")[0].content,
             "survives restart"
         );
+    }
+
+    #[test]
+    fn envelope_id_roundtrips_and_legacy_entries_default_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mesh_mail_slot.json");
+        {
+            let mut s = MailSlot::restore(MailSlotConfig::default(), path.clone());
+            s.enqueue_with_envelope("p1", "general", "me", "with envelope", "env-42")
+                .unwrap();
+            s.enqueue("p1", "general", "me", "legacy call").unwrap();
+        }
+        let s = MailSlot::restore(MailSlotConfig::default(), path.clone());
+        let pending = s.entries_for("p1");
+        assert_eq!(pending[0].envelope_id, "env-42");
+        assert!(
+            pending[1].envelope_id.is_empty(),
+            "enqueue() keeps the legacy envelope-less shape"
+        );
+
+        // A pre-envelope file (no envelope_id field) restores with defaults.
+        let legacy = serde_json::json!({
+            "version": 1,
+            "bounds": MailSlotConfig::default(),
+            "entries": [{
+                "id": "mail-1-0001",
+                "peer": "p1",
+                "channel": "general",
+                "sender": "me",
+                "content": "old file",
+                "queued_at": chrono::Utc::now().timestamp(),
+                "attempts": 0,
+            }],
+        });
+        std::fs::write(&path, serde_json::to_string(&legacy).unwrap()).unwrap();
+        let restored = MailSlot::restore(MailSlotConfig::default(), path);
+        assert_eq!(restored.total(), 1);
+        assert!(restored.entries_for("p1")[0].envelope_id.is_empty());
     }
 
     #[test]

@@ -48,7 +48,7 @@ use crate::chat::SanghaChat;
 use crate::hologram::HologramSync;
 use crate::lock::ResourceLockManager;
 use crate::peer::{PeerDiscovery, PeerId, PeerInfo};
-use crate::replay::{IngestGuard, ReplayVerdict};
+use crate::replay::{IngestGuard, ReplayCache, ReplayVerdict};
 use crate::signal::SignalBroadcast;
 
 // ── Constants ─────────────────────────────────────────────────────────
@@ -61,6 +61,11 @@ pub const MULTICAST_GROUP: &str = "224.0.0.69";
 
 /// Default heartbeat interval in seconds.
 pub const DEFAULT_HEARTBEAT_INTERVAL_SEC: u64 = 5;
+
+/// Chat freshness window (milliseconds, both directions). A signed chat
+/// whose timestamp is further from the receiver's clock than this is
+/// refused as stale before it can enter the channel log.
+pub const CHAT_TIMESTAMP_WINDOW_MS: u64 = 300_000;
 
 /// Upper bound on one mesh RPC round-trip. A peer that accepts a
 /// connection but never responds must surface as an error, not hang the
@@ -329,6 +334,11 @@ pub struct SanghaState {
     /// Beacon ingest guard: freshness window, per-source rate limit, replay
     /// cache (S9 §2.2–2.3).
     pub ingest_guard: Mutex<IngestGuard>,
+    /// Signed-heartbeat replay cache (S1 mesh phase 2): keyed by
+    /// `(peer_id, last_seen)` with the registry heartbeat timeout as the
+    /// freshness window. Only signature-verified observations enter —
+    /// a forged heartbeat must not consume the genuine one's slot.
+    pub heartbeat_replay: Mutex<ReplayCache>,
 }
 
 impl SanghaState {
@@ -380,6 +390,7 @@ impl SanghaState {
                 std::env::var("WM_SANGHA_REQUIRE_TOKENS").is_ok_and(|v| v == "1"),
             ),
             ingest_guard: Mutex::new(IngestGuard::new(4096, 8)),
+            heartbeat_replay: Mutex::new(ReplayCache::new(4096)),
         }
     }
 
@@ -651,7 +662,7 @@ impl SanghaTransport {
         Ok(())
     }
 
-    /// Send a chat message to a remote peer.
+    /// Send a chat message to a remote peer, minting a fresh envelope id.
     ///
     /// # Errors
     /// Returns an error if the send fails.
@@ -661,6 +672,31 @@ impl SanghaTransport {
         channel: &str,
         sender: &str,
         content: &str,
+    ) -> Result<serde_json::Value> {
+        self.send_chat_remote_with_envelope(
+            peer_id,
+            channel,
+            sender,
+            content,
+            &crate::chat::ChatMessage::new_envelope_id(sender),
+        )
+        .await
+    }
+
+    /// Send a chat message to a remote peer carrying a caller-supplied
+    /// envelope id. The id is minted once per logical send by the caller
+    /// (see `MeshNode::chat`) and reused across queue/flush retries so the
+    /// receiver can dedup a redelivery after a lost ack.
+    ///
+    /// # Errors
+    /// Returns an error if the send fails.
+    pub async fn send_chat_remote_with_envelope(
+        &self,
+        peer_id: &str,
+        channel: &str,
+        sender: &str,
+        content: &str,
+        envelope_id: &str,
     ) -> Result<serde_json::Value> {
         // Sign through the same code path the receiver verifies against,
         // so the canonical payload (serialized ChatMessage minus signature
@@ -674,18 +710,21 @@ impl SanghaTransport {
             timestamp,
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: envelope_id.to_string(),
         }
         .signed(&self.state.keypair);
         self.rpc_call(
             peer_id,
             "send_chat",
             serde_json::json!({
+                "id": signed.id,
                 "channel": channel,
                 "sender": sender,
                 "content": content,
                 "signature": signed.signature,
                 "public_key": signed.public_key,
                 "timestamp": timestamp,
+                "envelope_id": envelope_id,
             }),
         )
         .await
@@ -810,6 +849,33 @@ async fn enforce_lock_engagement(
     .map_err(|e| format!("engagement rejected: {e}"))
 }
 
+/// Enforce the stored peer authority's `can_execute` bit for a claimed
+/// sender/holder identity on the live transport (S1 mesh phase 2).
+///
+/// Errors distinguish the two failure classes the community needs:
+/// an unknown/unbound claimant is **not identity-bound** (no signed
+/// heartbeat ever bound a key), while a known, bound peer whose declared
+/// authority withholds execution **lacks can_execute authority**.
+async fn require_can_execute(
+    state: &SanghaState,
+    peer_id: &str,
+) -> std::result::Result<(), String> {
+    let (bound, can_execute) = {
+        let peers = state.peers.lock().await;
+        match peers.get(peer_id) {
+            Some(p) => (!p.public_key.is_empty(), p.authority.can_execute),
+            None => (false, false),
+        }
+    };
+    if !bound {
+        return Err(format!("peer '{peer_id}' is not identity-bound"));
+    }
+    if !can_execute {
+        return Err(format!("peer '{peer_id}' lacks can_execute authority"));
+    }
+    Ok(())
+}
+
 /// Handle a single RPC request.
 async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcResponse {
     match req.method.as_str() {
@@ -819,16 +885,79 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 Err(e) => return RpcResponse::err(format!("invalid params: {e}"), req.id),
             };
             let peer_id = peer_info.id.clone();
-            let result = if peer_info.signature.is_empty() {
-                // Legacy unsigned announcement — accepted without identity
-                // binding (single-node/trusted transport).
+            let bound = state
+                .peers
+                .lock()
+                .await
+                .bound_public_key(&peer_id)
+                .unwrap_or_default();
+
+            if peer_info.signature.is_empty() {
+                // Unsigned heartbeats are legacy address hints for peers
+                // this node has never bound. A bound peer must sign:
+                // an unsigned update could otherwise move a bound peer's
+                // address (join redirection) and clobber liveness state.
+                if !bound.is_empty() {
+                    return RpcResponse::err(
+                        format!(
+                            "unsigned heartbeat rejected: peer '{peer_id}' is identity-bound \
+                             and must send a signed heartbeat"
+                        ),
+                        req.id,
+                    );
+                }
                 state.peers.lock().await.discover(peer_info);
-                Ok(())
-            } else {
-                // Signed announcement: verify + bind the public key.
-                state.peers.lock().await.discover_signed(peer_info)
+                return RpcResponse::ok(
+                    serde_json::json!({"peer_id": peer_id, "status": "ok"}),
+                    req.id,
+                );
+            }
+
+            // Signed announcement: verify the identity first (a forged
+            // record must not consume the genuine one's replay slot), then
+            // freshness + replay, then apply the binding policy.
+            {
+                let peers = state.peers.lock().await;
+                if let Err(e) = peers.verify_identity(&peer_info) {
+                    return RpcResponse::err(format!("identity rejected: {e}"), req.id);
+                }
+            }
+
+            let window = {
+                let peers = state.peers.lock().await;
+                std::time::Duration::from_secs(peers.heartbeat_timeout_secs().max(0) as u64)
             };
-            match result {
+            let verdict = state.heartbeat_replay.lock().await.check_and_insert(
+                &peer_id,
+                peer_info.last_seen.max(0) as u64,
+                std::time::Instant::now(),
+                chrono::Utc::now().timestamp().max(0) as u64,
+                window,
+            );
+            match verdict {
+                ReplayVerdict::OutsideWindow => {
+                    return RpcResponse::err("stale heartbeat rejected", req.id);
+                }
+                ReplayVerdict::Replayed => {
+                    // Acknowledge without binding/observing — a captured
+                    // heartbeat replay cannot refresh liveness or move an
+                    // address, and the original join already registered.
+                    // The binding policy still applies: a replay must not
+                    // launder an identity change or quarantine into an ack.
+                    let check = state.peers.lock().await.verify_binding(&peer_info);
+                    if let Err(e) = check {
+                        return RpcResponse::err(format!("identity rejected: {e}"), req.id);
+                    }
+                    return RpcResponse::ok(
+                        serde_json::json!({"peer_id": peer_id, "status": "ok", "replayed": true}),
+                        req.id,
+                    );
+                }
+                ReplayVerdict::Fresh => {}
+            }
+
+            let binding = state.peers.lock().await.discover_verified(peer_info);
+            match binding {
                 Ok(()) => RpcResponse::ok(
                     serde_json::json!({"peer_id": peer_id, "status": "ok"}),
                     req.id,
@@ -847,11 +976,24 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 Ok(s) => s,
                 Err(e) => return RpcResponse::err(format!("invalid signal: {e}"), req.id),
             };
+            // Live authority gate (S1 mesh phase 2). Caveat: signals carry
+            // no signature, so `signal.source` is a CLAIM — the gate
+            // enforces the stored authority of the claimed peer, it does
+            // not prove who sent the frame (documented in
+            // docs/MESH_JOIN_PROTOCOL.md §6).
+            if let Err(reason) = require_can_execute(state, &signal.source).await {
+                return RpcResponse::err(format!("signal rejected: {reason}"), req.id);
+            }
             state.signals.lock().await.broadcast(signal);
             RpcResponse::ok(serde_json::json!({"status": "ok"}), req.id)
         }
 
         "send_chat" => {
+            let id = req
+                .params
+                .get("id")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
             let channel = req
                 .params
                 .get("channel")
@@ -877,6 +1019,11 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 .get("public_key")
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or("");
+            let envelope_id = req
+                .params
+                .get("envelope_id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("");
             let timestamp = req
                 .params
                 .get("timestamp")
@@ -884,34 +1031,40 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 .unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
 
             if signature.is_empty() || public_key.is_empty() {
-                // Legacy unsigned relay — accepted (trusted transport).
-                let msg = {
-                    let mut chat = state.chat.lock().await;
-                    chat.send(channel, sender, content)
-                };
-                return RpcResponse::ok(
-                    serde_json::json!({"status": "ok", "channel": msg.channel, "id": msg.id}),
+                // Signed-only ingest: the mesh transport never accepts an
+                // unsigned relay (the trusted-transport era is over).
+                return RpcResponse::err(
+                    "unsigned chat is not accepted over the mesh transport",
                     req.id,
                 );
             }
 
-            // Signed relay: verify the signature and the sender binding.
+            // Require a bound sender, then verify the signature against the
+            // BOUND key — `is_none_or` acceptance let any unknown claimant
+            // through as long as its self-carried key was self-consistent.
+            let bound = state
+                .peers
+                .lock()
+                .await
+                .bound_public_key(sender)
+                .unwrap_or_default();
+            if bound.is_empty() {
+                return RpcResponse::err(
+                    format!("message rejected: sender '{sender}' is not identity-bound"),
+                    req.id,
+                );
+            }
             let msg = crate::chat::ChatMessage {
-                id: 0,
+                id,
                 channel: channel.to_string(),
                 sender: sender.to_string(),
                 content: content.to_string(),
                 timestamp,
                 signature: signature.to_string(),
                 public_key: public_key.to_string(),
+                envelope_id: envelope_id.to_string(),
             };
-            let bound = {
-                let peers = state.peers.lock().await;
-                peers.bound_public_key(sender)
-            };
-            let valid =
-                msg.verify_signature() && bound.is_none_or(|bound| msg.verify_as_sender(&bound));
-            if !valid {
+            if !(msg.verify_signature() && msg.verify_as_sender(&bound)) {
                 return RpcResponse::err(
                     format!(
                         "message rejected: sender '{sender}' failed signature/binding verification"
@@ -928,12 +1081,29 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                     req.id,
                 );
             }
-            {
-                let mut chat = state.chat.lock().await;
-                chat.inject_signed(msg);
+            // Live authority gate (S1 mesh phase 2).
+            if let Err(reason) = require_can_execute(state, sender).await {
+                return RpcResponse::err(format!("message rejected: {reason}"), req.id);
             }
+            // Freshness on the receiver clock: a captured message older (or
+            // further ahead) than the chat window is refused before it can
+            // enter the channel log.
+            let now_ms = chrono::Utc::now().timestamp_millis();
+            if now_ms.abs_diff(msg.timestamp) > CHAT_TIMESTAMP_WINDOW_MS {
+                return RpcResponse::err("stale chat rejected", req.id);
+            }
+            let outcome = {
+                let mut chat = state.chat.lock().await;
+                chat.inject_signed(msg)
+            };
+            let duplicate = matches!(outcome, crate::chat::InjectOutcome::Duplicate);
             RpcResponse::ok(
-                serde_json::json!({"status": "ok", "channel": channel, "sender": sender}),
+                serde_json::json!({
+                    "status": "ok",
+                    "duplicate": duplicate,
+                    "channel": channel,
+                    "sender": sender,
+                }),
                 req.id,
             )
         }
@@ -956,6 +1126,9 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 .unwrap_or(30);
 
             if let Err(reason) = enforce_lock_engagement(state, req, holder).await {
+                return RpcResponse::err(reason, req.id);
+            }
+            if let Err(reason) = require_can_execute(state, holder).await {
                 return RpcResponse::err(reason, req.id);
             }
 
@@ -987,6 +1160,9 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
             if let Err(reason) = enforce_lock_engagement(state, req, holder).await {
                 return RpcResponse::err(reason, req.id);
             }
+            if let Err(reason) = require_can_execute(state, holder).await {
+                return RpcResponse::err(reason, req.id);
+            }
 
             let released = {
                 let mut locks = state.locks.lock().await;
@@ -1002,6 +1178,10 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
         }
 
         "sync_hologram" => {
+            // Authority/signing gate deliberately deferred (S1 phase 2):
+            // hologram sync is a read-class merge with importance-wins
+            // conflict resolution and no direct store write; gating it on
+            // identity is queued behind the compartment model (V9.2 queue).
             let remote_entries: Vec<crate::hologram::HologramEntry> =
                 match serde_json::from_value(req.params.clone()) {
                     Ok(e) => e,
@@ -1260,6 +1440,60 @@ fn rand_id() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::crypto::MeshKeyPair;
+
+    /// Bind a signed test peer into the registry (first-sight TOFU).
+    async fn bind_signed_peer(state: &SanghaState, peer_id: &str, seed: &[u8]) -> MeshKeyPair {
+        let keypair = MeshKeyPair::from_seed(seed);
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new(peer_id, "127.0.0.1:9000").signed(&keypair))
+            .expect("test peer binds");
+        keypair
+    }
+
+    /// Build the `send_chat` params the way `send_chat_remote_with_envelope`
+    /// serializes them (canonical signature over the same shape).
+    fn signed_chat_params(
+        keypair: &MeshKeyPair,
+        sender: &str,
+        channel: &str,
+        content: &str,
+        envelope_id: &str,
+        timestamp: i64,
+    ) -> serde_json::Value {
+        let msg = crate::chat::ChatMessage {
+            id: 0,
+            channel: channel.to_string(),
+            sender: sender.to_string(),
+            content: content.to_string(),
+            timestamp,
+            signature: String::new(),
+            public_key: String::new(),
+            envelope_id: envelope_id.to_string(),
+        }
+        .signed(keypair);
+        serde_json::json!({
+            "id": msg.id,
+            "channel": msg.channel,
+            "sender": msg.sender,
+            "content": msg.content,
+            "signature": msg.signature,
+            "public_key": msg.public_key,
+            "timestamp": msg.timestamp,
+            "envelope_id": msg.envelope_id,
+        })
+    }
+
+    fn heartbeat_req(peer: &PeerInfo, id: u64) -> RpcRequest {
+        RpcRequest {
+            method: "heartbeat".to_string(),
+            params: serde_json::to_value(peer).unwrap(),
+            id,
+        }
+    }
 
     #[test]
     fn peer_announce_roundtrip() {
@@ -1398,6 +1632,8 @@ mod tests {
     #[tokio::test]
     async fn handle_rpc_acquire_lock() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        // Live authority gate: the holder must be identity-bound.
+        bind_signed_peer(&state, "remote-1", b"remote-1-lock-seed").await;
 
         let req = RpcRequest {
             method: "acquire_lock".to_string(),
@@ -1421,6 +1657,7 @@ mod tests {
     #[tokio::test]
     async fn handle_rpc_release_lock() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        bind_signed_peer(&state, "remote-1", b"remote-1-lock-seed").await;
 
         // Acquire first
         let acquire_req = RpcRequest {
@@ -1628,6 +1865,8 @@ mod tests {
     #[tokio::test]
     async fn handle_rpc_broadcast_signal() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        // Live authority gate: signal.source must be identity-bound.
+        bind_signed_peer(&state, "remote-1", b"remote-1-signal-seed").await;
 
         let signal = crate::signal::Signal::new(
             crate::signal::SignalType::MemoryCreated,
@@ -1648,24 +1887,405 @@ mod tests {
     #[tokio::test]
     async fn handle_rpc_send_chat() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = bind_signed_peer(&state, "remote-1", b"remote-1-chat-seed").await;
 
         let req = RpcRequest {
             method: "send_chat".to_string(),
-            params: serde_json::json!({
-                "channel": "general",
-                "sender": "remote-1",
-                "content": "hello mesh",
-            }),
+            params: signed_chat_params(
+                &keypair,
+                "remote-1",
+                "general",
+                "hello mesh",
+                "env-handler-chat",
+                chrono::Utc::now().timestamp_millis(),
+            ),
             id: 8,
         };
 
         let resp = handle_rpc_request(&req, &state).await;
-        assert!(resp.result.is_some());
+        assert!(resp.error.is_none(), "{:?}", resp.error);
         let result = resp.result.unwrap();
+        assert_eq!(result["channel"], "general");
+        assert_eq!(result["duplicate"], false);
+    }
+
+    // ── Phase 2: heartbeat replay + signed-only ingest ────────────────
+
+    #[tokio::test]
+    async fn heartbeat_unknown_unsigned_still_registers_as_address_hint() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let peer = PeerInfo::new("hint-peer", "127.0.0.1:7370");
+        let resp = handle_rpc_request(&heartbeat_req(&peer, 20), &state).await;
+        assert!(resp.error.is_none(), "{:?}", resp.error);
         assert_eq!(
-            result.get("channel").and_then(|v| v.as_str()),
-            Some("general")
+            state.peers.lock().await.get("hint-peer").unwrap().address,
+            "127.0.0.1:7370"
         );
+    }
+
+    #[tokio::test]
+    async fn heartbeat_unsigned_for_bound_peer_is_rejected() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = MeshKeyPair::from_seed(b"bound-peer-seed");
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("bound-peer", "127.0.0.1:7370").signed(&keypair))
+            .expect("bind");
+
+        let unsigned = PeerInfo::new("bound-peer", "127.0.0.1:9999");
+        let resp = handle_rpc_request(&heartbeat_req(&unsigned, 21), &state).await;
+        let err = resp.error.expect("bound peer must sign");
+        assert!(err.contains("unsigned heartbeat rejected"), "{err}");
+        assert_eq!(
+            state.peers.lock().await.get("bound-peer").unwrap().address,
+            "127.0.0.1:7370",
+            "an unsigned heartbeat must never move a bound peer"
+        );
+    }
+
+    #[tokio::test]
+    async fn heartbeat_replay_is_acknowledged_without_rebinding() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = MeshKeyPair::from_seed(b"hb-replay-seed");
+        let signed = PeerInfo::new("hb-replay", "127.0.0.1:7371").signed(&keypair);
+
+        let first = handle_rpc_request(&heartbeat_req(&signed, 22), &state).await;
+        assert!(first.error.is_none(), "{:?}", first.error);
+        assert!(first.result.as_ref().unwrap().get("replayed").is_none());
+
+        // The same signed record again is acknowledged as a replay (the
+        // original join already bound it) — not an error, and no rebinding.
+        let second = handle_rpc_request(&heartbeat_req(&signed, 23), &state).await;
+        assert!(second.error.is_none(), "{:?}", second.error);
+        assert_eq!(second.result.unwrap()["replayed"], true);
+
+        // A genuinely new signed heartbeat (next second) is admitted.
+        let mut next = PeerInfo::new("hb-replay", "127.0.0.1:7371");
+        next.last_seen += 1;
+        let next = next.signed(&keypair);
+        let third = handle_rpc_request(&heartbeat_req(&next, 24), &state).await;
+        assert!(third.error.is_none(), "{:?}", third.error);
+        assert!(third.result.as_ref().unwrap().get("replayed").is_none());
+
+        // A replayed heartbeat must not move the peer's address.
+        let mut moved = PeerInfo::new("hb-replay", "127.0.0.1:9999");
+        moved.last_seen = signed.last_seen;
+        let moved = moved.signed(&keypair);
+        let fourth = handle_rpc_request(&heartbeat_req(&moved, 25), &state).await;
+        assert_eq!(fourth.result.unwrap()["replayed"], true);
+        assert_eq!(
+            state.peers.lock().await.get("hb-replay").unwrap().address,
+            "127.0.0.1:7371"
+        );
+    }
+
+    #[tokio::test]
+    async fn heartbeat_replay_cannot_launder_identity_theft_or_quarantine() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = MeshKeyPair::from_seed(b"hb-launder-seed");
+        let genuine = PeerInfo::new("hb-launder", "127.0.0.1:7374").signed(&keypair);
+        let first = handle_rpc_request(&heartbeat_req(&genuine, 50), &state).await;
+        assert!(first.error.is_none(), "{:?}", first.error);
+
+        // Same second, different key claiming the bound id → replayed, but
+        // the binding policy still refuses the identity change.
+        let attacker = MeshKeyPair::from_seed(b"hb-launder-attacker");
+        let mut spoof = PeerInfo::new("hb-launder", "127.0.0.1:9999");
+        spoof.last_seen = genuine.last_seen;
+        let spoof = spoof.signed(&attacker);
+        let resp = handle_rpc_request(&heartbeat_req(&spoof, 51), &state).await;
+        let err = resp.error.expect("replayed theft must be refused");
+        assert!(err.contains("identity theft"), "{err}");
+
+        // A replayed genuine heartbeat for a quarantined peer is refused too.
+        state.peers.lock().await.quarantine("hb-launder", "test");
+        let resp = handle_rpc_request(&heartbeat_req(&genuine, 52), &state).await;
+        let err = resp
+            .error
+            .expect("replayed heartbeat must not bypass quarantine");
+        assert!(err.contains("quarantined"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn heartbeat_stale_signed_is_rejected() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = MeshKeyPair::from_seed(b"hb-stale-seed");
+        let mut stale = PeerInfo::new("hb-stale", "127.0.0.1:7372");
+        stale.last_seen = chrono::Utc::now().timestamp() - 3600;
+
+        let resp = handle_rpc_request(&heartbeat_req(&stale.signed(&keypair), 25), &state).await;
+        assert_eq!(resp.error.as_deref(), Some("stale heartbeat rejected"));
+        assert!(
+            state.peers.lock().await.get("hb-stale").is_none(),
+            "stale heartbeat must not register"
+        );
+    }
+
+    #[tokio::test]
+    async fn signed_heartbeat_identity_rejection_is_labelled() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let good = MeshKeyPair::from_seed(b"identity-peer-seed");
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(PeerInfo::new("identity-peer", "127.0.0.1:7373").signed(&good))
+            .expect("bind");
+
+        let attacker = MeshKeyPair::from_seed(b"identity-attacker");
+        let theft = PeerInfo::new("identity-peer", "127.0.0.1:9999").signed(&attacker);
+        let resp = handle_rpc_request(&heartbeat_req(&theft, 26), &state).await;
+        let err = resp.error.expect("key change must be refused");
+        assert!(err.contains("identity rejected"), "{err}");
+        assert!(err.contains("identity theft"), "{err}");
+    }
+
+    // ── Phase 2: chat ingest gates + envelope dedup ───────────────────
+
+    #[tokio::test]
+    async fn chat_unsigned_is_rejected_over_the_mesh_transport() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: serde_json::json!({
+                "channel": "general",
+                "sender": "bound-peer",
+                "content": "no signature",
+            }),
+            id: 30,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert_eq!(
+            resp.error.as_deref(),
+            Some("unsigned chat is not accepted over the mesh transport")
+        );
+    }
+
+    #[tokio::test]
+    async fn chat_from_unbound_sender_is_rejected() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let stranger = MeshKeyPair::from_seed(b"stranger-seed");
+        let req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: signed_chat_params(
+                &stranger,
+                "stranger",
+                "general",
+                "let me in",
+                "env-stranger",
+                chrono::Utc::now().timestamp_millis(),
+            ),
+            id: 31,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        let err = resp.error.expect("unbound sender must be refused");
+        assert!(err.contains("not identity-bound"), "{err}");
+        assert_eq!(state.chat.lock().await.channel_message_count("general"), 0);
+    }
+
+    #[tokio::test]
+    async fn chat_signed_fresh_is_stored_with_duplicate_false() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = bind_signed_peer(&state, "chat-peer", b"chat-peer-seed").await;
+        let req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: signed_chat_params(
+                &keypair,
+                "chat-peer",
+                "general",
+                "fresh and signed",
+                "env-fresh-1",
+                chrono::Utc::now().timestamp_millis(),
+            ),
+            id: 32,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert!(resp.error.is_none(), "{:?}", resp.error);
+        assert_eq!(resp.result.unwrap()["duplicate"], false);
+        assert_eq!(state.chat.lock().await.channel_message_count("general"), 1);
+    }
+
+    #[tokio::test]
+    async fn chat_replay_by_envelope_id_is_reported_as_duplicate() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = bind_signed_peer(&state, "chat-peer", b"chat-peer-seed").await;
+        let params = signed_chat_params(
+            &keypair,
+            "chat-peer",
+            "general",
+            "exactly once",
+            "env-dedup-1",
+            chrono::Utc::now().timestamp_millis(),
+        );
+
+        let first = handle_rpc_request(
+            &RpcRequest {
+                method: "send_chat".to_string(),
+                params: params.clone(),
+                id: 33,
+            },
+            &state,
+        )
+        .await;
+        assert_eq!(first.result.unwrap()["duplicate"], false);
+        let second = handle_rpc_request(
+            &RpcRequest {
+                method: "send_chat".to_string(),
+                params,
+                id: 34,
+            },
+            &state,
+        )
+        .await;
+        assert!(second.error.is_none(), "{:?}", second.error);
+        assert_eq!(second.result.unwrap()["duplicate"], true);
+        assert_eq!(
+            state.chat.lock().await.channel_message_count("general"),
+            1,
+            "a duplicate envelope must not enter the log twice"
+        );
+    }
+
+    #[tokio::test]
+    async fn chat_stale_is_rejected() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let keypair = bind_signed_peer(&state, "chat-peer", b"chat-peer-seed").await;
+        let req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: signed_chat_params(
+                &keypair,
+                "chat-peer",
+                "general",
+                "from last week",
+                "env-stale-1",
+                chrono::Utc::now().timestamp_millis() - 600_000,
+            ),
+            id: 35,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        assert_eq!(resp.error.as_deref(), Some("stale chat rejected"));
+        assert_eq!(state.chat.lock().await.channel_message_count("general"), 0);
+    }
+
+    #[tokio::test]
+    async fn chat_authority_is_enforced() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let mut no_exec = PeerInfo::new("no-exec", "127.0.0.1:9001");
+        no_exec.authority = crate::peer::PeerAuthority::none();
+        let keypair = MeshKeyPair::from_seed(b"no-exec-seed");
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(no_exec.signed(&keypair))
+            .expect("authority-none peer binds");
+        // The stored record still verifies; only the gate refuses.
+        assert!(state.peers.lock().await.verify_peer("no-exec"));
+
+        let req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: signed_chat_params(
+                &keypair,
+                "no-exec",
+                "general",
+                "not allowed",
+                "env-no-exec",
+                chrono::Utc::now().timestamp_millis(),
+            ),
+            id: 36,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        let err = resp.error.expect("authority gate must refuse");
+        assert!(err.contains("lacks can_execute authority"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn signal_authority_is_enforced() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+
+        // Unknown source → not identity-bound.
+        let ghost = crate::signal::Signal::new(
+            crate::signal::SignalType::PeerStatus,
+            "ghost",
+            serde_json::json!({"status": "online"}),
+        );
+        let resp = handle_rpc_request(
+            &RpcRequest {
+                method: "broadcast_signal".to_string(),
+                params: serde_json::to_value(&ghost).unwrap(),
+                id: 37,
+            },
+            &state,
+        )
+        .await;
+        let err = resp.error.expect("unbound signal refused");
+        assert!(err.contains("not identity-bound"), "{err}");
+
+        // Bound but authority withheld.
+        let mut no_exec = PeerInfo::new("no-exec", "127.0.0.1:9001");
+        no_exec.authority = crate::peer::PeerAuthority::none();
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(no_exec.signed(&MeshKeyPair::from_seed(b"no-exec-signal-seed")))
+            .expect("bind");
+        let signal = crate::signal::Signal::new(
+            crate::signal::SignalType::PeerStatus,
+            "no-exec",
+            serde_json::json!({"status": "online"}),
+        );
+        let resp = handle_rpc_request(
+            &RpcRequest {
+                method: "broadcast_signal".to_string(),
+                params: serde_json::to_value(&signal).unwrap(),
+                id: 38,
+            },
+            &state,
+        )
+        .await;
+        let err = resp.error.expect("authority gate must refuse");
+        assert!(err.contains("lacks can_execute authority"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn lock_authority_is_enforced() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let mut no_exec = PeerInfo::new("no-exec", "127.0.0.1:9001");
+        no_exec.authority = crate::peer::PeerAuthority::none();
+        state
+            .peers
+            .lock()
+            .await
+            .discover_signed(no_exec.signed(&MeshKeyPair::from_seed(b"no-exec-lock-seed")))
+            .expect("bind");
+
+        let acquire = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: serde_json::json!({
+                "resource": "memory:galaxy:codex",
+                "holder": "no-exec",
+                "ttl_sec": 30,
+            }),
+            id: 39,
+        };
+        let resp = handle_rpc_request(&acquire, &state).await;
+        let err = resp.error.expect("authority gate must refuse");
+        assert!(err.contains("lacks can_execute authority"), "{err}");
+
+        let release = RpcRequest {
+            method: "release_lock".to_string(),
+            params: serde_json::json!({
+                "resource": "memory:galaxy:codex",
+                "holder": "no-exec",
+            }),
+            id: 40,
+        };
+        let resp = handle_rpc_request(&release, &state).await;
+        let err = resp.error.expect("authority gate must refuse");
+        assert!(err.contains("lacks can_execute authority"), "{err}");
     }
 
     #[test]
@@ -1885,15 +2505,34 @@ mod tests {
         });
 
         let mut client = TcpStream::connect(bound_addr).await.unwrap();
+        let client_keypair = MeshKeyPair::from_seed(b"client-1-e2e-seed");
 
-        // Send chat message
+        // Bind the client identity first — the signed-only chat ingest
+        // requires a bound sender.
+        let identity = PeerInfo::new("client-1", "127.0.0.1:9999").signed(&client_keypair);
+        let hb_req = RpcRequest {
+            method: "heartbeat".to_string(),
+            params: serde_json::to_value(&identity).unwrap(),
+            id: 199,
+        };
+        write_frame(&mut client, &serde_json::to_vec(&hb_req).unwrap())
+            .await
+            .unwrap();
+        let hb_resp_bytes = read_frame(&mut client).await.unwrap();
+        let hb_resp: RpcResponse = serde_json::from_slice(&hb_resp_bytes).unwrap();
+        assert!(hb_resp.error.is_none(), "{:?}", hb_resp.error);
+
+        // Send a signed, fresh chat message.
         let chat_req = RpcRequest {
             method: "send_chat".to_string(),
-            params: serde_json::json!({
-                "channel": "mesh",
-                "sender": "client-1",
-                "content": "hello from the mesh",
-            }),
+            params: signed_chat_params(
+                &client_keypair,
+                "client-1",
+                "mesh",
+                "hello from the mesh",
+                "env-tcp-e2e",
+                chrono::Utc::now().timestamp_millis(),
+            ),
             id: 200,
         };
         let chat_bytes = serde_json::to_vec(&chat_req).unwrap();
@@ -1902,9 +2541,13 @@ mod tests {
         let resp_bytes = read_frame(&mut client).await.unwrap();
         let resp: RpcResponse = serde_json::from_slice(&resp_bytes).unwrap();
         assert_eq!(resp.id, 200);
-        assert!(resp.result.is_some());
+        assert!(resp.result.is_some(), "{:?}", resp.error);
         let result = resp.result.unwrap();
         assert_eq!(result.get("channel").and_then(|v| v.as_str()), Some("mesh"));
+        assert_eq!(
+            result.get("duplicate").and_then(serde_json::Value::as_bool),
+            Some(false)
+        );
 
         // Verify message was stored on server
         let (msg_count, msg_content) = {
@@ -1920,7 +2563,21 @@ mod tests {
         assert_eq!(msg_count, 1);
         assert_eq!(msg_content, "hello from the mesh");
 
-        // Send a signal broadcast
+        // Repeated frame with the same envelope id — deduped, not stored twice.
+        let replay_req = RpcRequest {
+            method: "send_chat".to_string(),
+            params: serde_json::to_value(&chat_req.params).unwrap(),
+            id: 201,
+        };
+        write_frame(&mut client, &serde_json::to_vec(&replay_req).unwrap())
+            .await
+            .unwrap();
+        let replay_resp_bytes = read_frame(&mut client).await.unwrap();
+        let replay_resp: RpcResponse = serde_json::from_slice(&replay_resp_bytes).unwrap();
+        assert_eq!(replay_resp.result.unwrap()["duplicate"], true);
+        assert_eq!(state.chat.lock().await.channel_message_count("mesh"), 1);
+
+        // Send a signal broadcast from the bound client identity.
         let signal = crate::signal::Signal::new(
             crate::signal::SignalType::PeerStatus,
             "client-1",
@@ -1929,15 +2586,15 @@ mod tests {
         let sig_req = RpcRequest {
             method: "broadcast_signal".to_string(),
             params: serde_json::to_value(&signal).unwrap(),
-            id: 201,
+            id: 202,
         };
         let sig_bytes = serde_json::to_vec(&sig_req).unwrap();
         write_frame(&mut client, &sig_bytes).await.unwrap();
 
         let sig_resp_bytes = read_frame(&mut client).await.unwrap();
         let sig_resp: RpcResponse = serde_json::from_slice(&sig_resp_bytes).unwrap();
-        assert_eq!(sig_resp.id, 201);
-        assert!(sig_resp.result.is_some());
+        assert_eq!(sig_resp.id, 202);
+        assert!(sig_resp.result.is_some(), "{:?}", sig_resp.error);
     }
 
     #[tokio::test]
@@ -2156,6 +2813,7 @@ mod containment_tests {
             timestamp: chrono::Utc::now().timestamp_millis(),
             signature: String::new(),
             public_key: String::new(),
+            envelope_id: "env-forged".to_string(),
         }
         .signed(&attacker);
         let forged_result = a
@@ -2169,6 +2827,7 @@ mod containment_tests {
                     "signature": forged.signature,
                     "public_key": forged.public_key,
                     "timestamp": forged.timestamp,
+                    "envelope_id": forged.envelope_id,
                 }),
             )
             .await;

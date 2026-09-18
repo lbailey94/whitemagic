@@ -10,10 +10,12 @@
 //! `deny(dead_code)` there.
 #![cfg(unix)]
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
+
+use wm_sangha::{ChatMessage, MeshKeyPair, PeerAuthority, PeerInfo};
 
 struct ServeProcess {
     child: Child,
@@ -213,6 +215,231 @@ fn wait_for<T>(what: &str, secs: u64, mut f: impl FnMut() -> Option<T>) -> T {
         );
         std::thread::sleep(Duration::from_millis(300));
     }
+}
+
+// ── Raw mesh-frame harness (S1 mesh phase 2) ─────────────────────────
+//
+// The mesh listener speaks length-prefixed JSON-RPC (`[4-byte BE len][JSON]`)
+// directly, below the MCP/tool layer. These helpers let the phase-2 ingest
+// gates (signed-only chat, heartbeat freshness/replay, envelope dedup,
+// authority) be exercised on the wire exactly as a peer would.
+
+/// A raw TCP connection to a live mesh listener.
+struct RawMeshStream {
+    stream: std::net::TcpStream,
+}
+
+impl RawMeshStream {
+    /// Dial the mesh port, retrying while the server process boots.
+    fn connect(port: u16) -> Self {
+        let deadline = Instant::now() + Duration::from_secs(20);
+        loop {
+            match std::net::TcpStream::connect(format!("127.0.0.1:{port}")) {
+                Ok(stream) => {
+                    let _ = stream.set_read_timeout(Some(Duration::from_secs(15)));
+                    let _ = stream.set_write_timeout(Some(Duration::from_secs(15)));
+                    return Self { stream };
+                }
+                Err(e) => {
+                    assert!(
+                        Instant::now() < deadline,
+                        "raw mesh connect to 127.0.0.1:{port} failed: {e}"
+                    );
+                    std::thread::sleep(Duration::from_millis(200));
+                }
+            }
+        }
+    }
+
+    /// Send one framed JSON-RPC request and read the framed response.
+    fn call(&mut self, method: &str, params: &serde_json::Value, id: u64) -> serde_json::Value {
+        let req = serde_json::json!({"method": method, "params": params, "id": id});
+        let bytes = serde_json::to_vec(&req).expect("serialize raw request");
+        let len = u32::try_from(bytes.len()).expect("frame fits u32");
+        self.stream
+            .write_all(&len.to_be_bytes())
+            .and_then(|()| self.stream.write_all(&bytes))
+            .and_then(|()| self.stream.flush())
+            .expect("write raw frame");
+        let mut len_buf = [0u8; 4];
+        self.stream
+            .read_exact(&mut len_buf)
+            .expect("read frame len");
+        let len = u32::from_be_bytes(len_buf) as usize;
+        let mut buf = vec![0u8; len];
+        self.stream.read_exact(&mut buf).expect("read frame body");
+        serde_json::from_slice(&buf).expect("parse raw response")
+    }
+}
+
+/// A deterministic raw-frame client identity.
+fn raw_client(peer_id: &str) -> MeshKeyPair {
+    MeshKeyPair::from_seed(format!("raw-client-{peer_id}").as_bytes())
+}
+
+/// Signed heartbeat params for a raw client (identity + declared authority).
+fn raw_heartbeat(
+    keypair: &MeshKeyPair,
+    peer_id: &str,
+    authority: PeerAuthority,
+) -> serde_json::Value {
+    let mut peer = PeerInfo::new(peer_id, "127.0.0.1:1");
+    peer.authority = authority;
+    serde_json::to_value(peer.signed(keypair)).expect("serialize heartbeat")
+}
+
+/// Signed chat params matching what `send_chat_remote_with_envelope`
+/// produces (the receiver verifies against this exact shape).
+fn raw_chat(
+    keypair: &MeshKeyPair,
+    sender: &str,
+    channel: &str,
+    content: &str,
+    envelope_id: &str,
+    timestamp: i64,
+) -> serde_json::Value {
+    let msg = ChatMessage {
+        id: 0,
+        channel: channel.to_string(),
+        sender: sender.to_string(),
+        content: content.to_string(),
+        timestamp,
+        signature: String::new(),
+        public_key: String::new(),
+        envelope_id: envelope_id.to_string(),
+    }
+    .signed(keypair);
+    serde_json::json!({
+        "id": msg.id,
+        "channel": msg.channel,
+        "sender": msg.sender,
+        "content": msg.content,
+        "signature": msg.signature,
+        "public_key": msg.public_key,
+        "timestamp": msg.timestamp,
+        "envelope_id": msg.envelope_id,
+    })
+}
+
+/// Raw-frame heartbeat/chat ingest gates: a bound peer's heartbeat replays
+/// are acknowledged without rebinding, stale heartbeats and unsigned chat
+/// are refused, and a repeated envelope id is reported as a duplicate while
+/// the channel log keeps exactly one copy.
+#[cfg(unix)]
+#[test]
+fn raw_frame_heartbeat_replay_and_chat_dedup() {
+    let store = tempfile::tempdir().expect("store");
+    let _node = ServeProcess::spawn(store.path(), "raw-node-a", 17_415);
+    let mut mesh = RawMeshStream::connect(17_415);
+    let kp = raw_client("alpha");
+
+    // Signed heartbeat binds on first sight.
+    let heartbeat = raw_heartbeat(&kp, "raw-alpha", PeerAuthority::read_only());
+    let resp = mesh.call("heartbeat", &heartbeat, 1);
+    assert!(
+        resp["error"].is_null(),
+        "signed heartbeat must bind: {resp}"
+    );
+
+    // The exact same signed record again → acknowledged as a replay.
+    let resp = mesh.call("heartbeat", &heartbeat, 2);
+    assert_eq!(resp["result"]["replayed"], true, "{resp}");
+
+    // A stale signed heartbeat (outside the registry timeout window) is
+    // refused before any binding.
+    let mut stale = PeerInfo::new("raw-alpha", "127.0.0.1:1");
+    stale.last_seen = chrono::Utc::now().timestamp() - 3600;
+    let stale = serde_json::to_value(stale.signed(&kp)).expect("serialize stale");
+    let resp = mesh.call("heartbeat", &stale, 3);
+    assert_eq!(resp["error"], "stale heartbeat rejected", "{resp}");
+
+    // Unsigned chat is refused outright over the mesh transport.
+    let unsigned = serde_json::json!({
+        "channel": "raw",
+        "sender": "raw-alpha",
+        "content": "unsigned relay",
+    });
+    let resp = mesh.call("send_chat", &unsigned, 4);
+    assert_eq!(
+        resp["error"], "unsigned chat is not accepted over the mesh transport",
+        "{resp}"
+    );
+
+    // Signed fresh chat stores; the same envelope id is deduped.
+    let envelope = ChatMessage::new_envelope_id("raw-alpha");
+    let chat = raw_chat(
+        &kp,
+        "raw-alpha",
+        "raw",
+        "exactly once",
+        &envelope,
+        chrono::Utc::now().timestamp_millis(),
+    );
+    let resp = mesh.call("send_chat", &chat, 5);
+    assert_eq!(resp["result"]["duplicate"], false, "{resp}");
+    let resp = mesh.call("send_chat", &chat, 6);
+    assert_eq!(resp["result"]["duplicate"], true, "{resp}");
+}
+
+/// Raw-frame authority gates: an unbound claimant is distinguished from a
+/// bound peer whose stored authority withholds execution; signal and lock
+/// paths enforce the same stored-authority check.
+#[cfg(unix)]
+#[test]
+fn raw_frame_binding_and_authority_gates() {
+    let store = tempfile::tempdir().expect("store");
+    let _node = ServeProcess::spawn(store.path(), "raw-node-b", 17_416);
+    let mut mesh = RawMeshStream::connect(17_416);
+    let now = chrono::Utc::now().timestamp_millis();
+
+    // Chat from a never-bound sender → "not identity-bound".
+    let ghost = raw_client("ghost");
+    let chat = raw_chat(&ghost, "raw-ghost", "raw", "let me in", "env-ghost", now);
+    let resp = mesh.call("send_chat", &chat, 1);
+    let err = resp["error"].as_str().unwrap_or_default().to_string();
+    assert!(err.contains("not identity-bound"), "{resp}");
+
+    // A peer that self-declares `PeerAuthority::none()` binds fine, but
+    // every execution-class path refuses it with the authority error.
+    let no_exec = raw_client("noexec");
+    let heartbeat = raw_heartbeat(&no_exec, "raw-noexec", PeerAuthority::none());
+    let resp = mesh.call("heartbeat", &heartbeat, 2);
+    assert!(resp["error"].is_null(), "{resp}");
+
+    let chat = raw_chat(
+        &no_exec,
+        "raw-noexec",
+        "raw",
+        "not allowed",
+        "env-noexec",
+        now,
+    );
+    let resp = mesh.call("send_chat", &chat, 3);
+    let err = resp["error"].as_str().unwrap_or_default().to_string();
+    assert!(err.contains("lacks can_execute authority"), "{resp}");
+
+    let lock = serde_json::json!({
+        "resource": "memory:galaxy:codex",
+        "holder": "raw-noexec",
+        "ttl_sec": 30,
+    });
+    let resp = mesh.call("acquire_lock", &lock, 4);
+    let err = resp["error"].as_str().unwrap_or_default().to_string();
+    assert!(err.contains("lacks can_execute authority"), "{resp}");
+
+    // Signals carry no signature: the gate enforces the CLAIMED source's
+    // stored authority (an unbound claim is still refused).
+    let signal = serde_json::json!({
+        "id": 0,
+        "signal_type": "peer_status",
+        "source": "raw-ghost",
+        "payload": {"status": "online"},
+        "timestamp": now,
+        "importance": 0.5,
+    });
+    let resp = mesh.call("broadcast_signal", &signal, 5);
+    let err = resp["error"].as_str().unwrap_or_default().to_string();
+    assert!(err.contains("not identity-bound"), "{resp}");
 }
 
 // Unix-gated: both e2e tests wedge on Windows CI runners (UDP multicast

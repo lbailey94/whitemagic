@@ -490,6 +490,14 @@ impl PeerDiscovery {
         self
     }
 
+    /// Heartbeat timeout in seconds — peers not observed for this long are
+    /// evicted, and the signed-heartbeat replay window (phase 2). The
+    /// transport consults this instead of hardcoding a second constant.
+    #[must_use]
+    pub const fn heartbeat_timeout_secs(&self) -> i64 {
+        self.config.heartbeat_timeout_sec
+    }
+
     /// Current auto-quarantine policy.
     #[must_use]
     pub fn auto_quarantine_config(&self) -> AutoQuarantineConfig {
@@ -640,6 +648,22 @@ impl PeerDiscovery {
     /// first signed heartbeat performs the binding. Only a conflict with
     /// an already-bound key is identity theft.
     pub fn discover_signed(&mut self, peer: PeerInfo) -> Result<(), String> {
+        self.verify_identity(&peer)?;
+        self.discover_verified(peer)
+    }
+
+    /// Verify a signed identity record on its own terms: the signature must
+    /// be present and must verify under the public key the record carries.
+    ///
+    /// Split out of [`Self::discover_signed`] so wire handlers can verify
+    /// the identity **before** consulting the replay cache and only then
+    /// apply the binding policy ([`Self::discover_verified`]) — a forged
+    /// record must not consume the replay slot of the genuine one.
+    ///
+    /// # Errors
+    /// Returns a human-readable reason when the record is unsigned or the
+    /// signature does not verify.
+    pub fn verify_identity(&self, peer: &PeerInfo) -> Result<(), String> {
         if peer.signature.is_empty() || peer.public_key.is_empty() {
             return Err(format!(
                 "peer '{}' announced without an identity signature",
@@ -652,17 +676,20 @@ impl PeerDiscovery {
                 peer.id
             ));
         }
-        self.discover_verified(peer)
+        Ok(())
     }
 
-    /// Bind an already-verified signed identity to `peer`.
+    /// Binding policy for an already-verified signed identity: quarantined
+    /// peers are refused, and an already-bound peer ID may not change its
+    /// public key (identity theft). Check-only — no registry mutation.
     ///
-    /// The caller has verified the signature over its own wire format (e.g.
-    /// the beacon ingest seam); this applies the binding policy only:
-    /// quarantined peers are refused, and an already-bound peer ID may not
-    /// change its public key (identity theft). Used by the beacon path so the
-    /// signature is not re-verified against a different payload shape.
-    pub fn discover_verified(&mut self, peer: PeerInfo) -> Result<(), String> {
+    /// Callers use this before acknowledging a **replayed** heartbeat: a
+    /// replay must not launder an identity change or a quarantine refusal
+    /// into an ack, even though it must not bind or observe either.
+    ///
+    /// # Errors
+    /// Returns a human-readable reason when the binding would be refused.
+    pub fn verify_binding(&self, peer: &PeerInfo) -> Result<(), String> {
         if let Some(existing) = self.peers.get(&peer.id) {
             if existing.quarantined {
                 return Err(format!(
@@ -682,6 +709,18 @@ impl PeerDiscovery {
                 ));
             }
         }
+        Ok(())
+    }
+
+    /// Bind an already-verified signed identity to `peer`.
+    ///
+    /// The caller has verified the signature over its own wire format (e.g.
+    /// the beacon ingest seam); this applies the binding policy only:
+    /// quarantined peers are refused, and an already-bound peer ID may not
+    /// change its public key (identity theft). Used by the beacon path so the
+    /// signature is not re-verified against a different payload shape.
+    pub fn discover_verified(&mut self, peer: PeerInfo) -> Result<(), String> {
+        self.verify_binding(&peer)?;
         self.discover(peer);
         Ok(())
     }
@@ -1145,6 +1184,58 @@ mod tests {
         assert_eq!(stored.address, "127.0.0.1:8080");
         assert_eq!(stored.public_key, kp.public_key_hex());
         assert!(stored.verify_signature());
+    }
+
+    #[test]
+    fn verify_identity_is_the_discovery_verification_seam() {
+        // Extracted from discover_signed so wire handlers verify before the
+        // replay cache and bind after (phase 2 heartbeat ingest).
+        let registry = PeerDiscovery::default();
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"verify-id-seed");
+
+        let signed = PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp);
+        assert!(registry.verify_identity(&signed).is_ok());
+
+        let unsigned = PeerInfo::new("node-1", "127.0.0.1:8080");
+        assert!(registry.verify_identity(&unsigned).is_err());
+
+        let forged = PeerInfo::new("node-1", "127.0.0.1:8080")
+            .signed(&crate::crypto::MeshKeyPair::from_seed(b"attacker-seed"));
+        let mut tampered = forged;
+        tampered.address = "127.0.0.1:9999".to_string();
+        assert!(registry.verify_identity(&tampered).is_err());
+    }
+
+    #[test]
+    fn heartbeat_timeout_is_gettable_for_replay_windows() {
+        let pd = PeerDiscovery::new(PeerDiscoveryConfig {
+            heartbeat_timeout_sec: 45,
+            max_peers: 10,
+        });
+        assert_eq!(pd.heartbeat_timeout_secs(), 45);
+    }
+
+    #[test]
+    fn verify_binding_is_check_only() {
+        let mut registry = PeerDiscovery::default();
+        let kp = crate::crypto::MeshKeyPair::from_seed(b"binding-seed");
+        registry
+            .discover_signed(PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp))
+            .unwrap();
+
+        let forged = PeerInfo::new("node-1", "127.0.0.1:9999")
+            .signed(&crate::crypto::MeshKeyPair::from_seed(b"other-seed"));
+        assert!(registry.verify_binding(&forged).is_err());
+        // Check-only: the stored entry is untouched (replay ack path).
+        assert_eq!(registry.get("node-1").unwrap().address, "127.0.0.1:8080");
+        assert_eq!(
+            registry.bound_public_key("node-1").as_deref(),
+            Some(kp.public_key_hex().as_str())
+        );
+
+        registry.quarantine("node-1", "test");
+        let same_key = PeerInfo::new("node-1", "127.0.0.1:8080").signed(&kp);
+        assert!(registry.verify_binding(&same_key).is_err());
     }
 
     #[test]
