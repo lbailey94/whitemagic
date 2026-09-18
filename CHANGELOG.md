@@ -39,6 +39,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   version/date/generator (counts stay until verified) and accepts
   `WM_SITE_GENERATOR_NOTE` provenance from the release pipeline.
 
+### Mesh ingest hardening, phase 2 (S1)
+- **Heartbeats are signed-only for bound peers and replay-checked:** an
+  unsigned heartbeat can no longer redirect an identity-bound peer. Signed
+  heartbeats are identity-verified first, then windowed
+  (`heartbeat_timeout_sec`) and deduplicated; a replay is acknowledged
+  (`replayed: true`) without refreshing liveness or moving an address, and the
+  binding policy still applies so a replay cannot launder an identity change
+  or quarantine into an ack.
+- **Chat is signed-only, bound, fresh, and deduplicated:** over the mesh
+  transport an unsigned relay is refused; the sender must be identity-bound
+  and its signature verified against the bound key; messages outside ±5
+  minutes are rejected; `ChatMessage` gains a signed `envelope_id` (empty id
+  serializes as absent, so 9.1.9 signatures still verify) and duplicate ids
+  are dropped with `duplicate: true` — the mail slot's lost-ack retry no
+  longer double-delivers. Queued mail mints one envelope id and reuses it
+  across flush.
+- **Live authority enforcement:** `can_execute` is enforced at ingest for
+  chat, signals, and lock acquire/release (after the engagement check).
+  Signals remain advisory-gated because the signal record itself is unsigned
+  (documented); `sync_hologram` stays ungated (documented residual).
+
+### Conversion instrumentation — funnel local layer (scope 1)
+- **Local funnel records, no consent surface:** `telemetry.funnel` milestones
+  (`first_launch`, `init_ok`, `first_memory`, `first_resume`, `active_dN`) are
+  emitted on writable opens and successful lifecycle calls; content-free,
+  importance-capped, exempt from `telemetry.prune`, and mirrored by an atomic
+  `<store-root>/funnel_state.json` (rebuilt from records when missing).
+  `WM_FUNNEL_DISABLED=1` suppresses emissions.
+- **Install-channel detection:** `install.sh` writes
+  `<store-root>/install_channel` (sanitized `--ref`/`WM_INSTALL_REF`), the npm
+  launcher sets `WM_INSTALL_CHANNEL=npm`, the Docker image sets it, and path
+  heuristics cover cargo/release binaries; `wm status` gains an
+  "Installed via" line.
+- **`wm telemetry status`:** read-only disclosure of channel, milestones,
+  active days, and `Transport: none` — no network, no install-id (sharing is
+  a later scope).
+
+### M1 claim reconciliation (down-payment)
+- README curated route count 60→61 and the archive figure grounded to the
+  generated contract manifest; SECURITY version `v5`→`v9` and
+  destructive-tool count 9→10; `wm contract` doc header 297→303; MCPB
+  snapshot 60→61; AGENTS.md workspace line 9.1.8→9.1.9. Q04/Q05 remain open
+  (honesty guards unchanged).
+
 ## [9.1.9] — 2026-09-18 (recovery hardening, onboarding truth, continuity handoff, calm surfaces)
 
 ### Coordination truth (F3)

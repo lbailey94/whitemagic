@@ -111,7 +111,7 @@ discrete lifecycle catalog — 9 MCP tools in the curated profile
 (`memory.create/search/read/list/hybrid_recall`,
 `session.start/record/continuity`). Those nine are the client-visible tool
 schemas; the `wm` meta-tool provides explicit access to a larger curated
-route catalog (~60 routes: update, delete, digest, export/import, claims,
+route catalog (61 routes: update, delete, digest, export/import, claims,
 transactions, …) without expanding the client's schema.
 Direct handles for the common lifecycle calls, with NLU routing still available.
 Explicit routing is the dependable contract:
@@ -167,8 +167,10 @@ and refuses tampered or incomplete backups. Notes:
 The codebase contains a larger research system beyond the product boundary:
 autonomous cycles, dream consolidation, bicameral reasoning, an imagination
 engine, self-play training loops, polyglot sidecars (Julia/Haskell/Zig/Koka),
-a signed multi-agent mesh, holographic memory coordinates, and a 237-tool
-archive reachable via `wm serve` without a profile restriction. These are
+a signed multi-agent mesh, holographic memory coordinates, and the full
+research archive (~300 routes; the generated
+`docs/contract/route-schema-manifest.json` is the authority) reachable via
+`wm serve` without a profile restriction. These are
 research surfaces without product acceptance evidence; they may change or be
 removed. Only surfaces documented in this README are part of the product
 contract.

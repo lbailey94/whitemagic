@@ -1,7 +1,7 @@
 [
   {
     "name": "wm",
-    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (60 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.",
+    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (61 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.",
     "inputSchema": {
       "properties": {
         "args": {

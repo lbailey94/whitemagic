@@ -1,7 +1,7 @@
 //! `wm contract` — machine-checked route/schema contract catalog (P1 v0).
 //!
 //! Deferred from 9.1.6 (see `V9_1_7_FULL_PROFILE_CONTRACT_BACKLOG.md`): the
-//! 297-route catalog needs a deterministic, versioned manifest of each
+//! 303-route catalog needs a deterministic, versioned manifest of each
 //! route's declared input schema so discovery cannot disagree with runtime
 //! argument checks. v0 emits the manifest from ONE exact source revision
 //! (the running binary's registry) and checks a curated list of
