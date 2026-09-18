@@ -3639,9 +3639,41 @@ struct AtRestDisclosure {
     issue: bool,
 }
 
+/// RK-source disclosure for a parsed keyring: how the root key was obtained
+/// at initialization, plus the key-file path when the store/environment
+/// still knows it. Key values are never disclosed.
+fn at_rest_key_source_line(present: &wm_memory::AtRestStatusPresent) -> String {
+    match (present.meta.key_source.as_str(), present.key_file.as_ref()) {
+        ("generated_key_file", Some(path)) => format!(
+            "RK source: generated_key_file — key file {}",
+            path.display()
+        ),
+        ("key_file", Some(path)) => {
+            format!(
+                "RK source: key_file — configured key file {}",
+                path.display()
+            )
+        }
+        ("key_file", None) => "RK source: key_file — configured with WM_AT_REST_KEY_FILE \
+                               (path not recorded in the keyring meta)"
+            .to_string(),
+        ("env_root_key", _) => {
+            "RK source: env_root_key — WM_AT_REST_ROOT_KEY (value never disclosed)".to_string()
+        }
+        ("argon2id_passphrase", _) => {
+            "RK source: argon2id_passphrase — WM_AT_REST_PASSPHRASE (value never disclosed)"
+                .to_string()
+        }
+        (other, Some(path)) => format!("RK source: {other} — key file {}", path.display()),
+        (other, None) => format!("RK source: {other}"),
+    }
+}
+
 /// Format the section-11i at-rest disclosure for a keyring status (Q39
 /// slice A). Records are still plaintext in slice A — every rendered line
-/// says so, and mode B never claims crypto-erasure.
+/// says so, and mode B never claims crypto-erasure. A partial wrapped-DEK
+/// count is a WARN + issue: every writable open refuses until the keyring
+/// is repaired (fail-closed).
 fn format_at_rest_disclosure(
     status: &wm_memory::AtRestStatus,
     store_root: &Path,
@@ -3656,55 +3688,60 @@ fn format_at_rest_disclosure(
                 .to_string(),
             issue: false,
         },
-        AtRestStatus::Present(present) => match present.meta.mode {
-            AtRestMode::Keyfile => {
-                let source = present.key_file.as_ref().map_or_else(
-                    || "RK source: external key source recorded in keyring meta".to_string(),
-                    |path| format!("RK source: key file {}", path.display()),
-                );
-                AtRestDisclosure {
+        AtRestStatus::Present(present) => {
+            let keyring = keyring_path.display();
+            let coverage = format!(
+                "{}/{} galaxy DEKs wrapped",
+                present.wrapped_deks, present.galaxies
+            );
+            let source = at_rest_key_source_line(present);
+            let partial = present.wrapped_deks < present.galaxies;
+            let prefix = if partial { "[WARN]" } else { "[OK]  " };
+            let partial_suffix = if partial {
+                " — PARTIAL keyring; writable opens refuse (fail-closed) until the missing \
+                 wrapped DEKs are repaired"
+            } else {
+                ""
+            };
+            match present.meta.mode {
+                AtRestMode::Keyfile => AtRestDisclosure {
                     text: format!(
-                        "[OK]   At-rest: mode B (keyfile) — {}/{} galaxy DEKs wrapped \
-                         (keyring: {})\n       {source}\n       Physical-purge only — never \
-                         crypto-erasure on mode B; record encryption ships with Q39 slice B.\n",
-                        present.wrapped_deks,
-                        present.galaxies,
-                        keyring_path.display()
+                        "{prefix} At-rest: mode B (keyfile) — {coverage} (keyring: {keyring})\
+                         {partial_suffix}\n       {source}\n       Physical-purge only — never \
+                         crypto-erasure on mode B; record encryption ships with Q39 slice B.\n"
                     ),
-                    issue: false,
+                    issue: partial,
+                },
+                AtRestMode::Passphrase => {
+                    let argon = present.meta.argon2.as_ref().map_or_else(
+                        || "argon2id parameters missing from meta".to_string(),
+                        |a| {
+                            format!(
+                                "argon2id m={} KiB, t={}, p={}, v={}",
+                                a.m_cost_kib, a.t_cost, a.p_cost, a.version
+                            )
+                        },
+                    );
+                    AtRestDisclosure {
+                        text: format!(
+                            "{prefix} At-rest: mode C (passphrase) — {coverage} (keyring: \
+                             {keyring}){partial_suffix}\n       {source}\n       {argon}\n       \
+                             Passphrase crypto-erasure is not yet advertised — record \
+                             encryption ships with Q39 slice B.\n"
+                        ),
+                        issue: partial,
+                    }
                 }
-            }
-            AtRestMode::Passphrase => {
-                let argon = present.meta.argon2.as_ref().map_or_else(
-                    || "argon2id parameters missing from meta".to_string(),
-                    |a| {
-                        format!(
-                            "argon2id m={} KiB, t={}, p={}, v={}",
-                            a.m_cost_kib, a.t_cost, a.p_cost, a.version
-                        )
-                    },
-                );
-                AtRestDisclosure {
+                AtRestMode::Off => AtRestDisclosure {
                     text: format!(
-                        "[OK]   At-rest: mode C (passphrase) — {}/{} galaxy DEKs wrapped \
-                         (keyring: {})\n       {argon}\n       Passphrase crypto-erasure is \
-                         not yet advertised — record encryption ships with Q39 slice B.\n",
-                        present.wrapped_deks,
-                        present.galaxies,
-                        keyring_path.display()
+                        "[WARN] At-rest: keyring present at {keyring} but its meta records mode \
+                         'off' — contradictory state; writable opens refuse (fail-closed) until \
+                         the keyring is repaired.\n"
                     ),
-                    issue: false,
-                }
+                    issue: true,
+                },
             }
-            AtRestMode::Off => AtRestDisclosure {
-                text: format!(
-                    "[WARN] At-rest: keyring present at {} but its meta records mode 'off' — \
-                     malformed; writable opens refuse (fail-closed).\n",
-                    keyring_path.display()
-                ),
-                issue: true,
-            },
-        },
+        }
         AtRestStatus::Malformed { reason } => AtRestDisclosure {
             text: format!(
                 "[WARN] At-rest: keyring present at {} but its meta is malformed: {reason}\n       \
@@ -5946,19 +5983,35 @@ mod at_rest_doctor_tests {
     use super::*;
     use wm_memory::{Argon2Params, AtRestMode, AtRestStatus, AtRestStatusPresent, KeyringMeta};
 
-    fn present(mode: AtRestMode, argon2: Option<Argon2Params>) -> AtRestStatus {
+    fn present_with(
+        mode: AtRestMode,
+        argon2: Option<Argon2Params>,
+        key_source: &str,
+        key_file: Option<&str>,
+        wrapped_deks: usize,
+    ) -> AtRestStatus {
         AtRestStatus::Present(AtRestStatusPresent {
             meta: KeyringMeta {
                 format_version: wm_memory::KEYRING_FORMAT_VERSION,
                 mode,
-                key_source: "generated_key_file".to_string(),
+                key_source: key_source.to_string(),
                 created_at: "2026-09-18T00:00:00Z".to_string(),
                 argon2,
             },
-            wrapped_deks: 16,
+            wrapped_deks,
             galaxies: 16,
-            key_file: Some(std::path::PathBuf::from("/store/.at_rest_key")),
+            key_file: key_file.map(std::path::PathBuf::from),
         })
+    }
+
+    fn present(mode: AtRestMode, argon2: Option<Argon2Params>) -> AtRestStatus {
+        present_with(
+            mode,
+            argon2,
+            "generated_key_file",
+            Some("/store/.at_rest_key"),
+            16,
+        )
     }
 
     #[test]
@@ -5989,6 +6042,11 @@ mod at_rest_doctor_tests {
             disclosure.text
         );
         assert!(disclosure.text.contains("16/16"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("RK source: generated_key_file"),
+            "{}",
+            disclosure.text
+        );
         assert!(
             disclosure.text.contains("never crypto-erasure on mode B"),
             "{}",
@@ -6027,7 +6085,13 @@ mod at_rest_doctor_tests {
             salt_hex: "00".repeat(16),
         };
         let disclosure = format_at_rest_disclosure(
-            &present(AtRestMode::Passphrase, Some(argon)),
+            &present_with(
+                AtRestMode::Passphrase,
+                Some(argon),
+                "argon2id_passphrase",
+                None,
+                16,
+            ),
             Path::new("/store"),
         );
         assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
@@ -6042,11 +6106,144 @@ mod at_rest_doctor_tests {
             disclosure.text
         );
         assert!(
+            disclosure.text.contains("RK source: argon2id_passphrase"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
             disclosure.text.contains("not yet advertised"),
             "{}",
             disclosure.text
         );
         assert!(!disclosure.issue);
+    }
+
+    #[test]
+    fn formatter_env_root_key_source_is_disclosed() {
+        let disclosure = format_at_rest_disclosure(
+            &present_with(AtRestMode::Keyfile, None, "env_root_key", None, 16),
+            Path::new("/store"),
+        );
+        assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("RK source: env_root_key"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            !disclosure.text.contains("external key source"),
+            "the key source must be named, not hidden: {}",
+            disclosure.text
+        );
+        assert!(!disclosure.issue);
+    }
+
+    #[test]
+    fn formatter_configured_key_file_source_discloses_path() {
+        let disclosure = format_at_rest_disclosure(
+            &present_with(
+                AtRestMode::Keyfile,
+                None,
+                "key_file",
+                Some("/etc/whitemagic/at_rest.key"),
+                16,
+            ),
+            Path::new("/store"),
+        );
+        assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("RK source: key_file"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("/etc/whitemagic/at_rest.key"),
+            "{}",
+            disclosure.text
+        );
+        let without_path = format_at_rest_disclosure(
+            &present_with(AtRestMode::Keyfile, None, "key_file", None, 16),
+            Path::new("/store"),
+        );
+        assert!(
+            without_path
+                .text
+                .contains("configured with WM_AT_REST_KEY_FILE")
+                && without_path.text.contains("path not recorded"),
+            "{}",
+            without_path.text
+        );
+        assert!(!disclosure.issue);
+    }
+
+    #[test]
+    fn formatter_partial_dek_coverage_warns_and_is_an_issue() {
+        let disclosure = format_at_rest_disclosure(
+            &present_with(
+                AtRestMode::Keyfile,
+                None,
+                "generated_key_file",
+                Some("/store/.at_rest_key"),
+                12,
+            ),
+            Path::new("/store"),
+        );
+        assert!(disclosure.text.starts_with("[WARN]"), "{}", disclosure.text);
+        assert!(disclosure.text.contains("12/16"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("PARTIAL keyring"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("writable opens refuse"),
+            "{}",
+            disclosure.text
+        );
+        assert!(disclosure.issue);
+
+        let passphrase_partial = format_at_rest_disclosure(
+            &present_with(
+                AtRestMode::Passphrase,
+                Some(Argon2Params {
+                    m_cost_kib: 19_456,
+                    t_cost: 2,
+                    p_cost: 1,
+                    version: 0x13,
+                    salt_hex: "00".repeat(16),
+                }),
+                "argon2id_passphrase",
+                None,
+                3,
+            ),
+            Path::new("/store"),
+        );
+        assert!(
+            passphrase_partial.text.starts_with("[WARN]"),
+            "{}",
+            passphrase_partial.text
+        );
+        assert!(passphrase_partial.issue);
+    }
+
+    #[test]
+    fn formatter_present_mode_off_warns_and_is_an_issue() {
+        let disclosure = format_at_rest_disclosure(
+            &present_with(AtRestMode::Off, None, "generated_key_file", None, 0),
+            Path::new("/store"),
+        );
+        assert!(disclosure.text.starts_with("[WARN]"), "{}", disclosure.text);
+        assert!(
+            disclosure.text.contains("mode 'off'"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("writable opens refuse"),
+            "{}",
+            disclosure.text
+        );
+        assert!(disclosure.issue);
     }
 
     #[test]

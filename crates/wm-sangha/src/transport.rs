@@ -913,12 +913,19 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 );
             }
 
-            // Signed announcement: verify the identity first (a forged
-            // record must not consume the genuine one's replay slot), then
-            // freshness + replay, then apply the binding policy.
+            // Signed announcement: verify the identity first, then the
+            // binding policy, and only then freshness + replay. Both checks
+            // are check-only and mutation-free, so a forged record (bad
+            // signature, key change, or quarantined claimant) is refused
+            // BEFORE it can consume the genuine peer's replay slot for this
+            // timestamp — otherwise a self-signed forgery for a bound victim
+            // id would suppress the victim's liveness for the whole window.
             {
                 let peers = state.peers.lock().await;
                 if let Err(e) = peers.verify_identity(&peer_info) {
+                    return RpcResponse::err(format!("identity rejected: {e}"), req.id);
+                }
+                if let Err(e) = peers.verify_binding(&peer_info) {
                     return RpcResponse::err(format!("identity rejected: {e}"), req.id);
                 }
             }
@@ -942,8 +949,10 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                     // Acknowledge without binding/observing — a captured
                     // heartbeat replay cannot refresh liveness or move an
                     // address, and the original join already registered.
-                    // The binding policy still applies: a replay must not
-                    // launder an identity change or quarantine into an ack.
+                    // The binding policy also ran before the replay insert
+                    // (above) and still applies here as defense-in-depth: a
+                    // replay must never launder an identity change or a
+                    // quarantine into an ack.
                     let check = state.peers.lock().await.verify_binding(&peer_info);
                     if let Err(e) = check {
                         return RpcResponse::err(format!("identity rejected: {e}"), req.id);
@@ -981,6 +990,12 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
             // enforces the stored authority of the claimed peer, it does
             // not prove who sent the frame (documented in
             // docs/MESH_JOIN_PROTOCOL.md §6).
+            if state.peers.lock().await.is_quarantined(&signal.source) {
+                return RpcResponse::err(
+                    format!("signal rejected: source '{}' is quarantined", signal.source),
+                    req.id,
+                );
+            }
             if let Err(reason) = require_can_execute(state, &signal.source).await {
                 return RpcResponse::err(format!("signal rejected: {reason}"), req.id);
             }
@@ -1128,6 +1143,15 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
             if let Err(reason) = enforce_lock_engagement(state, req, holder).await {
                 return RpcResponse::err(reason, req.id);
             }
+            // The bad-apple rule at the lock seam: a quarantined peer is
+            // refused even though its stored authority may still grant
+            // execution (quarantine is orthogonal to authority).
+            if state.peers.lock().await.is_quarantined(holder) {
+                return RpcResponse::err(
+                    format!("lock rejected: holder '{holder}' is quarantined"),
+                    req.id,
+                );
+            }
             if let Err(reason) = require_can_execute(state, holder).await {
                 return RpcResponse::err(reason, req.id);
             }
@@ -1159,6 +1183,13 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
 
             if let Err(reason) = enforce_lock_engagement(state, req, holder).await {
                 return RpcResponse::err(reason, req.id);
+            }
+            // The bad-apple rule at the release seam (see acquire_lock).
+            if state.peers.lock().await.is_quarantined(holder) {
+                return RpcResponse::err(
+                    format!("lock rejected: holder '{holder}' is quarantined"),
+                    req.id,
+                );
             }
             if let Err(reason) = require_can_execute(state, holder).await {
                 return RpcResponse::err(reason, req.id);
@@ -2009,6 +2040,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn forged_heartbeat_cannot_consume_bound_victims_replay_slot() {
+        // H2 regression: the binding check runs BEFORE the replay insert,
+        // so a forged self-signed heartbeat for a bound victim id at the
+        // victim's next timestamp is refused without consuming the slot —
+        // otherwise an attacker could suppress the victim's liveness for
+        // the whole replay window by replaying the same forgery across it.
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        let victim = bind_signed_peer(&state, "hb-victim", b"hb-victim-seed").await;
+        let ts = chrono::Utc::now().timestamp();
+
+        // Forged self-signed heartbeat: valid signature, wrong key for the
+        // bound id, same `last_seen` the victim's next beat will carry.
+        let attacker = MeshKeyPair::from_seed(b"hb-attacker-seed");
+        let mut forged = PeerInfo::new("hb-victim", "127.0.0.1:9999");
+        forged.last_seen = ts;
+        let forged = forged.signed(&attacker);
+        let resp = handle_rpc_request(&heartbeat_req(&forged, 60), &state).await;
+        let err = resp.error.expect("forged heartbeat must be refused");
+        assert!(err.contains("identity theft"), "{err}");
+
+        // The genuine heartbeat at the same `last_seen` must still take the
+        // Fresh path (no `replayed` marker) — its replay slot is intact.
+        let mut genuine = PeerInfo::new("hb-victim", "127.0.0.1:9000");
+        genuine.last_seen = ts;
+        let genuine = genuine.signed(&victim);
+        let resp = handle_rpc_request(&heartbeat_req(&genuine, 61), &state).await;
+        assert!(resp.error.is_none(), "{:?}", resp.error);
+        assert!(
+            resp.result.as_ref().unwrap().get("replayed").is_none(),
+            "the forged beat must not have consumed the genuine slot: {:?}",
+            resp.result
+        );
+    }
+
+    #[tokio::test]
     async fn heartbeat_stale_signed_is_rejected() {
         let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
         let keypair = MeshKeyPair::from_seed(b"hb-stale-seed");
@@ -2286,6 +2352,74 @@ mod tests {
         let resp = handle_rpc_request(&release, &state).await;
         let err = resp.error.expect("authority gate must refuse");
         assert!(err.contains("lacks can_execute authority"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn quarantined_holder_cannot_acquire_or_release_locks() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        bind_signed_peer(&state, "bad-apple", b"bad-apple-lock-seed").await;
+
+        // The peer holds a lock acquired before the quarantine.
+        let acquire = RpcRequest {
+            method: "acquire_lock".to_string(),
+            params: serde_json::json!({
+                "resource": "memory:galaxy:codex",
+                "holder": "bad-apple",
+                "ttl_sec": 30,
+            }),
+            id: 70,
+        };
+        let resp = handle_rpc_request(&acquire, &state).await;
+        assert!(resp.error.is_none(), "{:?}", resp.error);
+
+        state.peers.lock().await.quarantine("bad-apple", "test");
+
+        let resp = handle_rpc_request(&acquire, &state).await;
+        let err = resp.error.expect("quarantined holder must not acquire");
+        assert!(err.contains("quarantined"), "{err}");
+
+        let release = RpcRequest {
+            method: "release_lock".to_string(),
+            params: serde_json::json!({
+                "resource": "memory:galaxy:codex",
+                "holder": "bad-apple",
+            }),
+            id: 71,
+        };
+        let resp = handle_rpc_request(&release, &state).await;
+        let err = resp.error.expect("quarantined holder must not release");
+        assert!(err.contains("quarantined"), "{err}");
+        assert!(
+            state
+                .locks
+                .lock()
+                .await
+                .get("memory:galaxy:codex")
+                .is_some(),
+            "the refusal must leave lock state untouched"
+        );
+    }
+
+    #[tokio::test]
+    async fn quarantined_source_cannot_broadcast_signals() {
+        let state = Arc::new(SanghaState::new("local", "127.0.0.1:7369"));
+        bind_signed_peer(&state, "bad-apple", b"bad-apple-signal-seed").await;
+        state.peers.lock().await.quarantine("bad-apple", "test");
+
+        let signal = crate::signal::Signal::new(
+            crate::signal::SignalType::PeerStatus,
+            "bad-apple",
+            serde_json::json!({"status": "online"}),
+        );
+        let req = RpcRequest {
+            method: "broadcast_signal".to_string(),
+            params: serde_json::to_value(&signal).unwrap(),
+            id: 72,
+        };
+        let resp = handle_rpc_request(&req, &state).await;
+        let err = resp.error.expect("quarantined source must not broadcast");
+        assert!(err.contains("quarantined"), "{err}");
+        assert_eq!(state.signals.lock().await.total_broadcast(), 0);
     }
 
     #[test]

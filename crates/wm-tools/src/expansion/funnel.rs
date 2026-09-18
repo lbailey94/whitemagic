@@ -34,6 +34,7 @@ use chrono::{DateTime, NaiveDate, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use wm_core::Galaxy;
+use wm_memory::MemoryQuery;
 use wm_memory::MemoryStore;
 use wm_memory::search::SearchEngine;
 
@@ -48,10 +49,6 @@ pub const FUNNEL_STATE_FILE: &str = "funnel_state.json";
 const STATE_TMP_FILE: &str = ".funnel_state.json.tmp";
 const STATE_SCHEMA: u32 = 1;
 const SOURCE: &str = "wm-funnel";
-/// Bounded galaxy scan cap for the state-rebuild fallback (key order, not
-/// time order — the ledger is the authority; the scan only recovers evidence
-/// that was already emitted).
-const GALAXY_SCAN_CAP: usize = 4096;
 /// Site middleware ref cap (`whitemagic-site/middleware.ts`).
 const REF_CAP: usize = 24;
 
@@ -342,11 +339,15 @@ fn save_state(store_root: &Path, state: &FunnelState) -> std::io::Result<()> {
     std::fs::rename(&tmp, &path)
 }
 
-/// Rebuild the ledger from a bounded `telemetry` galaxy scan.
+/// Rebuild the ledger from the funnel-tagged records in the `telemetry`
+/// galaxy.
 ///
 /// Used when the state file is missing (fingerprint loss: reinstall, store
-/// restore from a snapshot predating the ledger) so already-emitted
-/// milestones are not re-emitted with fresh timestamps.
+/// restore from a snapshot predating the ledger). The tag index is the
+/// filter — every `funnel`-tagged row is read, with no key-order row cap
+/// (a fixed 4096-row scan could silently miss a milestone and re-emit it
+/// with a fresh timestamp). Rows absent from the galaxy (e.g. purged) are
+/// unrecoverable and will be re-emitted.
 #[must_use]
 pub fn rebuild_from_galaxy(store: &MemoryStore) -> FunnelState {
     let mut state = FunnelState {
@@ -354,7 +355,12 @@ pub fn rebuild_from_galaxy(store: &MemoryStore) -> FunnelState {
         ..FunnelState::default()
     };
     let memories = store
-        .scan(Galaxy::Telemetry, GALAXY_SCAN_CAP)
+        .query(
+            Galaxy::Telemetry,
+            &MemoryQuery::new()
+                .with_tags(vec!["funnel".to_string()])
+                .with_limit(usize::MAX),
+        )
         .unwrap_or_default();
     for memory in &memories {
         if !memory.metadata.tags.iter().any(|t| t == "funnel") {

@@ -55,10 +55,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are dropped with `duplicate: true` — the mail slot's lost-ack retry no
   longer double-delivers. Queued mail mints one envelope id and reuses it
   across flush.
-- **Live authority enforcement:** `can_execute` is enforced at ingest for
-  chat, signals, and lock acquire/release (after the engagement check).
-  Signals remain advisory-gated because the signal record itself is unsigned
-  (documented); `sync_hologram` stays ungated (documented residual).
+- **Declared-authority gating, not yet an authorization boundary:**
+  `can_execute` is checked at ingest for chat, signals, and lock
+  acquire/release (after the engagement check), and quarantined peers are
+  refused on all three. Authority is peer-declared inside the signed
+  `PeerInfo`, so this rejects peers that declare reduced authority; it is not
+  a local policy boundary until authority provisioning lands (queued). Locks
+  and signals remain claimed-identity in permissive mode; signals stay
+  advisory-gated (unsigned record) and `sync_hologram` ungated (documented
+  residuals).
+- **Review-driven hardening (independent adversarial pass):** heartbeat
+  binding is verified before the replay slot is consumed (a forged signed
+  heartbeat can no longer suppress the genuine peer's liveness); envelope
+  dedup keys on `(sender, envelope_id)` (no cross-sender suppression); lock
+  and signal paths refuse quarantined peers; wire-supplied message ids
+  saturate instead of overflowing; legacy mail entries persist their minted
+  fallback envelope id so retries reuse it.
 
 ### Conversion instrumentation — funnel local layer (scope 1)
 - **Local funnel records, no consent surface:** `telemetry.funnel` milestones
@@ -97,6 +109,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `wm doctor` section 11i discloses mode, wrapped-DEK count, and key
   source without resolving the key. Records remain plaintext — record AEAD is
   Q39 Slice B, and no mode advertises crypto-erasure.
+- **Review-driven hardening:** doctor warns (as issues) on partial wrapped-DEK
+  coverage and on orphaned keyring rows without meta, and now discloses the
+  key source (with the configured path where known); an unrecognized
+  `WM_AT_REST_MODE` fails closed; root-key and key-file read buffers are
+  zeroized; funnel state rebuild queries by tag instead of a key-order cap.
 
 ## [9.1.9] — 2026-09-18 (recovery hardening, onboarding truth, continuity handoff, calm surfaces)
 

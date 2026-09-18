@@ -556,9 +556,17 @@ impl MeshNode {
         for msg in &pending {
             // Reuse the stored envelope so a redelivery after a lost ack is
             // deduped on the receiver; entries restored from a pre-envelope
-            // file have none, so mint a fallback for this flush.
+            // file have none, so mint a fallback for this flush — and
+            // PERSIST it into the entry before the send attempt, so an
+            // unavailable first attempt (or a later retry) reuses the same
+            // id instead of minting a fresh one per flush (L6).
             let envelope_id = if msg.envelope_id.is_empty() {
-                crate::chat::ChatMessage::new_envelope_id(&msg.sender)
+                let minted = crate::chat::ChatMessage::new_envelope_id(&msg.sender);
+                self.mail_slot
+                    .lock()
+                    .expect("mail slot lock poisoned")
+                    .set_envelope(&msg.id, &minted);
+                minted
             } else {
                 msg.envelope_id.clone()
             };
@@ -1386,6 +1394,66 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(200)).await;
         };
         assert_eq!(inbox["messages"][0]["envelope_id"], envelope, "{inbox}");
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[tokio::test]
+    async fn legacy_mail_entry_reuses_persisted_fallback_envelope_on_retry() {
+        // L6 regression: an entry with no envelope id (the pre-envelope
+        // restored-file shape) must mint a fallback ONCE and persist it, so
+        // the retry after rejoin reuses the same id — a fresh id per flush
+        // would let a lost-ack retry store the message twice.
+        let a = spawn_node_with("legacy-node-a", 17_641, false, TEST_GROUP_A, 300).await;
+        let addr = "127.0.0.1:17642";
+        {
+            let mut slot = a.mail_slot.lock().expect("mail slot lock poisoned");
+            slot.enqueue(addr, "general", "legacy-node-a", "legacy body")
+                .expect("enqueue");
+        }
+        assert!(
+            a.mail_list()["entries"][0]["envelope_id"]
+                .as_str()
+                .is_some_and(str::is_empty),
+            "legacy entry starts envelope-less"
+        );
+
+        // First flush attempt against a dead peer mints the fallback and
+        // persists it even though delivery is unavailable.
+        let first = within("first flush", a.flush_mail(Some(addr)))
+            .await
+            .expect("first flush");
+        assert_eq!(first["flushed"][0]["delivered"], 0, "{first}");
+        let persisted = a.mail_list()["entries"][0]["envelope_id"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string();
+        assert!(
+            !persisted.is_empty(),
+            "fallback envelope must persist for the retry: {}",
+            a.mail_list()
+        );
+
+        // The peer comes up; the retry reuses the persisted id end-to-end.
+        let b = spawn_node_with("legacy-node-b", 17_642, false, TEST_GROUP_A, 300).await;
+        let report = within("a join b (retry flush)", a.join(addr))
+            .await
+            .expect("a join b");
+        assert_eq!(report["mail_flushed"], 1, "{report}");
+        assert_eq!(a.mail_summary()["queued_total"], 0);
+
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        let inbox = loop {
+            let inbox = b.read_chat("general", 10).await.expect("b read");
+            if inbox["count"].as_u64().is_some_and(|c| c >= 1) {
+                break inbox;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "queued mail was never delivered: {inbox}"
+            );
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        };
+        assert_eq!(inbox["messages"][0]["envelope_id"], persisted, "{inbox}");
     }
 
     #[tokio::test]

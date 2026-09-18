@@ -297,7 +297,9 @@ impl SanghaChat {
         if let Some(keypair) = &self.signing_key {
             msg = msg.signed(keypair);
         }
-        self.next_msg_id += 1;
+        // Saturating: a wire-supplied id of u64::MAX must not be able to
+        // panic the next local send (L5).
+        self.next_msg_id = self.next_msg_id.saturating_add(1);
         self.total_messages += 1;
 
         let msgs = self.channels.entry(channel.to_string()).or_default();
@@ -340,7 +342,8 @@ impl SanghaChat {
             envelope_id: ChatMessage::new_envelope_id(sender),
         }
         .signed(keypair);
-        self.next_msg_id += 1;
+        // Saturating: see `send` (L5).
+        self.next_msg_id = self.next_msg_id.saturating_add(1);
         self.total_messages += 1;
 
         let msgs = self.channels.entry(channel.to_string()).or_default();
@@ -405,19 +408,22 @@ impl SanghaChat {
     ///
     /// Receiver-side dedup (S1 mesh phase 2): when the message carries a
     /// non-empty `envelope_id` that already exists in the target channel
-    /// log, the payload is not stored again — a lost ack plus retry does
-    /// not duplicate the message. Empty envelope ids (legacy messages)
-    /// are never deduped.
+    /// log **for the same sender**, the payload is not stored again — a
+    /// lost ack plus retry does not duplicate the message. Empty envelope
+    /// ids (legacy messages) are never deduped. The sender is part of the
+    /// key: an attacker must not be able to predict a victim's next
+    /// envelope id, send first under its own bound id, and have the
+    /// victim's genuine message deduped away (targeted suppression).
     pub fn inject_signed(&mut self, msg: ChatMessage) -> InjectOutcome {
         if !msg.envelope_id.is_empty()
-            && self
-                .channels
-                .get(&msg.channel)
-                .is_some_and(|msgs| msgs.iter().any(|m| m.envelope_id == msg.envelope_id))
+            && self.channels.get(&msg.channel).is_some_and(|msgs| {
+                msgs.iter()
+                    .any(|m| m.sender == msg.sender && m.envelope_id == msg.envelope_id)
+            })
         {
             return InjectOutcome::Duplicate;
         }
-        self.next_msg_id = self.next_msg_id.max(msg.id + 1);
+        self.next_msg_id = self.next_msg_id.max(msg.id.saturating_add(1));
         self.total_messages += 1;
         let msgs = self.channels.entry(msg.channel.clone()).or_default();
         if msgs.len() >= self.max_per_channel {
@@ -497,7 +503,7 @@ impl SanghaChat {
                     dropped += 1;
                     continue;
                 }
-                self.next_msg_id = self.next_msg_id.max(msg.id + 1);
+                self.next_msg_id = self.next_msg_id.max(msg.id.saturating_add(1));
                 self.channels.entry(channel.clone()).or_default().push(msg);
                 restored += 1;
             }
@@ -917,6 +923,108 @@ mod tests {
         assert_eq!(chat.inject_signed(empty.clone()), InjectOutcome::Stored);
         assert_eq!(chat.inject_signed(empty), InjectOutcome::Stored);
         assert_eq!(chat.channel_message_count("gana:1"), 4);
+    }
+
+    #[test]
+    fn inject_signed_dedups_by_sender_and_envelope_id() {
+        // M3 regression: the dedup key is (sender, envelope_id), not the
+        // envelope id alone. Otherwise a bound peer could predict a
+        // victim's next id, send first under its own sender, and have the
+        // victim's genuine message suppressed as duplicate:true.
+        let attacker = MeshKeyPair::from_seed(b"suppressor-seed");
+        let victim = MeshKeyPair::from_seed(b"suppressed-seed");
+        let mut chat = SanghaChat::default();
+        let base = ChatMessage {
+            id: 1,
+            channel: "gana:1".to_string(),
+            sender: String::new(),
+            content: "same predicted id".to_string(),
+            timestamp: 12345,
+            signature: String::new(),
+            public_key: String::new(),
+            envelope_id: "env-predicted".to_string(),
+        };
+
+        let attacker_msg = ChatMessage {
+            sender: "suppressor".to_string(),
+            ..base.clone()
+        }
+        .signed(&attacker);
+        let victim_msg = ChatMessage {
+            sender: "suppressed".to_string(),
+            ..base
+        }
+        .signed(&victim);
+
+        // The attacker's message stores; the victim's SAME envelope id from
+        // a different sender must also store (previously: Duplicate).
+        assert_eq!(chat.inject_signed(attacker_msg), InjectOutcome::Stored);
+        assert_eq!(
+            chat.inject_signed(victim_msg.clone()),
+            InjectOutcome::Stored,
+            "same envelope id from a different sender must not be suppressed"
+        );
+        assert_eq!(chat.channel_message_count("gana:1"), 2);
+
+        // Same (sender, envelope_id) pair still dedups.
+        assert_eq!(
+            chat.inject_signed(victim_msg),
+            InjectOutcome::Duplicate,
+            "a redelivery from the same sender must still dedup"
+        );
+        assert_eq!(chat.channel_message_count("gana:1"), 2);
+    }
+
+    #[test]
+    fn max_wire_id_saturates_instead_of_overflowing() {
+        // L5 regression: a wire-supplied id of u64::MAX must not overflow
+        // the next-id arithmetic in inject_signed/restore_from (debug
+        // panics) or the next local send.
+        let kp = MeshKeyPair::from_seed(b"max-id-seed");
+        let msg = ChatMessage {
+            id: u64::MAX,
+            channel: "gana:1".to_string(),
+            sender: "max-id-node".to_string(),
+            content: "max id".to_string(),
+            timestamp: 12345,
+            signature: String::new(),
+            public_key: String::new(),
+            envelope_id: "env-max".to_string(),
+        }
+        .signed(&kp);
+        let mut chat = SanghaChat::default();
+        assert_eq!(chat.inject_signed(msg), InjectOutcome::Stored);
+        let sent = chat.send("gana:1", "max-id-node", "after the max");
+        assert_eq!(sent.id, u64::MAX, "saturated, not wrapped");
+    }
+
+    #[test]
+    fn restore_from_saturates_on_max_wire_id() {
+        // The restore boundary parses persisted (originally wire-supplied)
+        // ids; a stored u64::MAX must not overflow `id + 1` there either.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mesh_chat_log.json");
+        let kp = MeshKeyPair::from_seed(b"max-restore-seed");
+        {
+            let mut chat = SanghaChat::default()
+                .with_signing_key(kp.clone())
+                .with_persistence(Some(path.clone()));
+            let msg = ChatMessage {
+                id: u64::MAX,
+                channel: "gana:1".to_string(),
+                sender: "max-restore-node".to_string(),
+                content: "persisted max id".to_string(),
+                timestamp: 12345,
+                signature: String::new(),
+                public_key: String::new(),
+                envelope_id: "env-restore-max".to_string(),
+            }
+            .signed(&kp);
+            assert_eq!(chat.inject_signed(msg), InjectOutcome::Stored);
+        }
+        let chat = SanghaChat::default().with_persistence(Some(path));
+        assert_eq!(chat.channel_message_count("gana:1"), 1);
+        assert_eq!(chat.read("gana:1", None)[0].id, u64::MAX);
     }
 
     #[test]

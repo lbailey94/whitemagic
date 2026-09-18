@@ -161,6 +161,21 @@ impl Default for AtRestConfig {
     }
 }
 
+/// Parse a raw `WM_AT_REST_MODE` value: unset is `off`, anything
+/// unrecognized is a hard error (fail-closed — a typo must never silently
+/// downgrade a store to plaintext).
+fn mode_from_env_value(value: Option<&str>) -> Result<AtRestMode> {
+    match value {
+        Some(raw) => AtRestMode::parse(raw).ok_or_else(|| {
+            mem_err(format!(
+                "WM_AT_REST_MODE='{raw}' is not off|keyfile|passphrase — refusing to open \
+                 (fail-closed); fix or unset the variable"
+            ))
+        }),
+        None => Ok(AtRestMode::Off),
+    }
+}
+
 impl AtRestConfig {
     /// Dark by default — zero behavior change.
     #[must_use]
@@ -176,20 +191,10 @@ impl AtRestConfig {
     /// Read `WM_AT_REST_MODE` (off | keyfile | passphrase, default off),
     /// `WM_AT_REST_KEY_FILE`, `WM_AT_REST_ROOT_KEY`, `WM_AT_REST_PASSPHRASE`.
     ///
-    /// Unrecognized modes warn and fall back to `off` (the pre-feature
-    /// behavior) — a typo can never silently enable a half-configured mode.
-    #[must_use]
-    pub fn from_env() -> Self {
-        let mode = match std::env::var("WM_AT_REST_MODE") {
-            Ok(value) => AtRestMode::parse(&value).unwrap_or_else(|| {
-                tracing::warn!(
-                    "WM_AT_REST_MODE='{value}' is not off|keyfile|passphrase — treating as off \
-                     (plaintext pass-through; no keyring)"
-                );
-                AtRestMode::Off
-            }),
-            Err(_) => AtRestMode::Off,
-        };
+    /// A set-but-unrecognized mode refuses the read (fail-closed): a typo
+    /// must never silently downgrade an open to plaintext pass-through.
+    pub fn from_env() -> Result<Self> {
+        let mode = mode_from_env_value(std::env::var("WM_AT_REST_MODE").ok().as_deref())?;
         let root_key = std::env::var("WM_AT_REST_ROOT_KEY")
             .ok()
             .filter(|v| !v.is_empty())
@@ -202,12 +207,12 @@ impl AtRestConfig {
             .ok()
             .filter(|v| !v.is_empty())
             .map(Zeroizing::new);
-        Self {
+        Ok(Self {
             mode,
             root_key,
             key_file,
             passphrase,
-        }
+        })
     }
 
     /// Mode-B config with an explicit material root key (64 hex chars or 32
@@ -467,7 +472,7 @@ fn unwrap_secret(
 /// Canonical 32-byte root key from `WM_AT_REST_ROOT_KEY`-style material
 /// (64 hex chars decode; 32 raw bytes pass through).
 fn root_key_from_material(material: &str) -> Result<Zeroizing<[u8; AT_REST_KEY_LEN]>> {
-    let bytes = wm_core::kdf::root_bytes(material);
+    let bytes = Zeroizing::new(wm_core::kdf::root_bytes(material));
     if bytes.len() != AT_REST_KEY_LEN {
         return Err(mem_err(format!(
             "at-rest root key material is {} bytes after canonicalization, expected \
@@ -519,12 +524,12 @@ fn load_or_create_key_file(
     allow_create: bool,
 ) -> Result<Zeroizing<[u8; AT_REST_KEY_LEN]>> {
     if path.exists() {
-        let bytes = std::fs::read(path).map_err(|e| {
+        let bytes = Zeroizing::new(std::fs::read(path).map_err(|e| {
             mem_err(format!(
                 "cannot read at-rest key file {}: {e}",
                 path.display()
             ))
-        })?;
+        })?);
         if bytes.len() != AT_REST_KEY_LEN {
             return Err(mem_err(format!(
                 "at-rest key file {} is {} bytes, expected {AT_REST_KEY_LEN}",
@@ -604,6 +609,17 @@ enum KeyringPresence {
     Unreadable(String),
 }
 
+/// Any rows at all in the keyring DBI? Distinguishes a truly-empty DBI
+/// (crash between `create_db` and the init transaction — safe to
+/// re-initialize) from orphaned key material (`dek:*`/`rk:check` rows with
+/// no `meta` row), which must fail closed rather than be overwritten.
+fn keyring_has_rows<T: Transaction>(tx: &T, db: Database) -> Result<bool> {
+    let mut cursor = tx
+        .open_ro_cursor(db)
+        .map_err(|e| mem_err(format!("LMDB cursor failed for the at-rest keyring: {e}")))?;
+    Ok(cursor.iter().next().is_some())
+}
+
 fn read_presence(env: &Environment) -> Result<KeyringPresence> {
     let db = match env.open_db(Some(KEYRING_DB)) {
         Ok(db) => db,
@@ -622,7 +638,17 @@ fn read_presence(env: &Environment) -> Result<KeyringPresence> {
             Ok(meta) => KeyringPresence::Meta(Box::new(meta)),
             Err(e) => KeyringPresence::Unreadable(e.to_string()),
         },
-        Err(lmdb::Error::NotFound) => KeyringPresence::Absent,
+        Err(lmdb::Error::NotFound) => {
+            if keyring_has_rows(&tx, db)? {
+                KeyringPresence::Unreadable(
+                    "the keyring DBI holds `dek:*`/`rk:check` rows but no `meta` row \
+                     (orphaned key material)"
+                        .to_string(),
+                )
+            } else {
+                KeyringPresence::Absent
+            }
+        }
         Err(e) => {
             return Err(mem_err(format!(
                 "LMDB read failed for the at-rest keyring meta: {e}"
@@ -665,7 +691,19 @@ pub(crate) fn read_status(env: &Environment, db: Database, store_dir: &Path) -> 
                     };
                 }
             },
-            Err(lmdb::Error::NotFound) => return AtRestStatus::Absent,
+            Err(lmdb::Error::NotFound) => {
+                return match keyring_has_rows(&tx, db) {
+                    Ok(true) => AtRestStatus::Malformed {
+                        reason: "the keyring DBI holds `dek:*`/`rk:check` rows but no `meta` \
+                                 row (orphaned key material)"
+                            .to_string(),
+                    },
+                    Ok(false) => AtRestStatus::Absent,
+                    Err(e) => AtRestStatus::Malformed {
+                        reason: e.to_string(),
+                    },
+                };
+            }
             Err(e) => {
                 return AtRestStatus::Malformed {
                     reason: format!("meta row unreadable: {e}"),
@@ -701,11 +739,6 @@ pub(crate) fn read_status(env: &Environment, db: Database, store_dir: &Path) -> 
                 ),
             };
         }
-        if meta.mode == AtRestMode::Off {
-            return AtRestStatus::Malformed {
-                reason: "meta records mode 'off' but a keyring exists".to_string(),
-            };
-        }
         if meta.mode == AtRestMode::Passphrase && meta.argon2.is_none() {
             return AtRestStatus::Malformed {
                 reason: "mode is 'passphrase' but the Argon2 parameters are missing".to_string(),
@@ -737,10 +770,19 @@ struct NewRootKey {
     argon2: Option<Argon2Params>,
 }
 
-/// Key-file path disclosed for a store-local generated key file (the only
-/// key source whose path is derivable from the store alone).
+/// Key-file path disclosed for a keyring rooted in a file. The generated
+/// store-local path is derivable from the store alone; an explicitly
+/// configured path was an open-time input never recorded in the meta, so it
+/// is disclosed only when this environment still has `WM_AT_REST_KEY_FILE`.
 fn disclosed_key_file(meta: &KeyringMeta, store_dir: &Path) -> Option<PathBuf> {
-    (meta.key_source == "generated_key_file").then(|| generated_key_path(store_dir))
+    match meta.key_source.as_str() {
+        "generated_key_file" => Some(generated_key_path(store_dir)),
+        "key_file" => std::env::var("WM_AT_REST_KEY_FILE")
+            .ok()
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from),
+        _ => None,
+    }
 }
 
 fn resolve_new_root_key(store_dir: &Path, config: &AtRestConfig) -> Result<NewRootKey> {
@@ -877,7 +919,16 @@ fn initialize(
             let state = unlock(env, db, store_dir, config, meta)?;
             return Ok((db, state));
         }
-        Err(lmdb::Error::NotFound) => {}
+        Err(lmdb::Error::NotFound) => {
+            if keyring_has_rows(&tx, db)? {
+                tx.abort();
+                return Err(mem_err(
+                    "at-rest keyring DBI contains rows but no `meta` row — refusing to \
+                     initialize over orphaned key material (fail-closed); restore the meta \
+                     row or deliberately remove the keyring DBI",
+                ));
+            }
+        }
         Err(e) => return Err(mem_err(format!("LMDB read failed (at-rest init): {e}"))),
     }
 
@@ -1005,8 +1056,8 @@ pub(crate) fn open_at_rest(
             meta.mode, meta.mode
         ))),
         (AtRestMode::Off, KeyringPresence::Unreadable(reason)) => Err(mem_err(format!(
-            "at-rest keyring present but its meta row is unreadable ({reason}) — refusing \
-             writable mode 'off' (fail-closed); inspect with a read-only path"
+            "at-rest keyring present but its state is unreadable/malformed ({reason}) — \
+             refusing writable mode 'off' (fail-closed); inspect with a read-only path"
         ))),
         (mode, KeyringPresence::Meta(meta)) => {
             if meta.mode != mode {
@@ -1027,8 +1078,8 @@ pub(crate) fn open_at_rest(
             Ok((Some(db), Some(state)))
         }
         (_mode, KeyringPresence::Unreadable(reason)) => Err(mem_err(format!(
-            "at-rest keyring present but its meta row is unreadable ({reason}) — refusing \
-             to initialize over it (fail-closed); restore the keyring or the key material"
+            "at-rest keyring present but its state is unreadable/malformed ({reason}) — \
+             refusing to initialize over it (fail-closed); restore the keyring or the key material"
         ))),
     }
 }
@@ -1078,6 +1129,20 @@ mod tests {
         drop(cursor);
         let _ = tx.commit();
         rows
+    }
+
+    /// Write raw keyring rows through an isolated env, simulating crash/
+    /// tamper states the open paths must classify.
+    fn write_keyring_rows(store_dir: &Path, rows: &[(&[u8], Vec<u8>)]) {
+        let env = Environment::new().set_max_dbs(64).open(store_dir).unwrap();
+        let db = env
+            .create_db(Some(KEYRING_DB), DatabaseFlags::default())
+            .unwrap();
+        let mut tx = env.begin_rw_txn().unwrap();
+        for (key, value) in rows {
+            tx.put(db, key, value, WriteFlags::default()).unwrap();
+        }
+        tx.commit().unwrap();
     }
 
     #[test]
@@ -1481,5 +1546,127 @@ mod tests {
         let store =
             MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::off()).unwrap();
         assert_eq!(store.at_rest_status(), AtRestStatus::Absent);
+    }
+
+    #[test]
+    fn orphan_keyring_rows_without_meta_refuse_init_and_report_malformed() {
+        // Crash/tamper simulation: DEK and rk:check rows exist but the meta
+        // row does not. This must fail closed — a keyfile init must never
+        // overwrite the orphaned wraps.
+        let tmp = tempfile::tempdir().unwrap();
+        drop(MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::off()).unwrap());
+        write_keyring_rows(
+            tmp.path(),
+            &[
+                (b"dek:codex", b"orphaned wrapped DEK".to_vec()),
+                (RK_CHECK_KEY, b"orphaned rk:check".to_vec()),
+            ],
+        );
+        let before = raw_keyring_rows(tmp.path());
+
+        match MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::keyfile()) {
+            Ok(_) => panic!("orphan rows must refuse keyfile initialization"),
+            Err(error) => {
+                let message = error.to_string();
+                assert!(message.contains("meta"), "{message}");
+                assert!(
+                    message.contains("orphan") && message.contains("fail-closed"),
+                    "{message}"
+                );
+            }
+        }
+        match MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::off()) {
+            Ok(_) => panic!("orphan rows must refuse a plaintext writable open"),
+            Err(error) => assert!(error.to_string().contains("fail-closed"), "{error}"),
+        }
+
+        for status in [
+            MemoryStore::open_inspection(tmp.path())
+                .unwrap()
+                .at_rest_status(),
+            MemoryStore::open_readonly(tmp.path())
+                .unwrap()
+                .at_rest_status(),
+        ] {
+            match status {
+                AtRestStatus::Malformed { reason } => {
+                    assert!(reason.contains("meta"), "{reason}");
+                }
+                other => panic!("expected Malformed for orphan rows, got {other:?}"),
+            }
+        }
+
+        assert_eq!(
+            raw_keyring_rows(tmp.path()),
+            before,
+            "refusals must not rewrite the orphaned rows"
+        );
+        assert!(
+            !tmp.path().join(AT_REST_KEY_FILE).exists(),
+            "a refused init must not write a key file"
+        );
+    }
+
+    #[test]
+    fn mode_off_meta_reports_present_but_writable_opens_still_refuse() {
+        // A parseable meta that records mode 'off' alongside a keyring is a
+        // contradictory state: read-only inspection can report it (doctor
+        // grades it), every writable open still refuses.
+        let tmp = tempfile::tempdir().unwrap();
+        drop(MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::off()).unwrap());
+        let meta = KeyringMeta {
+            format_version: KEYRING_FORMAT_VERSION,
+            mode: AtRestMode::Off,
+            key_source: "generated_key_file".to_string(),
+            created_at: "2026-09-18T00:00:00Z".to_string(),
+            argon2: None,
+        };
+        write_keyring_rows(
+            tmp.path(),
+            &[
+                (KEYRING_META_KEY, serde_json::to_vec(&meta).unwrap()),
+                (RK_CHECK_KEY, b"not-a-real-wrap".to_vec()),
+            ],
+        );
+
+        match MemoryStore::open_inspection(tmp.path())
+            .unwrap()
+            .at_rest_status()
+        {
+            AtRestStatus::Present(present) => {
+                assert_eq!(present.meta.mode, AtRestMode::Off);
+                assert_eq!(present.wrapped_deks, 0);
+            }
+            other => panic!("expected Present for a parseable mode-off meta, got {other:?}"),
+        }
+        match MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::off()) {
+            Ok(_) => panic!("mode-off keyring must refuse a plaintext writable open"),
+            Err(error) => assert!(error.to_string().contains("split-brain"), "{error}"),
+        }
+        match MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::keyfile()) {
+            Ok(_) => panic!("mode-off keyring must refuse a keyfile writable open"),
+            Err(error) => assert!(error.to_string().contains("mode mismatch"), "{error}"),
+        }
+    }
+
+    #[test]
+    fn unrecognized_env_mode_value_is_a_hard_error() {
+        assert_eq!(mode_from_env_value(None).unwrap(), AtRestMode::Off);
+        assert_eq!(
+            mode_from_env_value(Some(" KeyFile ")).unwrap(),
+            AtRestMode::Keyfile
+        );
+        for invalid in ["", "keyfil", "on", "off2", "plaintext"] {
+            let error = mode_from_env_value(Some(invalid))
+                .expect_err("unrecognized WM_AT_REST_MODE must be refused");
+            assert!(
+                error.to_string().contains("WM_AT_REST_MODE"),
+                "{invalid}: {error}"
+            );
+            assert!(
+                error.to_string().contains("fail-closed"),
+                "{invalid}: {error}"
+            );
+        }
     }
 }

@@ -54,11 +54,13 @@ pub struct StatusReport {
     pub backup_history_split: bool,
     pub profile: String,
     pub project: Option<String>,
-    /// Channel marker written by `scripts/install.sh`
-    /// (`<store-root>/install_channel`, content `install_sh[:ref]`). Read even
-    /// when the store is not initialized — an arrival record, not store state.
+    /// Installation channel: the installer's `<store-root>/install_channel`
+    /// marker (`install_sh[:ref]`) when present, otherwise the best-effort
+    /// funnel detection (env/dockerenv/path heuristics/`install.json`).
+    /// Read even when the store is not initialized — an arrival record, not
+    /// store state.
     pub install_channel: Option<String>,
-    /// Sanitized install ref from the marker, if any.
+    /// Sanitized install ref from the marker or detection, if any.
     pub install_channel_ref: Option<String>,
     pub update: Option<String>,
 }
@@ -282,6 +284,20 @@ pub fn read_install_channel(store_root: &Path) -> Option<(String, Option<String>
     wm_tools::expansion::funnel::parse_marker(&text)
 }
 
+/// Installation-channel disclosure for status.
+///
+/// The installer marker first, then the funnel classifier
+/// (`WM_INSTALL_CHANNEL`, `/.dockerenv`, exe heuristics, `install.json`).
+/// Unrecognized detection yields nothing.
+#[must_use]
+pub fn disclosed_install_channel(store_root: &Path) -> Option<(String, Option<String>)> {
+    read_install_channel(store_root).or_else(|| {
+        let (channel, reference) = wm_tools::expansion::funnel::detect_channel(store_root);
+        (channel != wm_tools::expansion::funnel::Channel::Unknown)
+            .then_some((channel.as_str().to_string(), reference))
+    })
+}
+
 /// Collect status for the given store root (the directory containing `lmdb/`).
 #[must_use]
 pub fn collect(store_root: &Path) -> StatusReport {
@@ -411,7 +427,7 @@ pub fn collect(store_root: &Path) -> StatusReport {
         "attention"
     };
 
-    let (install_channel, install_channel_ref) = read_install_channel(store_root)
+    let (install_channel, install_channel_ref) = disclosed_install_channel(store_root)
         .map_or((None, None), |(channel, reference)| {
             (Some(channel), reference)
         });
@@ -495,6 +511,28 @@ mod tests {
             !text.contains("needs attention"),
             "a fresh install with a marker is still a fresh install: {text}"
         );
+    }
+
+    #[test]
+    fn install_detection_fills_channel_when_marker_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (detected, detected_ref) = wm_tools::expansion::funnel::detect_channel(tmp.path());
+        let report = collect(tmp.path());
+        let expected = (detected != wm_tools::expansion::funnel::Channel::Unknown)
+            .then(|| detected.as_str().to_string());
+        assert_eq!(
+            report.install_channel, expected,
+            "marker-less stores must fall back to funnel detection"
+        );
+        assert_eq!(report.install_channel_ref, detected_ref);
+        assert_eq!(
+            report.state, "not_initialized",
+            "detected channel is disclosure, never store state: {report:?}"
+        );
+        if report.install_channel.is_some() {
+            let text = report.lines().join("\n");
+            assert!(text.contains("Installed via"), "{text}");
+        }
     }
 
     #[test]

@@ -46,7 +46,8 @@ pub struct QueuedMessage {
     /// Chat envelope id carried with the message (S1 mesh phase 2) so the
     /// receiver can dedup a redelivery after a lost ack, and the sender
     /// keeps the same id across flush retries. Empty on legacy entries
-    /// restored from pre-envelope files; the flush mints a fallback.
+    /// restored from pre-envelope files; the flush mints a fallback and
+    /// persists it here ([`MailSlot::set_envelope`]) so retries reuse it.
     #[serde(default)]
     pub envelope_id: String,
 }
@@ -284,6 +285,21 @@ impl MailSlot {
         }
     }
 
+    /// Persist an envelope id onto a queued entry. Used when a legacy
+    /// entry (restored without an `envelope_id`) gets a fallback id before
+    /// its first flush attempt: the id is written to the entry so later
+    /// retries reuse it instead of minting a fresh one every flush
+    /// (L6 — a fresh id per retry defeats receiver-side dedup after a
+    /// lost ack). Returns whether the entry existed.
+    pub fn set_envelope(&mut self, id: &str, envelope_id: &str) -> bool {
+        if let Some(m) = self.entries.iter_mut().find(|m| m.id == id) {
+            m.envelope_id = envelope_id.to_string();
+            self.persist();
+            return true;
+        }
+        false
+    }
+
     /// Drop one message by id (operator action). Returns whether it existed.
     pub fn drop_message(&mut self, id: &str) -> bool {
         let before = self.entries.len();
@@ -513,6 +529,31 @@ mod tests {
         let restored = MailSlot::restore(MailSlotConfig::default(), path);
         assert_eq!(restored.total(), 1);
         assert!(restored.entries_for("p1")[0].envelope_id.is_empty());
+    }
+
+    #[test]
+    fn set_envelope_persists_fallback_for_retry_reuse() {
+        // L6: a legacy entry (empty envelope id) may be flushed more than
+        // once (first attempt unavailable, retry after rejoin). The minted
+        // fallback id must be written back to the entry so the retry reuses
+        // it — a fresh id per attempt would defeat receiver-side dedup.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mesh_mail_slot.json");
+        {
+            let mut s = MailSlot::restore(MailSlotConfig::default(), path.clone());
+            s.enqueue("p1", "general", "me", "legacy entry").unwrap();
+        }
+        let mut s = MailSlot::restore(MailSlotConfig::default(), path.clone());
+        let entry_id = s.entries()[0].id.clone();
+        assert!(s.entries()[0].envelope_id.is_empty());
+
+        // Unknown ids are a no-op.
+        assert!(!s.set_envelope("mail-does-not-exist", "ignored"));
+        assert!(s.set_envelope(&entry_id, "me:123:fallback"));
+
+        // The fallback survives a reload (retry after restart reuses it).
+        let reloaded = MailSlot::restore(MailSlotConfig::default(), path);
+        assert_eq!(reloaded.entries_for("p1")[0].envelope_id, "me:123:fallback");
     }
 
     #[test]

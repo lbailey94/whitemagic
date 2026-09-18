@@ -253,13 +253,15 @@ impl MemoryStore {
     ///
     /// At-rest mode comes from the environment (`WM_AT_REST_MODE`, default
     /// `off`) — see [`Self::open_with_at_rest`]. `off` is a provable no-op:
-    /// no keyring DBI is created and no key files are written.
+    /// no keyring DBI is created and no key files are written. A
+    /// set-but-unrecognized `WM_AT_REST_MODE` value refuses the open
+    /// (fail-closed).
     ///
     /// On Unix, the store directory is created with mode 0o700 (owner-only
     /// access) if it does not already exist. Existing directories are
     /// left untouched.
     pub fn open(path: impl AsRef<Path>, map_size: usize) -> Result<Self> {
-        Self::open_with_at_rest(path, map_size, &crate::at_rest::AtRestConfig::from_env())
+        Self::open_with_at_rest(path, map_size, &crate::at_rest::AtRestConfig::from_env()?)
     }
 
     /// Open or create an LMDB store with an explicit at-rest configuration.
