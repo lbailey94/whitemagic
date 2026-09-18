@@ -38,7 +38,8 @@ docker run --rm lbailey94/whitemagic:9 --version   # wm 9.1.9
    ```
    (musl build first if the release didn't ship it — see
    `scripts/` release tooling.)
-3. Update the Hub README version line (below).
+3. Sync the Hub README: `gh workflow run hub-description.yml` (or update
+   manually — the block below is the source of truth).
 
 ## Hub README maintenance (the part that rots)
 
@@ -60,6 +61,22 @@ the `Current release:` line on each release:
 >   stack, kept for provenance — not the current product.
 >
 > Store your data in a mounted volume; memory never leaves the machine.
+
+**Automated (verified 2026-09-18):** `.github/workflows/hub-description.yml`
+extracts the block above from this file and PATCHes `full_description` with
+the `DOCKERHUB_TOKEN` Actions secret, then verifies the public description:
+
+```bash
+gh workflow run hub-description.yml
+```
+
+The secret must be a PAT with **Read + Write + Delete** permissions: the
+`docker login` credential in `~/.docker/config.json` and a registry-only PAT
+both log in but return 403 `insufficient scope` on the description API
+(re-verified against both on 2026-09-18); the scoped PAT replaced the CI
+secret that day. The `Current release:` date in the block is still
+hand-typed — correct it on release day before dispatching (the version
+string itself is auto-bumped by `scripts/release.sh`).
 
 **API alternative** (no web UI): with a Hub **PAT scoped read/write/delete**
 (the token stored by `docker login` is registry-scoped only and returns

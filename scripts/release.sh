@@ -278,7 +278,8 @@ if [ -n "${HUB_TOKEN:-}" ]; then
     [ -n "$JWT" ] && echo "HUB_TOKEN accepted — update the version line in the Hub description manually or extend this stage with the runbook block"
   fi
 else
-  echo "HUB_TOKEN not set — remember to bump the version line in the Hub README (docs/DOCKER_HUB_RUNBOOK.md block)"
+  echo "HUB_TOKEN not set — sync the Hub README with: gh workflow run hub-description.yml"
+  echo "  (source of truth: docs/DOCKER_HUB_RUNBOOK.md block; the PAT needs read/write/delete)"
 fi
 
 # ── manual tail (separate lanes) ─────────────────────────────────────────
