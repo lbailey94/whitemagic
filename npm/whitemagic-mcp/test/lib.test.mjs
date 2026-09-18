@@ -13,6 +13,7 @@ import {
   assetFor,
   cacheIsValid,
   cachedBinaryPath,
+  childEnvironment,
   ensureBinary,
   releaseTag,
 } from "../bin/lib.mjs";
@@ -52,6 +53,18 @@ test("assetFor maps supported platforms and refuses the rest", () => {
 test("releaseTag honors WHITEMAGIC_RELEASE override", () => {
   assert.equal(releaseTag("9.1.6"), "v9.1.6");
   assert.equal(releaseTag("9.1.6", { WHITEMAGIC_RELEASE: "v9" }), "v9");
+});
+
+test("childEnvironment marks the npm install channel without mutating the caller", () => {
+  const base = { PATH: "/usr/bin", WM_PROJECT: "demo" };
+  const child = childEnvironment(base);
+  assert.equal(child.WM_INSTALL_CHANNEL, "npm");
+  assert.equal(child.PATH, "/usr/bin");
+  assert.equal(child.WM_PROJECT, "demo");
+  assert.equal(base.WM_INSTALL_CHANNEL, undefined, "caller env must stay untouched");
+  assert.notEqual(child, base, "returns a copy");
+  // The npm launcher always tells the truth about its own channel.
+  assert.equal(childEnvironment({ WM_INSTALL_CHANNEL: "docker" }).WM_INSTALL_CHANNEL, "npm");
 });
 
 test("ensureBinary downloads, verifies, and caches", async () => {

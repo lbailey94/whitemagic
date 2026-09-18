@@ -15,7 +15,7 @@
 import { readFileSync } from "node:fs";
 import { platform } from "node:os";
 import { spawnSync } from "node:child_process";
-import { ensureBinary } from "./lib.mjs";
+import { childEnvironment, ensureBinary } from "./lib.mjs";
 
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
@@ -28,5 +28,9 @@ try {
 }
 
 const isWin = platform() === "win32";
-const result = spawnSync(bin, process.argv.slice(2), { stdio: "inherit", shell: isWin });
+const result = spawnSync(bin, process.argv.slice(2), {
+  stdio: "inherit",
+  shell: isWin,
+  env: childEnvironment(),
+});
 process.exit(result.status ?? 1);

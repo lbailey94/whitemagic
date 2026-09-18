@@ -1,9 +1,15 @@
 # Install funnel telemetry — P2 design (opt-in, content-free)
 
-**Status**: design draft for review (2026-09-17, session d8d53567). No
-implementation in 9.1.9.
-**Related**: `wm telemetry schema` / `wm telemetry preview` (P1, 2026-09-15),
-`docs/EDGE_GALAXY_TELEMETRY.md`, site `lib/analytics.ts`, `PRIVACY_POLICY.md`.
+**Status**: scope 1 (local funnel layer) implemented 2026-09-18 — typed
+`telemetry.funnel` milestones, `<store-root>/funnel_state.json`,
+`<store-root>/install_channel`, `install.sh --ref`, npm/docker channel
+markers, and the read-only `wm telemetry status`. Scope 2 (consent surface,
+transport, install-id) remains design; **no transmission path exists in this
+build**.
+**Related**: `wm telemetry schema` / `wm telemetry status` / `wm telemetry
+preview` (P1/P2, 2026-09-15/18), `docs/TELEMETRY.md`,
+`docs/EDGE_GALAXY_TELEMETRY.md`, site `lib/analytics.ts`,
+`PRIVACY_POLICY.md`.
 
 ## Why
 
@@ -31,6 +37,10 @@ Constraints that do not move:
   declares `"transport": {"mode": "none"}`; `wm telemetry preview` renders
   exactly what a send *would* carry, fully offline
   (`crates/wm-mcp/src/telemetry_view.rs`).
+- The scope-1 funnel layer (2026-09-18): `telemetry.funnel` milestones in the
+  same galaxy, the `<store-root>/funnel_state.json` ledger, the installer
+  marker `<store-root>/install_channel`, and `wm telemetry status` /
+  `Installed via` in `wm status` (`crates/wm-tools/src/expansion/funnel.rs`).
 - Site-side aggregate counters: visitor classes, install-intent CTA
   beacons, `install.sh?ref=` attribution (site `lib/analytics.ts`,
   `/api/stats`).
@@ -40,8 +50,11 @@ Constraints that do not move:
 
 ### 1. Local funnel layer (no consent needed; nothing leaves the device)
 
-Record one `telemetry.funnel` record per milestone in the existing
-telemetry galaxy (evidence, not cognition — same exclusions as the galaxy).
+**Implemented (scope 1).** Record one `telemetry.funnel` record per milestone
+in the existing telemetry galaxy (evidence, not cognition — same exclusions as
+the galaxy). The authoritative ledger is `<store-root>/funnel_state.json`
+(atomic write); a missing ledger rebuilds emitted milestones from a bounded
+galaxy scan. `WM_FUNNEL_DISABLED=1` is the kill switch.
 
 | event | trigger | fields |
 |---|---|---|
@@ -51,16 +64,24 @@ telemetry galaxy (evidence, not cognition — same exclusions as the galaxy).
 | `first_resume` | first `session.continuity` hit with ≥1 prior turn | — |
 | `active_dN` | a launch on calendar day N after first_launch | day offset |
 
-Channel detection (best effort, disclosed as best-effort):
+Channel detection (best effort, disclosed as best-effort), in precedence
+order, using the site's `INSTALL_CHANNELS` vocabulary
+(`install_sh | binary | npm | docker | cargo | source | unknown`):
 
-- `install.sh?ref=<tag>` → the installer writes `<store>/install_channel`
-  (plain file, no network); this alone improves attribution even without
-  sharing, and lets `wm status` show how this install arrived;
-- npm launcher sets `WM_INSTALL_CHANNEL=npm` (and any ref it was asked for);
-- Docker: `/.dockerenv` probe; cargo: binary path heuristic
-  (`~/.cargo/bin`); release binary: installer marker; otherwise `unknown`.
+- `WM_INSTALL_CHANNEL` (npm launcher sets `npm`; Dockerfile sets `docker`);
+- the installer marker `<store-root>/install_channel`
+  (`install_sh[:ref]`, written atomically by `scripts/install.sh` after a
+  successful verified install; `--ref` / `WM_INSTALL_REF` sanitized with the
+  site middleware rule — lowercase, `[a-z0-9_-]`, 24 chars);
+- a `/.dockerenv` probe;
+- the binary path heuristic (`~/.cargo/bin` → `cargo`, `/node_modules/` →
+  `npm`, `/Cellar/` or `/homebrew/` → `source`, otherwise `binary`);
+- `install.json` `installed_via`;
+- otherwise `unknown`.
 
-No install-id is needed locally — records are per-store.
+No install-id is needed locally — records are per-store. `wm telemetry
+status` (`--store`, `--json`) shows the local funnel read-only, even with no
+store.
 
 ### 2. Opt-in sharing (the part that needs a decision)
 
@@ -81,7 +102,7 @@ Envelope, versioned (`funnel/1`), exact fields:
   "version": "9.2.0",
   "os": "linux",
   "arch": "x86_64",
-  "channel": "install-sh | npm | cargo | docker | release | unknown",
+  "channel": "install_sh | npm | docker | cargo | source | binary | unknown",
   "first_launch": "2026-09-17",
   "milestones": ["first_launch", "init_ok", "first_memory"],
   "active_days": [0, 1, 4],
@@ -118,17 +139,27 @@ stores no raw IPs. Retention: 180 days.
 
 ## Rollout
 
-1. **9.1.x**: local funnel records + `wm telemetry status` + the
-   `<store>/install_channel` file written by install.sh.
-2. **9.2**: consent surface + transport + site endpoint + docs updates.
+1. **Local funnel layer — implemented 2026-09-18 (scope 1)**: typed
+   `telemetry.funnel` records, `<store-root>/funnel_state.json`,
+   `<store-root>/install_channel` written by `install.sh` (`--ref` /
+   `WM_INSTALL_REF`), npm/docker channel markers, `wm telemetry status`, and
+   the `Installed via` line in `wm status`. Read-only/preservation servers
+   write nothing; `WM_FUNNEL_DISABLED=1` disables emission.
+2. **Consent surface + transport + site endpoint + docs updates — not
+   implemented** (scope 2; requires the explicit opt-in decision below).
 3. **First analysis** once a meaningful number of install-ids exists, with
-   a pre-registered read (activation rate by channel, d2/d7).
+   a pre-registered read (activation rate by channel, d2/d7) — blocked on
+   step 2, but the local milestone ledger already supports on-device reads
+   via `wm telemetry status`.
 
 ## Open questions for Lucas
 
 1. Counts: bucketed (`1-5`, `6-50`, `50+`) or raw integers? Bucketing is
-   more private, less useful.
-2. Day actives: full offsets (`active_days`) or only `d2`/`d7` booleans?
+   more private, less useful. (Scope 2 — local layer stores no counts.)
+2. Day actives: local scope 1 records one `active_dN` milestone per offset
+   (`day_offset` field); the scope-2 envelope can still choose `active_days`
+   vs only `d2`/`d7` booleans.
 3. Server retention 180 days — enough?
-4. Should the npm launcher pass an install ref through (it currently only
-   downloads the release binary)?
+4. Should the npm launcher pass an install ref through? Scope 1 answer: the
+   launcher sets `WM_INSTALL_CHANNEL=npm` only; refs stay install.sh-side
+   until a scope-2 decision.

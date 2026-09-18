@@ -1565,6 +1565,23 @@ impl McpServer {
         // Load mutable structures from disk (Phase 6 persistence)
         server.load_mutable_state();
 
+        // ── Local install funnel (scope 1) ──
+        // Writable servers record activation evidence once per store:
+        // `first_launch` + `init_ok` here, tool milestones on the dispatch
+        // path. Read-only and preservation servers write nothing (scope 1:
+        // records stay on-device; no transport, no consent surface).
+        if !readonly && !preservation_readonly {
+            let root = store_path.parent().unwrap_or(store_path);
+            let emitted = wm_tools::expansion::funnel::record_launch(
+                &server.store,
+                server.search_engine.as_deref(),
+                root,
+            );
+            if emitted > 0 {
+                tracing::info!(milestones = emitted, "local funnel milestones recorded");
+            }
+        }
+
         Ok(server)
     }
 
@@ -3770,6 +3787,38 @@ impl McpServer {
             (Ok(_), _) => (true, None),
             (Err(_), _) => (false, None),
         };
+
+        // ── Local install funnel (scope 1): activation milestones ──
+        // First `memory.create`/`session.record` success and first
+        // `session.continuity` hit with ≥ 1 prior turn are recorded once per
+        // store. Writable servers only — read-only/preservation paths write
+        // nothing. Evidence stays on-device.
+        if success && !self.readonly && !self.preservation_readonly {
+            let effective_tool = if name == "wm" {
+                dispatch_result
+                    .as_ref()
+                    .ok()
+                    .and_then(|value| value.get("_wm_route"))
+                    .and_then(|route| route.get("tool"))
+                    .and_then(Value::as_str)
+            } else {
+                Some(name)
+            };
+            if let Some(effective_tool) = effective_tool {
+                let store_path = self.store.path();
+                let root = store_path.parent().unwrap_or(store_path);
+                let emitted = wm_tools::expansion::funnel::record_tool_milestone(
+                    &self.store,
+                    self.search_engine.as_deref(),
+                    root,
+                    effective_tool,
+                    dispatch_result.as_ref().ok(),
+                );
+                if emitted > 0 {
+                    tracing::info!(tool = effective_tool, "local funnel milestone recorded");
+                }
+            }
+        }
 
         // Record dispatch metrics into self-model for future forecasting
         // (skipped under the freeze pin: no metrics keeps confidence at 0.5).
@@ -6581,6 +6630,83 @@ mod tests {
                 "forbidden artifact: {forbidden}"
             );
         }
+    }
+
+    /// Scope 1 funnel wiring: writable init records launch milestones and
+    /// successful tool calls record the memory/resume milestones; read-only
+    /// init writes nothing (pinned independently by the preservation tree
+    /// snapshot above).
+    #[tokio::test]
+    async fn local_funnel_records_writable_milestones_only() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = test_store_path(&tmp);
+        let root = store.parent().unwrap().to_path_buf();
+
+        // Writable launch: first_launch + init_ok, ledger persisted.
+        let server = McpServer::with_defaults(&store).unwrap();
+        let state = wm_tools::expansion::funnel::read_state(&root).expect("funnel ledger");
+        assert!(
+            state.milestones.iter().any(|m| m == "first_launch"),
+            "{state:?}"
+        );
+        assert!(state.milestones.iter().any(|m| m == "init_ok"), "{state:?}");
+        drop(server);
+
+        // Tool milestones: session.start → record → continuity with history.
+        let mut server = McpServer::with_defaults(&store).unwrap();
+        let _ = server
+            .handle_request(r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}"#)
+            .await;
+        let started = crate::selftest::call(
+            &mut server,
+            1,
+            "session.start",
+            json!({"title": "funnel wiring probe"}),
+        )
+        .await;
+        assert!(
+            started.get("session_id").is_some() || started.get("status").is_some(),
+            "session.start should succeed: {started}"
+        );
+        crate::selftest::call(
+            &mut server,
+            2,
+            "session.record",
+            json!({"content": "funnel wiring probe turn", "role": "user", "turn_type": "decision"}),
+        )
+        .await;
+        let state = wm_tools::expansion::funnel::read_state(&root).expect("funnel ledger");
+        assert!(
+            state.milestones.iter().any(|m| m == "first_memory"),
+            "a successful session.record must emit first_memory: {state:?}"
+        );
+        drop(server);
+
+        let mut reopened = McpServer::with_defaults(&store).unwrap();
+        let continuity =
+            crate::selftest::call(&mut reopened, 3, "session.continuity", json!({"n": 5})).await;
+        assert!(
+            continuity["count"].as_u64().unwrap_or(0) >= 1
+                && !continuity["previous_session"].is_null(),
+            "probe needs a populated previous session: {continuity}"
+        );
+        let state = wm_tools::expansion::funnel::read_state(&root).expect("funnel ledger");
+        assert!(
+            state.milestones.iter().any(|m| m == "first_resume"),
+            "a continuity hit with ≥ 1 prior turn must emit first_resume: {state:?}"
+        );
+        drop(reopened);
+
+        // Read-only launch: no ledger, no funnel write of any kind.
+        let tmp2 = tempfile::tempdir().unwrap();
+        let store2 = test_store_path(&tmp2);
+        initialize_readonly_store(&store2);
+        let root2 = store2.parent().unwrap();
+        let _readonly = McpServer::with_defaults_mode(&store2, true).unwrap();
+        assert!(
+            !root2.join("funnel_state.json").exists(),
+            "read-only init must not write the funnel ledger"
+        );
     }
 
     #[test]

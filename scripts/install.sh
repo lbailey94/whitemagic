@@ -4,6 +4,12 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
 #   curl -fsSL ... | sh -s -- --version v9.1.9
+#   curl -fsSL ... | sh -s -- --ref hero      # install attribution (local marker)
+#
+# --ref (or WM_INSTALL_REF) is recorded locally in
+# <store-root>/install_channel so `wm status` / `wm telemetry status` can show
+# how this install arrived. It is sanitized (lowercase, [a-z0-9_-], 24 chars),
+# never transmitted, and never fails the install.
 #
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
@@ -20,6 +26,36 @@ VERSION=""
 TARGET=""
 INSTALL_DIR="${HOME}/.local/bin"
 REPO="lbailey94/whitemagic"
+REF="${WM_INSTALL_REF:-}"
+
+# Site middleware sanitization for install refs: lowercase, [a-z0-9_-],
+# capped at 24 chars (whitemagic-site/middleware.ts). Empty means no ref.
+sanitize_ref() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-' | cut -c1-24
+}
+
+# Record the arrival channel locally (best effort; never fails the install,
+# never creates lmdb/). Content: install_sh[:ref], atomically renamed into
+# place so a reinstall updates it in one step.
+write_install_marker() {
+    _store_root="${XDG_DATA_HOME:-${HOME}/.local/share}/whitemagic"
+    _marker="${_store_root}/install_channel"
+    _tmp="${_store_root}/.install_channel.tmp"
+    if ! mkdir -p "${_store_root}" 2>/dev/null; then
+        return 0
+    fi
+    if [ -n "${REF}" ]; then
+        _value="install_sh:${REF}"
+    else
+        _value="install_sh"
+    fi
+    if printf '%s\n' "${_value}" > "${_tmp}" 2>/dev/null \
+        && mv "${_tmp}" "${_marker}" 2>/dev/null; then
+        return 0
+    fi
+    rm -f "${_tmp}" 2>/dev/null || true
+    return 0
+}
 
 # Detect platform if not specified
 detect_target() {
@@ -44,9 +80,12 @@ while [ $# -gt 0 ]; do
         --version) VERSION="$2"; shift 2 ;;
         --target) TARGET="$2"; shift 2 ;;
         --dir) INSTALL_DIR="$2"; shift 2 ;;
+        --ref) REF="$2"; shift 2 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
+
+REF="$(sanitize_ref "${REF}")"
 
 if [ -z "$TARGET" ]; then
     TARGET="$(detect_target)"
@@ -147,6 +186,9 @@ echo "Installing to ${INSTALL_DIR}..."
 mkdir -p "$INSTALL_DIR"
 mv "${BINARY_PATH}" "${INSTALL_DIR}/wm"
 chmod +x "${INSTALL_DIR}/wm"
+
+# Local arrival marker (best effort; never fails the install).
+write_install_marker
 
 echo ""
 echo "WhiteMagic ${VERSION} installed to ${INSTALL_DIR}/wm"

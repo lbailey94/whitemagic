@@ -34,10 +34,12 @@ use super::common;
 const TAG_WINDOW: &str = "window";
 const TAG_ROLLUP: &str = "rollup";
 const TAG_OBSERVATION: &str = "observation";
-const RECORD_KINDS: [&str; 3] = [
+const TAG_FUNNEL: &str = "funnel";
+const RECORD_KINDS: [&str; 4] = [
     "telemetry.window",
     "telemetry.rollup",
     "telemetry.observation",
+    "telemetry.funnel",
 ];
 pub(crate) const IMPORTANCE_CEILING: f32 = 0.40;
 const SOURCE_TRUST: f32 = 0.7;
@@ -56,7 +58,7 @@ fn telemetry_effects(destructive: bool, writes: bool) -> EffectRow {
 }
 
 /// Validate a telemetry record shape. Returns the kind string.
-fn validate_record(record: &Value) -> std::result::Result<&'static str, String> {
+pub(crate) fn validate_record(record: &Value) -> std::result::Result<&'static str, String> {
     let kind = record
         .get("kind")
         .and_then(Value::as_str)
@@ -69,6 +71,47 @@ fn validate_record(record: &Value) -> std::result::Result<&'static str, String> 
         .get("ts")
         .and_then(Value::as_str)
         .ok_or_else(|| "record.ts (RFC3339) is required".to_string())?;
+    if *kind == "telemetry.funnel" {
+        // Local activation evidence: milestone identity plus bounded,
+        // content-free attribution fields. No free-text field is accepted.
+        let milestone = record
+            .get("milestone")
+            .and_then(Value::as_str)
+            .filter(|milestone| !milestone.is_empty())
+            .ok_or_else(|| {
+                "record.milestone (non-empty string) is required for telemetry.funnel records"
+                    .to_string()
+            })?;
+        if !super::funnel::is_known_milestone(milestone) {
+            return Err(format!(
+                "record.milestone '{milestone}' is not a known funnel milestone"
+            ));
+        }
+        if let Some(channel) = record.get("channel") {
+            let channel = channel.as_str().ok_or_else(|| {
+                "record.channel (string) must be a site install channel".to_string()
+            })?;
+            if super::funnel::Channel::parse(channel).is_none() {
+                return Err(format!(
+                    "record.channel '{channel}' must be one of install_sh|binary|npm|docker|cargo|source|unknown"
+                ));
+            }
+        }
+        for field in ["version", "os", "arch"] {
+            if record.get(field).is_some_and(|value| !value.is_string()) {
+                return Err(format!("record.{field} (string) is required when present"));
+            }
+        }
+        if record
+            .get("day_offset")
+            .is_some_and(|offset| offset.as_u64().is_none())
+        {
+            return Err(
+                "record.day_offset (non-negative integer) is required when present".to_string(),
+            );
+        }
+        return Ok(kind);
+    }
     if *kind == "telemetry.observation" {
         // Policy decision records (step-0 observation ladder): identity and
         // transition fields are mandatory; harmony/dims do not apply.
@@ -122,7 +165,10 @@ fn validate_record(record: &Value) -> std::result::Result<&'static str, String> 
 }
 
 /// Store a validated record in the telemetry galaxy. Returns (id, deduplicated).
-fn store_record(
+///
+/// Shared with the funnel emitter (`super::funnel`) so tags/class/ceiling
+/// discipline stays centralized on the typed path.
+pub(crate) fn store_record(
     store: &MemoryStore,
     search: Option<&SearchEngine>,
     record: &Value,
@@ -150,6 +196,7 @@ fn store_record(
     let kind_tag = match kind {
         "telemetry.window" => TAG_WINDOW,
         "telemetry.observation" => TAG_OBSERVATION,
+        "telemetry.funnel" => TAG_FUNNEL,
         _ => TAG_ROLLUP,
     };
     if !tags.iter().any(|t| t == kind_tag) {
@@ -222,12 +269,12 @@ impl Tool for TelemetryRecordTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Record one telemetry window/rollup (schema wm-telemetry-v1) into the telemetry galaxy. Args: record (object with kind/ts/harmony_score/dims), source (optional trust label), importance (optional, capped 0.40). Deduplicates on identical content."
+        "Record one telemetry window/rollup/observation/funnel record (schema wm-telemetry-v1) into the telemetry galaxy. Args: record (object with kind/ts/harmony_score/dims), source (optional trust label), importance (optional, capped 0.40). Deduplicates on identical content."
     }
     fn input_schema(&self) -> Value {
         common::schema(
             &json!({
-                "record": {"type": "object", "description": "telemetry.window | telemetry.rollup record (required)"},
+                "record": {"type": "object", "description": "telemetry.window | telemetry.rollup | telemetry.observation | telemetry.funnel record (required)"},
                 "source": common::str_prop("producer label (default 'agent')"),
                 "importance": common::num_prop("0-1, capped to the telemetry class ceiling 0.40"),
             }),
@@ -682,6 +729,7 @@ fn retention_inventory(
     let mut windows = Tier::default();
     let mut rollups = Tier::default();
     let mut observations = Tier::default();
+    let mut funnel = Tier::default();
     let mut unmanaged = Tier::default();
     for memory in &memories {
         let created = memory.metadata.created_at;
@@ -697,6 +745,8 @@ fn retention_inventory(
             rollups.observe(created, eligible, bytes);
         } else if tags.iter().any(|t| t == TAG_OBSERVATION) {
             observations.observe(created, false, bytes);
+        } else if tags.iter().any(|t| t == TAG_FUNNEL) {
+            funnel.observe(created, false, bytes);
         } else {
             unmanaged.observe(created, false, bytes);
         }
@@ -707,14 +757,19 @@ fn retention_inventory(
     observation_json["note"] = json!(
         "policy decision records are governance evidence; telemetry.prune does not delete them"
     );
+    let mut funnel_json = funnel.ages();
+    funnel_json["managed"] = json!(false);
+    funnel_json["note"] =
+        json!("store-lifetime evidence; telemetry.prune does not delete; reset explicitly");
     let mut unmanaged_json = unmanaged.ages();
-    unmanaged_json["note"] = json!("telemetry rows without a window/rollup/observation tag");
+    unmanaged_json["note"] = json!("telemetry rows without a window/rollup/observation/funnel tag");
 
     let prune_due = windows.eligible + rollups.eligible > 0;
     let inventory = json!({
         "windows": windows.json(window_days),
         "rollups": rollups.json(rollup_days),
         "observations": observation_json,
+        "funnel": funnel_json,
         "unmanaged": unmanaged_json,
     });
     Ok((inventory, prune_due))
@@ -932,6 +987,54 @@ mod tests {
             .unwrap();
         assert_eq!(out["kind"], "telemetry.rollup");
         assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 2);
+
+        // Funnel records validate on milestone identity, not harmony.
+        let funnel = json!({
+            "kind": "telemetry.funnel",
+            "ts": "2026-09-18T00:00:00+00:00",
+            "milestone": "active_d2",
+            "channel": "install_sh",
+            "version": "9.1.9",
+            "os": "linux",
+            "arch": "x86_64",
+            "day_offset": 2,
+        });
+        let out = tool
+            .call(&mut Context::default(), json!({"record": funnel}))
+            .await
+            .unwrap();
+        assert_eq!(out["kind"], "telemetry.funnel");
+        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 3);
+        let funnel_tags = store
+            .scan_all(Galaxy::Telemetry)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.metadata.tags.iter().any(|t| t == TAG_FUNNEL))
+            .expect("funnel tag");
+        assert!(funnel_tags.metadata.importance <= IMPORTANCE_CEILING);
+
+        // Unknown milestones and channels are loud.
+        let bad_milestone = json!({
+            "kind": "telemetry.funnel",
+            "ts": "2026-09-18T00:00:00+00:00",
+            "milestone": "activation",
+        });
+        assert!(
+            tool.call(&mut Context::default(), json!({"record": bad_milestone}))
+                .await
+                .is_err()
+        );
+        let bad_channel = json!({
+            "kind": "telemetry.funnel",
+            "ts": "2026-09-18T00:00:00+00:00",
+            "milestone": "first_launch",
+            "channel": "email",
+        });
+        assert!(
+            tool.call(&mut Context::default(), json!({"record": bad_channel}))
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]
@@ -1035,6 +1138,7 @@ mod tests {
             ("rollup", now - ChronoDuration::days(100)),
             ("rollup", now - ChronoDuration::hours(2)),
             ("observation", now - ChronoDuration::days(1)),
+            ("funnel", now - ChronoDuration::days(400)),
             ("", now - ChronoDuration::days(30)),
         ] {
             let mut mem = Memory::new(Galaxy::Telemetry, format!("{{\"ts\":\"{created}\"}}"));
@@ -1058,6 +1162,15 @@ mod tests {
         assert_eq!(out["inventory"]["rollups"]["eligible"], 1);
         assert_eq!(out["inventory"]["observations"]["count"], 1);
         assert_eq!(out["inventory"]["observations"]["managed"], false);
+        assert_eq!(
+            out["inventory"]["funnel"]["count"], 1,
+            "funnel records are inventoried as a tier"
+        );
+        assert!(
+            out["inventory"]["funnel"]["eligible"].is_null(),
+            "funnel records are store-lifetime evidence — never prune-eligible"
+        );
+        assert_eq!(out["inventory"]["funnel"]["managed"], false);
         assert_eq!(out["inventory"]["unmanaged"]["count"], 1);
         assert!(
             out["inventory"]["windows"]["next_eligible_since"].is_string(),
@@ -1066,7 +1179,7 @@ mod tests {
         assert!(out["inventory"]["windows"]["bytes"].as_u64().unwrap() > 0);
         assert_eq!(
             store.count(Galaxy::Telemetry).unwrap(),
-            6,
+            7,
             "the planner is read-only"
         );
 
@@ -1079,15 +1192,26 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(calm["prune_due"], false);
-        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 6);
+        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 7);
 
-        // And a wet prune executes exactly what the planner predicted.
+        // And a wet prune executes exactly what the planner predicted —
+        // windows/rollups only, never the funnel evidence.
         let prune = TelemetryPruneTool::new(Arc::clone(&store));
         let wet = prune
             .call(&mut Context::default(), json!({"dry_run": false}))
             .await
             .unwrap();
         assert_eq!(wet["deleted"], 2);
-        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 4);
+        assert_eq!(store.count(Galaxy::Telemetry).unwrap(), 5);
+        assert_eq!(
+            store
+                .scan_all(Galaxy::Telemetry)
+                .unwrap()
+                .iter()
+                .filter(|m| m.metadata.tags.iter().any(|t| t == TAG_FUNNEL))
+                .count(),
+            1,
+            "prune must leave funnel records untouched"
+        );
     }
 }

@@ -22,6 +22,7 @@ pub const RECORD_KINDS: &[&str] = &[
     "telemetry.window",
     "telemetry.rollup",
     "telemetry.observation",
+    "telemetry.funnel",
 ];
 
 /// The machine-readable telemetry contract: fields, retention, redaction,
@@ -52,6 +53,7 @@ pub fn schema_json() -> Value {
             "windows_days": 7,
             "rollups_days": 90,
             "observations": "retained with rollups (policy decision trail)",
+            "funnel": "store-lifetime activation evidence; telemetry.prune does not delete it (reset explicitly)",
             "prune": "`telemetry.retention` reports the inventory (read-only); the destructive `telemetry.prune` requires confirm: true",
         },
         "records": [
@@ -71,6 +73,12 @@ pub fn schema_json() -> Value {
                 "required": ["kind", "ts", "policy_id", "metric", "state", "action", "value"],
                 "optional": ["subject", "actuator", "step"],
                 "notes": "policy-decision record from the observation ladder (Yama bridge)",
+            },
+            {
+                "kind": "telemetry.funnel",
+                "required": ["kind", "ts", "milestone"],
+                "optional": ["channel", "version", "os", "arch", "day_offset", "importance", "source", "tags"],
+                "notes": "local activation evidence (no consent needed; nothing leaves the device); milestones first_launch|init_ok|first_memory|first_resume|active_dN. channel uses the site vocabulary install_sh|binary|npm|docker|cargo|source|unknown",
             },
         ],
     })
@@ -97,12 +105,17 @@ pub fn schema_lines() -> Vec<String> {
         String::new(),
         "Redaction pass: credential spans scrubbed before any preview/send (same pass as ingest)."
             .to_string(),
-        "Retention: windows 7 d, rollups 90 d, observations with rollups; telemetry.retention"
+        "Retention: windows 7 d, rollups 90 d, observations with rollups, funnel records"
             .to_string(),
-        "reports the inventory read-only and telemetry.prune deletes it (confirm-gated)."
+        "store-lifetime (telemetry.retention reports the inventory read-only; telemetry.prune"
             .to_string(),
+        "deletes windows/rollups only — reset funnel evidence explicitly).".to_string(),
         String::new(),
         "Transport: none — display-only until an explicit opt-in phase exists.".to_string(),
+        format!(
+            "Install funnel: wm telemetry status shows local activation evidence; {}",
+            wm_tools::expansion::funnel::TRANSPORT_LINE
+        ),
         "Machine form: wm telemetry schema --json".to_string(),
     ]);
     out
@@ -127,6 +140,16 @@ pub fn load_recent_telemetry(lmdb_dir: &Path, limit: usize) -> Vec<Value> {
         .collect();
     records.sort_by_key(|(created, _)| std::cmp::Reverse(*created));
     records.into_iter().take(limit).map(|(_, v)| v).collect()
+}
+
+/// Read-only install-funnel status for `wm telemetry status`.
+///
+/// Works with no store (marker/env classification only), opens LMDB for
+/// inspection only when a store exists, and writes nothing. Delegates to the
+/// funnel module so the CLI and the schema cannot drift.
+#[must_use]
+pub fn load_funnel_status(store_root: &Path) -> Value {
+    wm_tools::expansion::funnel::status_report(store_root)
 }
 
 /// Build the exact payload a hypothetical opt-in transmission would carry.
@@ -181,7 +204,30 @@ mod tests {
         }
         assert_eq!(schema["retention"]["windows_days"], 7);
         assert_eq!(schema["retention"]["rollups_days"], 90);
+        assert!(
+            schema["retention"]["funnel"].is_string(),
+            "funnel retention posture must be published"
+        );
         assert!(!schema_lines().is_empty());
+    }
+
+    #[test]
+    fn funnel_status_reads_the_marker_without_a_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("install_channel"), "install_sh:hero\n").unwrap();
+        let status = load_funnel_status(tmp.path());
+        assert_eq!(status["read_only"], true);
+        assert_eq!(status["channel"], "install_sh");
+        assert_eq!(status["channel_ref"], "hero");
+        assert_eq!(status["store_present"], false);
+        assert_eq!(status["first_launch"], Value::Null);
+        assert!(
+            status["transport"]
+                .as_str()
+                .unwrap_or("")
+                .contains("no share command exists"),
+            "the CLI status must disclose the transport posture: {status}"
+        );
     }
 
     #[test]

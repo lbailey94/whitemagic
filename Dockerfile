@@ -30,6 +30,10 @@ RUN apk add --no-cache curl coreutils \
  && install -m 0755 "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" /usr/local/bin/wm \
  && rm -f "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}.sha256"
 
+# Local install-funnel attribution: the binary records `docker` as the
+# arrival channel on-device only (scope 1 — no transport, nothing sent).
+ENV WM_INSTALL_CHANNEL=docker
+
 WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/wm"]
 # Default to the MCP stdio server so `docker run -i <image>` speaks MCP

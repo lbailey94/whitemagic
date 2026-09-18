@@ -263,11 +263,13 @@ enum Commands {
         #[arg(long)]
         week: bool,
     },
-    /// Telemetry schema and display-only transmission preview
+    /// Telemetry schema, local funnel status, and display-only preview
     ///
     /// Records are local; nothing is transmitted. `schema` publishes the
-    /// record/retention/redaction contract; `preview` shows exactly what a
-    /// future opt-in transmission would carry from this store.
+    /// record/retention/redaction contract; `status` shows local install
+    /// funnel evidence (channel, first launch, milestones, active days);
+    /// `preview` shows exactly what a future opt-in transmission would carry
+    /// from this store.
     Telemetry {
         #[command(subcommand)]
         command: TelemetryCommands,
@@ -618,6 +620,15 @@ enum Commands {
 enum TelemetryCommands {
     /// Publish the telemetry record/retention/redaction contract
     Schema {
+        /// Machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show local install-funnel evidence (read-only; works with no store)
+    Status {
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
         /// Machine-readable JSON
         #[arg(long)]
         json: bool,
@@ -1990,6 +2001,62 @@ fn run() -> anyhow::Result<()> {
                     for line in wm_mcp::telemetry_view::schema_lines() {
                         println!("{line}");
                     }
+                }
+            }
+            TelemetryCommands::Status { store, json } => {
+                let store_path = store.unwrap_or_else(default_store_path);
+                let status = wm_mcp::telemetry_view::load_funnel_status(&store_path);
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&status)?);
+                } else {
+                    println!("=== Telemetry Funnel (local only; nothing is transmitted) ===");
+                    println!(
+                        "Store: {} ({})",
+                        store_path.display(),
+                        if status["store_present"].as_bool().unwrap_or(false) {
+                            "store present"
+                        } else {
+                            "no store yet"
+                        }
+                    );
+                    let channel = status["channel"].as_str().unwrap_or("unknown");
+                    match status["channel_ref"].as_str() {
+                        Some(reference) => println!("Channel: {channel} (ref: {reference})"),
+                        None => println!("Channel: {channel}"),
+                    }
+                    println!(
+                        "First launch: {}",
+                        status["first_launch"].as_str().unwrap_or("none recorded")
+                    );
+                    let milestones = status["milestones"]
+                        .as_array()
+                        .map(|items| {
+                            items
+                                .iter()
+                                .filter_map(serde_json::Value::as_str)
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        })
+                        .filter(|joined| !joined.is_empty())
+                        .unwrap_or_else(|| "none yet".to_string());
+                    println!("Milestones: {milestones}");
+                    let active_days = status["active_days"]
+                        .as_array()
+                        .map(|items| {
+                            items
+                                .iter()
+                                .filter_map(serde_json::Value::as_u64)
+                                .map(|day| format!("d{day}"))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        })
+                        .filter(|joined| !joined.is_empty())
+                        .unwrap_or_else(|| "none yet".to_string());
+                    println!("Active days: {active_days}");
+                    println!(
+                        "Transport: {}",
+                        status["transport"].as_str().unwrap_or("none")
+                    );
                 }
             }
             TelemetryCommands::Preview { store, limit, json } => {

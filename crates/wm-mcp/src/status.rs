@@ -54,6 +54,12 @@ pub struct StatusReport {
     pub backup_history_split: bool,
     pub profile: String,
     pub project: Option<String>,
+    /// Channel marker written by `scripts/install.sh`
+    /// (`<store-root>/install_channel`, content `install_sh[:ref]`). Read even
+    /// when the store is not initialized — an arrival record, not store state.
+    pub install_channel: Option<String>,
+    /// Sanitized install ref from the marker, if any.
+    pub install_channel_ref: Option<String>,
     pub update: Option<String>,
 }
 
@@ -137,6 +143,13 @@ impl StatusReport {
         out.push(format!("MCP profile        {}", self.profile));
         if let Some(p) = &self.project {
             out.push(format!("Project scope      {p}"));
+        }
+        if let Some(channel) = &self.install_channel {
+            let line = match &self.install_channel_ref {
+                Some(reference) => format!("Installed via      {channel} (ref: {reference})"),
+                None => format!("Installed via      {channel}"),
+            };
+            out.push(line);
         }
         if let Some(u) = &self.update {
             out.push(format!("Update             {u}"));
@@ -258,6 +271,15 @@ pub fn read_install_json(store_root: &Path) -> Option<serde_json::Value> {
     let p = store_root.join("install.json");
     let text = std::fs::read_to_string(p).ok()?;
     serde_json::from_str(&text).ok()
+}
+
+/// Read the installer's channel marker even when the store is not
+/// initialized. A marker is an arrival record, not store state — it must
+/// never flip `state` to initialized.
+#[must_use]
+pub fn read_install_channel(store_root: &Path) -> Option<(String, Option<String>)> {
+    let text = std::fs::read_to_string(store_root.join("install_channel")).ok()?;
+    wm_tools::expansion::funnel::parse_marker(&text)
 }
 
 /// Collect status for the given store root (the directory containing `lmdb/`).
@@ -389,6 +411,11 @@ pub fn collect(store_root: &Path) -> StatusReport {
         "attention"
     };
 
+    let (install_channel, install_channel_ref) = read_install_channel(store_root)
+        .map_or((None, None), |(channel, reference)| {
+            (Some(channel), reference)
+        });
+
     StatusReport {
         version: env!("CARGO_PKG_VERSION").to_string(),
         store_path: store_root.display().to_string(),
@@ -409,6 +436,8 @@ pub fn collect(store_root: &Path) -> StatusReport {
         backup_history_split,
         profile,
         project,
+        install_channel,
+        install_channel_ref,
         update,
     }
 }
@@ -442,6 +471,29 @@ mod tests {
                 .iter()
                 .any(|l| l.contains("Search index") && l.contains("not created yet")),
             "index line must name the fresh state: {lines:?}"
+        );
+    }
+
+    #[test]
+    fn install_marker_reports_channel_without_initializing() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(
+            tmp.path().join("install_channel"),
+            "install_sh:HERO!!2026\n",
+        )
+        .unwrap();
+        let report = collect(tmp.path());
+        assert_eq!(report.state, "not_initialized", "a marker is not a store");
+        assert_eq!(report.install_channel.as_deref(), Some("install_sh"));
+        assert_eq!(report.install_channel_ref.as_deref(), Some("hero2026"));
+        let text = report.lines().join("\n");
+        assert!(
+            text.contains("Installed via      install_sh (ref: hero2026)"),
+            "{text}"
+        );
+        assert!(
+            !text.contains("needs attention"),
+            "a fresh install with a marker is still a fresh install: {text}"
         );
     }
 
@@ -562,6 +614,8 @@ mod tests {
             backup_history_split: true,
             profile: "curated".into(),
             project: None,
+            install_channel: None,
+            install_channel_ref: None,
             update: None,
         };
         let text = report.lines().join("\n");

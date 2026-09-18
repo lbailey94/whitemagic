@@ -58,6 +58,7 @@ pub mod correlation;
 pub mod dharma;
 pub mod drive;
 pub mod firewall;
+pub mod funnel;
 pub mod galaxy;
 pub mod geneseed;
 pub mod glyph;

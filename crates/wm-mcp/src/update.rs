@@ -452,6 +452,29 @@ mod tests {
         );
     }
 
+    /// The funnel classifier lives in `wm-tools` (below `wm-mcp` in the
+    /// dependency graph) and duplicates this heuristic by necessity — this
+    /// test fails the moment the two drift.
+    #[test]
+    fn funnel_detection_matches_wm_update() {
+        for path in [
+            "/home/x/.cargo/bin/wm",
+            "/opt/homebrew/Cellar/whitemagic/9.1.9/bin/wm",
+            "/usr/local/homebrew/bin/wm",
+            "/usr/lib/node_modules/whitemagic-mcp/bin/wm",
+            "/home/x/.npm/bin/wm",
+            "/home/x/.local/bin/wm",
+            "/tmp/target/debug/wm",
+        ] {
+            let exe = Path::new(path);
+            assert_eq!(
+                wm_tools::expansion::funnel::installed_via_from_exe(exe),
+                detect_installed_via(exe),
+                "funnel/exe detection drifted at {path}"
+            );
+        }
+    }
+
     #[test]
     fn platform_target_mapping_exists_on_supported_builds() {
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]

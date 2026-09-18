@@ -28,6 +28,16 @@ export function releaseTag(pkgVersion, env = process.env) {
   return env.WHITEMAGIC_RELEASE ?? `v${pkgVersion}`;
 }
 
+/**
+ * Environment for the spawned `wm` child. Marks the install channel so the
+ * binary's local install funnel can attribute this launch (recorded
+ * on-device only — scope 1 has no transport). Returns a copy: the caller's
+ * environment is never mutated.
+ */
+export function childEnvironment(env = process.env) {
+  return { ...env, WM_INSTALL_CHANNEL: "npm" };
+}
+
 export function assetFor(p = platform(), a = arch()) {
   if (p === "linux" && a === "x64") return "wm-linux-x86_64-musl";
   if (p === "darwin" && a === "arm64") return "wm-macos-aarch64";

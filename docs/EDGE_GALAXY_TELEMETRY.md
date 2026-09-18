@@ -101,6 +101,7 @@ producer's local ring):
 | Raw samples | producer ring (volatile) | minutes |
 | Windows | `telemetry.window` records | 7 d (`windows_older_than_days=7`) |
 | Rollups | `telemetry.rollup` — deterministic hourly aggregates (avg/min/max per dim, guna sums, event topics); re-runs deduplicate | 90 d (`rollups_older_than_days=90`) |
+| Funnel milestones | `telemetry.funnel` records (install-funnel scope 1) | **store lifetime** — `telemetry.retention` lists the `funnel` tier as `managed: false`; `telemetry.prune` never deletes it (reset explicitly) |
 
 - `telemetry.record` — typed ingestion (validates kind/ts/harmony_score/dims,
   caps importance at the telemetry class ceiling 0.40, dedup-aware).
@@ -112,8 +113,10 @@ producer's local ring):
   host was busy).
 - `telemetry.retention` — **read-only retention planner** (v9.1.5+): per-tier
   counts/bytes/oldest-newest/eligible under the exact horizons prune uses,
-  plus `managed: false` observation inventory (policy decision records are
-  governance evidence and are not pruned). It declares no writes and is never
+  plus `managed: false` inventories for observations (policy decision
+  records are governance evidence and are not pruned) and funnel milestones
+  (store-lifetime activation evidence; not deleted by `telemetry.prune`). It
+  declares no writes and is never
   confirm-gated or dharma-gated, so pre-prune evidence is always available —
   live-verified on a scratch store 2026-09-14 (planner reported
   `next_eligible_since` and `prune_due`; a wet prune was then vetoed by the

@@ -77,10 +77,15 @@ class InstallScriptProfileTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def run_installer(self):
+    def run_installer(self, *extra_args, env_extra=None):
         env = dict(os.environ)
         env["HOME"] = self.home
         env["STUB_BINARY"] = self.stub_binary
+        # The host's store location must never be touched by a test run.
+        env.pop("XDG_DATA_HOME", None)
+        env.pop("WM_INSTALL_REF", None)
+        if env_extra:
+            env.update(env_extra)
         # PATH must not already contain the install dir, so the wiring branch
         # under test is actually reached.
         env["PATH"] = self.shim_dir + ":/usr/bin:/bin"
@@ -92,6 +97,7 @@ class InstallScriptProfileTest(unittest.TestCase):
                 "v9.1.6",
                 "--target",
                 "x86_64-unknown-linux-musl",
+                *extra_args,
             ],
             capture_output=True,
             text=True,
@@ -101,6 +107,16 @@ class InstallScriptProfileTest(unittest.TestCase):
 
     def expected_line(self):
         return f'export PATH="{self.home}/.local/bin:$PATH"'
+
+    def default_store_root(self):
+        return os.path.join(self.home, ".local", "share", "whitemagic")
+
+    def read_marker(self, store_root=None):
+        path = os.path.join(store_root or self.default_store_root(), "install_channel")
+        if not os.path.exists(path):
+            return None
+        with open(path, encoding="utf-8") as fh:
+            return fh.read()
 
     def read_profile(self):
         path = os.path.join(self.home, ".profile")
@@ -177,6 +193,72 @@ class InstallScriptProfileTest(unittest.TestCase):
         installed = os.path.join(self.home, ".local", "bin", "wm")
         self.assertTrue(os.path.exists(installed))
         self.assertTrue(os.stat(installed).st_mode & stat.S_IEXEC)
+
+    # ── Local install-funnel marker (scope 1) ──────────────────────────
+
+    def test_installer_writes_local_channel_marker(self):
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.read_marker(), "install_sh\n")
+        self.assertFalse(
+            os.path.exists(os.path.join(self.default_store_root(), "lmdb")),
+            "the marker is best-effort attribution — it must not create lmdb/",
+        )
+        self.assertFalse(
+            os.path.exists(
+                os.path.join(self.default_store_root(), ".install_channel.tmp")
+            ),
+            "atomic write must not leave the tmp file behind",
+        )
+
+    def test_installer_records_sanitized_ref(self):
+        result = self.run_installer("--ref", "Hero-Ref_2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.read_marker(), "install_sh:hero-ref_2\n")
+
+    def test_installer_sanitizes_unsafe_ref(self):
+        # Site middleware rule: lowercase, [a-z0-9_-] only, 24 chars max.
+        result = self.run_installer("--ref", "Bad Ref!!<script>")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.read_marker(), "install_sh:badrefscript\n")
+
+        result = self.run_installer("--ref", "A" * 40)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.read_marker(), "install_sh:" + "a" * 24 + "\n")
+
+    def test_installer_honors_wm_install_ref(self):
+        result = self.run_installer(env_extra={"WM_INSTALL_REF": "Newsletter"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.read_marker(), "install_sh:newsletter\n")
+
+    def test_installer_respects_xdg_data_home(self):
+        xdg = os.path.join(self.tmp, "xdg-data")
+        result = self.run_installer(env_extra={"XDG_DATA_HOME": xdg})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        marker = self.read_marker(os.path.join(xdg, "whitemagic"))
+        self.assertEqual(marker, "install_sh\n")
+        self.assertIsNone(
+            self.read_marker(),
+            "XDG_DATA_HOME must win over the ~/.local/share default",
+        )
+
+    def test_reinstall_updates_marker_atomically(self):
+        first = self.run_installer("--ref", "one")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertEqual(self.read_marker(), "install_sh:one\n")
+
+        second = self.run_installer("--ref", "two")
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(self.read_marker(), "install_sh:two\n")
+
+        third = self.run_installer()
+        self.assertEqual(third.returncode, 0, third.stderr)
+        self.assertEqual(self.read_marker(), "install_sh\n", "reinstall without a ref clears it")
+        self.assertFalse(
+            os.path.exists(
+                os.path.join(self.default_store_root(), ".install_channel.tmp")
+            )
+        )
 
 
 if __name__ == "__main__":
