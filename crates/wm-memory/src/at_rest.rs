@@ -380,7 +380,7 @@ impl AtRestState {
 
 // ── Crypto primitives ──────────────────────────────────────────────────
 
-fn fill_random(buf: &mut [u8]) -> Result<()> {
+pub(crate) fn fill_random(buf: &mut [u8]) -> Result<()> {
     getrandom::fill(buf).map_err(|e| {
         mem_err(format!(
             "at-rest entropy source failed ({e}) — refusing to generate weak key material"
@@ -1390,6 +1390,115 @@ mod tests {
                 other => panic!("expected Present, got {other:?}"),
             }
         }
+    }
+
+    #[test]
+    fn records_seal_under_the_galaxy_dek_and_read_transparently() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = open_keyfile(tmp.path());
+        let mem = Memory::new(Galaxy::Sessions, "sealed cohort".into());
+        let id = mem.metadata.id;
+        let expected = serde_json::to_value(&mem).unwrap();
+        store.put(Galaxy::Sessions, &mem).unwrap();
+
+        let raw = store
+            .get_raw(Galaxy::Sessions, id.as_bytes())
+            .unwrap()
+            .unwrap();
+        assert!(
+            crate::codec::is_sealed_record(&raw),
+            "stored value must be sealed"
+        );
+        assert!(
+            crate::codec::decode(&raw).is_err(),
+            "sealed bytes must not decode as plaintext"
+        );
+
+        let read = store.get(Galaxy::Sessions, id).unwrap().unwrap();
+        assert_eq!(serde_json::to_value(&read).unwrap(), expected);
+        assert_eq!(store.scan_all(Galaxy::Sessions).unwrap().len(), 1);
+
+        drop(store);
+        let reopened = open_keyfile(tmp.path());
+        let again = reopened.get(Galaxy::Sessions, id).unwrap().unwrap();
+        assert_eq!(serde_json::to_value(&again).unwrap(), expected);
+    }
+
+    #[test]
+    fn sealed_records_do_not_open_under_another_stores_key() {
+        let tmp_a = tempfile::tempdir().unwrap();
+        let tmp_b = tempfile::tempdir().unwrap();
+        let key_a = "aa".repeat(AT_REST_KEY_LEN);
+        let key_b = "bb".repeat(AT_REST_KEY_LEN);
+        let store_a = MemoryStore::open_with_at_rest(
+            tmp_a.path(),
+            TEST_MAP,
+            &AtRestConfig::keyfile_with_root_key(key_a),
+        )
+        .unwrap();
+        let mem = Memory::new(Galaxy::Codex, "not yours".into());
+        let id = mem.metadata.id;
+        store_a.put(Galaxy::Codex, &mem).unwrap();
+        let raw = store_a
+            .get_raw(Galaxy::Codex, id.as_bytes())
+            .unwrap()
+            .unwrap();
+        drop(store_a);
+
+        let store_b = MemoryStore::open_with_at_rest(
+            tmp_b.path(),
+            TEST_MAP,
+            &AtRestConfig::keyfile_with_root_key(key_b),
+        )
+        .unwrap();
+        store_b.put_raw(Galaxy::Codex, id.as_bytes(), &raw).unwrap();
+        let error = store_b
+            .get(Galaxy::Codex, id)
+            .expect_err("foreign ciphertext must fail closed");
+        assert!(error.to_string().contains("at-rest open failed"), "{error}");
+    }
+
+    #[test]
+    fn keyring_upgrade_reads_plaintext_and_rewrite_seals_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let legacy = Memory::new(Galaxy::Codex, "pre-existing plaintext".into());
+        let id = legacy.metadata.id;
+        {
+            let store =
+                MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::off()).unwrap();
+            store.put(Galaxy::Codex, &legacy).unwrap();
+            let raw = store
+                .get_raw(Galaxy::Codex, id.as_bytes())
+                .unwrap()
+                .unwrap();
+            assert!(!crate::codec::is_sealed_record(&raw));
+        }
+
+        let upgraded = open_keyfile(tmp.path());
+        let read = upgraded.get(Galaxy::Codex, id).unwrap().unwrap();
+        assert_eq!(read.content, legacy.content);
+        let still_plain = upgraded
+            .get_raw(Galaxy::Codex, id.as_bytes())
+            .unwrap()
+            .unwrap();
+        assert!(
+            !crate::codec::is_sealed_record(&still_plain),
+            "reads must not rewrite records"
+        );
+
+        upgraded.put(Galaxy::Codex, &read).unwrap();
+        let sealed = upgraded
+            .get_raw(Galaxy::Codex, id.as_bytes())
+            .unwrap()
+            .unwrap();
+        assert!(
+            crate::codec::is_sealed_record(&sealed),
+            "encrypt-on-rewrite must seal the next write"
+        );
+        assert_eq!(
+            upgraded.get(Galaxy::Codex, id).unwrap().unwrap().content,
+            legacy.content
+        );
     }
 
     #[test]

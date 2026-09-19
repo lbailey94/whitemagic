@@ -768,9 +768,9 @@ impl RecallEngine {
                 let mut cursor = tx
                     .open_ro_cursor(db)
                     .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
-                for (_key, value) in cursor.iter() {
+                for (key, value) in cursor.iter() {
                     report.scanned += 1;
-                    let memory = match crate::codec::decode(value) {
+                    let memory = match self.store.decode_record_value(g, key, value) {
                         Ok(memory) => memory,
                         Err(error) => {
                             report.errors += 1;

@@ -396,6 +396,61 @@ impl MemoryStore {
         self.at_rest.as_ref()
     }
 
+    /// Galaxy DEK for record AEAD, when the store runs with an unlocked
+    /// at-rest keyring (Q39 slice B).
+    fn record_cipher(&self, galaxy: Galaxy) -> Option<&[u8; 32]> {
+        self.at_rest
+            .as_ref()
+            .and_then(|state| state.galaxy_dek(galaxy.db_name()))
+    }
+
+    /// Encode a memory for storage: msgpack, sealed under the galaxy DEK
+    /// when the store has one. Keyring-absent stores are byte-identical to
+    /// the pre-slice-B codec.
+    pub(crate) fn encode_record_value(&self, galaxy: Galaxy, memory: &Memory) -> Result<Vec<u8>> {
+        let plaintext = rmp_serde::to_vec_named(memory)
+            .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
+        let Some(key) = self.record_cipher(galaxy) else {
+            return Ok(plaintext);
+        };
+        crate::codec::seal_record(
+            &plaintext,
+            key,
+            galaxy.db_name(),
+            memory.metadata.id.as_bytes(),
+            memory.metadata.version,
+        )
+        .map_err(|e| CoreError::Memory(format!("at-rest seal failed: {e}")))
+    }
+
+    /// Decode a stored record value: sealed values open under the galaxy
+    /// DEK (failing closed without one), plaintext values follow the legacy
+    /// codec path.
+    pub(crate) fn decode_record_value(
+        &self,
+        galaxy: Galaxy,
+        key_bytes: &[u8],
+        value: &[u8],
+    ) -> Result<Memory> {
+        if crate::codec::is_sealed_record(value) {
+            let Some(dek) = self.record_cipher(galaxy) else {
+                return Err(CoreError::Memory(format!(
+                    "sealed record in {} but no at-rest key is loaded (WM_AT_REST_MODE off?)",
+                    galaxy.db_name()
+                )));
+            };
+            let record_id: [u8; 16] = key_bytes
+                .try_into()
+                .map_err(|_| CoreError::Memory("sealed record key is not a 16-byte id".into()))?;
+            let opened = crate::codec::open_record(value, dek, galaxy.db_name(), &record_id)
+                .map_err(|e| CoreError::Memory(format!("at-rest open failed: {e}")))?;
+            return crate::codec::decode(&opened)
+                .map_err(|e| CoreError::Memory(format!("deserialize failed: {e}")));
+        }
+        crate::codec::decode(value)
+            .map_err(|e| CoreError::Memory(format!("deserialize failed: {e}")))
+    }
+
     /// Bounded env open for inspection paths (9.1.6).
     ///
     /// LMDB env opens can block forever: against a live writer the
@@ -801,8 +856,7 @@ impl MemoryStore {
 
         let db = self.galaxy_db(galaxy)?;
         let key = memory.metadata.id.as_bytes();
-        let val = rmp_serde::to_vec_named(memory)
-            .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
+        let val = self.encode_record_value(galaxy, memory)?;
 
         let mut tx = self
             .env
@@ -816,7 +870,7 @@ impl MemoryStore {
         let existing = tx
             .get(db, key)
             .ok()
-            .and_then(|bytes| crate::codec::decode(bytes).ok());
+            .and_then(|bytes| self.decode_record_value(galaxy, key, bytes).ok());
 
         match tx.put(db, key, &val, lmdb::WriteFlags::default()) {
             Ok(()) => {}
@@ -854,8 +908,7 @@ impl MemoryStore {
         let result = tx.get(db, key);
         match result {
             Ok(bytes) => {
-                let memory: Memory = crate::codec::decode(bytes)
-                    .map_err(|e| CoreError::Memory(format!("deserialize failed: {e}")))?;
+                let memory = self.decode_record_value(galaxy, key, bytes)?;
                 tx.commit()
                     .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
                 Ok(Some(memory))
@@ -900,7 +953,7 @@ impl MemoryStore {
         if exists {
             // Read memory to get index values for cleanup
             if let Ok(bytes) = tx.get(db, key) {
-                if let Ok(memory) = crate::codec::decode(bytes) {
+                if let Ok(memory) = self.decode_record_value(galaxy, key, bytes) {
                     let _ = self.index_dbs.remove(&mut tx, galaxy, &memory);
                 }
             }
@@ -928,11 +981,11 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
 
         let mut memories = Vec::with_capacity(limit.min(256));
-        for (i, (_key, val)) in cursor.iter().enumerate() {
+        for (i, (key, val)) in cursor.iter().enumerate() {
             if memories.len() >= limit {
                 break;
             }
-            match crate::codec::decode(val) {
+            match self.decode_record_value(galaxy, key, val) {
                 Ok(memory) => memories.push(memory),
                 Err(e) => {
                     tracing::warn!(
@@ -976,8 +1029,8 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
 
         let mut memories = Vec::new();
-        for (i, (_key, val)) in cursor.iter().enumerate() {
-            match crate::codec::decode(val) {
+        for (i, (key, val)) in cursor.iter().enumerate() {
+            match self.decode_record_value(galaxy, key, val) {
                 Ok(memory) => memories.push(memory),
                 Err(e) => {
                     if strict {
@@ -1051,7 +1104,7 @@ impl MemoryStore {
         let keys_to_delete: Vec<(Vec<u8>, Memory)> = cursor
             .iter()
             .filter_map(|(key, val)| {
-                if let Ok(memory) = crate::codec::decode(val) {
+                if let Ok(memory) = self.decode_record_value(galaxy, key, val) {
                     Some((key.to_vec(), memory))
                 } else {
                     None
@@ -1092,8 +1145,7 @@ impl MemoryStore {
         let mut count = 0usize;
         for memory in memories {
             let key = memory.metadata.id.as_bytes();
-            let val = rmp_serde::to_vec_named(memory)
-                .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
+            let val = self.encode_record_value(galaxy, memory)?;
             match tx.put(db, key, &val, WriteFlags::default()) {
                 Ok(()) => {}
                 Err(lmdb::Error::MapFull) => {
@@ -1273,8 +1325,7 @@ impl MemoryStore {
 
         for memory in memories {
             let key = memory.metadata.id.as_bytes();
-            let val = rmp_serde::to_vec_named(memory)
-                .map_err(|e| CoreError::Memory(format!("serialize failed: {e}")))?;
+            let val = self.encode_record_value(galaxy, memory)?;
             tx.put(db, key, &val, WriteFlags::default())
                 .map_err(|e| CoreError::Memory(format!("LMDB put_batch failed: {e}")))?;
             self.index_dbs.add(&mut tx, galaxy, memory)?;
@@ -1354,7 +1405,7 @@ impl MemoryStore {
                 break;
             }
             if let Ok(bytes) = tx.get(db, id.as_bytes()) {
-                if let Ok(mem) = crate::codec::decode(bytes) {
+                if let Ok(mem) = self.decode_record_value(galaxy, id.as_bytes(), bytes) {
                     results.push(mem);
                 }
             }
@@ -1386,7 +1437,7 @@ impl MemoryStore {
                 break;
             }
             if let Ok(bytes) = tx.get(db, id.as_bytes()) {
-                if let Ok(mem) = crate::codec::decode(bytes) {
+                if let Ok(mem) = self.decode_record_value(galaxy, id.as_bytes(), bytes) {
                     results.push(mem);
                 }
             }
@@ -1418,7 +1469,7 @@ impl MemoryStore {
                 break;
             }
             if let Ok(bytes) = tx.get(db, id.as_bytes()) {
-                if let Ok(mem) = crate::codec::decode(bytes) {
+                if let Ok(mem) = self.decode_record_value(galaxy, id.as_bytes(), bytes) {
                     results.push(mem);
                 }
             }

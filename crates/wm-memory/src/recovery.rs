@@ -211,7 +211,7 @@ fn check_galaxy_integrity(store: &MemoryStore, galaxy: Galaxy) -> Result<GalaxyI
 
     for (key, val) in cursor.iter() {
         total += 1;
-        match crate::codec::decode(val) {
+        match store.decode_record_value(galaxy, key, val) {
             Ok(_) => valid += 1,
             Err(_) => {
                 corrupted_keys.push(hex_encode(key));
@@ -311,7 +311,7 @@ fn collect_and_quarantine(
     let mut corrupted_keys = Vec::new();
 
     for (key, val) in cursor.iter() {
-        match crate::codec::decode(val) {
+        match store.decode_record_value(galaxy, key, val) {
             Ok(_) => {}
             Err(e) => {
                 corrupted_keys.push(hex_encode(key));
@@ -347,8 +347,8 @@ fn rebuild_galaxy_indexes(store: &MemoryStore, galaxy: Galaxy) -> Result<usize> 
             .open_ro_cursor(db)
             .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
         let mut mems = Vec::new();
-        for (_key, val) in cursor.iter() {
-            if let Ok(mem) = crate::codec::decode(val) {
+        for (key, val) in cursor.iter() {
+            if let Ok(mem) = store.decode_record_value(galaxy, key, val) {
                 mems.push(mem);
             }
         }
