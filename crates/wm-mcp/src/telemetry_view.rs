@@ -125,9 +125,12 @@ pub fn schema_lines() -> Vec<String> {
             .to_string(),
         "deletes windows/rollups only — reset funnel evidence explicitly).".to_string(),
         String::new(),
-        "Transport: opt-in — nothing is sent until `wm telemetry enable --share` prints the".to_string(),
-        "exact funnel/1 payload and a human confirms; disable stops sending, reset-id rotates".to_string(),
-        "the install id. One offline envelope is spooled and retried once, then dropped.".to_string(),
+        "Transport: opt-in — nothing is sent until `wm telemetry enable --share` prints the"
+            .to_string(),
+        "exact funnel/1 payload and a human confirms; disable stops sending, reset-id rotates"
+            .to_string(),
+        "the install id. One offline envelope is spooled and retried once, then dropped."
+            .to_string(),
         format!(
             "Install funnel: wm telemetry status shows local activation evidence; {}",
             wm_tools::expansion::funnel::TRANSPORT_LINE

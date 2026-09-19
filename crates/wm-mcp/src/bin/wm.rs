@@ -2200,7 +2200,9 @@ fn run() -> anyhow::Result<()> {
                 let store_path = store.unwrap_or_else(default_store_path);
                 let state = wm_tools::expansion::funnel_share::disable(&store_path)?;
                 println!("Install-funnel sharing disabled. No further payloads will be sent.");
-                println!("Local milestone recording continues (WM_FUNNEL_DISABLED=1 stops that too).");
+                println!(
+                    "Local milestone recording continues (WM_FUNNEL_DISABLED=1 stops that too)."
+                );
                 if let Some(id) = state.install_id.as_deref() {
                     println!("Install id retained: {id} (rotate with `wm telemetry reset-id`)");
                 }

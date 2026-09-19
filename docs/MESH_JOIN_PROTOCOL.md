@@ -180,7 +180,14 @@ grant table in `<store>/mesh_authority.json` (path override
   (chat, signals, locks) — *default-deny*. Discovery still works: hints and
   binds are not authority;
 - a grant may pin `public_key` (applies only while the bound key matches)
-  or omit it (the grant follows the TOFU binding);
+  or omit it — and an omitted pin means the grant follows the TOFU binding
+  (**first signed heartbeat wins**), which now requires `"tofu": true` for
+  any grant carrying execution/write rights (E10: an unpinned execution
+  grant was squattable — whichever host bound the peer ID first received
+  it). An unpinned rights-bearing grant without that acknowledgment fails
+  the whole file closed, loudly. A pinned grant also **reserves its peer ID
+  at the bind seam**: another key claiming that ID is refused before it can
+  bind, so a squatter cannot lock the genuine peer out;
 - `mode: "advisory"` restores the legacy peer-declared behavior for a
   migration window; it is logged loudly at start and disclosed in
   `/status` under `authority.mode`;
@@ -208,10 +215,18 @@ entries with importance-wins conflict resolution and is **not yet gated**
       "can_execute": true,
       "can_write_memory": false,
       "can_delegate": false
+    },
+    "wm-abcdef012345": {
+      "tofu": true,
+      "can_execute": true
     }
   }
 }
 ```
+
+Unknown top-level or grant fields are errors (typos fail closed loudly), and
+the pin comparison is case-insensitive hex. The file is read at node start
+only.
 
 ## 7. Quarantine — the bad-apple rule
 

@@ -195,10 +195,7 @@ pub fn local_counts(store: &wm_memory::MemoryStore) -> Counts {
     let sessions = store
         .count_by_tag(wm_core::Galaxy::Sessions, "start")
         .unwrap_or(0) as u64;
-    Counts {
-        sessions,
-        memories,
-    }
+    Counts { sessions, memories }
 }
 
 /// Build the exact `funnel/1` payload for these state snapshots.
@@ -312,7 +309,8 @@ fn save_pending(store_root: &Path, envelope: &Value, attempts: u32) -> bool {
         Err(_) => return false,
     };
     let tmp = store_root.join(PENDING_TMP_FILE);
-    std::fs::write(&tmp, body).is_ok() && std::fs::rename(&tmp, store_root.join(PENDING_FILE)).is_ok()
+    std::fs::write(&tmp, body).is_ok()
+        && std::fs::rename(&tmp, store_root.join(PENDING_FILE)).is_ok()
 }
 
 fn read_pending(store_root: &Path) -> Option<(Value, u32)> {
@@ -350,12 +348,7 @@ fn retry_pending(store_root: &Path, poster: &dyn Poster) {
 ///
 /// Milestone changes send immediately; counts-only changes are throttled to
 /// once per quiet period. Testable core of [`maybe_spawn`].
-pub fn share_once(
-    store_root: &Path,
-    state: &FunnelState,
-    counts: Counts,
-    poster: &dyn Poster,
-) {
+pub fn share_once(store_root: &Path, state: &FunnelState, counts: Counts, poster: &dyn Poster) {
     if !sharing(store_root) {
         return;
     }
@@ -489,12 +482,16 @@ mod tests {
     fn envelope_is_content_free_and_carries_the_decided_fields() {
         let tmp = tempfile::tempdir().unwrap();
         let share = enable(tmp.path()).unwrap();
-        let envelope =
-            build_envelope(tmp.path(), &state_with_launch(), &share, Counts {
+        let envelope = build_envelope(
+            tmp.path(),
+            &state_with_launch(),
+            &share,
+            Counts {
                 sessions: 3,
                 memories: 12,
-            })
-            .unwrap();
+            },
+        )
+        .unwrap();
         assert_eq!(envelope["schema"], "funnel/1");
         assert_eq!(envelope["channel"], "install_sh");
         assert_eq!(envelope["ref"], "glama");

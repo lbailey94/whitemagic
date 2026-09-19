@@ -275,12 +275,16 @@ impl RawMeshStream {
 /// A deterministic raw-frame client identity.
 /// Write the per-store authority side map. Mesh action-class traffic is
 /// default-deny (W1), so each node must provision the peers it accepts.
+/// Tests bind runtime-derived ids, so the grants explicitly acknowledge the
+/// TOFU binding (`tofu: true`) — E10 requires that acknowledgment for any
+/// unpinned rights-bearing grant.
 fn provision(store_root: &std::path::Path, grants: &[(&str, bool)]) {
     let mut map = serde_json::Map::new();
     for (peer, can_execute) in grants {
         map.insert(
             (*peer).to_string(),
             serde_json::json!({
+                "tofu": true,
                 "can_execute": can_execute,
                 "can_write_memory": false,
                 "can_delegate": false,

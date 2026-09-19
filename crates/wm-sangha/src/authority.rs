@@ -29,7 +29,11 @@
 //! - `mode: "advisory"` — the legacy behavior (peer-declared authority is
 //!   honored) for a migration window; loud in `/status`.
 //! - `public_key` pins the grant to the peer's bound key; **omit it and the
-//!   grant inherits the TOFU binding** (first signed heartbeat wins).
+//!   grant follows the TOFU binding** (first signed heartbeat wins) — which
+//!   requires an explicit `"tofu": true` acknowledgment for any grant that
+//!   carries execution or write rights (E10 hardening: an unpinned
+//!   execution grant was squattable — whichever host bound the id first
+//!   received it).
 //! - A missing file means enforce with no grants. A malformed file fails
 //!   closed the same way, loudly.
 //!
@@ -84,12 +88,40 @@ impl AuthorityMode {
 pub struct AuthorityGrant {
     /// Optional identity pin: when set, the grant applies only while the
     /// peer's bound key matches. Omitted = the grant follows the TOFU
-    /// binding (the first signed heartbeat to claim the ID wins).
+    /// binding (the first signed heartbeat to claim the ID wins) and any
+    /// grant carrying positive rights requires `tofu: true`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub public_key: Option<String>,
+    /// Explicit acknowledgment that this grant follows the TOFU binding.
+    /// Required for unpinned grants with execution/write rights (E10).
+    #[serde(default)]
+    pub tofu: bool,
     /// The capabilities this node grants the peer.
     #[serde(flatten)]
     pub authority: PeerAuthority,
+}
+
+impl AuthorityGrant {
+    /// Whether this grant carries any positive capability.
+    #[must_use]
+    pub const fn grants_rights(&self) -> bool {
+        self.authority.can_execute || self.authority.can_write_memory || self.authority.can_delegate
+    }
+
+    /// Why this grant is unsafe to provision, if it is: an unpinned grant
+    /// with rights lets the first key to claim the peer ID inherit them.
+    #[must_use]
+    pub fn pin_rule_violation(&self) -> Option<String> {
+        if self.grants_rights() && self.public_key.is_none() && !self.tofu {
+            Some(
+                "unpinned grant with execution/write rights — set public_key, or \
+                 \"tofu\": true to accept the first-signed-key binding"
+                    .to_string(),
+            )
+        } else {
+            None
+        }
+    }
 }
 
 /// Where a peer's effective authority came from — named in gate errors so
@@ -173,13 +205,47 @@ impl MeshAuthorityPolicy {
 
     /// Load and validate a policy file.
     ///
+    /// Strict: unknown top-level keys, unknown grant capability keys, and
+    /// unpinned rights-bearing grants without `"tofu": true` are errors
+    /// (E10) — a typo must not silently degrade policy.
+    ///
     /// # Errors
-    /// Returns a human-readable reason when the file cannot be read or
-    /// parsed.
+    /// Returns a human-readable reason when the file cannot be read,
+    /// parsed, or validated.
     pub fn load(path: &Path) -> Result<Self, String> {
         let text =
             std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
-        serde_json::from_str(&text).map_err(|e| format!("parse {}: {e}", path.display()))
+        let value: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| format!("parse {}: {e}", path.display()))?;
+        validate_strict_keys(&value)?;
+        let policy: Self =
+            serde_json::from_value(value).map_err(|e| format!("parse {}: {e}", path.display()))?;
+        policy.validate()?;
+        Ok(policy)
+    }
+
+    /// Refuse grants that would let an unpinned identity execute (E10).
+    ///
+    /// # Errors
+    /// Names every offending peer ID.
+    pub fn validate(&self) -> Result<(), String> {
+        let offenders: Vec<String> = self
+            .grants
+            .iter()
+            .filter_map(|(peer_id, grant)| {
+                grant
+                    .pin_rule_violation()
+                    .map(|reason| format!("{peer_id} ({reason})"))
+            })
+            .collect();
+        if offenders.is_empty() {
+            Ok(())
+        } else {
+            Err(format!(
+                "unsafe mesh authority grants: {} — fix mesh_authority.json and restart",
+                offenders.join("; ")
+            ))
+        }
     }
 
     /// Whether the policy is in advisory (legacy) mode.
@@ -195,8 +261,30 @@ impl MeshAuthorityPolicy {
     }
 
     /// Provision (or replace) a grant.
-    pub fn grant(&mut self, peer_id: impl Into<String>, grant: AuthorityGrant) {
-        self.grants.insert(peer_id.into(), grant);
+    ///
+    /// # Errors
+    /// Refuses unpinned rights-bearing grants without `tofu: true` (the
+    /// E10 squatting rule) so no caller can create a squattable grant.
+    pub fn grant(
+        &mut self,
+        peer_id: impl Into<String>,
+        grant: AuthorityGrant,
+    ) -> Result<(), String> {
+        let peer_id = peer_id.into();
+        if let Some(reason) = grant.pin_rule_violation() {
+            return Err(format!("grant for '{peer_id}' refused: {reason}"));
+        }
+        self.grants.insert(peer_id, grant);
+        Ok(())
+    }
+
+    /// The pinned key for a peer ID, when the grant carries a pin (E10
+    /// bind-seam check: a squatter must not occupy a pinned peer's name).
+    #[must_use]
+    pub fn pinned_key_for(&self, peer_id: &str) -> Option<&str> {
+        self.grants
+            .get(peer_id)
+            .and_then(|grant| grant.public_key.as_deref())
     }
 
     /// Revoke a grant. Returns whether one existed.
@@ -220,7 +308,7 @@ impl MeshAuthorityPolicy {
             let pinned = grant
                 .public_key
                 .as_deref()
-                .is_some_and(|key| key == bound_key);
+                .is_some_and(|key| key.eq_ignore_ascii_case(bound_key));
             let unpinned = grant.public_key.is_none();
             if pinned || unpinned {
                 return EffectiveAuthority {
@@ -269,6 +357,52 @@ fn apply_env_mode(policy: &mut MeshAuthorityPolicy) {
     }
 }
 
+/// Strict key validation for the operator file: unknown top-level or grant
+/// keys are errors (E10). Wire messages are unaffected — this applies only
+/// to `mesh_authority.json`.
+fn validate_strict_keys(value: &serde_json::Value) -> Result<(), String> {
+    const TOP_LEVEL: &[&str] = &["mode", "grants"];
+    const GRANT_KEYS: &[&str] = &[
+        "public_key",
+        "tofu",
+        "can_execute",
+        "can_write_memory",
+        "can_delegate",
+        "delegate_trust_cap",
+        "allowed_tools",
+        "denied_tools",
+    ];
+    let Some(object) = value.as_object() else {
+        return Err("policy must be a JSON object".to_string());
+    };
+    for key in object.keys() {
+        if !TOP_LEVEL.contains(&key.as_str()) {
+            return Err(format!(
+                "unknown top-level field '{key}' (allowed: mode, grants)"
+            ));
+        }
+    }
+    if let Some(grants) = object.get("grants") {
+        let Some(grants) = grants.as_object() else {
+            return Err("grants must be a JSON object keyed by peer id".to_string());
+        };
+        for (peer_id, grant) in grants {
+            let Some(grant) = grant.as_object() else {
+                return Err(format!("grant for '{peer_id}' must be a JSON object"));
+            };
+            for key in grant.keys() {
+                if !GRANT_KEYS.contains(&key.as_str()) {
+                    return Err(format!(
+                        "unknown grant field '{key}' for '{peer_id}' (allowed: {})",
+                        GRANT_KEYS.join(", ")
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,6 +410,7 @@ mod tests {
     fn writable(_peer: &str) -> AuthorityGrant {
         AuthorityGrant {
             public_key: None,
+            tofu: true,
             authority: PeerAuthority {
                 can_execute: true,
                 can_write_memory: true,
@@ -306,7 +441,9 @@ mod tests {
     #[test]
     fn grant_applies_and_survives_pinless_tofu() {
         let mut policy = MeshAuthorityPolicy::enforce();
-        policy.grant("peer-a", writable("peer-a"));
+        policy
+            .grant("peer-a", writable("peer-a"))
+            .expect("tofu grant");
         let effective = policy.authority_for("peer-a", "any-bound-key", &PeerAuthority::none());
         assert_eq!(effective.source, AuthoritySource::Provisioned);
         assert!(effective.authority.can_execute);
@@ -318,7 +455,7 @@ mod tests {
         let mut policy = MeshAuthorityPolicy::enforce();
         let mut grant = writable("peer-a");
         grant.public_key = Some("aaaa".into());
-        policy.grant("peer-a", grant);
+        policy.grant("peer-a", grant).expect("pinned grant");
 
         let matching = policy.authority_for("peer-a", "aaaa", &PeerAuthority::read_only());
         assert_eq!(matching.source, AuthoritySource::Provisioned);
@@ -331,7 +468,9 @@ mod tests {
     #[test]
     fn revoke_removes_the_grant() {
         let mut policy = MeshAuthorityPolicy::enforce();
-        policy.grant("peer-a", writable("peer-a"));
+        policy
+            .grant("peer-a", writable("peer-a"))
+            .expect("tofu grant");
         assert_eq!(policy.grant_count(), 1);
         assert!(policy.revoke("peer-a"));
         assert!(!policy.revoke("peer-a"));
@@ -397,5 +536,99 @@ mod tests {
         assert_eq!(AuthorityMode::parse("Advisory"), None);
         assert_eq!(AuthorityMode::parse("0"), None);
         assert_eq!(AuthorityMode::parse(""), None);
+    }
+
+    #[test]
+    fn unpinned_execution_grant_without_tofu_is_refused() {
+        let mut policy = MeshAuthorityPolicy::enforce();
+        let mut grant = writable("peer-a");
+        grant.tofu = false;
+        assert!(
+            policy.grant("peer-a", grant).is_err(),
+            "unpinned can_execute without tofu must be refused"
+        );
+        assert_eq!(policy.grant_count(), 0);
+
+        // The same rule applies to the operator file, failing closed loudly.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("mesh_authority.json");
+        std::fs::write(
+            &path,
+            r#"{"mode":"enforce","grants":{"peer-a":{"can_execute":true}}}"#,
+        )
+        .expect("write");
+        let err = MeshAuthorityPolicy::load(&path).expect_err("load must refuse");
+        assert!(err.contains("peer-a"), "error names the peer: {err}");
+        let resolved = MeshAuthorityPolicy::resolve(Some(&path));
+        assert_eq!(resolved.mode, AuthorityMode::Enforce);
+        assert_eq!(resolved.grant_count(), 0);
+
+        // A zero-rights unpinned grant stays legal (nothing to squat for).
+        let mut harmless = AuthorityGrant {
+            public_key: None,
+            tofu: false,
+            authority: PeerAuthority::none(),
+        };
+        assert!(harmless.pin_rule_violation().is_none());
+        harmless.tofu = true;
+        assert!(harmless.pin_rule_violation().is_none());
+    }
+
+    #[test]
+    fn explicit_tofu_allows_a_pinless_execution_grant() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("mesh_authority.json");
+        std::fs::write(
+            &path,
+            r#"{"mode":"enforce","grants":{"peer-a":{"tofu":true,"can_execute":true}}}"#,
+        )
+        .expect("write");
+        let policy = MeshAuthorityPolicy::load(&path).expect("tofu grant loads");
+        let effective = policy.authority_for("peer-a", "first-key-wins", &PeerAuthority::none());
+        assert!(effective.authority.can_execute);
+    }
+
+    #[test]
+    fn unknown_keys_in_the_policy_file_are_errors() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let top_level = dir.path().join("top.json");
+        std::fs::write(
+            &top_level,
+            r#"{"mode":"enforce","grant":{"peer-a":{"can_execute":true}}}"#,
+        )
+        .expect("write");
+        let err = MeshAuthorityPolicy::load(&top_level).expect_err("typo must fail");
+        assert!(err.contains("unknown top-level field 'grant'"), "{err}");
+
+        let capability = dir.path().join("cap.json");
+        std::fs::write(
+            &capability,
+            r#"{"mode":"enforce","grants":{"peer-a":{"can_exec":true}}}"#,
+        )
+        .expect("write");
+        let err = MeshAuthorityPolicy::load(&capability).expect_err("typo must fail");
+        assert!(err.contains("unknown grant field 'can_exec'"), "{err}");
+    }
+
+    #[test]
+    fn pin_comparison_is_case_insensitive() {
+        let mut policy = MeshAuthorityPolicy::enforce();
+        policy
+            .grant(
+                "peer-a",
+                AuthorityGrant {
+                    public_key: Some("AABBCC".into()),
+                    tofu: false,
+                    authority: PeerAuthority {
+                        can_execute: true,
+                        ..PeerAuthority::none()
+                    },
+                },
+            )
+            .expect("pinned grant");
+        let effective = policy.authority_for("peer-a", "aabbcc", &PeerAuthority::none());
+        assert_eq!(effective.source, AuthoritySource::Provisioned);
+        assert!(policy.pinned_key_for("peer-a").is_some());
+        assert!(policy.pinned_key_for("peer-b").is_none());
     }
 }

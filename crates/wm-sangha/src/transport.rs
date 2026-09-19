@@ -916,6 +916,25 @@ async fn require_can_execute(
     })
 }
 
+/// E10: a pinned local grant reserves its peer ID for one key. A different
+/// key must not bind (or keep occupying) that ID — the gate would deny the
+/// squatter anyway, but letting it bind first would lock the genuine pinned
+/// peer out with an "identity theft refused" on arrival.
+fn reservation_conflict(state: &SanghaState, peer_id: &str, public_key: &str) -> Option<String> {
+    let pinned = state.with_authority(|policy| {
+        policy
+            .pinned_key_for(peer_id)
+            .map(std::string::ToString::to_string)
+    })?;
+    if pinned.eq_ignore_ascii_case(public_key) {
+        None
+    } else {
+        Some(format!(
+            "peer '{peer_id}' is reserved by a pinned grant for another key"
+        ))
+    }
+}
+
 /// Handle a single RPC request.
 async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcResponse {
     match req.method.as_str() {
@@ -968,6 +987,9 @@ async fn handle_rpc_request(req: &RpcRequest, state: &SanghaState) -> RpcRespons
                 if let Err(e) = peers.verify_binding(&peer_info) {
                     return RpcResponse::err(format!("identity rejected: {e}"), req.id);
                 }
+            }
+            if let Some(reason) = reservation_conflict(state, &peer_id, &peer_info.public_key) {
+                return RpcResponse::err(format!("identity rejected: {reason}"), req.id);
             }
 
             let window = {
@@ -1444,6 +1466,10 @@ async fn ingest_beacon(
                 return;
             }
         }
+        if let Some(reason) = reservation_conflict(state, &announce.peer_id, public_key) {
+            tracing::warn!("dropping beacon — {reason}");
+            return;
+        }
         let replay = state.ingest_guard.lock().await.record_verified(
             &announce.peer_id,
             timestamp,
@@ -1524,13 +1550,19 @@ mod tests {
             .await
             .discover_signed(PeerInfo::new(peer_id, "127.0.0.1:9000").signed(&keypair))
             .expect("test peer binds");
-        state.authority.write().expect("authority lock").grant(
-            peer_id,
-            crate::authority::AuthorityGrant {
-                public_key: None,
-                authority: crate::peer::PeerAuthority::full(),
-            },
-        );
+        state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                peer_id,
+                crate::authority::AuthorityGrant {
+                    public_key: None,
+                    tofu: true,
+                    authority: crate::peer::PeerAuthority::full(),
+                },
+            )
+            .expect("test grant");
         keypair
     }
 
@@ -1573,6 +1605,48 @@ mod tests {
             params: serde_json::to_value(peer).unwrap(),
             id,
         }
+    }
+
+    #[tokio::test]
+    async fn pinned_grant_reserves_the_peer_id_at_the_bind_seam() {
+        let state = Arc::new(SanghaState::new("self-node", "127.0.0.1:7369"));
+        state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                "reserved-peer",
+                crate::authority::AuthorityGrant {
+                    public_key: Some("AABBCC".into()),
+                    tofu: false,
+                    authority: crate::peer::PeerAuthority::full(),
+                },
+            )
+            .expect("pinned grant");
+
+        // Case-insensitive pin match; other keys conflict.
+        assert!(reservation_conflict(&state, "reserved-peer", "aabbcc").is_none());
+        assert!(reservation_conflict(&state, "reserved-peer", "ddeeff").is_some());
+        assert!(reservation_conflict(&state, "unreserved", "ddeeff").is_none());
+
+        // Through the real heartbeat path: the squatter never binds the id.
+        let squatter = PeerInfo::new("reserved-peer", "127.0.0.1:9001")
+            .signed(&MeshKeyPair::from_seed(b"squatter-seed"));
+        let response = handle_rpc_request(&heartbeat_req(&squatter, 71), &state).await;
+        let error = response.error.expect("squatting heartbeat must be refused");
+        assert!(
+            error.contains("reserved by a pinned grant"),
+            "error names the reservation: {error}"
+        );
+        assert!(
+            state
+                .peers
+                .lock()
+                .await
+                .bound_public_key("reserved-peer")
+                .is_none(),
+            "a conflicting key must not occupy the reserved id"
+        );
     }
 
     #[test]
@@ -1789,13 +1863,19 @@ mod tests {
             .await
             .discover_signed(PeerInfo::new("holder-a", "127.0.0.1:9999").signed(&mesh_kp))
             .expect("holder binds");
-        state.authority.write().expect("authority lock").grant(
-            "holder-a",
-            crate::authority::AuthorityGrant {
-                public_key: None,
-                authority: crate::peer::PeerAuthority::read_only(),
-            },
-        );
+        state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                "holder-a",
+                crate::authority::AuthorityGrant {
+                    public_key: None,
+                    tofu: true,
+                    authority: crate::peer::PeerAuthority::read_only(),
+                },
+            )
+            .expect("test grant");
         let issuer = wm_governance::engagement_tokens::EngagementIssuer::with_keypair(
             wm_governance::network_profile::AgentKeypair::from_seed(seed),
         );
@@ -2305,13 +2385,19 @@ mod tests {
             .expect("authority-none peer binds");
         // Provisioned without execution rights: the local grant is the
         // boundary, not the peer's own claim.
-        state.authority.write().expect("authority lock").grant(
-            "no-exec",
-            crate::authority::AuthorityGrant {
-                public_key: None,
-                authority: crate::peer::PeerAuthority::none(),
-            },
-        );
+        state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                "no-exec",
+                crate::authority::AuthorityGrant {
+                    public_key: None,
+                    tofu: true,
+                    authority: crate::peer::PeerAuthority::none(),
+                },
+            )
+            .expect("test grant");
         // The stored record still verifies; only the gate refuses.
         assert!(state.peers.lock().await.verify_peer("no-exec"));
 
@@ -2397,13 +2483,19 @@ mod tests {
             .await
             .discover_signed(no_exec.signed(&MeshKeyPair::from_seed(b"no-exec-signal-seed")))
             .expect("bind");
-        state.authority.write().expect("authority lock").grant(
-            "no-exec",
-            crate::authority::AuthorityGrant {
-                public_key: None,
-                authority: crate::peer::PeerAuthority::none(),
-            },
-        );
+        state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                "no-exec",
+                crate::authority::AuthorityGrant {
+                    public_key: None,
+                    tofu: true,
+                    authority: crate::peer::PeerAuthority::none(),
+                },
+            )
+            .expect("test grant");
         let signal = crate::signal::Signal::new(
             crate::signal::SignalType::PeerStatus,
             "no-exec",
@@ -2436,13 +2528,19 @@ mod tests {
             .await
             .discover_signed(no_exec.signed(&MeshKeyPair::from_seed(b"no-exec-lock-seed")))
             .expect("bind");
-        state.authority.write().expect("authority lock").grant(
-            "no-exec",
-            crate::authority::AuthorityGrant {
-                public_key: None,
-                authority: crate::peer::PeerAuthority::none(),
-            },
-        );
+        state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                "no-exec",
+                crate::authority::AuthorityGrant {
+                    public_key: None,
+                    tofu: true,
+                    authority: crate::peer::PeerAuthority::none(),
+                },
+            )
+            .expect("test grant");
 
         let acquire = RpcRequest {
             method: "acquire_lock".to_string(),
@@ -2755,13 +2853,19 @@ mod tests {
         let state = Arc::new(SanghaState::new("server", bound_addr.to_string()));
         // Provision the client (default-deny: a bound peer needs a grant
         // before action-class traffic is accepted).
-        state.authority.write().expect("authority lock").grant(
-            "client-1",
-            crate::authority::AuthorityGrant {
-                public_key: None,
-                authority: crate::peer::PeerAuthority::full(),
-            },
-        );
+        state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                "client-1",
+                crate::authority::AuthorityGrant {
+                    public_key: None,
+                    tofu: true,
+                    authority: crate::peer::PeerAuthority::full(),
+                },
+            )
+            .expect("test grant");
 
         let server_state = Arc::clone(&state);
         tokio::spawn(async move {
@@ -3037,13 +3141,19 @@ mod containment_tests {
         let (b, addr_b) = spawn_node("node-b", 17_402).await;
         // B provisions A (default-deny): the operator grant — not A's own
         // claim — is the boundary for action-class traffic.
-        b.state.authority.write().expect("authority lock").grant(
-            "node-a",
-            crate::authority::AuthorityGrant {
-                public_key: None,
-                authority: crate::peer::PeerAuthority::full(),
-            },
-        );
+        b.state
+            .authority
+            .write()
+            .expect("authority lock")
+            .grant(
+                "node-a",
+                crate::authority::AuthorityGrant {
+                    public_key: None,
+                    tofu: true,
+                    authority: crate::peer::PeerAuthority::full(),
+                },
+            )
+            .expect("test grant");
         let b_conn = format!("remote:{addr_b}");
         let _a_conn = format!("remote:{addr_a}");
 

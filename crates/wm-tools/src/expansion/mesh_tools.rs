@@ -449,7 +449,7 @@ mod tests {
         let b = spawn("tool-node-b", 17_622).await.expect("b");
         // Action-class traffic is provisioned explicitly (default-deny):
         // B must grant A before A's chat can be accepted.
-        b.grant_authority("tool-node-a", None, wm_sangha::PeerAuthority::full());
+        b.grant_authority("tool-node-a", None, wm_sangha::PeerAuthority::full(), true);
 
         let slot = MeshSlot::new();
         slot.set(Arc::clone(&a));

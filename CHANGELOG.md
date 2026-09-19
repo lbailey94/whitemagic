@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   spoofed unsigned heartbeat can no longer aim the auto-join loop or crowd
   the registry; signed beacons bind directly and an explicit join by address
   still works.
+- **Review-driven hardening (independent E10 adversarial pass).** An
+  unpinned execution grant was squattable: inbound peer IDs were never
+  checked against their keys, so the first host to send a signed heartbeat
+  claiming a granted ID received its rights. Unpinned rights-bearing grants
+  now require an explicit `"tofu": true` acknowledgment (the file fails
+  closed loudly without it, and the in-memory grant API refuses), a pinned
+  grant reserves its peer ID at the bind seam (a squatter cannot occupy the
+  name before the genuine peer), the policy file rejects unknown top-level
+  and grant fields, and pin comparison is case-insensitive. The review also
+  confirms the pre-existing residual: locks and signals still authorize the
+  wire-claimed identifier, not the connection identity (chat is bound-key
+  verified).
 
 ### Autonomous release pipeline
 - **CHANGELOG ceremony is automatic:** `scripts/version_truth.py

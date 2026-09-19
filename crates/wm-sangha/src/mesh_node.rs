@@ -272,6 +272,11 @@ impl MeshNode {
                 "mesh authority is ADVISORY — peer-declared authority is honored; \
                  provision grants and set WM_MESH_AUTHORITY=enforce for the real boundary"
             );
+        } else {
+            tracing::info!(
+                grants = authority.grant_count(),
+                "mesh authority policy loaded (enforce; file is read at start only)"
+            );
         }
         let state = Arc::new(
             SanghaState::with_persistence(
@@ -368,24 +373,33 @@ impl MeshNode {
 
     /// Provision (or replace) a local authority grant (in-memory; persist
     /// by editing `mesh_authority.json`).
+    ///
+    /// `tofu` acknowledges the first-signed-key binding for unpinned grants
+    /// with rights; without it such a grant is refused (E10).
     pub fn grant_authority(
         &self,
         peer_id: &str,
         public_key: Option<String>,
         authority: crate::peer::PeerAuthority,
+        tofu: bool,
     ) -> Value {
         let mut policy = self
             .state
             .authority
             .write()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        policy.grant(
-            peer_id,
-            crate::authority::AuthorityGrant {
-                public_key,
-                authority,
-            },
-        );
+        let grant = crate::authority::AuthorityGrant {
+            public_key,
+            tofu,
+            authority,
+        };
+        if let Err(e) = policy.grant(peer_id, grant) {
+            return json!({
+                "status": "error",
+                "granted": Value::Null,
+                "error": e,
+            });
+        }
         json!({
             "status": "ok",
             "granted": peer_id,
