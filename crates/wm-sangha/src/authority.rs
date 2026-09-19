@@ -186,7 +186,7 @@ impl MeshAuthorityPolicy {
     #[must_use]
     pub fn resolve(path: Option<&Path>) -> Self {
         let mut policy = match path {
-            Some(p) => match Self::load(p) {
+            Some(p) if p.exists() => match Self::load(p) {
                 Ok(policy) => policy,
                 Err(e) => {
                     tracing::error!(
@@ -197,7 +197,7 @@ impl MeshAuthorityPolicy {
                     Self::enforce()
                 }
             },
-            None => Self::enforce(),
+            _ => Self::enforce(),
         };
         apply_env_mode(&mut policy);
         policy
@@ -519,6 +519,16 @@ mod tests {
     fn missing_file_resolves_to_enforce() {
         let dir = tempfile::tempdir().expect("tempdir");
         let policy = MeshAuthorityPolicy::resolve(Some(&dir.path().join("absent.json")));
+        assert_eq!(policy.mode, AuthorityMode::Enforce);
+        assert_eq!(policy.grant_count(), 0);
+    }
+
+    #[test]
+    fn unreadable_existing_file_still_fails_closed() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("mesh_authority.json");
+        std::fs::create_dir(&path).expect("mkdir");
+        let policy = MeshAuthorityPolicy::resolve(Some(&path));
         assert_eq!(policy.mode, AuthorityMode::Enforce);
         assert_eq!(policy.grant_count(), 0);
     }
