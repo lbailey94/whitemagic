@@ -1,0 +1,90 @@
+name: Hub tag cleanup
+
+# S12 (docs/V9_2_WORK_QUEUE.md): remove the pre-9.x Docker Hub tags from
+# 2025-11 after their digests were archived
+# (planning/private/S12_DOCKERHUB_TAG_RECEIPTS_2026-09-19.md).
+# Safety: workflow_dispatch only; the confirm input must match; the tag list
+# is a hardcoded allowlist — this workflow cannot delete an arbitrary tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "delete-stale-2x-tags" to confirm the deletion'
+        required: true
+        type: string
+      dry_run:
+        description: "List the allowlisted tags without deleting"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete the allowlisted pre-9.x tags
+    runs-on: ubuntu-latest
+    env:
+      HUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+      HUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Validate confirmation and secret
+        run: |
+          [ "${{ inputs.confirm }}" = "delete-stale-2x-tags" ] \
+            || { echo "confirm input does not match"; exit 1; }
+          [ -n "$HUB_TOKEN" ] || { echo "DOCKERHUB_TOKEN not set"; exit 1; }
+          [ -n "$HUB_USER" ] || { echo "DOCKERHUB_USERNAME not set"; exit 1; }
+
+      - name: Log in
+        id: login
+        run: |
+          JWT=$(curl -fsS -H "Content-Type: application/json" \
+            -d "$(jq -n --arg u "$HUB_USER" --arg p "$HUB_TOKEN" '{username:$u,password:$p}')" \
+            https://hub.docker.com/v2/users/login | jq -r '.token // empty')
+          [ -n "$JWT" ] || { echo "Hub login failed"; exit 1; }
+          echo "::add-mask::$JWT"
+          echo "jwt=$JWT" >> "$GITHUB_OUTPUT"
+
+      - name: Delete the allowlisted tags
+        env:
+          JWT: ${{ steps.login.outputs.jwt }}
+        run: |
+          TAGS="2.1.2 2.1.3 2.1.4 2.2.1 2.2.3 2.2.4 2.2.5 2.2.6 2.2.7-alpha 2.2.9 2.3.1 buildcache"
+          for tag in $TAGS; do
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "dry-run: would delete $tag"
+              continue
+            fi
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer $JWT" \
+              "https://hub.docker.com/v2/repositories/lbailey94/whitemagic/tags/$tag/")
+            echo "deleted $tag -> HTTP $CODE"
+            case "$CODE" in
+              204|200|404) ;; # 404 = already gone
+              401|403) echo "scope/auth failure on $tag — stopping"; exit 1 ;;
+              *) echo "unexpected status on $tag"; exit 1 ;;
+            esac
+          done
+
+      - name: Verify the allowlist is gone and the keepers remain
+        run: |
+          TAGS=$(curl -fsS "https://hub.docker.com/v2/repositories/lbailey94/whitemagic/tags/?page_size=100" \
+            | jq -r '.results[].name')
+          echo "$TAGS"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "dry-run — skipping verification"
+            exit 0
+          fi
+          for gone in 2.1.2 2.1.3 2.1.4 2.2.1 2.2.3 2.2.4 2.2.5 2.2.6 2.2.7-alpha 2.2.9 2.3.1 buildcache; do
+            if printf '%s\n' "$TAGS" | grep -qx "$gone"; then
+              echo "stale tag $gone still present"; exit 1
+            fi
+          done
+          for kept in latest 9 9.1.0 9.1.9; do
+            if ! printf '%s\n' "$TAGS" | grep -qx "$kept"; then
+              echo "keeper tag $kept missing"; exit 1
+            fi
+          done
+          echo "cleanup verified: stale tags gone, keepers intact"
