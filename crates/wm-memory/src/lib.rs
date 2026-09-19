@@ -25,6 +25,7 @@ pub mod indexes;
 pub mod lifecycle;
 pub mod mandala;
 pub mod memory;
+pub mod migration;
 pub mod predictive_cache;
 pub mod query_planner;
 pub mod recall;
@@ -45,7 +46,8 @@ pub use associations::{Association, AssociationStore, LinkType};
 pub use at_rest::{
     AT_REST_KEY_FILE, Argon2Params, AtRestConfig, AtRestMode, AtRestState, AtRestStatus,
     AtRestStatusPresent, DEK_KEY_PREFIX, KEYRING_DB, KEYRING_FORMAT_VERSION, KEYRING_META_KEY,
-    KeyringMeta, RK_CHECK_INFO, RK_CHECK_KEY, RK_CHECK_PLAINTEXT, generated_key_path,
+    KeyringMeta, MIGRATION_LEDGER_KEY, MigrationGalaxyState, MigrationLedger, RK_CHECK_INFO,
+    RK_CHECK_KEY, RK_CHECK_PLAINTEXT, generated_key_path,
 };
 pub use attestation::{
     ATTESTATION_DOMAIN, ATTESTATION_KEY_ENV, ATTESTATIONS_DB, AttestationReport, RecordAttestation,
@@ -83,6 +85,10 @@ pub use mandala::{Compartment, CompartmentConfig, MandalaLevel, MandalaManager};
 pub use memory::{
     Memory, MemoryId, MemoryMetadata, MemoryType, Tier, content_hash, decode_embedding,
     encode_embedding, trust_weighted_score,
+};
+pub use migration::{
+    AtRestMigrationReport, DEFAULT_MIGRATION_BATCH, GalaxyAtRestCounts, GalaxyMigrationReport,
+    RECORD_GALAXIES, at_rest_record_counts, migrate_at_rest_records, migration_ledger,
 };
 pub use predictive_cache::{CacheStats, PredictiveCache};
 pub use query_planner::{QueryClass, QueryPlan};

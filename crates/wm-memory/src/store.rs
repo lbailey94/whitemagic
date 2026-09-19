@@ -396,9 +396,17 @@ impl MemoryStore {
         self.at_rest.as_ref()
     }
 
+    /// Keyring DBI handle when the store has one (`None` for plaintext
+    /// pass-through stores and on read paths where the DBI is absent).
+    /// Slice-B migration reads/writes its ledger through this handle.
+    #[must_use]
+    pub const fn keyring_db(&self) -> Option<Database> {
+        self.keyring_db
+    }
+
     /// Galaxy DEK for record AEAD, when the store runs with an unlocked
     /// at-rest keyring (Q39 slice B).
-    fn record_cipher(&self, galaxy: Galaxy) -> Option<&[u8; 32]> {
+    pub(crate) fn record_cipher(&self, galaxy: Galaxy) -> Option<&[u8; 32]> {
         self.at_rest
             .as_ref()
             .and_then(|state| state.galaxy_dek(galaxy.db_name()))
@@ -495,6 +503,22 @@ impl MemoryStore {
         }
     }
 
+    /// Default LMDB map size for this platform (`WM_DEFAULT_MAP_SIZE`
+    /// overrides). See [`Self::open_default`] for the platform rationale.
+    #[must_use]
+    pub fn default_map_size() -> usize {
+        let platform_default = if cfg!(windows) {
+            256 * 1024 * 1024
+        } else {
+            4 * 1024 * 1024 * 1024
+        };
+        std::env::var("WM_DEFAULT_MAP_SIZE")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .filter(|&v| v > 0)
+            .unwrap_or(platform_default)
+    }
+
     /// Open with the default map size.
     ///
     /// 4 GB on Unix: LMDB truncates the data file sparsely (ftruncate), so
@@ -508,16 +532,7 @@ impl MemoryStore {
         // CI uses this on Windows, where NTFS materializes the map file at
         // full size and hundreds of parallel test stores would exhaust the
         // runner disk even at the 256MB Windows default.
-        let platform_default = if cfg!(windows) {
-            256 * 1024 * 1024
-        } else {
-            4 * 1024 * 1024 * 1024
-        };
-        let size = std::env::var("WM_DEFAULT_MAP_SIZE")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .filter(|&v| v > 0)
-            .unwrap_or(platform_default);
+        let size = Self::default_map_size();
         Self::open(path, size)
     }
 

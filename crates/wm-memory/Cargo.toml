@@ -80,3 +80,7 @@ harness = false
 [[bench]]
 name = "episodic_bench"
 harness = false
+
+[[bench]]
+name = "at_rest_bench"
+harness = false

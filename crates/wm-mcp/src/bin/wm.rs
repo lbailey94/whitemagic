@@ -601,6 +601,18 @@ enum Commands {
         #[command(subcommand)]
         command: SessionCommands,
     },
+    /// At-rest keyring operations (Q39 slice B)
+    ///
+    /// `wm at-rest migrate` seals pre-existing plaintext records under the
+    /// store's galaxy DEKs (encrypt-on-rewrite, bounded batches, crash-safe
+    /// `migration:v1` ledger in the keyring DBI). Requires an unlocked
+    /// keyring: run with the same WM_AT_REST_MODE/key source as the server.
+    /// Takes the LMDB lock — stop the store's server unit first.
+    #[command(hide = true)]
+    AtRest {
+        #[command(subcommand)]
+        command: AtRestCommands,
+    },
     /// Survey or correct memory source-trust provenance (V8.1 groundwork)
     ///
     /// source_trust semantics: 1.0 = user-confirmed, 0.7 = tool-ingested
@@ -614,6 +626,44 @@ enum Commands {
         store: Option<PathBuf>,
         #[command(subcommand)]
         command: TrustCommand,
+    },
+}
+
+#[derive(clap::Subcommand)]
+enum AtRestCommands {
+    /// Seal pre-existing plaintext records under the galaxy DEKs
+    ///
+    /// Encrypt-on-rewrite migration (Q39 slice B): walks each record galaxy
+    /// in bounded LMDB batches, seals plaintext records under the galaxy
+    /// DEK, and records progress in the keyring `migration:v1` ledger.
+    /// Idempotent and crash-safe — re-running resumes from the ledger and
+    /// skips already-sealed records. Refuses plaintext (`off`) stores: there
+    /// is no keyring to seal under (the no-op is reported, not an error).
+    Migrate {
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Only migrate these galaxies (repeatable; default: all record galaxies)
+        #[arg(long)]
+        galaxy: Vec<String>,
+        /// Records per LMDB write transaction (default: 256)
+        #[arg(long, default_value_t = wm_memory::DEFAULT_MIGRATION_BATCH)]
+        batch: usize,
+        /// Report what would be migrated without writing anything
+        #[arg(long)]
+        dry_run: bool,
+        /// Wait up to N seconds for a busy store (live serve) before failing
+        #[arg(long, default_value_t = 0)]
+        wait: u64,
+    },
+    /// Show the `migration:v1` ledger state without writing anything
+    Status {
+        /// Path to the store root directory (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Machine-readable JSON
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -2525,6 +2575,22 @@ fn run() -> anyhow::Result<()> {
         Commands::Session { command } => {
             run_session_command(command)?;
         }
+        Commands::AtRest { command } => match command {
+            AtRestCommands::Migrate {
+                store,
+                galaxy,
+                batch,
+                dry_run,
+                wait,
+            } => {
+                let store_path = store.unwrap_or_else(|| wm_config.store_path());
+                run_at_rest_migrate(&store_path, &galaxy, batch, dry_run, wait)?;
+            }
+            AtRestCommands::Status { store, json } => {
+                let store_path = store.unwrap_or_else(|| wm_config.store_path());
+                run_at_rest_status(&store_path, json)?;
+            }
+        },
         Commands::Seal { store } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_seal(&store_path)?;
@@ -3015,6 +3081,249 @@ fn dirs_home() -> std::path::PathBuf {
 }
 
 /// Seal the store directory (`wm seal`).
+/// Parse the `--galaxy` filter for at-rest migration, defaulting to every
+/// record galaxy.
+fn at_rest_galaxies(filter: &[String]) -> anyhow::Result<Vec<wm_core::Galaxy>> {
+    if filter.is_empty() {
+        return Ok(wm_memory::RECORD_GALAXIES.to_vec());
+    }
+    let mut galaxies = Vec::new();
+    for name in filter {
+        let lower = name.to_lowercase();
+        let galaxy = wm_core::Galaxy::from_db_name(&lower)
+            .or_else(|| wm_core::Galaxy::from_db_name(name))
+            .ok_or_else(|| anyhow::anyhow!("unknown galaxy '{name}'"))?;
+        if !wm_memory::RECORD_GALAXIES.contains(&galaxy) {
+            anyhow::bail!(
+                "galaxy '{name}' is not a record galaxy (karma, dharma, associations, and \
+                 embeddings store non-record data and are never migrated)"
+            );
+        }
+        galaxies.push(galaxy);
+    }
+    Ok(galaxies)
+}
+
+/// `wm at-rest migrate` — Q39 slice B encrypt-on-rewrite migration.
+fn run_at_rest_migrate(
+    store_path: &std::path::Path,
+    galaxy_filter: &[String],
+    batch: usize,
+    dry_run: bool,
+    wait: u64,
+) -> anyhow::Result<()> {
+    let at_rest_config = wm_memory::AtRestConfig::from_env().map_err(|e| anyhow::anyhow!("{e}"))?;
+    run_at_rest_migrate_with_config(
+        store_path,
+        galaxy_filter,
+        batch,
+        dry_run,
+        wait,
+        &at_rest_config,
+    )
+}
+
+/// Testable core of `wm at-rest migrate` with an explicit at-rest config.
+fn run_at_rest_migrate_with_config(
+    store_path: &std::path::Path,
+    galaxy_filter: &[String],
+    batch: usize,
+    dry_run: bool,
+    wait: u64,
+    at_rest_config: &wm_memory::AtRestConfig,
+) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.join("data.mdb").exists() {
+        anyhow::bail!("No LMDB data found at {}.", lmdb_path.display());
+    }
+    let galaxies = at_rest_galaxies(galaxy_filter)?;
+    // A live server holds the Tantivy writer lock (and the LMDB lock); fail
+    // fast with holder names instead of hanging on the open.
+    wm_mcp::store_busy::ensure_store_available(store_path, wait)?;
+
+    if dry_run {
+        // Dry-run opens read-only: the keyring status (mode + coverage) is
+        // readable without resolving the RK, and nothing is written.
+        let store = wm_memory::MemoryStore::open_inspection(&lmdb_path)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        match store.at_rest_status() {
+            wm_memory::AtRestStatus::Absent => {
+                if at_rest_config.mode() == wm_memory::AtRestMode::Off {
+                    println!(
+                        "Dry run: no keyring at {} and WM_AT_REST_MODE=off — nothing to migrate \
+                         (plaintext pass-through).",
+                        lmdb_path.display()
+                    );
+                } else {
+                    println!(
+                        "Dry run: no keyring at {} yet, but mode '{}' is configured — the first \
+                         writable open would initialize the keyring and seal plaintext records in \
+                         {} record galaxies (batch {batch}).",
+                        lmdb_path.display(),
+                        at_rest_config.mode(),
+                        galaxies.len()
+                    );
+                    for galaxy in &galaxies {
+                        let count = store.count(*galaxy).unwrap_or(0);
+                        println!("  {}: {count} entries", galaxy.db_name());
+                    }
+                    println!(
+                        "Run without --dry-run (with the store's key source set) to initialize \
+                         and migrate; take a `wm backup` first."
+                    );
+                }
+            }
+            wm_memory::AtRestStatus::Malformed { reason } => {
+                anyhow::bail!("keyring is malformed ({reason}) — repair it before migrating");
+            }
+            wm_memory::AtRestStatus::Present(present) => {
+                println!(
+                    "Dry run: keyring mode '{}', {}/{} galaxy DEKs wrapped — would seal plaintext \
+                     records in {} record galaxies (batch {batch}).",
+                    present.meta.mode,
+                    present.wrapped_deks,
+                    present.galaxies,
+                    galaxies.len()
+                );
+                let counts = wm_memory::at_rest_record_counts(&store).unwrap_or_default();
+                for galaxy in &galaxies {
+                    if let Some(c) = counts.iter().find(|c| c.galaxy == galaxy.db_name()) {
+                        println!(
+                            "  {}: {} plaintext, {} sealed, {} non-record rows",
+                            galaxy.db_name(),
+                            c.plaintext,
+                            c.sealed,
+                            c.non_record
+                        );
+                    } else {
+                        println!("  {}: 0 entries", galaxy.db_name());
+                    }
+                }
+                println!(
+                    "Run without --dry-run (with the store's key source set) to apply; take a \
+                     `wm backup` first."
+                );
+            }
+        }
+        return Ok(());
+    }
+
+    // The migration needs an unlocked keyring: open with the supplied
+    // at-rest configuration (from the environment in the CLI path). An `off`
+    // config on a keyring store is refused by the split-brain guard; a
+    // keyring-absent store reports the no-op.
+    //
+    // The write open wedges (not fails) on a held LMDB writer lock (9.1.6):
+    // probe non-blocking first so the documented "stop the server" refusal
+    // actually fires instead of hanging.
+    if let Err(e) = wm_memory::MemoryStore::probe_write_lock(store_path) {
+        anyhow::bail!(
+            "Could not take the LMDB lock at {} — a server may be running \
+             (stop the store's wm-serve unit first). Underlying: {e}",
+            lmdb_path.display()
+        );
+    }
+    let store = wm_memory::MemoryStore::open_with_at_rest(
+        &lmdb_path,
+        wm_memory::MemoryStore::default_map_size(),
+        at_rest_config,
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
+    if store.at_rest_status() == wm_memory::AtRestStatus::Absent {
+        println!(
+            "No keyring at {} — nothing to migrate (plaintext pass-through).",
+            lmdb_path.display()
+        );
+        return Ok(());
+    }
+
+    let report = wm_memory::migrate_at_rest_records(&store, &galaxies, batch)
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    for galaxy in &report.galaxies {
+        println!(
+            "{}: sealed {} ({} already sealed, {} undecodable, {} non-record rows){}",
+            galaxy.galaxy,
+            galaxy.encrypted,
+            galaxy.already_sealed,
+            galaxy.undecodable,
+            galaxy.skipped_non_record,
+            if galaxy.done { " — done" } else { "" }
+        );
+    }
+    println!(
+        "Migrated {} record(s) across {} galaxy(ies){}.",
+        report.total_encrypted,
+        report.galaxies.len(),
+        if report.all_done() {
+            " — all selected galaxies complete"
+        } else {
+            " — re-run to continue (crash-safe ledger)"
+        }
+    );
+    Ok(())
+}
+
+/// `wm at-rest status` — read the migration ledger without writing.
+fn run_at_rest_status(store_path: &std::path::Path, json: bool) -> anyhow::Result<()> {
+    let lmdb_path = store_path.join("lmdb");
+    if !lmdb_path.join("data.mdb").exists() {
+        anyhow::bail!("No LMDB data found at {}.", lmdb_path.display());
+    }
+    let store =
+        wm_memory::MemoryStore::open_inspection(&lmdb_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let ledger = wm_memory::migration_ledger(&store).map_err(|e| anyhow::anyhow!("{e}"))?;
+    if json {
+        let payload = serde_json::json!({
+            "at_rest": match store.at_rest_status() {
+                wm_memory::AtRestStatus::Absent => serde_json::json!({"mode": "off", "keyring": false}),
+                wm_memory::AtRestStatus::Malformed { reason } => {
+                    serde_json::json!({"keyring": true, "malformed": reason})
+                }
+                wm_memory::AtRestStatus::Present(present) => serde_json::json!({
+                    "keyring": true,
+                    "mode": present.meta.mode.as_str(),
+                    "wrapped_deks": present.wrapped_deks,
+                    "galaxies": present.galaxies,
+                }),
+            },
+            "migration": ledger,
+        });
+        println!("{}", serde_json::to_string_pretty(&payload)?);
+        return Ok(());
+    }
+    match &ledger {
+        None => println!(
+            "No keyring at {} — plaintext pass-through; no migration state.",
+            lmdb_path.display()
+        ),
+        Some(ledger) if ledger.galaxies.is_empty() => {
+            println!("Keyring present; no migration has run yet (no `migration:v1` ledger rows).");
+        }
+        Some(ledger) => {
+            let mode = match store.at_rest_status() {
+                wm_memory::AtRestStatus::Present(present) => present.meta.mode.to_string(),
+                wm_memory::AtRestStatus::Malformed { reason } => format!("malformed ({reason})"),
+                wm_memory::AtRestStatus::Absent => "off".to_string(),
+            };
+            println!(
+                "Migration ledger (mode {mode}, updated {}):",
+                ledger.updated_at
+            );
+            for (name, state) in &ledger.galaxies {
+                if state.done {
+                    println!("  {name}: {} sealed, done", state.encrypted);
+                } else {
+                    println!(
+                        "  {name}: {} sealed, resume cursor {}",
+                        state.encrypted, state.cursor_hex
+                    );
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn run_seal(store_path: &std::path::Path) -> anyhow::Result<()> {
     let lmdb_path = store_path.join("lmdb");
     if !lmdb_path.exists() {
@@ -3847,13 +4156,15 @@ fn at_rest_key_source_line(present: &wm_memory::AtRestStatusPresent) -> String {
 }
 
 /// Format the section-11i at-rest disclosure for a keyring status (Q39
-/// slice A). Records are still plaintext in slice A — every rendered line
-/// says so, and mode B never claims crypto-erasure. A partial wrapped-DEK
-/// count is a WARN + issue: every writable open refuses until the keyring
-/// is repaired (fail-closed).
+/// slice A/B). Every rendered line is honest about what is actually
+/// encrypted: counts come from the WMEN magic only (never decryption), and
+/// a partial wrapped-DEK count or unreadable ledger is a WARN + issue
+/// (writable opens refuse until repaired — fail-closed).
 fn format_at_rest_disclosure(
     status: &wm_memory::AtRestStatus,
     store_root: &Path,
+    counts: Option<&[wm_memory::GalaxyAtRestCounts]>,
+    ledger: Option<&wm_memory::MigrationLedger>,
 ) -> AtRestDisclosure {
     use wm_memory::{AtRestMode, AtRestStatus};
     let keyring_path = store_root.join("lmdb");
@@ -3880,12 +4191,61 @@ fn format_at_rest_disclosure(
             } else {
                 ""
             };
+            // Slice-B record inventory: sealed vs plaintext per galaxy, plus
+            // the migration ledger state. Pure formatting — the caller
+            // supplies read-only counts.
+            use std::fmt::Write as _;
+            let mut inventory = String::new();
+            if let Some(counts) = counts {
+                let sealed: u64 = counts.iter().map(|c| c.sealed).sum();
+                let plaintext: u64 = counts.iter().map(|c| c.plaintext).sum();
+                let _ = write!(
+                    inventory,
+                    "\n       Records (12 record galaxies): {sealed} sealed, {plaintext} plaintext \
+                     (WMEN magic only)"
+                );
+                if plaintext > 0 {
+                    let per_galaxy = counts
+                        .iter()
+                        .filter(|c| c.plaintext > 0)
+                        .map(|c| format!("{}={}", c.galaxy, c.plaintext))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    let _ = write!(inventory, "\n       Plaintext by galaxy: {per_galaxy}");
+                }
+            }
+            if let Some(ledger) = ledger {
+                if ledger.galaxies.is_empty() {
+                    inventory
+                        .push_str("\n       Migration: no run yet (migration:v1 ledger empty)");
+                } else {
+                    let mut parts = Vec::new();
+                    for (name, state) in &ledger.galaxies {
+                        parts.push(format!(
+                            "{name}: {}{}",
+                            state.encrypted,
+                            if state.done {
+                                " done"
+                            } else {
+                                " (resume pending)"
+                            }
+                        ));
+                    }
+                    let _ = write!(
+                        inventory,
+                        "\n       Migration: {} (updated {})",
+                        parts.join(", "),
+                        ledger.updated_at
+                    );
+                }
+            }
             match present.meta.mode {
                 AtRestMode::Keyfile => AtRestDisclosure {
                     text: format!(
                         "{prefix} At-rest: mode B (keyfile) — {coverage} (keyring: {keyring})\
-                         {partial_suffix}\n       {source}\n       Physical-purge only — never \
-                         crypto-erasure on mode B; record encryption ships with Q39 slice B.\n"
+                         {partial_suffix}\n       {source}{inventory}\n       Physical-purge only \
+                         — never crypto-erasure on mode B; record sealing is Q39 slice B \
+                         (WMEN envelope).\n"
                     ),
                     issue: partial,
                 },
@@ -3902,9 +4262,9 @@ fn format_at_rest_disclosure(
                     AtRestDisclosure {
                         text: format!(
                             "{prefix} At-rest: mode C (passphrase) — {coverage} (keyring: \
-                             {keyring}){partial_suffix}\n       {source}\n       {argon}\n       \
-                             Passphrase crypto-erasure is not yet advertised — record \
-                             encryption ships with Q39 slice B.\n"
+                             {keyring}){partial_suffix}\n       {source}\n       {argon}\
+                             {inventory}\n       Passphrase crypto-erasure is not yet \
+                             advertised — record sealing is Q39 slice B (WMEN envelope).\n"
                         ),
                         issue: partial,
                     }
@@ -4957,14 +5317,26 @@ fn run_doctor(
         }
     }
 
-    // 11i. At-rest key mode (Q39 slice A) — per-store disclosure of the
-    //      keyring mode: off is honestly plaintext, mode B is physical-purge
-    //      only, mode C is not yet advertised, and a malformed keyring is an
-    //      issue. Read-only: the status reads the keyring meta row only; the
-    //      RK is never resolved and nothing is created or written here.
+    // 11i. At-rest key mode (Q39 slice A/B) — per-store disclosure of the
+    //      keyring mode plus the slice-B record inventory (sealed vs
+    //      plaintext by WMEN magic) and migration ledger state. Read-only:
+    //      the status reads the keyring meta row only; the RK is never
+    //      resolved and nothing is created or written here.
     println!();
     {
-        let disclosure = format_at_rest_disclosure(&server.store().at_rest_status(), &store_path);
+        let status = server.store().at_rest_status();
+        let counts = if matches!(status, wm_memory::AtRestStatus::Present(_)) {
+            wm_memory::at_rest_record_counts(server.store()).ok()
+        } else {
+            None
+        };
+        let ledger = if matches!(status, wm_memory::AtRestStatus::Present(_)) {
+            wm_memory::migration_ledger(server.store()).ok().flatten()
+        } else {
+            None
+        };
+        let disclosure =
+            format_at_rest_disclosure(&status, &store_path, counts.as_deref(), ledger.as_ref());
         print!("{}", disclosure.text);
         if disclosure.issue {
             issues += 1;
@@ -6114,6 +6486,136 @@ mod session_cli_tests {
 }
 
 #[cfg(test)]
+mod at_rest_cli_tests {
+    use super::*;
+    use wm_memory::{AtRestConfig, MemoryStore};
+
+    const TEST_MAP: usize = 16 * 1024 * 1024;
+
+    fn fresh_root(tmp: &std::path::Path) -> std::path::PathBuf {
+        tmp.join("store")
+    }
+
+    fn plant_plaintext(root: &std::path::Path, count: usize) -> Vec<uuid::Uuid> {
+        let lmdb = root.join("lmdb");
+        let store = MemoryStore::open_with_at_rest(&lmdb, TEST_MAP, &AtRestConfig::off()).unwrap();
+        let mut ids = Vec::new();
+        for i in 0..count {
+            let mem = wm_memory::Memory::new(wm_core::Galaxy::Codex, format!("legacy {i}"));
+            ids.push(mem.metadata.id);
+            store.put(wm_core::Galaxy::Codex, &mem).unwrap();
+        }
+        ids
+    }
+
+    fn sealed_count(root: &std::path::Path, hex_key: &str) -> usize {
+        let lmdb = root.join("lmdb");
+        let store = MemoryStore::open_with_at_rest(
+            &lmdb,
+            TEST_MAP,
+            &AtRestConfig::keyfile_with_root_key(hex_key.to_string()),
+        )
+        .unwrap();
+        store
+            .scan_all(wm_core::Galaxy::Codex)
+            .unwrap()
+            .into_iter()
+            .filter(|m| {
+                store
+                    .get_raw(wm_core::Galaxy::Codex, m.metadata.id.as_bytes())
+                    .unwrap()
+                    .is_some_and(|raw| raw.starts_with(b"WMEN"))
+            })
+            .count()
+    }
+
+    #[test]
+    fn migrate_seals_plaintext_records_and_status_reports_the_ledger() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = fresh_root(tmp.path());
+        let ids = plant_plaintext(&root, 6);
+        let hex_key = "cc".repeat(32);
+
+        run_at_rest_migrate_with_config(
+            &root,
+            &[],
+            4,
+            false,
+            0,
+            &AtRestConfig::keyfile_with_root_key(hex_key.clone()),
+        )
+        .unwrap();
+
+        assert_eq!(
+            sealed_count(&root, &hex_key),
+            6,
+            "all records must be sealed"
+        );
+        drop(ids);
+
+        // Status is read-only and reports the completed ledger.
+        run_at_rest_status(&root, true).unwrap();
+    }
+
+    #[test]
+    fn migrate_refuses_a_plaintext_store_without_a_keyring_as_a_noop() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = fresh_root(tmp.path());
+        plant_plaintext(&root, 2);
+
+        run_at_rest_migrate_with_config(&root, &[], 0, false, 0, &AtRestConfig::off()).unwrap();
+        // Nothing sealed, nothing created.
+        let lmdb = root.join("lmdb");
+        let store = MemoryStore::open_inspection(&lmdb).unwrap();
+        assert_eq!(store.at_rest_status(), wm_memory::AtRestStatus::Absent);
+    }
+
+    #[test]
+    fn migrate_dry_run_writes_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = fresh_root(tmp.path());
+        let ids = plant_plaintext(&root, 3);
+        let lmdb = root.join("lmdb");
+        // Keyring store: initialize first with a writable keyfile open.
+        drop(MemoryStore::open_with_at_rest(&lmdb, TEST_MAP, &AtRestConfig::keyfile()).unwrap());
+        let before = std::fs::metadata(lmdb.join("data.mdb")).unwrap().len();
+
+        run_at_rest_migrate_with_config(&root, &[], 0, true, 0, &AtRestConfig::keyfile()).unwrap();
+
+        // Records remain plaintext and no ledger exists.
+        let store = MemoryStore::open_inspection(&lmdb).unwrap();
+        assert!(
+            wm_memory::migration_ledger(&store)
+                .unwrap()
+                .unwrap()
+                .galaxies
+                .is_empty()
+        );
+        let raw = store
+            .get_raw(wm_core::Galaxy::Codex, ids[0].as_bytes())
+            .unwrap()
+            .unwrap();
+        assert!(!raw.starts_with(b"WMEN"), "dry run must not seal records");
+        let after = std::fs::metadata(lmdb.join("data.mdb")).unwrap().len();
+        assert_eq!(after, before, "dry run must not write the store");
+    }
+
+    #[test]
+    fn galaxy_filter_rejects_non_record_galaxies() {
+        let error = at_rest_galaxies(&["karma".to_string()]).unwrap_err();
+        assert!(error.to_string().contains("not a record galaxy"), "{error}");
+        assert_eq!(
+            at_rest_galaxies(&["codex".to_string()]).unwrap(),
+            vec![wm_core::Galaxy::Codex]
+        );
+        assert_eq!(
+            at_rest_galaxies(&[]).unwrap().len(),
+            wm_memory::RECORD_GALAXIES.len()
+        );
+    }
+}
+
+#[cfg(test)]
 mod help_surface_tests {
     use super::*;
     use clap::CommandFactory;
@@ -6235,7 +6737,8 @@ mod at_rest_doctor_tests {
 
     #[test]
     fn formatter_off_is_honest_plaintext() {
-        let disclosure = format_at_rest_disclosure(&AtRestStatus::Absent, Path::new("/store"));
+        let disclosure =
+            format_at_rest_disclosure(&AtRestStatus::Absent, Path::new("/store"), None, None);
         assert!(disclosure.text.starts_with("[INFO]"), "{}", disclosure.text);
         assert!(
             disclosure.text.contains("plaintext pass-through"),
@@ -6252,8 +6755,12 @@ mod at_rest_doctor_tests {
 
     #[test]
     fn formatter_keyfile_discloses_mode_b_and_no_crypto_erasure() {
-        let disclosure =
-            format_at_rest_disclosure(&present(AtRestMode::Keyfile, None), Path::new("/store"));
+        let disclosure = format_at_rest_disclosure(
+            &present(AtRestMode::Keyfile, None),
+            Path::new("/store"),
+            None,
+            None,
+        );
         assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
         assert!(
             disclosure.text.contains("mode B (keyfile)"),
@@ -6312,6 +6819,8 @@ mod at_rest_doctor_tests {
                 16,
             ),
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
         assert!(
@@ -6342,6 +6851,8 @@ mod at_rest_doctor_tests {
         let disclosure = format_at_rest_disclosure(
             &present_with(AtRestMode::Keyfile, None, "env_root_key", None, 16),
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
         assert!(
@@ -6368,6 +6879,8 @@ mod at_rest_doctor_tests {
                 16,
             ),
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(disclosure.text.starts_with("[OK]"), "{}", disclosure.text);
         assert!(
@@ -6383,6 +6896,8 @@ mod at_rest_doctor_tests {
         let without_path = format_at_rest_disclosure(
             &present_with(AtRestMode::Keyfile, None, "key_file", None, 16),
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(
             without_path
@@ -6406,6 +6921,8 @@ mod at_rest_doctor_tests {
                 12,
             ),
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(disclosure.text.starts_with("[WARN]"), "{}", disclosure.text);
         assert!(disclosure.text.contains("12/16"), "{}", disclosure.text);
@@ -6436,6 +6953,8 @@ mod at_rest_doctor_tests {
                 3,
             ),
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(
             passphrase_partial.text.starts_with("[WARN]"),
@@ -6450,6 +6969,8 @@ mod at_rest_doctor_tests {
         let disclosure = format_at_rest_disclosure(
             &present_with(AtRestMode::Off, None, "generated_key_file", None, 0),
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(disclosure.text.starts_with("[WARN]"), "{}", disclosure.text);
         assert!(
@@ -6472,6 +6993,8 @@ mod at_rest_doctor_tests {
                 reason: "meta row does not parse".to_string(),
             },
             Path::new("/store"),
+            None,
+            None,
         );
         assert!(disclosure.text.starts_with("[WARN]"), "{}", disclosure.text);
         assert!(disclosure.text.contains("malformed"), "{}", disclosure.text);
@@ -6481,6 +7004,91 @@ mod at_rest_doctor_tests {
             disclosure.text
         );
         assert!(disclosure.issue);
+    }
+
+    #[test]
+    fn formatter_discloses_record_inventory_and_migration_state() {
+        let counts = vec![
+            wm_memory::GalaxyAtRestCounts {
+                galaxy: "codex".into(),
+                sealed: 12,
+                plaintext: 3,
+                non_record: 0,
+            },
+            wm_memory::GalaxyAtRestCounts {
+                galaxy: "sessions".into(),
+                sealed: 5,
+                plaintext: 0,
+                non_record: 1,
+            },
+        ];
+        let mut ledger = wm_memory::MigrationLedger::default();
+        ledger.galaxies.insert(
+            "codex".to_string(),
+            wm_memory::MigrationGalaxyState {
+                encrypted: 12,
+                cursor_hex: "aa".into(),
+                done: false,
+            },
+        );
+        let disclosure = format_at_rest_disclosure(
+            &present(AtRestMode::Keyfile, None),
+            Path::new("/store"),
+            Some(&counts),
+            Some(&ledger),
+        );
+        assert!(
+            disclosure
+                .text
+                .contains("12 record galaxies): 17 sealed, 3 plaintext"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("Plaintext by galaxy: codex=3"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            disclosure.text.contains("codex: 12 (resume pending)"),
+            "{}",
+            disclosure.text
+        );
+        assert!(
+            !disclosure
+                .text
+                .contains("crypto-erasure on mode B is available"),
+            "{}",
+            disclosure.text
+        );
+        assert!(!disclosure.issue);
+
+        // A fully-done ledger renders as done, and zero plaintext renders
+        // without the per-galaxy breakdown line.
+        let done = format_at_rest_disclosure(
+            &present(AtRestMode::Passphrase, None),
+            Path::new("/store"),
+            Some(&[wm_memory::GalaxyAtRestCounts {
+                galaxy: "codex".into(),
+                sealed: 9,
+                plaintext: 0,
+                non_record: 0,
+            }]),
+            Some(&{
+                let mut l = wm_memory::MigrationLedger::default();
+                l.galaxies.insert(
+                    "codex".to_string(),
+                    wm_memory::MigrationGalaxyState {
+                        encrypted: 9,
+                        cursor_hex: String::new(),
+                        done: true,
+                    },
+                );
+                l
+            }),
+        );
+        assert!(done.text.contains("codex: 9 done"), "{}", done.text);
+        assert!(!done.text.contains("Plaintext by galaxy"), "{}", done.text);
     }
 
     /// The doctor must read an at-rest store without resolving the RK on the

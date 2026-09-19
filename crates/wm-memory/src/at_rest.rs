@@ -46,6 +46,8 @@ pub const KEYRING_META_KEY: &[u8] = b"meta";
 pub const RK_CHECK_KEY: &[u8] = b"rk:check";
 /// Prefix of the `dek:<galaxy-db-name>` rows holding wrapped galaxy DEKs.
 pub const DEK_KEY_PREFIX: &str = "dek:";
+/// Keyring row holding the slice-B background-migration ledger (JSON).
+pub const MIGRATION_LEDGER_KEY: &[u8] = b"migration:v1";
 /// Current keyring meta format version.
 pub const KEYRING_FORMAT_VERSION: u32 = 1;
 /// AAD (and known plaintext) for the `rk:check` row.
@@ -1130,6 +1132,126 @@ pub(crate) fn open_at_rest(
              refusing to initialize over it (fail-closed); restore the keyring or the key material"
         ))),
     }
+}
+
+// ── Slice-B migration ledger ───────────────────────────────────────────
+
+/// Per-galaxy progress row in the slice-B background migration ledger.
+///
+/// Crash-safe resume contract: `encrypted` is the count of records sealed
+/// so far, `cursor_hex` is the last *scanned* key (hex) — records are
+/// idempotently re-encryptable, so a crash between a batch commit and the
+/// ledger write only repeats a bounded amount of work. `done` means the
+/// galaxy's key space was scanned to the end under this cursor.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MigrationGalaxyState {
+    /// Records sealed under the galaxy DEK so far (this migration run).
+    pub encrypted: u64,
+    /// Last scanned raw key, hex-encoded; empty = start of the keyspace.
+    #[serde(default)]
+    pub cursor_hex: String,
+    /// Whether the whole keyspace has been scanned.
+    #[serde(default)]
+    pub done: bool,
+}
+
+/// The `migration:v1` ledger row (keyring DBI).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MigrationLedger {
+    /// Ledger format version.
+    #[serde(default = "default_migration_ledger_version")]
+    pub version: u32,
+    /// Per-galaxy progress, keyed by `Galaxy::db_name()`.
+    #[serde(default)]
+    pub galaxies: std::collections::BTreeMap<String, MigrationGalaxyState>,
+    /// RFC 3339 timestamp of the last ledger update.
+    #[serde(default)]
+    pub updated_at: String,
+}
+
+impl Default for MigrationLedger {
+    fn default() -> Self {
+        Self {
+            version: default_migration_ledger_version(),
+            galaxies: std::collections::BTreeMap::new(),
+            updated_at: String::new(),
+        }
+    }
+}
+
+const fn default_migration_ledger_version() -> u32 {
+    1
+}
+
+/// Read the migration ledger from an already-open keyring DBI. A missing
+/// row is the default (no migration has run); an unreadable row is a hard
+/// error (a corrupt ledger must never silently restart a migration).
+pub(crate) fn read_migration_ledger(env: &Environment, db: Database) -> Result<MigrationLedger> {
+    let tx = env
+        .begin_ro_txn()
+        .map_err(|e| mem_err(format!("LMDB ro_txn failed (migration ledger): {e}")))?;
+    let ledger = match tx.get(db, &MIGRATION_LEDGER_KEY) {
+        Ok(bytes) => serde_json::from_slice::<MigrationLedger>(bytes).map_err(|e| {
+            mem_err(format!(
+                "migration ledger row does not parse as JSON ({e}) — refusing to migrate over it"
+            ))
+        })?,
+        Err(lmdb::Error::NotFound) => MigrationLedger::default(),
+        Err(e) => {
+            return Err(mem_err(format!("LMDB read failed (migration ledger): {e}")));
+        }
+    };
+    tx.commit()
+        .map_err(|e| mem_err(format!("LMDB commit failed (migration ledger): {e}")))?;
+    Ok(ledger)
+}
+
+/// Write the migration ledger row (same transaction discipline as record
+/// batches: one txn per update, called after each committed batch).
+pub(crate) fn write_migration_ledger(
+    env: &Environment,
+    db: Database,
+    ledger: &MigrationLedger,
+) -> Result<()> {
+    let json = serde_json::to_vec(ledger)
+        .map_err(|e| mem_err(format!("migration ledger serialization failed: {e}")))?;
+    let mut tx = env
+        .begin_rw_txn()
+        .map_err(|e| mem_err(format!("LMDB rw_txn failed (migration ledger): {e}")))?;
+    tx.put(db, &MIGRATION_LEDGER_KEY, &json, WriteFlags::default())
+        .map_err(|e| mem_err(format!("LMDB put failed (migration ledger): {e}")))?;
+    tx.commit()
+        .map_err(|e| mem_err(format!("LMDB commit failed (migration ledger): {e}")))?;
+    Ok(())
+}
+
+/// Whether `key` (a raw galaxy-DB key) is a candidate for record sealing.
+/// Only 16-byte UUID keys are memory records; anything else (e.g. raw
+/// config rows written through `put_raw`) is skipped, not an error.
+pub(crate) const fn migration_candidate_key(key: &[u8]) -> bool {
+    key.len() == 16
+}
+
+/// Decode a plaintext (legacy) record value during migration. Sealed values
+/// are skipped by the caller; this returns `None` for undecodable plaintext
+/// so the migration can count-and-skip instead of aborting.
+pub(crate) fn decode_plaintext_for_migration(value: &[u8]) -> Option<crate::memory::Memory> {
+    if crate::codec::is_sealed_record(value) {
+        return None;
+    }
+    crate::codec::decode(value).ok()
+}
+
+/// A raw plaintext record value re-sealed under the galaxy DEK.
+pub(crate) fn seal_migrated_record(
+    value: &[u8],
+    key: &[u8; AT_REST_KEY_LEN],
+    galaxy_db_name: &str,
+    record_id: &[u8; 16],
+    version: u64,
+) -> Result<Vec<u8>> {
+    crate::codec::seal_record(value, key, galaxy_db_name, record_id, version)
+        .map_err(|e| mem_err(format!("at-rest migration seal failed: {e}")))
 }
 
 #[cfg(test)]
