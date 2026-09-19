@@ -982,12 +982,39 @@ fn count_token_hits(content: &str, stripped_query: &str) -> usize {
         .count()
 }
 
+/// Printable-character ratio used by the index/admission gate.
+///
+/// Tab, newline, and carriage return are **formatting whitespace, not
+/// debris** — they count as printable, aligned with the byte-level ingest
+/// gate (`wm_mcp::ingest::binary_content`), which already treats those
+/// three bytes as printable. Any other Unicode control character counts
+/// against the ratio. Empty content returns 1.0 (vacuously clean); callers
+/// reject emptiness separately.
+///
+/// 2026-09-19 benchmark finding: the old definition counted line breaks as
+/// unprintable, so code/formatting-heavy memories (hex-color lists, HTML
+/// and jQuery snippets) failed admission even though they are exactly the
+/// content a coding-agent memory exists to keep.
+#[must_use]
+pub fn printable_ratio(content: &str) -> f32 {
+    let total = content.chars().count();
+    if total == 0 {
+        return 1.0;
+    }
+    let printable = content
+        .chars()
+        .filter(|c| !c.is_control() || matches!(c, '\t' | '\n' | '\r'))
+        .count();
+    printable as f32 / total as f32
+}
+
 /// Prepare content for indexing.
 ///
 /// Returns `None` when the content is not clean text and must be skipped:
 /// - empty / whitespace-only content
 /// - contains a null byte (binary serialization artifact)
-/// - printable-char ratio below [`MIN_PRINTABLE_RATIO`]
+/// - printable-char ratio below [`MIN_PRINTABLE_RATIO`] (tab/newline/CR
+///   count as printable — see [`printable_ratio`])
 ///
 /// Otherwise returns the content scrubbed of control characters and capped
 /// at [`MAX_INDEX_CONTENT_LEN`] chars.
@@ -999,13 +1026,7 @@ pub fn sanitize_content_for_index(content: &str) -> Option<String> {
     if content.as_bytes().contains(&0) {
         return None;
     }
-
-    let total = content.chars().count();
-    if total == 0 {
-        return None;
-    }
-    let printable = content.chars().filter(|c| !c.is_control()).count();
-    if (printable as f32 / total as f32) < MIN_PRINTABLE_RATIO {
+    if printable_ratio(content) < MIN_PRINTABLE_RATIO {
         return None;
     }
 
@@ -1453,6 +1474,29 @@ mod tests {
         // 5 control chars out of 11 → ratio 0.55 < 0.9 → skip
         let content = "\u{01}\u{02}\u{03}\u{04}\u{05}hello";
         assert!(sanitize_content_for_index(content).is_none());
+    }
+
+    #[test]
+    fn sanitize_content_accepts_code_and_formatting_heavy_text() {
+        // 2026-09-19 benchmark regression: code/formatting-heavy turns were
+        // rejected because every line break counted as unprintable. Tab,
+        // newline, and CR are formatting whitespace — they must not fail
+        // admission (the byte-level ingest gate already treats them as
+        // printable bytes).
+        let hex_list = "Casper\n#ACBFCD\n\nPickled Bluewood\n#324558\n\nComet\n#545B70\n";
+        assert!(sanitize_content_for_index(hex_list).is_some());
+        let html = "Sure, here's how:\n```html\n<!DOCTYPE html>\n<html>\n  <body>\n \n \n  </body>\n</html>\n```";
+        assert!(sanitize_content_for_index(html).is_some());
+        // Genuine binary control chars still fail the ratio.
+        let binary = "\u{01}\u{02}\u{03}\u{04}\u{05}hello";
+        assert!(sanitize_content_for_index(binary).is_none());
+    }
+
+    #[test]
+    fn printable_ratio_treats_line_breaks_as_printable() {
+        assert!((printable_ratio("a\nb\tc\rd") - 1.0).abs() < f32::EPSILON);
+        assert!(printable_ratio("\u{01}\u{02}\u{03}\u{04}\u{05}hello") < 0.9);
+        assert!((printable_ratio("") - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]

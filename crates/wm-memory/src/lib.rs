@@ -103,8 +103,8 @@ pub use release_manifest::{
 pub use revision::{MemoryRevision, RevisionActor, RevisionChainReport};
 pub use search::{
     IndexHealth, MAX_INDEX_CONTENT_LEN, MIN_PRINTABLE_RATIO, STOPWORDS, SearchEngine,
-    SearchOptions, SearchResult, sanitize_content_for_index, sanitize_tantivy_query, scrub_text,
-    strip_stopwords,
+    SearchOptions, SearchResult, printable_ratio, sanitize_content_for_index,
+    sanitize_tantivy_query, scrub_text, strip_stopwords,
 };
 pub use semantic::{SemanticEncoder, SemanticScores};
 pub use store::MemoryQuery;

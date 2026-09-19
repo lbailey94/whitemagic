@@ -20,6 +20,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Both with regression tests; E10 Q39A receipt:
   `planning/private/E10_Q39A_AT_REST_REVIEW_2026-09-19.md`.
 
+### Content admission hardening (benchmark-found)
+- **Line breaks are not debris.** The index/admission gate's printable-ratio
+  now counts tab/newline/CR as printable, aligned with the byte-level ingest
+  gate (`wm_mcp::ingest::binary_content`) which already did. Code and
+  formatting-heavy memories (hex-color lists, HTML/jQuery snippets —
+  exactly what a coding-agent memory exists to keep) are no longer refused;
+  NUL bytes and genuine control-character-heavy payloads still fail closed.
+  The shared `printable_ratio` replaces the three copies of the old rule
+  (`wm reindex`, `wm repair-content` classification).
+- **`memory.batch_create` skips and reports instead of voiding the batch.**
+  One malformed or unindexable item no longer fails the whole call: valid
+  items are ingested and the response carries `skipped_count` + `skipped`
+  (`{index, reason}` per item). Found by the T0 benchmark run — a single
+  rejected turn cost 5 of the 50 canonical questions their entire haystack
+  (R@1 42.2% → 38.0% on the raw run).
+
 ### Backup integrity — Q07-F1
 - **`envelope.json` is inside the backup manifest.** `wm backup` now lists
   the root-level `envelope.json` entry in `SHA256SUMS` (beside the `data/**`

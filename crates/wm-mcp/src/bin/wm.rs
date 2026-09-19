@@ -3344,7 +3344,6 @@ fn run_repair_content(
                 }
                 total_skipped += 1;
                 let total = mem.content.chars().count();
-                let printable = mem.content.chars().filter(|c| !c.is_control()).count();
                 let cleaned: String = mem
                     .content
                     .chars()
@@ -3357,7 +3356,7 @@ fn run_repair_content(
                     })
                     .collect();
                 if total > 0
-                    && (printable as f32 / total as f32) >= 0.5
+                    && wm_memory::printable_ratio(&mem.content) >= 0.5
                     && wm_memory::sanitize_content_for_index(&cleaned).is_some()
                 {
                     repairable += 1;

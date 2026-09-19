@@ -761,21 +761,31 @@ impl Tool for MemoryBatchCreateTool {
         // Collect memories for batch processing
         let mut memories: Vec<(Galaxy, Memory)> = Vec::new();
 
+        // Per-item admission: a malformed or unindexable item is skipped and
+        // reported, never fatal — one bad turn must not void an import batch
+        // (2026-09-19 benchmark finding: a single rejected turn cost whole
+        // haystacks). Callers wanting all-or-nothing inspect `skipped`.
+        let mut skipped: Vec<Value> = Vec::new();
         for (index, item) in items.iter().enumerate() {
-            let content = item
-                .get("content")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| {
-                    wm_core::CoreError::InvalidArgs("each item needs content (string)".into())
-                })?;
-            content_admission_gate(content).map_err(|reason| {
-                wm_core::CoreError::InvalidArgs(format!("items[{index}]: {reason}"))
-            })?;
+            let Some(content) = item.get("content").and_then(|v| v.as_str()) else {
+                skipped.push(json!({"index": index, "reason": "each item needs content (string)"}));
+                continue;
+            };
+            if let Err(reason) = content_admission_gate(content) {
+                skipped.push(json!({"index": index, "reason": reason}));
+                continue;
+            }
             let galaxy_str = item
                 .get("galaxy")
                 .and_then(|v| v.as_str())
                 .unwrap_or("codex");
-            let galaxy = parse_galaxy(galaxy_str)?;
+            let galaxy = match parse_galaxy(galaxy_str) {
+                Ok(galaxy) => galaxy,
+                Err(e) => {
+                    skipped.push(json!({"index": index, "reason": format!("galaxy: {e}")}));
+                    continue;
+                }
+            };
             let tags: Vec<String> = item
                 .get("tags")
                 .and_then(|v| v.as_array())
@@ -794,10 +804,15 @@ impl Tool for MemoryBatchCreateTool {
             // tag families (rsi:/ingest:/heritage) carry provenance the
             // content shape alone lacks. String importance forms are
             // accepted loudly (same legacy-schema reason as single create).
-            if let Some(importance) =
-                wm_dispatch::write_gate::parse_importance_value(item.get("importance"))
-                    .map_err(wm_core::CoreError::InvalidArgs)?
-            {
+            let parsed_importance =
+                match wm_dispatch::write_gate::parse_importance_value(item.get("importance")) {
+                    Ok(value) => value,
+                    Err(e) => {
+                        skipped.push(json!({"index": index, "reason": format!("importance: {e}")}));
+                        continue;
+                    }
+                };
+            if let Some(importance) = parsed_importance {
                 memory.metadata.importance = importance;
             }
             memory.metadata.class =
@@ -956,6 +971,10 @@ impl Tool for MemoryBatchCreateTool {
             "ids": ids,
             "attested_count": attested_count,
         });
+        if !skipped.is_empty() {
+            response["skipped_count"] = json!(skipped.len());
+            response["skipped"] = json!(skipped);
+        }
         let warnings: Vec<String> = cred_kinds
             .iter()
             .map(|k| {
@@ -4490,6 +4509,44 @@ mod tests {
             .unwrap();
         assert_eq!(result["attested_count"], 0);
         assert_eq!(result["count"], 1);
+    }
+
+    #[tokio::test]
+    async fn memory_batch_create_skips_invalid_items_instead_of_voiding_the_batch() {
+        let store = test_store();
+        let tool = MemoryBatchCreateTool::new(store.clone(), None, None);
+        let mut ctx = Context::new(BrainWave::Gamma);
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "items": [
+                        {"content": "valid one"},
+                        {"content": "\u{01}\u{02}\u{03}\u{04}\u{05}binary"},
+                        {"content": ""},
+                        {"content": "valid two"},
+                    ]
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
+        assert_eq!(result["count"], 2);
+        assert_eq!(result["skipped_count"], 2);
+        assert_eq!(result["skipped"][0]["index"], 1);
+        assert_eq!(result["skipped"][1]["index"], 2);
+
+        // Code/formatting-heavy content is admitted, not skipped (the
+        // 2026-09-19 benchmark regression).
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"items": [{"content": "Casper\n#ACBFCD\n\nComet\n#545B70\n"}]}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["count"], 1);
+        assert!(result.get("skipped").is_none());
     }
 
     #[tokio::test]

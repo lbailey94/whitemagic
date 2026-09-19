@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use wm_core::{CoreError, Galaxy, Result};
 
 use crate::memory::Memory;
-use crate::search::{SearchEngine, sanitize_content_for_index};
+use crate::search::{SearchEngine, printable_ratio, sanitize_content_for_index};
 use crate::store::MemoryStore;
 
 /// Batch size for scanning galaxies during rebuild (unused by `scan_all`
@@ -478,12 +478,12 @@ pub fn repair_content(
                 continue;
             }
             // Majority-text rule: control-char scrubbing must not manufacture
-            // searchable noise out of binary garbage.
+            // searchable noise out of binary garbage. Tab/newline/CR count as
+            // printable (shared ratio definition — 2026-09-19 alignment).
             let total = mem.content.chars().count();
-            let printable = mem.content.chars().filter(|c| !c.is_control()).count();
             let cleaned = clean_for_repair(&mem.content);
             if total == 0
-                || (printable as f32 / total as f32) < 0.5
+                || printable_ratio(&mem.content) < 0.5
                 || sanitize_content_for_index(&cleaned).is_none()
             {
                 stats.unrepairable += 1;
