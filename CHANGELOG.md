@@ -5,6 +5,21 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security — Q39 slice A review fixes
+- **Forward-compat keyring guard.** The writable at-rest path now rejects a
+  keyring whose `format_version` is newer than the build understands
+  (previously only the read-only disclosure path checked it, so an older
+  binary could interpret future-format rows). The same guard covers the
+  concurrent first-init winner path.
+- **Argon2 parameter bounds.** Argon2id parameters read from keyring meta are
+  now bounded (version must be 0x13; `m_cost ≤ 1 GiB`, `t_cost ≤ 64`,
+  `p_cost ≤ 16`) before derivation — a tampered meta row can no longer turn
+  unlock into a resource-exhaustion primitive.
+  Both with regression tests; E10 Q39A receipt:
+  `planning/private/E10_Q39A_AT_REST_REVIEW_2026-09-19.md`.
+
 ## [9.2.0] — 2026-09-19
 
 ### Release-gate fixes (verification wave)

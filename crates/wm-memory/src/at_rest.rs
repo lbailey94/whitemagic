@@ -94,6 +94,12 @@ const ARGON2_M_COST_KIB: u32 = 19_456;
 const ARGON2_T_COST: u32 = 2;
 const ARGON2_P_COST: u32 = 1;
 const ARGON2_VERSION: u32 = 0x13;
+/// Upper bounds for Argon2 parameters accepted from keyring meta: the meta
+/// row is store-local data, and a tampered one must not turn unlock into a
+/// resource-exhaustion primitive (E10 Q39A finding).
+const ARGON2_M_COST_MAX_KIB: u32 = 1_048_576; // 1 GiB
+const ARGON2_T_COST_MAX: u32 = 64;
+const ARGON2_P_COST_MAX: u32 = 16;
 
 fn mem_err(message: impl Into<String>) -> CoreError {
     CoreError::Memory(message.into())
@@ -495,10 +501,34 @@ fn argon2_params(salt: &[u8; ARGON2_SALT_LEN]) -> Argon2Params {
     }
 }
 
+/// Reject Argon2 parameters from keyring meta that this build would not
+/// have written: an unsupported version or values large enough to exhaust
+/// memory/CPU on unlock (fail-closed, before any allocation).
+fn validate_argon2_params(params: &Argon2Params) -> Result<()> {
+    if params.version != ARGON2_VERSION {
+        return Err(mem_err(format!(
+            "at-rest Argon2 version {} is not supported (expected {ARGON2_VERSION})",
+            params.version
+        )));
+    }
+    if params.m_cost_kib > ARGON2_M_COST_MAX_KIB
+        || params.t_cost > ARGON2_T_COST_MAX
+        || params.p_cost > ARGON2_P_COST_MAX
+    {
+        return Err(mem_err(format!(
+            "at-rest Argon2 parameters exceed sane bounds (m={} KiB max {ARGON2_M_COST_MAX_KIB}, \
+             t={} max {ARGON2_T_COST_MAX}, p={} max {ARGON2_P_COST_MAX}) — refusing to derive",
+            params.m_cost_kib, params.t_cost, params.p_cost
+        )));
+    }
+    Ok(())
+}
+
 fn derive_rk_from_passphrase(
     passphrase: &str,
     params: &Argon2Params,
 ) -> Result<Zeroizing<[u8; AT_REST_KEY_LEN]>> {
+    validate_argon2_params(params)?;
     let salt = hex_decode(&params.salt_hex)
         .ok_or_else(|| mem_err("at-rest keyring meta has a non-hex Argon2 salt"))?;
     let params = Params::new(
@@ -635,6 +665,16 @@ fn read_presence(env: &Environment) -> Result<KeyringPresence> {
         .map_err(|e| mem_err(format!("LMDB ro_txn failed (at-rest keyring): {e}")))?;
     let presence = match tx.get(db, &KEYRING_META_KEY) {
         Ok(bytes) => match serde_json::from_slice::<KeyringMeta>(bytes) {
+            // A future-format keyring must fail the writable path too, not
+            // just the disclosure path: older code must never interpret
+            // rows it does not understand (forward-compat, E10 Q39A).
+            Ok(meta) if meta.format_version != KEYRING_FORMAT_VERSION => {
+                KeyringPresence::Unreadable(format!(
+                    "unsupported keyring format_version {} (this build reads \
+                     {KEYRING_FORMAT_VERSION})",
+                    meta.format_version
+                ))
+            }
             Ok(meta) => KeyringPresence::Meta(Box::new(meta)),
             Err(e) => KeyringPresence::Unreadable(e.to_string()),
         },
@@ -909,6 +949,14 @@ fn initialize(
                 ))
             })?;
             tx.abort();
+            if meta.format_version != KEYRING_FORMAT_VERSION {
+                return Err(mem_err(format!(
+                    "at-rest keyring appeared during initialization with unsupported \
+                     format_version {} (this build reads {KEYRING_FORMAT_VERSION}) — \
+                     refusing to touch it",
+                    meta.format_version
+                )));
+            }
             if meta.mode != config.mode {
                 return Err(mem_err(format!(
                     "at-rest mode mismatch: store was initialized as '{}' but this open \
@@ -1605,6 +1653,68 @@ mod tests {
             !tmp.path().join(AT_REST_KEY_FILE).exists(),
             "a refused init must not write a key file"
         );
+    }
+
+    #[test]
+    fn future_keyring_format_version_refuses_writable_open_and_reports_malformed() {
+        // A future build's keyring (format_version > this build's) must fail
+        // the writable path, not just the disclosure path: older code must
+        // never interpret rows whose layout it does not understand.
+        let tmp = tempfile::tempdir().unwrap();
+        drop(open_keyfile(tmp.path()));
+        let rows = raw_keyring_rows(tmp.path());
+        let meta_bytes = rows
+            .iter()
+            .find(|(key, _)| key.as_slice() == KEYRING_META_KEY)
+            .map(|(_, value)| value.clone())
+            .expect("keyring meta row");
+        let mut meta: serde_json::Value = serde_json::from_slice(&meta_bytes).unwrap();
+        meta["format_version"] = serde_json::json!(99);
+        write_keyring_rows(
+            tmp.path(),
+            &[(KEYRING_META_KEY, serde_json::to_vec(&meta).unwrap())],
+        );
+
+        match MemoryStore::open_with_at_rest(tmp.path(), TEST_MAP, &AtRestConfig::keyfile()) {
+            Ok(_) => panic!("a future keyring format must refuse writable opens"),
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.contains("unsupported keyring format_version"),
+                    "{message}"
+                );
+            }
+        }
+        match MemoryStore::open_inspection(tmp.path())
+            .unwrap()
+            .at_rest_status()
+        {
+            AtRestStatus::Malformed { reason } => {
+                assert!(reason.contains("format_version"), "{reason}");
+            }
+            other => panic!("expected Malformed for a future format, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn hostile_argon2_params_from_meta_are_rejected_before_derivation() {
+        let salt_hex = "00".repeat(ARGON2_SALT_LEN);
+        let huge = Argon2Params {
+            m_cost_kib: 4_000_000,
+            t_cost: ARGON2_T_COST,
+            p_cost: ARGON2_P_COST,
+            version: ARGON2_VERSION,
+            salt_hex,
+        };
+        let error = derive_rk_from_passphrase("passphrase", &huge).unwrap_err();
+        assert!(error.to_string().contains("exceed sane bounds"), "{error}");
+
+        let wrong_version = Argon2Params {
+            version: 0x10,
+            ..huge
+        };
+        let error = derive_rk_from_passphrase("passphrase", &wrong_version).unwrap_err();
+        assert!(error.to_string().contains("version"), "{error}");
     }
 
     #[test]
