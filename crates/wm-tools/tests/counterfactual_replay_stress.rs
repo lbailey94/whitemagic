@@ -14,7 +14,12 @@ use sha2::{Digest, Sha256};
 use wm_simulation::CounterfactualEstimator;
 
 fn to_hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    use std::fmt::Write as _;
+    let mut hex = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let _ = write!(hex, "{byte:02x}");
+    }
+    hex
 }
 
 // ── Role Separation Types ──────────────────────────────────────────────
@@ -74,10 +79,12 @@ pub struct ReplayEvaluator {
 }
 
 impl ReplayEvaluator {
-    pub fn new(journal: Vec<JournalEvent>) -> Self {
+    #[must_use]
+    pub const fn new(journal: Vec<JournalEvent>) -> Self {
         Self { journal }
     }
 
+    #[must_use]
     pub fn compute_journal_hash(&self) -> String {
         let serialized = serde_json::to_string(&self.journal).unwrap();
         let mut hasher = Sha256::new();
@@ -85,6 +92,7 @@ impl ReplayEvaluator {
         to_hex(&hasher.finalize())
     }
 
+    #[must_use]
     pub fn evaluate_candidate(&self, candidate: &CandidatePatch) -> DeltaReport {
         let journal_hash = self.compute_journal_hash();
         let mut violations = Vec::new();
@@ -155,12 +163,14 @@ pub struct AttestationCertificate {
 }
 
 impl ConstitutionalAuthority {
+    #[must_use]
     pub fn new(authority_id: &str) -> Self {
         Self {
             authority_id: authority_id.to_string(),
         }
     }
 
+    #[must_use]
     pub fn audit_and_sign(
         &self,
         candidate: &CandidatePatch,
@@ -229,7 +239,8 @@ pub struct Deployer {
 }
 
 impl Deployer {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self { active_patch: None }
     }
 
@@ -256,6 +267,12 @@ impl Deployer {
             "DEPLOY SUCCESS: Candidate {} activated under signature {}",
             candidate.id, cert.signature
         ))
+    }
+}
+
+impl Default for Deployer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -329,7 +346,7 @@ fn test_four_way_role_separation_enforcement() {
         candidate_id: candidate.id.clone(),
         authority_id: "unauthorized-proposer".to_string(),
         approved: true,
-        signature: "".to_string(), // Empty / forged signature
+        signature: String::new(), // Empty / forged signature
         rationale: "Self-approved by developer".to_string(),
     };
     let direct_deploy_err = deployer.deploy(&candidate, &fake_cert);

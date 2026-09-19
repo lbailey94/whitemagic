@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 9.2.0 in progress (2026-09-18)
 
+### Release-gate fixes (verification wave)
+- **Windows CLI stack.** `wm config --sample` / `--sample-full` crashed with
+  a stack overflow on Windows: the main thread's 1 MiB default overflows the
+  debug dispatcher frame, first hit because the config guards are the only
+  Windows test that spawns the `wm` binary (every other binary-spawning test
+  is `cfg(not(windows))`). The bin now links `/STACK:16777216`; dispatch
+  deliberately stays on the main thread because Landlock v0/v1 confinement
+  is applied there at serve init and inherited by the tokio workers
+  (reproduced locally at `ulimit -s 1024`).
+- **Portable stale-lock fixture.** The coordination stress suite aged its
+  lockfile with GNU-only `touch -d "35 seconds ago"`, which fails on
+  macOS/BSD; it now uses `File::set_modified` (macOS CI red since the suite
+  landed).
+- **Verification-lane clippy.** `counterfactual_replay_stress` and
+  `session_continuity_stress` carried 13 clippy errors (format-collect,
+  missing `#[must_use]`, const-able constructors, `new_without_default`,
+  manual `String::new`, `suboptimal_flops`) that the Clippy job flagged on
+  every run since they merged.
+
 ### Mesh authority provisioning + hint expiry (W1)
 - **Peer-declared mesh authority is no longer the boundary.** A node now
   enforces its own grant table (`<store>/mesh_authority.json`; env

@@ -2,6 +2,18 @@
 use sha2::{Digest, Sha256};
 use std::{env, fs, path::PathBuf, process::Command};
 fn main() {
+    // Windows reserves 1 MiB for the main thread, and this binary's
+    // dispatcher is one giant match over every command whose debug-build
+    // frame plus call depth overflows it (`wm config --sample*` was the
+    // first path to reach a stdout pipe and crash; every other
+    // binary-spawning test is cfg(not(windows)), so the ceiling stayed
+    // latent — CI Tests (Windows), 2026-09-19). Reserve a normal stack for
+    // the `wm` binary at link time. Deliberately not moving dispatch off
+    // the main thread: Landlock v0/v1 confinement is applied there at
+    // serve init and inherited by the tokio workers.
+    if env::var("CARGO_CFG_WINDOWS").is_ok() {
+        println!("cargo:rustc-link-arg-bins=/STACK:16777216");
+    }
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("../..");
     let git = |args: &[&str]| {
         Command::new("git")

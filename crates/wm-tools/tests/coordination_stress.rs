@@ -10,9 +10,9 @@
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::Arc;
 use std::time::Duration as StdDuration;
+use std::time::SystemTime;
 use tokio::sync::Barrier;
 use wm_core::{Context, Tool};
 use wm_tools::expansion::{CodeCheckTool, CodeClaimTool, CodeListTool, CodeReleaseTool};
@@ -104,7 +104,7 @@ async fn test_50_tasks_competing_for_single_scope_zero_split_brain() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn test_50_tasks_disjoint_scopes_no_lost_updates() {
-    let (_dir, root) = fake_git_repo();
+    let (dir, root) = fake_git_repo();
     let num_tasks = 50;
     let barrier = Arc::new(Barrier::new(num_tasks));
     let mut handles = Vec::new();
@@ -198,7 +198,7 @@ async fn test_50_tasks_disjoint_scopes_no_lost_updates() {
         0,
         "all leases successfully released"
     );
-    drop(_dir);
+    drop(dir);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
@@ -303,12 +303,12 @@ async fn test_stale_lockfile_recovery_steals_and_succeeds() {
     // Manually create a simulated crashed writer's lockfile
     fs::write(&lock_file, "crashed_pid_99999").unwrap();
 
-    // Set mtime to 35 seconds ago using `touch -d "35 seconds ago"` (STALE_LOCK_SECS is 30s)
-    let status = Command::new("touch")
-        .args(["-d", "35 seconds ago", lock_file.to_str().unwrap()])
-        .status()
-        .expect("touch command must succeed");
-    assert!(status.success());
+    // Age the lockfile past STALE_LOCK_SECS (30 s) without shelling out:
+    // `touch -d "35 seconds ago"` is GNU-only and fails on macOS/BSD touch.
+    let lock = fs::File::options().write(true).open(&lock_file).unwrap();
+    lock.set_modified(SystemTime::now() - StdDuration::from_secs(35))
+        .unwrap();
+    drop(lock);
 
     // Claim should detect stale lock, steal it, and succeed
     let claim = CodeClaimTool::new(None);

@@ -170,7 +170,7 @@ async fn test_export_import_lossless_replay_roundtrip() {
                     "session_id": sid,
                     "content": format!("turn content {t}"),
                     "role": if t % 2 == 0 { "user" } else { "ai" },
-                    "importance": 0.5 + (t as f64 * 0.04),
+                    "importance": f64::from(t).mul_add(0.04, 0.5),
                 }),
             )
             .await
