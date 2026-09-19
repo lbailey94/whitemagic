@@ -1,0 +1,4 @@
+# Contract artifacts are regenerated in place and compared byte-for-byte by
+# the Q08 boundary-matrix gate. Keep LF on every platform so Windows
+# checkouts (core.autocrlf) do not trip the comparison.
+docs/contract/*.md text eol=lf

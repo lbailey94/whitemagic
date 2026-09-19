@@ -119,8 +119,12 @@ fn matrix_block_matches_committed_artifact() {
     let generated = render_block(server.registry());
     let doc_path =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/contract/boundary-matrix.md");
+    // Windows checkouts convert the artifact to CRLF; normalize on read so
+    // both the comparison and the regenerate path are line-ending agnostic
+    // (2026-09-19 CI: this gate failed on Windows only).
     let doc = std::fs::read_to_string(&doc_path)
-        .unwrap_or_else(|e| panic!("read {}: {e}", doc_path.display()));
+        .unwrap_or_else(|e| panic!("read {}: {e}", doc_path.display()))
+        .replace("\r\n", "\n");
     let committed = extract_between(&doc, BEGIN, END);
     if std::env::var("WM_UPDATE_Q08_MATRIX").ok().as_deref() == Some("1") {
         let updated = replace_between(&doc, BEGIN, END, &generated);
