@@ -4,9 +4,10 @@
 
 ## Current state (honest)
 
-The Hub carries the **v9 line only** (`9.1.0`–`9.1.9`, `9`, `latest`). The
-13 tags from Nov 2025 — the **2.x-era Python MCP stack** (1,441 cumulative
-pulls) — were retired 2026-09-19 (S12): digests were archived first
+The Hub carries the **v9 line only** (one tag per release through the
+current version, plus `9` and `latest`). The 13 tags from Nov 2025 — the
+**2.x-era Python MCP stack** (1,441 cumulative pulls) — were retired
+2026-09-19 (S12): digests were archived first
 (`planning/private/S12_DOCKERHUB_TAG_RECEIPTS_2026-09-19.md`) and the
 allowlisted cleanup ran through `.github/workflows/hub-tag-cleanup.yml`
 (dispatch-only, exact-confirm input). Use that workflow for future stale
