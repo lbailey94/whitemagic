@@ -311,9 +311,15 @@ impl ClaimsLedger {
             .collect()
     }
 
-    /// Calibration report over resolved (validated + falsified) claims.
+    /// Calibration report over resolved (validated + falsified) claims with statutory default k.
     #[must_use]
     pub fn calibration(&self) -> ClaimCalibration {
+        self.calibration_with_k(CALIBRATION_PRIOR_SAMPLES)
+    }
+
+    /// Calibration report over resolved (validated + falsified) claims with custom empirical-Bayes prior strength k.
+    #[must_use]
+    pub fn calibration_with_k(&self, k: f64) -> ClaimCalibration {
         let resolved: Vec<&Claim> = self
             .claims
             .iter()
@@ -365,11 +371,11 @@ impl ClaimsLedger {
             calibration_gap: mean_confidence - hit_rate,
             brier,
             hit_rate_ci95: wilson95(validated, n),
-            shrinkage: nf / (nf + CALIBRATION_PRIOR_SAMPLES),
+            shrinkage: if nf + k > 0.0 { nf / (nf + k) } else { 1.0 },
         }
     }
 
-    /// Empirical-Bayes calibrated confidence for a raw confidence.
+    /// Empirical-Bayes calibrated confidence for a raw confidence with statutory default k.
     ///
     /// Shrinks the raw confidence toward the observed hit rate, weighted by
     /// resolved sample size (w = n/(n + k)). Identity when nothing is
@@ -377,6 +383,12 @@ impl ClaimsLedger {
     /// of its own track record.
     #[must_use]
     pub fn calibrated_confidence(&self, raw: f64) -> f64 {
+        self.calibrated_confidence_with_k(raw, CALIBRATION_PRIOR_SAMPLES)
+    }
+
+    /// Empirical-Bayes calibrated confidence with custom prior sample weight k.
+    #[must_use]
+    pub fn calibrated_confidence_with_k(&self, raw: f64, k: f64) -> f64 {
         let validated = self
             .claims
             .iter()
@@ -391,7 +403,11 @@ impl ClaimsLedger {
             return raw.clamp(0.0, 1.0);
         }
         let hit_rate = validated as f64 / resolved as f64;
-        let w = resolved as f64 / (resolved as f64 + CALIBRATION_PRIOR_SAMPLES);
+        let w = if resolved as f64 + k > 0.0 {
+            resolved as f64 / (resolved as f64 + k)
+        } else {
+            1.0
+        };
         w.mul_add(hit_rate - raw, raw).clamp(0.0, 1.0)
     }
 

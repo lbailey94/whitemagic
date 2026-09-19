@@ -238,7 +238,12 @@ impl Tool for ClaimsTool {
             }
             "status" => Ok(ledger.status()),
             "calibration" => {
-                let cal = ledger.calibration();
+                let k = args
+                    .get("prior_samples")
+                    .or_else(|| args.get("k"))
+                    .and_then(Value::as_f64)
+                    .unwrap_or(wm_simulation::CALIBRATION_PRIOR_SAMPLES);
+                let cal = ledger.calibration_with_k(k);
                 let interpretation = if cal.calibration_gap > 0.05 {
                     "overconfident"
                 } else if cal.calibration_gap < -0.05 {
@@ -256,7 +261,7 @@ impl Tool for ClaimsTool {
                         json!({
                             "id": c.id,
                             "confidence": c.confidence,
-                            "calibrated_confidence": ledger.calibrated_confidence(c.confidence),
+                            "calibrated_confidence": ledger.calibrated_confidence_with_k(c.confidence, k),
                         })
                     })
                     .collect();
@@ -273,6 +278,7 @@ impl Tool for ClaimsTool {
                     "hit_rate_ci95_low": cal.hit_rate_ci95.0,
                     "hit_rate_ci95_high": cal.hit_rate_ci95.1,
                     "shrinkage": cal.shrinkage,
+                    "prior_samples": k,
                     "pending_recalibrated": pending,
                 }))
             }

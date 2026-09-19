@@ -933,7 +933,10 @@ impl Tool for SessionContinuityTool {
         "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off') plus that session's latest checkpoint handoff (next_queue, open_flags, git state, tests_green, lease_id) when one exists. Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD)."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
-        let current = args.get("current_session_id").and_then(Value::as_str);
+        let current = args
+            .get("current_session_id")
+            .or_else(|| args.get("session_id"))
+            .and_then(Value::as_str);
         let n = args.get("n").and_then(Value::as_u64).unwrap_or(10) as usize;
 
         // Find the most recent session_start that is not the current session.

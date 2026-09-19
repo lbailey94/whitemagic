@@ -32,7 +32,7 @@ pub use bayesian::{
     norm_pdf,
 };
 pub use calibration::{BrierScorecard, CalibrationBin, CalibrationPrediction, CalibrationStore};
-pub use claims::{Claim, ClaimStatus, ClaimsLedger, ValidationEvent};
+pub use claims::{CALIBRATION_PRIOR_SAMPLES, Claim, ClaimStatus, ClaimsLedger, ValidationEvent};
 pub use counterfactual::{CounterfactualEstimator, CounterfactualResult};
 pub use forecasting::{ForecastMethod, ForecastResult, Forecaster};
 pub use monte_carlo::{Distribution, McConfig, McResult, MonteCarloSimulator};
