@@ -11,6 +11,7 @@
 #![deny(unsafe_code)]
 
 pub mod anchor;
+pub mod boundary_matrix;
 pub mod config;
 pub mod contract;
 pub mod cyberbrain;

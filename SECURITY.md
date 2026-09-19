@@ -47,7 +47,7 @@ WhiteMagic v9 is a trusted local single-user process. Its security model:
   v5.8.0 release gate, 2026-08-20 — a dated figure, not today's exposure;
   current-build exposure is profile-selected per the Q03 generated manifest,
   with per-tool dispositions under Q04 audit).
-- **Destructive confirmation**: 10 destructive tools require an explicit
+- **Destructive confirmation**: 12 destructive tools require an explicit
   `route=` match plus `confirm: true` and are structurally unreachable via
   natural-language routing.
 - **Read-only mode**: `--readonly` refuses every tool that declares writes and

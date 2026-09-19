@@ -228,6 +228,7 @@ pub const SCOPE_REGISTRY: &[(&str, ScopeRule)] = &[
     // name its target. (Tool-level default remains, but the enforced seam
     // requires the explicit scope — the Jul-13 law.)
     ("memory.deduplicate", ScopeRule::ArgFields(&["galaxy"])),
+    ("galaxy.cold_rotate", ScopeRule::ArgFields(&["galaxy"])),
     // One galaxy named explicitly, or store-wide acknowledged with
     // `store_wide: true`. Tool-level dry-run hardening is the documented
     // follow-up in the wm-tools scope.
@@ -239,6 +240,12 @@ pub const SCOPE_REGISTRY: &[(&str, ScopeRule)] = &[
         "transaction.rollback",
         ScopeRule::SelfBounded(
             "scope is the active transaction's snapshot (set by transaction.begin)",
+        ),
+    ),
+    (
+        "telemetry.prune",
+        ScopeRule::SelfBounded(
+            "bounded by design — telemetry galaxy windows/rollups only, explicit or default retention horizons, dry_run defaults true",
         ),
     ),
     (
@@ -700,6 +707,7 @@ mod tests {
             ("galaxy.restore", json!({"snapshot_id": "snap-1"})),
             ("memory.consolidate", json!({"galaxy": "codex"})),
             ("memory.deduplicate", json!({"galaxy": "codex"})),
+            ("galaxy.cold_rotate", json!({"galaxy": "telemetry"})),
             ("system.flush", json!({"galaxy": "scratch"})),
             ("system.flush", json!({"store_wide": true})),
         ] {
@@ -725,6 +733,16 @@ mod tests {
     }
 
     #[test]
+    fn scope_law_blocks_cold_rotate_without_galaxy() {
+        let fb = Firebreak::with_armed(true);
+        let args = json!({"confirm": true, "dry_run": false});
+        assert!(matches!(
+            fb.enforce("galaxy.cold_rotate", &seam_effects(), &args),
+            FirebreakOutcome::Blocked(_)
+        ));
+    }
+
+    #[test]
     fn self_bounded_rules_pass_without_args() {
         let fb = Firebreak::with_armed(true);
         assert!(matches!(
@@ -733,6 +751,14 @@ mod tests {
         ));
         assert!(matches!(
             fb.enforce("karma.clear", &seam_effects(), &json!({})),
+            FirebreakOutcome::Proceed { .. }
+        ));
+        assert!(matches!(
+            fb.enforce(
+                "telemetry.prune",
+                &seam_effects(),
+                &json!({"dry_run": false})
+            ),
             FirebreakOutcome::Proceed { .. }
         ));
     }
