@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Both with regression tests; E10 Q39A receipt:
   `planning/private/E10_Q39A_AT_REST_REVIEW_2026-09-19.md`.
 
+### Backup integrity — Q07-F1
+- **`envelope.json` is inside the backup manifest.** `wm backup` now lists
+  the root-level `envelope.json` entry in `SHA256SUMS` (beside the `data/**`
+  entries) and `wm restore` verifies it before reading the envelope, so
+  tampering with the backup label is detected instead of displayed. Pre-fix
+  backups (no envelope entry) restore unchanged; a pre-fix binary restoring
+  a post-fix backup refuses cleanly at the new manifest line (loud, no
+  partial restore). Regression:
+  `envelope_json_tamper_is_detected_by_the_manifest`.
+
 ## [9.2.0] — 2026-09-19
 
 ### Release-gate fixes (verification wave)

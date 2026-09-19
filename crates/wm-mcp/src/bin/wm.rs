@@ -2685,7 +2685,17 @@ fn run_backup(
     copy_tree(store_path, &data_dest, &mut files)?;
     files.sort();
 
-    // SHA256SUMS manifest over every copied file (paths relative to data/).
+    // Envelope v2 (S4): a self-describing backup. Same envelope module the
+    // session export/import path uses — one validator, three uses. Written
+    // before the manifest so its digest covers the final bytes.
+    let envelope = wm_memory::envelope::EnvelopeHeader::new("store_backup", files.len());
+    let envelope_path = dest.join("envelope.json");
+    std::fs::write(&envelope_path, serde_json::to_string_pretty(&envelope)?)?;
+
+    // SHA256SUMS manifest over every copied file (paths relative to data/),
+    // plus the root-level envelope.json entry (Q07-F1): the backup's own
+    // label is inside the integrity story too, and `sha256sum -c` still
+    // works from the backup directory.
     use sha2::Digest;
     use std::fmt::Write as _;
     let mut sums = String::new();
@@ -2699,15 +2709,13 @@ fn run_backup(
         };
         let _ = writeln!(sums, "{digest}  data/{rel}");
     }
+    let envelope_digest: String = {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(std::fs::read(&envelope_path)?);
+        hex(&hasher.finalize())
+    };
+    let _ = writeln!(sums, "{envelope_digest}  envelope.json");
     std::fs::write(dest.join("SHA256SUMS"), sums)?;
-
-    // Envelope v2 (S4): a self-describing backup. Same envelope module the
-    // session export/import path uses — one validator, three uses.
-    let envelope = wm_memory::envelope::EnvelopeHeader::new("store_backup", files.len());
-    std::fs::write(
-        dest.join("envelope.json"),
-        serde_json::to_string_pretty(&envelope)?,
-    )?;
 
     println!(
         "Backed up {} files ({} bytes) to {}",
@@ -2743,22 +2751,29 @@ fn run_restore(
 
     // Verify BEFORE touching the target.
     use sha2::Digest;
-    let mut manifest_count = 0usize;
+    let mut data_count = 0usize;
     for line in std::fs::read_to_string(&sums_path)?.lines() {
         let line = line.trim();
         if line.is_empty() {
             continue;
         }
-        manifest_count += 1;
         let (expected, manifest_path) = line
             .split_once("  ")
             .ok_or_else(|| anyhow::anyhow!("bad SHA256SUMS line: {line}"))?;
-        // Manifest paths are relative to the backup root with a data/ prefix,
-        // so `sha256sum -c` works from the backup directory itself.
-        let rel = manifest_path.strip_prefix("data/").ok_or_else(|| {
-            anyhow::anyhow!("bad SHA256SUMS path (missing data/ prefix): {manifest_path}")
-        })?;
-        let abs = data_src.join(rel);
+        // Manifest paths are relative to the backup root with a data/ prefix
+        // (store files) or the bare root-level `envelope.json` entry
+        // (Q07-F1), so `sha256sum -c` works from the backup directory itself.
+        let abs = if manifest_path == "envelope.json" {
+            backup.join("envelope.json")
+        } else {
+            let rel = manifest_path.strip_prefix("data/").ok_or_else(|| {
+                anyhow::anyhow!(
+                    "bad SHA256SUMS path (expected data/ prefix or envelope.json): {manifest_path}"
+                )
+            })?;
+            data_count += 1;
+            data_src.join(rel)
+        };
         let actual = {
             let mut hasher = sha2::Sha256::new();
             hasher.update(std::fs::read(&abs)?);
@@ -2787,9 +2802,9 @@ fn run_restore(
                 wm_memory::envelope::ENVELOPE_FORMAT_VERSION
             );
         }
-        if header.count != manifest_count {
+        if header.count != data_count {
             eprintln!(
-                "WARN: envelope declares {} files but SHA256SUMS lists {manifest_count}; \
+                "WARN: envelope declares {} data files but SHA256SUMS lists {data_count}; \
                  restoring what the manifest verifies",
                 header.count
             );
@@ -5448,6 +5463,48 @@ mod restore_preservation_tests {
             .unwrap()
             .unwrap()
             .path()
+    }
+
+    /// Q07-F1: `envelope.json` is inside the integrity manifest — tampering
+    /// with the backup label is detected before restore reads it.
+    #[test]
+    fn envelope_json_tamper_is_detected_by_the_manifest() {
+        let tmp = tempfile::tempdir().unwrap();
+        let source = tmp.path().join("source");
+        let store = MemoryStore::open_default(source.join("lmdb")).unwrap();
+        let mut record = Memory::new(wm_core::Galaxy::Codex, "envelope tamper fixture".into());
+        record.metadata.id = uuid::Uuid::from_u128(0x931);
+        store.put(wm_core::Galaxy::Codex, &record).unwrap();
+        drop(store);
+
+        let backup = backup_fixture(&source, &tmp.path().join("backups"));
+        let sums = std::fs::read_to_string(backup.join("SHA256SUMS")).unwrap();
+        assert!(
+            sums.lines().any(|line| line.ends_with("  envelope.json")),
+            "envelope.json must be covered by SHA256SUMS:\n{sums}"
+        );
+
+        // Tamper with the label only: change created_at, keep data files.
+        let envelope_path = backup.join("envelope.json");
+        let mut envelope: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&envelope_path).unwrap()).unwrap();
+        envelope["created_at"] = serde_json::json!("1999-01-01T00:00:00Z");
+        std::fs::write(
+            &envelope_path,
+            serde_json::to_string_pretty(&envelope).unwrap(),
+        )
+        .unwrap();
+
+        let target = tmp.path().join("target");
+        let error = run_restore(&backup, &target, true).unwrap_err();
+        assert!(
+            error.to_string().contains("envelope.json"),
+            "tampered envelope must be named in the failure: {error}"
+        );
+        assert!(
+            !target.join("lmdb").join("data.mdb").exists(),
+            "a failed verification must not write the target"
+        );
     }
 
     /// Q07 residual: tombstone / backup-expiry semantics.
