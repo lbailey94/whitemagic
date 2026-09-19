@@ -196,10 +196,7 @@ async fn test_workflow_b_multi_agent_distributed_handoff() {
     let mut ctx = Context::default();
 
     // === WORKER ALPHA ===
-    let alpha_start = start_tool
-        .call(&mut ctx, json!({}))
-        .await
-        .unwrap();
+    let alpha_start = start_tool.call(&mut ctx, json!({})).await.unwrap();
     let alpha_session_id = alpha_start["session_id"].as_str().unwrap().to_string();
 
     let claim_alpha = claim_tool
@@ -256,10 +253,7 @@ async fn test_workflow_b_multi_agent_distributed_handoff() {
         .unwrap();
 
     // === WORKER BETA (Autonomous Successor) ===
-    let beta_start = start_tool
-        .call(&mut ctx, json!({}))
-        .await
-        .unwrap();
+    let beta_start = start_tool.call(&mut ctx, json!({})).await.unwrap();
     let beta_session_id = beta_start["session_id"].as_str().unwrap().to_string();
 
     // Discover prior work via project-root continuity
@@ -276,7 +270,10 @@ async fn test_workflow_b_multi_agent_distributed_handoff() {
     assert_eq!(cont_res["status"], "success");
     assert_eq!(cont_res["previous_session"], alpha_session_id);
     let handoff = &cont_res["checkpoint"];
-    assert_eq!(handoff["next_queue"][0], "transform: crates/pipeline/mod.rs");
+    assert_eq!(
+        handoff["next_queue"][0],
+        "transform: crates/pipeline/mod.rs"
+    );
     assert_eq!(handoff["open_flags"][0], "stage_1:done");
     assert_eq!(handoff["tests_green"], true);
 
@@ -438,10 +435,7 @@ async fn test_workflow_d_the_intentionally_awful_workflow() {
     let mut ctx = Context::default();
 
     // === PHASE D1: Worker 1 starts under Spec v1 ===
-    let w1_start = start_tool
-        .call(&mut ctx, json!({}))
-        .await
-        .unwrap();
+    let w1_start = start_tool.call(&mut ctx, json!({})).await.unwrap();
     let w1_session_id = w1_start["session_id"].as_str().unwrap().to_string();
 
     // Worker 1 acquires lease with TTL = 1 second
@@ -544,10 +538,7 @@ async fn test_workflow_d_the_intentionally_awful_workflow() {
         .unwrap();
 
     // === PHASE D4: Successor Worker 2 Awakens ===
-    let w2_start = start_tool
-        .call(&mut ctx, json!({}))
-        .await
-        .unwrap();
+    let w2_start = start_tool.call(&mut ctx, json!({})).await.unwrap();
     let w2_session_id = w2_start["session_id"].as_str().unwrap().to_string();
 
     // Successor checks lock status -> lease has expired -> state is "free"

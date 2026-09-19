@@ -239,7 +239,10 @@ impl Deployer {
         cert: &AttestationCertificate,
     ) -> Result<String, String> {
         if !cert.approved {
-            return Err(format!("DEPLOY REFUSED: Certificate not approved ({})", cert.rationale));
+            return Err(format!(
+                "DEPLOY REFUSED: Certificate not approved ({})",
+                cert.rationale
+            ));
         }
         if cert.signature.is_empty() {
             return Err("DEPLOY REFUSED: Missing cryptographic signature".to_string());
@@ -249,7 +252,10 @@ impl Deployer {
         }
 
         self.active_patch = Some(candidate.id.clone());
-        Ok(format!("DEPLOY SUCCESS: Candidate {} activated under signature {}", candidate.id, cert.signature))
+        Ok(format!(
+            "DEPLOY SUCCESS: Candidate {} activated under signature {}",
+            candidate.id, cert.signature
+        ))
     }
 }
 
@@ -328,7 +334,11 @@ fn test_four_way_role_separation_enforcement() {
     };
     let direct_deploy_err = deployer.deploy(&candidate, &fake_cert);
     assert!(direct_deploy_err.is_err());
-    assert!(direct_deploy_err.unwrap_err().contains("Missing cryptographic signature"));
+    assert!(
+        direct_deploy_err
+            .unwrap_err()
+            .contains("Missing cryptographic signature")
+    );
 
     // 2. Evaluator replays journal independently
     let delta_report = evaluator.evaluate_candidate(&candidate);
@@ -410,14 +420,12 @@ fn test_counterfactual_replay_rejects_spurious_epistemic_drift() {
 fn test_counterfactual_synthetic_control_validation() {
     // 20 points before intervention (mean latency ~ 1.50ms)
     let pre_intervention = vec![
-        1.52, 1.49, 1.51, 1.50, 1.48, 1.53, 1.50, 1.51, 1.49, 1.50,
-        1.52, 1.49, 1.51, 1.50, 1.48, 1.53, 1.50, 1.51, 1.49, 1.50,
+        1.52, 1.49, 1.51, 1.50, 1.48, 1.53, 1.50, 1.51, 1.49, 1.50, 1.52, 1.49, 1.51, 1.50, 1.48,
+        1.53, 1.50, 1.51, 1.49, 1.50,
     ];
 
     // 10 points after intervention (mean latency ~ 0.98ms, ~35% speedup)
-    let post_intervention = vec![
-        0.98, 0.97, 0.99, 0.98, 0.96, 0.97, 0.99, 0.98, 0.97, 0.98,
-    ];
+    let post_intervention = vec![0.98, 0.97, 0.99, 0.98, 0.96, 0.97, 0.99, 0.98, 0.97, 0.98];
 
     let estimator = CounterfactualEstimator::new(0.05, 500, 42);
     let result = estimator.estimate(&pre_intervention, &post_intervention);
@@ -433,6 +441,12 @@ fn test_counterfactual_synthetic_control_validation() {
     assert!(result.relative_impact < -0.30); // > 30% reduction
 
     // Statistically significant with 95% confidence
-    assert!(result.significant, "causal impact of candidate must be statistically significant");
-    assert!(result.ci_upper < 0.0, "confidence interval must strictly exclude zero");
+    assert!(
+        result.significant,
+        "causal impact of candidate must be statistically significant"
+    );
+    assert!(
+        result.ci_upper < 0.0,
+        "confidence interval must strictly exclude zero"
+    );
 }

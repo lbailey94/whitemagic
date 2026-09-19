@@ -14,8 +14,8 @@ use std::sync::Arc;
 use wm_core::{Context, Galaxy, Tool};
 use wm_memory::MemoryStore;
 use wm_tools::expansion::{
-    SessionCheckpointNodiscoveryTool, SessionContinuityTool, SessionExportTool,
-    SessionImportTool, SessionRecordTool, SessionReplayTool, SessionStartTool,
+    SessionCheckpointNodiscoveryTool, SessionContinuityTool, SessionExportTool, SessionImportTool,
+    SessionRecordTool, SessionReplayTool, SessionStartTool,
 };
 
 fn test_store() -> (tempfile::TempDir, Arc<MemoryStore>) {
@@ -215,9 +215,6 @@ async fn test_export_import_lossless_replay_roundtrip() {
         assert_eq!(orig_turns[i]["id"], imported_turns[i]["id"]);
         assert_eq!(orig_turns[i]["role"], imported_turns[i]["role"]);
         assert_eq!(orig_turns[i]["content"], imported_turns[i]["content"]);
-        assert_eq!(
-            orig_turns[i]["created_at"],
-            imported_turns[i]["created_at"]
-        );
+        assert_eq!(orig_turns[i]["created_at"], imported_turns[i]["created_at"]);
     }
 }
