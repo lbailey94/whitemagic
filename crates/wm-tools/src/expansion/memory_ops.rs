@@ -18,6 +18,20 @@ use super::common::{
     schema, str_prop,
 };
 
+/// Recall-mode label for the fused search route.
+///
+/// The fusion path runs whenever a real embedder is wired, but with the
+/// vector weight configured to zero it ranks by BM25 alone. The disclosure
+/// must follow the configured weights, not the code path taken (T0 finding
+/// F-T0-2: `bm25-baseline` disclosed `hybrid` while its ranking was BM25).
+fn fused_mode_label(vector_weight: f32) -> &'static str {
+    if vector_weight > 0.0 {
+        "hybrid"
+    } else {
+        "bm25"
+    }
+}
+
 /// Attach the navigation disclosure to a scrubbed excerpt result. The source
 /// stays exact and `memory.read` remains the complete-read path.
 fn with_navigation_disclosure(mut result: serde_json::Value, original: &str) -> serde_json::Value {
@@ -1176,7 +1190,7 @@ impl Tool for MemoryHybridRecallTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Search memories: hybrid BM25+vector fusion with a real embedder; otherwise the episodic deterministic route, falling back to BM25 full-text. Every result discloses recall_mode (hybrid|episodic|fts). memory.hybrid_recall is a compatibility alias."
+        "Search memories: hybrid BM25+vector fusion with a real embedder; otherwise the episodic deterministic route, falling back to BM25 full-text. Every result discloses recall_mode (hybrid|bm25|episodic|fts|importance|cold|none) — bm25 means the fusion ran with the vector weight configured to zero (BM25-only ranking). memory.hybrid_recall is a compatibility alias."
     }
     fn input_schema(&self) -> Value {
         schema(
@@ -1245,8 +1259,8 @@ impl Tool for MemoryHybridRecallTool {
         let mut trust_disclosure: Option<serde_json::Value> = None;
 
         // Recall-mode honesty (V8 ship list #1/#6): which route answered
-        // this query is disclosed on the result — hybrid | episodic | fts |
-        // importance | none.
+        // this query is disclosed on the result — hybrid | bm25 | episodic |
+        // fts | importance | none.
         let mut recall_mode = "none";
         // Hybrid fusion requires a REAL embedder: with the stub, vector
         // halves are noise, so a stub-wired engine must not claim the
@@ -1256,6 +1270,15 @@ impl Tool for MemoryHybridRecallTool {
             .recall
             .as_ref()
             .is_some_and(|recall| recall.embedder_is_real());
+        // The fusion route with the vector weight configured to zero ranks
+        // by BM25 alone (T0 finding F-T0-2: the tool used to disclose
+        // `hybrid` regardless). Disclose `bm25` in that case — the label
+        // follows the configured weights, not the code path taken.
+        let fused_mode = fused_mode_label(
+            self.recall
+                .as_ref()
+                .map_or(1.0, |recall| recall.config().vector_weight),
+        );
 
         // Phase 0: If RecallEngine with a real embedder is available, use
         // hybrid BM25 + vector search for fused ranking. Trust weighting
@@ -1294,7 +1317,7 @@ impl Tool for MemoryHybridRecallTool {
                                     "bm25_score": hr.bm25_score,
                                     "vector_score": hr.vector_score,
                                     "trust": mem.metadata.source_trust,
-                                    "source": "hybrid",
+                                    "source": fused_mode,
                                 }),
                                 &mem.content,
                             ));
@@ -1314,7 +1337,7 @@ impl Tool for MemoryHybridRecallTool {
                     }));
                 }
                 if !results.is_empty() {
-                    recall_mode = "hybrid";
+                    recall_mode = fused_mode;
                 }
             }
         }
@@ -3078,6 +3101,75 @@ mod tests {
         assert_eq!(v["results"][0]["source"], "episodic");
         assert_eq!(v["results"][0]["id"], json!(needle_id.to_string()));
         assert!(v["results"][0]["score"].as_f64().unwrap() > 0.0);
+    }
+
+    #[test]
+    fn fused_mode_label_follows_the_configured_vector_weight() {
+        // F-T0-2: the label follows the weights, not the code path.
+        assert_eq!(fused_mode_label(0.3), "hybrid");
+        assert_eq!(fused_mode_label(1.0), "hybrid");
+        assert_eq!(fused_mode_label(0.0), "bm25");
+    }
+
+    #[tokio::test]
+    async fn zero_vector_weight_discloses_bm25_not_hybrid() {
+        // T0 finding F-T0-2: `bm25-baseline` ran the fusion path with the
+        // vector/importance weights zeroed (ranking = BM25) yet disclosed
+        // `recall_mode: hybrid` on every result. The disclosure must say
+        // bm25 for that configuration.
+        let (_dir, store, search) = hybrid_fixture();
+        let needle = Memory::new(
+            Galaxy::Codex,
+            "Kotlin coroutine budget meeting notes".into(),
+        );
+        let needle_id = needle.metadata.id;
+        store.put(Galaxy::Codex, &needle).unwrap();
+        wm_memory::reindex::rebuild_index(&store, &search, &[]).unwrap();
+
+        struct FakeVecEmbedder;
+        impl wm_memory::Embedder for FakeVecEmbedder {
+            fn embed_batch(&self, texts: &[&str]) -> wm_core::Result<Vec<Vec<f32>>> {
+                Ok(texts.iter().map(|_| vec![0.1_f32; 16]).collect())
+            }
+            fn dimension(&self) -> usize {
+                16
+            }
+            fn is_available(&self) -> bool {
+                true
+            }
+            fn backend_name(&self) -> &'static str {
+                "fake"
+            }
+        }
+
+        let config = wm_memory::RecallConfig {
+            bm25_weight: 1.0,
+            vector_weight: 0.0,
+            importance_weight: 0.0,
+            ..wm_memory::RecallConfig::default()
+        };
+        let recall = Arc::new(
+            RecallEngine::new(
+                store.clone(),
+                search.clone(),
+                wm_memory::VectorStore::new(),
+                Arc::new(FakeVecEmbedder),
+                config,
+            )
+            .unwrap(),
+        );
+        let tool = MemoryHybridRecallTool::as_search(store.clone(), Some(search), Some(recall));
+        let mut ctx = Context::default();
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"query": "kotlin coroutine budget", "limit": 10}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["recall_mode"], "bm25", "{v}");
+        assert_eq!(v["results"][0]["source"], "bm25", "{v}");
+        assert_eq!(v["results"][0]["id"], json!(needle_id.to_string()));
     }
 
     #[tokio::test]
