@@ -69,6 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sync_release_facts.py --refresh` patches `public/api/manifest.json`
   version/date/generator (counts stay until verified) and accepts
   `WM_SITE_GENERATOR_NOTE` provenance from the release pipeline.
+- **Hub tag hygiene (S12):** the 2025 2.x-era image tags were retired after
+  their digests were archived; the new `hub-tag-cleanup.yml` is
+  dispatch-only with an exact-confirm input and a hardcoded tag allowlist,
+  and the Hub description now states the 2.x retirement instead of claiming
+  they are kept.
 
 ### Mesh ingest hardening, phase 2 (S1)
 - **Heartbeats are signed-only for bound peers and replay-checked:** an

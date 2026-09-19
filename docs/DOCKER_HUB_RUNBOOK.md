@@ -4,10 +4,13 @@
 
 ## Current state (honest)
 
-The Hub holds 13 tags pushed Nov 11–19, 2025 — the **2.x-era Python MCP
-stack** (npm-2.x days), last push `2.3.1` + `latest` + `buildcache`.
-1,441 cumulative pulls. These images are history, not the v9 Rust
-product. The Hub README is currently bare.
+The Hub carries the **v9 line only** (`9.1.0`–`9.1.9`, `9`, `latest`). The
+13 tags from Nov 2025 — the **2.x-era Python MCP stack** (1,441 cumulative
+pulls) — were retired 2026-09-19 (S12): digests were archived first
+(`planning/private/S12_DOCKERHUB_TAG_RECEIPTS_2026-09-19.md`) and the
+allowlisted cleanup ran through `.github/workflows/hub-tag-cleanup.yml`
+(dispatch-only, exact-confirm input). Use that workflow for future stale
+tags; it cannot delete anything outside its hardcoded allowlist.
 
 ## The v9 image (this repo's Dockerfile)
 
@@ -59,7 +62,8 @@ the `Current release:` line on each release:
 > - Current release: v9.1.9 (2026-09-18) —
 >   https://github.com/lbailey94/whitemagic/releases/tag/v9.1.9
 > - Tags `2.x` (2.1.0–2.3.1, Nov 2025): the historical Python MCP
->   stack, kept for provenance — not the current product.
+>   stack — retired 2026-09-19; digests archived in the lab's process
+>   archive.
 >
 > Store your data in a mounted volume; memory never leaves the machine.
 
