@@ -353,6 +353,7 @@ banner "SITE SYNC"
 SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/WHITEMAGIC/whitemagic-site}"
 if $DRY_RUN; then
   echo "[dry-run] in $SITE_DIR: verify capability counts vs the released binary,"
+  echo "[dry-run]   verify guide commands/flags vs the released binary,"
   echo "[dry-run]   npm run sync-facts:refresh → check-* / tsc / build → commit + push master"
 elif [ ! -d "$SITE_DIR/.git" ]; then
   echo "WARN: site repo not found at $SITE_DIR — sync the site manually"
@@ -398,8 +399,13 @@ else
     RELEASE_COMMIT="$(git -C "$REPO_ROOT" rev-list -n1 "v$VERSION" | cut -c1-7)"
     export WM_SITE_GENERATOR_NOTE="capability counts verified via \`wm manifest\` against the v$VERSION release binary ($RELEASE_COMMIT)"
     npm run sync-facts:refresh || { echo "WARN: site fact refresh failed"; exit 0; }
-    if ! { npm run check-facts && npm run check-build-truth && npm run check-surfaces && npx tsc --noEmit; }; then
-      echo "WARN: site gates failed — site NOT pushed; inspect $SITE_DIR"
+    # Guide copy must not advertise commands or flags the released binary
+    # stopped printing. Uses the same verified $RELEASED_BIN the counts check
+    # used; check_guide_commands.py exits 2 only when no binary is available.
+    GUIDE_OK=1
+    WM_BIN="$RELEASED_BIN" python3 scripts/check_guide_commands.py || GUIDE_OK=0
+    if [ "$GUIDE_OK" = "0" ] || ! { npm run check-facts && npm run check-build-truth && npm run check-surfaces && npx tsc --noEmit; }; then
+      echo "WARN: site gates failed (facts, counts, prose, guide commands, or types) — site NOT pushed; inspect $SITE_DIR"
       exit 0
     fi
     SITE_LOG="$(mktemp)"
