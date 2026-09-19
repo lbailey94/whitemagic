@@ -433,9 +433,11 @@ implementation surface for the CSA MAESTRO agentic layers:
 
 ## 11. What v0 does not do
 
-Honest list, so nobody assumes otherwise: no encryption in transit (TLS
-is a V8+ item; the wire is readable by a local passive observer), no
-relay/multi-hop or NAT traversal, no peer discovery across subnets
+Honest list, so nobody assumes otherwise: no encryption in transit yet —
+design decided 2026-09-19 (`docs/MESH_TLS_REVOCATION_DESIGN.md`: TLS 1.3
+with identity-pinned certs + rotation, implementation Q26; the wire is
+readable by a local passive observer until then), no relay/multi-hop or NAT
+traversal, no peer discovery across subnets
 (multicast is link-local), no revocation lists (quarantine is per-node,
 by design), key management is a shared-secret-free but unmanaged
 file/env surface pending B7, and signed chat is freshness-windowed to
@@ -443,12 +445,19 @@ file/env surface pending B7, and signed chat is freshness-windowed to
 (S1 phase 2, 9.1.10) — the live replay cache covers **beacon ingest**
 (phase 1) and **signed heartbeats** (phase 2; identity + binding before
 the replay insert), while chat is covered by freshness plus envelope
-dedup rather than a timestamp replay cache. `PeerAuthority` is
-peer-declared inside the self-signed `PeerInfo` and is **not an
-authorization boundary yet** — local authority provisioning is queued,
-and locks/signals are claimed-identity checks in permissive mode (only
-engagement tokens, when required, bind the holder cryptographically).
-Signals are not signed (source is a claim), hologram sync is not gated,
-and only `can_execute` is enforced live (`allowed_tools` /
-`can_write_memory` / `can_delegate` remain declarative). Each of these
-is a gate on Gate 2 cohort use, not a silent gap.
+dedup rather than a timestamp replay cache. `PeerAuthority` inside the
+self-signed `PeerInfo` remains peer-declared; the boundary is the **local**
+grant table (`mesh_authority.json`; E10 pin-or-tofu): unprovisioned bound
+peers are default-denied for action-class traffic (chat, signals, locks),
+and a pinned grant reserves its peer ID at the bind seam so a squatter
+cannot occupy the name. Locks and signals remain claimed-identity checks
+in permissive mode (only engagement tokens, when required, bind the holder
+cryptographically). Dispositions (W1 close, 2026-09-19):
+**signed signals — accepted residual** (source is a claim; the first
+production signal emitter, Q26, must land signing together with its
+consumer); **hologram sync — deferred** (read-class merge, no store write,
+and no sender in the wire shape; Q26); **`can_write_memory` /
+`can_delegate` / `allowed_tools` — declarative only** (no mesh write path
+exists); **transport confidentiality + key lifecycle — design decided**
+(`docs/MESH_TLS_REVOCATION_DESIGN.md`). Each remaining item is a gate on
+Gate 2 cohort use, not a silent gap.

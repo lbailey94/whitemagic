@@ -36,7 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and grant fields, and pin comparison is case-insensitive. The review also
   confirms the pre-existing residual: locks and signals still authorize the
   wire-claimed identifier, not the connection identity (chat is bound-key
-  verified).
+  verified), and records the remaining dispositions in the mesh protocol
+  doc (§11): signed signals accepted-residual (signing lands with the first
+  production emitter, Q26), hologram sync deferred to Q26, declarative
+  caps stay declarative, transport confidentiality + key lifecycle design
+  decided (`docs/MESH_TLS_REVOCATION_DESIGN.md`).
 
 ### Autonomous release pipeline
 - **CHANGELOG ceremony is automatic:** `scripts/version_truth.py
