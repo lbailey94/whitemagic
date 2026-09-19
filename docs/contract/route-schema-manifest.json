@@ -3087,7 +3087,7 @@
           "type": "number"
         },
         "record": {
-          "description": "telemetry.window | telemetry.rollup record (required)",
+          "description": "telemetry.window | telemetry.rollup | telemetry.observation | telemetry.funnel record (required)",
           "type": "object"
         },
         "source": {
@@ -3395,5 +3395,5 @@
       "route": "workspace.stats"
     }
   ],
-  "version": "9.1.9"
+  "version": "9.2.0"
 }
