@@ -104,8 +104,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   heuristics cover cargo/release binaries; `wm status` gains an
   "Installed via" line.
 - **`wm telemetry status`:** read-only disclosure of channel, milestones,
-  active days, and `Transport: none` — no network, no install-id (sharing is
-  a later scope).
+  active days, and the transport posture; opt-in sharing (below) ships in
+  this release with its own consent surface.
+
+### Opt-in install-funnel sharing (scope 2)
+- **Human-consented, off by default:** `wm telemetry enable --share` prints
+  the exact `funnel/1` payload and requires typed confirmation (non-TTY runs
+  require the explicit `--yes` flag and still print it); `wm telemetry
+  disable` stops sending immediately and `wm telemetry reset-id` rotates the
+  random uuidv4 identifier. Consent + delivery state live in
+  `<store-root>/funnel_share.json`.
+- **Content-free envelope:** install id, version/os/arch, install channel
+  (+ optional ref), first-launch timestamp, milestone names, active day
+  offsets, and raw session/memory counts — no memory text, prompts, paths,
+  hostnames, or IPs. Sends are best effort (2 s deadline), deduplicated, and
+  throttled to one counts-only update per hour; one offline envelope is
+  spooled and retried once, then dropped.
+- **npm launcher ref pass-through:** a caller-supplied `WM_INSTALL_REF`
+  rides the channel as `npm:<ref>` (sanitized to the installer/middleware
+  rule), so directory listings can attribute npm installs the same way
+  `install.sh?ref=` does.
+- **Site ingest + readout:** `POST /api/funnel` (strict allowlist, 180-day
+  per-install records, per-id and global daily caps, no IP storage) and the
+  token-gated `/api/admin/funnel` rollup feed the local dashboard's
+  activation panel. `PRIVACY_POLICY.md` discloses the optional funnel; the
+  site's `WM_TELEMETRY_POLICY` names the opt-in path.
+
+### Release-channel truth on the public surfaces
+- **README + site mirror the adopted channel:** the README status carries
+  `Release channel: open alpha` and the site's `/whitemagic` page gained a
+  channel/support section (open-alpha statement + support-window table
+  mirroring `SECURITY.md`).
+- **Channel bug fixed:** `release.yml` never passed `--channel`, so every
+  signed manifest silently recorded `stable`; it now passes
+  `--channel "open alpha"` and `release_manifest.py` requires the flag (no
+  silent default) — both locked by regression tests.
 
 ### M1 claim reconciliation (down-payment)
 - README curated route count 60→61 and the archive figure grounded to the
