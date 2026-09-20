@@ -1197,7 +1197,7 @@ impl Tool for MemoryHybridRecallTool {
             &json!({
                 "query": str_prop("Full-text query"),
                 "galaxy": str_prop("Galaxy filter (optional; default: search all memory galaxies, results labeled; \"all\" is accepted as an alias for the unfiltered default)"),
-                "limit": int_prop("Maximum results (default 10)"),
+                "limit": super::common::positive_int_prop("Maximum results (default 10; must be >= 1)"),
                 "min_importance": num_prop("Minimum memory importance (0-1)"),
                 "min_score": num_prop("Absolute BM25 score floor"),
                 "min_score_ratio": num_prop("Relative floor: reject hits below this fraction of the top score"),
@@ -1213,10 +1213,10 @@ impl Tool for MemoryHybridRecallTool {
         let galaxy_explicit = galaxy_arg.is_some();
         let galaxy = parse_galaxy_or(galaxy_arg, Galaxy::Codex)?;
         let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
-        let limit = args
-            .get("limit")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(10) as usize;
+        // limit must be >= 1: zero used to reach Tantivy's TopDocs and panic
+        // the process (2026-09-19 review). Caller error at the boundary.
+        let limit = super::common::positive_usize_arg(&args, "limit", 10)
+            .map_err(wm_core::CoreError::InvalidArgs)?;
         let include_cold = args
             .get("include_cold")
             .and_then(serde_json::Value::as_bool)
@@ -2224,7 +2224,7 @@ impl Tool for MemoryAggregateTool {
             &json!({
                 "query": str_prop("Full-text query selecting the memories to aggregate over"),
                 "metric": str_prop("Aggregate metric: count | session_count | session_span"),
-                "limit": int_prop("Maximum candidates considered (default 50)"),
+                "limit": super::common::positive_int_prop("Maximum candidates considered (default 50; must be >= 1)"),
             }),
             &["query", "metric"],
         )
@@ -2238,7 +2238,8 @@ impl Tool for MemoryAggregateTool {
             .get("metric")
             .and_then(Value::as_str)
             .ok_or_else(|| wm_core::CoreError::InvalidArgs("metric (string) required".into()))?;
-        let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(50) as usize;
+        let limit = super::common::positive_usize_arg(&args, "limit", 50)
+            .map_err(wm_core::CoreError::InvalidArgs)?;
         let Some(search) = self.search.as_ref() else {
             return Err(wm_core::CoreError::Memory(
                 "search engine unavailable for aggregation".into(),
@@ -3177,6 +3178,34 @@ mod tests {
         assert_eq!(v["recall_mode"], "bm25", "{v}");
         assert_eq!(v["results"][0]["source"], "bm25", "{v}");
         assert_eq!(v["results"][0]["id"], json!(needle_id.to_string()));
+    }
+
+    #[tokio::test]
+    async fn search_rejects_non_positive_limit() {
+        // 2026-09-19 review: limit 0 passed through to Tantivy and panicked
+        // the server process (exit 101). The boundary must reject it —
+        // zero, negative, and non-integer forms alike — and the boundary
+        // value 1 must still work.
+        let (_dir, store, search) = hybrid_fixture();
+        index_memory(&store, &search, Galaxy::Codex, "kotlin coroutine budget");
+        let tool = MemoryHybridRecallTool::as_search(store, Some(search), None);
+        let mut ctx = Context::default();
+        for bad in [json!(0), json!(-1), json!("0"), json!(0.5)] {
+            let err = tool
+                .call(&mut ctx, json!({"query": "kotlin", "limit": bad}))
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains("limit"),
+                "limit={bad} must be rejected, got: {err}"
+            );
+        }
+        let v = tool
+            .call(&mut ctx, json!({"query": "kotlin", "limit": 1}))
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success", "{v}");
+        assert_eq!(v["results"].as_array().map(Vec::len), Some(1), "{v}");
     }
 
     #[tokio::test]

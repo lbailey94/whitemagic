@@ -126,6 +126,33 @@ pub fn bounded_num_prop(description: &str, lo: f64, hi: f64) -> serde_json::Valu
     })
 }
 
+/// Validate a positive (>= 1) integer argument.
+///
+/// Absent or explicit null → `default`. A present value must be an integer
+/// of at least 1: zero crossed into Tantivy's `TopDocs` invariant and
+/// panicked the server process (2026-09-19 review), so it is a caller
+/// error, never a clamp.
+pub fn positive_usize_arg(
+    args: &serde_json::Value,
+    key: &str,
+    default: usize,
+) -> Result<usize, String> {
+    match args.get(key) {
+        None | Some(serde_json::Value::Null) => Ok(default),
+        Some(serde_json::Value::Number(n)) => match n.as_u64() {
+            Some(v) if v >= 1 => Ok(v as usize),
+            _ => Err(format!("{key} must be an integer >= 1, got: {n}")),
+        },
+        Some(other) => Err(format!("{key} must be an integer >= 1, got: {other}")),
+    }
+}
+
+/// Positive-integer schema property (minimum 1).
+#[must_use]
+pub fn positive_int_prop(description: &str) -> serde_json::Value {
+    serde_json::json!({"type": "integer", "minimum": 1, "description": description})
+}
+
 /// Validate an optional numeric argument against a bounds contract.
 ///
 /// Absent or explicit null → `Ok(None)`. A present value must be a finite

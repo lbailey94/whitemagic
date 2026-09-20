@@ -721,6 +721,16 @@ impl SearchEngine {
     ///    pass the floor receive a coverage-ratio score boost.
     /// 6. Output content is scrubbed of control characters.
     pub fn search_opt(&self, query: &str, opts: &SearchOptions) -> Result<Vec<SearchResult>> {
+        // Tantivy's TopDocs panics on limit 0 ("Limit must be greater than
+        // 0") — inside a server that panic kills the process (2026-09-19
+        // review: memory.search with limit 0 exited 101). Reject before the
+        // collector is built; the tool boundary reports the caller error,
+        // this guard protects every other path into the engine.
+        if opts.limit == 0 {
+            return Err(CoreError::InvalidArgs(
+                "search limit must be >= 1, got: 0".into(),
+            ));
+        }
         let stripped = strip_stopwords(query);
         let sanitized = sanitize_tantivy_query(&stripped);
         if sanitized.trim().is_empty() {
@@ -1084,6 +1094,25 @@ mod tests {
         let tmp = tempdir().unwrap();
         let engine = SearchEngine::open(tmp.path()).unwrap();
         (tmp, engine)
+    }
+
+    /// 2026-09-19 review: limit 0 reached Tantivy's `TopDocs` and panicked
+    /// the server process (exit 101). The engine must return a caller error
+    /// before the collector is built — this guard covers every path in.
+    #[test]
+    fn search_rejects_zero_limit_without_panicking() {
+        let (_tmp, engine) = open_engine();
+        let err = engine.search("anything", 0).unwrap_err();
+        assert!(err.to_string().contains("limit"), "{err}");
+        let err = engine
+            .search_in_galaxy("anything", Some(Galaxy::Codex), 0)
+            .unwrap_err();
+        assert!(err.to_string().contains("limit"), "{err}");
+        let opts = SearchOptions {
+            limit: 0,
+            ..SearchOptions::default()
+        };
+        assert!(engine.search_opt("anything", &opts).is_err());
     }
 
     /// Write a legacy one-field index into `dir`, simulating a store created
