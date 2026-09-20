@@ -377,7 +377,7 @@ impl Tool for SessionRecordTool {
                 "content": super::common::str_prop("Turn content"),
                 "role": super::common::str_prop("user | ai (default user)"),
                 "turn_type": super::common::str_prop("message, decision, breakthrough, question, answer, code_change, error, summary, context"),
-                "importance": super::common::num_prop("0-1 importance (default 0.5)"),
+                "importance": super::common::bounded_num_prop("0-1 importance (default 0.5)", 0.0, 1.0),
                 "session_id": super::common::str_prop("Target session (default: most recent session)"),
                 "supersedes": super::common::str_prop("Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)"),
             }),
@@ -402,11 +402,13 @@ impl Tool for SessionRecordTool {
             .get("turn_type")
             .and_then(Value::as_str)
             .unwrap_or("message");
-        let importance = args
-            .get("importance")
-            .and_then(Value::as_f64)
-            .unwrap_or(0.5)
-            .clamp(0.0, 1.0);
+        // Canonical importance contract (2026-09-19 review): the same
+        // validator memory.create/update use — out-of-range values are
+        // caller errors, never silently clamped. This path used to accept
+        // importance=1.5 and store 1.0 while sibling APIs rejected it.
+        let importance = wm_dispatch::write_gate::parse_importance_value(args.get("importance"))
+            .map_err(wm_core::CoreError::InvalidArgs)?
+            .unwrap_or(0.5);
         let session_id = args.get("session_id").and_then(Value::as_str);
 
         // Resolve the session: explicit id, or the most recent session_start.
@@ -2514,6 +2516,42 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    /// 2026-09-19 review: importance is defined on 0.0-1.0; this path used
+    /// to accept 1.5 and silently store 1.0 while memory.create/update
+    /// rejected the same value. Out-of-range is a caller error here too.
+    #[tokio::test]
+    async fn record_rejects_out_of_range_importance() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store);
+        let mut ctx = Context::default();
+        for bad in [json!(1.5), json!(999), json!(-0.25), json!("2.0")] {
+            let err = record
+                .call(
+                    &mut ctx,
+                    json!({"content": "x", "session_id": sid, "importance": bad}),
+                )
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains("importance"),
+                "importance={bad} must be rejected, got: {err}"
+            );
+        }
+        // Boundaries and a valid value still land (string forms included —
+        // the same permissive input contract as memory.create/update).
+        for good in [json!(0.0), json!(1.0), json!(0.75), json!("0.4")] {
+            let v = record
+                .call(
+                    &mut ctx,
+                    json!({"content": "x", "session_id": sid, "importance": good}),
+                )
+                .await
+                .unwrap();
+            assert_eq!(v["status"], "success", "{v}");
+        }
     }
 
     /// Provenance contract (sessions-galaxy archaeology fix, 2026-08-29):

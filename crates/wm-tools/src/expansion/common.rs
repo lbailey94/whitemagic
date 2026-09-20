@@ -110,6 +110,22 @@ pub fn num_prop(description: &str) -> serde_json::Value {
     serde_json::json!({"type": "number", "description": description})
 }
 
+/// Bounded numeric schema property (inclusive bounds).
+///
+/// The JSON Schema side of the same contract the argument parsers enforce:
+/// a property advertised as "0-1" should say so in the schema, not only in
+/// prose (2026-09-19 review: session.record accepted 1.5 while sibling APIs
+/// rejected it).
+#[must_use]
+pub fn bounded_num_prop(description: &str, lo: f64, hi: f64) -> serde_json::Value {
+    serde_json::json!({
+        "type": "number",
+        "minimum": lo,
+        "maximum": hi,
+        "description": description,
+    })
+}
+
 /// Validate an optional numeric argument against a bounds contract.
 ///
 /// Absent or explicit null → `Ok(None)`. A present value must be a finite

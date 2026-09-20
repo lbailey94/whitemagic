@@ -516,7 +516,7 @@ impl Tool for MemoryUpdateTool {
                 "id": super::common::str_prop("Memory UUID to update"),
                 "content": super::common::str_prop("New content (optional)"),
                 "tags": super::common::str_array_prop("Replacement tags (optional)"),
-                "importance": super::common::num_prop("New importance 0.0-1.0 (optional)"),
+                "importance": super::common::bounded_num_prop("New importance 0.0-1.0 (optional)", 0.0, 1.0),
                 "title": super::common::str_prop("New title (optional)"),
                 "topic": super::common::str_prop("New topic label (optional)"),
                 "galaxy": super::common::str_prop("Galaxy (default: codex)"),
