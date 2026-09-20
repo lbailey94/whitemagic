@@ -2,7 +2,7 @@
 
 **Effective Date**: 2026-08-13
 **Last updated**: 2026-09-18 (optional install funnel disclosed)
-**Version**: 9.2.0
+**Version**: 9.2.1
 
 ## Summary
 
