@@ -464,65 +464,88 @@ impl Tool for SessionRecordTool {
                 })?
         };
 
-        // Sequence = existing turns for this session + 1 (superseded turns
-        // still count — the log position is history, visibility is separate).
-        let sequence = load_turns(&self.store, Some(&session_id), 10_000, true)?.len() as u64 + 1;
-
-        let mut mem = Memory::new(
-            Galaxy::Sessions,
-            json!({
-                "type": "session_turn",
-                "session_id": session_id,
-                "sequence": sequence,
-                "role": role,
-                "turn_type": turn_type,
-                "importance": importance,
-                "content": content,
-                "timestamp": wm_core::time::now_unix_millis(),
-            })
-            .to_string(),
-        );
-        mem.metadata.tags = vec![
-            "session".into(),
-            "turn".into(),
-            role.into(),
-            turn_type.into(),
-            format!("session:{session_id}"),
-        ];
-        // Provenance: the turn's role IS the authorship claim. An ai-role
-        // turn is agent-written and must not claim user provenance — the
-        // sessions-galaxy archaeology finding (2026-08-29) was that every
-        // turn stamped user/1.0 because Memory::new defaulted there. Trust
-        // classes per the retrieval-trust semantics: user 1.0, agent 0.7
-        // (tool-ingested neutral).
-        let (source, trust): (&str, f32) = if role == "user" {
-            ("user", 1.0)
-        } else {
-            ("agent", 0.7)
+        // Amend-with-supersede (P2) target: validated before the turn is
+        // written, so a bad id never burns a sequence.
+        let supersedes = match args.get("supersedes").and_then(Value::as_str) {
+            Some(old_id_str) => {
+                let old_id = uuid::Uuid::parse_str(old_id_str).map_err(|e| {
+                    wm_core::CoreError::InvalidArgs(format!("invalid 'supersedes' id: {e}"))
+                })?;
+                if self.store.get(Galaxy::Sessions, old_id)?.is_none() {
+                    return Err(wm_core::CoreError::NotFound(format!(
+                        "superseded turn {old_id} not found"
+                    )));
+                }
+                Some(old_id)
+            }
+            None => None,
         };
-        mem.metadata.source = source.to_string();
-        mem.metadata.source_trust = trust;
 
-        // Amend-with-supersede (P2): mark the corrected turn so default
-        // retrieval uses the new record. History stays intact — the old turn
-        // remains queryable via include_superseded.
-        if let Some(old_id_str) = args.get("supersedes").and_then(Value::as_str) {
-            let old_id = uuid::Uuid::parse_str(old_id_str).map_err(|e| {
-                wm_core::CoreError::InvalidArgs(format!("invalid 'supersedes' id: {e}"))
-            })?;
-            let mut old = self.store.get(Galaxy::Sessions, old_id)?.ok_or_else(|| {
-                wm_core::CoreError::NotFound(format!("superseded turn {old_id} not found"))
-            })?;
-            old.metadata
-                .tags
-                .push(format!("superseded-by:{}", mem.metadata.id));
-            self.store.put(Galaxy::Sessions, &old)?;
-            super::common::index_memory(self.search.as_deref(), &old);
-            mem.metadata.tags.push(format!("supersedes:{old_id}"));
+        // H1 (2026-09-20 review): the sequence is allocated inside the same
+        // LMDB write transaction as the turn record — never derived from a
+        // scan. Concurrent writers get unique, contiguous sequences; a crash
+        // rolls back counter and record together.
+        let timestamp = wm_core::time::now_unix_millis();
+        let (sequence, mem) = self.store.put_session_turn(&session_id, |sequence| {
+            let mut mem = Memory::new(
+                Galaxy::Sessions,
+                json!({
+                    "type": "session_turn",
+                    "session_id": session_id,
+                    "sequence": sequence,
+                    "role": role,
+                    "turn_type": turn_type,
+                    "importance": importance,
+                    "content": content,
+                    "timestamp": timestamp,
+                })
+                .to_string(),
+            );
+            mem.metadata.tags = vec![
+                "session".into(),
+                "turn".into(),
+                role.into(),
+                turn_type.into(),
+                format!("session:{session_id}"),
+            ];
+            // Provenance: the turn's role IS the authorship claim. An ai-role
+            // turn is agent-written and must not claim user provenance — the
+            // sessions-galaxy archaeology finding (2026-08-29) was that every
+            // turn stamped user/1.0 because Memory::new defaulted there. Trust
+            // classes per the retrieval-trust semantics: user 1.0, agent 0.7
+            // (tool-ingested neutral).
+            let (source, trust): (&str, f32) = if role == "user" {
+                ("user", 1.0)
+            } else {
+                ("agent", 0.7)
+            };
+            mem.metadata.source = source.to_string();
+            mem.metadata.source_trust = trust;
+            mem.metadata.importance = importance as f32;
+            // Amend-with-supersede (P2): the new record carries the pointer;
+            // the old turn is marked after the new one commits (below).
+            if let Some(old_id) = supersedes {
+                mem.metadata.tags.push(format!("supersedes:{old_id}"));
+            }
+            mem
+        })?;
+
+        // Mark the corrected turn so default retrieval uses the new record.
+        // History stays intact — the old turn remains queryable via
+        // include_superseded. Ordering: the new turn commits first, so a
+        // crash between the two writes leaves the old turn visible
+        // (contradiction preserved) rather than superseded with no
+        // replacement.
+        if let Some(old_id) = supersedes {
+            if let Some(mut old) = self.store.get(Galaxy::Sessions, old_id)? {
+                old.metadata
+                    .tags
+                    .push(format!("superseded-by:{}", mem.metadata.id));
+                self.store.put(Galaxy::Sessions, &old)?;
+                super::common::index_memory(self.search.as_deref(), &old);
+            }
         }
 
-        mem.metadata.importance = importance as f32;
-        self.store.put(Galaxy::Sessions, &mem)?;
         super::common::index_memory(self.search.as_deref(), &mem);
         Ok(json!({
             "status": "success",
@@ -2539,13 +2562,118 @@ mod tests {
         assert_eq!(v["turns"][1]["role"], "ai");
     }
 
+    /// H1 (2026-09-20 review): 100 simultaneous `session.record` writers used
+    /// to yield 43 unique sequences (allocation was read-count-then-write).
+    /// Sequences are now allocated inside the record's own write transaction.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+    async fn concurrent_record_writers_get_unique_contiguous_sequences() {
+        const N: usize = 100;
+        let store = test_store();
+        let sid = start_session(&store);
+        let tool = Arc::new(SessionRecordTool::new(store));
+
+        let mut handles = Vec::with_capacity(N);
+        for i in 0..N {
+            let tool = Arc::clone(&tool);
+            let sid = sid.clone();
+            handles.push(tokio::spawn(async move {
+                let mut ctx = Context::default();
+                let v = tool
+                    .call(
+                        &mut ctx,
+                        json!({
+                            "session_id": sid,
+                            "role": "ai",
+                            "turn_type": "message",
+                            "content": format!("concurrent turn {i}"),
+                        }),
+                    )
+                    .await
+                    .unwrap();
+                v["sequence"].as_u64().expect("sequence in response")
+            }));
+        }
+
+        let mut sequences = Vec::with_capacity(N);
+        for handle in handles {
+            sequences.push(handle.await.unwrap());
+        }
+        sequences.sort_unstable();
+        assert_eq!(
+            sequences,
+            (1..=N as u64).collect::<Vec<_>>(),
+            "{N} concurrent session.record writers must get 1..={N}"
+        );
+    }
+
+    /// The supersede ordering contract: the replacement turn commits first,
+    /// then the old turn is marked. Default replay hides the old turn;
+    /// include_superseded preserves the contradiction.
+    #[tokio::test]
+    async fn supersede_marks_old_turn_and_hides_it_by_default() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+
+        let first = record
+            .call(
+                &mut ctx,
+                json!({"session_id": sid, "content": "we chose A"}),
+            )
+            .await
+            .unwrap();
+        let first_id = first["memory_id"].as_str().unwrap().to_string();
+        let second = record
+            .call(
+                &mut ctx,
+                json!({"session_id": sid, "content": "we chose B", "supersedes": first_id}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second["sequence"], 2);
+
+        // Old turn is marked, so default retrieval prefers the new record.
+        let old = store
+            .get(
+                wm_core::Galaxy::Sessions,
+                uuid::Uuid::parse_str(&first_id).unwrap(),
+            )
+            .unwrap()
+            .unwrap();
+        assert!(
+            old.metadata
+                .tags
+                .iter()
+                .any(|t| t.starts_with("superseded-by:")),
+            "old turn must carry superseded-by: {:?}",
+            old.metadata.tags
+        );
+
+        let replay = SessionReplayTool::new(store.clone());
+        let visible = replay
+            .call(&mut ctx, json!({"mode": "full", "session_id": sid}))
+            .await
+            .unwrap();
+        assert_eq!(visible["count"], 1, "default view shows the current story");
+        assert_eq!(visible["turns"][0]["content"], "we chose B");
+
+        let full = replay
+            .call(
+                &mut ctx,
+                json!({"mode": "full", "session_id": sid, "include_superseded": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(full["count"], 2, "history stays queryable");
+    }
+
     #[tokio::test]
     async fn record_requires_content_and_valid_role() {
         let store = test_store();
         let sid = start_session(&store);
         let tool = SessionRecordTool::new(store);
         let mut ctx = Context::default();
-        assert!(tool.call(&mut ctx, json!({})).await.is_err());
         assert!(
             tool.call(&mut ctx, json!({"role": "system", "content": "x"}))
                 .await

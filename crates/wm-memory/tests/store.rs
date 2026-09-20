@@ -114,3 +114,162 @@ fn test_valkyrie_sanctuary_memory_storage() {
     );
     assert_eq!(store.count(Galaxy::Valkyrie).unwrap(), 1);
 }
+
+/// H1 (2026-09-20 review): sequence allocation must happen inside the same
+/// LMDB write transaction as the turn record. The reviewer's reproduction
+/// (100 simultaneous `session.record` writers) got 43 unique sequences from
+/// the old read-count-then-write allocation. This is the acceptance test:
+/// N concurrent writers get exactly 1..=N unique, contiguous sequences.
+#[test]
+fn concurrent_put_session_turn_allocates_contiguous_unique_sequences() {
+    use std::sync::Arc;
+    use wm_memory::Memory;
+
+    const N: usize = 100;
+    let tmp = tempdir().unwrap();
+    let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
+    let sid = "sess-h1-100-writers";
+
+    // All writers must be spawned before any join: joining inside the spawn
+    // map would serialize the loop and the test would prove nothing, so this
+    // collect is deliberate (clippy's needless_collect suggestion would
+    // serialize it).
+    #[allow(clippy::needless_collect)]
+    let handles: Vec<_> = (0..N)
+        .map(|i| {
+            let store = Arc::clone(&store);
+            std::thread::spawn(move || {
+                let (sequence, _mem) = store
+                    .put_session_turn(sid, |sequence| {
+                        let mut mem = Memory::new(
+                            Galaxy::Sessions,
+                            format!(
+                                "{{\"type\":\"session_turn\",\"sequence\":{sequence},\"writer\":{i}}}"
+                            ),
+                        );
+                        mem.metadata.tags = vec!["session".into(), "turn".into()];
+                        mem
+                    })
+                    .unwrap();
+                sequence
+            })
+        })
+        .collect();
+
+    let mut sequences: Vec<u64> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+    sequences.sort_unstable();
+    assert_eq!(
+        sequences,
+        (1..=N as u64).collect::<Vec<_>>(),
+        "{N} concurrent writers must receive 1..={N} with no duplicates"
+    );
+
+    // The counter is the source of truth for the next allocation.
+    assert_eq!(store.last_session_sequence(sid).unwrap(), Some(N as u64));
+
+    // Every allocated sequence is actually persisted, exactly once, and the
+    // record content agrees with the allocated value.
+    let stored = store.scan_all(Galaxy::Sessions).unwrap();
+    assert_eq!(stored.len(), N, "every writer's turn must be stored");
+    let mut stored_sequences: Vec<u64> = stored
+        .iter()
+        .map(|m| {
+            let v: serde_json::Value = serde_json::from_str(&m.content).unwrap();
+            v.get("sequence")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap()
+        })
+        .collect();
+    stored_sequences.sort_unstable();
+    assert_eq!(stored_sequences, (1..=N as u64).collect::<Vec<_>>());
+}
+
+/// Cheap regression for the two-writer case (duplicates appeared in 3/5
+/// trials before the fix): a loop of interleaved writers must never reuse a
+/// sequence.
+#[test]
+fn two_writer_loop_never_duplicates_sequences() {
+    use std::sync::Arc;
+    use wm_memory::Memory;
+
+    const PER_WRITER: usize = 25;
+    let tmp = tempdir().unwrap();
+    let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
+    let sid = "sess-h1-two-writers";
+
+    // Both writers spawn before either join (same deliberate collect as the
+    // 100-writer test above).
+    #[allow(clippy::needless_collect)]
+    let handles: Vec<_> = (0..2)
+        .map(|w| {
+            let store = Arc::clone(&store);
+            std::thread::spawn(move || {
+                let mut mine = Vec::with_capacity(PER_WRITER);
+                for i in 0..PER_WRITER {
+                    let (sequence, _mem) = store
+                        .put_session_turn(sid, |sequence| {
+                            let mut mem = Memory::new(
+                                Galaxy::Sessions,
+                                format!(
+                                    "{{\"type\":\"session_turn\",\"sequence\":{sequence},\"w\":{w},\"i\":{i}}}"
+                                ),
+                            );
+                            mem.metadata.tags = vec!["session".into(), "turn".into()];
+                            mem
+                        })
+                        .unwrap();
+                    mine.push(sequence);
+                }
+                mine
+            })
+        })
+        .collect();
+
+    let mut all: Vec<u64> = handles
+        .into_iter()
+        .flat_map(|h| h.join().unwrap())
+        .collect();
+    all.sort_unstable();
+    let total = 2 * PER_WRITER;
+    assert_eq!(
+        all,
+        (1..=total as u64).collect::<Vec<_>>(),
+        "two interleaved writers must still produce contiguous unique sequences"
+    );
+    assert_eq!(
+        store.last_session_sequence(sid).unwrap(),
+        Some(total as u64)
+    );
+}
+
+/// Counters are per-session: one session's allocations never move another's.
+#[test]
+fn session_sequences_are_scoped_per_session() {
+    use wm_memory::Memory;
+
+    let tmp = tempdir().unwrap();
+    let store = MemoryStore::open_default(tmp.path()).unwrap();
+
+    let build = |label: &str| {
+        let label = label.to_string();
+        move |sequence: u64| {
+            let mut mem = Memory::new(
+                Galaxy::Sessions,
+                format!(
+                    "{{\"type\":\"session_turn\",\"sequence\":{sequence},\"label\":\"{label}\"}}"
+                ),
+            );
+            mem.metadata.tags = vec!["session".into(), "turn".into()];
+            mem
+        }
+    };
+
+    let (a1, _) = store.put_session_turn("sess-a", build("a")).unwrap();
+    let (b1, _) = store.put_session_turn("sess-b", build("b")).unwrap();
+    let (a2, _) = store.put_session_turn("sess-a", build("a")).unwrap();
+
+    assert_eq!((a1, b1, a2), (1, 1, 2));
+    assert_eq!(store.last_session_sequence("sess-a").unwrap(), Some(2));
+    assert_eq!(store.last_session_sequence("sess-b").unwrap(), Some(1));
+    assert_eq!(store.last_session_sequence("sess-unknown").unwrap(), None);
+}

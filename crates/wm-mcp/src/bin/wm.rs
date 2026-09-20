@@ -3532,6 +3532,21 @@ fn run_reindex(
                 );
             }
         }
+        // H2 (2026-09-19 review): disclose the derived episodic sidecar too —
+        // `wm reindex` is the repair path for both derived indexes.
+        match store.episodic_sidecar_health() {
+            Ok((0, _)) => {}
+            Ok((records, false)) => {
+                println!("  episodic sidecar: populated ({records} raw record(s)).");
+            }
+            Ok((records, true)) => {
+                println!(
+                    "  episodic sidecar: DEGRADED — {records} raw record(s), 0 term postings; \
+                     a real run would rebuild it."
+                );
+            }
+            Err(e) => println!("  episodic sidecar: probe failed: {e}"),
+        }
         return Ok(());
     }
 
@@ -3551,6 +3566,13 @@ fn run_reindex(
             );
         }
     }
+    // Derived episodic term sidecar: reconstruct from the raw records so one
+    // repair command heals both derived indexes (H2, 2026-09-19 review). The
+    // raw lane is canonical and never touched; DUP_SORT puts are idempotent.
+    let episodes = store.episodic().rebuild_sidecar().map_err(|e| {
+        anyhow::anyhow!("Tantivy rebuilt, but the episodic term sidecar rebuild failed: {e}")
+    })?;
+    println!("Episodic term sidecar rebuilt from {episodes} raw record(s).");
     Ok(())
 }
 
@@ -5262,7 +5284,10 @@ fn run_doctor(
         let embedder = wm_memory::create_embedder();
         let backend = embedder.backend_name();
         if backend == "stub" {
-            let episodic_count = server.store_arc().episodic().record_count().unwrap_or(0);
+            // Read-only count: must not trigger the sidecar auto-rebuild —
+            // doctor diagnoses derived-index state, it does not silently
+            // heal it before section 11j grades it.
+            let episodic_count = server.store_arc().episodic_record_count().unwrap_or(0);
             let cache_count = server.store_arc().embedding_cache_count().unwrap_or(0);
             let cache_note = if cache_count > 0 {
                 format!(", embedding cache: {cache_count} vectors")
@@ -5361,6 +5386,35 @@ fn run_doctor(
             format_at_rest_disclosure(&status, &store_path, counts.as_deref(), ledger.as_ref());
         print!("{}", disclosure.text);
         if disclosure.issue {
+            issues += 1;
+        }
+    }
+
+    // 11j. Episodic derived index (H2) — the raw episodic lane is canonical;
+    //      the DUP_SORT term-postings sidecar is a reconstructible view. When
+    //      records exist but the sidecar is empty, a rebuild failed (or never
+    //      ran): report DEGRADED, never "healthy" (2026-09-19 review).
+    println!();
+    match server.store().episodic_sidecar_health() {
+        Ok((0, _)) => {
+            println!("[INFO] Episodic derived index: no records yet (nothing to check).");
+        }
+        Ok((records, false)) => {
+            println!("[OK]   Episodic derived index: {records} record(s), term sidecar populated.");
+        }
+        Ok((records, true)) => {
+            println!(
+                "[WARN] DEGRADED: canonical memory intact, derived episodic index incomplete \
+                 ({records} record(s), 0 term postings)."
+            );
+            println!(
+                "       Run 'wm reindex --store {}' to rebuild the episodic sidecar from the raw records.",
+                store_path.display()
+            );
+            issues += 1;
+        }
+        Err(e) => {
+            println!("[WARN] Episodic derived index: probe failed: {e}");
             issues += 1;
         }
     }

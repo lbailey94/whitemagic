@@ -7846,6 +7846,7 @@ dependencies = [
  "clap",
  "hmac",
  "landlock",
+ "lmdb",
  "pyo3",
  "rmp-serde",
  "rusqlite",

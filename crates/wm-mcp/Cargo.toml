@@ -57,6 +57,9 @@ landlock = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+# Test-only: derived-index fixtures (clear/seed named DBIs) for the H2
+# doctor/reindex integration tests. Same pin as wm-memory uses.
+lmdb = "0.8"
 
 [features]
 default = []

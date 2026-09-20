@@ -2,6 +2,7 @@
 
 use lmdb::{Cursor, Database, Environment, Transaction, WriteFlags};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use wm_core::{
@@ -195,8 +196,11 @@ impl<'a> EpisodicStore<'a> {
     /// keeps append O(new pairs) instead of rewriting a serialized Vec that
     /// grows with the store.
     fn term_postings(&self, term: &str) -> Result<Vec<EpisodicId>> {
+        // Normalize exactly as the index does (H2, 2026-09-19 review): a
+        // long token must map to the same hashed key on both sides.
+        let term = index_safe_term(term);
         if let Ok(cache) = self.term_cache.read() {
-            if let Some(ids) = cache.get(term) {
+            if let Some(ids) = cache.get(&term) {
                 return Ok(ids.clone());
             }
         }
@@ -205,7 +209,7 @@ impl<'a> EpisodicStore<'a> {
             .env
             .begin_ro_txn()
             .map_err(|e| CoreError::Memory(format!("episodic index ro_txn failed: {e}")))?;
-        let term_key = term.to_string();
+        let term_key = term;
         let mut ids: Vec<EpisodicId> = Vec::new();
         {
             // Existence pre-check: iter_from() unwraps MDB_SET_RANGE, which
@@ -277,7 +281,13 @@ impl<'a> EpisodicStore<'a> {
                 base_terms
             };
             for term in enriched {
-                pending.entry(term).or_default().push(record);
+                // H2 (2026-09-19 review): keys longer than LMDB's 511-byte
+                // limit abort the sidecar write with MDB_BAD_VALSIZE. Terms
+                // are canonicalized here so the raw record still indexes.
+                pending
+                    .entry(index_safe_term(&term))
+                    .or_default()
+                    .push(record);
             }
         }
         let mut tx = self
@@ -291,7 +301,7 @@ impl<'a> EpisodicStore<'a> {
                 // instead of rewriting the whole posting list.
                 if let Err(e) = tx.put(
                     self.term_db,
-                    &term.as_bytes().to_vec(),
+                    &term,
                     &record.id.as_bytes(),
                     WriteFlags::default(),
                 ) {
@@ -986,6 +996,29 @@ fn index_terms_with_aliases(text: &str, aliases: Option<&AdaptiveAliases>) -> Ve
             }
             terms
         })
+}
+
+/// LMDB's default maximum key size is 511 bytes; longer keys abort the
+/// write with `MDB_BAD_VALSIZE`. A whitespace-free 512-character session
+/// title reproduced exactly that on 2026-09-19: the authoritative record and
+/// Tantivy index committed, the sidecar write failed, and the tool still
+/// reported unqualified success. Terms longer than this bound are replaced
+/// by a deterministic hash form — same bytes at index and query time — so
+/// the sidecar stays writable and exact-match semantics are preserved.
+///
+/// The bound leaves margin under 511 for any future key framing.
+const MAX_TERM_KEY_BYTES: usize = 480;
+
+/// Canonical sidecar key for a term: unchanged when it fits under the LMDB
+/// key limit, deterministic `~h:<sha256hex>` otherwise. The `~` prefix
+/// cannot collide with a tokenizer term: `tokenize` splits on
+/// non-alphanumeric characters, so no real term contains `~`.
+fn index_safe_term(term: &str) -> String {
+    if term.len() <= MAX_TERM_KEY_BYTES {
+        return term.to_string();
+    }
+    let digest = Sha256::digest(term.as_bytes());
+    format!("~h:{digest:x}")
 }
 
 fn tokenize(text: &str) -> Vec<String> {
@@ -1903,6 +1936,72 @@ mod tests {
             .search("memory retrieval", 10, true)
             .unwrap();
         assert_eq!(all.len(), 2);
+    }
+
+    /// H2 (2026-09-19 review): a whitespace-free 512-character title aborted
+    /// the sidecar write with `MDB_BAD_VALSIZE` while the authoritative record
+    /// committed — an unqualified-success partial write. Long terms are now
+    /// canonicalized to a hashed key at both index and query time.
+    #[test]
+    fn overlong_terms_index_and_search_without_bad_valsize() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let long_title = "x".repeat(512);
+        let record = sample_record(1, &format!("session title {long_title}"));
+        store.episodic().append(&record).unwrap();
+
+        // The authoritative lane committed and the sidecar accepted the term
+        // (an append error would have propagated here before the fix).
+        assert_eq!(
+            store.episodic().get(record.id).unwrap(),
+            Some(record.clone())
+        );
+
+        // The same long token still retrieves the record.
+        let hits = store.episodic().search(&long_title, 10, false).unwrap();
+        assert_eq!(hits.len(), 1, "long-token query must still match");
+        assert_eq!(hits[0].record.id, record.id);
+
+        // Boundary sanity: 480 bytes stays verbatim, 481 hashes.
+        assert_eq!(index_safe_term(&"a".repeat(480)).len(), 480);
+        let hashed = index_safe_term(&"a".repeat(481));
+        assert!(hashed.starts_with("~h:"), "{hashed}");
+        assert_eq!(hashed.len(), 67);
+    }
+
+    /// H2 (2026-09-19 review): a failed sidecar rebuild leaves the raw lane
+    /// intact with zero term postings. The health probe must expose that
+    /// state (doctor grades DEGRADED) and the rebuild path must heal it.
+    #[test]
+    fn sidecar_health_exposes_incomplete_derived_index_and_rebuild_heals() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        store
+            .episodic()
+            .append(&sample_record(1, "durable raw fact"))
+            .unwrap();
+        assert_eq!(store.episodic_sidecar_health().unwrap(), (1, false));
+
+        // Simulate a failed / never-run sidecar rebuild: clear the derived
+        // postings behind the store; the raw record stays authoritative.
+        {
+            let db = store.env().open_db(Some("episodic_terms_v2")).unwrap();
+            let mut tx = store.env().begin_rw_txn().unwrap();
+            tx.clear_db(db).unwrap();
+            tx.commit().unwrap();
+        }
+        assert_eq!(
+            store.episodic_sidecar_health().unwrap(),
+            (1, true),
+            "records without postings must be visible as degraded"
+        );
+
+        // Repair path (what `wm reindex` runs) restores the derived view.
+        let rebuilt = store.episodic().rebuild_sidecar().unwrap();
+        assert_eq!(rebuilt, 1);
+        assert_eq!(store.episodic_sidecar_health().unwrap(), (1, false));
+        let hits = store.episodic().search("durable fact", 10, false).unwrap();
+        assert_eq!(hits.len(), 1);
     }
 
     #[test]

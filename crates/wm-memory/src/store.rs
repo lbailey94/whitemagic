@@ -4,7 +4,8 @@
 //! Reads are zero-copy (mmap'd). Writes are batched.
 
 use lmdb::{
-    Cursor, Database, DatabaseFlags, Environment, EnvironmentFlags, Transaction, WriteFlags,
+    Cursor, Database, DatabaseFlags, Environment, EnvironmentFlags, RwTransaction, Transaction,
+    WriteFlags,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -189,6 +190,12 @@ pub struct MemoryStore {
     attestations_db: Database,
     /// Dedicated database for compressed cold-stored memories.
     pub(crate) cold_storage_db: Database,
+    /// Per-session monotonic turn-sequence counters (H1, 2026-09-20).
+    /// Key = session id bytes, value = last allocated sequence (u64 BE).
+    /// Incremented inside the same write transaction as the turn record so
+    /// concurrent writers cannot reuse a sequence. Optional on read paths
+    /// (legacy stores keep opening strict; a writable open creates it).
+    session_sequences_db: Option<Database>,
     /// Optional at-rest keyring DBI (Q39 slice A). `Some` when the store has
     /// a keyring; read-only paths open it optionally and never create it.
     keyring_db: Option<Database>,
@@ -351,6 +358,14 @@ impl MemoryStore {
             .map_err(|e| {
                 CoreError::Memory(format!("LMDB create_db failed for cold_storage: {e}"))
             })?;
+        // H1 (2026-09-20): per-session turn-sequence counters. Created on
+        // every writable open (legacy stores repair on first write open);
+        // deliberately not required schema on read paths.
+        let session_sequences_db = env
+            .create_db(Some("session_sequences"), DatabaseFlags::default())
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB create_db failed for session_sequences: {e}"))
+            })?;
         let (keyring_db, at_rest) = crate::at_rest::open_at_rest(&env, &path, at_rest_config)?;
         Ok(Self {
             path,
@@ -365,6 +380,7 @@ impl MemoryStore {
             revisions_db,
             attestations_db,
             cold_storage_db,
+            session_sequences_db: Some(session_sequences_db),
             keyring_db,
             at_rest,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
@@ -574,6 +590,9 @@ impl MemoryStore {
         let revisions_db = open_named("revisions")?;
         let attestations_db = open_named(crate::attestation::ATTESTATIONS_DB)?;
         let cold_storage_db = open_named("cold_storage")?;
+        // H1 counters are optional on read paths (like the keyring): legacy
+        // stores keep opening strict; the DBI is created by writable opens.
+        let session_sequences_db = env.open_db(Some("session_sequences")).ok();
         // The at-rest keyring is optional on read paths: opened when present,
         // never created, and its RK is never resolved here (status only).
         let keyring_db = crate::at_rest::open_keyring_optional(&env)?;
@@ -591,6 +610,7 @@ impl MemoryStore {
             revisions_db,
             attestations_db,
             cold_storage_db,
+            session_sequences_db,
             keyring_db,
             at_rest: None,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
@@ -657,6 +677,9 @@ impl MemoryStore {
         let revisions_db = open_named("revisions")?;
         let attestations_db = open_named(crate::attestation::ATTESTATIONS_DB)?;
         let cold_storage_db = open_named("cold_storage")?;
+        // H1 counters are optional here too: inspection must never require a
+        // schema a legacy store may lack.
+        let session_sequences_db = env.open_db(Some("session_sequences")).ok();
         // The at-rest keyring is optional on read paths: opened when present,
         // never created, and its RK is never resolved here (status only).
         let keyring_db = crate::at_rest::open_keyring_optional(&env)?;
@@ -674,6 +697,7 @@ impl MemoryStore {
             revisions_db,
             attestations_db,
             cold_storage_db,
+            session_sequences_db,
             keyring_db,
             at_rest: None,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
@@ -770,6 +794,51 @@ impl MemoryStore {
     /// Get the semantic encoder.
     pub const fn semantic_encoder(&self) -> &SemanticEncoder {
         &self.semantic_encoder
+    }
+
+    /// Read-only health probe for the derived episodic sidecar (H2,
+    /// 2026-09-19 review): `(authoritative indexable record count, sidecar
+    /// empty?)`.
+    ///
+    /// `count > 0 && sidecar_empty` is the signature of a failed or
+    /// never-run sidecar rebuild — the raw lane is canonical, the term
+    /// postings are a reconstructible view. Callers (doctor) grade that
+    /// DEGRADED instead of reporting a healthy store. Private /
+    /// model-excluded records deliberately have no postings, so only
+    /// indexable records count. Unlike [`Self::episodic`], this never
+    /// triggers the once-per-process rebuild and never writes.
+    pub fn episodic_sidecar_health(&self) -> Result<(u64, bool)> {
+        let view = EpisodicStore::new(
+            &self.env,
+            self.episodic_db,
+            self.episodic_terms_v2_db,
+            self.episodic_term_cache.clone(),
+            &self.mutation_count,
+        );
+        let empty = view.sidecar_is_empty()?;
+        if !empty {
+            return Ok((view.record_count()?, false));
+        }
+        let indexable = view
+            .scan(None, usize::MAX)?
+            .iter()
+            .filter(|record| !record.is_private && !record.model_exclude)
+            .count() as u64;
+        Ok((indexable, true))
+    }
+
+    /// Authoritative episodic record count without triggering the
+    /// once-per-process sidecar rebuild (read-only; for inspection paths
+    /// such as `wm doctor`, which must diagnose, not silently repair).
+    pub fn episodic_record_count(&self) -> Result<u64> {
+        let view = EpisodicStore::new(
+            &self.env,
+            self.episodic_db,
+            self.episodic_terms_v2_db,
+            self.episodic_term_cache.clone(),
+            &self.mutation_count,
+        );
+        view.record_count()
     }
 
     /// Rebuild the episodic DUP_SORT sidecar once per process when it is
@@ -869,14 +938,26 @@ impl MemoryStore {
             }
         }
 
-        let db = self.galaxy_db(galaxy)?;
-        let key = memory.metadata.id.as_bytes();
-        let val = self.encode_record_value(galaxy, memory)?;
-
         let mut tx = self
             .env
             .begin_rw_txn()
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        self.put_in_txn(&mut tx, galaxy, memory)?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        self.mutation_count.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    /// Body of [`Self::put`] inside a caller-owned write transaction: record
+    /// upsert plus secondary-index maintenance. Split out for
+    /// [`Self::put_session_turn`], which allocates the turn's sequence in the
+    /// same transaction and therefore cannot call `put` itself. Dropping the
+    /// transaction without commit aborts it (early returns here abort).
+    fn put_in_txn(&self, tx: &mut RwTransaction, galaxy: Galaxy, memory: &Memory) -> Result<()> {
+        let db = self.galaxy_db(galaxy)?;
+        let key = memory.metadata.id.as_bytes();
+        let val = self.encode_record_value(galaxy, memory)?;
 
         // Overwrite semantics: capture the previous record (if any) so its
         // index entries can be removed before the new ones are added.
@@ -890,25 +971,132 @@ impl MemoryStore {
         match tx.put(db, key, &val, lmdb::WriteFlags::default()) {
             Ok(()) => {}
             Err(lmdb::Error::MapFull) => {
-                tx.abort();
                 return Err(CoreError::Memory(format!(
                     "LMDB map full: galaxy {}, consider growing map size or pruning old memories",
                     galaxy.db_name()
                 )));
             }
             Err(e) => {
-                tx.abort();
                 return Err(CoreError::Memory(format!("LMDB put failed: {e}")));
             }
         }
         if let Some(existing) = existing {
-            self.index_dbs.remove(&mut tx, galaxy, &existing)?;
+            self.index_dbs.remove(tx, galaxy, &existing)?;
         }
-        self.index_dbs.add(&mut tx, galaxy, memory)?;
+        self.index_dbs.add(tx, galaxy, memory)?;
+        Ok(())
+    }
+
+    /// Atomically allocate the next per-session turn sequence **and** store
+    /// the turn in one LMDB write transaction (H1, 2026-09-20 review).
+    ///
+    /// The review reproduced duplicate sequences under concurrent writers:
+    /// allocation was read-count-then-write (`load_turns().len() + 1`),
+    /// outside the serialization boundary. The counter lives in the
+    /// `session_sequences` DBI and is incremented inside the record's
+    /// transaction, so N concurrent writers get exactly 1..=N unique,
+    /// contiguous sequences with no burned numbers (a crash before commit
+    /// rolls back both the counter and the record).
+    ///
+    /// `build` runs with the allocated sequence while the transaction is
+    /// open and returns the record to store — this keeps the sequence inside
+    /// the record's own content truthful (the turn schema carries it)
+    /// without a second write transaction.
+    ///
+    /// Returns `(sequence, stored_memory)`.
+    pub fn put_session_turn<F>(&self, session_id: &str, build: F) -> Result<(u64, Memory)>
+    where
+        F: FnOnce(u64) -> Memory,
+    {
+        let seq_db = self.session_sequences_db.ok_or_else(|| {
+            CoreError::Memory(
+                "session_sequences DBI missing (legacy store opened read-only); \
+                 a writable open repairs it via ensure_schema"
+                    .into(),
+            )
+        })?;
+        if let Some(limit) = self.max_entries_per_galaxy {
+            let current = self.count(Galaxy::Sessions)?;
+            if current >= limit {
+                return Err(CoreError::Memory(format!(
+                    "galaxy {} entry limit reached ({current}/{limit}), write rejected",
+                    Galaxy::Sessions.db_name()
+                )));
+            }
+        }
+
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        let key: &[u8] = session_id.as_bytes();
+        // A malformed counter is an error, never a silent reset to 0 —
+        // resetting would re-issue sequences the session already used.
+        let current = match tx.get(seq_db, &key) {
+            Ok(bytes) => {
+                let arr: [u8; 8] = <[u8; 8]>::try_from(bytes).map_err(|_| {
+                    CoreError::Memory(format!(
+                        "session_sequences value for {session_id} is malformed \
+                         ({} bytes, want 8)",
+                        bytes.len()
+                    ))
+                })?;
+                u64::from_be_bytes(arr)
+            }
+            Err(lmdb::Error::NotFound) => 0,
+            Err(e) => {
+                return Err(CoreError::Memory(format!(
+                    "LMDB get failed (session_sequences): {e}"
+                )));
+            }
+        };
+        let next = current
+            .checked_add(1)
+            .ok_or_else(|| CoreError::Memory("session sequence overflow (u64)".into()))?;
+        tx.put(
+            seq_db,
+            &key,
+            &next.to_be_bytes(),
+            lmdb::WriteFlags::default(),
+        )
+        .map_err(|e| CoreError::Memory(format!("LMDB put failed (session_sequences): {e}")))?;
+
+        let memory = build(next);
+        self.put_in_txn(&mut tx, Galaxy::Sessions, &memory)?;
         tx.commit()
             .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
-        Ok(())
+        Ok((next, memory))
+    }
+
+    /// Last allocated turn sequence for a session, read from the counter
+    /// (no scan). `None` when the session has no allocated sequence yet, or
+    /// when the store predates the `session_sequences` DBI.
+    pub fn last_session_sequence(&self, session_id: &str) -> Result<Option<u64>> {
+        let Some(seq_db) = self.session_sequences_db else {
+            return Ok(None);
+        };
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let key: &[u8] = session_id.as_bytes();
+        match tx.get(seq_db, &key) {
+            Ok(bytes) => {
+                let arr: [u8; 8] = <[u8; 8]>::try_from(bytes).map_err(|_| {
+                    CoreError::Memory(format!(
+                        "session_sequences value for {session_id} is malformed \
+                         ({} bytes, want 8)",
+                        bytes.len()
+                    ))
+                })?;
+                Ok(Some(u64::from_be_bytes(arr)))
+            }
+            Err(lmdb::Error::NotFound) => Ok(None),
+            Err(e) => Err(CoreError::Memory(format!(
+                "LMDB get failed (session_sequences): {e}"
+            ))),
+        }
     }
 
     /// Retrieve a memory by ID from the given galaxy.

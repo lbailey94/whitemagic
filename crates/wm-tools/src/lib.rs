@@ -697,6 +697,14 @@ impl Tool for MemoryBatchCreateTool {
     fn gana(&self) -> Gana {
         Gana::Encampment
     }
+    fn description(&self) -> &str {
+        "Batch-create memories (one call, one Tantivy commit; ~10-50x faster than \
+         repeated memory.create). Admission is per item: malformed or unindexable \
+         items are skipped and reported in `skipped`, never fatal. Crash contract: \
+         partial-on-crash — a termination mid-batch can leave a committed prefix; \
+         the raw LMDB lane is canonical and `wm reindex` restores the derived \
+         indexes exactly (no corruption, no silent drift)."
+    }
     fn effects(&self) -> &EffectRow {
         &self.effects
     }
@@ -705,7 +713,7 @@ impl Tool for MemoryBatchCreateTool {
             &json!({
                 "items": {
                     "type": "array",
-                    "description": "Array of {content, galaxy?, tags?} objects",
+                    "description": "Array of {content, galaxy?, tags?} objects; admission is per item (malformed items are skipped and reported in `skipped`); partial-on-crash contract — recover derived indexes with `wm reindex`",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -4547,6 +4555,28 @@ mod tests {
             .unwrap();
         assert_eq!(result["count"], 1);
         assert!(result.get("skipped").is_none());
+    }
+
+    /// H3 (2026-09-20): batch_create's crash semantics are documented, not
+    /// discovered — the description must state the partial-on-crash contract
+    /// and the deterministic recovery path.
+    #[tokio::test]
+    async fn memory_batch_create_documents_partial_on_crash_contract() {
+        let store = test_store();
+        let tool = MemoryBatchCreateTool::new(store, None, None);
+        let description = Tool::description(&tool).to_lowercase();
+        assert!(
+            description.contains("partial-on-crash"),
+            "description must state the crash contract: {description}"
+        );
+        assert!(
+            description.contains("wm reindex"),
+            "description must name the recovery path: {description}"
+        );
+        assert!(
+            description.contains("skipped"),
+            "description must state per-item admission: {description}"
+        );
     }
 
     #[tokio::test]
