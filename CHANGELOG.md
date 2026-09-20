@@ -46,6 +46,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   partial restore). Regression:
   `envelope_json_tamper_is_detected_by_the_manifest`.
 
+### At-rest record sealing — Q39 slice B (dark by default)
+- **WMEN record envelope.** With `WM_AT_REST_MODE=keyfile|passphrase`, record
+  bodies seal under the galaxy DEK (XChaCha20-Poly1305; AAD = galaxy + record
+  id + content version) on every write; `off` stays byte-identical (no DBI,
+  no files). A writable `off` open of a store whose keyring meta exists is
+  refused (split-brain guard), and a sealed value without its key fails
+  closed.
+- **`wm at-rest migrate` / `status`.** Encrypt-on-rewrite migration for
+  pre-existing plaintext records: bounded batches, crash-safe `migration:v1`
+  ledger, `--dry-run` counts without writing. `wm doctor` section 11i
+  discloses the per-store mode, sealed/plaintext counts, and migration state
+  read-only, never resolving the key. Mode B remains physical-purge only; no
+  crypto-erasure language until slices C–E.
+
+### Dispatch boundary + threat model — Q08/Q09
+- **Boundary matrix.** Machine-checked dispatch boundary matrix
+  (direct/wrapper/NLU/autonomous/federated × authority/effect gates) with a
+  Windows line-ending-agnostic CI gate.
+- **Threat model.** Q09 confidentiality/injection threat model and the L-S7
+  disposition documented.
+
+### Retrieval — T0 findings (disclosure + correctness)
+- **`recall_mode: bm25` disclosed** when the fusion runs with the vector
+  weight zeroed; a BM25-ranked search is no longer labeled `hybrid`.
+- **Rerank pool decoupled from the candidate width.** `candidate_limit` is
+  the deterministic retrieval width; the new `rerank_pool` bounds only the
+  embed/reorder pool. Measured with the in-process ONNX backend (50q, all
+  runs valid): blend 0.7 + wide retrieval + pool 10 gives R@1 58.0 / R@5 90.0
+  / R@10 98.0 / MRR 0.698 at about a fifth of the pool-50 embed cost. The
+  earlier HTTP-embedder attempt was host-bound and invalid — not quotable.
+- **Inert vector half skipped.** With the vector and importance weights both
+  zero, the query embed and vector-index rehydration are skipped — ranking
+  unchanged by construction, no embed round-trip for BM25-weighted searches,
+  and an embedder outage cannot empty a search that never needed it.
+
+### Input contracts + stability
+- **Search limits must be >= 1.** `limit: 0` reached Tantivy's `TopDocs` and
+  panicked the server process (exit 101; store healthy). Rejected at the tool
+  boundary (`minimum: 1` in the schema) and guarded in the engine.
+- **`session.record` validation parity.** Out-of-range importance is rejected
+  instead of silently clamped; `turn_type` is checked against the documented
+  vocabulary; blank content is refused; the CLI rejects NaN/inf/out-of-range
+  importance instead of normalizing it.
+- **Bounded schemas.** Importance inputs publish `minimum`/`maximum`;
+  positive-integer inputs publish `minimum: 1`.
+
+### Governance + first-user polish
+- **Firebreak prose fix.** The command veto scans only fields that can
+  execute: `session.checkpoint`'s prose handoff fields (`next_queue`,
+  `open_flags`, `label`) are exempt, and the redirection heuristic no longer
+  treats numeric targets (`-> 100`, `R@1 > 0.78`) as commands. `-> /path`
+  still requires confirm.
+- **Warning noise.** The mesh-key warning fires only when the mesh starts;
+  the read-only index warning only for long-lived readers; `wm contract
+  --check` prints its success line.
+- **Installer.** Checksum-verified macOS targets (arm64/x86_64) in the repo
+  and site installers; Windows stays refused pending its installer decision.
+- **Release lane.** Site guide commands and flags are verified against the
+  released binary before the tag.
+
 ## [9.2.0] — 2026-09-19
 
 ### Release-gate fixes (verification wave)
