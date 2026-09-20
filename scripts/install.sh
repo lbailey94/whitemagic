@@ -14,9 +14,11 @@
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
 #
-# Install gate (alpha): Linux x86-64 only. macOS/Windows binaries are
-# published in every release but their install paths are not gated yet —
-# this script deliberately refuses them rather than guessing.
+# Install gate (alpha): Linux x86-64 and macOS (x86_64/aarch64). macOS
+# binaries are checksum-verified like Linux; the site copy stays
+# "published, not install-gated" until a real-Mac smoke test passes.
+# Windows binaries are published in every release but have no installer
+# yet — this script refuses them rather than guessing.
 # On Linux x86-64 the fully static (musl) build is preferred when the target
 # release provides it; the dynamically linked glibc build requires glibc 2.39+.
 
@@ -127,6 +129,7 @@ artifact_available() {
 
 BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
 STATIC_BUILD=0
+PLATFORM_LABEL=""
 
 case "$TARGET" in
     x86_64-unknown-linux-musl)
@@ -148,10 +151,18 @@ case "$TARGET" in
             fi
         fi
         ;;
+    aarch64-apple-darwin)
+        ARTIFACT="wm-macos-aarch64"
+        PLATFORM_LABEL="macOS arm64"
+        ;;
+    x86_64-apple-darwin)
+        ARTIFACT="wm-macos-x86_64"
+        PLATFORM_LABEL="macOS x86_64"
+        ;;
     *)
         echo "Unsupported target for this release: ${TARGET}" >&2
-        echo "The alpha install gate covers Linux x86-64 only." >&2
-        echo "macOS/Windows binaries are published in every release: https://github.com/${REPO}/releases" >&2
+        echo "Install-gated targets are Linux x86-64 and macOS (x86_64/aarch64)." >&2
+        echo "Windows binaries are published in every release: https://github.com/${REPO}/releases" >&2
         exit 1
         ;;
 esac
@@ -194,6 +205,8 @@ echo ""
 echo "WhiteMagic ${VERSION} installed to ${INSTALL_DIR}/wm"
 if [ "$STATIC_BUILD" = "1" ]; then
     echo "Build: fully static (musl) — no glibc requirement."
+elif [ -n "$PLATFORM_LABEL" ]; then
+    echo "Build: ${PLATFORM_LABEL} — ad-hoc signed by the macOS linker."
 else
     echo "Build: dynamically linked (glibc 2.39+ required)."
 fi
