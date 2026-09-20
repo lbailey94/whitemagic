@@ -1190,7 +1190,7 @@ impl Tool for MemoryHybridRecallTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Search memories: hybrid BM25+vector fusion with a real embedder; otherwise the episodic deterministic route, falling back to BM25 full-text. Every result discloses recall_mode (hybrid|bm25|episodic|fts|importance|cold|none) — bm25 means the fusion ran with the vector weight configured to zero (BM25-only ranking). memory.hybrid_recall is a compatibility alias."
+        "Search memories: hybrid BM25+vector fusion with a real embedder; otherwise the episodic deterministic route, falling back to BM25 full-text. Every result discloses recall_mode (hybrid|bm25|episodic|fts|importance|cold|none) — bm25 means the fusion ranked with the vector weight configured to zero (the query embed is skipped when the vector half cannot contribute). memory.hybrid_recall is a compatibility alias."
     }
     fn input_schema(&self) -> Value {
         schema(
@@ -3129,10 +3129,14 @@ mod tests {
         store.put(Galaxy::Codex, &needle).unwrap();
         wm_memory::reindex::rebuild_index(&store, &search, &[]).unwrap();
 
-        struct FakeVecEmbedder;
-        impl wm_memory::Embedder for FakeVecEmbedder {
-            fn embed_batch(&self, texts: &[&str]) -> wm_core::Result<Vec<Vec<f32>>> {
-                Ok(texts.iter().map(|_| vec![0.1_f32; 16]).collect())
+        // Any embed call would be a regression: the vector half is inert
+        // under this config, so the tool path must answer from BM25 alone
+        // (F-T0-2 follow-up — before the fast path this config still paid
+        // the query embed).
+        struct NoEmbedEmbedder;
+        impl wm_memory::Embedder for NoEmbedEmbedder {
+            fn embed_batch(&self, _texts: &[&str]) -> wm_core::Result<Vec<Vec<f32>>> {
+                panic!("zeroed vector weight must not call the embedder");
             }
             fn dimension(&self) -> usize {
                 16
@@ -3141,7 +3145,7 @@ mod tests {
                 true
             }
             fn backend_name(&self) -> &'static str {
-                "fake"
+                "no-embed-test"
             }
         }
 
@@ -3156,7 +3160,7 @@ mod tests {
                 store.clone(),
                 search.clone(),
                 wm_memory::VectorStore::new(),
-                Arc::new(FakeVecEmbedder),
+                Arc::new(NoEmbedEmbedder),
                 config,
             )
             .unwrap(),

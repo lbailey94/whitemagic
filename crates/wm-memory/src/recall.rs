@@ -408,6 +408,20 @@ impl RecallEngine {
         self.embedder.backend_name() != "stub"
     }
 
+    /// Whether the vector half cannot affect the fused ranking under the
+    /// configured weights (F-T0-2 follow-up).
+    ///
+    /// The vector half contributes through two channels: the
+    /// `vector_weight * cosine` term, and candidate-set injection — a
+    /// vector-only hit can still surface when `importance_weight > 0`
+    /// because its fused score then carries the importance term. The half
+    /// is inert only when both channels are zeroed, in which case the
+    /// query embed and the vector-index rehydration are dead weight.
+    #[must_use]
+    fn vector_half_inert(&self) -> bool {
+        self.config.vector_weight <= 0.0 && self.config.importance_weight <= 0.0
+    }
+
     /// Probe the configured embedder with one tiny input.
     ///
     /// Degradation honesty: a configured embedder that cannot answer
@@ -966,21 +980,6 @@ impl RecallEngine {
         Vec<RecallResult>,
         Option<crate::recall_conformal::ConformalSetInfo>,
     ) {
-        // 1. Embed query
-        let query_vec = match self.embedder.embed_query(query) {
-            Ok(v) => v,
-            Err(_) => return (Vec::new(), None),
-        };
-
-        // 1b. Rehydrate the process-local vector index on first use
-        //     (vectors persist in LMDB; the index does not). Failure is
-        //     loud but non-fatal: the BM25 half still answers.
-        if let Err(error) = self.ensure_vectors_loaded() {
-            tracing::warn!(
-                "vector store rehydration failed ({error}) — hybrid vector half degraded"
-            );
-        }
-
         // 2. BM25 search (get more than limit for fusion)
         let bm25_limit = limit * 3;
         let bm25_results = self
@@ -988,8 +987,34 @@ impl RecallEngine {
             .search_in_galaxy(query, galaxy_filter, bm25_limit)
             .unwrap_or_default();
 
-        // 3. Vector search
-        let vector_results = {
+        // 3. Vector half — skipped entirely when the vector half is inert
+        //    (F-T0-2 follow-up). An inert vector half means the configured
+        //    weights zero both of its contribution channels: the
+        //    `vector_weight * cosine` term and the candidate-set injection
+        //    that can surface vector-only hits through the
+        //    `importance_weight * importance` term. Skipping the query
+        //    embed and the vector-index rehydration then changes nothing
+        //    about the ranking, while a BM25-weighted search no longer
+        //    pays an embedder round-trip (T0: ~100 ms/query) and cannot be
+        //    emptied by an embedder outage it never needed.
+        let vector_results = if self.vector_half_inert() {
+            Vec::new()
+        } else {
+            // 3a. Embed query
+            let query_vec = match self.embedder.embed_query(query) {
+                Ok(v) => v,
+                Err(_) => return (Vec::new(), None),
+            };
+
+            // 3b. Rehydrate the process-local vector index on first use
+            //     (vectors persist in LMDB; the index does not). Failure
+            //     is loud but non-fatal: the BM25 half still answers.
+            if let Err(error) = self.ensure_vectors_loaded() {
+                tracing::warn!(
+                    "vector store rehydration failed ({error}) — hybrid vector half degraded"
+                );
+            }
+
             let Ok(vs) = self.vector_store.lock() else {
                 return (Vec::new(), None);
             };
@@ -2718,6 +2743,86 @@ mod tests {
             "vector store should be loaded after the first hybrid search"
         );
         assert_eq!(vs.len(), 1, "persisted embedding should be indexed");
+    }
+
+    #[test]
+    fn bm25_weighted_search_skips_the_query_embed() {
+        // F-T0-2 follow-up: with the vector and importance weights zeroed
+        // the vector half cannot change the ranking, so the query embed
+        // and the vector-index rehydration must be skipped. The embedder
+        // here fails every call — before the fast path the search returned
+        // nothing because the embed error won (T0 bm25-baseline paid the
+        // embed despite ranking by BM25 alone).
+        struct FailingEmbedder;
+        impl crate::embedder::Embedder for FailingEmbedder {
+            fn embed_batch(&self, _texts: &[&str]) -> Result<Vec<Vec<f32>>> {
+                Err(CoreError::Memory("embedder offline".into()))
+            }
+            fn dimension(&self) -> usize {
+                16
+            }
+            fn is_available(&self) -> bool {
+                false
+            }
+            fn backend_name(&self) -> &'static str {
+                "failing-test"
+            }
+        }
+
+        let tmp = tempfile::tempdir().unwrap();
+        let store_dir = tmp.path().join("store");
+        std::fs::create_dir_all(&store_dir).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&store_dir).unwrap());
+        let index_dir = tmp.path().join("index");
+        std::fs::create_dir_all(&index_dir).unwrap();
+        let search_engine = Arc::new(SearchEngine::open(&index_dir).unwrap());
+
+        let config = RecallConfig {
+            bm25_weight: 1.0,
+            vector_weight: 0.0,
+            importance_weight: 0.0,
+            ..RecallConfig::default()
+        };
+        let engine = RecallEngine::new(
+            store.clone(),
+            search_engine.clone(),
+            VectorStore::new(),
+            Arc::new(FailingEmbedder),
+            config,
+        )
+        .unwrap();
+
+        let mem = crate::Memory::new(
+            Galaxy::Codex,
+            "kotlin coroutine budget meeting notes".to_string(),
+        );
+        let mem_id = mem.metadata.id;
+        store.put(Galaxy::Codex, &mem).unwrap();
+        let mut writer = search_engine.writer().unwrap();
+        search_engine
+            .add_document(
+                &mut writer,
+                &mem_id.to_string(),
+                "codex",
+                "kotlin coroutine budget meeting notes",
+                &[],
+                1_700_000_000,
+            )
+            .unwrap();
+        search_engine.commit(&mut writer).unwrap();
+
+        let (results, _) =
+            engine.hybrid_search_with_disclosure("kotlin coroutine budget", 5, Some(Galaxy::Codex));
+        assert_eq!(
+            results.len(),
+            1,
+            "the BM25 half must answer without the embedder"
+        );
+        assert_eq!(results[0].memory_id, mem_id);
+        assert!(
+            !engine.vector_store.lock().unwrap().is_loaded(),
+            "an inert vector half must not rehydrate the vector index"
+        );
     }
 
     #[test]
