@@ -1285,7 +1285,8 @@
       "declared": true,
       "properties": {
         "limit": {
-          "description": "Maximum candidates considered (default 50)",
+          "description": "Maximum candidates considered (default 50; must be >= 1)",
+          "minimum": 1,
           "type": "integer"
         },
         "metric": {
@@ -1378,6 +1379,8 @@
               },
               "importance": {
                 "description": "Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)",
+                "maximum": 1.0,
+                "minimum": 0.0,
                 "type": "number"
               },
               "tags": {
@@ -1515,6 +1518,8 @@
         },
         "importance": {
           "description": "Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
           "type": "number"
         },
         "source": {
@@ -1612,7 +1617,7 @@
       "declared": true,
       "properties": {
         "candidate_limit": {
-          "description": "Maximum candidates to score (default 2x limit)",
+          "description": "Maximum candidates to score (default 2x limit). This is the deterministic retrieval width — keep it wide for tail recall; bound rerank embedding cost with rerank_pool instead (measured on the 50q set: wide retrieval + small pool beat narrowed retrieval on R@1 and R@10)",
           "type": "integer"
         },
         "include_historical": {
@@ -1640,8 +1645,12 @@
           "type": "boolean"
         },
         "rerank_alpha": {
-          "description": "Rerank mode selector (default 0.7): <1.0 hybrid blend weight; >=1.0 near-tie cosine tiebreaker; >=2.0 protected top-K full cosine reorder (recall@limit preserved by construction)",
+          "description": "Rerank mode selector (default 0.7): <1.0 hybrid blend weight; >=1.0 near-tie cosine tiebreaker; >=2.0 protected top-K full cosine reorder (recall@limit preserved by construction when the candidate set is not narrowed). Blending alphas can drop correct items out of top-K — prefer >=2.0 when recall@limit matters",
           "type": "number"
+        },
+        "rerank_pool": {
+          "description": "Embedding/reorder width for rerank (default 0 = auto: min(50, max(limit, candidate_limit)), capped at 50). Lower it on CPU embedders to cut latency without narrowing candidate_limit (the deterministic retrieval width)",
+          "type": "integer"
         }
       },
       "required": [
@@ -1737,7 +1746,8 @@
           "type": "boolean"
         },
         "limit": {
-          "description": "Maximum results (default 10)",
+          "description": "Maximum results (default 10; must be >= 1)",
+          "minimum": 1,
           "type": "integer"
         },
         "min_importance": {
@@ -1986,7 +1996,8 @@
           "type": "boolean"
         },
         "limit": {
-          "description": "Maximum results (default 10)",
+          "description": "Maximum results (default 10; must be >= 1)",
+          "minimum": 1,
           "type": "integer"
         },
         "min_importance": {
@@ -2106,6 +2117,8 @@
         },
         "importance": {
           "description": "New importance 0.0-1.0 (optional)",
+          "maximum": 1.0,
+          "minimum": 0.0,
           "type": "number"
         },
         "tags": {
@@ -2794,6 +2807,8 @@
         },
         "importance": {
           "description": "0-1 importance (default 0.5)",
+          "maximum": 1.0,
+          "minimum": 0.0,
           "type": "number"
         },
         "role": {
@@ -2809,7 +2824,18 @@
           "type": "string"
         },
         "turn_type": {
-          "description": "message, decision, breakthrough, question, answer, code_change, error, summary, context",
+          "description": "Turn type (default message)",
+          "enum": [
+            "message",
+            "decision",
+            "breakthrough",
+            "question",
+            "answer",
+            "code_change",
+            "error",
+            "summary",
+            "context"
+          ],
           "type": "string"
         }
       },
@@ -3395,5 +3421,5 @@
       "route": "workspace.stats"
     }
   ],
-  "version": "9.2.0"
+  "version": "9.2.1"
 }
