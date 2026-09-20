@@ -1103,7 +1103,7 @@ impl McpServer {
         // the trust primitive agent message boards require (cf. the July
         // 2026 agent-incident reporting).
         let sangha_chat = Arc::new(std::sync::Mutex::new(
-            SanghaChat::new(100).with_signing_key(mesh_signing_key()),
+            SanghaChat::new(100).with_signing_key(mesh_signing_key_quiet()),
         ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
         // Mesh transport slot (R0): one handle shared by the `sangha.mesh.*`
@@ -4367,16 +4367,45 @@ impl McpServer {
 /// When unset, a random per-process key is used — the node appears as a fresh
 /// identity each restart, but a hardcoded default would be shared by every
 /// WhiteMagic node, letting anyone impersonate another node's messages.
+///
+/// This is the loud variant: the missing-key disclosure belongs to callers
+/// that are starting (or about to start) the mesh transport. Constructing
+/// the local Sangha chat does not need a stable node identity, so those
+/// call sites use [`mesh_signing_key_quiet`] (2026-09-19 review: a new user
+/// running an unrelated local command should not be warned about a mesh key
+/// they never asked for).
+#[must_use]
 pub fn mesh_signing_key() -> wm_sangha::MeshKeyPair {
+    mesh_signing_key_inner(true)
+}
+
+/// [`mesh_signing_key`] without the missing-key warning.
+///
+/// Same derivation, disclosure at debug — for local chat construction,
+/// where the identity is per-process by design and `WM_MESH_KEY` is not
+/// actionable.
+#[must_use]
+pub fn mesh_signing_key_quiet() -> wm_sangha::MeshKeyPair {
+    mesh_signing_key_inner(false)
+}
+
+fn mesh_signing_key_inner(loud: bool) -> wm_sangha::MeshKeyPair {
     match std::env::var("WM_MESH_KEY") {
         Ok(key) if !key.is_empty() => {
             wm_sangha::MeshKeyPair::derive_identity(&wm_core::kdf::root_bytes(&key))
         }
         _ => {
-            tracing::warn!(
-                "WM_MESH_KEY not set — using a random per-process Sangha identity; \
-                 set WM_MESH_KEY for a stable node identity across restarts"
-            );
+            if loud {
+                tracing::warn!(
+                    "WM_MESH_KEY not set — using a random per-process Sangha identity; \
+                     set WM_MESH_KEY for a stable node identity across restarts"
+                );
+            } else {
+                tracing::debug!(
+                    "WM_MESH_KEY not set — local Sangha chat uses a random per-process \
+                     identity (mesh transport not started)"
+                );
+            }
             let mut seed = [0u8; 32];
             seed[..16].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
             seed[16..].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
@@ -4774,7 +4803,7 @@ mod tests {
         // the trust primitive agent message boards require (cf. the July
         // 2026 agent-incident reporting).
         let sangha_chat = Arc::new(std::sync::Mutex::new(
-            SanghaChat::new(100).with_signing_key(mesh_signing_key()),
+            SanghaChat::new(100).with_signing_key(mesh_signing_key_quiet()),
         ));
         let lock_manager = Arc::new(std::sync::Mutex::new(ResourceLockManager::default()));
 

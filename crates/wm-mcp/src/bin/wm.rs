@@ -2032,7 +2032,10 @@ fn run() -> anyhow::Result<()> {
             }
             if json {
                 println!("{}", serde_json::to_string_pretty(&manifest)?);
-            } else if !check || !violations.is_empty() {
+            } else {
+                // Success is explicit: `--check` in CI reads exit 0 either
+                // way, but a human running it should see the contract held
+                // (2026-09-19 review: silent success looked like a no-op).
                 println!(
                     "Route schema manifest: {} routes ({} declared, {} undeclared)",
                     manifest["counts"]["routes"],
@@ -2040,7 +2043,7 @@ fn run() -> anyhow::Result<()> {
                     manifest["counts"]["undeclared"]
                 );
                 if violations.is_empty() {
-                    println!("Curated unconditional-read check: clean");
+                    println!("Contract OK — 0 violations (curated unconditional-read check)");
                 } else {
                     for violation in &violations {
                         println!("  [FAIL] {violation}");
@@ -4332,7 +4335,9 @@ fn run_doctor(
     // --repair, quarantine the broken index and rebuild from LMDB.
     let tantivy_path = lmdb_path.join("tantivy");
     if tantivy_path.exists() {
-        if let Err(open_error) = wm_memory::SearchEngine::open_readonly(&tantivy_path) {
+        // Quiet open: this process exits before later writes could matter;
+        // the loud disclosure belongs to the long-lived read-only server.
+        if let Err(open_error) = wm_memory::SearchEngine::open_readonly_quiet(&tantivy_path) {
             println!();
             println!("--- Search Index ---");
             println!(
@@ -4440,7 +4445,7 @@ fn run_doctor(
         // Consistency check: compare LMDB memory counts to Tantivy doc counts.
         // If they differ, the index is stale (best-effort indexing failures,
         // skipped sanitization, or orphan documents from failed deletes).
-        match wm_memory::SearchEngine::open_readonly(&tantivy_path) {
+        match wm_memory::SearchEngine::open_readonly_quiet(&tantivy_path) {
             Ok(search) => {
                 let consistency = wm_memory::check_consistency(server.store(), &search);
                 if consistency.has_drift {

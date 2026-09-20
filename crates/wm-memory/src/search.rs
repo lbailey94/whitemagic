@@ -433,14 +433,34 @@ impl SearchEngine {
     /// proxy and an opencode MCP client) can share the store for searches;
     /// writes through this engine fail with a clear error.
     pub fn open_readonly(path: impl AsRef<Path>) -> Result<Self> {
+        Self::open_readonly_with_disclosure(path, true)
+    }
+
+    /// [`open_readonly`] without the open-time write-visibility warning:
+    /// for one-shot inspection processes (`wm doctor`) that exit before any
+    /// later write could matter. The read-only server keeps the loud path —
+    /// there the warning is the honest Backlog B2 disclosure.
+    pub fn open_readonly_quiet(path: impl AsRef<Path>) -> Result<Self> {
+        Self::open_readonly_with_disclosure(path, false)
+    }
+
+    fn open_readonly_with_disclosure(path: impl AsRef<Path>, loud: bool) -> Result<Self> {
         let path = path.as_ref();
         // Backlog B2: a read-only open never observes later writes — searches
-        // miss fresh memories until restart. Say so at the moment it matters.
-        tracing::warn!(
-            "read-only search index opened at {} — it will not observe writes made \
-             after this point; restart the read-only server to pick up new memories",
-            path.display()
-        );
+        // miss fresh memories until restart. Say so at the moment it matters
+        // (a long-lived reader); a one-shot CLI process exits first.
+        if loud {
+            tracing::warn!(
+                "read-only search index opened at {} — it will not observe writes made \
+                 after this point; restart the read-only server to pick up new memories",
+                path.display()
+            );
+        } else {
+            tracing::debug!(
+                "read-only search index opened at {} (inspection process)",
+                path.display()
+            );
+        }
         let (schema, field_id, field_galaxy, field_content, field_tags, field_timestamp) =
             Self::build_schema();
         let (index, schema_migrated) = Self::open_index(path, &schema, false)?;
