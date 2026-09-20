@@ -495,6 +495,8 @@ def run_benchmark(
     per_case: bool = False,
     rerank: bool = False,
     rerank_alpha: float = 0.7,
+    rerank_pool: int = 0,
+    search_limit: int = 0,
     persistent: bool = False,
     trust_labels: bool = False,
     conformal: bool = False,
@@ -517,7 +519,7 @@ def run_benchmark(
     print(f"Composite windows: {'on' if use_composites else 'off'}")
     print(f"Contextual indexing: {'on' if use_contextual else 'off'}")
     print(f"Search route: {search_route}")
-    print(f"Rerank: {'on (alpha={})'.format(rerank_alpha) if rerank else 'off'}")
+    print(f"Rerank: {'on (alpha={}, pool={})'.format(rerank_alpha, rerank_pool or 'auto') if rerank else 'off'}")
     print(f"Limit: {limit}")
     print(f"Candidate limit: {candidate_limit}")
     print(f"Persistent server: {'on' if persistent else 'off'}")
@@ -749,7 +751,7 @@ def run_benchmark(
         search_id = req_id
         search_args = {
             "query": question,
-            "limit": max(limit, candidate_limit),
+            "limit": search_limit if search_limit > 0 else max(limit, candidate_limit),
         }
         if search_route == "memory.search":
             search_args.update({
@@ -762,6 +764,8 @@ def run_benchmark(
             if rerank:
                 search_args["rerank"] = True
                 search_args["rerank_alpha"] = rerank_alpha
+                if rerank_pool > 0:
+                    search_args["rerank_pool"] = rerank_pool
         else:
             raise ValueError(f"unsupported search route: {search_route}")
 
@@ -1042,6 +1046,7 @@ def run_benchmark(
         "search_route": search_route,
         "rerank": rerank,
         "rerank_alpha": rerank_alpha,
+        "rerank_pool": rerank_pool,
         "keyword_extraction": use_keywords,
         "composite_windows": use_composites,
         "contextual_indexing": use_contextual,
@@ -1180,6 +1185,8 @@ def main() -> None:
     parser.add_argument("--candidate-limit", type=int, default=100, help="Broad candidate-set size used for presence evidence (default: 100)")
     parser.add_argument("--rerank", action="store_true", help="Enable vector reranking for episodic search")
     parser.add_argument("--rerank-alpha", type=float, default=0.7, help="Deterministic weight in hybrid score (default: 0.7)")
+    parser.add_argument("--rerank-pool", type=int, default=0, help="Embedding/reorder width for rerank, decoupled from candidate_limit (default: 0 = auto min(50, max(limit, candidate_limit)))")
+    parser.add_argument("--search-limit", type=int, default=0, help="Tool `limit` (returned results); 0 = max(limit, candidate_limit). Set to the evaluation k (e.g. 10) to exercise protected rerank's fixed-membership guarantee")
     parser.add_argument("--persistent", action="store_true", help="Use a single long-running server process for all questions (faster with ONNX)")
     parser.add_argument("--store", default=None, help="Persistent-mode store directory (reused if it exists, kept on exit — enables warm re-run benches)")
     parser.add_argument("--trust-labels", action="store_true", help="V8 S8: stamp needle-session turns source=user (1.0), distractors 0.7 (for the WM_TRUST_WEIGHT comparative run)")
@@ -1220,7 +1227,8 @@ def main() -> None:
             conformal=args.conformal, use_composites=args.composites,
             use_contextual=args.contextual, candidate_limit=args.candidate_limit,
             search_route=args.route, output_path=output_path, per_case=args.per_case,
-            rerank=args.rerank, rerank_alpha=args.rerank_alpha,
+            rerank=args.rerank, rerank_alpha=args.rerank_alpha, rerank_pool=args.rerank_pool,
+            search_limit=args.search_limit,
             persistent=args.persistent, store_path=args.store,
         )
     except BaseException as exc:
@@ -1245,6 +1253,8 @@ def main() -> None:
             "contextual": args.contextual,
             "rerank": args.rerank,
             "rerank_alpha": args.rerank_alpha,
+            "rerank_pool": args.rerank_pool,
+            "search_limit": args.search_limit,
         },
         failures=result["execution_failures"],
     )

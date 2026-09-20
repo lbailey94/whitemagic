@@ -23,6 +23,12 @@ EMBED_ENDPOINT="${WM_EMBEDDER_ENDPOINT:-http://127.0.0.1:18899/v1/embeddings}"
 EMBED_MODEL="${WM_EMBEDDER_MODEL:-bge-small}"
 EMBED_DIM="${WM_EMBEDDER_DIM:-384}"
 EMBED_TIMEOUT="${WM_EMBEDDER_TIMEOUT_MS:-15000}"
+# Optional in-process ONNX backend: when WM_EMBEDDER_BACKEND=onnx is exported,
+# the embedder profiles use it instead of the HTTP endpoint (the `none`
+# profile keeps the stub). This is how the rerank family is measured without
+# HTTP-slot contention (T0 finding F-T0-1).
+EMBED_BACKEND="${WM_EMBEDDER_BACKEND:-}"
+EMBED_ORT_MODEL="${WM_EMBEDDER_ORT_MODEL:-}"
 EMBED_BASE="${EMBED_ENDPOINT%/v1/embeddings}"
 
 QUESTIONS=50
@@ -130,23 +136,34 @@ for cfg in "${CONFIGS[@]}"; do
 
     ENV_CMD=(env
         -u WM_EMBEDDER_ENDPOINT -u WM_EMBEDDER_MODEL -u WM_EMBEDDER_DIM -u WM_EMBEDDER_TIMEOUT_MS
+        -u WM_EMBEDDER_BACKEND -u WM_EMBEDDER_ORT_MODEL
         -u WM_EPISODIC_RERANK_ONLY
         -u WM_RECALL_BM25_WEIGHT -u WM_RECALL_VECTOR_WEIGHT -u WM_RECALL_IMPORTANCE_WEIGHT)
+
+    # Forward the optional backend choice only into embedder profiles.
+    add_embed_backend() {
+        if [ -n "$EMBED_BACKEND" ]; then ENV_CMD+=(WM_EMBEDDER_BACKEND="$EMBED_BACKEND"); fi
+        if [ -n "$EMBED_ORT_MODEL" ]; then ENV_CMD+=(WM_EMBEDDER_ORT_MODEL="$EMBED_ORT_MODEL"); fi
+        return 0
+    }
     case "$profile" in
         none) : ;;
         embedder)
             ENV_CMD+=(WM_EMBEDDER_ENDPOINT="$EMBED_ENDPOINT" WM_EMBEDDER_MODEL="$EMBED_MODEL"
                       WM_EMBEDDER_DIM="$EMBED_DIM" WM_EMBEDDER_TIMEOUT_MS="$EMBED_TIMEOUT")
+            add_embed_backend
             ;;
         embedder-rerankonly)
             ENV_CMD+=(WM_EMBEDDER_ENDPOINT="$EMBED_ENDPOINT" WM_EMBEDDER_MODEL="$EMBED_MODEL"
                       WM_EMBEDDER_DIM="$EMBED_DIM" WM_EMBEDDER_TIMEOUT_MS="$EMBED_TIMEOUT"
                       WM_EPISODIC_RERANK_ONLY=1)
+            add_embed_backend
             ;;
         embedder-bm25only)
             ENV_CMD+=(WM_EMBEDDER_ENDPOINT="$EMBED_ENDPOINT" WM_EMBEDDER_MODEL="$EMBED_MODEL"
                       WM_EMBEDDER_DIM="$EMBED_DIM" WM_EMBEDDER_TIMEOUT_MS="$EMBED_TIMEOUT"
                       WM_RECALL_BM25_WEIGHT=1 WM_RECALL_VECTOR_WEIGHT=0 WM_RECALL_IMPORTANCE_WEIGHT=0)
+            add_embed_backend
             ;;
         *) echo "unknown env profile: $profile" >&2; exit 1 ;;
     esac

@@ -760,6 +760,7 @@ impl<'a> EpisodicStore<'a> {
         candidate_limit: usize,
         include_historical: bool,
         alpha: f32,
+        rerank_pool: usize,
     ) -> Result<Vec<EpisodicSearchResult>> {
         let Some(ref embedder) = self.embedder else {
             return self.search_with_limits(query, limit, candidate_limit, include_historical);
@@ -768,10 +769,25 @@ impl<'a> EpisodicStore<'a> {
             return self.search_with_limits(query, limit, candidate_limit, include_historical);
         }
 
-        // Over-fetch deterministic candidates for reranking.
-        let rerank_pool = limit.max(candidate_limit).min(50);
-        let deterministic =
-            self.search_scored(query, rerank_pool, rerank_pool, include_historical)?;
+        // `candidate_limit` is the deterministic retrieval width (how deep
+        // the scorer looks); `rerank_pool` bounds only how many of those
+        // candidates are embedded and reordered (0 = auto). Decoupled so a
+        // wide deterministic membership can back a small embed pool — the
+        // old shared value also shrank the deterministic set, which broke
+        // protected mode's fixed-membership claim against the baseline
+        // (T0 finding F-T0-1).
+        let rerank_pool = if rerank_pool == 0 {
+            limit.max(candidate_limit).min(50)
+        } else {
+            rerank_pool.max(limit).min(50)
+        };
+        // `search_scored` does not truncate (its limit arg is planning-only),
+        // so the pool is enforced here explicitly.
+        let deterministic: Vec<EpisodicSearchResult> = self
+            .search_scored(query, rerank_pool, candidate_limit, include_historical)?
+            .into_iter()
+            .take(rerank_pool)
+            .collect();
         if deterministic.is_empty() {
             return Ok(Vec::new());
         }
@@ -1496,6 +1512,88 @@ mod tests {
         assert!(!is_current_query("What did I say about the trip?"));
         // Word-boundary match: "current" inside another word must not fire.
         assert!(!is_current_query("What currency did I use in Japan?"));
+    }
+
+    #[test]
+    fn protected_rerank_preserves_membership_with_a_small_pool() {
+        // T0 F-T0-1: `rerank_pool` bounds only the embedded/reordered set;
+        // `candidate_limit` stays the deterministic retrieval width. The old
+        // code used the pool for both, so shrinking the pool also shrank the
+        // candidate set and protected mode lost baseline membership.
+        use crate::embedder::Embedder;
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        struct CountingEmbedder(Arc<AtomicUsize>);
+        impl Embedder for CountingEmbedder {
+            fn embed_batch(&self, texts: &[&str]) -> wm_core::Result<Vec<Vec<f32>>> {
+                self.0.store(texts.len(), Ordering::Relaxed);
+                Ok(texts
+                    .iter()
+                    .map(|t| {
+                        let mut v = vec![0.0_f32; 8];
+                        for (i, b) in t.bytes().enumerate() {
+                            v[i % 8] += f32::from(b) / 255.0;
+                        }
+                        v
+                    })
+                    .collect())
+            }
+            fn dimension(&self) -> usize {
+                8
+            }
+            fn is_available(&self) -> bool {
+                true
+            }
+            fn backend_name(&self) -> &'static str {
+                "counting-test"
+            }
+        }
+
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        for i in 0..20 {
+            store
+                .episodic()
+                .append(&user_statement(
+                    i,
+                    &format!("Record {i} discusses topic alpha beta gamma delta epsilon"),
+                ))
+                .unwrap();
+        }
+
+        let query = "topic alpha beta gamma delta epsilon";
+        // Deterministic top-5 from a 20-wide candidate scoring — the
+        // membership protected mode must preserve.
+        let expected: Vec<uuid::Uuid> = store
+            .episodic()
+            .search_scored(query, 5, 20, false)
+            .unwrap()
+            .iter()
+            .take(5)
+            .map(|r| r.record.id)
+            .collect();
+        assert_eq!(expected.len(), 5);
+
+        let batches = Arc::new(AtomicUsize::new(0));
+        store.set_episodic_embedder(Arc::new(CountingEmbedder(batches.clone())));
+        let reranked = store
+            .episodic()
+            .search_with_rerank(query, 5, 20, false, 2.0, 5)
+            .unwrap();
+        assert_eq!(
+            batches.load(Ordering::Relaxed),
+            6,
+            "small rerank pool must embed pool + query only"
+        );
+        let mut got: Vec<uuid::Uuid> = reranked.iter().map(|r| r.record.id).collect();
+        let mut want = expected;
+        got.sort();
+        want.sort();
+        assert_eq!(
+            got, want,
+            "protected mode must keep the deterministic candidate set (membership), only reorder it"
+        );
     }
 
     #[test]

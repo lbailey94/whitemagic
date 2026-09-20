@@ -1974,7 +1974,7 @@ impl Tool for MemoryEpisodicSearchTool {
             &json!({
                 "query": str_prop("Full-text query"),
                 "limit": int_prop("Maximum results (default 10)"),
-                "candidate_limit": int_prop("Maximum candidates to score (default 2x limit). With rerank this also bounds the embedding pool: pool = min(limit.max(candidate_limit), 50) query+candidate embeddings per search — lower it on CPU embedders to trade tail recall for latency (a 50-candidate pool costs ~3-8 s warm on an in-process ONNX CPU embedder, ~25-60 s via the 2-thread HTTP embedder)"),
+                "candidate_limit": int_prop("Maximum candidates to score (default 2x limit). This is the deterministic retrieval width — keep it wide for tail recall; bound rerank embedding cost with rerank_pool instead (measured on the 50q set: wide retrieval + small pool beat narrowed retrieval on R@1 and R@10)"),
                 "include_historical": {
                     "type": "boolean",
                     "description": "Include superseded, revoked, and archived records",
@@ -1985,8 +1985,9 @@ impl Tool for MemoryEpisodicSearchTool {
                 },
                 "rerank_alpha": {
                     "type": "number",
-                    "description": "Rerank mode selector (default 0.7): <1.0 hybrid blend weight; >=1.0 near-tie cosine tiebreaker; >=2.0 protected top-K full cosine reorder (recall@limit preserved by construction). Blending alphas can drop correct items out of top-K — prefer >=2.0 when recall@limit matters",
+                    "description": "Rerank mode selector (default 0.7): <1.0 hybrid blend weight; >=1.0 near-tie cosine tiebreaker; >=2.0 protected top-K full cosine reorder (recall@limit preserved by construction when the candidate set is not narrowed). Blending alphas can drop correct items out of top-K — prefer >=2.0 when recall@limit matters",
                 },
+                "rerank_pool": int_prop("Embedding/reorder width for rerank (default 0 = auto: min(50, max(limit, candidate_limit)), capped at 50). Lower it on CPU embedders to cut latency without narrowing candidate_limit (the deterministic retrieval width)"),
                 "min_score": {
                     "type": "number",
                     "description": "Minimum score threshold; results below this are dropped (abstention). Default 0.0 (no threshold)",
@@ -2015,6 +2016,7 @@ impl Tool for MemoryEpisodicSearchTool {
             .get("rerank_alpha")
             .and_then(Value::as_f64)
             .unwrap_or(0.7) as f32;
+        let rerank_pool = args.get("rerank_pool").and_then(Value::as_u64).unwrap_or(0) as usize;
         let min_score = args
             .get("min_score")
             .and_then(Value::as_f64)
@@ -2053,6 +2055,7 @@ impl Tool for MemoryEpisodicSearchTool {
                 candidate_limit,
                 include_historical,
                 rerank_alpha,
+                rerank_pool,
             )?
         } else {
             self.store.episodic().search_with_limits(
