@@ -1,7 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lbailey94/whitemagic-mcp",
-  "description": "Local-first memory and session continuity for AI coding agents over MCP. No cloud, no telemetry.",
+  "description": "Local-first, governed memory and session continuity for AI coding agents. No cloud, no telemetry.",
+  "title": "WhiteMagic — governed local memory for agent continuity",
   "websiteURL": "https://whitemagic.dev",
   "repository": {
     "url": "https://github.com/lbailey94/whitemagic",
