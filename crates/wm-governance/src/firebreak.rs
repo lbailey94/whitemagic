@@ -274,6 +274,40 @@ pub const SCOPE_REGISTRY: &[(&str, ScopeRule)] = &[
 const VETO_EXEMPT_FIELDS: &[(&str, &[&str])] =
     &[("session.checkpoint", &["next_queue", "open_flags", "label"])];
 
+/// Every registered tool that sits on the irreversible seam
+/// ([`Firebreak::is_on_seam`]) must be declared here.
+///
+/// Completeness is enforced by `crates/wm-mcp/tests/contract_harness.rs`:
+/// adding an on-seam tool without declaring it fails CI, and a declaration
+/// that no longer names a live seam tool fails too. Slice 1 declares names;
+/// command-bearing field declarations (the `VETO_EXEMPT_FIELDS`
+/// generalization) are the next iteration.
+pub const DECLARED_SEAM_TOOLS: &[&str] = &[
+    "bagua.dispatch",
+    "bounty.evidence.package",
+    "bounty.import",
+    "bus.emit",
+    "captain.deploy",
+    "galaxy.cold_rotate",
+    "galaxy.purge",
+    "galaxy.restore",
+    "galaxy.transfer",
+    "karma.clear",
+    "memory.batch_delete",
+    "memory.consolidate",
+    "memory.deduplicate",
+    "memory.delete",
+    "memory.recall_feedback",
+    "oss.bounty.scan",
+    "oss.bounty.status",
+    "sangha.locks",
+    "session.checkpoint",
+    "system.flush",
+    "telemetry.prune",
+    "transaction.rollback",
+    "whitemagic",
+];
+
 /// Common scope field names, checked when a destructive tool is not in the
 /// registry. Fail loud-but-open: warn, then allow.
 const COMMON_SCOPE_FIELDS: &[&str] = &[

@@ -1867,7 +1867,7 @@ impl Tool for MemoryRecallFeedbackTool {
     fn input_schema(&self) -> Value {
         schema(
             &json!({
-                "samples": {"type": "array", "description": "Feedback samples: [{score: 0-1 fused score, relevant: bool}]"},
+                "samples": {"type": "array", "items": {"type": "object"}, "description": "Feedback samples: [{score: 0-1 fused score, relevant: bool}]"},
                 "score": num_prop("Single-sample fused score (0-1)"),
                 "relevant": {"type": "boolean", "description": "Single-sample relevance label"},
             }),

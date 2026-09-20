@@ -304,10 +304,12 @@ impl Tool for SessionCheckpointTool {
                 },
                 "next_queue": {
                     "type": "array",
+                    "items": {"type": "string"},
                     "description": "Ordered next-step strings for the next session."
                 },
                 "open_flags": {
                     "type": "array",
+                    "items": {"type": "string"},
                     "description": "Open concerns/flags worth surfacing on resume."
                 },
                 "lease_id": super::common::str_prop("Claimed scope (code.claim lease_id) that remains held at this handoff"),
@@ -432,10 +434,12 @@ impl Tool for SessionCheckpointNodiscoveryTool {
                 },
                 "next_queue": {
                     "type": "array",
+                    "items": {"type": "string"},
                     "description": "Ordered next-step strings for the next session."
                 },
                 "open_flags": {
                     "type": "array",
+                    "items": {"type": "string"},
                     "description": "Open concerns/flags worth surfacing on resume."
                 },
                 "lease_id": super::common::str_prop("Claimed scope (code.claim lease_id) that remains held at this handoff"),
