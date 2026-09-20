@@ -130,7 +130,13 @@ const DANGEROUS_COMMANDS: &[&str] = &[
     r"(?i)drop\s+table",
     r"(?i)truncate\s+table",
     r"(?i)delete\s+from\s+.*where\s+1=1",
-    r"(?i)>\s+\S+",
+    // Shell-redirection heuristic. The target must not start with a digit:
+    // a bare numeric target is prose ("R@1 > 0.78", "-> 100") far more often
+    // than a real file, and requiring confirm on it blocked legitimate
+    // checkpoints (2026-09-20 review). Path and word targets still match —
+    // including `-> /path`, which a shell does parse as `-` plus a
+    // redirection, so this is a precision fix, not an adjacency bypass.
+    r"(?i)>\s+[^\s\d>]",
     r"(?i)pip\s+install\s+--upgrade",
     r"(?i)npm\s+install\s+-g",
 ];
@@ -255,6 +261,18 @@ pub const SCOPE_REGISTRY: &[(&str, ScopeRule)] = &[
         ),
     ),
 ];
+
+/// Per-tool prose fields exempt from the command veto.
+///
+/// The veto exists to stop dangerous *operations* from executing; args that
+/// are only stored must not require confirm. `session.checkpoint` truthfully
+/// declares `spawns: true` (fixed `git` capture, no shell), which puts it on
+/// the seam — but its handoff fields are prose, and scanning them blocked a
+/// legitimate checkpoint on the arrow in "100 writers -> 100 unique
+/// sequences" (2026-09-20 review). Exemptions are field-scoped, so a
+/// command-shaped value in any other field still requires confirm.
+const VETO_EXEMPT_FIELDS: &[(&str, &[&str])] =
+    &[("session.checkpoint", &["next_queue", "open_flags", "label"])];
 
 /// Common scope field names, checked when a destructive tool is not in the
 /// registry. Fail loud-but-open: warn, then allow.
@@ -390,9 +408,22 @@ impl Firebreak {
         }
     }
 
-    fn scan(&self, args: &Value) -> Vec<VetoFinding> {
+    fn scan(&self, tool: &str, args: &Value) -> Vec<VetoFinding> {
+        let exempt = VETO_EXEMPT_FIELDS
+            .iter()
+            .find(|(name, _)| *name == tool)
+            .map_or(&[][..], |(_, fields)| *fields);
         let mut strings = Vec::new();
-        Self::collect_strings(args, &mut strings);
+        if let Value::Object(map) = args {
+            for (key, value) in map {
+                if exempt.contains(&key.as_str()) {
+                    continue;
+                }
+                Self::collect_strings(value, &mut strings);
+            }
+        } else {
+            Self::collect_strings(args, &mut strings);
+        }
         let mut findings = Vec::new();
         for s in strings {
             let excerpt: String = s.chars().take(80).collect();
@@ -494,7 +525,7 @@ impl Firebreak {
         }
 
         // P1.4 — forbidden-command veto.
-        let findings = self.scan(args);
+        let findings = self.scan(tool, args);
         let confirmed = args
             .get("confirm")
             .and_then(Value::as_bool)
@@ -635,6 +666,86 @@ mod tests {
             fb.enforce("poly.exec", &effects, &confirmed),
             FirebreakOutcome::Proceed { .. }
         ));
+    }
+
+    /// 2026-09-20 false-positive fix: `session.checkpoint` is on the seam
+    /// (truthful spawns declaration for fixed git capture), so the veto used
+    /// to scan its prose handoff fields — the arrow in "100 writers -> 100
+    /// unique sequences" demanded confirm for a legitimate checkpoint.
+    #[test]
+    fn checkpoint_prose_fields_are_exempt_from_the_veto() {
+        let fb = Firebreak::with_armed(true);
+        let mut effects = EffectRow::read_only(vec![Resource::Galaxy("sessions".into())]);
+        effects.spawns = true;
+        let args = json!({
+            "next_queue": [
+                "P1 H1: allocate inside the txn (100 writers -> 100 unique sequences)",
+                "derived-failure surfacing -> doctor must say DEGRADED",
+            ],
+            "open_flags": ["R@1 > 0.78 is the T1 target"],
+            "label": "9.2.1 -> morning",
+        });
+        assert!(
+            matches!(
+                fb.enforce("session.checkpoint", &effects, &args),
+                FirebreakOutcome::Proceed { advisories } if advisories.is_empty()
+            ),
+            "prose handoff fields must not require confirm"
+        );
+    }
+
+    /// The exemption is field-scoped: a command-shaped value in a
+    /// non-exempt checkpoint field still requires confirm.
+    #[test]
+    fn checkpoint_non_exempt_fields_still_scan() {
+        let fb = Firebreak::with_armed(true);
+        let mut effects = EffectRow::read_only(vec![Resource::Galaxy("sessions".into())]);
+        effects.spawns = true;
+        let args = json!({"root": "echo hi > /etc/passwd"});
+        assert!(matches!(
+            fb.enforce("session.checkpoint", &effects, &args),
+            FirebreakOutcome::Blocked(_)
+        ));
+    }
+
+    /// The redirection heuristic still gates real shell redirections,
+    /// including the `-> /path` adjacency (which a shell parses as `-` plus
+    /// a redirection — no evasion), while numeric comparisons are prose.
+    #[test]
+    fn redirection_requires_confirm_but_comparisons_do_not() {
+        let fb = Firebreak::with_armed(true);
+        let mut effects = EffectRow::read_only(vec![Resource::Galaxy("codex".into())]);
+        effects.spawns = true;
+        for payload in [
+            "echo hi > /etc/passwd",
+            "echo hi -> /etc/passwd",
+            "cat x >> /var/log/syslog",
+            "git log > build.log",
+        ] {
+            let args = json!({"cmd": payload});
+            assert!(
+                matches!(
+                    fb.enforce("poly.exec", &effects, &args),
+                    FirebreakOutcome::Blocked(_)
+                ),
+                "must require confirm: {payload}"
+            );
+            let confirmed = json!({"cmd": payload, "confirm": true});
+            assert!(matches!(
+                fb.enforce("poly.exec", &effects, &confirmed),
+                FirebreakOutcome::Proceed { .. }
+            ));
+        }
+        for prose in ["R@1 > 0.78", "100 writers -> 100 unique sequences"] {
+            let args = json!({"note": prose});
+            assert!(
+                matches!(
+                    fb.enforce("poly.exec", &effects, &args),
+                    FirebreakOutcome::Proceed { advisories } if advisories.is_empty()
+                ),
+                "prose must not require confirm: {prose}"
+            );
+        }
     }
 
     #[test]
