@@ -786,6 +786,23 @@ enum TrustCommand {
     },
 }
 
+/// Importance parser for CLI parity with `session.record`/`memory.create`.
+///
+/// Non-finite and out-of-range values are caller errors, never silently
+/// normalized — serde_json maps NaN to null, which would otherwise fall
+/// back to the 0.5 default (2026-09-19 review).
+fn parse_importance_arg(value: &str) -> Result<f64, String> {
+    let parsed: f64 = value
+        .parse()
+        .map_err(|_| format!("importance must be a number in 0.0-1.0, got: {value}"))?;
+    if !parsed.is_finite() || !(0.0..=1.0).contains(&parsed) {
+        return Err(format!(
+            "importance must be a number in 0.0-1.0, got: {value}"
+        ));
+    }
+    Ok(parsed)
+}
+
 /// Subcommands for `wm session` — each maps 1:1 onto an MCP session route
 /// and carries its own `--store` override.
 #[derive(Subcommand)]
@@ -814,7 +831,7 @@ enum SessionCommands {
         #[arg(long, default_value = "message")]
         turn_type: String,
         /// Importance 0.0-1.0
-        #[arg(long, default_value_t = 0.5)]
+        #[arg(long, default_value_t = 0.5, value_parser = parse_importance_arg)]
         importance: f64,
         /// Target session id (default: most recent session)
         #[arg(long)]

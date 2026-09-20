@@ -328,6 +328,22 @@ fn parse_lossless_cursor(
     Ok((view.to_string(), index, offset))
 }
 
+/// The documented `session.record` turn-type vocabulary.
+///
+/// Digest/continuity key on these sections; a value outside the list is a
+/// caller error, not a new historical fact (2026-09-19 review).
+pub const TURN_TYPES: &[&str] = &[
+    "message",
+    "decision",
+    "breakthrough",
+    "question",
+    "answer",
+    "code_change",
+    "error",
+    "summary",
+    "context",
+];
+
 /// `session.record` — record a conversation turn as persistent session memory.
 pub struct SessionRecordTool {
     store: Arc<MemoryStore>,
@@ -376,7 +392,11 @@ impl Tool for SessionRecordTool {
             &json!({
                 "content": super::common::str_prop("Turn content"),
                 "role": super::common::str_prop("user | ai (default user)"),
-                "turn_type": super::common::str_prop("message, decision, breakthrough, question, answer, code_change, error, summary, context"),
+                "turn_type": json!({
+                    "type": "string",
+                    "enum": TURN_TYPES,
+                    "description": "Turn type (default message)",
+                }),
                 "importance": super::common::bounded_num_prop("0-1 importance (default 0.5)", 0.0, 1.0),
                 "session_id": super::common::str_prop("Target session (default: most recent session)"),
                 "supersedes": super::common::str_prop("Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)"),
@@ -394,14 +414,28 @@ impl Tool for SessionRecordTool {
                 "role must be 'user' or 'ai'".into(),
             ));
         }
+        // Blank content is a caller error (memory.create rejects it too);
+        // whitespace-only turns must not become historical facts.
         let content = args
             .get("content")
             .and_then(Value::as_str)
-            .ok_or_else(|| wm_core::CoreError::InvalidArgs("content is required".into()))?;
+            .filter(|s| !s.trim().is_empty())
+            .ok_or_else(|| {
+                wm_core::CoreError::InvalidArgs("content is required and must not be blank".into())
+            })?;
+        // The documented vocabulary is the contract; an unknown type would
+        // otherwise be stored as a malformed historical fact (2026-09-19
+        // review: arbitrary strings were accepted despite the fixed list).
         let turn_type = args
             .get("turn_type")
             .and_then(Value::as_str)
             .unwrap_or("message");
+        if !TURN_TYPES.contains(&turn_type) {
+            return Err(wm_core::CoreError::InvalidArgs(format!(
+                "turn_type must be one of: {}",
+                TURN_TYPES.join(", ")
+            )));
+        }
         // Canonical importance contract (2026-09-19 review): the same
         // validator memory.create/update use — out-of-range values are
         // caller errors, never silently clamped. This path used to accept
@@ -2508,6 +2542,7 @@ mod tests {
     #[tokio::test]
     async fn record_requires_content_and_valid_role() {
         let store = test_store();
+        let sid = start_session(&store);
         let tool = SessionRecordTool::new(store);
         let mut ctx = Context::default();
         assert!(tool.call(&mut ctx, json!({})).await.is_err());
@@ -2516,6 +2551,35 @@ mod tests {
                 .await
                 .is_err()
         );
+        // 2026-09-19 review: blank/whitespace content and unknown turn
+        // types are caller errors, not historical facts.
+        for bad in [json!(""), json!("   "), json!("\n\t")] {
+            let err = tool
+                .call(&mut ctx, json!({"content": bad, "session_id": sid}))
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains("content"),
+                "content={bad:?}: {err}"
+            );
+        }
+        let err = tool
+            .call(
+                &mut ctx,
+                json!({"content": "x", "session_id": sid, "turn_type": "observation"}),
+            )
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("turn_type"), "{err}");
+        // The documented vocabulary still lands.
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({"content": "x", "session_id": sid, "turn_type": "context"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success", "{v}");
     }
 
     /// 2026-09-19 review: importance is defined on 0.0-1.0; this path used
