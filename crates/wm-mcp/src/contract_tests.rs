@@ -303,8 +303,17 @@ fn platform_story_is_consistent_across_surfaces() {
         quickstart.contains("**Install path**: Linux x86-64"),
         "QUICKSTART must state the Linux x86-64 install path"
     );
+    // 2026-09-20: the installer gained a checksum-verified macOS path while
+    // the documented support gate stays Linux x86-64 until the real-Mac
+    // smoke test. The refusal message must name the targets the installer
+    // actually supports and keep Windows explicitly refused — without
+    // claiming a macOS gate that has not been announced.
     assert!(
-        installer.contains("alpha install gate covers Linux x86-64"),
-        "install.sh refusal message must match the documented gate"
+        installer.contains("Linux x86-64") && installer.contains("macOS (x86_64/aarch64)"),
+        "install.sh refusal message must name the supported install targets"
+    );
+    assert!(
+        installer.contains("Windows is not install-gated"),
+        "install.sh must refuse Windows explicitly (no installer yet)"
     );
 }

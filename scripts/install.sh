@@ -161,8 +161,8 @@ case "$TARGET" in
         ;;
     *)
         echo "Unsupported target for this release: ${TARGET}" >&2
-        echo "Install-gated targets are Linux x86-64 and macOS (x86_64/aarch64)." >&2
-        echo "Windows binaries are published in every release: https://github.com/${REPO}/releases" >&2
+        echo "This installer supports Linux x86-64 and macOS (x86_64/aarch64)." >&2
+        echo "Windows is not install-gated yet — binaries are published: https://github.com/${REPO}/releases" >&2
         exit 1
         ;;
 esac
