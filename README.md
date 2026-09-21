@@ -210,6 +210,20 @@ wm migrate --v2-dir ~/.whitemagic/users/local/galaxies --dry-run   # preview
 wm migrate --v2-dir ~/.whitemagic/users/local/galaxies              # migrate
 ```
 
+## The stack
+
+> Local memory → governed execution → verifiable continuity
+
+- [`whitemagic`](https://github.com/lbailey94/whitemagic) — local-first memory and session continuity for AI agents
+- [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — portable, offline-verifiable evidence for governed tasks (Apache-2.0)
+- [`mandalaos-gate-lite`](https://github.com/lbailey94/mandalaos-gate-lite) — bounded agent execution that emits receipts (review snapshot)
+- [`whitemagic-plugins`](https://github.com/lbailey94/whitemagic-plugins) — client integrations and adapters
+
+Each repository stands on its own: WhiteMagic does not require MandalaOS, and
+Continuity Receipt does not require WhiteMagic. Three entrances — **use it** →
+`whitemagic`; **review a protocol** → `continuity-receipt`; **attack the
+security architecture** → `mandalaos-gate-lite`.
+
 ## License
 
 [MIT](LICENSE) © Lucas Bailey and WhiteMagic Contributors
