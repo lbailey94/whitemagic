@@ -242,6 +242,22 @@ mod tests {
         assert_eq!(result.command, ReflexCommand::EmergencyStop);
     }
 
+    /// E-stop is unconditional: even a deny-all table cannot refuse it.
+    #[test]
+    fn emergency_stop_allowed_under_deny_all() {
+        let mut table = ReflexDispatchTable::new(crate::reflex::safety::SAFETY_DENY_ALL);
+        table.register(0, e_stop_handler, SafetyBit::EmergencyStop.mask());
+        table.register(1, ok_handler, SafetyBit::ActuatorControl.mask());
+        let args = ReflexArgs::default();
+        let result = table.dispatch(0, &args).unwrap();
+        assert_eq!(result.command, ReflexCommand::EmergencyStop);
+        // Non-e-stop handlers stay blocked under deny-all.
+        assert!(matches!(
+            table.dispatch(1, &args).unwrap_err(),
+            ReflexError::SafetyBlocked { .. }
+        ));
+    }
+
     #[test]
     fn handler_failure_propagates() {
         let mut table = ReflexDispatchTable::permissive();

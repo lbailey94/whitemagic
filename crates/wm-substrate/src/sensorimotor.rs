@@ -555,16 +555,46 @@ impl ReflexRule {
 pub struct ReflexLoop {
     rules: Vec<ReflexRule>,
     last_trigger: HashMap<String, Instant>,
+    max_reading_age_secs: f64,
 }
 
 impl ReflexLoop {
+    /// Default freshness bound for sensor readings, in seconds.
+    ///
+    /// A rule never fires from a reading older than this: actuation must
+    /// follow observation, and a cached/stuck snapshot must not actuate.
+    pub const DEFAULT_MAX_READING_AGE_SECS: f64 = 5.0;
+
     /// Create a new reflex loop.
     #[must_use]
     pub fn new() -> Self {
         Self {
             rules: Vec::new(),
             last_trigger: HashMap::new(),
+            max_reading_age_secs: Self::DEFAULT_MAX_READING_AGE_SECS,
         }
+    }
+
+    /// Override the reading freshness bound.
+    ///
+    /// `secs <= 0.0` disables the freshness check — tests and offline
+    /// benchmarks only; production must keep a positive bound.
+    #[must_use]
+    pub const fn with_max_reading_age(mut self, secs: f64) -> Self {
+        self.max_reading_age_secs = secs;
+        self
+    }
+
+    /// Whether a reading is fresh enough to fire a rule.
+    ///
+    /// Stale readings (older than the bound) and future timestamps (clock
+    /// skew) are refused until a fresh poll replaces them.
+    fn reading_is_fresh(&self, reading: &SensorReading, now: f64) -> bool {
+        if self.max_reading_age_secs <= 0.0 {
+            return true;
+        }
+        let age = now - reading.timestamp;
+        age.is_finite() && (0.0..=self.max_reading_age_secs).contains(&age)
     }
 
     /// Add a reflex rule.
@@ -577,6 +607,7 @@ impl ReflexLoop {
     pub fn evaluate(&mut self, readings: &[SensorReading]) -> Vec<ActuatorCommand> {
         let mut commands = Vec::new();
         let now = Instant::now();
+        let wall_now = now_secs();
 
         for rule in &self.rules {
             // Check cooldown
@@ -589,6 +620,9 @@ impl ReflexLoop {
 
             // Find matching reading
             if let Some(reading) = readings.iter().find(|r| r.sensor_id == rule.sensor_id) {
+                if !self.reading_is_fresh(reading, wall_now) {
+                    continue;
+                }
                 if rule.is_triggered(reading) {
                     commands.push(ActuatorCommand::new(
                         &rule.actuator_id,
@@ -1727,6 +1761,67 @@ mod tests {
             1.0,
         ));
         assert_eq!(loop_.rule_count(), 1);
+    }
+
+    #[test]
+    fn reflex_loop_refuses_stale_readings() {
+        let mut loop_ = ReflexLoop::new();
+        loop_.add_rule(ReflexRule::above(
+            "temp0",
+            "fan0",
+            ActuatorKind::Motor,
+            70.0,
+            1.0,
+            0.0,
+        ));
+
+        let mut reading = SensorReading::new("temp0", SensorKind::Temperature, 90.0);
+        reading.timestamp = now_secs() - 3600.0;
+        assert!(
+            loop_.evaluate(&[reading]).is_empty(),
+            "a one-hour-old reading must not actuate"
+        );
+    }
+
+    #[test]
+    fn reflex_loop_refuses_future_timestamps() {
+        let mut loop_ = ReflexLoop::new();
+        loop_.add_rule(ReflexRule::above(
+            "temp0",
+            "fan0",
+            ActuatorKind::Motor,
+            70.0,
+            1.0,
+            0.0,
+        ));
+
+        let mut reading = SensorReading::new("temp0", SensorKind::Temperature, 90.0);
+        reading.timestamp = now_secs() + 3600.0;
+        assert!(
+            loop_.evaluate(&[reading]).is_empty(),
+            "a future-dated reading (clock skew) must not actuate"
+        );
+    }
+
+    #[test]
+    fn reflex_loop_max_age_is_configurable() {
+        let mut loop_ = ReflexLoop::new().with_max_reading_age(0.0);
+        loop_.add_rule(ReflexRule::above(
+            "temp0",
+            "fan0",
+            ActuatorKind::Motor,
+            70.0,
+            1.0,
+            0.0,
+        ));
+
+        let mut reading = SensorReading::new("temp0", SensorKind::Temperature, 90.0);
+        reading.timestamp = now_secs() - 3600.0;
+        assert_eq!(
+            loop_.evaluate(&[reading]).len(),
+            1,
+            "a non-positive bound disables the freshness check (tests only)"
+        );
     }
 
     #[test]

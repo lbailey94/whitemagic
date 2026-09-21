@@ -849,7 +849,11 @@ impl McpServer {
         let vector_store = Arc::new(std::sync::Mutex::new(wm_memory::VectorStore::new()));
 
         // v4 subsystems: reflex dispatch table, timescale bus, global workspace
-        let mut reflex_table = wm_cognitive::ReflexDispatchTable::permissive();
+        // Production posture: SAFETY_DEFAULT denies actuation until the operator
+        // opts in via WM_SAFETY_MASK (e-stop is unconditional).
+        let mut reflex_table = wm_cognitive::ReflexDispatchTable::new(
+            wm_cognitive::reflex::safety::production_safety_mask(),
+        );
         wm_cognitive::reflex::builtins::register_builtins(&mut reflex_table);
         let reflex_table = Arc::new(std::sync::Mutex::new(reflex_table));
 
@@ -1061,6 +1065,7 @@ impl McpServer {
             Some(Arc::clone(&sensorimotor_bus)),
             Some(Arc::clone(&reflex_loop)),
             Some(&gan_ying_bus),
+            Some(&reflex_table),
             transaction_state.clone(),
             Some(&escalation_queue),
             Some(&firewall),
@@ -4760,6 +4765,7 @@ mod tests {
             recall_for_tools,
             Some(Arc::clone(&homeostatic_loop)),
             Some(Arc::clone(&anomaly_detector)),
+            None,
             None,
             None,
             None,

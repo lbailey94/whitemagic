@@ -287,6 +287,7 @@ pub fn register_expansion(
     sensorimotor_bus: Option<Arc<std::sync::Mutex<SensorimotorBus>>>,
     reflex_loop: Option<Arc<std::sync::Mutex<ReflexLoop>>>,
     gan_ying_bus: Option<&Arc<std::sync::Mutex<GanYingBus>>>,
+    safety_table: Option<&Arc<std::sync::Mutex<wm_cognitive::ReflexDispatchTable>>>,
     transaction_state: TransactionState,
     resource_rules: Option<&Arc<wm_governance::ResourceRules>>,
     escalation_queue: Option<&Arc<std::sync::Mutex<wm_governance::EscalationQueue>>>,
@@ -541,8 +542,13 @@ pub fn register_expansion(
         ))
     });
     let reflex = reflex_loop.unwrap_or_else(|| Arc::new(std::sync::Mutex::new(ReflexLoop::new())));
-    reg =
-        sensorimotor_tools::register_sensorimotor(&reg, bus.clone(), reflex.clone(), gan_ying_bus);
+    reg = sensorimotor_tools::register_sensorimotor(
+        &reg,
+        bus.clone(),
+        reflex.clone(),
+        gan_ying_bus,
+        safety_table,
+    );
 
     // Sensorimotor autonomous cycle (1) — Embodiment
     reg = reg.register(Arc::new(SensorimotorScanTool::new(

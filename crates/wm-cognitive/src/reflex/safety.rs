@@ -81,9 +81,50 @@ pub const SAFETY_DEFAULT: SafetyMask = SafetyBit::EmergencyStop.mask()
 ///
 /// This is the core safety check: `(handler_mask & table_mask) == handler_mask`.
 /// It's a single AND + compare — no function calls, no allocation.
+///
+/// [`SafetyBit::EmergencyStop`] is **unconditional**: no table mask may refuse
+/// it, so an e-stop always executes — including under [`SAFETY_DENY_ALL`].
 #[must_use]
 pub const fn is_allowed(handler_mask: SafetyMask, table_mask: SafetyMask) -> bool {
-    (handler_mask & table_mask) == handler_mask
+    let effective = table_mask | SafetyBit::EmergencyStop.mask();
+    (handler_mask & effective) == handler_mask
+}
+
+/// Environment override for the process-wide safety allowlist mask.
+pub const SAFETY_MASK_ENV: &str = "WM_SAFETY_MASK";
+
+/// Resolve the production safety allowlist mask.
+///
+/// Defaults to [`SAFETY_DEFAULT`] (actuation denied until explicitly opted
+/// in). `WM_SAFETY_MASK` accepts a decimal or `0x`-prefixed hex `u32`
+/// bitmask; an unparseable value is refused loudly and the conservative
+/// default is used — availability stays up, actuation stays denied.
+#[must_use]
+pub fn production_safety_mask() -> SafetyMask {
+    let Ok(raw) = std::env::var(SAFETY_MASK_ENV) else {
+        return SAFETY_DEFAULT;
+    };
+    if let Some(mask) = parse_safety_mask(&raw) {
+        mask
+    } else {
+        tracing::warn!(
+            value = %raw,
+            "invalid WM_SAFETY_MASK — using SAFETY_DEFAULT (actuation denied)"
+        );
+        SAFETY_DEFAULT
+    }
+}
+
+/// Parse a decimal or `0x`-prefixed hex `u32` safety mask.
+fn parse_safety_mask(raw: &str) -> Option<SafetyMask> {
+    let trimmed = raw.trim();
+    trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+        .map_or_else(
+            || trimmed.parse::<u32>().ok(),
+            |hex| u32::from_str_radix(hex, 16).ok(),
+        )
 }
 
 /// Combine multiple `SafetyBit`s into a single mask.
@@ -112,12 +153,41 @@ mod tests {
     }
 
     #[test]
-    fn deny_all_blocks_everything() {
+    fn deny_all_blocks_everything_except_emergency_stop() {
+        assert!(is_allowed(SafetyBit::EmergencyStop.mask(), SAFETY_DENY_ALL));
         assert!(!is_allowed(
-            SafetyBit::EmergencyStop.mask(),
+            SafetyBit::ActuatorControl.mask(),
             SAFETY_DENY_ALL
         ));
-        assert!(!is_allowed(0x1, SAFETY_DENY_ALL));
+        assert!(!is_allowed(0x2, SAFETY_DENY_ALL));
+    }
+
+    #[test]
+    fn emergency_stop_is_unconditional() {
+        for table in [SAFETY_DENY_ALL, SAFETY_DEFAULT, SAFETY_ALLOW_ALL] {
+            assert!(
+                is_allowed(SafetyBit::EmergencyStop.mask(), table),
+                "e-stop must be allowed under table mask {table:#010x}"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_safety_mask_accepts_decimal_and_hex() {
+        assert_eq!(parse_safety_mask("0"), Some(0));
+        assert_eq!(parse_safety_mask("123"), Some(123));
+        assert_eq!(parse_safety_mask("0x2e5"), Some(0x2e5));
+        assert_eq!(parse_safety_mask(" 0XFF "), Some(0xFF));
+        assert_eq!(parse_safety_mask("0xffffffff"), Some(SAFETY_ALLOW_ALL));
+    }
+
+    #[test]
+    fn parse_safety_mask_rejects_garbage() {
+        assert_eq!(parse_safety_mask(""), None);
+        assert_eq!(parse_safety_mask("0xzz"), None);
+        assert_eq!(parse_safety_mask("-1"), None);
+        assert_eq!(parse_safety_mask("1.5"), None);
+        assert_eq!(parse_safety_mask("0x1_0000_0000"), None);
     }
 
     #[test]

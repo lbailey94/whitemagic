@@ -17,6 +17,8 @@
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
 
+use crate::reflex::safety::{SafetyBit, is_allowed};
+use crate::reflex::types::SafetyMask;
 use serde::{Deserialize, Serialize};
 use wm_bicameral::ScenarioEngine;
 use wm_core::{DynamicGalaxyRegistry, Galaxy, Result};
@@ -451,6 +453,9 @@ pub struct CycleContext<'a> {
     pub sensorimotor_bus: Option<&'a std::sync::Mutex<SensorimotorBus>>,
     /// Optional reflex loop for embodiment cycles
     pub reflex_loop: Option<&'a std::sync::Mutex<ReflexLoop>>,
+    /// Optional safety allowlist mask gating reflex actuation. `None` is
+    /// fail-closed: triggered commands are reported but never executed.
+    pub safety_mask: Option<SafetyMask>,
     /// Optional imagination engine (ScenarioEngine) for the Research cycle
     pub imagination: Option<&'a ScenarioEngine>,
     /// Optional DynamicGalaxyRegistry for creating dynamic galaxies from emergence clusters
@@ -476,6 +481,7 @@ impl<'a> CycleContext<'a> {
             health_score,
             sensorimotor_bus: None,
             reflex_loop: None,
+            safety_mask: None,
             imagination: None,
             dynamic_galaxies: None,
             synchronicity_hints: Vec::new(),
@@ -491,6 +497,16 @@ impl<'a> CycleContext<'a> {
     ) -> Self {
         self.sensorimotor_bus = Some(bus);
         self.reflex_loop = Some(reflex);
+        self
+    }
+
+    /// Attach the reflex safety allowlist mask that gates actuation.
+    ///
+    /// Without it, reflex-triggered actuator commands are refused
+    /// (fail-closed): the cycle reports what would have fired.
+    #[must_use]
+    pub const fn with_safety_mask(mut self, mask: SafetyMask) -> Self {
+        self.safety_mask = Some(mask);
         self
     }
 
@@ -1902,10 +1918,13 @@ impl AutonomousCycleRunner {
     /// actuator commands, and produce proposals documenting what was observed and
     /// what actions were taken.
     ///
+    /// Actuation is gated by the context's reflex safety mask: a triggered
+    /// command executes only when the mask carries `ActuatorControl`, and a
+    /// missing mask is fail-closed (commands are reported, never executed).
+    ///
     /// This cycle does not require human review — it logs sensor readings and
-    /// reflex actions for observability but does not perform destructive operations
-    /// beyond what the reflex rules themselves dictate (which are configured by the
-    /// user via `reflex.add`).
+    /// reflex actions for observability; the safety mask, not review, is the
+    /// actuation boundary.
     ///
     /// If no sensorimotor bus or reflex loop is attached to the context, the cycle
     /// returns `NoProposals` with an explanatory note.
@@ -1951,20 +1970,34 @@ impl AutonomousCycleRunner {
 
         let reflex_count = commands.len();
 
-        // Execute triggered commands
+        // Execute triggered commands — gated by the reflex safety mask.
+        // Fail-closed: no mask attached means no actuation. (`actuator.estop`
+        // is not a reflex command and remains unconditional.)
         let mut executed = 0usize;
         let mut errors = Vec::new();
         if !commands.is_empty() {
-            let Ok(mut bus) = bus_ref.lock() else {
-                result.status = CycleStatus::Error;
-                result.notes = "Sensorimotor bus mutex poisoned during command execution".into();
-                return result;
-            };
-            for cmd in &commands {
-                match bus.send_command(cmd) {
-                    Ok(()) => executed += 1,
-                    Err(e) => errors.push(e),
+            let allowed = ctx
+                .safety_mask
+                .is_some_and(|mask| is_allowed(SafetyBit::ActuatorControl.mask(), mask));
+            if allowed {
+                let Ok(mut bus) = bus_ref.lock() else {
+                    result.status = CycleStatus::Error;
+                    result.notes =
+                        "Sensorimotor bus mutex poisoned during command execution".into();
+                    return result;
+                };
+                for cmd in &commands {
+                    match bus.send_command(cmd) {
+                        Ok(()) => executed += 1,
+                        Err(e) => errors.push(e),
+                    }
                 }
+            } else {
+                errors.push(
+                    "actuation denied: reflex safety mask missing or lacks ActuatorControl \
+                     (fail-closed) — commands reported, none executed"
+                        .to_string(),
+                );
             }
         }
 
@@ -1997,7 +2030,7 @@ impl AutonomousCycleRunner {
             if errors.is_empty() {
                 String::new()
             } else {
-                format!(", {} errors", errors.len())
+                format!(", {} errors ({})", errors.len(), errors[0])
             }
         );
         result
@@ -2313,6 +2346,87 @@ mod tests {
         assert_eq!(result.proposals_generated, 1);
         assert_eq!(result.sensorimotor[0].sensor_id, "test_temp");
         assert!(!result.sensorimotor[0].reflex_triggered);
+    }
+
+    #[test]
+    fn sensorimotor_cycle_fails_closed_without_safety_mask() {
+        use wm_substrate::sensorimotor::{
+            ActuatorKind, ReflexRule, SensorKind, SensorimotorBus, StubActuator, StubSensor,
+        };
+
+        let (_tmp, store, assoc) = setup();
+        let mut bus = SensorimotorBus::new(100);
+        bus.register_sensor(Box::new(StubSensor::new(
+            "test_temp",
+            SensorKind::Temperature,
+            80.0,
+        )));
+        bus.register_actuator(Box::new(StubActuator::new("fan0", ActuatorKind::Motor)));
+        let bus = std::sync::Mutex::new(bus);
+        let reflex = std::sync::Mutex::new(wm_substrate::sensorimotor::ReflexLoop::new());
+        {
+            let mut r = reflex.lock().unwrap();
+            r.add_rule(ReflexRule::above(
+                "test_temp",
+                "fan0",
+                ActuatorKind::Motor,
+                50.0,
+                1.0,
+                0.0,
+            ));
+        }
+
+        let ctx = CycleContext::new(&store, &assoc, 1.0).with_sensorimotor(&bus, &reflex);
+        let mut runner = AutonomousCycleRunner::default();
+        let result = runner.run_cycle(CycleType::Sensorimotor, &ctx);
+        assert_eq!(result.status, CycleStatus::Completed);
+        assert_eq!(result.proposals_generated, 1);
+        assert!(
+            result.notes.contains("actuation denied"),
+            "the fail-closed refusal must be visible in the cycle notes: {}",
+            result.notes
+        );
+    }
+
+    #[test]
+    fn sensorimotor_cycle_executes_with_actuator_bit() {
+        use wm_substrate::sensorimotor::{
+            ActuatorKind, ReflexRule, SensorKind, SensorimotorBus, StubActuator, StubSensor,
+        };
+
+        let (_tmp, store, assoc) = setup();
+        let mut bus = SensorimotorBus::new(100);
+        bus.register_sensor(Box::new(StubSensor::new(
+            "test_temp",
+            SensorKind::Temperature,
+            80.0,
+        )));
+        bus.register_actuator(Box::new(StubActuator::new("fan0", ActuatorKind::Motor)));
+        let bus = std::sync::Mutex::new(bus);
+        let reflex = std::sync::Mutex::new(wm_substrate::sensorimotor::ReflexLoop::new());
+        {
+            let mut r = reflex.lock().unwrap();
+            r.add_rule(ReflexRule::above(
+                "test_temp",
+                "fan0",
+                ActuatorKind::Motor,
+                50.0,
+                1.0,
+                0.0,
+            ));
+        }
+
+        let ctx = CycleContext::new(&store, &assoc, 1.0)
+            .with_sensorimotor(&bus, &reflex)
+            .with_safety_mask(SafetyBit::ActuatorControl.mask());
+        let mut runner = AutonomousCycleRunner::default();
+        let result = runner.run_cycle(CycleType::Sensorimotor, &ctx);
+        assert_eq!(result.status, CycleStatus::Completed);
+        assert!(
+            result.notes.contains("1 commands executed"),
+            "opted-in actuation must execute: {}",
+            result.notes
+        );
     }
 
     // ── Config tests ───────────────────────────────────────────────────

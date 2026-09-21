@@ -521,8 +521,17 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
         // Autonomous cycles (with imagination engine for Research cycle)
         if now.duration_since(last_cycle) >= config.cycle_interval {
             let health = server.dharma_gate().homeostasis().health_score();
+            // Reflex actuation is gated by the live safety mask; a poisoned
+            // table is fail-closed (deny-all, e-stop still unconditional).
+            let safety_mask = server
+                .reflex_table()
+                .lock()
+                .map_or(wm_cognitive::reflex::safety::SAFETY_DENY_ALL, |table| {
+                    table.safety_mask()
+                });
             let ctx = CycleContext::new(&store, &associations, health)
                 .with_sensorimotor(&sensorimotor_bus, &reflex_loop)
+                .with_safety_mask(safety_mask)
                 .with_imagination(&scenario_engine)
                 .with_dynamic_galaxies(server.dynamic_galaxies())
                 .with_synchronicity(pending_sync_hints.take());

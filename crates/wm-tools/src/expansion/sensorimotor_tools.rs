@@ -18,11 +18,42 @@ use async_trait::async_trait;
 
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};
-use wm_cognitive::{EventType, GanYingBus};
+use wm_cognitive::reflex::safety::{SAFETY_MASK_ENV, SafetyBit, is_allowed};
+use wm_cognitive::{EventType, GanYingBus, ReflexDispatchTable};
 use wm_core::{Context, EffectRow, Gana, Resource, Tool, ToolStats};
 use wm_substrate::sensorimotor::{
     ActuatorCommand, ActuatorKind, ReflexLoop, ReflexRule, SensorimotorBus,
 };
+
+// ── Safety gate ───────────────────────────────────────────────────────
+
+/// Refuse actuation unless the attached safety table allows
+/// [`SafetyBit::ActuatorControl`].
+///
+/// A missing table is fail-closed: tools built without the server's live
+/// reflex table cannot actuate. Callers that only read sensors are unaffected
+/// (a stopped clock cannot write; only the actuation path is gated).
+fn actuation_refusal(table: Option<&Arc<Mutex<ReflexDispatchTable>>>) -> Option<String> {
+    let Some(table) = table else {
+        return Some(
+            "actuation denied: no safety table attached (fail-closed) — \
+             the server wires the reflex table at init"
+                .to_string(),
+        );
+    };
+    let Ok(table) = table.lock() else {
+        return Some("actuation denied: safety table mutex poisoned".to_string());
+    };
+    if is_allowed(SafetyBit::ActuatorControl.mask(), table.safety_mask()) {
+        None
+    } else {
+        Some(format!(
+            "actuation denied by safety mask {:#010x} — actuator control requires the \
+             ActuatorControl bit (opt in with {SAFETY_MASK_ENV}=0x…)",
+            table.safety_mask()
+        ))
+    }
+}
 
 // ── Sensor Tools ──────────────────────────────────────────────────────
 
@@ -343,6 +374,7 @@ impl Tool for ActuatorListTool {
 pub struct ActuatorCommandTool {
     bus: Arc<Mutex<SensorimotorBus>>,
     gan_ying: Option<Arc<Mutex<GanYingBus>>>,
+    safety: Option<Arc<Mutex<ReflexDispatchTable>>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -352,6 +384,7 @@ impl ActuatorCommandTool {
         Self {
             bus,
             gan_ying: None,
+            safety: None,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("substrate".into())],
@@ -367,12 +400,21 @@ impl ActuatorCommandTool {
         Self {
             bus,
             gan_ying: Some(gan_ying),
+            safety: None,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("substrate".into())],
                 ..Default::default()
             },
         }
+    }
+
+    /// Attach the live reflex safety table. Without it, actuation is refused
+    /// (fail-closed).
+    #[must_use]
+    pub fn with_safety(mut self, table: Arc<Mutex<ReflexDispatchTable>>) -> Self {
+        self.safety = Some(table);
+        self
     }
 }
 
@@ -388,7 +430,8 @@ impl Tool for ActuatorCommandTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Send a command to an actuator (args: actuator_id, value, optional: kind, params)"
+        "Send a command to an actuator (args: actuator_id, value, optional: kind, params). \
+         Safely gated: requires the ActuatorControl bit in the reflex safety mask."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let actuator_id = args
@@ -414,6 +457,14 @@ impl Tool for ActuatorCommandTool {
             .unwrap_or_default();
 
         let cmd = ActuatorCommand::new(actuator_id, kind, value).with_params(params);
+
+        if let Some(reason) = actuation_refusal(self.safety.as_ref()) {
+            return Ok(json!({
+                "status": "error",
+                "blocked_by": "safety-mask",
+                "message": reason,
+            }));
+        }
 
         let Ok(mut bus) = self.bus.lock() else {
             return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
@@ -687,6 +738,7 @@ pub struct ReflexEvaluateTool {
     bus: Arc<Mutex<SensorimotorBus>>,
     reflex: Arc<Mutex<ReflexLoop>>,
     gan_ying: Option<Arc<Mutex<GanYingBus>>>,
+    safety: Option<Arc<Mutex<ReflexDispatchTable>>>,
     stats: ToolStats,
     effects: EffectRow,
 }
@@ -697,6 +749,7 @@ impl ReflexEvaluateTool {
             bus,
             reflex,
             gan_ying: None,
+            safety: None,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("substrate".into())],
@@ -714,12 +767,21 @@ impl ReflexEvaluateTool {
             bus,
             reflex,
             gan_ying: Some(gan_ying),
+            safety: None,
             stats: ToolStats::default(),
             effects: EffectRow {
                 writes: vec![Resource::Galaxy("substrate".into())],
                 ..Default::default()
             },
         }
+    }
+
+    /// Attach the live reflex safety table. Without it, triggered commands
+    /// are reported but never executed (fail-closed).
+    #[must_use]
+    pub fn with_safety(mut self, table: Arc<Mutex<ReflexDispatchTable>>) -> Self {
+        self.safety = Some(table);
+        self
     }
 }
 
@@ -735,7 +797,8 @@ impl Tool for ReflexEvaluateTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Poll sensors, evaluate reflex rules, and send any triggered actuator commands"
+        "Poll sensors, evaluate reflex rules, and send any triggered actuator commands \
+         (execution is gated by the ActuatorControl bit in the reflex safety mask)"
     }
     async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
         let readings = {
@@ -753,6 +816,7 @@ impl Tool for ReflexEvaluateTool {
         };
 
         let mut executed = 0usize;
+        let mut blocked = 0usize;
         let mut errors = Vec::new();
 
         if !commands.is_empty() {
@@ -772,13 +836,18 @@ impl Tool for ReflexEvaluateTool {
                 }
             }
 
-            let Ok(mut bus) = self.bus.lock() else {
-                return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
-            };
-            for cmd in &commands {
-                match bus.send_command(cmd) {
-                    Ok(()) => executed += 1,
-                    Err(e) => errors.push(e),
+            if let Some(reason) = actuation_refusal(self.safety.as_ref()) {
+                blocked = commands.len();
+                errors.push(reason);
+            } else {
+                let Ok(mut bus) = self.bus.lock() else {
+                    return Ok(json!({"status": "error", "message": "bus mutex poisoned"}));
+                };
+                for cmd in &commands {
+                    match bus.send_command(cmd) {
+                        Ok(()) => executed += 1,
+                        Err(e) => errors.push(e),
+                    }
                 }
             }
         }
@@ -787,6 +856,7 @@ impl Tool for ReflexEvaluateTool {
             "sensors_polled": readings.len(),
             "commands_triggered": commands.len(),
             "commands_executed": executed,
+            "commands_blocked": blocked,
             "errors": errors,
         }))
     }
@@ -813,12 +883,16 @@ fn parse_actuator_kind(s: &str) -> ActuatorKind {
 // ── Registration ──────────────────────────────────────────────────────
 
 /// Register all sensorimotor tools.
+///
 /// If `gan_ying` is provided, event-emitting tools will emit resonance events.
+/// If `safety` is provided, the actuation path is gated by its safety mask;
+/// without it, actuation is refused (fail-closed).
 pub fn register_sensorimotor(
     registry: &wm_dispatch::ToolRegistry,
     bus: Arc<Mutex<SensorimotorBus>>,
     reflex: Arc<Mutex<ReflexLoop>>,
     gan_ying: Option<&Arc<Mutex<GanYingBus>>>,
+    safety: Option<&Arc<Mutex<ReflexDispatchTable>>>,
 ) -> wm_dispatch::ToolRegistry {
     let poll = match gan_ying {
         Some(gy) => SensorPollTool::with_gan_ying(bus.clone(), Arc::clone(gy)),
@@ -828,6 +902,10 @@ pub fn register_sensorimotor(
         Some(gy) => ActuatorCommandTool::with_gan_ying(bus.clone(), Arc::clone(gy)),
         None => ActuatorCommandTool::new(bus.clone()),
     };
+    let cmd = match safety {
+        Some(table) => cmd.with_safety(Arc::clone(table)),
+        None => cmd,
+    };
     let estop = match &gan_ying {
         Some(gy) => ActuatorEStopTool::with_gan_ying(bus.clone(), Arc::clone(gy)),
         None => ActuatorEStopTool::new(bus.clone()),
@@ -835,6 +913,10 @@ pub fn register_sensorimotor(
     let eval = match &gan_ying {
         Some(gy) => ReflexEvaluateTool::with_gan_ying(bus.clone(), reflex.clone(), Arc::clone(gy)),
         None => ReflexEvaluateTool::new(bus.clone(), reflex.clone()),
+    };
+    let eval = match safety {
+        Some(table) => eval.with_safety(Arc::clone(table)),
+        None => eval,
     };
     registry
         .register(Arc::new(SensorListTool::new(bus.clone())))
@@ -854,7 +936,8 @@ pub fn register_sensorimotor(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wm_substrate::sensorimotor::{SensorKind, StubSensor};
+    use wm_cognitive::reflex::safety::SAFETY_DEFAULT;
+    use wm_substrate::sensorimotor::{SensorKind, StubActuator, StubSensor};
 
     fn make_bus() -> Arc<Mutex<SensorimotorBus>> {
         let mut bus = SensorimotorBus::new(64);
@@ -865,6 +948,21 @@ mod tests {
         )));
         bus.register_sensor(Box::new(StubSensor::new("load0", SensorKind::Custom, 0.3)));
         Arc::new(Mutex::new(bus))
+    }
+
+    fn make_actuator_bus() -> Arc<Mutex<SensorimotorBus>> {
+        let mut bus = SensorimotorBus::new(64);
+        bus.register_sensor(Box::new(StubSensor::new(
+            "temp0",
+            SensorKind::Temperature,
+            55.0,
+        )));
+        bus.register_actuator(Box::new(StubActuator::new("fan0", ActuatorKind::Motor)));
+        Arc::new(Mutex::new(bus))
+    }
+
+    fn safety_table(mask: u32) -> Arc<Mutex<ReflexDispatchTable>> {
+        Arc::new(Mutex::new(ReflexDispatchTable::new(mask)))
     }
 
     fn make_reflex() -> Arc<Mutex<ReflexLoop>> {
@@ -978,6 +1076,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn actuator_command_fails_closed_without_safety_table() {
+        let tool = ActuatorCommandTool::new(make_actuator_bus());
+        let mut ctx = Context::default();
+        let result = tool
+            .call(&mut ctx, json!({"actuator_id": "fan0", "value": 0.5}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "error");
+        assert_eq!(result["blocked_by"], "safety-mask");
+    }
+
+    #[tokio::test]
+    async fn actuator_command_denied_by_default_mask() {
+        let tool =
+            ActuatorCommandTool::new(make_actuator_bus()).with_safety(safety_table(SAFETY_DEFAULT));
+        let mut ctx = Context::default();
+        let result = tool
+            .call(&mut ctx, json!({"actuator_id": "fan0", "value": 0.5}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "error");
+        assert_eq!(result["blocked_by"], "safety-mask");
+    }
+
+    #[tokio::test]
+    async fn actuator_command_allowed_with_actuator_bit() {
+        let tool = ActuatorCommandTool::new(make_actuator_bus())
+            .with_safety(safety_table(SafetyBit::ActuatorControl.mask()));
+        let mut ctx = Context::default();
+        let result = tool
+            .call(&mut ctx, json!({"actuator_id": "fan0", "value": 0.5}))
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "ok");
+        assert_eq!(result["actuator_id"], "fan0");
+    }
+
+    #[tokio::test]
     async fn reflex_list_tool() {
         let tool = ReflexListTool::new(make_reflex());
         let mut ctx = Context::default();
@@ -1045,6 +1181,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn reflex_evaluate_blocks_commands_without_safety_table() {
+        let bus = make_actuator_bus();
+        let reflex = make_reflex();
+        {
+            let mut r = reflex.lock().unwrap();
+            r.add_rule(ReflexRule::above(
+                "temp0",
+                "fan0",
+                ActuatorKind::Motor,
+                50.0,
+                1.0,
+                0.0,
+            ));
+        }
+
+        let tool = ReflexEvaluateTool::new(bus, reflex);
+        let mut ctx = Context::default();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
+        let triggered = result["commands_triggered"].as_u64().unwrap();
+        assert!(triggered > 0);
+        assert_eq!(result["commands_executed"], 0);
+        assert_eq!(result["commands_blocked"].as_u64().unwrap(), triggered);
+    }
+
+    #[tokio::test]
+    async fn reflex_evaluate_executes_with_actuator_bit() {
+        let bus = make_actuator_bus();
+        let reflex = make_reflex();
+        {
+            let mut r = reflex.lock().unwrap();
+            r.add_rule(ReflexRule::above(
+                "temp0",
+                "fan0",
+                ActuatorKind::Motor,
+                50.0,
+                1.0,
+                0.0,
+            ));
+        }
+
+        let tool = ReflexEvaluateTool::new(bus, reflex)
+            .with_safety(safety_table(SafetyBit::ActuatorControl.mask()));
+        let mut ctx = Context::default();
+        let result = tool.call(&mut ctx, json!({})).await.unwrap();
+        assert!(result["commands_triggered"].as_u64().unwrap() > 0);
+        assert_eq!(result["commands_executed"], 1);
+        assert_eq!(result["commands_blocked"], 0);
+    }
+
+    #[tokio::test]
     async fn parse_actuator_kind_all_variants() {
         assert_eq!(parse_actuator_kind("motor"), ActuatorKind::Motor);
         assert_eq!(parse_actuator_kind("relay"), ActuatorKind::Relay);
@@ -1060,7 +1246,24 @@ mod tests {
         let registry = wm_dispatch::ToolRegistry::new();
         let bus = make_bus();
         let reflex = make_reflex();
-        let registered = register_sensorimotor(&registry, bus, reflex, None);
+        let registered = register_sensorimotor(&registry, bus, reflex, None, None);
         assert!(registered.len() >= 10);
+    }
+
+    #[tokio::test]
+    async fn register_sensorimotor_with_safety_table_gates_actuation() {
+        let registry = wm_dispatch::ToolRegistry::new();
+        let bus = make_actuator_bus();
+        let reflex = make_reflex();
+        let table = safety_table(SAFETY_DEFAULT);
+        let registered = register_sensorimotor(&registry, bus, reflex, None, Some(&table));
+
+        let tool = registered.get("actuator.command").expect("registered");
+        let mut ctx = Context::default();
+        let result = tool
+            .call(&mut ctx, json!({"actuator_id": "fan0", "value": 1.0}))
+            .await
+            .unwrap();
+        assert_eq!(result["blocked_by"], "safety-mask");
     }
 }
