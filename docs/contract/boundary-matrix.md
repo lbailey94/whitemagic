@@ -37,7 +37,7 @@ boundary · `—` boundary does not carry registry routes.
 ## 2. Route inventory (generated)
 
 <!-- BEGIN GENERATED: q08-route-matrix -->
-Routes: 303 — read 200, write 81, destructive 12, spawn 3, coordination 2, meta 5 (exclusive class; first match wins in that order, meta by route name).
+Routes: 304 — read 201, write 81, destructive 12, spawn 3, coordination 2, meta 5 (exclusive class; first match wins in that order, meta by route name).
 
 | Route | Gana | Class | Effects | B1 direct | B2 wrapper | B3 NLU | B4 daemon | B5 gateway | B6 mesh |
 |---|---|---|---|---|---|---|---|---|---|
@@ -296,6 +296,7 @@ Routes: 303 — read 200, write 81, destructive 12, spawn 3, coordination 2, met
 | session.record | StraddlingLegs | write | w | A | A | A | N | P | — |
 | session.replay | StraddlingLegs | read | r | A | A | A | N | P | — |
 | session.start | StraddlingLegs | write | w | A | A | A | N | P | — |
+| session.track_log | StraddlingLegs | read | r | A | A | A | N | P | — |
 | session.verify | StraddlingLegs | read | r | A | A | A | N | P | — |
 | sim.counterfactual | Mound | read | r | A | A | A | N | P | — |
 | sim.forecast | Mound | read | r | A | A | A | N | P | — |

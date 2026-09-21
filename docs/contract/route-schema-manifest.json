@@ -1,7 +1,7 @@
 {
   "counts": {
-    "declared": 86,
-    "routes": 303,
+    "declared": 87,
+    "routes": 304,
     "undeclared": 217
   },
   "format_version": 1,
@@ -1366,7 +1366,7 @@
       "declared": true,
       "properties": {
         "items": {
-          "description": "Array of {content, galaxy?, tags?} objects",
+          "description": "Array of {content, galaxy?, tags?} objects; admission is per item (malformed items are skipped and reported in `skipped`); partial-on-crash contract — recover derived indexes with `wm reindex`",
           "items": {
             "properties": {
               "content": {
@@ -1895,6 +1895,9 @@
         },
         "samples": {
           "description": "Feedback samples: [{score: 0-1 fused score, relevant: bool}]",
+          "items": {
+            "type": "object"
+          },
           "type": "array"
         },
         "score": {
@@ -2573,10 +2576,16 @@
         },
         "next_queue": {
           "description": "Ordered next-step strings for the next session.",
+          "items": {
+            "type": "string"
+          },
           "type": "array"
         },
         "open_flags": {
           "description": "Open concerns/flags worth surfacing on resume.",
+          "items": {
+            "type": "string"
+          },
           "type": "array"
         },
         "root": {
@@ -2590,6 +2599,10 @@
         "tests_green": {
           "description": "Whether the test suite was green at checkpoint time.",
           "type": "boolean"
+        },
+        "track": {
+          "description": "Optional track slug — tags this checkpoint into that track's log (session.track_log)",
+          "type": "string"
         }
       },
       "required": [],
@@ -2620,10 +2633,16 @@
         },
         "next_queue": {
           "description": "Ordered next-step strings for the next session.",
+          "items": {
+            "type": "string"
+          },
           "type": "array"
         },
         "open_flags": {
           "description": "Open concerns/flags worth surfacing on resume.",
+          "items": {
+            "type": "string"
+          },
           "type": "array"
         },
         "session_id": {
@@ -2633,6 +2652,10 @@
         "tests_green": {
           "description": "Whether the test suite was green at checkpoint time.",
           "type": "boolean"
+        },
+        "track": {
+          "description": "Optional track slug — tags this checkpoint into that track's log (session.track_log)",
+          "type": "string"
         }
       },
       "required": [],
@@ -2823,6 +2846,10 @@
           "description": "Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)",
           "type": "string"
         },
+        "track": {
+          "description": "Optional track slug (lowercase; a-z0-9 start, then a-z0-9-_. /) — tags this turn into that track's implementation log (session.track_log)",
+          "type": "string"
+        },
         "turn_type": {
           "description": "Turn type (default message)",
           "enum": [
@@ -2916,6 +2943,41 @@
       },
       "required": [],
       "route": "session.start"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "include_superseded": {
+          "description": "Include superseded turns (default false — the current story only).",
+          "type": "boolean"
+        },
+        "limit": {
+          "description": "Max entries returned per track, most recent kept (default 100)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "since": {
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        },
+        "track": {
+          "description": "Track slug to read (recorded via session.record/session.checkpoint 'track')",
+          "type": "string"
+        },
+        "tracks": {
+          "description": "Multiple track slugs — merged chronologically (the related-ticket review view)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "until": {
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "session.track_log"
     },
     {
       "declared": true,
