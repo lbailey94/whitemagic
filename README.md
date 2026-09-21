@@ -78,7 +78,7 @@ docker run -i lbailey94/whitemagic:9 serve   # Docker Hub
 
 Adoption snapshot (2026-09-13): 759 npm downloads/30d · 1,846 Docker pulls ·
 67 crates.io downloads. Package installs are independent of the installer and
-grew without any website CTA — the substrate chooses its own doors.
+grew without any website CTA — the memory layer chooses its own doors.
 
 Verify the installation and see the product work end to end:
 
