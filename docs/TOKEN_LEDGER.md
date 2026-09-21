@@ -58,8 +58,14 @@ the store.
 ## Status and next steps
 
 - **v0 (this slice):** record/continuity rows + `wm ledger` aggregation.
-- **Next:** dashboard panel; backfill report over existing stores; recall-tool
-  rows (`memory.search` / `memory.hybrid_recall`); tokenizer calibration.
+- **Backfill report:** `python3 scripts/token_ledger_report.py [--json]` scans every
+  project store's dispatch counters and ledger plus the opencode session DB — entirely
+  locally — and prints the cache-context and state-over-transcript picture. First run
+  (2026-09-21): 8 stores · 246,122 local WM ops · 1,242 opencode sessions with a 97.59%
+  cache-served share (context, not attribution) · ledger rows begin at the next
+  record/continuity.
+- **Next:** dashboard panel; recall-tool rows (`memory.search` / `memory.hybrid_recall`);
+  tokenizer calibration.
 - **Then:** T1 with/without delta; the tokens-only public artifact.
 
 Heritage: Gen1 shipped `consciousness.token_economy` / `consciousness.token_report`;

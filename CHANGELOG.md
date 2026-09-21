@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Attribution rules and metric definitions ship in `docs/TOKEN_LEDGER.md`:
   provider/harness prompt caching is context, not a WhiteMagic saving, and the
   token-equivalent is a disclosed estimate (`bytes / 4`).
+- **Backfill report.** `python3 scripts/token_ledger_report.py [--json]` scans
+  every project store's dispatch counters and savings ledger plus the opencode
+  session DB, entirely locally, and prints the cache-context (provider) and
+  state-over-transcript (WhiteMagic-attributable) picture side by side. First
+  run: 8 stores · 246,122 local WM ops · 1,242 sessions at a 97.59% cache-served
+  share of input (context, not attribution).
 
 ### MCP boundary — content is data, not instructions- **Notes that merely mention security vocabulary are stored, not refused.**
   `tools/call` scanned every top-level string argument for injection
