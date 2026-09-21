@@ -1,13 +1,13 @@
 # Guía rápida de WhiteMagic
 
-**Idiomas:** [English](QUICKSTART.md) · **Español** · [Português (BR)](QUICKSTART.pt-BR.md)
+**Idiomas:** [English](QUICKSTART.md) · **Español** · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
 
 **Versión**: consulta la versión actual en el [README](../README.md).
-**Plataforma**: Linux x86-64 (musl estático, sin requisitos de distribución);
-los builds de Linux arm64 (aarch64) se suman a la matriz de publicación con
-pruebas nativas en CI y el instalador los selecciona automáticamente cuando
-un release los incluye. Los binarios de macOS y Windows se publican en cada
-versión, pero sus rutas de instalación aún no están verificadas.
+**Plataforma**: Linux x86-64 (musl estático, sin requisitos de distribución)
+y Linux arm64 (aarch64, ruta de instalación verificada con pruebas nativas en
+CI; glibc 2.39+ hasta que exista un build arm64 estático), seleccionados
+automáticamente por el instalador. Los binarios de macOS y Windows se publican
+en cada versión, pero sus rutas de instalación aún no están verificadas.
 
 De cero a memoria de agente funcionando en menos de cinco minutos.
 
@@ -38,8 +38,9 @@ Descarga la última versión, verifica su checksum SHA256 e instala `wm` en
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Equivalente manual: descarga el binario de tu plataforma (`wm-linux-x86_64`
-o `wm-linux-aarch64`) y su archivo `.sha256` desde la
+Equivalente manual: descarga el binario de tu plataforma (`wm-linux-x86_64`,
+`wm-linux-aarch64` o el build estático `wm-linux-x86_64-musl`) y su archivo
+`.sha256` desde la
 [página de releases](https://github.com/lbailey94/whitemagic/releases), y
 luego:
 
@@ -49,7 +50,8 @@ chmod +x wm-linux-x86_64
 mkdir -p ~/.local/bin && mv wm-linux-x86_64 ~/.local/bin/wm
 ```
 
-El binario requiere glibc 2.39+ (compilado en Ubuntu 24.04).
+Los builds con enlace dinámico requieren glibc 2.39+ (compilados en
+Ubuntu 24.04); el build estático musl de x86-64 no requiere glibc.
 
 ### Desde el código fuente
 

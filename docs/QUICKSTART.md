@@ -1,13 +1,12 @@
 # WhiteMagic Quickstart
 
-**Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md)
+**Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
 
 **Version**: 9.2.2
-**Install path**: Linux x86-64 (static musl); Linux arm64 (aarch64) builds
-join the release matrix with native arm64 CI smoke coverage, selected
-automatically by the installer where a release provides them. macOS and
-Windows binaries ship in every release but their install paths are not gated
-yet.
+**Install path**: Linux x86-64 (static musl) and Linux arm64 (aarch64,
+install-gated, native arm64 CI smoke; glibc 2.39+ until a static arm64 build
+lands), selected automatically by the installer. macOS and Windows binaries
+ship in every release but their install paths are not gated yet.
 
 Get from zero to working agent memory in under five minutes.
 
@@ -37,9 +36,10 @@ This downloads the latest release, verifies its SHA256 checksum, and installs
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Manual equivalent: download `wm-linux-x86_64` and `wm-linux-x86_64.sha256`
-from the [releases page](https://github.com/lbailey94/whitemagic/releases),
-then:
+Manual equivalent: download your platform's binary (`wm-linux-x86_64` or
+`wm-linux-aarch64`, plus the x86-64 `wm-linux-x86_64-musl` static build) and
+its `.sha256` file from the
+[releases page](https://github.com/lbailey94/whitemagic/releases), then:
 
 ```bash
 sha256sum -c wm-linux-x86_64.sha256
@@ -47,7 +47,8 @@ chmod +x wm-linux-x86_64
 mkdir -p ~/.local/bin && mv wm-linux-x86_64 ~/.local/bin/wm
 ```
 
-The binary requires glibc 2.39+ (built on Ubuntu 24.04).
+The dynamically linked builds require glibc 2.39+ (built on Ubuntu 24.04);
+the x86-64 static musl build has no glibc requirement.
 
 ### From source
 

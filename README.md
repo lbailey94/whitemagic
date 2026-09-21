@@ -28,8 +28,8 @@ agents. The version number is a compatibility signal; the channel is
 an evidence claim (beta and stable each require their own exit conditions,
 not a version milestone).
 
-- **Install path: Linux x86-64** — fully static (musl) build, no glibc or distribution requirements. Linux arm64 (aarch64) builds join the release matrix with native arm64 CI smoke coverage, and the installer selects them automatically where a release provides them. macOS and Windows binaries are published in every release but are not yet install-gated.
-- **Support window:** the current minor and the previous minor on the Linux x86-64 line receive fixes; older minors are archival. macOS and Windows remain published but unsupported — see [`SECURITY.md`](SECURITY.md).
+- **Install path: Linux x86-64 and arm64** — x86-64 is a fully static (musl) build with no glibc or distribution requirements; arm64 (aarch64) is install-gated with native arm64 CI smoke coverage (glibc 2.39+ until a static arm64 build lands). The installer selects the right build automatically. macOS and Windows binaries are published in every release but are not yet install-gated.
+- **Support window:** the current minor and the previous minor on the install-gated Linux line (x86-64 and arm64) receive fixes; older minors are archival. macOS and Windows remain published but unsupported — see [`SECURITY.md`](SECURITY.md).
 - Trusted, local-first, single-user operation with Landlock containment and firebreak guards.
 
 ## What it does
@@ -193,6 +193,8 @@ cargo clippy --all-targets
 - [`docs/QUICKSTART.md`](docs/QUICKSTART.md) — the two-process continuity demo
 - [`docs/QUICKSTART.es.md`](docs/QUICKSTART.es.md) — guía rápida (Español)
 - [`docs/QUICKSTART.pt-BR.md`](docs/QUICKSTART.pt-BR.md) — guia rápido (Português BR)
+- [`docs/QUICKSTART.fr.md`](docs/QUICKSTART.fr.md) — guide de démarrage (Français)
+- [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md) — translation index and help-wanted languages
 - [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md) — client configuration
 - [`docs/MULTI_LAPTOP.md`](docs/MULTI_LAPTOP.md) — moving between machines (backup/restore, session carry)
 - [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — signed, offline-verifiable records of governed tasks (separate spec repo, Apache-2.0)
