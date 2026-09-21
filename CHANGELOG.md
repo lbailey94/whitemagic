@@ -22,6 +22,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads and search never consult freed pages; back up and restore into a
   fresh store for byte-level absence on disk (documented on the command).
 
+### MCP boundary — content is data, not instructions
+- **Notes that merely mention security vocabulary are stored, not refused.**
+  `tools/call` scanned every top-level string argument for injection
+  patterns, so `session.record` (also `memory.create`, `wm` thoughts, and
+  search queries) rejected content containing words like `jailbreak`,
+  `root access`, or `system prompt:` with `-32602` — while the same content
+  already passed nested under the `wm` meta-tool's `args` object. Content
+  keys (`content`, `query`, `text`, `title`, `topic`, `thought`, checkpoint
+  `next_queue`/`open_flags`, ...) are now exempt at the boundary, and the
+  instruction scan runs recursively over non-data strings so nesting can no
+  longer bypass it. Instruction-shaped content is flagged, never blocked:
+  `memory.create` / `memory.batch_create` / `memory.update` /
+  `session.record` return a `warnings` entry, and recall navigation results
+  disclose `instruction_shaped` + `instruction_pattern` so callers can
+  treat the record as untrusted data. Non-data fields still reject, and the
+  SSRF / path / size checks are unchanged.
+- **`session.record` catalog schema matches the tool.** The discovery
+  schema advertised `note` (not a real turn type) and omitted `supersedes`
+  and `track`; it now carries the real enum, 0–1 importance bounds, and the
+  amendment/track arguments.
+
 ### Continuity — bounded output
 - **`session.continuity` is bounded by default.** A single 100,000-char turn
   produced a ~200 KB JSON-RPC response, duplicated across structuredContent

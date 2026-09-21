@@ -52,6 +52,14 @@ fn with_navigation_disclosure(mut result: serde_json::Value, original: &str) -> 
         );
         obj.insert("content_scrubbed".into(), json!(scrubbed));
         obj.insert("exact_read_available".into(), json!(true));
+        // mcp-input-boundary (2026-09-21): content that reads as
+        // instructions is disclosed on surfacing, not blocked at the write.
+        // The model (and any UI) can treat it as untrusted data; exact read
+        // stays available for humans and audit.
+        if let Some(pattern) = wm_memory::detect_injection(original) {
+            obj.insert("instruction_shaped".into(), json!(true));
+            obj.insert("instruction_pattern".into(), json!(pattern));
+        }
     }
     result
 }
@@ -633,6 +641,10 @@ impl Tool for MemoryUpdateTool {
             .map(wm_memory::credential_shaped_content)
             .unwrap_or_default();
 
+        // mcp-input-boundary (2026-09-21): instruction-shaped content is
+        // flagged (never rejected) exactly like credential-shaped content.
+        let instruction_pattern = wm_memory::detect_injection(&mem.content);
+
         // Re-index in Tantivy if search engine is available (non-fatal, but a
         // failure is recorded in the durable pending-index ledger).
         super::common::replace_memory_index(&self.store, self.search.as_deref(), &mem);
@@ -655,16 +667,23 @@ impl Tool for MemoryUpdateTool {
         if let Some(rev) = revision_disclosure {
             response["revision"] = rev;
         }
-        if !cred_kinds.is_empty() {
-            response["warnings"] = json!(
-                cred_kinds
-                    .iter()
-                    .map(|k| format!(
+        if !cred_kinds.is_empty() || instruction_pattern.is_some() {
+            let mut warnings: Vec<String> = cred_kinds
+                .iter()
+                .map(|k| {
+                    format!(
                         "content looks like a credential ({k}) — {}",
                         wm_memory::CREDENTIAL_ADVICE
-                    ))
-                    .collect::<Vec<String>>()
-            );
+                    )
+                })
+                .collect();
+            if let Some(pattern) = instruction_pattern {
+                warnings.push(format!(
+                    "content contains an instruction-shaped pattern ({pattern}) — stored as data; \
+                     review it before trusting it as context"
+                ));
+            }
+            response["warnings"] = json!(warnings);
         }
         Ok(response)
     }

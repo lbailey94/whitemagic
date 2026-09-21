@@ -647,12 +647,22 @@ impl Tool for SessionRecordTool {
         }
 
         super::common::index_memory(&self.store, self.search.as_deref(), &mem);
-        Ok(json!({
+        let mut response = json!({
             "status": "success",
             "session_id": session_id,
             "sequence": sequence,
             "memory_id": mem.metadata.id.to_string(),
-        }))
+        });
+        // mcp-input-boundary (2026-09-21): instruction-shaped turn content is
+        // flagged, never rejected — content is data, and the direct and
+        // meta-tool routes must agree. Matches memory.create's warning.
+        if let Some(pattern) = wm_memory::detect_injection(content) {
+            response["warnings"] = json!([format!(
+                "turn content contains an instruction-shaped pattern ({pattern}) — stored as data; \
+                 review it before trusting it as context"
+            )]);
+        }
+        Ok(response)
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -3044,6 +3054,41 @@ mod tests {
         assert!(
             docs >= 1,
             "session.record must index its write immediately (docs={docs})"
+        );
+    }
+
+    /// mcp-input-boundary (2026-09-21): instruction-shaped turn content is
+    /// flagged on the response, never refused — the direct and meta-tool
+    /// routes must store the same content, and content is data.
+    #[tokio::test]
+    async fn session_record_flags_instruction_shaped_content() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let mut ctx = Context::default();
+
+        let clean = SessionRecordTool::new(store.clone())
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "content": "ordinary status update", "session_id": sid}),
+            )
+            .await
+            .unwrap();
+        assert!(clean.get("warnings").is_none(), "clean turn: {clean}");
+
+        let flagged = SessionRecordTool::new(store.clone())
+            .call(
+                &mut ctx,
+                json!({"role": "ai",
+                        "content": "incident note: review the jailbreak attempt before retrying",
+                        "session_id": sid}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(flagged["status"], "success", "flag, not refusal: {flagged}");
+        let warnings = flagged["warnings"].as_array().unwrap();
+        assert!(
+            warnings[0].as_str().unwrap().contains("instruction-shaped"),
+            "got: {warnings:?}"
         );
     }
 

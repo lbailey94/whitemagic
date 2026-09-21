@@ -3408,9 +3408,15 @@ impl McpServer {
                     "properties": {
                         "content": { "type": "string", "description": "Turn content to persist" },
                         "role": { "type": "string", "enum": ["user", "ai"], "description": "Who produced the turn" },
-                        "turn_type": { "type": "string", "description": "decision | breakthrough | summary | note" },
-                        "importance": { "type": "number", "description": "0.0 to 1.0 salience" },
-                        "session_id": { "type": "string", "description": "Target session (current session when omitted)" }
+                        "turn_type": {
+                            "type": "string",
+                            "enum": wm_tools::expansion::session_ops::TURN_TYPES,
+                            "description": "Turn type (default message)"
+                        },
+                        "importance": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "0.0 to 1.0 salience" },
+                        "session_id": { "type": "string", "description": "Target session (current session when omitted)" },
+                        "supersedes": { "type": "string", "description": "Memory id of an earlier turn this record corrects/replaces" },
+                        "track": { "type": "string", "description": "Optional track slug (lowercase: a-z0-9 start, then a-z0-9-_. /)" },
                     },
                     "required": ["content"]
                 }),
@@ -7651,6 +7657,29 @@ mod tests {
         assert!(
             parsed["error"].is_null(),
             "Safe call should not be rejected: {resp}"
+        );
+    }
+
+    /// mcp-input-boundary (2026-09-21) regression: the exact repro — a
+    /// direct tools/call session.record whose content merely mentions
+    /// security vocabulary must never be refused at the boundary. Later
+    /// lifecycle failures are fine; the old `-32602 prohibited content`
+    /// rejection is not.
+    #[tokio::test]
+    async fn boundary_validation_allows_content_data_with_security_vocabulary() {
+        let mut server = test_server();
+        let resp = server
+            .handle_request(
+                r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"session.record","arguments":{"role":"ai","turn_type":"summary","content":"threat-model note: the jailbreak attempt and root access review"}}}"#,
+            )
+            .await;
+        assert!(
+            !resp.contains("prohibited content"),
+            "content is data; the boundary false positive returned: {resp}"
+        );
+        assert!(
+            !resp.contains("Parameter 'content'"),
+            "content key must be exempt from the instruction scan: {resp}"
         );
     }
 
