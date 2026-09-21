@@ -14,11 +14,12 @@
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
 #
-# Install gate (alpha): Linux (x86-64, aarch64) and macOS (x86_64/aarch64).
-# macOS binaries are checksum-verified like Linux; the site copy stays
-# "published, not install-gated" until a real-Mac smoke test passes.
-# Windows binaries are published in every release but have no installer
-# yet — this script refuses them rather than guessing.
+# Install gate (alpha): Linux (x86-64, aarch64) is install-gated. macOS
+# (x86_64/aarch64) installs are checksum-verified like Linux; the public
+# label says "installer available — hardware smoke gate pending" until a
+# real-Mac smoke test passes.
+# Windows binaries are published in every release; this script refuses them
+# rather than guessing (a preview scripts/install.ps1 exists, not gated yet).
 # On Linux the fully static (musl) build is preferred when the target
 # release provides it; the dynamically linked glibc build requires glibc 2.39+.
 # Linux aarch64 is selected automatically when the release ships it; older
@@ -191,27 +192,48 @@ esac
 BINARY_URL="${BASE_URL}/${ARTIFACT}"
 CHECKSUM_URL="${BASE_URL}/${ARTIFACT}.sha256"
 
+# Prefer the compressed distributable when the release ships one and gunzip
+# is available (~60% less bandwidth; matters on slow or metered links).
+# Older releases without the .gz fall back to the raw binary.
+COMPRESSED=0
+if command -v gzip >/dev/null 2>&1 \
+    && artifact_available "${BASE_URL}/${ARTIFACT}.gz.sha256"; then
+    COMPRESSED=1
+fi
+
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
-echo "Downloading binary..."
-curl -fsSL "$BINARY_URL" -o "${TMPDIR}/${ARTIFACT}"
-curl -fsSL "$CHECKSUM_URL" -o "${TMPDIR}/checksum.sha256"
+BINARY_PATH="${TMPDIR}/${ARTIFACT}"
+if [ "$COMPRESSED" = "1" ]; then
+    echo "Downloading binary (compressed)..."
+    curl -fsSL "${BASE_URL}/${ARTIFACT}.gz" -o "${TMPDIR}/${ARTIFACT}.gz"
+    curl -fsSL "${BASE_URL}/${ARTIFACT}.gz.sha256" -o "${TMPDIR}/checksum.sha256"
+else
+    echo "Downloading binary..."
+    curl -fsSL "$BINARY_URL" -o "${TMPDIR}/${ARTIFACT}"
+    curl -fsSL "$CHECKSUM_URL" -o "${TMPDIR}/checksum.sha256"
+    # Legacy checksum lines may reference the pre-rename build name ("wm")
+    # rather than the distributed artifact name. Honor whatever name the
+    # manifest uses (raw path only; the .gz manifest names its own file).
+    expected="$(sed -E 's/^[0-9a-fA-F]{64}[[:space:]]+\*?(.+)$/\1/' "${TMPDIR}/checksum.sha256" | head -1)"
+    if [ -n "$expected" ] && [ "$expected" != "$ARTIFACT" ]; then
+        mv "${TMPDIR}/${ARTIFACT}" "${TMPDIR}/${expected}"
+        BINARY_PATH="${TMPDIR}/${expected}"
+    fi
+fi
 
 echo "Verifying checksum..."
-# Release checksum lines may reference the pre-rename build name ("wm") rather
-# than the distributed artifact name. Honor whatever name the manifest uses.
-BINARY_PATH="${TMPDIR}/${ARTIFACT}"
-expected="$(sed -E 's/^[0-9a-fA-F]{64}[[:space:]]+\*?(.+)$/\1/' "${TMPDIR}/checksum.sha256" | head -1)"
-if [ -n "$expected" ] && [ "$expected" != "$ARTIFACT" ]; then
-    mv "${TMPDIR}/${ARTIFACT}" "${TMPDIR}/${expected}"
-    BINARY_PATH="${TMPDIR}/${expected}"
-fi
 # sha256sum on Linux, shasum on macOS
 if command -v sha256sum >/dev/null 2>&1; then
     (cd "$TMPDIR" && sha256sum -c checksum.sha256)
 else
     (cd "$TMPDIR" && shasum -a 256 -c checksum.sha256)
+fi
+
+if [ "$COMPRESSED" = "1" ]; then
+    gunzip -c "${TMPDIR}/${ARTIFACT}.gz" > "${BINARY_PATH}"
+    rm -f "${TMPDIR}/${ARTIFACT}.gz"
 fi
 
 echo "Installing to ${INSTALL_DIR}..."

@@ -96,19 +96,32 @@ jobs:
       - run: python3 scripts/curated_smoke_test.py
 
   smoke-aarch64:
-    timeout-minutes: 25
-    name: Curated Smoke Test (Linux aarch64)
+    timeout-minutes: 30
+    name: Curated Smoke Test (Linux aarch64 ${{ matrix.flavor }})
     runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: gnu
+            target: aarch64-unknown-linux-gnu
+          - flavor: musl
+            target: aarch64-unknown-linux-musl
     steps:
       - uses: actions/checkout@v4
+      - name: Install musl tools
+        if: matrix.flavor == 'musl'
+        run: |
+          sudo apt-get update && sudo apt-get install -y musl-tools
+          sudo ln -sf "$(command -v musl-gcc)" /usr/local/bin/aarch64-linux-musl-gcc
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-unknown-linux-gnu
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --target aarch64-unknown-linux-gnu --bin wm
+      - run: cargo build --release --target ${{ matrix.target }} --bin wm
       - name: Selftest (native arm64)
-        run: target/aarch64-unknown-linux-gnu/release/wm selftest --json
-      - run: python3 scripts/curated_smoke_test.py --binary target/aarch64-unknown-linux-gnu/release/wm
+        run: target/${{ matrix.target }}/release/wm selftest --json
+      - run: python3 scripts/curated_smoke_test.py --binary target/${{ matrix.target }}/release/wm
 
   installer-windows:
     timeout-minutes: 25

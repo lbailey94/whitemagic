@@ -10,6 +10,7 @@ The tests run the real script in a temp HOME with a stub ``curl`` on PATH, so
 no network is used and the exact production logic is exercised.
 """
 
+import gzip
 import hashlib
 import os
 import shutil
@@ -42,10 +43,19 @@ case "$url" in
     *api.github.com*)
         printf '{"tag_name": "v9.1.6"}'
         ;;
+    *.gz.sha256)
+        if [ "$code_mode" = "1" ]; then
+            if [ "${STUB_NO_GZ:-0}" = "1" ]; then printf '404'; else printf '200'; fi
+        else
+            name="${url##*/}"
+            name="${name%.sha256}"
+            printf '%s  %s\\n' "@@DIGEST_GZ@@" "$name" > "$out"
+        fi
+        ;;
     *.sha256*)
         if [ "$code_mode" = "1" ]; then
             case "$url" in
-                *musl*) printf '404' ;;
+                *aarch64-musl*) printf '404' ;;
                 *aarch64*)
                     if [ "${STUB_NO_AARCH64:-0}" = "1" ]; then printf '404'; else printf '200'; fi
                     ;;
@@ -54,6 +64,9 @@ case "$url" in
         else
             printf '%s  wm\\n' "@@DIGEST@@" > "$out"
         fi
+        ;;
+    *wm-linux-x86_64-musl.gz|*wm-linux-aarch64.gz)
+        cp "$STUB_BINARY_GZ" "$out"
         ;;
     *wm-linux-x86_64-musl*)
         cp "$STUB_BINARY" "$out"
@@ -78,9 +91,17 @@ class InstallScriptProfileTest(unittest.TestCase):
         self.stub_binary = os.path.join(self.tmp, "fake-wm")
         with open(self.stub_binary, "wb") as fh:
             fh.write(FAKE_BINARY)
+        self.stub_binary_gz = os.path.join(self.tmp, "fake-wm.gz")
+        gz_bytes = gzip.compress(FAKE_BINARY)
+        with open(self.stub_binary_gz, "wb") as fh:
+            fh.write(gz_bytes)
         curl_path = os.path.join(self.shim_dir, "curl")
         with open(curl_path, "w", encoding="utf-8") as fh:
-            fh.write(STUB_CURL.replace("@@DIGEST@@", FAKE_BINARY_SHA256))
+            fh.write(
+                STUB_CURL.replace("@@DIGEST@@", FAKE_BINARY_SHA256).replace(
+                    "@@DIGEST_GZ@@", hashlib.sha256(gz_bytes).hexdigest()
+                )
+            )
         os.chmod(curl_path, os.stat(curl_path).st_mode | stat.S_IEXEC)
         # Deterministic glibc for the aarch64 glibc-floor gate.
         getconf_path = os.path.join(self.shim_dir, "getconf")
@@ -95,6 +116,7 @@ class InstallScriptProfileTest(unittest.TestCase):
         env = dict(os.environ)
         env["HOME"] = self.home
         env["STUB_BINARY"] = self.stub_binary
+        env["STUB_BINARY_GZ"] = self.stub_binary_gz
         # The host's store location must never be touched by a test run.
         env.pop("XDG_DATA_HOME", None)
         env.pop("WM_INSTALL_REF", None)
@@ -207,6 +229,25 @@ class InstallScriptProfileTest(unittest.TestCase):
         installed = os.path.join(self.home, ".local", "bin", "wm")
         self.assertTrue(os.path.exists(installed))
         self.assertTrue(os.stat(installed).st_mode & stat.S_IEXEC)
+
+    # ── Compressed distributable (bandwidth) ───────────────────────────
+
+    def test_prefers_compressed_asset_when_present(self):
+        result = self.run_installer()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("compressed", result.stdout)
+        installed = os.path.join(self.home, ".local", "bin", "wm")
+        self.assertTrue(os.path.exists(installed))
+        with open(installed, "rb") as fh:
+            self.assertEqual(fh.read(), FAKE_BINARY, "gunzip must restore the exact binary")
+
+    def test_falls_back_to_raw_when_compressed_absent(self):
+        result = self.run_installer(env_extra={"STUB_NO_GZ": "1"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("compressed", result.stdout)
+        installed = os.path.join(self.home, ".local", "bin", "wm")
+        with open(installed, "rb") as fh:
+            self.assertEqual(fh.read(), FAKE_BINARY)
 
     # ── Linux aarch64 (arm64 releases) ─────────────────────────────────
 
