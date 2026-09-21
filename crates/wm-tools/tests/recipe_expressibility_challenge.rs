@@ -59,12 +59,12 @@ async fn test_workflow_a_defect_diagnosis_and_verification() {
     let claims_tool = ClaimsTool::new(claims_ledger.clone());
     let mut ctx = Context::default();
 
-    // Step A1: Start session
-    let start_res = start_tool
-        .call(&mut ctx, json!({ "session_id": "diag-session-01" }))
-        .await
-        .unwrap();
+    // Step A1: Start session. session.start mints the id; a caller-supplied
+    // session_id is not honored, and session.record now refuses ids that do
+    // not name an existing session_start (2026-09-21 orphan-turn guard).
+    let start_res = start_tool.call(&mut ctx, json!({})).await.unwrap();
     assert_eq!(start_res["status"], "success");
+    let diag_session_id = start_res["session_id"].as_str().unwrap().to_string();
 
     // Step A2: Register falsifiable defect hypothesis
     let claim_res = claims_tool
@@ -90,7 +90,7 @@ async fn test_workflow_a_defect_diagnosis_and_verification() {
         .call(
             &mut ctx,
             json!({
-                "session_id": "diag-session-01",
+                "session_id": diag_session_id,
                 "role": "ai",
                 "content": "Reproduction: 50 concurrent dispatchers deadlock on mutex acquisition in worker loop",
             }),
@@ -106,7 +106,7 @@ async fn test_workflow_a_defect_diagnosis_and_verification() {
             json!({
                 "scope": "crates/core/queue.rs",
                 "intent": "replace mutex with atomic CAS loop",
-                "owner_session": "diag-session-01",
+                "owner_session": diag_session_id,
                 "root": root_str(&root),
             }),
         )
@@ -119,7 +119,7 @@ async fn test_workflow_a_defect_diagnosis_and_verification() {
         .call(
             &mut ctx,
             json!({
-                "session_id": "diag-session-01",
+                "session_id": diag_session_id,
                 "role": "ai",
                 "content": "Patch applied: AtomicBool state flag replaces Mutex guard in try_dispatch",
             }),
@@ -151,7 +151,7 @@ async fn test_workflow_a_defect_diagnosis_and_verification() {
         .call(
             &mut ctx,
             json!({
-                "session_id": "diag-session-01",
+                "session_id": diag_session_id,
                 "project": root_str(&root),
                 "continuity_receipt": {
                     "task": "queue deadlock resolution",
@@ -171,7 +171,7 @@ async fn test_workflow_a_defect_diagnosis_and_verification() {
             &mut ctx,
             json!({
                 "scope": "crates/core/queue.rs",
-                "owner_session": "diag-session-01",
+                "owner_session": diag_session_id,
                 "root": root_str(&root),
             }),
         )
