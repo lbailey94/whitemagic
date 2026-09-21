@@ -143,6 +143,7 @@ wm-leases.json
 /scripts/*
 !/scripts/install.sh
 !/scripts/install.ps1
+!/scripts/build_deb.sh
 !/scripts/crates_publish_order.py
 !/scripts/eval_matrix.sh
 !/scripts/release_manifest.py

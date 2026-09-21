@@ -3,13 +3,18 @@
 # release, verify, install. See docs/DOCKER_HUB_RUNBOOK.md.
 #
 #   docker build --build-arg WM_VERSION=v9 -t whitemagic:9 .
+#   docker buildx build --platform linux/amd64,linux/arm64 --push \
+#     --build-arg WM_VERSION=v9 -t whitemagic:9 .
 #   docker run --rm whitemagic:9 --version
 ARG ALPINE_VERSION=3.21
 FROM alpine:${ALPINE_VERSION}
 
 ARG WM_VERSION=v9.2.2
-ARG WM_ARCH=x86_64
 ARG WM_TARGET=musl
+# Explicit arch override for classic `docker build`; with buildx, TARGETARCH
+# is mapped automatically (amd64 -> x86_64, arm64 -> aarch64).
+ARG WM_ARCH=
+ARG TARGETARCH
 
 # Required by the official MCP registry (ownership proof for the OCI
 # package reference in npm/whitemagic-mcp/server.json).
@@ -19,16 +24,24 @@ LABEL io.modelcontextprotocol.server.name="io.github.lbailey94/whitemagic-mcp" \
       org.opencontainers.image.url="https://whitemagic.dev" \
       org.opencontainers.image.source="https://github.com/lbailey94/whitemagic"
 
-RUN apk add --no-cache curl coreutils \
- && curl -fsSL \
-      "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/wm-linux-${WM_ARCH}-${WM_TARGET}" \
-      -o "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" \
- && curl -fsSL \
-      "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/wm-linux-${WM_ARCH}-${WM_TARGET}.sha256" \
-      -o "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}.sha256" \
- && (cd /tmp && sha256sum -c "wm-linux-${WM_ARCH}-${WM_TARGET}.sha256") \
- && install -m 0755 "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" /usr/local/bin/wm \
- && rm -f "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}" "/tmp/wm-linux-${WM_ARCH}-${WM_TARGET}.sha256"
+RUN set -eu; \
+    arch="${WM_ARCH:-}"; \
+    if [ -z "$arch" ]; then \
+      case "${TARGETARCH:-amd64}" in \
+        amd64) arch=x86_64 ;; \
+        arm64) arch=aarch64 ;; \
+        *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+      esac; \
+    fi; \
+    asset="wm-linux-${arch}-${WM_TARGET}"; \
+    apk add --no-cache curl coreutils; \
+    curl -fsSL "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/${asset}" \
+      -o "/tmp/${asset}"; \
+    curl -fsSL "https://github.com/lbailey94/whitemagic/releases/download/${WM_VERSION}/${asset}.sha256" \
+      -o "/tmp/${asset}.sha256"; \
+    (cd /tmp && sha256sum -c "${asset}.sha256"); \
+    install -m 0755 "/tmp/${asset}" /usr/local/bin/wm; \
+    rm -f "/tmp/${asset}" "/tmp/${asset}.sha256"
 
 # Local install-funnel attribution: the binary records `docker` as the
 # arrival channel on-device only (scope 1 — no transport, nothing sent).

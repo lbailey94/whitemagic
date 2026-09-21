@@ -167,6 +167,32 @@ jobs:
           if ($proc.ExitCode -eq 0) { Write-Error "tampered binary must be refused"; exit 1 }
           Write-Host "tampered binary refused (exit $($proc.ExitCode))"
 
+  debian-package:
+    timeout-minutes: 25
+    name: Debian Package (x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install musl tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - name: Ensure target installed (cache restore can clobber it)
+        run: rustup target add x86_64-unknown-linux-musl
+      - run: cargo build --release --target x86_64-unknown-linux-musl --bin wm
+      - name: Build the .deb
+        run: |
+          VERSION="$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')"
+          sh scripts/build_deb.sh target/x86_64-unknown-linux-musl/release/wm amd64 "$VERSION" dist-deb
+      - name: Install and smoke the package
+        run: |
+          sudo dpkg -i dist-deb/wm-linux-amd64.deb
+          wm --version
+          wm selftest --json > /dev/null
+          echo "deb smoke passed"
+
   optional-features:
     timeout-minutes: 20
     name: Optional Feature Builds

@@ -199,6 +199,19 @@ jobs:
           fi
           find ci-facts -type f | sort || true
 
+      - name: Build Debian packages (.deb)
+        run: |
+          set -eu
+          VERSION="${GITHUB_REF_NAME#v}"
+          for pair in "wm-linux-x86_64-musl:amd64" "wm-linux-aarch64-musl:arm64"; do
+            asset="${pair%%:*}"; arch="${pair##*:}"
+            if [ -f "artifacts/${asset}" ]; then
+              sh scripts/build_deb.sh "artifacts/${asset}" "$arch" "$VERSION" artifacts
+            else
+              echo "::warning::${asset} missing - skipping the ${arch} .deb"
+            fi
+          done
+
       - name: Sign release artifacts (keyless, Sigstore)
         run: |
           for f in artifacts/wm-*; do
@@ -311,7 +324,13 @@ jobs:
           done
           echo "::warning::npm whitemagic-mcp@${VERSION} not visible after ~4 minutes; continuing to MCP registry with retries"
 
-      - name: Publish Docker Hub (skips without secrets)
+      - name: Set up QEMU (arm64 image builds)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Publish Docker Hub (multi-arch; skips without secrets)
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -319,11 +338,25 @@ jobs:
           if [ -z "${DOCKERHUB_TOKEN:-}" ]; then echo "DOCKERHUB_TOKEN not set - skipping"; exit 0; fi
           VERSION="${GITHUB_REF_NAME#v}"; MAJOR="${VERSION%%.*}"
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker build --build-arg "WM_VERSION=${GITHUB_REF_NAME}" \
-            -t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest .
-          docker push "lbailey94/whitemagic:${VERSION}"
-          docker push "lbailey94/whitemagic:${MAJOR}"
-          docker push lbailey94/whitemagic:latest
+          # Multi-arch: amd64 uses the x86_64-musl asset, arm64 the
+          # aarch64-musl asset (shipped in the same release). If the
+          # multi-arch build fails, fall back to the amd64-only path so a
+          # release is never blocked by the image lane.
+          if docker buildx build --platform linux/amd64,linux/arm64 \
+               --build-arg "WM_VERSION=${GITHUB_REF_NAME}" \
+               -t "lbailey94/whitemagic:${VERSION}" \
+               -t "lbailey94/whitemagic:${MAJOR}" \
+               -t lbailey94/whitemagic:latest \
+               --push .; then
+            echo "docker: multi-arch (linux/amd64, linux/arm64) published"
+          else
+            echo "::warning::multi-arch image build failed - publishing amd64 only"
+            docker build --build-arg "WM_VERSION=${GITHUB_REF_NAME}" \
+              -t "lbailey94/whitemagic:${VERSION}" -t "lbailey94/whitemagic:${MAJOR}" -t lbailey94/whitemagic:latest .
+            docker push "lbailey94/whitemagic:${VERSION}"
+            docker push "lbailey94/whitemagic:${MAJOR}"
+            docker push lbailey94/whitemagic:latest
+          fi
 
       - name: Publish MCP registry (GitHub OIDC, propagation-aware)
         run: |
