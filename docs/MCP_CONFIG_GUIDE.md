@@ -1,6 +1,6 @@
 # MCP Client Configuration Guide
 
-**Version**: 9.2.1
+**Version**: 9.2.2
 
 The release binary is a single executable: `wm`. The release installer picks
 the **static musl build on Linux x86-64** (no glibc requirement); macOS and
