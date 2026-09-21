@@ -24,6 +24,7 @@ pub mod landlock_sandbox;
 pub mod manifest;
 pub mod migrate;
 pub mod network_audit;
+pub mod offline_docs;
 pub mod opencode;
 pub mod report;
 pub mod resources;

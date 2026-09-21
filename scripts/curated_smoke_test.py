@@ -631,6 +631,27 @@ def run_grimoire_gate(binary):
         ok(f"grimoire gate: ready ({len(steps)} steps, {payload.get('total_ms')} ms)")
 
 
+def run_docs_gate(binary):
+    """The bundled offline guide must print without a network or a store."""
+    result = subprocess.run(
+        [binary, "docs", "quickstart"],
+        capture_output=True, text=True, timeout=30,
+        env={**os.environ, "RUST_LOG": "error"},
+    )
+    if result.returncode != 0:
+        fail("docs gate", f"exit {result.returncode}: {result.stderr[:300]}")
+        return
+    text = result.stdout
+    missing = [
+        needle for needle in ("wm grimoire", "wm quickstart", "session.continuity", "wm backup")
+        if needle not in text
+    ]
+    if missing:
+        fail("docs gate", f"offline quickstart missing: {missing}")
+    else:
+        ok(f"docs gate: offline quickstart prints ({len(text)} chars)")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Curated profile smoke test")
     parser.add_argument("--binary", default=None, help="path to the wm binary")
@@ -773,6 +794,7 @@ def main():
 
     # First-run orchestration gate.
     run_grimoire_gate(binary)
+    run_docs_gate(binary)
 
     if FAILURES:
         print(f"\n{len(FAILURES)} smoke step(s) failed: {FAILURES}")

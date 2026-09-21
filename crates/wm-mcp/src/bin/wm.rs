@@ -148,6 +148,12 @@ enum Commands {
         #[arg(long)]
         verbose: bool,
     },
+    /// Print bundled documentation offline (no network needed)
+    Docs {
+        /// Topic to print (default: quickstart)
+        #[arg(value_name = "TOPIC")]
+        topic: Option<String>,
+    },
     /// Run a five-second end-to-end invariant check on a throwaway store
     Selftest {
         /// Machine-readable report
@@ -1427,6 +1433,16 @@ fn run() -> anyhow::Result<()> {
             // for it indefinitely. Force shutdown with a bounded timeout instead.
             rt.shutdown_timeout(std::time::Duration::from_millis(500));
         }
+        Commands::Docs { topic } => match topic.as_deref().unwrap_or("quickstart") {
+            "quickstart" | "quick-start" | "start" => {
+                print!("{}", wm_mcp::offline_docs::QUICKSTART);
+            }
+            other => {
+                eprintln!("unknown docs topic: {other}");
+                eprintln!("available topics: quickstart");
+                std::process::exit(2);
+            }
+        },
         Commands::Quickstart { .. } => {
             let rt = tokio::runtime::Runtime::new()?;
             rt.block_on(async { run_quickstart().await })?;
