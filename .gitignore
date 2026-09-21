@@ -139,9 +139,10 @@ wm-leases.json
 /docs/V8_MEMORY_RESEARCH_AGENDA.md
 /docs/VECTOR_SEARCH_ROADMAP.md
 
-# Internal development and staging scripts (public surface: install.sh + smoke test + release)
+# Internal development and staging scripts (public surface: install.sh + install.ps1 + smoke test + release)
 /scripts/*
 !/scripts/install.sh
+!/scripts/install.ps1
 !/scripts/crates_publish_order.py
 !/scripts/eval_matrix.sh
 !/scripts/release_manifest.py

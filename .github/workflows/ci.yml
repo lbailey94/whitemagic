@@ -110,6 +110,48 @@ jobs:
         run: target/aarch64-unknown-linux-gnu/release/wm selftest --json
       - run: python3 scripts/curated_smoke_test.py --binary target/aarch64-unknown-linux-gnu/release/wm
 
+  installer-windows:
+    timeout-minutes: 25
+    name: Windows Installer (install.ps1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release binary
+        run: cargo build --release --bin wm
+      - name: Generate checksum for local-file mode
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash target/release/wm.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  wm-windows-x86_64.exe" | Out-File -Encoding ascii target/release/wm-windows-x86_64.exe.sha256
+      - name: Run install.ps1 (local-file mode)
+        shell: pwsh
+        run: |
+          ./scripts/install.ps1 -File target/release/wm.exe `
+            -ChecksumFile target/release/wm-windows-x86_64.exe.sha256 `
+            -Dir "$env:RUNNER_TEMP\wm-bin" -Ref ci
+      - name: Smoke test the installed binary
+        shell: pwsh
+        run: |
+          & "$env:RUNNER_TEMP\wm-bin\wm.exe" --version
+          & "$env:RUNNER_TEMP\wm-bin\wm.exe" selftest --json | Out-Null
+          Write-Host "install.ps1 smoke passed"
+      - name: Tampered binary must be refused
+        shell: pwsh
+        run: |
+          $tampered = "$env:RUNNER_TEMP\tampered.exe"
+          Copy-Item target/release/wm.exe $tampered
+          Add-Content -LiteralPath $tampered -Value "tamper" -Encoding ascii
+          $proc = Start-Process pwsh -PassThru -Wait -ArgumentList @(
+            "-NoProfile", "-File", "scripts/install.ps1",
+            "-File", $tampered,
+            "-ChecksumFile", "target/release/wm-windows-x86_64.exe.sha256",
+            "-Dir", "$env:RUNNER_TEMP\wm-bin-bad"
+          )
+          if ($proc.ExitCode -eq 0) { Write-Error "tampered binary must be refused"; exit 1 }
+          Write-Host "tampered binary refused (exit $($proc.ExitCode))"
+
   optional-features:
     timeout-minutes: 20
     name: Optional Feature Builds
