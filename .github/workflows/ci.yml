@@ -118,6 +118,8 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+      - name: Ensure target installed (cache restore can clobber it)
+        run: rustup target add ${{ matrix.target }}
       - run: cargo build --release --target ${{ matrix.target }} --bin wm
       - name: Selftest (native arm64)
         run: target/${{ matrix.target }}/release/wm selftest --json
