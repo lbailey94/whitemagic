@@ -36,6 +36,9 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             artifact: wm-linux-x86_64-musl
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            artifact: wm-linux-aarch64
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact: wm-macos-x86_64
@@ -77,8 +80,8 @@ jobs:
           if [ -f "${BIN}.exe" ]; then BIN="${BIN}.exe"; fi
           "$BIN" selftest --json
 
-      - name: Smoke test curated workflow (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Smoke test curated workflow (Linux, native per arch)
+        if: startsWith(matrix.os, 'ubuntu')
         run: python3 scripts/curated_smoke_test.py --binary target/${{ matrix.target }}/release/wm
 
       - name: Rename binary for release (Linux/macOS)

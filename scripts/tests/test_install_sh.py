@@ -44,12 +44,21 @@ case "$url" in
         ;;
     *.sha256*)
         if [ "$code_mode" = "1" ]; then
-            printf '200'
+            case "$url" in
+                *musl*) printf '404' ;;
+                *aarch64*)
+                    if [ "${STUB_NO_AARCH64:-0}" = "1" ]; then printf '404'; else printf '200'; fi
+                    ;;
+                *) printf '200' ;;
+            esac
         else
             printf '%s  wm\\n' "@@DIGEST@@" > "$out"
         fi
         ;;
     *wm-linux-x86_64-musl*)
+        cp "$STUB_BINARY" "$out"
+        ;;
+    *wm-linux-aarch64*)
         cp "$STUB_BINARY" "$out"
         ;;
     *)
@@ -73,11 +82,16 @@ class InstallScriptProfileTest(unittest.TestCase):
         with open(curl_path, "w", encoding="utf-8") as fh:
             fh.write(STUB_CURL.replace("@@DIGEST@@", FAKE_BINARY_SHA256))
         os.chmod(curl_path, os.stat(curl_path).st_mode | stat.S_IEXEC)
+        # Deterministic glibc for the aarch64 glibc-floor gate.
+        getconf_path = os.path.join(self.shim_dir, "getconf")
+        with open(getconf_path, "w", encoding="utf-8") as fh:
+            fh.write("#!/bin/sh\necho 'glibc 2.39'\n")
+        os.chmod(getconf_path, os.stat(getconf_path).st_mode | stat.S_IEXEC)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def run_installer(self, *extra_args, env_extra=None):
+    def run_installer(self, *extra_args, target="x86_64-unknown-linux-musl", env_extra=None):
         env = dict(os.environ)
         env["HOME"] = self.home
         env["STUB_BINARY"] = self.stub_binary
@@ -96,7 +110,7 @@ class InstallScriptProfileTest(unittest.TestCase):
                 "--version",
                 "v9.1.6",
                 "--target",
-                "x86_64-unknown-linux-musl",
+                target,
                 *extra_args,
             ],
             capture_output=True,
@@ -193,6 +207,23 @@ class InstallScriptProfileTest(unittest.TestCase):
         installed = os.path.join(self.home, ".local", "bin", "wm")
         self.assertTrue(os.path.exists(installed))
         self.assertTrue(os.stat(installed).st_mode & stat.S_IEXEC)
+
+    # ── Linux aarch64 (arm64 releases) ─────────────────────────────────
+
+    def test_installs_linux_aarch64_when_present(self):
+        result = self.run_installer(target="aarch64-unknown-linux-gnu")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        installed = os.path.join(self.home, ".local", "bin", "wm")
+        self.assertTrue(os.path.exists(installed))
+        self.assertIn("Linux arm64", result.stdout)
+
+    def test_refuses_aarch64_when_release_lacks_it(self):
+        result = self.run_installer(
+            target="aarch64-unknown-linux-gnu",
+            env_extra={"STUB_NO_AARCH64": "1"},
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("does not include the Linux aarch64 build yet", result.stderr)
 
     # ── Local install-funnel marker (scope 1) ──────────────────────────
 

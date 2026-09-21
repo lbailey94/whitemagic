@@ -95,6 +95,21 @@ jobs:
       - run: cargo build --release --bin wm
       - run: python3 scripts/curated_smoke_test.py
 
+  smoke-aarch64:
+    timeout-minutes: 25
+    name: Curated Smoke Test (Linux aarch64)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --target aarch64-unknown-linux-gnu --bin wm
+      - name: Selftest (native arm64)
+        run: target/aarch64-unknown-linux-gnu/release/wm selftest --json
+      - run: python3 scripts/curated_smoke_test.py --binary target/aarch64-unknown-linux-gnu/release/wm
+
   optional-features:
     timeout-minutes: 20
     name: Optional Feature Builds

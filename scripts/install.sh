@@ -14,13 +14,15 @@
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
 #
-# Install gate (alpha): Linux x86-64 and macOS (x86_64/aarch64). macOS
-# binaries are checksum-verified like Linux; the site copy stays
+# Install gate (alpha): Linux (x86-64, aarch64) and macOS (x86_64/aarch64).
+# macOS binaries are checksum-verified like Linux; the site copy stays
 # "published, not install-gated" until a real-Mac smoke test passes.
 # Windows binaries are published in every release but have no installer
 # yet — this script refuses them rather than guessing.
-# On Linux x86-64 the fully static (musl) build is preferred when the target
+# On Linux the fully static (musl) build is preferred when the target
 # release provides it; the dynamically linked glibc build requires glibc 2.39+.
+# Linux aarch64 is selected automatically when the release ships it; older
+# releases refuse with a clear message (aarch64 CI smoke coverage is native).
 
 set -eu
 
@@ -151,6 +153,25 @@ case "$TARGET" in
             fi
         fi
         ;;
+    aarch64-unknown-linux-gnu)
+        if artifact_available "${BASE_URL}/wm-linux-aarch64-musl.sha256"; then
+            ARTIFACT="wm-linux-aarch64-musl"
+            STATIC_BUILD=1
+        else
+            ARTIFACT="wm-linux-aarch64"
+            if ! artifact_available "${BASE_URL}/${ARTIFACT}.sha256"; then
+                echo "This release (${VERSION}) does not include the Linux aarch64 build yet." >&2
+                echo "Install an upcoming release, or build from source: cargo build --release --bin wm" >&2
+                exit 1
+            fi
+            if ! glibc_at_least 2 39; then
+                echo "This release provides no static aarch64 build, and the dynamic build requires glibc 2.39+ (found: $(getconf GNU_LIBC_VERSION 2>/dev/null || echo 'unknown'))." >&2
+                echo "Upgrade your distribution's glibc, or install a newer WhiteMagic release." >&2
+                exit 1
+            fi
+            PLATFORM_LABEL="Linux arm64"
+        fi
+        ;;
     aarch64-apple-darwin)
         ARTIFACT="wm-macos-aarch64"
         PLATFORM_LABEL="macOS arm64"
@@ -161,7 +182,7 @@ case "$TARGET" in
         ;;
     *)
         echo "Unsupported target for this release: ${TARGET}" >&2
-        echo "This installer supports Linux x86-64 and macOS (x86_64/aarch64)." >&2
+        echo "This installer supports Linux x86-64, Linux aarch64, and macOS (x86_64/aarch64)." >&2
         echo "Windows is not install-gated yet — binaries are published: https://github.com/${REPO}/releases" >&2
         exit 1
         ;;

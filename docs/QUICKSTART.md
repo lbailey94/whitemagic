@@ -1,8 +1,11 @@
 # WhiteMagic Quickstart
 
 **Version**: 9.2.2
-**Install path**: Linux x86-64 (static musl). macOS and Windows binaries ship
-in every release but their install paths are not gated yet.
+**Install path**: Linux x86-64 (static musl); Linux arm64 (aarch64) builds
+join the release matrix with native arm64 CI smoke coverage, selected
+automatically by the installer where a release provides them. macOS and
+Windows binaries ship in every release but their install paths are not gated
+yet.
 
 Get from zero to working agent memory in under five minutes.
 

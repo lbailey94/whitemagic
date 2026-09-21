@@ -312,6 +312,13 @@ fn platform_story_is_consistent_across_surfaces() {
         installer.contains("Linux x86-64") && installer.contains("macOS (x86_64/aarch64)"),
         "install.sh refusal message must name the supported install targets"
     );
+    // 2026-09-21: Linux aarch64 joins the release matrix with native arm64
+    // CI smoke coverage; the installer maps the target and refuses clearly
+    // when a release predates the arm64 artifacts.
+    assert!(
+        installer.contains("aarch64-unknown-linux-gnu") && installer.contains("wm-linux-aarch64"),
+        "install.sh must map the Linux aarch64 target (arm64 releases)"
+    );
     assert!(
         installer.contains("Windows is not install-gated"),
         "install.sh must refuse Windows explicitly (no installer yet)"

@@ -3,8 +3,10 @@
 **Version**: 9.2.2
 
 The release binary is a single executable: `wm`. The release installer picks
-the **static musl build on Linux x86-64** (no glibc requirement); macOS and
-Windows assets are static within their platform's conventions. A binary built
+the **static musl build on Linux x86-64** (no glibc requirement) and the
+Linux arm64 (aarch64) build on arm64 hosts (glibc 2.39+ until a static arm64
+build lands); macOS and Windows assets are static within their platform's
+conventions. A binary built
 from source follows the host toolchain instead. The MCP server is the `serve`
 subcommand. The curated profile is the supported surface.
 
