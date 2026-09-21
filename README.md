@@ -1,8 +1,8 @@
 # WhiteMagic
 
-Local-first memory and session continuity for coding agents.
+A local-first memory layer for MCP agents.
 
-WhiteMagic gives an AI coding agent durable project memory over MCP: record
+WhiteMagic gives an AI agent durable project memory over MCP: record
 important context, find it after restart, and carry useful decisions into the
 next session — without sending your memory store to any hosted service.
 
@@ -23,8 +23,8 @@ next session — without sending your memory store to any hosted service.
 
 ## Status
 
-**WhiteMagic v9.** Release channel: **open alpha** — public alpha for AI
-coding agents. The version number is a compatibility signal; the channel is
+**WhiteMagic v9.** Release channel: **open alpha** — public alpha for MCP
+agents. The version number is a compatibility signal; the channel is
 an evidence claim (beta and stable each require their own exit conditions,
 not a version milestone).
 
@@ -85,7 +85,7 @@ Verify the installation and see the product work end to end:
 ```bash
 wm --version    # wm 9.2.1
 wm quickstart   # 30-second two-process continuity demo (isolated store)
-wm grimoire     # guided first-run: host, substrate, agent wiring, vocabulary, continuity
+wm grimoire     # guided first-run: host, memory layer, agent wiring, vocabulary, continuity
 ```
 
 `wm doctor` is a troubleshooting tool, not a setup step — run
@@ -193,6 +193,7 @@ cargo clippy --all-targets
 - [`docs/QUICKSTART.md`](docs/QUICKSTART.md) — the two-process continuity demo
 - [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md) — client configuration
 - [`docs/MULTI_LAPTOP.md`](docs/MULTI_LAPTOP.md) — moving between machines (backup/restore, session carry)
+- [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — signed, offline-verifiable records of governed tasks (separate spec repo, Apache-2.0)
 - [`CHANGELOG.md`](CHANGELOG.md) — release notes
 - [`SECURITY.md`](SECURITY.md) — reporting vulnerabilities
 
@@ -213,5 +214,6 @@ wm migrate --v2-dir ~/.whitemagic/users/local/galaxies              # migrate
 
 - Support: open an issue at
   <https://github.com/lbailey94/whitemagic/issues>
+- Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Security: email <lbailey94@protonmail.com> (please do not open public
   issues for security reports)
