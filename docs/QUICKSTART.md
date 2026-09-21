@@ -9,7 +9,7 @@ Get from zero to working agent memory in under five minutes.
 ## 30-second path
 
 ```bash
-wm grimoire     # guided first-run: host, substrate, agents, memory, vocabulary, continuity
+wm grimoire     # guided first-run: host, memory layer, agents, memory, vocabulary, continuity
 wm quickstart   # two-process continuity demo on an isolated store
 wm selftest     # end-to-end invariant check (throwaway store, ~1 second)
 ```

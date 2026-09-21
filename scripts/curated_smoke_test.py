@@ -617,7 +617,7 @@ def run_grimoire_gate(binary):
         fail("grimoire gate", f"non-JSON output: {e}: {result.stdout[:500]}")
         return
 
-    expected = ["host", "substrate", "release", "agent", "memory", "teach", "continuity"]
+    expected = ["host", "memory-layer", "release", "agent", "memory", "teach", "continuity"]
     steps = {s.get("name"): s.get("status") for s in payload.get("steps", [])}
     missing = [name for name in expected if name not in steps]
     failed = [name for name, status in steps.items() if status == "fail"]

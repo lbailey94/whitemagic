@@ -166,7 +166,7 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Guided first-run: inspect host, verify substrate, check release,
+    /// Guided first-run: inspect host, verify the memory layer, check release,
     /// configure the agent, calibrate memory, teach the vocabulary, and
     /// demonstrate restart continuity (agent-first; `--json` for machines)
     Grimoire {
@@ -1508,7 +1508,7 @@ fn run() -> anyhow::Result<()> {
                 println!();
                 for s in &report.steps {
                     println!(
-                        "  {} {:<11} {}",
+                        "  {} {:<13} {}",
                         match s.status {
                             StepStatus::Ok => "[OK]  ",
                             StepStatus::Warn => "[WARN]",

@@ -1,7 +1,7 @@
 //! `wm selftest` — a five-second end-to-end invariant check on a throwaway store.
 //!
 //! Intended for installs, updates, bug reports, CI, and agents that
-//! want to verify their own memory substrate before trusting it.
+//! want to verify their own memory layer before trusting it.
 //!
 //! Every check is local, deterministic, and touches only a temporary
 //! namespace; real memories are never read or written. The report is also

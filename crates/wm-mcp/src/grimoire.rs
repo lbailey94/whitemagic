@@ -7,7 +7,7 @@
 //! docs:
 //!
 //! ```text
-//! host → substrate → release → agent → memory → load → teach → continuity
+//! host → memory-layer → release → agent → memory → load → teach → continuity
 //! ```
 //!
 //! Two audiences, one run: humans get stable `[OK]/[WARN]/[SKIP]/[FAIL]`
@@ -44,7 +44,7 @@ pub enum StepStatus {
 /// One grimoire step.
 #[derive(Debug, Clone, Serialize)]
 pub struct Step {
-    /// Stable machine name (host, substrate, release, agent, memory, teach, continuity).
+    /// Stable machine name (host, memory-layer, release, agent, memory, teach, continuity).
     pub name: &'static str,
     /// Step outcome.
     pub status: StepStatus,
@@ -69,9 +69,10 @@ pub struct Report {
     /// Compatibility alias for [`Self::environment_ok`] (pre-9.1.9 field
     /// name).
     pub ready: bool,
-    /// Host, substrate, and memory steps did not fail: the substrate is
-    /// functional on this machine.
-    pub substrate_ready: bool,
+    /// Host, memory-layer, and memory steps did not fail: the memory layer
+    /// is functional on this machine. (Pre-9.2.2 this field was named
+    /// `substrate_ready`; the rename is vocabulary, not semantics.)
+    pub memory_layer_ready: bool,
     /// At least one MCP client is wired and no detected client failed to
     /// configure. False when none was detected, only proposed (dry run), or
     /// any write failed.
@@ -82,7 +83,7 @@ pub struct Report {
     /// lexical-only installs report false honestly. Semantic recall is
     /// OPTIONAL — this field never gates `core_ready`.
     pub semantic_recall_available: bool,
-    /// The product core is active: `substrate_ready && agent_wired &&
+    /// The product core is active: `memory_layer_ready && agent_wired &&
     /// continuity_verified`. This is what `fully_activated` reports;
     /// `semantic_recall_available` is deliberately excluded because a
     /// lexical-only install is fully usable (2026-09-15 audit: the old name
@@ -175,13 +176,13 @@ fn host_step() -> Step {
     )
 }
 
-async fn substrate_step() -> Step {
+async fn memory_layer_step() -> Step {
     let t = Instant::now();
     match crate::selftest::run().await {
         Ok(report) => {
             let (passed, total) = report.score();
             step(
-                "substrate",
+                "memory-layer",
                 if report.passed() {
                     StepStatus::Ok
                 } else {
@@ -192,7 +193,7 @@ async fn substrate_step() -> Step {
             )
         }
         Err(e) => step(
-            "substrate",
+            "memory-layer",
             StepStatus::Fail,
             format!("selftest could not run: {e}"),
             t,
@@ -568,7 +569,7 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
     // offline timeout). The step is spliced back into report order below.
     let release_handle = opts.check_release.then(|| std::thread::spawn(release_step));
     let mut steps = vec![host_step()];
-    steps.push(substrate_step().await);
+    steps.push(memory_layer_step().await);
     let (agent, agent_wired) = agent_step(opts.write);
     steps.push(agent);
     let (memory, semantic_recall_available) = memory_step(&opts.store);
@@ -586,7 +587,7 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
     });
 
     // Join the release probe and splice it back into report order (host,
-    // substrate, release, agent, memory, load, teach, continuity).
+    // memory-layer, release, agent, memory, load, teach, continuity).
     let release_step_result = match release_handle {
         Some(handle) => handle.join().unwrap_or_else(|_| Step {
             name: "release",
@@ -603,11 +604,11 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
     };
     steps.insert(2, release_step_result);
 
-    // Split readiness: "WhiteMagic works" (substrate), "I am wired to it"
+    // Split readiness: "WhiteMagic works" (memory layer), "I am wired to it"
     // (agent), and "continuity was proven" are different facts; `ready`
     // remains as a compatibility alias for `environment_ok`.
     let status_of = |name: &str| steps.iter().find(|s| s.name == name).map(|s| s.status);
-    let substrate_ready = ["host", "substrate", "memory"]
+    let memory_layer_ready = ["host", "memory-layer", "memory"]
         .iter()
         .all(|name| !matches!(status_of(name), Some(StepStatus::Fail)));
     let continuity_verified = matches!(status_of("continuity"), Some(StepStatus::Ok));
@@ -616,12 +617,12 @@ pub async fn run(opts: Options) -> anyhow::Result<Report> {
         version: env!("CARGO_PKG_VERSION").to_string(),
         environment_ok,
         ready: environment_ok,
-        substrate_ready,
+        memory_layer_ready,
         agent_wired,
         continuity_verified,
         semantic_recall_available,
-        core_ready: substrate_ready && agent_wired && continuity_verified,
-        fully_activated: substrate_ready && agent_wired && continuity_verified,
+        core_ready: memory_layer_ready && agent_wired && continuity_verified,
+        fully_activated: memory_layer_ready && agent_wired && continuity_verified,
         steps,
         total_ms: overall.elapsed().as_millis(),
     })
@@ -805,8 +806,8 @@ mod tests {
         );
         assert!(report.ready, "grimoire must be ready: {report:?}");
         assert!(
-            report.substrate_ready,
-            "substrate must be ready: {report:?}"
+            report.memory_layer_ready,
+            "memory layer must be ready: {report:?}"
         );
         assert!(
             report.continuity_verified,
@@ -814,7 +815,7 @@ mod tests {
         );
         assert_eq!(
             report.fully_activated,
-            report.substrate_ready && report.agent_wired && report.continuity_verified,
+            report.memory_layer_ready && report.agent_wired && report.continuity_verified,
             "activation must be the conjunction of the split states"
         );
         assert_eq!(
@@ -829,7 +830,7 @@ mod tests {
             names,
             vec![
                 "host",
-                "substrate",
+                "memory-layer",
                 "release",
                 "agent",
                 "memory",
