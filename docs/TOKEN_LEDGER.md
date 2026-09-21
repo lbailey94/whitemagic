@@ -6,12 +6,16 @@ Nothing in this file describes an off-device report; the ledger never leaves the
 ## What it is
 
 `session.record` and `session.continuity` append one JSON line each to
-`<store>/lmdb/savings_ledger.jsonl`. `wm ledger` aggregates those rows plus the
-dispatch counters in `mutable_tool_stats.json`:
+`<store>/lmdb/savings_ledger.jsonl`; the recall route appends one per call.
+`wm ledger` aggregates those rows plus the dispatch counters in
+`mutable_tool_stats.json`; `wm stats` prints a compact savings block (the
+ledger is local-only — nothing leaves the store):
 
 ```bash
 wm ledger            # human summary
 wm ledger --json     # machine-readable
+wm ledger --calibrate 3.7   # set the per-store bytes/token divisor
+wm stats             # compact savings block at the end
 wm ledger --store ~/.local/share/whitemagic
 ```
 
@@ -30,7 +34,7 @@ the store.
 | `recall.bytes_injected` | Navigation text actually returned by the recall (scrubbed/bounded). |
 | `recall.results` | Result count for the call. |
 | `state_to_context_ratio` | `bytes_available / bytes_injected` — the WhiteMagic-attributable compression. |
-| `token_equivalent_saved_estimate` | `(bytes_available - bytes_injected) / 4`. **Estimate**; the divisor is disclosed in the output and must be recalibrated against a real tokenizer before any external publication. |
+| `token_equivalent_saved_estimate` | `(bytes_available - bytes_injected) / divisor`. **Estimate**; the divisor defaults to 4.0 and is disclosed in the output. Calibrate per store with `wm ledger --calibrate <bytes_per_token>` (encode a representative sample with the tokenizer of your choice; valid 1.0–16.0). |
 | `local_ops` | Dispatch calls by tool family. Every WhiteMagic operation is local compute (LMDB + Tantivy + episodic); none is a model call. |
 
 ## Attribution rules (binding for any public use)

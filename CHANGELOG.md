@@ -32,7 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gate (append failures are logged, never fatal) and never leaves the store.
   Attribution rules and metric definitions ship in `docs/TOKEN_LEDGER.md`:
   provider/harness prompt caching is context, not a WhiteMagic saving, and the
-  token-equivalent is a disclosed estimate (`bytes / 4`).
+  token-equivalent is a disclosed estimate (`bytes / 4`, calibratable per store
+  with `wm ledger --calibrate`), and `wm stats` prints a compact savings block.
 - **Backfill report.** `python3 scripts/token_ledger_report.py [--json]` scans
   every project store's dispatch counters and savings ledger plus the opencode
   session DB, entirely locally, and prints the cache-context (provider) and

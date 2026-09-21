@@ -278,6 +278,11 @@ enum Commands {
         /// Machine-readable output
         #[arg(long)]
         json: bool,
+        /// Set the per-store bytes-per-token calibration divisor (1.0-16.0).
+        /// Default 4.0 is a disclosed estimate; calibrate by encoding a
+        /// representative sample with the tokenizer of your choice.
+        #[arg(long)]
+        calibrate: Option<f64>,
     },
     /// Show resource usage and brain-wave state
     Stats {
@@ -2024,9 +2029,21 @@ fn run() -> anyhow::Result<()> {
                 }
             }
         }
-        Commands::Ledger { store, json } => {
+        Commands::Ledger {
+            store,
+            json,
+            calibrate,
+        } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
-            wm_mcp::ledger::run(&store_path, json)?;
+            if let Some(divisor) = calibrate {
+                wm_mcp::ledger::set_calibration(&store_path, divisor)?;
+                println!(
+                    "Savings calibration set: {divisor} bytes/token (store {}). The default remains 4.0 for uncalibrated stores.",
+                    store_path.display()
+                );
+            } else {
+                wm_mcp::ledger::run(&store_path, json)?;
+            }
         }
         Commands::Stats { store, week } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
@@ -2114,6 +2131,12 @@ fn run() -> anyhow::Result<()> {
                     }
                     Ok(rows) => print_usage_rows(&rows),
                 }
+            }
+            // Token-ledger v0: local-only savings (state-over-transcript,
+            // recall, local op mix). Full detail: `wm ledger`.
+            println!();
+            if let Err(error) = wm_mcp::ledger::run_brief(&store_path) {
+                println!("Savings ledger unavailable: {error}");
             }
         }
         Commands::Contract { json, check, out } => {

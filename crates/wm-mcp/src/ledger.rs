@@ -24,12 +24,48 @@ use serde_json::{Value, json};
 
 const LEDGER_FILE: &str = "savings_ledger.jsonl";
 const TOOL_STATS_FILE: &str = "mutable_tool_stats.json";
-/// Disclosed estimate divisor (bytes per token). Recalibrate against a real
-/// tokenizer before any external publication; see docs/TOKEN_LEDGER.md.
-const BYTES_PER_TOKEN: u64 = 4;
+const CALIBRATION_FILE: &str = "savings_calibration.json";
+/// Default estimate divisor (bytes per token) when a store has no local
+/// calibration. Disclosed in every output; calibrate with
+/// `wm ledger --calibrate <bytes_per_token>`.
+pub const DEFAULT_BYTES_PER_TOKEN: f64 = 4.0;
 
 fn lmdb_path(store_root: &Path) -> PathBuf {
     store_root.join("lmdb")
+}
+
+/// Read the per-store calibration divisor (validated 1.0–16.0; default 4.0).
+#[must_use]
+pub fn bytes_per_token(store_root: &Path) -> f64 {
+    std::fs::read_to_string(lmdb_path(store_root).join(CALIBRATION_FILE))
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .and_then(|v| v.get("bytes_per_token").and_then(Value::as_f64))
+        .filter(|v| (1.0..=16.0).contains(v))
+        .unwrap_or(DEFAULT_BYTES_PER_TOKEN)
+}
+
+/// Write the per-store calibration divisor.
+///
+/// The divisor is a local estimate setting, not a claim: encode a
+/// representative sample with the tokenizer of your choice, divide bytes by
+/// tokens, and set the result here.
+pub fn set_calibration(store_root: &Path, divisor: f64) -> Result<()> {
+    if !(1.0..=16.0).contains(&divisor) {
+        anyhow::bail!("bytes_per_token must be in 1.0..=16.0 (got {divisor})");
+    }
+    let lmdb = lmdb_path(store_root);
+    std::fs::create_dir_all(&lmdb)?;
+    let payload = json!({
+        "bytes_per_token": divisor,
+        "note": "Local tokenizer calibration divisor. The 4.0 default is a disclosed estimate; set this by encoding a representative sample with the tokenizer of your choice.",
+        "set_at": chrono::Utc::now().to_rfc3339(),
+    });
+    std::fs::write(
+        lmdb.join(CALIBRATION_FILE),
+        serde_json::to_string_pretty(&payload)?,
+    )?;
+    Ok(())
 }
 
 fn family_of(tool: &str) -> &'static str {
@@ -133,6 +169,8 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
     top_tools.truncate(5);
 
     let saved = bytes_available.saturating_sub(bytes_injected);
+    let divisor = bytes_per_token(store_root);
+    let token_equivalent = (saved as f64 / divisor).round() as u64;
     let ratio = if bytes_injected == 0 {
         Value::Null
     } else {
@@ -162,8 +200,8 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
             "bytes_injected": recall_bytes_injected,
         },
         "state_to_context_ratio": ratio,
-        "token_equivalent_saved_estimate": saved / BYTES_PER_TOKEN,
-        "bytes_per_token_divisor": BYTES_PER_TOKEN,
+        "token_equivalent_saved_estimate": token_equivalent,
+        "bytes_per_token_divisor": divisor,
         "local_ops": {
             "total": local_total,
             "by_family": families,
@@ -203,7 +241,9 @@ pub fn run(store_root: &Path, as_json: bool) -> Result<()> {
     );
     println!(
         "Token-equivalent saved (estimate, bytes/{}): {}",
-        report["bytes_per_token_divisor"].as_u64().unwrap_or(4),
+        report["bytes_per_token_divisor"]
+            .as_f64()
+            .unwrap_or(DEFAULT_BYTES_PER_TOKEN),
         report["token_equivalent_saved_estimate"]
             .as_u64()
             .unwrap_or(0)
@@ -228,6 +268,37 @@ pub fn run(store_root: &Path, as_json: bool) -> Result<()> {
         println!("  by family: {}", parts.join(" · "));
     }
     println!("{}", report["disclaimer"].as_str().unwrap_or(""));
+    Ok(())
+}
+
+/// Compact savings block for `wm stats` (no store/disclaimer boilerplate —
+/// the full report stays `wm ledger`).
+pub fn run_brief(store_root: &Path) -> Result<()> {
+    let report = aggregate(store_root)?;
+    let c = &report["continuity"];
+    let r = &report["record"];
+    let rc = &report["recall"];
+    let local = &report["local_ops"];
+    println!("=== Savings Ledger (local-only) ===");
+    println!(
+        "Records: {} calls · Continuity: {} calls ({} B available → {} B injected, ratio {}) · Recall: {} calls",
+        r["calls"].as_u64().unwrap_or(0),
+        c["calls"].as_u64().unwrap_or(0),
+        c["bytes_available"].as_u64().unwrap_or(0),
+        c["bytes_injected"].as_u64().unwrap_or(0),
+        report["state_to_context_ratio"],
+        rc["calls"].as_u64().unwrap_or(0),
+    );
+    println!(
+        "Token-equivalent saved (estimate, bytes/{}): {} · local WM ops: {}",
+        report["bytes_per_token_divisor"]
+            .as_f64()
+            .unwrap_or(DEFAULT_BYTES_PER_TOKEN),
+        report["token_equivalent_saved_estimate"]
+            .as_u64()
+            .unwrap_or(0),
+        local["total"].as_u64().unwrap_or(0),
+    );
     Ok(())
 }
 
@@ -287,5 +358,22 @@ mod tests {
         assert_eq!(report["ledger_present"], false);
         assert_eq!(report["continuity"]["calls"], 0);
         assert_eq!(report["state_to_context_ratio"], Value::Null);
+    }
+
+    #[test]
+    fn calibration_changes_the_divisor_and_estimate() {
+        let dir = tempfile::tempdir().unwrap();
+        fixture_store(dir.path());
+        assert_eq!(bytes_per_token(dir.path()), DEFAULT_BYTES_PER_TOKEN);
+
+        set_calibration(dir.path(), 3.0).unwrap();
+        assert_eq!(bytes_per_token(dir.path()), 3.0);
+        let report = aggregate(dir.path()).unwrap();
+        assert_eq!(report["bytes_per_token_divisor"], 3.0);
+        // saved = 1000 - 100 = 900; 900 / 3 = 300
+        assert_eq!(report["token_equivalent_saved_estimate"], 300);
+
+        assert!(set_calibration(dir.path(), 0.5).is_err(), "below range");
+        assert!(set_calibration(dir.path(), 20.0).is_err(), "above range");
     }
 }

@@ -70,6 +70,8 @@ def read_store(lmdb_dir: str) -> dict:
         "recall_results": 0,
         "recall_bytes_available": 0,
         "recall_bytes_injected": 0,
+        "bytes_per_token": BYTES_PER_TOKEN,
+        "token_equivalent_saved_estimate": 0,
     }
 
     stats_path = os.path.join(lmdb_dir, "mutable_tool_stats.json")
@@ -126,6 +128,19 @@ def read_store(lmdb_dir: str) -> dict:
                         out["recall_bytes_injected"] += num("bytes_injected")
         except OSError:
             pass
+
+    # Per-store calibration divisor (default 4.0 = disclosed estimate).
+    cal_path = os.path.join(lmdb_dir, "savings_calibration.json")
+    if os.path.isfile(cal_path):
+        try:
+            with open(cal_path, encoding="utf-8") as fh:
+                candidate = float(json.load(fh).get("bytes_per_token", BYTES_PER_TOKEN))
+            if 1.0 <= candidate <= 16.0:
+                out["bytes_per_token"] = candidate
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+    saved = max(0, out["bytes_available"] - out["bytes_injected"])
+    out["token_equivalent_saved_estimate"] = int(round(saved / out["bytes_per_token"]))
 
     out["ops_by_family"] = dict(out["ops_by_family"])
     return out
@@ -215,13 +230,14 @@ def build_report(stores_glob: str, opencode_db: str, with_opencode: bool) -> dic
         for fam, n in s["ops_by_family"].items():
             totals["ops_by_family"][fam] += n
     totals["ops_by_family"] = dict(totals["ops_by_family"])
-    saved = max(0, totals["bytes_available"] - totals["bytes_injected"])
     totals["state_to_context_ratio"] = (
         round(totals["bytes_available"] / totals["bytes_injected"], 2)
         if totals["bytes_injected"]
         else None
     )
-    totals["token_equivalent_saved_estimate"] = saved // BYTES_PER_TOKEN
+    totals["token_equivalent_saved_estimate"] = sum(
+        s["token_equivalent_saved_estimate"] for s in stores
+    )
 
     return {
         "generated_by": "scripts/token_ledger_report.py",
@@ -232,7 +248,8 @@ def build_report(stores_glob: str, opencode_db: str, with_opencode: bool) -> dic
         "attribution": (
             "State-over-transcript is WhiteMagic-attributable; provider/harness "
             "prompt caching is context, not a WhiteMagic saving. Token-equivalent "
-            f"is an estimate (bytes/{BYTES_PER_TOKEN}). See docs/TOKEN_LEDGER.md."
+            "is an estimate using each store's calibration divisor (default 4.0; "
+            "set with `wm ledger --calibrate`). See docs/TOKEN_LEDGER.md."
         ),
     }
 
