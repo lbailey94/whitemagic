@@ -344,6 +344,35 @@ pub const TURN_TYPES: &[&str] = &[
     "context",
 ];
 
+/// Maximum track-slug length (the `track:<slug>` tag suffix).
+pub const TRACK_MAX_LEN: usize = 64;
+
+/// Validate a track slug: the machine-addressable name of a work track.
+///
+/// Lowercase ASCII alphanumeric start, then lowercase alphanumeric or
+/// `-`, `_`, `.`, `/`; 1..=`TRACK_MAX_LEN` chars. Strict on purpose — the
+/// slug is a tag suffix, so near-duplicates (`Harness-2` vs `harness-2`)
+/// would silently split one track's log in two.
+pub(crate) fn validate_track(track: &str) -> wm_core::Result<()> {
+    let valid = !track.is_empty()
+        && track.len() <= TRACK_MAX_LEN
+        && track
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+        && track.chars().all(|c| {
+            c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '-' | '_' | '.' | '/')
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(wm_core::CoreError::InvalidArgs(format!(
+            "invalid track {track:?} — must start with a-z0-9, contain only a-z0-9, '-', '_', '.', '/', \
+             and be at most {TRACK_MAX_LEN} chars"
+        )))
+    }
+}
+
 /// `session.record` — record a conversation turn as persistent session memory.
 pub struct SessionRecordTool {
     store: Arc<MemoryStore>,
@@ -400,12 +429,13 @@ impl Tool for SessionRecordTool {
                 "importance": super::common::bounded_num_prop("0-1 importance (default 0.5)", 0.0, 1.0),
                 "session_id": super::common::str_prop("Target session (default: most recent session)"),
                 "supersedes": super::common::str_prop("Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)"),
+                "track": super::common::str_prop("Optional track slug (lowercase; a-z0-9 start, then a-z0-9-_. /) — tags this turn into that track's implementation log (session.track_log)"),
             }),
             &["content"],
         )
     }
     fn description(&self) -> &str {
-        "Record a conversation turn as persistent session memory. Args: content (required), role (user|ai, default user), turn_type (default message), importance (0-1, default 0.5), session_id (optional — defaults to the most recent session), supersedes (optional turn memory-id — marks the old turn superseded so replay/continuity/digest use the new record)."
+        "Record a conversation turn as persistent session memory. Args: content (required), role (user|ai, default user), turn_type (default message), importance (0-1, default 0.5), session_id (optional — defaults to the most recent session), supersedes (optional turn memory-id — marks the old turn superseded so replay/continuity/digest use the new record), track (optional slug — tags the turn into that track's log, read back with session.track_log)."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let role = args.get("role").and_then(Value::as_str).unwrap_or("user");
@@ -444,6 +474,13 @@ impl Tool for SessionRecordTool {
             .map_err(wm_core::CoreError::InvalidArgs)?
             .unwrap_or(0.5);
         let session_id = args.get("session_id").and_then(Value::as_str);
+        // Track membership is a machine-readable tag (`track:<slug>`), so a
+        // malformed slug is a caller error — never a silent near-duplicate
+        // track (2026-09-20 track-log design).
+        let track = args.get("track").and_then(Value::as_str);
+        if let Some(track) = track {
+            validate_track(track)?;
+        }
 
         // Resolve the session: explicit id, or the most recent session_start.
         // Resolution MUST use `created_at`, not iteration position: LMDB scan
@@ -487,20 +524,20 @@ impl Tool for SessionRecordTool {
         // rolls back counter and record together.
         let timestamp = wm_core::time::now_unix_millis();
         let (sequence, mem) = self.store.put_session_turn(&session_id, |sequence| {
-            let mut mem = Memory::new(
-                Galaxy::Sessions,
-                json!({
-                    "type": "session_turn",
-                    "session_id": session_id,
-                    "sequence": sequence,
-                    "role": role,
-                    "turn_type": turn_type,
-                    "importance": importance,
-                    "content": content,
-                    "timestamp": timestamp,
-                })
-                .to_string(),
-            );
+            let mut turn = json!({
+                "type": "session_turn",
+                "session_id": session_id,
+                "sequence": sequence,
+                "role": role,
+                "turn_type": turn_type,
+                "importance": importance,
+                "content": content,
+                "timestamp": timestamp,
+            });
+            if let Some(track) = track {
+                turn["track"] = json!(track);
+            }
+            let mut mem = Memory::new(Galaxy::Sessions, turn.to_string());
             mem.metadata.tags = vec![
                 "session".into(),
                 "turn".into(),
@@ -508,6 +545,9 @@ impl Tool for SessionRecordTool {
                 turn_type.into(),
                 format!("session:{session_id}"),
             ];
+            if let Some(track) = track {
+                mem.metadata.tags.push(format!("track:{track}"));
+            }
             // Provenance: the turn's role IS the authorship claim. An ai-role
             // turn is agent-written and must not claim user provenance — the
             // sessions-galaxy archaeology finding (2026-08-29) was that every
@@ -1796,6 +1836,248 @@ impl Tool for SessionImportTool {
     }
 }
 
+/// The `track:<slug>` tag on a memory, if present.
+fn track_of(mem: &Memory) -> Option<&str> {
+    mem.metadata
+        .tags
+        .iter()
+        .find_map(|t| t.strip_prefix("track:"))
+}
+
+/// `session.track_log` — read the per-track implementation log.
+///
+/// Tracks are the machine-readable form of the doc-level track ledger:
+/// `session.record` / `session.checkpoint` tag entries with `track:<slug>`,
+/// and this tool reads them back. With `track`/`tracks` it returns the merged
+/// chronological log plus the latest checkpoint handoff per track; with
+/// neither it returns an overview of every track (entry count, last activity,
+/// latest preview) — the orchestrator's re-read surface for directional
+/// alignment across related tracks. The alignment verdict is the reader's;
+/// this tool supplies the log and staleness facts.
+pub struct SessionTrackLogTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl SessionTrackLogTool {
+    #[must_use]
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow::read_only(vec![Resource::Galaxy("sessions".into())]),
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for SessionTrackLogTool {
+    fn name(&self) -> &str {
+        "session.track_log"
+    }
+    fn gana(&self) -> Gana {
+        Gana::StraddlingLegs
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "track": super::common::str_prop("Track slug to read (recorded via session.record/session.checkpoint 'track')"),
+                "tracks": super::common::str_array_prop("Multiple track slugs — merged chronologically (the related-ticket review view)"),
+                "since": super::common::str_prop("Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+                "until": super::common::str_prop("Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+                "limit": super::common::positive_int_prop("Max entries returned per track, most recent kept (default 100)"),
+                "include_superseded": {
+                    "type": "boolean",
+                    "description": "Include superseded turns (default false — the current story only)."
+                },
+            }),
+            &[],
+        )
+    }
+    fn description(&self) -> &str {
+        "Read the per-track implementation log — turns and checkpoints tagged with a track slug. Args: track (single) or tracks (array, merged chronologically), since/until, limit (default 100, most recent kept per track), include_superseded. With neither track nor tracks: an overview of every track (entry count, last activity, latest preview) for cross-track alignment review."
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let mut requested: Vec<String> = Vec::new();
+        if let Some(track) = args.get("track").and_then(Value::as_str) {
+            validate_track(track)?;
+            requested.push(track.to_string());
+        }
+        if let Some(tracks) = args.get("tracks").and_then(Value::as_array) {
+            for t in tracks {
+                let t = t.as_str().ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs("'tracks' entries must be strings".into())
+                })?;
+                validate_track(t)?;
+                if !requested.iter().any(|r| r == t) {
+                    requested.push(t.to_string());
+                }
+            }
+        }
+        let limit = args
+            .get("limit")
+            .and_then(Value::as_u64)
+            .unwrap_or(100)
+            .clamp(1, 1000) as usize;
+        let include_superseded = args
+            .get("include_superseded")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+
+        // Same time-bound contract as replay/continuity/digest: invalid
+        // bounds are a caller error, never silence.
+        let since = match args.get("since") {
+            Some(v) if !v.is_null() => Some(parse_time_bound(v, false).ok_or_else(|| {
+                wm_core::CoreError::InvalidArgs(
+                    "invalid 'since' — use epoch seconds, RFC 3339, or YYYY-MM-DD".into(),
+                )
+            })?),
+            _ => None,
+        };
+        let until = match args.get("until") {
+            Some(v) if !v.is_null() => Some(parse_time_bound(v, true).ok_or_else(|| {
+                wm_core::CoreError::InvalidArgs(
+                    "invalid 'until' — use epoch seconds, RFC 3339, or YYYY-MM-DD".into(),
+                )
+            })?),
+            _ => None,
+        };
+
+        type Entries = std::collections::BTreeMap<String, Vec<(DateTime<Utc>, Value)>>;
+        let mut by_track: Entries = std::collections::BTreeMap::new();
+        let mut latest_checkpoint: std::collections::BTreeMap<String, (DateTime<Utc>, Value)> =
+            std::collections::BTreeMap::new();
+
+        for mem in &self.store.scan_all(Galaxy::Sessions)? {
+            let Some(track) = track_of(mem) else { continue };
+            if !requested.is_empty() && !requested.iter().any(|r| r == track) {
+                continue;
+            }
+            if !include_superseded
+                && mem
+                    .metadata
+                    .tags
+                    .iter()
+                    .any(|t| t.starts_with("superseded-by:"))
+            {
+                continue;
+            }
+            let created_at = mem.metadata.created_at;
+            if since.is_some_and(|t| created_at < t) || until.is_some_and(|t| created_at > t) {
+                continue;
+            }
+            let entry = if let Some(turn) = turn_json(mem) {
+                Some(json!({
+                    "kind": "turn",
+                    "track": track,
+                    "session_id": turn.get("session_id"),
+                    "sequence": turn.get("sequence"),
+                    "role": turn.get("role"),
+                    "turn_type": turn.get("turn_type"),
+                    "importance": turn.get("importance"),
+                    "created_at": created_at.to_rfc3339(),
+                    "content": turn.get("content"),
+                }))
+            } else if mem.metadata.tags.contains(&"checkpoint".to_string()) {
+                serde_json::from_str::<Value>(&mem.content)
+                    .ok()
+                    .map(|parsed| {
+                        json!({
+                            "kind": "checkpoint",
+                            "track": track,
+                            "session_id": parsed.get("session_id"),
+                            "label": parsed.get("label"),
+                            "created_at": created_at.to_rfc3339(),
+                            "handoff": parsed.get("handoff"),
+                        })
+                    })
+            } else {
+                None
+            };
+            let Some(entry) = entry else { continue };
+            if entry["kind"] == "checkpoint" {
+                latest_checkpoint
+                    .entry(track.to_string())
+                    .and_modify(|(ts, existing)| {
+                        if created_at > *ts {
+                            *ts = created_at;
+                            *existing = entry.clone();
+                        }
+                    })
+                    .or_insert_with(|| (created_at, entry.clone()));
+            }
+            by_track
+                .entry(track.to_string())
+                .or_default()
+                .push((created_at, entry));
+        }
+
+        let now = Utc::now();
+        let overview = requested.is_empty();
+        let track_names: Vec<String> = if overview {
+            by_track.keys().cloned().collect()
+        } else {
+            requested
+        };
+        let mut tracks: Vec<Value> = Vec::with_capacity(track_names.len());
+        for track in track_names {
+            let mut list = by_track.remove(&track).unwrap_or_default();
+            list.sort_by_key(|(ts, _)| *ts);
+            let entry_count = list.len();
+            let last_activity = list.last().map(|(ts, _)| *ts);
+            let latest_entry = list.last().map(|(_, e)| {
+                json!({
+                    "kind": e.get("kind"),
+                    "turn_type": e.get("turn_type"),
+                    "label": e.get("label"),
+                    "preview": e
+                        .get("content")
+                        .and_then(Value::as_str)
+                        .map(|s| s.chars().take(160).collect::<String>()),
+                })
+            });
+            if list.len() > limit {
+                list.drain(0..list.len() - limit);
+            }
+            let mut out = json!({
+                "track": track,
+                "known": entry_count > 0,
+                "entry_count": entry_count,
+                "returned": list.len(),
+                "last_activity_at": last_activity.map(|t| t.to_rfc3339()),
+                "age_seconds": last_activity.map(|t| (now - t).num_seconds().max(0)),
+                "latest_checkpoint": latest_checkpoint.get(&track).map(|(ts, cp)| {
+                    json!({
+                        "created_at": ts.to_rfc3339(),
+                        "entry": cp,
+                    })
+                }),
+            });
+            if overview {
+                out["latest_entry"] = latest_entry.unwrap_or(Value::Null);
+            } else {
+                out["entries"] = Value::Array(list.into_iter().map(|(_, e)| e).collect());
+            }
+            tracks.push(out);
+        }
+
+        Ok(json!({
+            "status": "success",
+            "mode": if overview { "overview" } else { "log" },
+            "track_count": tracks.len(),
+            "tracks": tracks,
+            "disclosure": "directional alignment is the reader's judgment — this view supplies the log, the checkpoint handoff, and staleness facts (age_seconds)",
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
 pub fn register_session_ops(
     registry: &wm_dispatch::ToolRegistry,
     store: &Arc<MemoryStore>,
@@ -1807,6 +2089,7 @@ pub fn register_session_ops(
         ))
         .register(Arc::new(SessionReplayTool::new(store.clone())))
         .register(Arc::new(SessionContinuityTool::new(store.clone())))
+        .register(Arc::new(SessionTrackLogTool::new(store.clone())))
         .register(Arc::new(
             SessionHandoffTool::new(store.clone()).with_search(search.clone()),
         ))
@@ -1817,6 +2100,7 @@ pub fn register_session_ops(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::expansion::session::SessionCheckpointNodiscoveryTool;
 
     fn test_store() -> Arc<MemoryStore> {
         let dir = tempfile::tempdir().unwrap();
@@ -2789,6 +3073,255 @@ mod tests {
             .expect("user turn present");
         assert_eq!(user_mem.metadata.source, "user");
         assert!((user_mem.metadata.source_trust - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[tokio::test]
+    async fn record_rejects_invalid_track_slug() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store);
+        let mut ctx = Context::default();
+        let mut bad = vec![
+            String::new(),
+            "Track-A".to_string(),
+            "has space".to_string(),
+            "-leading".to_string(),
+        ];
+        bad.push("x".repeat(TRACK_MAX_LEN + 1));
+        for bad in &bad {
+            let err = record
+                .call(
+                    &mut ctx,
+                    json!({"content": "x", "session_id": sid, "track": bad}),
+                )
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(err.contains("invalid track"), "slug {bad:?}: {err}");
+        }
+        // Valid slugs pass: digits start, dash/dot/slash/underscore.
+        let ok = record
+            .call(
+                &mut ctx,
+                json!({"content": "x", "session_id": sid, "track": "wmv9/harness-2.1_a"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(ok["status"], "success");
+    }
+
+    #[tokio::test]
+    async fn track_log_reads_recorded_turns_per_track() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+        for (track, content) in [
+            ("harness-2", "harness: schema check landed"),
+            ("safety-a", "safety: mask gate landed"),
+            ("harness-2", "harness: manifest regen done"),
+        ] {
+            record
+                .call(
+                    &mut ctx,
+                    json!({
+                        "role": "ai",
+                        "content": content,
+                        "session_id": sid,
+                        "track": track,
+                        "turn_type": "summary",
+                    }),
+                )
+                .await
+                .unwrap();
+        }
+
+        let log = SessionTrackLogTool::new(store);
+        let v = log
+            .call(&mut ctx, json!({"track": "harness-2"}))
+            .await
+            .unwrap();
+        assert_eq!(v["mode"], "log");
+        assert_eq!(v["tracks"][0]["track"], "harness-2");
+        assert_eq!(v["tracks"][0]["entry_count"], 2);
+        assert_eq!(v["tracks"][0]["returned"], 2);
+        assert_eq!(
+            v["tracks"][0]["entries"][0]["content"],
+            "harness: schema check landed"
+        );
+        assert_eq!(
+            v["tracks"][0]["entries"][1]["content"],
+            "harness: manifest regen done"
+        );
+        assert!(v["tracks"][0]["age_seconds"].as_i64().unwrap() >= 0);
+
+        // Overview lists every track with last-activity facts, no entries.
+        let all = log.call(&mut ctx, json!({})).await.unwrap();
+        assert_eq!(all["mode"], "overview");
+        assert_eq!(all["track_count"], 2);
+        let names: Vec<&str> = all["tracks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["track"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, vec!["harness-2", "safety-a"]);
+        assert!(all["tracks"][0]["entries"].is_null());
+        assert_eq!(all["tracks"][0]["latest_entry"]["turn_type"], "summary");
+        assert!(
+            all["tracks"][0]["latest_entry"]["preview"]
+                .as_str()
+                .unwrap()
+                .contains("manifest regen")
+        );
+
+        // An unknown track is disclosed as empty, never fabricated.
+        let unknown = log
+            .call(&mut ctx, json!({"track": "never-seen"}))
+            .await
+            .unwrap();
+        assert_eq!(unknown["tracks"][0]["known"], false);
+        assert_eq!(unknown["tracks"][0]["entry_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn track_log_merges_related_tracks_and_filters_time() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+        for (track, content) in [
+            ("harness-2", "old harness note"),
+            ("safety-a", "safety note"),
+            ("harness-2", "new harness note"),
+        ] {
+            record
+                .call(
+                    &mut ctx,
+                    json!({"role": "ai", "content": content, "session_id": sid, "track": track}),
+                )
+                .await
+                .unwrap();
+        }
+        // Age the first harness turn out of the since window.
+        for mut mem in store.scan_all(Galaxy::Sessions).unwrap() {
+            if mem.content.contains("old harness note") {
+                mem.metadata.created_at = Utc::now() - chrono::Duration::days(3);
+                store.put(Galaxy::Sessions, &mem).unwrap();
+            }
+        }
+
+        let log = SessionTrackLogTool::new(store);
+        let cutoff = (Utc::now() - chrono::Duration::days(1))
+            .format("%Y-%m-%d")
+            .to_string();
+        let v = log
+            .call(
+                &mut ctx,
+                json!({"tracks": ["harness-2", "safety-a"], "since": cutoff}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["track_count"], 2);
+        let harness = &v["tracks"][0];
+        assert_eq!(harness["track"], "harness-2");
+        assert_eq!(harness["entry_count"], 1, "aged turn filtered: {v}");
+        assert_eq!(harness["entries"][0]["content"], "new harness note");
+        let safety = &v["tracks"][1];
+        assert_eq!(safety["track"], "safety-a");
+        assert_eq!(safety["entry_count"], 1);
+
+        // Bad slug in the array is a caller error, not a silent miss.
+        let err = log
+            .call(&mut ctx, json!({"tracks": ["harness-2", "Bad Slug"]}))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("invalid track"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn track_log_hides_superseded_turns_by_default() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+        let first = record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "content": "v1 estimate", "session_id": sid,
+                       "track": "bench", "turn_type": "summary"}),
+            )
+            .await
+            .unwrap();
+        record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "content": "v2 estimate", "session_id": sid,
+                       "track": "bench", "turn_type": "summary",
+                       "supersedes": first["memory_id"]}),
+            )
+            .await
+            .unwrap();
+
+        let log = SessionTrackLogTool::new(store);
+        let v = log.call(&mut ctx, json!({"track": "bench"})).await.unwrap();
+        assert_eq!(v["tracks"][0]["entry_count"], 1);
+        assert_eq!(v["tracks"][0]["entries"][0]["content"], "v2 estimate");
+        let all = log
+            .call(
+                &mut ctx,
+                json!({"track": "bench", "include_superseded": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(all["tracks"][0]["entry_count"], 2);
+    }
+
+    #[tokio::test]
+    async fn checkpoint_track_lands_in_track_log() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let checkpoint = SessionCheckpointNodiscoveryTool::new(store.clone());
+        let mut ctx = Context::default();
+        let v = checkpoint
+            .call(
+                &mut ctx,
+                json!({
+                    "session_id": sid,
+                    "track": "harness-2",
+                    "label": "slice2-done",
+                    "next_queue": ["regen manifest", "push after ceremony"],
+                    "open_flags": ["none"],
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success");
+
+        let log = SessionTrackLogTool::new(store);
+        let out = log
+            .call(&mut ctx, json!({"track": "harness-2"}))
+            .await
+            .unwrap();
+        assert_eq!(out["tracks"][0]["entry_count"], 1);
+        assert_eq!(out["tracks"][0]["entries"][0]["kind"], "checkpoint");
+        assert_eq!(
+            out["tracks"][0]["latest_checkpoint"]["entry"]["label"],
+            "slice2-done"
+        );
+        assert_eq!(
+            out["tracks"][0]["latest_checkpoint"]["entry"]["handoff"]["next_queue"][0],
+            "regen manifest"
+        );
+
+        // Invalid checkpoint track is refused before any write.
+        let err = checkpoint
+            .call(&mut ctx, json!({"session_id": sid, "track": "Bad"}))
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("invalid track"), "{err}");
     }
 
     #[tokio::test]

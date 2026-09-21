@@ -382,7 +382,7 @@ pub const DECLARED_SEAM_TOOLS: &[SeamToolDeclaration] = &[
     },
     SeamToolDeclaration {
         tool: "session.checkpoint",
-        prose_fields: &["next_queue", "open_flags", "label"],
+        prose_fields: &["next_queue", "open_flags", "label", "track"],
     },
     SeamToolDeclaration {
         tool: "system.flush",

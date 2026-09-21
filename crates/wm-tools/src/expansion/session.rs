@@ -12,6 +12,8 @@ use wm_core::{
 };
 use wm_memory::{Memory, MemoryStore};
 
+use super::session_ops::validate_track;
+
 /// Capture verifiable git state from a repository root.
 ///
 /// Returns `None` when the path is not a git repository or `git` is
@@ -194,19 +196,23 @@ fn store_checkpoint_record(
     label: &str,
     data: &Value,
     handoff: &Value,
+    track: Option<&str>,
 ) -> wm_core::Result<Value> {
-    let mut mem = Memory::new(
-        Galaxy::Sessions,
-        json!({
-            "type": "checkpoint",
-            "session_id": session_id,
-            "label": label,
-            "data": data,
-            "handoff": handoff,
-        })
-        .to_string(),
-    );
+    let mut content = json!({
+        "type": "checkpoint",
+        "session_id": session_id,
+        "label": label,
+        "data": data,
+        "handoff": handoff,
+    });
+    if let Some(track) = track {
+        content["track"] = json!(track);
+    }
+    let mut mem = Memory::new(Galaxy::Sessions, content.to_string());
     mem.metadata.tags = vec!["session".into(), "checkpoint".into()];
+    if let Some(track) = track {
+        mem.metadata.tags.push(format!("track:{track}"));
+    }
     mem.metadata.importance = 0.5;
     // Machine-captured event — claims system provenance, never user.
     mem.metadata.source = "system".to_string();
@@ -314,12 +320,13 @@ impl Tool for SessionCheckpointTool {
                 },
                 "lease_id": super::common::str_prop("Claimed scope (code.claim lease_id) that remains held at this handoff"),
                 "root": super::common::str_prop("Repository root for auto git-capture (default: WM_PROJECT_ROOT env)"),
+                "track": super::common::str_prop("Optional track slug — tags this checkpoint into that track's log (session.track_log)"),
             }),
             &[],
         )
     }
     fn description(&self) -> &str {
-        "Save a session checkpoint with a verifiable structured handoff: commit, branch, dirty count (auto-captured from git via WM_PROJECT_ROOT), tests_green, next_queue, open_flags, lease_id (a code.claim scope that stays held)."
+        "Save a session checkpoint with a verifiable structured handoff: commit, branch, dirty count (auto-captured from git via WM_PROJECT_ROOT), tests_green, next_queue, open_flags, lease_id (a code.claim scope that stays held), and an optional track slug for the per-track implementation log."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let session_id = match args.get("session_id").and_then(|v| v.as_str()) {
@@ -333,6 +340,10 @@ impl Tool for SessionCheckpointTool {
             .and_then(|v| v.as_str())
             .unwrap_or("checkpoint");
         let data = args.get("data").cloned().unwrap_or_else(|| json!({}));
+        let track = args.get("track").and_then(|v| v.as_str());
+        if let Some(track) = track {
+            validate_track(track)?;
+        }
 
         // Structured handoff (P0): explicit arguments win; git state is
         // auto-captured so the common case records truth without effort.
@@ -364,6 +375,7 @@ impl Tool for SessionCheckpointTool {
             label,
             &data,
             &handoff,
+            track,
         )
     }
     fn stats(&self) -> &ToolStats {
@@ -447,6 +459,7 @@ impl Tool for SessionCheckpointNodiscoveryTool {
                     "type": "object",
                     "description": "Legacy free-form passthrough stored beside the handoff."
                 },
+                "track": super::common::str_prop("Optional track slug — tags this checkpoint into that track's log (session.track_log)"),
             }),
             &[],
         )
@@ -466,6 +479,10 @@ impl Tool for SessionCheckpointNodiscoveryTool {
             .and_then(|v| v.as_str())
             .unwrap_or("checkpoint");
         let data = args.get("data").cloned().unwrap_or_else(|| json!({}));
+        let track = args.get("track").and_then(|v| v.as_str());
+        if let Some(track) = track {
+            validate_track(track)?;
+        }
 
         // Caller-supplied fields only — no resolve_project_root, no
         // capture_git_state, no filesystem/subprocess access of any kind.
@@ -493,6 +510,7 @@ impl Tool for SessionCheckpointNodiscoveryTool {
             label,
             &data,
             &handoff,
+            track,
         )
     }
     fn stats(&self) -> &ToolStats {
