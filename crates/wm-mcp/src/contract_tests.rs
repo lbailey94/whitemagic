@@ -321,6 +321,17 @@ fn platform_story_is_consistent_across_surfaces() {
     );
     assert!(
         installer.contains("Windows is not install-gated"),
-        "install.sh must refuse Windows explicitly (no installer yet)"
+        "install.sh must refuse Windows explicitly (preview install.ps1, not gated yet)"
+    );
+    // 2026-09-21 (9.2.3 prep): the gate flips to Linux x86-64 + arm64 with
+    // the release that ships arm64 assets; README and QUICKSTART must name it.
+    assert!(
+        readme.contains("Install path: Linux x86-64 and arm64"),
+        "README must carry the Linux x86-64 + arm64 install gate"
+    );
+    assert!(
+        quickstart.contains("**Install path**: Linux x86-64 and Linux arm64")
+            && quickstart.contains("install-gated"),
+        "QUICKSTART must carry the Linux x86-64 + arm64 install gate"
     );
 }

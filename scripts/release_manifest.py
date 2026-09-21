@@ -42,14 +42,17 @@ from pathlib import Path
 TARGETS = {
     "wm-linux-x86_64-musl": "linux-x86_64-musl",
     "wm-linux-x86_64": "linux-x86_64",
+    "wm-linux-aarch64-musl": "linux-aarch64-musl",
+    "wm-linux-aarch64": "linux-aarch64",
     "wm-macos-x86_64": "macos-x86_64",
     "wm-macos-aarch64": "macos-aarch64",
     "wm-windows-x86_64.exe": "windows-x86_64",
 }
 
-# Targets whose install path is gated (README §Install path: Linux x86-64
-# today; macOS/Windows binaries are published but not yet install-gated).
-DEFAULT_INSTALL_GATED = ["linux-x86_64"]
+# Targets whose install path is gated (README §Install path: Linux x86-64 and
+# arm64 since 9.2.3 ships arm64 with native CI smoke; macOS/Windows binaries
+# are published but not yet install-gated).
+DEFAULT_INSTALL_GATED = ["linux-x86_64", "linux-aarch64"]
 
 
 def sha256_file(path: Path) -> str:

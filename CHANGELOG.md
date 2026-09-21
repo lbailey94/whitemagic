@@ -5,6 +5,50 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Platform — Linux arm64 (aarch64) install path
+- **Linux arm64 joins the install gate, statically.** The release matrix gains
+  `wm-linux-aarch64` (gnu, glibc 2.39+) and `wm-linux-aarch64-musl` (fully
+  static, Pi-class friendly) with native arm64 CI smoke on every push; the
+  installer prefers the static build when a release provides it. The signed
+  release manifest and release health carry both targets, gates
+  `linux-aarch64` alongside `linux-x86_64`, and `wm update check` plus the
+  npm launcher resolve the static arm64 asset on Linux arm64 hosts.
+- **Gzipped distributables.** Every Linux/macOS artifact is published as
+  `.gz` + `.gz.sha256` (~58% smaller); the installer probes for the
+  compressed asset, verifies its checksum, and prefers it on slow links
+  (legacy raw path preserved). Release health requires the compressed set.
+- **Windows installer preview.** `scripts/install.ps1` mirrors the Unix
+  installer — latest-release resolve including prereleases, mandatory SHA-256
+  verification, per-user install under `%LOCALAPPDATA%\WhiteMagic\bin`,
+  user-PATH update — with a CI smoke job and a tampered-binary refusal check.
+  The documented gate stays "not install-gated" until a tagged-release
+  certification passes.
+
+### Docs — i18n quickstarts
+- **Spanish and Portuguese (BR) quickstarts** (`docs/QUICKSTART.es.md`,
+  `docs/QUICKSTART.pt-BR.md`): end-to-end mirrors of the English guide with
+  language switchers, and a platform line that matches the gate. First
+  translations under CONTRIBUTING's standing invitation.
+
+### Fixed — `wm status` stderr noise
+- **A healthy install stops looking suspicious.** One-shot `wm status` opens
+  the search index quietly, so the Backlog B2 read-only write-visibility
+  disclosure no longer leaks to stderr whenever ambient `RUST_LOG` admits
+  WARN; the long-lived read-only server keeps the loud disclosure. Regression
+  test spawns the real binary with `RUST_LOG=warn` on an indexed store.
+- **CI flake classes closed**: mid-request client resets now surface the same
+  truncation diagnostic on macOS (local_llm), and the writer-lock probe skips
+  the calling process's own stale lock so two sequential CLI runs on one
+  store no longer refuse themselves (store_busy).
+
+### Changed — one platform story
+- README, SECURITY, QUICKSTART (EN/ES/PT-BR), and the installer comments
+  now agree: install-gated Linux x86-64 + arm64; macOS installer available
+  with the hardware smoke gate pending; Windows binaries published with a
+  preview installer, not gated yet.
+
 ## [9.2.2] — 2026-09-21
 
 ### Security — Sangha migration seam closed

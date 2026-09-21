@@ -4,12 +4,13 @@
 [Português (BR)](QUICKSTART.pt-BR.md) · **Français**
 
 **Version** : consultez la version actuelle dans le [README](../README.md).
-**Plateforme** : Linux x86-64 (musl statique, sans dépendance de
-distribution) ; les builds Linux arm64 (aarch64) rejoignent la matrice de
-publication avec des tests natifs en CI et l'installateur les sélectionne
-automatiquement lorsqu'une version les fournit. Les binaires macOS et
-Windows sont publiés à chaque version, mais leurs chemins d'installation ne
-sont pas encore validés.
+**Plateforme** : Linux x86-64 et Linux arm64 (aarch64) — chemins
+d'installation validés, builds statiques musl sélectionnés automatiquement
+par l'installateur (des builds dynamiques restent disponibles pour les hôtes
+glibc 2.39+) ; les versions publient aussi des distributions compressées en
+gzip pour les liens lents. Les binaires macOS et Windows sont publiés à
+chaque version, mais leurs chemins d'installation ne sont pas encore
+validés.
 
 De zéro à une mémoire d'agent fonctionnelle en moins de cinq minutes.
 
@@ -40,8 +41,10 @@ installe `wm` dans `~/.local/bin`. Si ce dossier n'est pas dans votre `PATH` :
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Équivalent manuel : téléchargez le binaire de votre plateforme
-(`wm-linux-x86_64` ou `wm-linux-aarch64`) et son fichier `.sha256` depuis la
+Équivalent manuel : téléchargez le binaire de votre plateforme (les builds
+statiques `wm-linux-x86_64-musl` / `wm-linux-aarch64-musl`, ou les builds
+glibc 2.39+ `wm-linux-x86_64` / `wm-linux-aarch64`, avec leur variante
+`.gz`) et son fichier `.sha256` depuis la
 [page des versions](https://github.com/lbailey94/whitemagic/releases), puis :
 
 ```bash

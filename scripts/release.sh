@@ -353,6 +353,7 @@ banner "SITE SYNC"
 SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/WHITEMAGIC/whitemagic-site}"
 if $DRY_RUN; then
   echo "[dry-run] in $SITE_DIR: verify capability counts vs the released binary,"
+  echo "[dry-run]   verify the public installer copy matches scripts/install.sh,"
   echo "[dry-run]   verify guide commands/flags vs the released binary,"
   echo "[dry-run]   npm run sync-facts:refresh → check-* / tsc / build → commit + push master"
 elif [ ! -d "$SITE_DIR/.git" ]; then
@@ -373,6 +374,16 @@ else
     git fetch origin master --quiet || { echo "WARN: site fetch failed"; exit 0; }
     git pull --ff-only origin master --quiet || { echo "WARN: site pull failed"; exit 0; }
 
+    # The public installer is a manual copy of scripts/install.sh and drifted
+    # behind it once (2026-09-21 reviewer finding: no arm64 mapping, stale
+    # PATH logic). Byte-compare before syncing facts.
+    INSTALLER_OK=1
+    if ! cmp -s "$REPO_ROOT/scripts/install.sh" public/install.sh; then
+      echo "ERROR: public/install.sh is not in sync with scripts/install.sh" >&2
+      echo "  fix: cp $REPO_ROOT/scripts/install.sh public/install.sh" >&2
+      INSTALLER_OK=0
+    fi
+
     COUNTS_OK=1
     if [ -n "$RELEASED_BIN" ] && [ -x "$RELEASED_BIN" ]; then
       RUNTIME_JSON="$(mktemp)"
@@ -389,8 +400,8 @@ else
       echo "WARN: released binary unavailable — counts not verified"
       COUNTS_OK=0
     fi
-    if [ "$COUNTS_OK" = "0" ]; then
-      echo "site NOT synced: review public/api/manifest.json counts (see above), then:"
+    if [ "$COUNTS_OK" = "0" ] || [ "$INSTALLER_OK" = "0" ]; then
+      echo "site NOT synced: fix the issue(s) above, then:"
       echo "  cd $SITE_DIR && npm run sync-facts:refresh && npm run check-facts \\"
       echo "    && git add -A && git commit -m 'release(site): sync facts to v$VERSION' && git push origin master"
       exit 0

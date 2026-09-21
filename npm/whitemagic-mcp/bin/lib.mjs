@@ -56,6 +56,7 @@ export function childEnvironment(env = process.env) {
 
 export function assetFor(p = platform(), a = arch()) {
   if (p === "linux" && a === "x64") return "wm-linux-x86_64-musl";
+  if (p === "linux" && a === "arm64") return "wm-linux-aarch64-musl";
   if (p === "darwin" && a === "arm64") return "wm-macos-aarch64";
   if (p === "darwin" && a === "x64") return "wm-macos-x86_64";
   if (p === "win32" && a === "x64") return "wm-windows-x86_64.exe";

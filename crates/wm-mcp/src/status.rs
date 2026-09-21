@@ -367,7 +367,13 @@ pub fn collect(store_root: &Path) -> StatusReport {
     let mut index_skip_reserve = None;
     let mut index_detail = None;
     if index_dir.exists() {
-        match wm_memory::search::SearchEngine::open_readonly(&index_dir) {
+        // Quiet open: `wm status` is a one-shot inspection process that exits
+        // before any later write could matter, so the Backlog B2
+        // write-visibility warning is noise here (it made a healthy install
+        // look suspicious whenever RUST_LOG admitted WARN — 2026-09-21
+        // reviewer finding). The long-lived read-only server keeps the loud
+        // path in `server.rs`.
+        match wm_memory::search::SearchEngine::open_readonly_quiet(&index_dir) {
             Err(e) => {
                 index_detail = Some(format!("unopenable: {e}"));
             }

@@ -47,7 +47,7 @@ test("assetFor maps supported platforms and refuses the rest", () => {
   assert.equal(assetFor("darwin", "arm64"), "wm-macos-aarch64");
   assert.equal(assetFor("darwin", "x64"), "wm-macos-x86_64");
   assert.equal(assetFor("win32", "x64"), "wm-windows-x86_64.exe");
-  assert.equal(assetFor("linux", "arm64"), null);
+  assert.equal(assetFor("linux", "arm64"), "wm-linux-aarch64-musl");
   assert.equal(assetFor("freebsd", "x64"), null);
 });
 
@@ -231,7 +231,7 @@ test("network failure is a one-line human error", async () => {
 
 test("unsupported platform lists the source-install path", async () => {
   await assert.rejects(
-    ensureBinary({ fetchImpl: releaseFetch, cacheRoot: tempCache(), tag: TAG, p: "linux", a: "arm64", log: () => {} }),
+    ensureBinary({ fetchImpl: releaseFetch, cacheRoot: tempCache(), tag: TAG, p: "freebsd", a: "x64", log: () => {} }),
     (err) => err.message.includes("install from source"),
   );
 });

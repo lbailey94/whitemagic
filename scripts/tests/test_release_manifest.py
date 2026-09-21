@@ -26,8 +26,14 @@ class ReleaseManifestFactsTest(unittest.TestCase):
             )
             self.assertEqual(rm.workspace_crate_count(root), 2)
 
-    def test_install_gated_defaults_to_linux(self) -> None:
-        self.assertEqual(rm.DEFAULT_INSTALL_GATED, ["linux-x86_64"])
+    def test_install_gated_defaults_to_linux_arches(self) -> None:
+        self.assertEqual(
+            rm.DEFAULT_INSTALL_GATED, ["linux-x86_64", "linux-aarch64"]
+        )
+
+    def test_arm64_artifacts_map_to_manifest_targets(self) -> None:
+        self.assertEqual(rm.TARGETS["wm-linux-aarch64"], "linux-aarch64")
+        self.assertEqual(rm.TARGETS["wm-linux-aarch64-musl"], "linux-aarch64-musl")
 
     def test_load_tests_and_benchmarks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -182,6 +182,10 @@ pub fn verify_manifest(
 pub const fn current_target() -> Option<&'static str> {
     if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
         Some("linux-x86_64-musl")
+    } else if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
+        // Static musl arm64 is the preferred install (mirrors x86_64); the
+        // gnu build remains for hosts that need it.
+        Some("linux-aarch64-musl")
     } else if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
         Some("macos-x86_64")
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
@@ -477,8 +481,18 @@ mod tests {
 
     #[test]
     fn platform_target_mapping_exists_on_supported_builds() {
+        // Each arm is pinned on its own CI runner (the native arm64 job
+        // covers the Linux arm64 mapping).
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         assert_eq!(current_target(), Some("linux-x86_64-musl"));
+        #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+        assert_eq!(current_target(), Some("linux-aarch64-musl"));
+        #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+        assert_eq!(current_target(), Some("macos-x86_64"));
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        assert_eq!(current_target(), Some("macos-aarch64"));
+        #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+        assert_eq!(current_target(), Some("windows-x86_64"));
     }
 
     #[test]

@@ -43,13 +43,24 @@ UA = "wm-release-health/1.0 (+https://github.com/lbailey94/whitemagic)"
 TARGETS = [
     "wm-linux-x86_64-musl",
     "wm-linux-x86_64",
+    "wm-linux-aarch64-musl",
+    "wm-linux-aarch64",
     "wm-macos-x86_64",
     "wm-macos-aarch64",
     "wm-windows-x86_64.exe",
 ]
-REQUIRED_RELEASE_ASSETS = [
-    asset for target in TARGETS for asset in (target, f"{target}.sha256")
-] + ["release-manifest.json", "release-manifest.json.sig"]
+# Linux/macOS distributables are published gzip'd alongside the raw binary
+# (2026-09-21, slow-link accessibility); Windows is raw only.
+COMPRESSED_TARGETS = [t for t in TARGETS if t != "wm-windows-x86_64.exe"]
+REQUIRED_RELEASE_ASSETS = (
+    [
+        asset
+        for target in TARGETS
+        for asset in (target, f"{target}.sha256")
+    ]
+    + [asset for target in COMPRESSED_TARGETS for asset in (f"{target}.gz", f"{target}.gz.sha256")]
+    + ["release-manifest.json", "release-manifest.json.sig"]
+)
 NPM_PACKAGE = "whitemagic-mcp"
 DOCKER_REPO = "lbailey94/whitemagic"
 MCP_SERVER = "io.github.lbailey94/whitemagic-mcp"

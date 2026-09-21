@@ -3,11 +3,12 @@
 **Idiomas:** [English](QUICKSTART.md) · **Español** · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
 
 **Versión**: consulta la versión actual en el [README](../README.md).
-**Plataforma**: Linux x86-64 (musl estático, sin requisitos de distribución)
-y Linux arm64 (aarch64, ruta de instalación verificada con pruebas nativas en
-CI; glibc 2.39+ hasta que exista un build arm64 estático), seleccionados
-automáticamente por el instalador. Los binarios de macOS y Windows se publican
-en cada versión, pero sus rutas de instalación aún no están verificadas.
+**Plataforma**: Linux x86-64 y Linux arm64 (aarch64) — rutas de instalación
+verificadas, builds estáticos musl seleccionados automáticamente por el
+instalador (también hay builds dinámicos para hosts con glibc 2.39+); las
+versiones publican además distribuciones comprimidas en gzip para enlaces
+lentos. Los binarios de macOS y Windows se publican en cada versión, pero sus
+rutas de instalación aún no están verificadas.
 
 De cero a memoria de agente funcionando en menos de cinco minutos.
 
@@ -38,9 +39,10 @@ Descarga la última versión, verifica su checksum SHA256 e instala `wm` en
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Equivalente manual: descarga el binario de tu plataforma (`wm-linux-x86_64`,
-`wm-linux-aarch64` o el build estático `wm-linux-x86_64-musl`) y su archivo
-`.sha256` desde la
+Equivalente manual: descarga el binario de tu plataforma (los builds
+estáticos `wm-linux-x86_64-musl` / `wm-linux-aarch64-musl`, o los builds
+glibc 2.39+ `wm-linux-x86_64` / `wm-linux-aarch64`, con su variante `.gz`)
+y su archivo `.sha256` desde la
 [página de releases](https://github.com/lbailey94/whitemagic/releases), y
 luego:
 
@@ -51,7 +53,7 @@ mkdir -p ~/.local/bin && mv wm-linux-x86_64 ~/.local/bin/wm
 ```
 
 Los builds con enlace dinámico requieren glibc 2.39+ (compilados en
-Ubuntu 24.04); el build estático musl de x86-64 no requiere glibc.
+Ubuntu 24.04); los builds estáticos musl no requieren glibc.
 
 ### Desde el código fuente
 

@@ -28,7 +28,7 @@ agents. The version number is a compatibility signal; the channel is
 an evidence claim (beta and stable each require their own exit conditions,
 not a version milestone).
 
-- **Install path: Linux x86-64 and arm64** — x86-64 is a fully static (musl) build with no glibc or distribution requirements; arm64 (aarch64) is install-gated with native arm64 CI smoke coverage (glibc 2.39+ until a static arm64 build lands). The installer selects the right build automatically. macOS and Windows binaries are published in every release but are not yet install-gated.
+- **Install path: Linux x86-64 and arm64** — fully static (musl) builds with no glibc or distribution requirements, selected automatically by the installer; dynamically linked builds remain available for glibc 2.39+ hosts, and releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS and Windows binaries are published in every release but are not yet install-gated.
 - **Support window:** the current minor and the previous minor on the install-gated Linux line (x86-64 and arm64) receive fixes; older minors are archival. macOS and Windows remain published but unsupported — see [`SECURITY.md`](SECURITY.md).
 - Trusted, local-first, single-user operation with Landlock containment and firebreak guards.
 

@@ -115,3 +115,53 @@ fn status_collect_completes_on_a_live_store() {
         "probe must succeed after the server exits"
     );
 }
+
+/// 2026-09-21 reviewer finding: once a real indexed store exists, a one-shot
+/// `wm status` emitted the Backlog B2 read-only-index write-visibility warning
+/// on stderr whenever ambient `RUST_LOG` admitted WARN — a healthy install
+/// looked suspicious. The inspection process opens the index quietly now; the
+/// long-lived read-only server keeps the loud disclosure.
+#[test]
+fn status_stderr_stays_clean_when_rust_log_admits_warnings() {
+    let root = tempfile::tempdir().expect("tempdir");
+    let store = root.path().join("store");
+    let store_arg = store.to_str().expect("store path").to_string();
+
+    // Fixture: a real store with an indexed write.
+    let out = Command::new(env!("CARGO_BIN_EXE_wm"))
+        .args([
+            "session",
+            "start",
+            "--store",
+            &store_arg,
+            "--title",
+            "status stderr fixture",
+        ])
+        .output()
+        .expect("run wm session start");
+    assert!(
+        out.status.success(),
+        "fixture must initialize an indexed store: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let out = Command::new(env!("CARGO_BIN_EXE_wm"))
+        .args(["status", "--store", &store_arg])
+        .env("RUST_LOG", "warn")
+        .output()
+        .expect("run wm status");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "status must succeed: {stderr}");
+    assert!(
+        !stderr.contains("read-only search index opened"),
+        "one-shot status must not disclose read-only index write-visibility: {stderr}"
+    );
+    assert!(
+        !stderr.contains("WARN"),
+        "healthy status must not emit warning noise under RUST_LOG=warn: {stderr}"
+    );
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("ready"),
+        "status report still expected on stdout"
+    );
+}
