@@ -213,6 +213,9 @@ enum Commands {
         action: UpdateAction,
     },
     /// Diagnose system issues
+    ///
+    /// With `--report`, writes the sanitized local support bundle instead of
+    /// diagnosing (alias for `wm report`; read-only, nothing transmitted).
     Doctor {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
         #[arg(long)]
@@ -236,6 +239,10 @@ enum Commands {
         /// the supported product surface only (first-run feedback, 2026-09-13).
         #[arg(long)]
         deep: bool,
+        /// Write the sanitized support bundle instead of diagnosing
+        /// (alias for `wm report`; same read-only, nothing-transmitted contract)
+        #[arg(long)]
+        report: bool,
     },
     /// Analyze git history and mine codebase patterns with longevity scores (read-only)
     #[command(hide = true)]
@@ -1082,6 +1089,35 @@ fn lab_commands() -> Vec<(String, String)> {
         .collect()
 }
 
+/// Write the sanitized support bundle (`wm report`), shared with the
+/// `wm doctor --report` alias. Read-only; nothing is transmitted.
+fn write_support_bundle(
+    store_path: &std::path::Path,
+    out: Option<PathBuf>,
+    json: bool,
+) -> anyhow::Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+    if json {
+        let report = rt.block_on(wm_mcp::report::build(store_path));
+        println!("{}", serde_json::to_string_pretty(&report)?);
+    } else {
+        let out_dir = out.unwrap_or_else(|| {
+            PathBuf::from(format!(
+                "wm-report-{}",
+                chrono::Utc::now().format("%Y-%m-%d")
+            ))
+        });
+        let path = rt.block_on(wm_mcp::report::write_bundle(store_path, &out_dir))?;
+        println!("Sanitized support bundle written to {}", path.display());
+        println!(
+            "  report.json  — version, platform, store health, index drift, selftest, env allowlist"
+        );
+        println!("  README.txt   — what is included and what is excluded");
+        println!("Nothing was transmitted; review the bundle before sharing it.");
+    }
+    Ok(())
+}
+
 /// `wm help --all` — the default help plus the hidden lab/advanced surface.
 ///
 /// The existence of complexity does not mean complexity needs to be
@@ -1874,7 +1910,17 @@ fn run() -> anyhow::Result<()> {
             network,
             kaizen,
             deep,
+            report,
         } => {
+            // `wm doctor --report` is the documented alias for `wm report`.
+            if report {
+                write_support_bundle(
+                    &store.unwrap_or_else(|| wm_config.store_path()),
+                    None,
+                    false,
+                )?;
+                return Ok(());
+            }
             // Posture-by-observation is store-independent: `--network` runs
             // the socket audit alone and never opens the LMDB env.
             let issues = if network {
@@ -2072,26 +2118,7 @@ fn run() -> anyhow::Result<()> {
             }
         }
         Commands::Report { store, out, json } => {
-            let store_path = store.unwrap_or_else(|| wm_config.store_path());
-            let rt = tokio::runtime::Runtime::new()?;
-            if json {
-                let report = rt.block_on(wm_mcp::report::build(&store_path));
-                println!("{}", serde_json::to_string_pretty(&report)?);
-            } else {
-                let out_dir = out.unwrap_or_else(|| {
-                    PathBuf::from(format!(
-                        "wm-report-{}",
-                        chrono::Utc::now().format("%Y-%m-%d")
-                    ))
-                });
-                let path = rt.block_on(wm_mcp::report::write_bundle(&store_path, &out_dir))?;
-                println!("Sanitized support bundle written to {}", path.display());
-                println!(
-                    "  report.json  — version, platform, store health, index drift, selftest, env allowlist"
-                );
-                println!("  README.txt   — what is included and what is excluded");
-                println!("Nothing was transmitted; review the bundle before sharing it.");
-            }
+            write_support_bundle(&store.unwrap_or_else(|| wm_config.store_path()), out, json)?;
         }
         Commands::Telemetry { command } => match command {
             TelemetryCommands::Schema { json } => {
