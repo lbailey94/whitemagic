@@ -32,12 +32,12 @@ jobs:
 
   # Ported concept from the v26 archives (og_whitemagic
   # .github/workflows/security-ci.yml: STRATA checkers + dependency audits).
-  # The Rust-side equivalents: clippy (lint gate in ci.yml) + cargo-deny
-  # style dependency auditing rides here until a dedicated deny job lands.
+  # Rust-side equivalent: clippy (lint gate in ci.yml) + this hard cargo-deny
+  # gate. Policy lives in the root deny.toml; every ignore there carries its
+  # rationale and is re-reviewed when the advisory DB moves.
   cargo-deny:
     name: dependency audit (cargo-deny)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
-        continue-on-error: true # advisory until a deny.toml lands
