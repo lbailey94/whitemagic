@@ -26,6 +26,9 @@ the store.
 | `record.bytes_stored` | Turn content bytes written into the local store. |
 | `continuity.bytes_available` | Stored bytes the bounded continuity envelope stands in for. |
 | `continuity.bytes_injected` | Bytes the envelope actually placed into the caller's context. |
+| `recall.bytes_available` | Full stored content of the results a recall returned. |
+| `recall.bytes_injected` | Navigation text actually returned by the recall (scrubbed/bounded). |
+| `recall.results` | Result count for the call. |
 | `state_to_context_ratio` | `bytes_available / bytes_injected` — the WhiteMagic-attributable compression. |
 | `token_equivalent_saved_estimate` | `(bytes_available - bytes_injected) / 4`. **Estimate**; the divisor is disclosed in the output and must be recalibrated against a real tokenizer before any external publication. |
 | `local_ops` | Dispatch calls by tool family. Every WhiteMagic operation is local compute (LMDB + Tantivy + episodic); none is a model call. |
@@ -57,15 +60,14 @@ the store.
 
 ## Status and next steps
 
-- **v0 (this slice):** record/continuity rows + `wm ledger` aggregation.
+- **v0 (this slice):** record/continuity/recall rows + `wm ledger` aggregation.
 - **Backfill report:** `python3 scripts/token_ledger_report.py [--json]` scans every
   project store's dispatch counters and ledger plus the opencode session DB — entirely
   locally — and prints the cache-context and state-over-transcript picture. First run
   (2026-09-21): 8 stores · 246,122 local WM ops · 1,242 opencode sessions with a 97.59%
   cache-served share (context, not attribution) · ledger rows begin at the next
   record/continuity.
-- **Next:** dashboard panel; recall-tool rows (`memory.search` / `memory.hybrid_recall`);
-  tokenizer calibration.
+- **Next:** dashboard panel; tokenizer calibration.
 - **Then:** T1 with/without delta; the tokens-only public artifact.
 
 Heritage: Gen1 shipped `consciousness.token_economy` / `consciousness.token_report`;

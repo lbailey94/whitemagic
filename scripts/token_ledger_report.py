@@ -66,6 +66,10 @@ def read_store(lmdb_dir: str) -> dict:
         "turns_available": 0,
         "turns_returned": 0,
         "turns_omitted": 0,
+        "recall_calls": 0,
+        "recall_results": 0,
+        "recall_bytes_available": 0,
+        "recall_bytes_injected": 0,
     }
 
     stats_path = os.path.join(lmdb_dir, "mutable_tool_stats.json")
@@ -115,6 +119,11 @@ def read_store(lmdb_dir: str) -> dict:
                         out["turns_available"] += num("turns_available")
                         out["turns_returned"] += num("turns_returned")
                         out["turns_omitted"] += num("turns_omitted")
+                    elif op == "recall":
+                        out["recall_calls"] += 1
+                        out["recall_results"] += num("results")
+                        out["recall_bytes_available"] += num("bytes_available")
+                        out["recall_bytes_injected"] += num("bytes_injected")
         except OSError:
             pass
 
@@ -197,6 +206,10 @@ def build_report(stores_glob: str, opencode_db: str, with_opencode: bool) -> dic
         "turns_available": sum(s["turns_available"] for s in stores),
         "turns_returned": sum(s["turns_returned"] for s in stores),
         "turns_omitted": sum(s["turns_omitted"] for s in stores),
+        "recall_calls": sum(s["recall_calls"] for s in stores),
+        "recall_results": sum(s["recall_results"] for s in stores),
+        "recall_bytes_available": sum(s["recall_bytes_available"] for s in stores),
+        "recall_bytes_injected": sum(s["recall_bytes_injected"] for s in stores),
     }
     for s in stores:
         for fam, n in s["ops_by_family"].items():
@@ -243,6 +256,12 @@ def print_report(report: dict) -> None:
         )
     else:
         print("  state-over-transcript: no ledger rows yet (fills as sessions record and resume)")
+    if t["recall_calls"]:
+        print(
+            f"  recall: {t['recall_calls']:,} calls · {t['recall_results']:,} results · "
+            f"{t['recall_bytes_available']:,} B available → "
+            f"{t['recall_bytes_injected']:,} B injected"
+        )
 
     oc = report["opencode"]
     if oc:

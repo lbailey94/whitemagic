@@ -1763,6 +1763,34 @@ impl Tool for MemoryHybridRecallTool {
             None
         };
         let evidence_bundle = build_evidence_bundle(&self.store, &results);
+        // Token-ledger v0 (2026-09-21): recall rows — what the store held vs
+        // what actually entered context. Local-only diagnostic; attribution
+        // rules in docs/TOKEN_LEDGER.md (cache is context, memory is
+        // attribution).
+        let bytes_injected: usize = results
+            .iter()
+            .filter_map(|r| r.get("content").and_then(serde_json::Value::as_str))
+            .map(str::len)
+            .sum();
+        let bytes_available: usize = results
+            .iter()
+            .filter_map(|r| r.get("id").and_then(serde_json::Value::as_str))
+            .filter_map(|id| uuid::Uuid::parse_str(id).ok())
+            .filter_map(|id| resolve_memory_across_galaxies(&self.store, id))
+            .map(|(_, mem)| mem.content.len())
+            .sum();
+        super::common::append_savings_row(
+            &self.store,
+            &json!({
+                "ts_ms": wm_core::time::now_unix_millis(),
+                "op": "recall",
+                "tool": self.route_name,
+                "recall_mode": recall_mode,
+                "results": results.len(),
+                "bytes_available": bytes_available,
+                "bytes_injected": bytes_injected,
+            }),
+        );
         let hint = if results.is_empty() && !query.is_empty() {
             Some(if galaxy_explicit {
                 empty_result_hint(&self.store, galaxy)

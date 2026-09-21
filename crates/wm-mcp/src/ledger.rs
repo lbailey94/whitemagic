@@ -60,6 +60,10 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
     let mut turns_available = 0u64;
     let mut turns_returned = 0u64;
     let mut turns_omitted = 0u64;
+    let mut recall_calls = 0u64;
+    let mut recall_results = 0u64;
+    let mut recall_bytes_available = 0u64;
+    let mut recall_bytes_injected = 0u64;
     let mut malformed = 0u64;
 
     let ledger_present = ledger_path.exists();
@@ -82,6 +86,12 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
                     turns_available += u("turns_available");
                     turns_returned += u("turns_returned");
                     turns_omitted += u("turns_omitted");
+                }
+                Some("recall") => {
+                    recall_calls += 1;
+                    recall_results += u("results");
+                    recall_bytes_available += u("bytes_available");
+                    recall_bytes_injected += u("bytes_injected");
                 }
                 _ => {}
             }
@@ -145,6 +155,12 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
             "turns_returned": turns_returned,
             "turns_omitted": turns_omitted,
         },
+        "recall": {
+            "calls": recall_calls,
+            "results": recall_results,
+            "bytes_available": recall_bytes_available,
+            "bytes_injected": recall_bytes_injected,
+        },
         "state_to_context_ratio": ratio,
         "token_equivalent_saved_estimate": saved / BYTES_PER_TOKEN,
         "bytes_per_token_divisor": BYTES_PER_TOKEN,
@@ -192,6 +208,14 @@ pub fn run(store_root: &Path, as_json: bool) -> Result<()> {
             .as_u64()
             .unwrap_or(0)
     );
+    let rc = &report["recall"];
+    println!(
+        "Recall: {} calls · {} results · {} bytes available → {} bytes injected",
+        rc["calls"].as_u64().unwrap_or(0),
+        rc["results"].as_u64().unwrap_or(0),
+        rc["bytes_available"].as_u64().unwrap_or(0),
+        rc["bytes_injected"].as_u64().unwrap_or(0)
+    );
     println!(
         "Local WM ops (100% local compute): {} total",
         local["total"].as_u64().unwrap_or(0)
@@ -219,6 +243,7 @@ mod tests {
             concat!(
                 "{\"op\":\"record\",\"bytes_stored\":1000,\"ts_ms\":1}\n",
                 "{\"op\":\"continuity\",\"bytes_available\":1000,\"bytes_injected\":100,\"turns_available\":5,\"turns_returned\":3,\"turns_omitted\":2,\"ts_ms\":2}\n",
+                "{\"op\":\"recall\",\"results\":2,\"bytes_available\":800,\"bytes_injected\":200,\"ts_ms\":3}\n",
                 "not json\n"
             ),
         )
@@ -240,6 +265,10 @@ mod tests {
         assert_eq!(report["record"]["bytes_stored"], 1000);
         assert_eq!(report["continuity"]["bytes_available"], 1000);
         assert_eq!(report["continuity"]["bytes_injected"], 100);
+        assert_eq!(report["recall"]["calls"], 1);
+        assert_eq!(report["recall"]["results"], 2);
+        assert_eq!(report["recall"]["bytes_available"], 800);
+        assert_eq!(report["recall"]["bytes_injected"], 200);
         assert_eq!(report["state_to_context_ratio"], 10.0);
         assert_eq!(report["token_equivalent_saved_estimate"], 225);
         assert_eq!(report["malformed_rows"], 1);

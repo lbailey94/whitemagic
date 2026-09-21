@@ -23,11 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fresh store for byte-level absence on disk (documented on the command).
 
 ### Token ledger — local state-over-transcript measurement
-- **`wm ledger` reports what stays out of model context.** `session.record`
-  and `session.continuity` now append one local JSON row each to
+- **`wm ledger` reports what stays out of model context.** `session.record`,
+  `session.continuity`, and the recall route (`memory.search` /
+  `memory.hybrid_recall`) now append one local JSON row each to
   `<store>/lmdb/savings_ledger.jsonl` (bytes stored vs bytes injected by the
-  bounded envelope); `wm ledger [--json]` aggregates those rows plus the
-  dispatch counters into a local-only report. The ledger is evidence, not a
+  bounded envelope/navigation); `wm ledger [--json]` aggregates those rows plus
+  the dispatch counters into a local-only report. The ledger is evidence, not a
   gate (append failures are logged, never fatal) and never leaves the store.
   Attribution rules and metric definitions ship in `docs/TOKEN_LEDGER.md`:
   provider/harness prompt caching is context, not a WhiteMagic saving, and the
