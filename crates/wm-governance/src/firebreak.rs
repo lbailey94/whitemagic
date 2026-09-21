@@ -262,50 +262,144 @@ pub const SCOPE_REGISTRY: &[(&str, ScopeRule)] = &[
     ),
 ];
 
-/// Per-tool prose fields exempt from the command veto.
+/// One on-seam tool's command-veto field declaration (9.2.2 slice 2).
 ///
-/// The veto exists to stop dangerous *operations* from executing; args that
-/// are only stored must not require confirm. `session.checkpoint` truthfully
-/// declares `spawns: true` (fixed `git` capture, no shell), which puts it on
-/// the seam — but its handoff fields are prose, and scanning them blocked a
-/// legitimate checkpoint on the arrow in "100 writers -> 100 unique
-/// sequences" (2026-09-20 review). Exemptions are field-scoped, so a
-/// command-shaped value in any other field still requires confirm.
-const VETO_EXEMPT_FIELDS: &[(&str, &[&str])] =
-    &[("session.checkpoint", &["next_queue", "open_flags", "label"])];
+/// The veto scans **every string field** of a seam dispatch by default
+/// (fail-closed: a newly added argument is scanned until explicitly
+/// classified). `prose_fields` names the fields whose values are stored-only
+/// prose — never executed, never a command — and are therefore exempt from the
+/// forbidden-command veto. Every other field is command-bearing by
+/// construction: the classification is derived (schema properties minus
+/// `prose_fields`), so a new command-bearing field cannot ship unclassified —
+/// it is scanned on arrival.
+///
+/// `session.checkpoint` truthfully declares `spawns: true` (fixed `git`
+/// capture, no shell), which puts it on the seam — but its handoff fields are
+/// prose, and scanning them blocked a legitimate checkpoint on the arrow in
+/// "100 writers -> 100 unique sequences" (2026-09-20 review). Exemptions are
+/// field-scoped: a command-shaped value in any other field still requires
+/// confirm.
+#[derive(Debug, Clone, Copy)]
+pub struct SeamToolDeclaration {
+    /// Registered tool name.
+    pub tool: &'static str,
+    /// Fields whose values are stored-only prose — exempt from the veto.
+    /// Empty means the whole argument surface is command-bearing.
+    pub prose_fields: &'static [&'static str],
+}
+
+impl SeamToolDeclaration {
+    /// The declared prose fields for `tool`, or none for an undeclared tool
+    /// (fail-closed: everything scans).
+    #[must_use]
+    pub fn prose_fields_for(tool: &str) -> &'static [&'static str] {
+        DECLARED_SEAM_TOOLS
+            .iter()
+            .find(|decl| decl.tool == tool)
+            .map_or(&[], |decl| decl.prose_fields)
+    }
+}
 
 /// Every registered tool that sits on the irreversible seam
-/// ([`Firebreak::is_on_seam`]) must be declared here.
+/// ([`Firebreak::is_on_seam`]) declares its field classification here.
 ///
 /// Completeness is enforced by `crates/wm-mcp/tests/contract_harness.rs`:
-/// adding an on-seam tool without declaring it fails CI, and a declaration
-/// that no longer names a live seam tool fails too. Slice 1 declares names;
-/// command-bearing field declarations (the `VETO_EXEMPT_FIELDS`
-/// generalization) are the next iteration.
-pub const DECLARED_SEAM_TOOLS: &[&str] = &[
-    "bagua.dispatch",
-    "bounty.evidence.package",
-    "bounty.import",
-    "bus.emit",
-    "captain.deploy",
-    "galaxy.cold_rotate",
-    "galaxy.purge",
-    "galaxy.restore",
-    "galaxy.transfer",
-    "karma.clear",
-    "memory.batch_delete",
-    "memory.consolidate",
-    "memory.deduplicate",
-    "memory.delete",
-    "memory.recall_feedback",
-    "oss.bounty.scan",
-    "oss.bounty.status",
-    "sangha.locks",
-    "session.checkpoint",
-    "system.flush",
-    "telemetry.prune",
-    "transaction.rollback",
-    "whitemagic",
+/// adding an on-seam tool without declaring it fails CI, a declaration that no
+/// longer names a live seam tool fails too, and a declared field that is not a
+/// property of the tool's input schema fails (stale/typo guard).
+pub const DECLARED_SEAM_TOOLS: &[SeamToolDeclaration] = &[
+    SeamToolDeclaration {
+        tool: "bagua.dispatch",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "bounty.evidence.package",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "bounty.import",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "bus.emit",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "captain.deploy",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "galaxy.cold_rotate",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "galaxy.purge",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "galaxy.restore",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "galaxy.transfer",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "karma.clear",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "memory.batch_delete",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "memory.consolidate",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "memory.deduplicate",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "memory.delete",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "memory.recall_feedback",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "oss.bounty.scan",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "oss.bounty.status",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "sangha.locks",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "session.checkpoint",
+        prose_fields: &["next_queue", "open_flags", "label"],
+    },
+    SeamToolDeclaration {
+        tool: "system.flush",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "telemetry.prune",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "transaction.rollback",
+        prose_fields: &[],
+    },
+    SeamToolDeclaration {
+        tool: "whitemagic",
+        prose_fields: &[],
+    },
 ];
 
 /// Common scope field names, checked when a destructive tool is not in the
@@ -443,10 +537,7 @@ impl Firebreak {
     }
 
     fn scan(&self, tool: &str, args: &Value) -> Vec<VetoFinding> {
-        let exempt = VETO_EXEMPT_FIELDS
-            .iter()
-            .find(|(name, _)| *name == tool)
-            .map_or(&[][..], |(_, fields)| *fields);
+        let exempt = SeamToolDeclaration::prose_fields_for(tool);
         let mut strings = Vec::new();
         if let Value::Object(map) = args {
             for (key, value) in map {

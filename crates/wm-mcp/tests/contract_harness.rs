@@ -209,7 +209,12 @@ fn lifecycle_schemas_cohere_with_registry() {
 #[test]
 fn every_on_seam_tool_is_declared() {
     let (_tmp, server) = registry_for_test();
-    let declared: BTreeSet<&str> = DECLARED_SEAM_TOOLS.iter().copied().collect();
+    let declared: BTreeSet<&str> = DECLARED_SEAM_TOOLS.iter().map(|d| d.tool).collect();
+    assert_eq!(
+        DECLARED_SEAM_TOOLS.len(),
+        declared.len(),
+        "DECLARED_SEAM_TOOLS contains duplicate tool entries"
+    );
 
     let mut undeclared: Vec<String> = Vec::new();
     let mut live: BTreeSet<String> = BTreeSet::new();
@@ -237,5 +242,148 @@ fn every_on_seam_tool_is_declared() {
     assert!(
         stale.is_empty(),
         "DECLARED_SEAM_TOOLS names non-seam or absent tools: {stale:?}"
+    );
+}
+
+/// D. Declared prose fields are real input-schema properties (stale/typo
+/// guard). Everything not declared prose is command-bearing by construction,
+/// so an exemption that no longer exists in the schema is declaration drift.
+#[test]
+fn declared_seam_fields_exist_in_tool_schemas() {
+    let (_tmp, server) = registry_for_test();
+    let mut checked = 0usize;
+    let mut failures: Vec<String> = Vec::new();
+
+    for decl in DECLARED_SEAM_TOOLS {
+        if decl.prose_fields.is_empty() {
+            continue;
+        }
+        let Some(tool) = server.registry().get(decl.tool) else {
+            failures.push(format!("{}: declared but not registered", decl.tool));
+            continue;
+        };
+        let schema = tool.input_schema();
+        let props = schema.get("properties").and_then(|v| v.as_object());
+        for field in decl.prose_fields {
+            checked += 1;
+            if !props.is_some_and(|p| p.contains_key(*field)) {
+                failures.push(format!(
+                    "{}: prose field '{field}' is not an input-schema property",
+                    decl.tool
+                ));
+            }
+        }
+    }
+
+    assert!(
+        checked >= 1,
+        "expected at least one declared prose field to check; found none"
+    );
+    assert!(
+        failures.is_empty(),
+        "seam field declaration drift ({}):\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
+/// E. Declared bounds, enums, and required-lists are internally coherent
+/// (the schema-only half of "one input contract per tool"; parser-agreement
+/// at boundary values remains the next iteration).
+#[test]
+fn declared_schema_bounds_and_enums_are_coherent() {
+    let (_tmp, server) = registry_for_test();
+    let mut checked = 0usize;
+    let mut failures: Vec<String> = Vec::new();
+
+    for tool in server.registry().all_ref() {
+        let Some(schema) = declared_schema(tool) else {
+            continue;
+        };
+        let name = tool.name();
+        let Some(props) = schema.get("properties").and_then(|v| v.as_object()) else {
+            continue;
+        };
+        for (prop, spec) in props {
+            let type_name = spec.get("type").and_then(|v| v.as_str());
+            let min = spec.get("minimum").and_then(serde_json::Value::as_f64);
+            let max = spec.get("maximum").and_then(serde_json::Value::as_f64);
+
+            if let Some(lo) = min {
+                checked += 1;
+                if !lo.is_finite() {
+                    failures.push(format!("{name}.{prop}: minimum is not finite"));
+                }
+            }
+            if let Some(hi) = max {
+                checked += 1;
+                if !hi.is_finite() {
+                    failures.push(format!("{name}.{prop}: maximum is not finite"));
+                }
+            }
+            if let (Some(lo), Some(hi)) = (min, max) {
+                if lo > hi {
+                    failures.push(format!("{name}.{prop}: minimum {lo} > maximum {hi}"));
+                }
+            }
+            if type_name == Some("integer") {
+                if let Some(lo) = min {
+                    if lo.fract() != 0.0 {
+                        failures.push(format!("{name}.{prop}: integer minimum {lo} is fractional"));
+                    }
+                }
+                if let Some(hi) = max {
+                    if hi.fract() != 0.0 {
+                        failures.push(format!("{name}.{prop}: integer maximum {hi} is fractional"));
+                    }
+                }
+            }
+
+            if let Some(values) = spec.get("enum").and_then(|v| v.as_array()) {
+                checked += 1;
+                if values.is_empty() {
+                    failures.push(format!("{name}.{prop}: empty enum"));
+                }
+                let mut seen = BTreeSet::new();
+                for value in values {
+                    if !seen.insert(value.to_string()) {
+                        failures.push(format!("{name}.{prop}: duplicate enum value {value}"));
+                    }
+                    let type_matches = match type_name {
+                        Some("string") => value.is_string(),
+                        Some("number" | "integer") => value.is_number(),
+                        Some("boolean") => value.is_boolean(),
+                        _ => true,
+                    };
+                    if !type_matches {
+                        failures.push(format!(
+                            "{name}.{prop}: enum value {value} does not match type {type_name:?}"
+                        ));
+                    }
+                }
+            }
+        }
+
+        if let Some(required) = schema.get("required").and_then(|v| v.as_array()) {
+            let mut seen = BTreeSet::new();
+            for entry in required {
+                if let Some(field) = entry.as_str() {
+                    if !seen.insert(field) {
+                        failures.push(format!("{name}: duplicate required field '{field}'"));
+                    }
+                }
+            }
+        }
+    }
+
+    assert!(
+        checked >= 5,
+        "expected bound/enum declarations to check; found only {checked}"
+    );
+    assert!(
+        failures.is_empty(),
+        "schema bound/enum incoherence ({}):\n{}",
+        failures.len(),
+        failures.join("\n")
     );
 }
