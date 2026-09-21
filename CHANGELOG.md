@@ -5,6 +5,86 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.2] — 2026-09-21
+
+### Security — Sangha migration seam closed
+- **Pre-9.1.8 mesh identities no longer accepted.** The one-release
+  dual-verify seam promised at 9.1.8 is removed: `accepts_identity` is
+  derived-only (the XOR-fold arm is gone), and beacon ingest requires the
+  canonical signature — `verify_signature_all_eras` and the legacy payload
+  window are deleted. Pre-9.1.8 peers must upgrade and re-join
+  (`docs/MESH_JOIN_PROTOCOL.md` migration section updated; regression tests
+  pin both removals). Closes the impersonation window found in the
+  2026-09-20 sweep.
+
+### Safety — reflex actuation boundary (9.2.2 slice A)
+- **Actuation is default-deny.** The reflex tier now consults a safety mask:
+  `actuator.command`, `reflex.evaluate`, and the autonomous Sensorimotor
+  cycle refuse to send commands without the `ActuatorControl` bit, and a
+  missing handler table is fail-closed. Production wires `SAFETY_DEFAULT`
+  (`WM_SAFETY_MASK` accepts decimal/`0x` hex; invalid values fall back
+  loudly). **E-stop is unconditional** — no mask may refuse it.
+- **Stale readings cannot actuate.** Reflex rules refuse readings older than
+  5 s (and future-dated timestamps), so a cached snapshot cannot drive a
+  command.
+
+### Coordination — lease ledger fails closed
+- **A damaged `wm-leases.json` is no longer read as "no leases held".**
+  Mutations refuse to overwrite an unreadable ledger (the error names the
+  deliberate escape: delete the file to start empty); `code.check` reports
+  `unavailable` instead of a false `free`, and `code.list` reports
+  `unavailable` instead of an empty list. An absent file is still an empty
+  ledger, and recovery after a deliberate delete is covered by regression.
+
+### Session and store integrity (H1/H2/H3)
+- **Atomic turn sequences (H1).** `session.record` supersede ordering is
+  now commit-new-then-mark-old, so a crash between the two leaves a
+  contradiction (both turns visible) rather than a superseded turn with no
+  replacement.
+- **Index-safe terms (H2).** The episodic sidecar only admits postings that
+  the index can actually serve; raw records stay canonical, and `wm reindex`
+  rebuilds Tantivy and the episodic sidecar together.
+- **DEGRADED grading (H3).** `wm doctor` diagnoses the derived episodic
+  sidecar (section 11j) and grades it `DEGRADED` + exit 1 when the canonical
+  store is intact but the derived index is incomplete — it no longer
+  auto-heals before grading. `wm reindex` is the repair.
+
+### Session tracks
+- **Track-tagged implementation logs.** `session.record`,
+  `session.checkpoint`, and `session.checkpoint_nodiscovery` accept an
+  optional `track` slug (validated, never normalized) stored as the
+  `track:<slug>` tag; `session.track_log` reads one track, several merged,
+  or an all-track overview (entry count, last activity, age, latest
+  preview, latest checkpoint handoff). Superseded turns are hidden by
+  default. Contract: `docs/TRACK_LOG.md`.
+
+### CLI
+- **`wm doctor --report`** writes the same sanitized, nothing-transmitted
+  support bundle as `wm report` (shared `write_support_bundle()`; `wm
+  report` behavior unchanged).
+
+### Contract harness (9.2.2 slices)
+- **Slice 1** — schema coherence + seam declarations: input-schema
+  well-formedness for every declared schema, tools/list lifecycle schemas vs
+  the registry contract, and seam declaration completeness both ways. Caught
+  and fixed 5 schema defects; 23 on-seam tools declared.
+- **Slice 2** — per-field seam declarations (`prose_fields`) with a
+  fail-closed default (undeclared fields scan) plus harness check D: every
+  declared prose field must exist in the tool's input schema.
+- **Gen2 invariants suite** — canonical content survives a wiped derived
+  index (health visibly degraded), partial batch writes disclose per-item
+  skips, deletion leaves a karma-chain entry, and supersession preserves
+  the prior hash with a verifiable chain.
+
+### Vocabulary — grimoire says "memory layer"
+- **`wm grimoire` step renamed:** the `substrate` step is now
+  `memory-layer` (human output width adjusted; the step list in README,
+  QUICKSTART, MCP instructions, and the curated smoke test follow).
+- **JSON field rename:** `substrate_ready` → `memory_layer_ready`. This is a
+  deliberate breaking rename of one alpha JSON field (no alias retained —
+  the old word is the thing being retired); `core_ready`/`fully_activated`
+  semantics are unchanged.
+
 ## [9.2.1] — 2026-09-20
 
 ### Security — Q39 slice A review fixes
