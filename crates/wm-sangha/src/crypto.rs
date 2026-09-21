@@ -43,30 +43,29 @@ impl MeshKeyPair {
     /// `root` is the canonical root bytes ([`wm_core::kdf::root_bytes`] —
     /// 64-hex material decoded, other material raw); the attestation subkey
     /// derives from the same root. This is the key the node advertises; use
-    /// [`Self::from_seed`] only for the one-release dual-verify migration and
-    /// legacy fixtures.
+    /// [`Self::from_seed`] only for deterministic test/fixture keypairs.
     #[must_use]
     pub fn derive_identity(root: &[u8]) -> Self {
         Self::from_secret(hkdf32(root, MESH_IDENTITY_INFO))
     }
 
-    /// True when `pubkey_hex` is a valid identity for this root in either era.
+    /// True when `pubkey_hex` is this root's canonical (9.1.8+) identity.
     ///
-    /// Covers both the HKDF-derived key and the legacy XOR-fold key — the
-    /// one-release migration seam. Drop the legacy arm after the migration
-    /// release (S9 §2.1).
+    /// The pre-9.1.8 XOR-fold acceptance arm was **removed in 9.2.2**
+    /// (S9 §2.1): a legacy-derived key is no longer a valid identity for any
+    /// root, so the one-release migration window is closed.
     #[must_use]
     pub fn accepts_identity(pubkey_hex: &str, root: &[u8]) -> bool {
         pubkey_hex == Self::derive_identity(root).public_key_hex()
-            || pubkey_hex == Self::from_seed(root).public_key_hex()
     }
 
-    /// Generate a fresh keypair from a 32-byte seed (deterministic for
-    /// reproducible tests; production should derive from a secret).
+    /// Deterministic keypair for tests and fixtures (seed bytes XOR-folded
+    /// into 32 bytes).
     ///
-    /// **Legacy derivation (pre-9.1.8):** raw seed bytes XOR-folded into 32
-    /// bytes — kept for the dual-verify migration and historical fixtures;
-    /// new code derives with [`Self::derive_identity`].
+    /// This is **not** a wire identity derivation — the pre-9.1.8 legacy
+    /// acceptance arm was removed in 9.2.2, so a key made this way is not
+    /// accepted as any root's identity. Production identity derives with
+    /// [`Self::derive_identity`].
     #[must_use]
     pub fn from_seed(seed: &[u8]) -> Self {
         let mut bytes = [0u8; 32];
@@ -234,12 +233,15 @@ mod tests {
     }
 
     #[test]
-    fn accepts_identity_covers_both_migration_eras() {
+    fn accepts_identity_is_derived_only_after_legacy_removal() {
         let root = b"legacy-or-derived-roots";
         let derived = MeshKeyPair::derive_identity(root).public_key_hex();
         let legacy = MeshKeyPair::from_seed(root).public_key_hex();
         assert!(MeshKeyPair::accepts_identity(&derived, root));
-        assert!(MeshKeyPair::accepts_identity(&legacy, root));
+        assert!(
+            !MeshKeyPair::accepts_identity(&legacy, root),
+            "the pre-9.1.8 XOR-fold identity must no longer be accepted (removed 9.2.2)"
+        );
         assert!(!MeshKeyPair::accepts_identity(
             &MeshKeyPair::derive_identity(b"other-root").public_key_hex(),
             root

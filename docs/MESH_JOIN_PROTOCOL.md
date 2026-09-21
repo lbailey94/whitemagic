@@ -119,12 +119,12 @@ via the auto-join loop on each node's beacons).
   identity across restarts**. Unset → a random per-process key + a loud
   warning (a hardcoded default would be shared by every WhiteMagic node —
   an impersonation primitive, not a convenience).
-- **Migration (one release, dual-verify):** the pre-9.1.8 XOR-fold identity
-  derivation is still accepted (`MeshKeyPair::accepts_identity`,
-  `verify_signature_all_eras`); beacons advertise the derived key. A peer
-  that has not upgraded keeps working; a peer that upgrades rebinds after
-  its old registry entry ages out (or is re-joined). The legacy arm drops
-  in the release after 9.1.8.
+- **Migration (closed in 9.2.2):** the pre-9.1.8 XOR-fold identity
+  derivation and the legacy three-field signing payload were **removed**
+  (`MeshKeyPair::accepts_identity` is derived-only; `verify_signature`
+  rejects legacy payloads). Beacons advertise the HKDF-derived key; a peer
+  running pre-9.1.8 must upgrade and re-join — the one-release dual-verify
+  window promised at 9.1.8 is over.
 - Peer ID default: `wm-` + first 12 hex chars of the public key.
   `WM_MESH_PEER_ID` overrides with a readable name; identity binding
   still keys on the public key, so names are labels, not credentials.

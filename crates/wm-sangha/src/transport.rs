@@ -186,22 +186,6 @@ impl PeerAnnounce {
         })
     }
 
-    /// Migration-tolerant verification: accept a signature over the current
-    /// payload shape or over the legacy three-field payload.
-    #[must_use]
-    pub fn verify_signature_all_eras(&self, public_key_hex: &str) -> bool {
-        if self.verify_signature(public_key_hex) {
-            return true;
-        }
-        if self.public_key_hex.is_some() {
-            let legacy = format!("{}:{}:{}", self.peer_id, self.tcp_addr, self.timestamp);
-            return self.signature.as_ref().is_some_and(|sig| {
-                crate::crypto::MeshKeyPair::verify_hex(&legacy, sig, public_key_hex)
-            });
-        }
-        false
-    }
-
     /// Serialize to JSON bytes.
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -1450,7 +1434,7 @@ async fn ingest_beacon(
 
     let bound_key = state.peers.lock().await.bound_public_key(&announce.peer_id);
     if let Some(public_key) = announce.public_key_hex.as_deref() {
-        if !announce.verify_signature_all_eras(public_key) {
+        if !announce.verify_signature(public_key) {
             tracing::warn!(
                 "dropping signed beacon from {} — signature does not verify under its announced key",
                 announce.peer_id
@@ -1491,7 +1475,7 @@ async fn ingest_beacon(
         }
     } else {
         if let Some(key) = bound_key.filter(|k| !k.is_empty()) {
-            if !announce.verify_signature_all_eras(&key) {
+            if !announce.verify_signature(&key) {
                 tracing::warn!(
                     "dropping beacon for known peer {} — missing or invalid signature",
                     announce.peer_id
@@ -3358,6 +3342,25 @@ mod containment_tests {
         assert!(
             announce.verify_signature(&state.keypair.public_key_hex()),
             "broadcast announce must verify against the sender's bound key"
+        );
+    }
+
+    /// 9.2.2: the one-release migration window is closed — a signature over
+    /// the legacy three-field payload (no public key bound into the signed
+    /// bytes) is rejected even when the announcement carries a key.
+    #[test]
+    fn legacy_three_field_payload_signature_is_rejected() {
+        let keypair = MeshKeyPair::from_seed(b"legacy-payload-node");
+        let mut announce = PeerAnnounce::new("legacy-payload-node", "127.0.0.1:7381");
+        announce.public_key_hex = Some(keypair.public_key_hex());
+        let legacy = format!(
+            "{}:{}:{}",
+            announce.peer_id, announce.tcp_addr, announce.timestamp
+        );
+        announce.signature = Some(keypair.sign_hex(&legacy));
+        assert!(
+            !announce.verify_signature(&keypair.public_key_hex()),
+            "legacy payload signatures must not verify after the 9.2.2 removal"
         );
     }
 
