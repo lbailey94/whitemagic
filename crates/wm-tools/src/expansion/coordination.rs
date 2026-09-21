@@ -67,6 +67,22 @@ struct LeaseFile {
     leases: Vec<Lease>,
 }
 
+/// Result of reading the ledger file.
+enum LedgerRead {
+    /// Parsed leases — an absent file is an empty ledger.
+    Leases(Vec<Lease>),
+    /// The file exists but could not be read or parsed (fail-closed).
+    Unavailable { reason: String },
+}
+
+/// Read-only ledger view for `code.check` / `code.list`.
+pub(crate) struct LedgerSnapshot {
+    pub active: Vec<Lease>,
+    pub expired: Vec<Lease>,
+    /// Set when the file exists but could not be read/parsed.
+    pub unavailable: Option<String>,
+}
+
 /// The shared ledger: `<git-common-dir>/wm-leases.json`.
 #[derive(Debug, Clone)]
 pub struct LeaseLedger {
@@ -153,25 +169,69 @@ impl LeaseLedger {
         let _ = std::fs::remove_file(self.lock_path());
     }
 
-    fn parse_file(&self) -> Vec<Lease> {
-        let Ok(raw) = std::fs::read_to_string(&self.path) else {
-            return Vec::new();
-        };
-        let Ok(parsed) = serde_json::from_str::<LeaseFile>(&raw) else {
-            // A corrupt ledger must never wedge coordination: treat it as
-            // empty (advisory system; the next successful write rebuilds).
-            tracing::warn!(
-                path = %self.path.display(),
-                "wm-leases.json unreadable — treating ledger as empty"
-            );
-            return Vec::new();
-        };
-        parsed.leases
+    /// Read the ledger file.
+    ///
+    /// An **absent** file is an empty ledger (first run). A file that exists
+    /// but cannot be read or parsed is `Unavailable` — never silently empty:
+    /// a damaged or tampered ledger must not look like "no leases held".
+    fn read_ledger(&self) -> LedgerRead {
+        match std::fs::read_to_string(&self.path) {
+            Ok(raw) => match serde_json::from_str::<LeaseFile>(&raw) {
+                Ok(parsed) => LedgerRead::Leases(parsed.leases),
+                Err(e) => {
+                    tracing::error!(
+                        path = %self.path.display(),
+                        error = %e,
+                        "wm-leases.json is present but unparseable — failing closed"
+                    );
+                    LedgerRead::Unavailable {
+                        reason: format!("present but unparseable ({e})"),
+                    }
+                }
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => LedgerRead::Leases(Vec::new()),
+            Err(e) => {
+                tracing::error!(
+                    path = %self.path.display(),
+                    error = %e,
+                    "wm-leases.json exists but cannot be read — failing closed"
+                );
+                LedgerRead::Unavailable {
+                    reason: format!("unreadable ({e})"),
+                }
+            }
+        }
+    }
+
+    /// Fail-closed guard for mutations: an unavailable ledger is never
+    /// overwritten. The message names the file and the deliberate escape.
+    fn require_readable(&self, read: &LedgerRead) -> wm_core::Result<()> {
+        match read {
+            LedgerRead::Leases(_) => Ok(()),
+            LedgerRead::Unavailable { reason } => Err(CoreError::Tool(format!(
+                "lease ledger {} is {reason} — refusing to modify it (fail-closed). \
+                 Inspect the file; if it is genuinely lost, delete it to start an empty ledger \
+                 (all claims are advisory and expire on their own)",
+                self.path.display()
+            ))),
+        }
+    }
+
+    /// Split leases into (active, expired) at `now`.
+    fn partition_active(all: Vec<Lease>, now: DateTime<Utc>) -> (Vec<Lease>, Vec<Lease>) {
+        all.into_iter()
+            .partition(|l| match DateTime::parse_from_rfc3339(&l.expires_at) {
+                Ok(exp) => exp.with_timezone(&Utc) > now,
+                Err(_) => false, // unparseable expiry = expired
+            })
     }
 
     /// Run `f` against the active leases under the ledger lock, prune
     /// expired entries, and atomically persist the result. Expired leases
     /// are returned so callers can surface the transition.
+    ///
+    /// Fail-closed: a present-but-unreadable ledger refuses the mutation
+    /// instead of overwriting unknown claims.
     fn mutate<T>(
         &self,
         f: impl FnOnce(&mut Vec<Lease>, &[Lease]) -> wm_core::Result<T>,
@@ -184,13 +244,12 @@ impl LeaseLedger {
         self.acquire_lock()?;
         let result = (|| {
             let now = Utc::now();
-            let all = self.parse_file();
-            let (mut active, expired): (Vec<Lease>, Vec<Lease>) =
-                all.into_iter()
-                    .partition(|l| match DateTime::parse_from_rfc3339(&l.expires_at) {
-                        Ok(exp) => exp.with_timezone(&Utc) > now,
-                        Err(_) => false, // unparseable expiry = expired
-                    });
+            let read = self.read_ledger();
+            self.require_readable(&read)?;
+            let LedgerRead::Leases(all) = read else {
+                unreachable!("require_readable rejects Unavailable");
+            };
+            let (mut active, expired) = Self::partition_active(all, now);
             let pre = active.clone();
             let out = f(&mut active, &expired)?;
             // Persist only on real change — pure reads (check/list on a
@@ -233,16 +292,26 @@ impl LeaseLedger {
     /// persisting expiry pruning. Expired leases are logically absent (they
     /// are still returned in the second vec for observability); physical
     /// pruning waits for the next permitted mutation.
-    pub(crate) fn snapshot_readonly(&self) -> wm_core::Result<(Vec<Lease>, Vec<Lease>)> {
+    ///
+    /// A present-but-unreadable ledger is reported as
+    /// [`LedgerSnapshot::unavailable`] instead of a silent empty ledger.
+    pub(crate) fn snapshot_readonly(&self) -> wm_core::Result<LedgerSnapshot> {
         let now = Utc::now();
-        let all = self.parse_file();
-        let (active, expired): (Vec<Lease>, Vec<Lease>) =
-            all.into_iter()
-                .partition(|l| match DateTime::parse_from_rfc3339(&l.expires_at) {
-                    Ok(exp) => exp.with_timezone(&Utc) > now,
-                    Err(_) => false, // unparseable expiry = expired
-                });
-        Ok((active, expired))
+        match self.read_ledger() {
+            LedgerRead::Leases(all) => {
+                let (active, expired) = Self::partition_active(all, now);
+                Ok(LedgerSnapshot {
+                    active,
+                    expired,
+                    unavailable: None,
+                })
+            }
+            LedgerRead::Unavailable { reason } => Ok(LedgerSnapshot {
+                active: Vec::new(),
+                expired: Vec::new(),
+                unavailable: Some(reason),
+            }),
+        }
     }
 
     // ── Bridge API (F-1): mesh-side scope coordination ────────────────
@@ -666,7 +735,7 @@ impl Tool for CodeCheckTool {
         )
     }
     fn description(&self) -> &str {
-        "Check whether a scope is claimed — reports the holder, their intent, and expiry when claimed; 'free' means no active lease."
+        "Check whether a scope is claimed — reports the holder, their intent, and expiry when claimed; 'free' means no active lease. A damaged ledger reports 'unavailable', never a false 'free'."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let scope = require_str(&args, "scope")?;
@@ -675,7 +744,19 @@ impl Tool for CodeCheckTool {
 
         // True read-only snapshot (AHIMSA Target A, regression 3): no lock
         // file, no temporary file, no persisted pruning.
-        let (active, newly_expired) = ledger.snapshot_readonly()?;
+        let snapshot = ledger.snapshot_readonly()?;
+        if let Some(reason) = &snapshot.unavailable {
+            return Ok(json!({
+                "status": "unavailable",
+                "scope": scope,
+                "state": "unavailable",
+                "reason": reason,
+                "file": ledger.path().display().to_string(),
+                "next_action": "inspect or deliberately delete the ledger file — a damaged ledger is never treated as empty",
+            }));
+        }
+        let active = snapshot.active;
+        let newly_expired = snapshot.expired;
         let holder = active.iter().find(|l| l.scope == scope).map(lease_json);
 
         for lease in &newly_expired {
@@ -888,7 +969,7 @@ impl Tool for CodeListTool {
         )
     }
     fn description(&self) -> &str {
-        "List active claims in the shared lease ledger — what each agent is holding and until when."
+        "List active claims in the shared lease ledger — what each agent is holding and until when. Reports 'unavailable' rather than an empty list when the ledger file is damaged."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let include_expired = args
@@ -899,7 +980,17 @@ impl Tool for CodeListTool {
         let ledger = LeaseLedger::discover(&root)?;
         // True read-only snapshot: expired leases are logically absent and
         // nothing is persisted (AHIMSA Target A, regression 3).
-        let (active, expired) = ledger.snapshot_readonly()?;
+        let snapshot = ledger.snapshot_readonly()?;
+        if let Some(reason) = &snapshot.unavailable {
+            return Ok(json!({
+                "status": "unavailable",
+                "reason": reason,
+                "file": ledger.path().display().to_string(),
+                "next_action": "inspect or deliberately delete the ledger file — a damaged ledger is never treated as empty",
+            }));
+        }
+        let active = snapshot.active;
+        let expired = snapshot.expired;
         let mut leases: Vec<Value> = active.iter().map(lease_json).collect();
         if include_expired {
             let mut expired_json: Vec<Value> = expired
@@ -1381,6 +1472,71 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn corrupt_ledger_fails_closed_never_silently_empty() {
+        let (_guard, root) = git_repo();
+        let ledger_path = LeaseLedger::discover(&root).unwrap().path().to_path_buf();
+        std::fs::write(&ledger_path, "{ this is not json").unwrap();
+
+        let claim = CodeClaimTool::new(None);
+        let check = CodeCheckTool::new(None);
+        let list = CodeListTool::new();
+        let mut ctx = Context::default();
+
+        // Mutations refuse — a damaged ledger is never overwritten.
+        let err = claim
+            .call(
+                &mut ctx,
+                json!({
+                    "scope": "src/x.rs",
+                    "intent": "y",
+                    "owner_session": "s",
+                    "root": root_str(&root),
+                }),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("unparseable"), "{err}");
+        assert!(err.contains("fail-closed"), "{err}");
+
+        // Reads report unavailable — never a false "free".
+        let checked = check
+            .call(
+                &mut ctx,
+                json!({"scope": "src/x.rs", "root": root_str(&root)}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(checked["state"], "unavailable", "got: {checked}");
+
+        let listed = list
+            .call(&mut ctx, json!({"root": root_str(&root)}))
+            .await
+            .unwrap();
+        assert_eq!(listed["status"], "unavailable", "got: {listed}");
+
+        // The corrupt file is untouched (no overwrite, no temp leftover).
+        let raw = std::fs::read_to_string(&ledger_path).unwrap();
+        assert!(raw.contains("not json"), "ledger must not be rewritten");
+
+        // The documented escape works: delete deliberately, start empty.
+        std::fs::remove_file(&ledger_path).unwrap();
+        let recovered = claim
+            .call(
+                &mut ctx,
+                json!({
+                    "scope": "src/x.rs",
+                    "intent": "y",
+                    "owner_session": "s",
+                    "root": root_str(&root),
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(recovered["status"], "success", "got: {recovered}");
+    }
+
+    #[tokio::test]
     async fn list_hides_expired_by_default_but_can_include_them() {
         let (_guard, root) = git_repo();
         let claim = CodeClaimTool::new(None);
@@ -1561,10 +1717,11 @@ mod tests {
             .await;
         let err = refused.unwrap_err().to_string();
         assert!(err.contains("alternate root"), "{err}");
-        let (active_b, _) = LeaseLedger::discover(&root_b)
+        let active_b = LeaseLedger::discover(&root_b)
             .unwrap()
             .snapshot_readonly()
-            .unwrap();
+            .unwrap()
+            .active;
         assert_eq!(
             active_b.len(),
             1,
