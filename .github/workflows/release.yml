@@ -254,6 +254,40 @@ jobs:
           files: artifacts/*
           generate_release_notes: true
 
+  certify-install:
+    name: Certify install.sh (${{ matrix.arch }})
+    needs: [publish]
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            arch: aarch64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      # The signed manifest declares these targets install-gated; this job
+      # earns that claim by installing the PUBLISHED release through the
+      # public installer (raw or .gz, checksum-verified) and running the
+      # installed binary's own invariants.
+      - name: Install the published release through the public installer
+        env:
+          WM_INSTALL_REF: ci-certify
+        run: |
+          sh scripts/install.sh --version "${GITHUB_REF_NAME}" \
+            --target "${{ matrix.target }}" \
+            --dir "${RUNNER_TEMP}/wm-bin"
+      - name: Smoke the installed binary
+        run: |
+          "${RUNNER_TEMP}/wm-bin/wm" --version
+          "${RUNNER_TEMP}/wm-bin/wm" selftest --json > /dev/null
+          echo "install.sh certification PASSED: ${{ matrix.arch }} ${GITHUB_REF_NAME}"
+
   registries:
     name: Publish registries
     needs: [publish]
