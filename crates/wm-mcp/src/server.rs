@@ -795,6 +795,24 @@ impl McpServer {
                     report.scanned
                 );
             }
+            // Drain the durable pending-index ledger first: writes that lost
+            // the Tantivy writer lock recorded themselves, and this writable
+            // context is where they get reconciled (2026-09-21 reviewer
+            // finding). Targeted work ahead of the broad drift heal below.
+            match wm_memory::reindex::drain_index_pending(&store, &engine) {
+                Ok(report) if report.pending > 0 => tracing::warn!(
+                    pending = report.pending,
+                    drained = report.drained,
+                    missing = report.missing,
+                    failed = report.failed,
+                    "pending-index ledger reconciled at startup"
+                ),
+                Ok(_) => {}
+                Err(e) => tracing::warn!(
+                    error = %e,
+                    "pending-index drain failed — entries stay for the next writable start"
+                ),
+            }
             // Self-heal drift that accumulated under previous runs: session
             // tools, dream consolidation, and research cycles write LMDB
             // without a search engine, and best-effort index failures are
@@ -2170,6 +2188,23 @@ impl McpServer {
         // leaves drift for the next writable start to repair.
         if !self.readonly {
             if let Some(engine) = self.search_engine() {
+                // Drain the pending-index ledger too: writes that lost the
+                // writer lock during this session become searchable before
+                // the process exits (2026-09-21 reviewer finding).
+                match wm_memory::reindex::drain_index_pending(&self.store, engine) {
+                    Ok(report) if report.pending > 0 => tracing::warn!(
+                        pending = report.pending,
+                        drained = report.drained,
+                        missing = report.missing,
+                        failed = report.failed,
+                        "pending-index ledger reconciled on shutdown"
+                    ),
+                    Ok(_) => {}
+                    Err(e) => tracing::warn!(
+                        error = %e,
+                        "pending-index drain failed on shutdown — entries stay for the next writable start"
+                    ),
+                }
                 match wm_memory::reindex::heal_index_drift(&self.store, engine) {
                     Ok(Some(report)) => {
                         let detail = report

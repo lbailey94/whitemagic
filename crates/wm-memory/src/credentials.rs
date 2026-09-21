@@ -75,6 +75,15 @@ pub fn credential_shaped_content(content: &str) -> Vec<&'static str> {
         push("credential_assignment", &mut kinds);
     }
 
+    // 8. Credential-bearing URI userinfo (`scheme://user:pass@host`),
+    //    independent of any surrounding variable name — a bare URL in prose
+    //    and `DATABASE_URL=...` are the same shape (2026-09-21 review:
+    //    connection strings survived `--redact` because only keyed
+    //    assignments were scanned).
+    if uri_userinfo_span(content).is_some() {
+        push("credential_uri", &mut kinds);
+    }
+
     kinds
 }
 
@@ -101,13 +110,21 @@ fn token_after(
 /// a secret. Compound keys are listed explicitly because the delimiter must
 /// immediately follow the key name: `secret` alone never matches
 /// `AWS_SECRET_ACCESS_KEY=...` (the `_` blocks the delimiter check).
+///
+/// 2026-09-21 review: `token` was missing although the detection comment
+/// claimed it, so `TOKEN=...` and every `*_token=...` compound (the
+/// delimiter follows the `token` substring) survived `--redact`. Compounds
+/// ending in a listed key are covered by that key; only compounds where the
+/// suffix blocks the delimiter (`secret_access_key`) need their own entry.
 const ASSIGNMENT_KEYS: &[&str] = &[
     "password",
     "passwd",
+    "passphrase",
     "api_key",
     "api-key",
     "apikey",
     "secret",
+    "token",
     "access_token",
     "secret_access_key",
     "aws_secret_access_key",
@@ -190,6 +207,12 @@ pub fn redact_credential_content(content: &str) -> (String, Vec<&'static str>) {
     if kinds.contains(&"credential_assignment") {
         while let Some((start, end)) = assignment_value_span(&out) {
             out.replace_range(start..end, "[REDACTED:credential_assignment]");
+        }
+    }
+
+    if kinds.contains(&"credential_uri") {
+        while let Some((start, end)) = uri_userinfo_span(&out) {
+            out.replace_range(start..end, "[REDACTED:credential_uri]");
         }
     }
 
@@ -291,6 +314,51 @@ fn assignment_value_span(text: &str) -> Option<(usize, usize)> {
             }
             from = after;
         }
+    }
+    None
+}
+
+/// Span of the first credential-bearing URI userinfo
+/// (`scheme://user:pass@host`).
+///
+/// Structural, not key-based: the authority (between `://` and the first
+/// `/`, `?`, `#`, or whitespace) must contain `@`, and the userinfo before
+/// the last `@` must contain a colon with a non-empty password. URLs without
+/// userinfo (`https://example.com/x`), bare usernames
+/// (`ssh://git@github.com:22/repo`), and `host:port` pairs stay clean.
+/// Redaction replaces the whole userinfo — user and password — deliberately
+/// over- rather than under-redacting.
+fn uri_userinfo_span(text: &str) -> Option<(usize, usize)> {
+    let mut from = 0usize;
+    while let Some(rel) = text[from..].find("://") {
+        let sep = from + rel;
+        let authority_start = sep + 3;
+        let scheme_start = text[..sep]
+            .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == '+' || c == '.' || c == '-'))
+            .map_or(0, |i| i + 1);
+        let scheme = &text[scheme_start..sep];
+        let scheme_ok = scheme.starts_with(|c: char| c.is_ascii_alphabetic());
+        if scheme_ok {
+            let authority_end = text[authority_start..]
+                .find(|c: char| c == '/' || c == '?' || c == '#' || c.is_whitespace())
+                .map_or(text.len(), |i| authority_start + i);
+            if let Some(at_rel) = text[authority_start..authority_end].rfind('@') {
+                let at = authority_start + at_rel;
+                let userinfo = &text[authority_start..at];
+                if let Some(colon_rel) = userinfo.rfind(':') {
+                    let password = &userinfo[colon_rel + 1..];
+                    // The redaction marker must never re-trigger detection,
+                    // or the apply pass is not idempotent.
+                    let is_marker = userinfo
+                        .get(..10)
+                        .is_some_and(|p| p.eq_ignore_ascii_case("[REDACTED:"));
+                    if !password.is_empty() && !is_marker {
+                        return Some((authority_start, at));
+                    }
+                }
+            }
+        }
+        from = authority_start;
     }
     None
 }
@@ -550,5 +618,92 @@ mod tests {
         );
         let (twice, _) = redact_credential_content(&once);
         assert_eq!(once, twice);
+    }
+
+    /// 2026-09-21 reviewer P0: `TOKEN=...` survived `--redact` because
+    /// `ASSIGNMENT_KEYS` omitted `token`, and connection strings survived
+    /// because only keyed assignments were scanned.
+    #[test]
+    fn reviewer_fixtures_are_detected_and_redacted() {
+        let token = "TOKEN=generic_token_value_0123456789abcdef";
+        assert!(
+            credential_shaped_content(token).contains(&"credential_assignment"),
+            "plain token assignments must fire"
+        );
+        let (red, kinds) = redact_credential_content(token);
+        assert!(kinds.contains(&"credential_assignment"));
+        assert!(!red.contains("generic_token_value_0123456789abcdef"));
+        assert!(
+            credential_shaped_content(&red).is_empty(),
+            "redacted token must read clean: {red}"
+        );
+
+        let uri = "DATABASE_URL=postgres://alice:fakepassword123456@db.example.com/prod";
+        assert!(
+            credential_shaped_content(uri).contains(&"credential_uri"),
+            "URI userinfo must be detected independently of the key name"
+        );
+        let (red, kinds) = redact_credential_content(uri);
+        assert!(kinds.contains(&"credential_uri"));
+        assert!(!red.contains("fakepassword123456"), "password must be gone");
+        assert!(
+            !red.contains("alice"),
+            "userinfo over-redaction is deliberate"
+        );
+        assert!(red.contains("db.example.com"), "host stays: {red}");
+        assert!(
+            credential_shaped_content(&red).is_empty(),
+            "redacted URI must read clean: {red}"
+        );
+        let (twice, _) = redact_credential_content(&red);
+        assert_eq!(red, twice, "URI redaction must be idempotent");
+
+        // Empty user, non-empty password (`redis://:pass@host`).
+        let redis = "REDIS_URL=redis://:hunter2hunter2@cache.internal:6379/0";
+        let (red, kinds) = redact_credential_content(redis);
+        assert!(kinds.contains(&"credential_uri"));
+        assert!(!red.contains("hunter2hunter2"));
+        assert!(credential_shaped_content(&red).is_empty());
+
+        // JSON form, mixed case, quotes, and surrounding whitespace.
+        let json = r#"{"Database_Url": "Postgres://Alice:Passw0rd123456@Db.Example.com/prod"}"#;
+        let (red, kinds) = redact_credential_content(json);
+        assert!(
+            kinds.contains(&"credential_uri"),
+            "JSON URI must fire: {kinds:?}"
+        );
+        assert!(!red.contains("Passw0rd123456"));
+        assert!(credential_shaped_content(&red).is_empty());
+
+        // Compound token names are covered by the `token` key: the delimiter
+        // immediately follows the substring.
+        for text in [
+            "BOT_TOKEN=0123456789abcdef",
+            "SESSION_TOKEN: 0123456789abcdef",
+            "bearer_token=0123456789abcdef",
+            "PASSPHRASE=correct-horse-battery-staple",
+        ] {
+            assert!(
+                credential_shaped_content(text).contains(&"credential_assignment"),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn uri_lookalikes_stay_clean() {
+        for text in [
+            "see https://example.com/path for details",
+            "ssh://git@github.com:22/repo",
+            "connect to http://127.0.0.1:8080/status",
+            "https://user@example.com/profile",
+            "the scheme: separator is not a URL",
+            "note:// just a label",
+        ] {
+            assert!(
+                credential_shaped_content(text).is_empty(),
+                "lookalike must stay clean: {text}"
+            );
+        }
     }
 }

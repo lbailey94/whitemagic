@@ -633,25 +633,9 @@ impl Tool for MemoryUpdateTool {
             .map(wm_memory::credential_shaped_content)
             .unwrap_or_default();
 
-        // Re-index in Tantivy if search engine is available (non-fatal)
-        if let Some(search) = &self.search {
-            if let Err(e) = (|| {
-                let mut writer = search.writer()?;
-                search.delete_document(&mut writer, id_str)?;
-                search.add_document(
-                    &mut writer,
-                    id_str,
-                    galaxy_name(galaxy),
-                    &mem.content,
-                    &mem.metadata.tags,
-                    mem.metadata.created_at.timestamp(),
-                )?;
-                search.commit(&mut writer)?;
-                Ok::<(), wm_core::CoreError>(())
-            })() {
-                tracing::warn!("Tantivy re-indexing failed for memory {id_str}: {e}");
-            }
-        }
+        // Re-index in Tantivy if search engine is available (non-fatal, but a
+        // failure is recorded in the durable pending-index ledger).
+        super::common::replace_memory_index(&self.store, self.search.as_deref(), &mem);
 
         let mut response = json!({
             "status": "success",

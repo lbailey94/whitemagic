@@ -196,6 +196,13 @@ pub struct MemoryStore {
     /// concurrent writers cannot reuse a sequence. Optional on read paths
     /// (legacy stores keep opening strict; a writable open creates it).
     session_sequences_db: Option<Database>,
+    /// Durable pending-index ledger (2026-09-21 review). A write whose
+    /// write-time Tantivy indexing lost the writer lock is recorded here so
+    /// the next writable context reconciles it instead of leaving silent
+    /// drift. Key = memory id bytes, value = JSON
+    /// `{"galaxy": ..., "at_ms": ...}`. Optional on read paths (legacy
+    /// stores keep opening strict; a writable open creates it).
+    index_pending_db: Option<Database>,
     /// Optional at-rest keyring DBI (Q39 slice A). `Some` when the store has
     /// a keyring; read-only paths open it optionally and never create it.
     keyring_db: Option<Database>,
@@ -366,6 +373,13 @@ impl MemoryStore {
             .map_err(|e| {
                 CoreError::Memory(format!("LMDB create_db failed for session_sequences: {e}"))
             })?;
+        // 2026-09-21 review: durable pending-index ledger. Created on every
+        // writable open; optional on read paths like session_sequences.
+        let index_pending_db = env
+            .create_db(Some("index_pending"), DatabaseFlags::default())
+            .map_err(|e| {
+                CoreError::Memory(format!("LMDB create_db failed for index_pending: {e}"))
+            })?;
         let (keyring_db, at_rest) = crate::at_rest::open_at_rest(&env, &path, at_rest_config)?;
         Ok(Self {
             path,
@@ -381,6 +395,7 @@ impl MemoryStore {
             attestations_db,
             cold_storage_db,
             session_sequences_db: Some(session_sequences_db),
+            index_pending_db: Some(index_pending_db),
             keyring_db,
             at_rest,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
@@ -593,6 +608,8 @@ impl MemoryStore {
         // H1 counters are optional on read paths (like the keyring): legacy
         // stores keep opening strict; the DBI is created by writable opens.
         let session_sequences_db = env.open_db(Some("session_sequences")).ok();
+        // Pending-index ledger is optional on read paths too.
+        let index_pending_db = env.open_db(Some("index_pending")).ok();
         // The at-rest keyring is optional on read paths: opened when present,
         // never created, and its RK is never resolved here (status only).
         let keyring_db = crate::at_rest::open_keyring_optional(&env)?;
@@ -611,6 +628,7 @@ impl MemoryStore {
             attestations_db,
             cold_storage_db,
             session_sequences_db,
+            index_pending_db,
             keyring_db,
             at_rest: None,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
@@ -680,6 +698,8 @@ impl MemoryStore {
         // H1 counters are optional here too: inspection must never require a
         // schema a legacy store may lack.
         let session_sequences_db = env.open_db(Some("session_sequences")).ok();
+        // The pending-index ledger is optional on inspection too.
+        let index_pending_db = env.open_db(Some("index_pending")).ok();
         // The at-rest keyring is optional on read paths: opened when present,
         // never created, and its RK is never resolved here (status only).
         let keyring_db = crate::at_rest::open_keyring_optional(&env)?;
@@ -698,6 +718,7 @@ impl MemoryStore {
             attestations_db,
             cold_storage_db,
             session_sequences_db,
+            index_pending_db,
             keyring_db,
             at_rest: None,
             episodic_term_cache: std::sync::Arc::new(RwLock::new(HashMap::new())),
@@ -1097,6 +1118,126 @@ impl MemoryStore {
                 "LMDB get failed (session_sequences): {e}"
             ))),
         }
+    }
+
+    /// Record a memory whose write-time Tantivy indexing failed (the writer
+    /// lock was held by another process). The next writable context drains
+    /// the ledger with [`crate::reindex::drain_index_pending`] instead of
+    /// leaving the user to discover silent index drift later (2026-09-21
+    /// reviewer finding).
+    pub fn mark_index_pending(&self, galaxy: &str, memory_id: &str, at_ms: i64) -> Result<()> {
+        let db = self.index_pending_db.ok_or_else(|| {
+            CoreError::Memory(
+                "index_pending DBI missing (store opened without the writable schema repair)"
+                    .into(),
+            )
+        })?;
+        let value = serde_json::to_vec(&serde_json::json!({"galaxy": galaxy, "at_ms": at_ms}))
+            .map_err(|e| CoreError::Memory(format!("index_pending encode: {e}")))?;
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        let key = memory_id.as_bytes();
+        tx.put(db, &key, &value, lmdb::WriteFlags::default())
+            .map_err(|e| CoreError::Memory(format!("LMDB put failed (index_pending): {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Pending-index entries as `(memory_id, galaxy, at_ms)`, oldest first.
+    /// A legacy store without the DBI reads as an empty ledger.
+    pub fn index_pending_entries(&self) -> Result<Vec<(String, String, i64)>> {
+        let Some(db) = self.index_pending_db else {
+            return Ok(Vec::new());
+        };
+        let tx = self
+            .env
+            .begin_ro_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
+        let mut cursor = tx
+            .open_ro_cursor(db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor failed (index_pending): {e}")))?;
+        let mut out: Vec<(String, String, i64)> = Vec::new();
+        for (key, value) in cursor.iter() {
+            let id = String::from_utf8_lossy(key).into_owned();
+            let parsed: serde_json::Value =
+                serde_json::from_slice(value).unwrap_or(serde_json::Value::Null);
+            let galaxy = parsed
+                .get("galaxy")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string();
+            let at_ms = parsed
+                .get("at_ms")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or_default();
+            out.push((id, galaxy, at_ms));
+        }
+        drop(cursor);
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        out.sort_by_key(|(_, _, at)| *at);
+        Ok(out)
+    }
+
+    /// Number of pending-index entries (0 for a legacy store without the DBI).
+    pub fn count_index_pending(&self) -> Result<usize> {
+        Ok(self.index_pending_entries()?.len())
+    }
+
+    /// Clear the given pending-index ids (idempotent). Returns how many rows
+    /// existed and were removed.
+    pub fn clear_index_pending(&self, ids: &[String]) -> Result<usize> {
+        let Some(db) = self.index_pending_db else {
+            return Ok(0);
+        };
+        if ids.is_empty() {
+            return Ok(0);
+        }
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        let mut cleared = 0usize;
+        for id in ids {
+            let key = id.as_bytes();
+            match tx.del(db, &key, None) {
+                Ok(()) => cleared += 1,
+                Err(lmdb::Error::NotFound) => {}
+                Err(e) => {
+                    return Err(CoreError::Memory(format!(
+                        "LMDB del failed (index_pending): {e}"
+                    )));
+                }
+            }
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(cleared)
+    }
+
+    /// Clear every pending-index entry (after a full successful reindex);
+    /// returns the count that was cleared.
+    pub fn clear_all_index_pending(&self) -> Result<usize> {
+        let Some(db) = self.index_pending_db else {
+            return Ok(0);
+        };
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
+        let count = tx
+            .open_ro_cursor(db)
+            .map_err(|e| CoreError::Memory(format!("LMDB cursor failed (index_pending): {e}")))?
+            .iter()
+            .count();
+        tx.clear_db(db)
+            .map_err(|e| CoreError::Memory(format!("LMDB clear failed (index_pending): {e}")))?;
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        Ok(count)
     }
 
     /// Retrieve a memory by ID from the given galaxy.

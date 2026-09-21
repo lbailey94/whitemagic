@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security — credential redaction actually redacts
+- **`TOKEN=` and connection-string credentials are detected and scrubbed.**
+  `ASSIGNMENT_KEYS` was missing `token` (the detection comment claimed it),
+  and credential-bearing URI userinfo (`postgres://user:pass@host`,
+  `redis://:pass@host`) was never scanned — so `wm ingest --redact` reported
+  `redactions=0` and stored the secrets verbatim, and `wm redact-content`
+  called the records already clean. Detection now covers plain/compound token
+  keys and `passphrase`, plus URL userinfo independent of the variable name;
+  the retrofit also rewrites the **episodic raw lane** that mirrors explicit
+  memories (rewriting the galaxy row alone left the bytes in LMDB). Tests
+  assert LMDB + Tantivy absence of the fixture bytes and a clean re-detect.
+  LMDB is copy-on-write, so a *freed* page can retain pre-rewrite bytes —
+  reads and search never consult freed pages; back up and restore into a
+  fresh store for byte-level absence on disk (documented on the command).
+
+### Continuity — bounded output
+- **`session.continuity` is bounded by default.** A single 100,000-char turn
+  produced a ~200 KB JSON-RPC response, duplicated across structuredContent
+  and the text representation. Turns now carry `memory_id`, `content_bytes`,
+  and `content_truncated`; per-turn content defaults to 8 KiB
+  (`max_content_bytes`) and the turns budget to 48 KiB
+  (`max_response_bytes`), newest turns win with `turns_omitted` disclosing
+  drops, and an oversized checkpoint handoff becomes a truncation marker.
+  Exact originals stay one `memory.read id=<memory_id>` away.
+
+### Backup — destination containment
+- **`wm backup` refuses destinations inside the source store before creating
+  anything.** `--out <store>`, `--out <store>/backups`, and a symlink
+  (including a dangling one) pointing into the store all recursed until the
+  OS refused the pathname. Both sides are symlink-resolved component-wise,
+  so a link cannot smuggle the destination inside; sibling destinations back
+  up normally.
+
+### Session integrity — no orphan turns
+- **`session.record` rejects unknown session ids.** A typo or stale id used
+  to return success and leave an orphan turn (`Memories 1, Sessions 0`) that
+  continuity could not recover. An explicit id must name an existing
+  `session_start`; `session.import` remains the recovery path for
+  orphan/imported turns.
+
+### Index durability — pending-index ledger
+- **Writes that lose the Tantivy writer lock are recorded, not forgotten.**
+  The index write path — including the CLI case where the engine cannot even
+  be opened because another process holds the writer — now records the memory
+  id in an `index_pending` LMDB ledger. The next writable context re-indexes
+  and clears the entries: `wm serve` startup and shutdown, the daemon's
+  checkpoint tick, and `wm reindex` (which reports how many entries its
+  rebuild covered). Lock-loss is no longer discoverable only as later drift.
+
 ### Platform — Linux arm64 (aarch64) install path
 - **Linux arm64 joins the install gate, statically.** The release matrix gains
   `wm-linux-aarch64` (gnu, glibc 2.39+) and `wm-linux-aarch64-musl` (fully

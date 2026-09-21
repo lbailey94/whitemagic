@@ -231,7 +231,7 @@ pub(crate) fn store_record(
         .map_err(|e| format!("telemetry store failed: {e}"))?;
     let deduplicated = stored_id != new_id;
     if !deduplicated {
-        common::index_memory(search, &memory);
+        common::index_memory(store, search, &memory);
     }
     Ok((stored_id.to_string(), deduplicated))
 }

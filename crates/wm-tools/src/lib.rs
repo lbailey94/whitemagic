@@ -540,46 +540,20 @@ impl Tool for MemoryCreateTool {
         if let Some(recall) = &self.recall {
             if let Err(e) = recall.store_with_embedding(galaxy, &memory) {
                 tracing::warn!("RecallEngine store_with_embedding failed for memory {id}: {e}");
-                // Fall back to plain store + Tantivy
+                // Fall back to plain store + Tantivy (a writer-lock loss is
+                // recorded in the durable pending-index ledger).
                 self.store.put(galaxy, &memory)?;
-                if let Some(search) = &self.search {
-                    if let Err(e) = (|| {
-                        let mut writer = search.writer()?;
-                        search.add_document(
-                            &mut writer,
-                            &id.to_string(),
-                            galaxy.db_name(),
-                            content,
-                            &memory.metadata.tags,
-                            memory.metadata.created_at.timestamp(),
-                        )?;
-                        search.commit(&mut writer)?;
-                        Ok::<(), wm_core::CoreError>(())
-                    })() {
-                        tracing::warn!("Tantivy indexing failed for memory {id}: {e}");
-                    }
-                }
+                crate::expansion::common::index_memory(
+                    &self.store,
+                    self.search.as_deref(),
+                    &memory,
+                );
             }
         } else {
             self.store.put(galaxy, &memory)?;
-            // Index into Tantivy if search engine is available (non-fatal)
-            if let Some(search) = &self.search {
-                if let Err(e) = (|| {
-                    let mut writer = search.writer()?;
-                    search.add_document(
-                        &mut writer,
-                        &id.to_string(),
-                        galaxy.db_name(),
-                        content,
-                        &memory.metadata.tags,
-                        memory.metadata.created_at.timestamp(),
-                    )?;
-                    search.commit(&mut writer)?;
-                    Ok::<(), wm_core::CoreError>(())
-                })() {
-                    tracing::warn!("Tantivy indexing failed for memory {id}: {e}");
-                }
-            }
+            // Index into Tantivy if search engine is available (non-fatal,
+            // but a failure is recorded in the durable pending-index ledger).
+            crate::expansion::common::index_memory(&self.store, self.search.as_deref(), &memory);
         }
 
         let episodic_capture_error = capture_explicit_memory(

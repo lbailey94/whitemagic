@@ -164,6 +164,48 @@ fn format_turn(v: &Value, full: bool) -> Value {
     }
 }
 
+/// Continuity output bounds (2026-09-21 reviewer finding: one 100,000-char
+/// turn produced a ~200 KB JSON-RPC response — a single pathological memory
+/// dumping tens of thousands of tokens into the context window continuity
+/// exists to protect). Per-turn content is capped, the turns budget bounds
+/// the whole response, and every turn carries its memory id so the exact
+/// original stays one `memory.read` away.
+const CONTINUITY_DEFAULT_MAX_CONTENT_BYTES: usize = 8 * 1024;
+const CONTINUITY_DEFAULT_MAX_RESPONSE_BYTES: usize = 48 * 1024;
+const CONTINUITY_MIN_BUDGET_BYTES: usize = 256;
+const CONTINUITY_MAX_BUDGET_BYTES: usize = 256 * 1024;
+/// Wrapper/metadata allowance inside the turns budget: turn objects carry
+/// ~200 B of metadata each, so a single capped turn plus its metadata must
+/// stay under the budget.
+const CONTINUITY_WRAPPER_ALLOWANCE: usize = 256;
+
+/// Largest byte index <= `max` that sits on a UTF-8 boundary.
+fn floor_char_boundary_index(s: &str, max: usize) -> usize {
+    let mut end = max.min(s.len());
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    end
+}
+
+/// Continuity turn: metadata plus bounded content and an exact-read id.
+fn format_continuity_turn(mem: &Memory, v: &Value, max_content_bytes: usize) -> Value {
+    let role = v.get("role").and_then(Value::as_str).unwrap_or("?");
+    let content = v.get("content").and_then(Value::as_str).unwrap_or("");
+    let end = floor_char_boundary_index(content, max_content_bytes);
+    json!({
+        "memory_id": mem.metadata.id.to_string(),
+        "session_id": v.get("session_id"),
+        "sequence": v.get("sequence"),
+        "role": role,
+        "turn_type": v.get("turn_type"),
+        "importance": v.get("importance"),
+        "content": &content[..end],
+        "content_bytes": content.len(),
+        "content_truncated": end < content.len(),
+    })
+}
+
 const LOSSLESS_MAX_PAGE_SIZE: usize = 64;
 const LOSSLESS_DEFAULT_PAGE_SIZE: usize = 16;
 const LOSSLESS_MIN_WIRE_BYTES: usize = 1024;
@@ -488,6 +530,24 @@ impl Tool for SessionRecordTool {
         // positionally (`next_back`) silently misfiles turns into an
         // arbitrary session once more than one start exists.
         let session_id: String = if let Some(sid) = session_id {
+            // 2026-09-21 reviewer finding: any string was accepted, so a typo
+            // or stale id silently created an orphan turn (Memories 1,
+            // Sessions 0) that continuity then could not recover. An
+            // explicit id must name an existing session_start; session.import
+            // is the recovery path for genuinely orphaned/imported turns.
+            let parsed = uuid::Uuid::parse_str(sid).map_err(|e| {
+                wm_core::CoreError::InvalidArgs(format!("invalid session_id {sid:?}: {e}"))
+            })?;
+            let is_start = self
+                .store
+                .get(Galaxy::Sessions, parsed)?
+                .is_some_and(|m| m.metadata.tags.iter().any(|t| t == "start"));
+            if !is_start {
+                return Err(wm_core::CoreError::NotFound(format!(
+                    "no session found with id {sid} — run session.start first \
+                     (session.import is the recovery path for orphan/imported turns)"
+                )));
+            }
             sid.to_string()
         } else {
             self.store
@@ -582,11 +642,11 @@ impl Tool for SessionRecordTool {
                     .tags
                     .push(format!("superseded-by:{}", mem.metadata.id));
                 self.store.put(Galaxy::Sessions, &old)?;
-                super::common::index_memory(self.search.as_deref(), &old);
+                super::common::index_memory(&self.store, self.search.as_deref(), &old);
             }
         }
 
-        super::common::index_memory(self.search.as_deref(), &mem);
+        super::common::index_memory(&self.store, self.search.as_deref(), &mem);
         Ok(json!({
             "status": "success",
             "session_id": session_id,
@@ -1024,12 +1084,14 @@ impl Tool for SessionContinuityTool {
                 "n": super::common::int_prop("Number of prior turns (default 10)"),
                 "since": super::common::str_prop("Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD"),
                 "until": super::common::str_prop("Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"),
+                "max_content_bytes": super::common::int_prop("Per-turn content cap in bytes (256-262144, default 8192)"),
+                "max_response_bytes": super::common::int_prop("Turns budget in bytes (256-262144, default 49152)"),
             }),
             &[],
         )
     }
     fn description(&self) -> &str {
-        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off') plus that session's latest checkpoint handoff (next_queue, open_flags, git state, tests_green, lease_id) when one exists. Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD)."
+        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off') plus that session's latest checkpoint handoff (next_queue, open_flags, git state, tests_green, lease_id) when one exists. Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD), max_content_bytes (per-turn cap, default 8192), max_response_bytes (turns budget, default 49152). Output is bounded: each turn carries memory_id, content_bytes, and content_truncated; the newest turns win when the budget is exceeded (turns_omitted), and an oversized checkpoint handoff is replaced by a truncation marker. Read exact originals with memory.read id=<memory_id>."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let current = args
@@ -1037,6 +1099,29 @@ impl Tool for SessionContinuityTool {
             .or_else(|| args.get("session_id"))
             .and_then(Value::as_str);
         let n = args.get("n").and_then(Value::as_u64).unwrap_or(10) as usize;
+        let size_arg = |name: &str, default: usize| -> wm_core::Result<usize> {
+            match args.get(name) {
+                None => Ok(default),
+                Some(v) => v
+                    .as_u64()
+                    .and_then(|v| usize::try_from(v).ok())
+                    .ok_or_else(|| {
+                        wm_core::CoreError::InvalidArgs(format!("{name} must be an integer"))
+                    }),
+            }
+        };
+        let max_content_bytes =
+            size_arg("max_content_bytes", CONTINUITY_DEFAULT_MAX_CONTENT_BYTES)?;
+        let max_response_bytes =
+            size_arg("max_response_bytes", CONTINUITY_DEFAULT_MAX_RESPONSE_BYTES)?;
+        if !(CONTINUITY_MIN_BUDGET_BYTES..=CONTINUITY_MAX_BUDGET_BYTES).contains(&max_content_bytes)
+            || !(CONTINUITY_MIN_BUDGET_BYTES..=CONTINUITY_MAX_BUDGET_BYTES)
+                .contains(&max_response_bytes)
+        {
+            return Err(wm_core::CoreError::InvalidArgs(format!(
+                "continuity budgets must be in {CONTINUITY_MIN_BUDGET_BYTES}..={CONTINUITY_MAX_BUDGET_BYTES} bytes"
+            )));
+        }
 
         // Find the most recent session_start that is not the current session.
         // `rfind` on scan order is a UUID lottery (LMDB iterates by key, and
@@ -1097,29 +1182,83 @@ impl Tool for SessionContinuityTool {
             &args,
         )?;
         let total = turns.len();
-        let tail: Vec<Value> = turns
-            .split_off(total.saturating_sub(n))
-            .iter()
-            .map(|(_, v)| format_turn(v, true))
-            .collect();
+        let selected = turns.split_off(total.saturating_sub(n));
+        // Newest first: the budget drops the OLDEST selected turns first —
+        // recent context is what "where we left off" is for. The newest turn
+        // is always kept (content-capped), so the response is bounded even
+        // when a single turn exceeds the whole budget.
+        let newest_first: Vec<(Memory, Value)> = selected.into_iter().rev().collect();
+        let per_turn_cap = max_content_bytes.min(
+            max_response_bytes
+                .saturating_sub(CONTINUITY_WRAPPER_ALLOWANCE)
+                .max(1),
+        );
+        let mut formatted_rev: Vec<Value> = Vec::new();
+        let mut used = 0usize;
+        let mut turns_omitted = 0usize;
+        for (idx, (mem, v)) in newest_first.iter().enumerate() {
+            let turn = format_continuity_turn(mem, v, per_turn_cap);
+            let size = serde_json::to_string(&turn).map_or(0, |s| s.len());
+            if idx > 0 && used + size > max_response_bytes {
+                turns_omitted = newest_first.len() - idx;
+                break;
+            }
+            used += size;
+            formatted_rev.push(turn);
+        }
+        let tail: Vec<Value> = formatted_rev.into_iter().rev().collect();
+        let content_truncated = tail.iter().any(|t| t["content_truncated"] == true);
+        let truncated = turns_omitted > 0 || content_truncated;
+
         // The previous session's latest checkpoint handoff is the most
         // actionable part of "where were we?" — the server's own instructions
         // tell agents to hand off through these fields (next_queue,
         // open_flags, git, tests_green, lease_id), so continuity must surface
         // them or the handoff is write-only (2026-09-17 reviewer finding).
-        // Same key and shape as session.digest's checkpoint state.
+        // Same key and shape as session.digest's checkpoint state. An
+        // oversized handoff is replaced by a marker so it cannot blow the
+        // response budget; its id reads the full record.
         let (checkpoint, checkpoint_id) = match latest_checkpoint_handoff(&self.store, &prev_id)? {
-            Some((id, _, handoff)) => (handoff, Value::String(id)),
+            Some((id, _, handoff)) => {
+                let bytes = serde_json::to_string(&handoff).map_or(0, |s| s.len());
+                if bytes > max_response_bytes {
+                    (
+                        json!({
+                            "truncated": true,
+                            "bytes": bytes,
+                            "hint": format!(
+                                "checkpoint handoff exceeds the {max_response_bytes} B budget — read the full record with memory.read id={id}"
+                            ),
+                        }),
+                        Value::String(id),
+                    )
+                } else {
+                    (handoff, Value::String(id))
+                }
+            }
             None => (Value::Null, Value::Null),
         };
-        Ok(json!({
+
+        let mut response = json!({
             "status": "success",
             "previous_session": prev_id,
             "count": tail.len(),
             "turns": tail,
             "checkpoint": checkpoint,
             "checkpoint_id": checkpoint_id,
-        }))
+            "truncated": truncated,
+            "turns_omitted": turns_omitted,
+            "max_content_bytes": per_turn_cap,
+            "max_response_bytes": max_response_bytes,
+        });
+        if truncated {
+            response["hint"] = json!(format!(
+                "continuity output is bounded (per-turn cap {per_turn_cap} B, turns budget \
+                 {max_response_bytes} B). Every turn carries memory_id; read the exact \
+                 original with memory.read id=<memory_id>."
+            ));
+        }
+        Ok(response)
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -1442,7 +1581,7 @@ impl Tool for SessionHandoffTool {
                 ];
                 mem.metadata.importance = 0.8;
                 self.store.put(Galaxy::Sessions, &mem)?;
-                super::common::index_memory(self.search.as_deref(), &mem);
+                super::common::index_memory(&self.store, self.search.as_deref(), &mem);
                 Ok(json!({
                     "status": "success",
                     "action": "transfer",
@@ -1474,7 +1613,7 @@ impl Tool for SessionHandoffTool {
                     updated.content = v.to_string();
                 }
                 self.store.put(Galaxy::Sessions, &updated)?;
-                super::common::index_memory(self.search.as_deref(), &updated);
+                super::common::index_memory(&self.store, self.search.as_deref(), &updated);
                 Ok(json!({
                     "status": "success",
                     "action": "accept",
@@ -2546,6 +2685,172 @@ mod tests {
             !digest_text.contains("240ms"),
             "superseded claim must not leak: {digest_text}"
         );
+    }
+
+    /// 2026-09-21 reviewer finding: a 100,000-char turn produced a ~200 KB
+    /// JSON-RPC response with no truncation or budget. Continuity must bound
+    /// per-turn content and the response, disclose it, and keep the exact
+    /// original reachable by id.
+    #[tokio::test]
+    async fn continuity_bounds_pathological_turn_content() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let huge = "A".repeat(100_000);
+        let first = SessionRecordTool::new(store.clone())
+            .call(
+                &mut Context::default(),
+                json!({"role": "ai", "content": huge, "session_id": sid}),
+            )
+            .await
+            .unwrap();
+        let turn_id = first["memory_id"].as_str().unwrap().to_string();
+        let current = start_session(&store);
+
+        let continuity = SessionContinuityTool::new(store.clone());
+        let v = continuity
+            .call(
+                &mut Context::default(),
+                json!({"current_session_id": current}),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(v["count"], 1);
+        assert_eq!(v["truncated"], true);
+        assert_eq!(v["turns"][0]["content_truncated"], true);
+        assert_eq!(v["turns"][0]["content_bytes"], 100_000);
+        assert_eq!(v["turns"][0]["memory_id"], turn_id);
+        let cap = v["max_content_bytes"].as_u64().unwrap() as usize;
+        assert!(v["turns"][0]["content"].as_str().unwrap().len() <= cap);
+        let wire = serde_json::to_string(&v).unwrap();
+        assert!(
+            wire.len() <= CONTINUITY_DEFAULT_MAX_RESPONSE_BYTES + 2048,
+            "response must stay near the default budget ({} bytes)",
+            wire.len()
+        );
+        assert!(v["hint"].as_str().unwrap().contains("memory.read"));
+
+        // Truncation is display-only: the canonical record is intact.
+        let id = uuid::Uuid::parse_str(&turn_id).unwrap();
+        let mem = store.get(Galaxy::Sessions, id).unwrap().unwrap();
+        assert_eq!(mem.content.matches('A').count(), 100_000);
+    }
+
+    #[tokio::test]
+    async fn continuity_budget_keeps_newest_turns_and_reports_omissions() {
+        let store = test_store();
+        let sid = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+        for i in 0..10 {
+            record
+                .call(
+                    &mut ctx,
+                    json!({
+                        "role": "ai",
+                        "content": format!("turn-{i}-{}", "x".repeat(5_000)),
+                        "session_id": sid,
+                    }),
+                )
+                .await
+                .unwrap();
+        }
+        let current = start_session(&store);
+        let continuity = SessionContinuityTool::new(store.clone());
+        let v = continuity
+            .call(
+                &mut ctx,
+                json!({"current_session_id": current, "max_response_bytes": 12_288}),
+            )
+            .await
+            .unwrap();
+
+        let omitted = v["turns_omitted"].as_u64().unwrap();
+        assert!(omitted > 0, "budget must omit older turns: {v}");
+        assert_eq!(v["truncated"], true);
+        let kept = v["turns"].as_array().unwrap();
+        assert!(!kept.is_empty());
+        let seqs: Vec<u64> = kept
+            .iter()
+            .map(|t| t["sequence"].as_u64().unwrap())
+            .collect();
+        assert_eq!(*seqs.last().unwrap(), 10, "newest turn must be kept");
+        assert!(
+            seqs.windows(2).all(|w| w[0] < w[1]),
+            "turns stay chronological: {seqs:?}"
+        );
+        for t in kept {
+            assert!(t["memory_id"].as_str().is_some(), "exact-read id required");
+        }
+        let wire = serde_json::to_string(&v).unwrap();
+        assert!(
+            wire.len() <= 12_288 + 2048,
+            "response must stay near the requested budget ({} bytes)",
+            wire.len()
+        );
+    }
+
+    #[tokio::test]
+    async fn continuity_budget_args_are_validated() {
+        let store = test_store();
+        let continuity = SessionContinuityTool::new(store);
+        let mut ctx = Context::default();
+        let err = continuity
+            .call(&mut ctx, json!({"max_response_bytes": 1}))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("continuity budgets"), "got: {err}");
+        let err = continuity
+            .call(&mut ctx, json!({"max_content_bytes": "big"}))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("must be an integer"), "got: {err}");
+    }
+
+    /// 2026-09-21 reviewer finding: recording into a nonexistent session id
+    /// returned success and left an orphan turn (Memories 1, Sessions 0).
+    #[tokio::test]
+    async fn record_rejects_unknown_session_ids() {
+        let store = test_store();
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+
+        let err = record
+            .call(
+                &mut ctx,
+                json!({"content": "orphan turn probe",
+                        "session_id": "00000000-0000-0000-0000-000000000999"}),
+            )
+            .await
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("no session found"),
+            "unknown id must be refused: {err}"
+        );
+        assert!(
+            store.scan_all(Galaxy::Sessions).unwrap().is_empty(),
+            "refused record must not write anything"
+        );
+
+        let err = record
+            .call(
+                &mut ctx,
+                json!({"content": "x", "session_id": "not-a-uuid"}),
+            )
+            .await
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("invalid session_id"),
+            "malformed id must be a caller error: {err}"
+        );
+
+        // A real started session still accepts turns.
+        let sid = start_session(&store);
+        let ok = record
+            .call(&mut ctx, json!({"content": "real turn", "session_id": sid}))
+            .await
+            .unwrap();
+        assert_eq!(ok["status"], "success");
     }
 
     #[tokio::test]

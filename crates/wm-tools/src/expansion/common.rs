@@ -251,10 +251,26 @@ pub fn deindex(search: Option<&SearchEngine>, id_str: &str) {
 /// Best-effort and non-fatal, mirroring `deindex`. Every path that writes a
 /// memory into LMDB outside `memory.create`/`memory.update` should index it
 /// through this helper so full-text search stays consistent.
-pub fn index_memory(search: Option<&SearchEngine>, mem: &wm_memory::Memory) {
-    let Some(search) = search else { return };
+/// Write a memory into the search index. When indexing fails (typically the
+/// Tantivy writer lock is held by another process), the id is recorded in the
+/// store's durable pending-index ledger so a later writable context
+/// reconciles it — the write must never report success and leave silent
+/// drift (2026-09-21 reviewer finding).
+pub fn index_memory(
+    store: &wm_memory::MemoryStore,
+    search: Option<&SearchEngine>,
+    mem: &wm_memory::Memory,
+) {
     let id_str = mem.metadata.id.to_string();
     let galaxy_str = mem.metadata.galaxy.db_name().to_string();
+    let Some(search) = search else {
+        // No engine at write time — the CLI could not take the Tantivy
+        // writer lock (another process holds it) or none is configured. The
+        // canonical write still succeeded, so record it for reconciliation.
+        tracing::debug!("no search engine for memory {id_str} — recording pending index entry");
+        mark_pending_index(store, &galaxy_str, &id_str);
+        return;
+    };
     if let Err(e) = (|| {
         let mut writer = search.writer()?;
         search.add_document(
@@ -269,6 +285,50 @@ pub fn index_memory(search: Option<&SearchEngine>, mem: &wm_memory::Memory) {
         Ok::<(), wm_core::CoreError>(())
     })() {
         tracing::warn!("Tantivy indexing failed for memory {id_str}: {e}");
+        mark_pending_index(store, &galaxy_str, &id_str);
+    }
+}
+
+/// Delete-then-add re-index for an updated memory, with the same durable
+/// pending-index marking as [`index_memory`].
+pub fn replace_memory_index(
+    store: &wm_memory::MemoryStore,
+    search: Option<&SearchEngine>,
+    mem: &wm_memory::Memory,
+) {
+    let id_str = mem.metadata.id.to_string();
+    let galaxy_str = mem.metadata.galaxy.db_name().to_string();
+    let Some(search) = search else {
+        tracing::debug!("no search engine for memory {id_str} — recording pending index entry");
+        mark_pending_index(store, &galaxy_str, &id_str);
+        return;
+    };
+    if let Err(e) = (|| {
+        let mut writer = search.writer()?;
+        search.delete_document(&mut writer, &id_str)?;
+        search.add_document(
+            &mut writer,
+            &id_str,
+            &galaxy_str,
+            &mem.content,
+            &mem.metadata.tags,
+            mem.metadata.created_at.timestamp(),
+        )?;
+        search.commit(&mut writer)?;
+        Ok::<(), wm_core::CoreError>(())
+    })() {
+        tracing::warn!("Tantivy re-indexing failed for memory {id_str}: {e}");
+        mark_pending_index(store, &galaxy_str, &id_str);
+    }
+}
+
+/// Record a failed index write in the durable ledger (best effort: the
+/// canonical write already succeeded, and a second failure here is logged,
+/// never hidden).
+fn mark_pending_index(store: &wm_memory::MemoryStore, galaxy: &str, id: &str) {
+    let at_ms = wm_core::time::now_unix_millis();
+    if let Err(e) = store.mark_index_pending(galaxy, id, at_ms) {
+        tracing::warn!("could not record pending index entry for memory {id}: {e}");
     }
 }
 
@@ -349,5 +409,43 @@ mod tests {
             .unwrap();
         assert!(!mem.metadata.validity.is_current());
         assert!(validity_visible(&mem));
+    }
+
+    /// 2026-09-21 reviewer finding: an index write that lost the Tantivy
+    /// writer lock used to disappear behind a stderr warning. It must be
+    /// recorded in the durable pending-index ledger instead.
+    #[test]
+    fn index_memory_records_pending_when_the_writer_lock_is_lost() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = wm_memory::MemoryStore::open_default(tmp.path()).unwrap();
+        let tantivy_dir = tmp.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy_dir).unwrap();
+        let _holder = wm_memory::SearchEngine::open(&tantivy_dir).unwrap();
+        let readonly = wm_memory::SearchEngine::open_readonly(&tantivy_dir).unwrap();
+
+        let mem = Memory::new(Galaxy::Codex, "lock-lost write".into());
+        store.put(Galaxy::Codex, &mem).unwrap();
+        index_memory(&store, Some(&readonly), &mem);
+
+        let pending = store.index_pending_entries().unwrap();
+        assert_eq!(pending.len(), 1, "lock loss must be recorded durably");
+        assert_eq!(pending[0].0, mem.metadata.id.to_string());
+        assert_eq!(pending[0].1, "codex");
+    }
+
+    /// The CLI cannot even open the engine while another process holds the
+    /// writer, so the write path reaches this function with `None`; that case
+    /// must be recorded too (2026-09-21 reviewer finding, concurrency repro).
+    #[test]
+    fn index_memory_records_pending_when_no_engine_is_available() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = wm_memory::MemoryStore::open_default(tmp.path()).unwrap();
+        let mem = Memory::new(Galaxy::Sessions, "no engine at write time".into());
+        store.put(Galaxy::Sessions, &mem).unwrap();
+        index_memory(&store, None, &mem);
+        let pending = store.index_pending_entries().unwrap();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].0, mem.metadata.id.to_string());
+        assert_eq!(pending[0].1, "sessions");
     }
 }

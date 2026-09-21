@@ -259,36 +259,37 @@ impl<'a> EpisodicStore<'a> {
         }
     }
 
-    fn index_records(&self, records: &[EpisodicRecord]) -> Result<()> {
-        let public: Vec<&EpisodicRecord> = records
-            .iter()
-            .filter(|record| !record.is_private && !record.model_exclude)
-            .collect();
-        if public.is_empty() {
-            return Ok(());
+    /// Indexable terms for a record: alias- and enrichment-expanded, safe for
+    /// LMDB keys, and empty for private/model-excluded records (never posted).
+    /// One derivation shared by append indexing and content replacement so the
+    /// raw lane and the sidecar can never disagree (2026-09-21 review).
+    fn record_terms(&self, record: &EpisodicRecord) -> std::collections::BTreeSet<String> {
+        if record.is_private || record.model_exclude {
+            return std::collections::BTreeSet::new();
         }
-        let mut pending: HashMap<String, Vec<&EpisodicRecord>> = HashMap::new();
-        for record in &public {
-            let base_terms = index_terms_with_aliases(&record.content, self.aliases.as_ref());
-            let enriched: Vec<String> = if let Some(ref enrichment) = self.enrichment {
-                let mut all = base_terms.clone();
-                let extra = enrichment.enrich(&base_terms);
-                all.extend(extra);
-                all.sort();
-                all.dedup();
-                all
+        let base = index_terms_with_aliases(&record.content, self.aliases.as_ref());
+        let terms: std::collections::BTreeSet<String> =
+            if let Some(ref enrichment) = self.enrichment {
+                let mut all = base.clone();
+                all.extend(enrichment.enrich(&base));
+                all.into_iter().collect()
             } else {
-                base_terms
+                base.into_iter().collect()
             };
-            for term in enriched {
-                // H2 (2026-09-19 review): keys longer than LMDB's 511-byte
-                // limit abort the sidecar write with MDB_BAD_VALSIZE. Terms
-                // are canonicalized here so the raw record still indexes.
-                pending
-                    .entry(index_safe_term(&term))
-                    .or_default()
-                    .push(record);
+        // H2 (2026-09-19 review): keys longer than LMDB's 511-byte limit abort
+        // the sidecar write with MDB_BAD_VALSIZE; canonicalize every term.
+        terms.into_iter().map(|t| index_safe_term(&t)).collect()
+    }
+
+    fn index_records(&self, records: &[EpisodicRecord]) -> Result<()> {
+        let mut pending: HashMap<String, Vec<&EpisodicRecord>> = HashMap::new();
+        for record in records {
+            for term in self.record_terms(record) {
+                pending.entry(term).or_default().push(record);
             }
+        }
+        if pending.is_empty() {
+            return Ok(());
         }
         let mut tx = self
             .env
@@ -423,6 +424,70 @@ impl<'a> EpisodicStore<'a> {
             }
             Err(e) => Err(CoreError::Memory(format!("episodic get failed: {e}"))),
         }
+    }
+
+    /// Replace one raw record's content in place (credential redaction /
+    /// repair path), keeping the raw lane and the term sidecar consistent.
+    ///
+    /// Returns `false` when no record with that id exists. Postings for terms
+    /// the new content no longer contains are removed, and the new terms are
+    /// posted in the same transaction. The raw record is overwritten even
+    /// when private/model-excluded — the bytes must not survive anywhere,
+    /// even in records the lane never indexes (2026-09-21 reviewer finding).
+    pub fn replace_content(&self, id: EpisodicId, new_content: &str) -> Result<bool> {
+        let mut tx = self
+            .env
+            .begin_rw_txn()
+            .map_err(|e| CoreError::Memory(format!("episodic rw_txn failed: {e}")))?;
+        let existing = match tx.get(self.db, id.as_bytes()) {
+            Ok(bytes) => bytes.to_vec(),
+            Err(lmdb::Error::NotFound) => {
+                tx.abort();
+                return Ok(false);
+            }
+            Err(e) => {
+                tx.abort();
+                return Err(CoreError::Memory(format!("episodic get failed: {e}")));
+            }
+        };
+        let mut record: EpisodicRecord = rmp_serde::from_slice(&existing)
+            .map_err(|e| CoreError::Memory(format!("episodic deserialize failed: {e}")))?;
+        if record.content == new_content {
+            tx.abort();
+            return Ok(true);
+        }
+        let old_terms = self.record_terms(&record);
+        record.content = new_content.to_string();
+        let new_terms = self.record_terms(&record);
+        let value = rmp_serde::to_vec(&record)
+            .map_err(|e| CoreError::Memory(format!("episodic serialize failed: {e}")))?;
+        tx.put(self.db, id.as_bytes(), &value, WriteFlags::default())
+            .map_err(|e| CoreError::Memory(format!("episodic replace write failed: {e}")))?;
+        for term in old_terms.difference(&new_terms) {
+            match tx.del(self.term_db, term, Some(id.as_bytes())) {
+                Ok(()) | Err(lmdb::Error::NotFound) => {}
+                Err(e) => {
+                    tx.abort();
+                    return Err(CoreError::Memory(format!(
+                        "episodic term delete failed: {e}"
+                    )));
+                }
+            }
+        }
+        for term in &new_terms {
+            if let Err(e) = tx.put(self.term_db, term, id.as_bytes(), WriteFlags::default()) {
+                tx.abort();
+                return Err(CoreError::Memory(format!(
+                    "episodic term write failed: {e}"
+                )));
+            }
+        }
+        tx.commit()
+            .map_err(|e| CoreError::Memory(format!("episodic commit failed: {e}")))?;
+        self.mutation_count
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.clear_term_cache();
+        Ok(true)
     }
 
     /// Apply an explicit lifecycle transition to a persisted record.
@@ -2403,5 +2468,59 @@ mod tests {
         if let Some(br) = b_rank {
             assert!(a_ranks.iter().all(|&ar| ar < br));
         }
+    }
+
+    /// 2026-09-21 reviewer finding: `wm redact-content` scrubbed the galaxy
+    /// row while the episodic raw lane kept the original bytes. Replacing a
+    /// record's content must rewrite the raw record and move the term
+    /// postings with it.
+    #[test]
+    fn replace_content_rewrites_raw_record_and_term_postings() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        // A single alphanumeric token: the tokenizer would split an
+        // underscore fixture, so a shared word could match both sides.
+        let secret = "zq8x5v3p1k9r2m4n6w7a2s4d8";
+        let record = sample_record(1, &format!("TOKEN={secret}")).with_id(uuid::Uuid::new_v4());
+        let id = record.id;
+        store.episodic().append(&record).unwrap();
+        assert!(
+            !store
+                .episodic()
+                .search(secret, 5, false)
+                .unwrap()
+                .is_empty(),
+            "fixture secret must be searchable before redaction"
+        );
+
+        let redacted = "TOKEN=[REDACTED:credential_assignment]";
+        assert!(store.episodic().replace_content(id, redacted).unwrap());
+        let stored = store.episodic().get(id).unwrap().unwrap();
+        assert_eq!(stored.content, redacted, "raw lane must be rewritten");
+        assert!(
+            store
+                .episodic()
+                .search(secret, 5, false)
+                .unwrap()
+                .is_empty(),
+            "the old term must not keep the record searchable"
+        );
+        assert!(
+            !store
+                .episodic()
+                .search("REDACTED", 5, false)
+                .unwrap()
+                .is_empty(),
+            "the new terms must be posted"
+        );
+
+        // Idempotent and absent-safe.
+        assert!(store.episodic().replace_content(id, redacted).unwrap());
+        assert!(
+            !store
+                .episodic()
+                .replace_content(uuid::Uuid::new_v4(), "x")
+                .unwrap()
+        );
     }
 }

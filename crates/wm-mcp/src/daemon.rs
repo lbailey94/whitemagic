@@ -1149,6 +1149,23 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
             // per-write indexing, so a long-running daemon would otherwise
             // hide new memories from search until the next restart.
             if let Some(engine) = server.search_engine() {
+                // Targeted first: drain the durable pending-index ledger so
+                // lock-losing writers reconcile while the daemon runs, not
+                // just at the next restart (2026-09-21 reviewer finding).
+                match wm_memory::reindex::drain_index_pending(server.store(), engine) {
+                    Ok(report) if report.pending > 0 => tracing::info!(
+                        pending = report.pending,
+                        drained = report.drained,
+                        missing = report.missing,
+                        failed = report.failed,
+                        "pending-index ledger reconciled"
+                    ),
+                    Ok(_) => {}
+                    Err(e) => tracing::warn!(
+                        error = %e,
+                        "pending-index drain failed — entries stay for the next attempt"
+                    ),
+                }
                 match wm_memory::reindex::heal_index_drift(server.store(), engine) {
                     Ok(Some(report)) => {
                         // Name the drifted galaxies: a bare count hid the

@@ -159,7 +159,7 @@ impl Tool for SessionStartTool {
         mem.metadata.source = "system".to_string();
         mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
-        super::common::index_memory(self.search.as_deref(), &mem);
+        super::common::index_memory(&self.store, self.search.as_deref(), &mem);
         let episodic_capture_error = crate::capture_explicit_memory(
             &self.store,
             &mem,
@@ -218,7 +218,7 @@ fn store_checkpoint_record(
     mem.metadata.source = "system".to_string();
     mem.metadata.source_trust = 0.7;
     store.put(Galaxy::Sessions, &mem)?;
-    super::common::index_memory(search, &mem);
+    super::common::index_memory(store, search, &mem);
     let episodic_capture_error = crate::capture_explicit_memory(
         store,
         &mem,
@@ -812,7 +812,7 @@ impl Tool for SessionEndTool {
         mem.metadata.source = "system".to_string();
         mem.metadata.source_trust = 0.7;
         self.store.put(Galaxy::Sessions, &mem)?;
-        super::common::index_memory(self.search.as_deref(), &mem);
+        super::common::index_memory(&self.store, self.search.as_deref(), &mem);
         let episodic_capture_error = crate::capture_explicit_memory(
             &self.store,
             &mem,

@@ -1645,10 +1645,19 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         fs::create_dir_all(root).unwrap();
+        // 2026-09-21 reviewer fixtures: a plain TOKEN assignment and a
+        // credential-bearing connection string must scrub like the token
+        // shapes always did.
+        let token_secret = "generic_token_value_0123456789abcdef";
+        let db_password = "fakepassword123456";
         fs::write(
             root.join("notes.md"),
-            "# Notes\n\ntoken sk-proj0123456789abcdefghijklmnopqrstuv\n\n\
-             -----BEGIN RSA PRIVATE KEY-----\nMIIEowSECRET\n-----END RSA PRIVATE KEY-----\n",
+            format!(
+                "# Notes\n\ntoken sk-proj0123456789abcdefghijklmnopqrstuv\n\
+                 TOKEN={token_secret}\n\
+                 DATABASE_URL=postgres://alice:{db_password}@db.example.com/prod\n\n\
+                 -----BEGIN RSA PRIVATE KEY-----\nMIIEowSECRET\n-----END RSA PRIVATE KEY-----\n"
+            ),
         )
         .unwrap();
         let store_path = tmp.path().join("store");
@@ -1677,10 +1686,30 @@ mod tests {
             .join("\n");
         assert!(joined.contains("[REDACTED:private_key_pem]"));
         assert!(joined.contains("[REDACTED:openai_style_key]"));
+        assert!(joined.contains("[REDACTED:credential_assignment]"));
+        assert!(joined.contains("[REDACTED:credential_uri]"));
         assert!(
             !joined.contains("MIIEowSECRET")
-                && !joined.contains("sk-proj0123456789abcdefghijklmnopqrstuv"),
+                && !joined.contains("sk-proj0123456789abcdefghijklmnopqrstuv")
+                && !joined.contains(token_secret)
+                && !joined.contains(db_password),
             "no secret material may reach the store"
+        );
+
+        // The derived index must be just as clean: the reviewer found the
+        // generic token searchable after the redaction pass was reported.
+        let search = SearchEngine::open_readonly(store_path.join("lmdb").join("tantivy")).unwrap();
+        assert!(
+            search.search(token_secret, 5).unwrap().is_empty(),
+            "ingested token must not be searchable"
+        );
+        assert!(
+            search.search(db_password, 5).unwrap().is_empty(),
+            "ingested DB password must not be searchable"
+        );
+        assert!(
+            !search.search("REDACTED", 5).unwrap().is_empty(),
+            "redaction markers must be searchable"
         );
     }
 

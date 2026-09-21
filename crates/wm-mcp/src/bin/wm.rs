@@ -584,10 +584,14 @@ enum Commands {
     ///
     /// Retrofit for content written before `wm ingest --redact` existed (or
     /// by other write paths): scans memories for credential-shaped spans
-    /// (PEM keys, prefixed tokens, assignment values) and rewrites matching
-    /// rows with `[REDACTED:<kind>]` markers, chaining the revision history
-    /// and reindexing them. DRY-RUN by default — a `--tag` filter scopes the
-    /// pass (e.g. `source:convo-harvest-20260911`).
+    /// (PEM keys, prefixed tokens, assignment values, credential-bearing URI
+    /// userinfo) and rewrites matching rows — galaxy rows plus the episodic
+    /// raw records that mirror them — with `[REDACTED:<kind>]` markers,
+    /// chaining the revision history and reindexing them. LMDB copy-on-write
+    /// can leave pre-rewrite bytes in freed pages (never read or searched);
+    /// back up and restore into a fresh store for byte-level absence on disk.
+    /// DRY-RUN by default — a `--tag` filter scopes the pass
+    /// (e.g. `source:convo-harvest-20260911`).
     #[command(hide = true)]
     RedactContent {
         /// Path to the store root directory (default: ~/.local/share/whitemagic)
@@ -2766,6 +2770,91 @@ fn run_trust(store_path: &std::path::Path, command: TrustCommand) -> anyhow::Res
 
 /// Rebuild the Tantivy index from LMDB (`wm reindex`).
 /// Back up the full store root (`wm backup`).
+/// Resolve a path lexically, following symlinks component by component —
+/// including *dangling* symlinks, which `std::fs::canonicalize` refuses and
+/// which are exactly how a destination like `<store>/backups` can be smuggled
+/// past a naive check before it exists.
+fn resolve_path_lenient(path: &std::path::Path, depth: usize) -> Option<std::path::PathBuf> {
+    use std::path::Component;
+    // Linux caps symlink resolution at 40; use the same bound.
+    if depth > 40 {
+        return None;
+    }
+    let mut out = std::path::PathBuf::new();
+    for comp in path.components() {
+        match comp {
+            Component::RootDir => out.push(std::path::MAIN_SEPARATOR.to_string()),
+            Component::Prefix(_) => out.push(comp.as_os_str()),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(name) => {
+                let candidate = out.join(name);
+                let is_link =
+                    std::fs::symlink_metadata(&candidate).is_ok_and(|m| m.file_type().is_symlink());
+                if is_link {
+                    let target = std::fs::read_link(&candidate).ok()?;
+                    let target = if target.is_absolute() {
+                        target
+                    } else {
+                        out.join(target)
+                    };
+                    out = resolve_path_lenient(&target, depth + 1)?;
+                } else {
+                    out.push(name);
+                }
+            }
+        }
+    }
+    Some(out)
+}
+
+/// Absolute, symlink-resolved form of `path` for containment checks (the
+/// final component may not exist yet).
+fn resolve_backup_path(path: &std::path::Path) -> Option<std::path::PathBuf> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().ok()?.join(path)
+    };
+    resolve_path_lenient(&absolute, 0)
+}
+
+/// Refuse backup destinations that resolve into the source store: `copy_tree`
+/// would then recurse into the backup it is writing until the OS refuses the
+/// pathname (2026-09-21 reviewer finding — `--out <store>`,
+/// `--out <store>/backups`, and a symlink pointing inside the store all
+/// recurse). Both sides are symlink-resolved first, so a link cannot smuggle
+/// the destination inside. Runs before anything is created.
+fn ensure_backup_destination_outside_store(
+    store_path: &std::path::Path,
+    dest_parent: &std::path::Path,
+) -> anyhow::Result<()> {
+    let store_canon = resolve_backup_path(store_path).ok_or_else(|| {
+        anyhow::anyhow!(
+            "cannot resolve the store path {} (symlink loop?)",
+            store_path.display()
+        )
+    })?;
+    let dest_canon = resolve_backup_path(dest_parent).ok_or_else(|| {
+        anyhow::anyhow!(
+            "cannot resolve the backup destination {} (symlink loop?)",
+            dest_parent.display()
+        )
+    })?;
+    if dest_canon == store_canon || dest_canon.starts_with(&store_canon) {
+        anyhow::bail!(
+            "Refusing to back up into the store: destination {} resolves inside the \
+             source store {}. Choose a directory outside the store — preferably on \
+             a different disk.",
+            dest_parent.display(),
+            store_canon.display()
+        );
+    }
+    Ok(())
+}
+
 fn run_backup(
     store_path: &std::path::Path,
     out_parent: Option<&std::path::Path>,
@@ -2805,6 +2894,7 @@ fn run_backup(
         || dirs_home().join("whitemagic-backups"),
         std::path::PathBuf::from,
     );
+    ensure_backup_destination_outside_store(store_path, &dest_parent)?;
     let ts = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
     let dest = dest_parent.join(format!("whitemagic-backup-{ts}"));
     let data_dest = dest.join("data");
@@ -3616,6 +3706,23 @@ fn run_reindex(
         anyhow::anyhow!("Tantivy rebuilt, but the episodic term sidecar rebuild failed: {e}")
     })?;
     println!("Episodic term sidecar rebuilt from {episodes} raw record(s).");
+    // The rebuild reconciled every record in scope, so the durable
+    // pending-index ledger can drop those entries (2026-09-21 reviewer
+    // finding: lock-losing writers enqueue instead of leaving drift).
+    let cleared = if galaxy_filter.is_empty() {
+        store.clear_all_index_pending()?
+    } else {
+        let ids: Vec<String> = store
+            .index_pending_entries()?
+            .into_iter()
+            .filter(|(_, galaxy, _)| galaxy_filter.iter().any(|g| g == galaxy))
+            .map(|(id, _, _)| id)
+            .collect();
+        store.clear_index_pending(&ids)?
+    };
+    if cleared > 0 {
+        println!("Cleared {cleared} pending-index entr(ies) covered by this rebuild.");
+    }
     Ok(())
 }
 
@@ -5953,6 +6060,87 @@ mod restore_preservation_tests {
             .unwrap()
             .unwrap()
             .path()
+    }
+
+    fn store_with_one_record(root: &std::path::Path) {
+        let store = MemoryStore::open_default(root.join("lmdb")).unwrap();
+        store
+            .put(
+                wm_core::Galaxy::Codex,
+                &Memory::new(wm_core::Galaxy::Codex, "guard fixture".into()),
+            )
+            .unwrap();
+    }
+
+    /// 2026-09-21 reviewer P1: `--out <store>`, `--out <store>/backups`, and
+    /// a symlink into the store all recursed into the backup being written
+    /// until the OS refused the pathname. Refusal must happen before anything
+    /// is created; a destination outside the store still works.
+    #[test]
+    fn backup_refuses_destinations_inside_the_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        let source = tmp.path().join("source");
+        store_with_one_record(&source);
+
+        for (label, dest) in [
+            ("the store root itself", source.clone()),
+            ("a direct store subdirectory", source.join("backups")),
+            ("a nested store subdirectory", source.join("lmdb/backups")),
+        ] {
+            let err = run_backup(&source, Some(&dest)).unwrap_err();
+            assert!(
+                err.to_string()
+                    .contains("Refusing to back up into the store"),
+                "{label} must be refused: {err}"
+            );
+        }
+        assert!(
+            !source.join("backups").exists() && !source.join("lmdb/backups").exists(),
+            "refusal must not create the destination"
+        );
+
+        let outside = tmp.path().join("outside");
+        std::fs::create_dir_all(&outside).unwrap();
+        run_backup(&source, Some(&outside)).unwrap();
+        assert_eq!(
+            std::fs::read_dir(&outside).unwrap().count(),
+            1,
+            "a destination outside the store backs up normally"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn backup_refuses_symlinked_destinations_inside_the_store() {
+        let tmp = tempfile::tempdir().unwrap();
+        let source = tmp.path().join("source");
+        store_with_one_record(&source);
+
+        // A link to an existing directory inside the store.
+        std::fs::create_dir_all(source.join("backups")).unwrap();
+        let existing_link = tmp.path().join("link-existing");
+        std::os::unix::fs::symlink(source.join("backups"), &existing_link).unwrap();
+        let err = run_backup(&source, Some(&existing_link)).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("Refusing to back up into the store"),
+            "link to an existing store directory must be refused: {err}"
+        );
+
+        // A dangling link whose target would be created inside the store —
+        // `canonicalize` cannot see through this one before it exists.
+        let dangling_link = tmp.path().join("link-dangling");
+        std::os::unix::fs::symlink(source.join("nested/backups"), &dangling_link).unwrap();
+        let err = run_backup(&source, Some(&dangling_link)).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("Refusing to back up into the store"),
+            "dangling link into the store must be refused: {err}"
+        );
+        assert!(
+            !source.join("nested").exists(),
+            "refusal must not create the linked target"
+        );
     }
 
     /// Q07-F1: `envelope.json` is inside the integrity manifest — tampering

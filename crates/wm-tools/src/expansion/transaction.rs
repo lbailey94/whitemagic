@@ -375,7 +375,7 @@ impl Tool for TransactionRollbackTool {
             // which preserves each memory's original UUID and index entries).
             total_restored += self.store.batch_put(galaxy, &memories)?;
             for mem in &memories {
-                super::common::index_memory(self.search.as_deref(), mem);
+                super::common::index_memory(&self.store, self.search.as_deref(), mem);
             }
         }
 

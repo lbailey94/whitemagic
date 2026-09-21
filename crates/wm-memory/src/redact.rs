@@ -12,6 +12,14 @@
 //!
 //! The caller must hold the writer lock (no writable serve on the store);
 //! a fresh `wm backup` before applying is the operator's responsibility.
+//!
+//! Note (2026-09-21 reviewer finding): rewrites scrub the live records in
+//! every lane — galaxy rows and the episodic raw records that mirror explicit
+//! memories. LMDB is copy-on-write, so a *freed* page can retain pre-rewrite
+//! bytes until the allocator reuses it; reads and search never consult freed
+//! pages, so nothing is retrievable once this pass reports clean. For
+//! byte-level absence on disk, back the store up and restore into a fresh
+//! store.
 
 // The writer must stay alive for the whole pass (one commit at the end);
 // tightening its drop scope mid-scan is exactly what the lint suggests and
@@ -114,6 +122,13 @@ pub fn redact_store_content(
                     compartment: None,
                 },
             )?;
+            // Explicit memories are mirrored into the episodic raw lane; the
+            // galaxy row alone is not the whole store. Without this the
+            // original bytes survived in data.mdb even though the galaxy row
+            // read clean (2026-09-21 reviewer finding).
+            store
+                .episodic()
+                .replace_content(mem.metadata.id, &mem.content)?;
             let id_str = mem.metadata.id.to_string();
             search.delete_document(writer, &id_str)?;
             search.add_document(
@@ -243,6 +258,95 @@ mod tests {
             redact_store_content(&store, &search, &[Galaxy::Research], None, true).unwrap();
         assert_eq!(second.redacted, 0);
         assert_eq!(second.already_clean, 2);
+    }
+
+    /// 2026-09-21 reviewer P0 store-level regression: after an apply pass the
+    /// fixture secret bytes must occur nowhere in LMDB and must not be
+    /// searchable; the redaction markers are.
+    #[test]
+    fn reviewer_fixtures_are_absent_from_lmdb_and_index_after_apply() {
+        let (_tmp, store, search) = setup();
+        let token_secret = "zq8x5v3p1k9r2m4n6w7a2s4d8";
+        let db_password = "m4n6p8q2r9t3v5w7y9b3c5f7";
+        let content = format!(
+            "secrets.txt\nTOKEN={token_secret}\n\
+             DATABASE_URL=postgres://alice:{db_password}@db.example.com/prod"
+        );
+        let id = put_tagged(
+            &store,
+            &search,
+            Galaxy::Research,
+            &content,
+            &["source:secrets"],
+        );
+        // Mirror the explicit-memory capture path: an episodic raw record
+        // with the same id carries the same bytes, and the retrofit must
+        // scrub that lane too (2026-09-21 review: the galaxy row read clean
+        // while data.mdb still held the secret in the raw record).
+        let episodic = wm_core::EpisodicRecord::new(
+            None,
+            0,
+            wm_core::EpisodicKind::Observation,
+            content,
+            wm_core::Provenance::new(wm_core::ProvenanceSource::Agent),
+        )
+        .with_id(id);
+        store.episodic().append(&episodic).unwrap();
+
+        let report =
+            redact_store_content(&store, &search, &[Galaxy::Research], None, true).unwrap();
+        assert_eq!(report.redacted, 1);
+        assert!(report.kinds.contains_key("credential_assignment"));
+        assert!(report.kinds.contains_key("credential_uri"));
+
+        for mem in store.scan_all(Galaxy::Research).unwrap() {
+            assert!(
+                !mem.content.contains(token_secret),
+                "LMDB still holds the token"
+            );
+            assert!(
+                !mem.content.contains(db_password),
+                "LMDB still holds the DB password"
+            );
+            assert!(
+                crate::credential_shaped_content(&mem.content).is_empty(),
+                "stored content must read clean: {}",
+                mem.content
+            );
+        }
+        let raw = store.episodic().get(id).unwrap().unwrap();
+        assert!(
+            !raw.content.contains(token_secret) && !raw.content.contains(db_password),
+            "episodic raw lane still holds the secret: {}",
+            raw.content
+        );
+        assert!(crate::credential_shaped_content(&raw.content).is_empty());
+        assert!(
+            store
+                .episodic()
+                .search(token_secret, 5, false)
+                .unwrap()
+                .is_empty(),
+            "episodic search must not match the old secret"
+        );
+        assert!(
+            search.search(token_secret, 5).unwrap().is_empty(),
+            "token must not be searchable after redaction"
+        );
+        assert!(
+            search.search(db_password, 5).unwrap().is_empty(),
+            "password must not be searchable after redaction"
+        );
+        assert!(
+            !search.search("REDACTED", 5).unwrap().is_empty(),
+            "redaction markers must be searchable"
+        );
+
+        // The store pass is idempotent: a second apply finds nothing.
+        let second =
+            redact_store_content(&store, &search, &[Galaxy::Research], None, true).unwrap();
+        assert_eq!(second.redacted, 0);
+        assert_eq!(second.already_clean, 1);
     }
 
     #[test]

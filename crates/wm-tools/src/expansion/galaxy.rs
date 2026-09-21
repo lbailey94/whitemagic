@@ -596,7 +596,7 @@ impl Tool for GalaxyRestoreTool {
                 mem.metadata.importance = (imp as f32).clamp(0.0, 1.0);
             }
             self.store.put(target_galaxy, &mem)?;
-            super::common::index_memory(self.search.as_deref(), &mem);
+            super::common::index_memory(&self.store, self.search.as_deref(), &mem);
             restored += 1;
         }
 

@@ -632,6 +632,93 @@ pub fn open_or_quarantine(
     }
 }
 
+/// Outcome of a pending-index drain.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct DrainReport {
+    /// Entries present in the ledger when the drain started.
+    pub pending: usize,
+    /// Entries re-indexed and cleared.
+    pub drained: usize,
+    /// Entries whose memory no longer exists (cleared without indexing).
+    pub missing: usize,
+    /// Entries with an unknown galaxy name or malformed id (cleared).
+    pub unknown_galaxy: usize,
+    /// Entries left in the ledger (re-indexing failed; retried next time).
+    pub failed: usize,
+}
+
+/// Reconcile the durable pending-index ledger: re-index every recorded write
+/// and clear the entries that succeeded.
+///
+/// Called by writable contexts at startup so writers that lost the Tantivy
+/// writer lock cannot leave silent index drift (2026-09-21 reviewer finding).
+/// Missing memories and unknown galaxy names are cleared (nothing to index);
+/// entries that fail to re-index stay for the next attempt. A held writer
+/// lock fails the call before anything is cleared.
+///
+/// # Errors
+/// Propagates the writer-lock open error (nothing cleared then) and
+/// store/index errors from the commit.
+#[allow(clippy::significant_drop_tightening)] // writer must live to the commit
+pub fn drain_index_pending(store: &MemoryStore, search: &SearchEngine) -> Result<DrainReport> {
+    let entries = store.index_pending_entries()?;
+    let mut report = DrainReport {
+        pending: entries.len(),
+        ..Default::default()
+    };
+    if entries.is_empty() {
+        return Ok(report);
+    }
+    let mut writer = search.writer()?;
+    let mut cleared: Vec<String> = Vec::new();
+    for (id, galaxy_name, _) in &entries {
+        let Some(galaxy) = Galaxy::from_db_name(galaxy_name) else {
+            report.unknown_galaxy += 1;
+            cleared.push(id.clone());
+            continue;
+        };
+        let Ok(parsed) = uuid::Uuid::parse_str(id) else {
+            report.unknown_galaxy += 1;
+            cleared.push(id.clone());
+            continue;
+        };
+        let Some(memory) = store.get(galaxy, parsed)? else {
+            report.missing += 1;
+            cleared.push(id.clone());
+            continue;
+        };
+        let indexed = search.delete_document(&mut writer, id).and_then(|()| {
+            search.add_document(
+                &mut writer,
+                id,
+                galaxy.db_name(),
+                &memory.content,
+                &memory.metadata.tags,
+                memory.metadata.created_at.timestamp(),
+            )
+        });
+        match indexed {
+            Ok(()) => {
+                report.drained += 1;
+                cleared.push(id.clone());
+            }
+            Err(e) => {
+                tracing::warn!(
+                    memory_id = %id,
+                    error = %e,
+                    "pending-index drain could not re-index a memory"
+                );
+                report.failed += 1;
+            }
+        }
+    }
+    // Commit before clearing: a crash between the two replays idempotent
+    // delete-then-add work; the reverse order could lose the mark.
+    search.commit(&mut writer)?;
+    store.clear_index_pending(&cleared)?;
+    Ok(report)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -663,6 +750,62 @@ mod tests {
             )
             .unwrap();
         search.commit(&mut writer).unwrap();
+    }
+
+    /// 2026-09-21 reviewer finding: a writer that lost the Tantivy lock
+    /// records itself in the durable pending ledger; the next writable
+    /// context drains it, deleted records are cleared without indexing, and a
+    /// still-held lock leaves the entries for the next attempt.
+    #[test]
+    fn pending_index_ledger_drains_and_clears() {
+        let tmp = tempdir().unwrap();
+        let store = MemoryStore::open_default(tmp.path()).unwrap();
+        let tantivy_dir = tmp.path().join("tantivy");
+        std::fs::create_dir_all(&tantivy_dir).unwrap();
+        let search = SearchEngine::open(&tantivy_dir).unwrap();
+
+        let mem = Memory::new(Galaxy::Codex, "lock-lost write".into());
+        let id = mem.metadata.id;
+        store.put(Galaxy::Codex, &mem).unwrap();
+        store
+            .mark_index_pending("codex", &id.to_string(), 1)
+            .unwrap();
+        // A record that no longer exists (deleted after the failed write).
+        let ghost = uuid::Uuid::new_v4();
+        store
+            .mark_index_pending("codex", &ghost.to_string(), 2)
+            .unwrap();
+        assert_eq!(store.count_index_pending().unwrap(), 2);
+
+        let report = drain_index_pending(&store, &search).unwrap();
+        assert_eq!(report.pending, 2);
+        assert_eq!(report.drained, 1);
+        assert_eq!(report.missing, 1);
+        assert_eq!(report.failed, 0);
+        assert_eq!(store.count_index_pending().unwrap(), 0);
+        assert!(
+            !search.search("lock-lost write", 5).unwrap().is_empty(),
+            "drained memory must be searchable"
+        );
+
+        // Empty ledger: a second drain is a no-op.
+        assert_eq!(drain_index_pending(&store, &search).unwrap().pending, 0);
+
+        // A held writer lock (read-only engine) refuses before clearing.
+        let survivor = uuid::Uuid::new_v4();
+        store
+            .mark_index_pending("codex", &survivor.to_string(), 3)
+            .unwrap();
+        let readonly = SearchEngine::open_readonly(&tantivy_dir).unwrap();
+        assert!(
+            drain_index_pending(&store, &readonly).is_err(),
+            "drain must fail when the writer lock is unavailable"
+        );
+        assert_eq!(
+            store.count_index_pending().unwrap(),
+            1,
+            "entries must survive a lock-loss drain"
+        );
     }
 
     #[test]
