@@ -7,7 +7,7 @@
 //! so this text cannot drift from the CLI silently.
 
 /// Short first-run walkthrough printed by `wm docs quickstart`.
-pub const QUICKSTART: &str = r#"WhiteMagic — offline quickstart
+pub const QUICKSTART: &str = r"WhiteMagic — offline quickstart
 ================================
 
 Install (if you have not yet):
@@ -53,7 +53,7 @@ is a single directory you can copy, move, or delete.
 Full docs (when online): https://www.whitemagic.dev/whitemagic/guide
 Quickstart in English, Español, Português (BR), Français:
   https://github.com/lbailey94/whitemagic/blob/main/docs/QUICKSTART.md
-"#;
+";
 
 #[cfg(test)]
 mod tests {
