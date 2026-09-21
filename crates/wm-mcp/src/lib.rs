@@ -21,6 +21,7 @@ pub mod grimoire;
 pub mod ingest;
 pub mod input_validation;
 pub mod landlock_sandbox;
+pub mod ledger;
 pub mod manifest;
 pub mod migrate;
 pub mod network_audit;

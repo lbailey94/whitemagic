@@ -662,6 +662,20 @@ impl Tool for SessionRecordTool {
                  review it before trusting it as context"
             )]);
         }
+        // Token-ledger v0 (2026-09-21): bytes stored, locally. Evidence, not
+        // a gate — a ledger failure never fails the write.
+        super::common::append_savings_row(
+            &self.store,
+            &json!({
+                "ts_ms": timestamp,
+                "op": "record",
+                "session_id": session_id,
+                "sequence": sequence,
+                "role": role,
+                "turn_type": turn_type,
+                "bytes_stored": content.len(),
+            }),
+        );
         Ok(response)
     }
     fn stats(&self) -> &ToolStats {
@@ -1268,6 +1282,25 @@ impl Tool for SessionContinuityTool {
                  original with memory.read id=<memory_id>."
             ));
         }
+        // Token-ledger v0 (2026-09-21): bytes available vs bytes injected.
+        // `bytes_available` is the stored state the bounded envelope stands in
+        // for; `bytes_injected` is what actually entered the caller's context.
+        // Local-only diagnostic data; see docs/TOKEN_LEDGER.md.
+        let bytes_available: usize = newest_first.iter().map(|(m, _)| m.content.len()).sum();
+        super::common::append_savings_row(
+            &self.store,
+            &json!({
+                "ts_ms": wm_core::time::now_unix_millis(),
+                "op": "continuity",
+                "previous_session": prev_id,
+                "turns_available": total,
+                "turns_returned": tail.len(),
+                "turns_omitted": turns_omitted,
+                "bytes_available": bytes_available,
+                "bytes_injected": used,
+                "max_response_bytes": max_response_bytes,
+            }),
+        );
         Ok(response)
     }
     fn stats(&self) -> &ToolStats {
@@ -3089,6 +3122,58 @@ mod tests {
         assert!(
             warnings[0].as_str().unwrap().contains("instruction-shaped"),
             "got: {warnings:?}"
+        );
+    }
+
+    /// Token-ledger v0 (2026-09-21): record + continuity append local ledger
+    /// rows carrying the state-over-transcript numbers.
+    #[tokio::test]
+    async fn record_and_continuity_write_savings_ledger() {
+        // Held tempdir: the ledger is a file beside the LMDB store, so the
+        // directory must outlive the write (unlike `test_store()`, whose
+        // tempdir is dropped on return).
+        let dir = tempfile::tempdir().unwrap();
+        let lmdb = dir.path().join("lmdb");
+        std::fs::create_dir_all(&lmdb).unwrap();
+        let store = Arc::new(MemoryStore::open_default(&lmdb).unwrap());
+        let sid = start_session(&store);
+        let mut ctx = Context::default();
+        SessionRecordTool::new(store.clone())
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "content": "x".repeat(2000), "session_id": sid}),
+            )
+            .await
+            .unwrap();
+        SessionContinuityTool::new(store.clone())
+            .call(
+                &mut ctx,
+                json!({"current_session_id": "00000000-0000-4000-8000-000000000000"}),
+            )
+            .await
+            .unwrap();
+
+        let path = store.path().join("savings_ledger.jsonl");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let rows: Vec<serde_json::Value> = text
+            .lines()
+            .map(|l| serde_json::from_str(l).unwrap())
+            .collect();
+        assert_eq!(
+            rows.len(),
+            2,
+            "one record row + one continuity row: {rows:?}"
+        );
+        assert_eq!(rows[0]["op"], "record");
+        assert_eq!(rows[0]["bytes_stored"], 2000);
+        assert_eq!(rows[1]["op"], "continuity");
+        assert!(
+            rows[1]["bytes_available"].as_u64().unwrap() >= 2000,
+            "stored state must be counted: {rows:?}"
+        );
+        assert!(
+            rows[1]["bytes_injected"].as_u64().unwrap() > 0,
+            "injected envelope must be counted: {rows:?}"
         );
     }
 

@@ -389,6 +389,69 @@ pub const fn galaxy_name(g: Galaxy) -> &'static str {
     g.db_name()
 }
 
+// ── Savings ledger (token-ledger v0, 2026-09-21) ─────────────────────
+
+/// File name of the local savings ledger, at the store's LMDB path.
+///
+/// The ledger is local-only diagnostic data: one JSON line per continuity /
+/// record operation, recording bytes stored and bytes injected so the
+/// state-over-transcript ratio is measurable without any off-device
+/// telemetry. Aggregated by `wm ledger`; see `docs/TOKEN_LEDGER.md` for the
+/// metric definitions and the attribution rules (cache is context, memory is
+/// attribution).
+pub const SAVINGS_LEDGER_FILE: &str = "savings_ledger.jsonl";
+
+/// Append one row to the local savings ledger (best-effort).
+///
+/// A ledger write failure is logged and never fails the tool call — the
+/// ledger is evidence, not a gate (same doctrine as creation attestations).
+pub fn append_savings_row(store: &wm_memory::MemoryStore, row: &serde_json::Value) {
+    let path = store.path().join(SAVINGS_LEDGER_FILE);
+    let Ok(line) = serde_json::to_string(row) else {
+        tracing::warn!("savings ledger row failed to serialize; skipped");
+        return;
+    };
+    let appended = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .and_then(|mut file| {
+            use std::io::Write as _;
+            writeln!(file, "{line}")
+        });
+    if let Err(e) = appended {
+        tracing::warn!(
+            error = %e,
+            path = %path.display(),
+            "savings ledger append failed (local diagnostic only)"
+        );
+    }
+}
+
+/// Read every well-formed row from the local savings ledger.
+///
+/// Malformed lines are skipped with a warning (never silent) so a partial
+/// write cannot poison the aggregation.
+#[must_use]
+pub fn read_savings_rows(store: &wm_memory::MemoryStore) -> Vec<serde_json::Value> {
+    let path = store.path().join(SAVINGS_LEDGER_FILE);
+    let Ok(text) = std::fs::read_to_string(&path) else {
+        return Vec::new();
+    };
+    let mut rows = Vec::new();
+    let mut malformed = 0usize;
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        match serde_json::from_str::<serde_json::Value>(line) {
+            Ok(v) => rows.push(v),
+            Err(_) => malformed += 1,
+        }
+    }
+    if malformed > 0 {
+        tracing::warn!(malformed, path = %path.display(), "savings ledger skipped malformed lines");
+    }
+    rows
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -266,6 +266,19 @@ enum Commands {
         #[arg(long)]
         stats_only: bool,
     },
+    /// Local token/savings ledger: stored vs injected state, local op mix
+    ///
+    /// Reads the local savings ledger written by session.record and
+    /// session.continuity plus the dispatch counters. Nothing is transmitted;
+    /// definitions and attribution rules: docs/TOKEN_LEDGER.md.
+    Ledger {
+        /// Path to the LMDB store directory (default: configured store)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Machine-readable output
+        #[arg(long)]
+        json: bool,
+    },
     /// Show resource usage and brain-wave state
     Stats {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
@@ -2010,6 +2023,10 @@ fn run() -> anyhow::Result<()> {
                     );
                 }
             }
+        }
+        Commands::Ledger { store, json } => {
+            let store_path = store.unwrap_or_else(|| wm_config.store_path());
+            wm_mcp::ledger::run(&store_path, json)?;
         }
         Commands::Stats { store, week } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());

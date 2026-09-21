@@ -22,8 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads and search never consult freed pages; back up and restore into a
   fresh store for byte-level absence on disk (documented on the command).
 
-### MCP boundary — content is data, not instructions
-- **Notes that merely mention security vocabulary are stored, not refused.**
+### Token ledger — local state-over-transcript measurement
+- **`wm ledger` reports what stays out of model context.** `session.record`
+  and `session.continuity` now append one local JSON row each to
+  `<store>/lmdb/savings_ledger.jsonl` (bytes stored vs bytes injected by the
+  bounded envelope); `wm ledger [--json]` aggregates those rows plus the
+  dispatch counters into a local-only report. The ledger is evidence, not a
+  gate (append failures are logged, never fatal) and never leaves the store.
+  Attribution rules and metric definitions ship in `docs/TOKEN_LEDGER.md`:
+  provider/harness prompt caching is context, not a WhiteMagic saving, and the
+  token-equivalent is a disclosed estimate (`bytes / 4`).
+
+### MCP boundary — content is data, not instructions- **Notes that merely mention security vocabulary are stored, not refused.**
   `tools/call` scanned every top-level string argument for injection
   patterns, so `session.record` (also `memory.create`, `wm` thoughts, and
   search queries) rejected content containing words like `jailbreak`,
