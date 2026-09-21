@@ -382,6 +382,18 @@ mod tests {
                         request_tx.send(Err("incomplete headers: read deadline exceeded".into()));
                     return;
                 }
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::ConnectionReset
+                        || e.kind() == std::io::ErrorKind::ConnectionAborted =>
+                {
+                    // A client that drops mid-request can surface as a reset
+                    // instead of a clean EOF (observed on macOS runners) —
+                    // both are the same truncation fact, reported the same way.
+                    let _ = request_tx.send(Err(
+                        "incomplete request: EOF before headers were complete".into(),
+                    ));
+                    return;
+                }
                 Err(e) => {
                     let _ = request_tx.send(Err(format!("header read failed: {e}")));
                     return;
@@ -429,6 +441,15 @@ mod tests {
                         || e.kind() == std::io::ErrorKind::TimedOut =>
                 {
                     let _ = request_tx.send(Err("incomplete body: read deadline exceeded".into()));
+                    return;
+                }
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::ConnectionReset
+                        || e.kind() == std::io::ErrorKind::ConnectionAborted =>
+                {
+                    let _ = request_tx.send(Err(
+                        "incomplete request: EOF before the body was complete".into(),
+                    ));
                     return;
                 }
                 Err(e) => {

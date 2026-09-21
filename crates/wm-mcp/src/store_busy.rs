@@ -82,8 +82,16 @@ mod imp {
             });
         };
 
+        // Never report a lock held by the calling process itself: in-process
+        // callers (tests, library use) can transiently hold a lock from a
+        // previous open, and the open itself is the authority on real
+        // contention. Only *other* processes are actionable holders.
+        let self_pid = std::process::id();
         if let Some(inode) = writer_lock_inode(store_path) {
             for pid in locks_writers(&proc_root.join("locks"), inode) {
+                if pid == self_pid {
+                    continue;
+                }
                 push(pid);
             }
         }
@@ -217,6 +225,7 @@ pub fn ensure_store_available(_store_path: &Path, _wait_secs: u64) -> anyhow::Re
 #[cfg(all(test, unix))]
 mod tests {
     use super::imp::{is_serving_cmdline, parse_locks_writers, store_holders_in};
+    use std::os::unix::fs::MetadataExt;
     use std::path::Path;
 
     #[test]
@@ -269,5 +278,34 @@ mod tests {
         assert_eq!(holders.len(), 1, "exactly the fake serve must be detected");
         assert_eq!(holders[0].pid, 4242);
         assert!(holders[0].cmdline.contains("serve"));
+    }
+
+    #[test]
+    fn store_holders_in_never_reports_the_calling_process() {
+        // Regression: the ingest redact test flaked when a writer lock from a
+        // previous in-process open was still visible and the guard reported
+        // the test binary itself as a holder.
+        let tmp = tempfile::tempdir().unwrap();
+        let store = tmp.path().join("store");
+        let lock_dir = store.join("lmdb/tantivy");
+        std::fs::create_dir_all(&lock_dir).unwrap();
+        let lock = lock_dir.join(".tantivy-writer.lock");
+        std::fs::write(&lock, b"").unwrap();
+        let ino = std::fs::metadata(&lock).unwrap().ino();
+        std::fs::write(
+            tmp.path().join("locks"),
+            format!(
+                "131: FLOCK ADVISORY WRITE {} 103:02:{} 0 EOF\n",
+                std::process::id(),
+                ino
+            ),
+        )
+        .unwrap();
+
+        let holders = store_holders_in(tmp.path(), &store);
+        assert!(
+            holders.is_empty(),
+            "the calling process must never be reported as a holder: {holders:?}"
+        );
     }
 }
