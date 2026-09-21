@@ -1,5 +1,7 @@
 # WhiteMagic Quickstart
 
+**Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md)
+
 **Version**: 9.2.2
 **Install path**: Linux x86-64 (static musl); Linux arm64 (aarch64) builds
 join the release matrix with native arm64 CI smoke coverage, selected

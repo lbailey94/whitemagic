@@ -191,6 +191,8 @@ cargo clippy --all-targets
 ## Documentation
 
 - [`docs/QUICKSTART.md`](docs/QUICKSTART.md) — the two-process continuity demo
+- [`docs/QUICKSTART.es.md`](docs/QUICKSTART.es.md) — guía rápida (Español)
+- [`docs/QUICKSTART.pt-BR.md`](docs/QUICKSTART.pt-BR.md) — guia rápido (Português BR)
 - [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md) — client configuration
 - [`docs/MULTI_LAPTOP.md`](docs/MULTI_LAPTOP.md) — moving between machines (backup/restore, session carry)
 - [`continuity-receipt`](https://github.com/lbailey94/continuity-receipt) — signed, offline-verifiable records of governed tasks (separate spec repo, Apache-2.0)
