@@ -25,7 +25,9 @@ Override with --dataset PATH.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import math
 import os
 import re
 import select
@@ -64,6 +66,131 @@ def read_loadavg() -> str:
             return " ".join(fh.read().split()[:3])
     except OSError:
         return "n/a"
+
+
+# ── T1 isolation / sharding / session-level scoring (2026-09-22) ────────────
+
+def sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def embedder_label() -> str:
+    """Disclosed embedder identity for the run manifest."""
+    if os.environ.get("WM_EMBEDDER_BACKEND", "").lower() == "onnx":
+        return f"onnx:{os.environ.get('WM_EMBEDDER_ORT_MODEL', 'bge-small-en-v1.5')}"
+    if os.environ.get("WM_EMBEDDER_ENDPOINT"):
+        return f"http:{os.environ['WM_EMBEDDER_ENDPOINT']}"
+    return "stub/tfidf (BM25-only)"
+
+
+def filter_dataset(
+    dataset: list[dict[str, Any]],
+    ids_file: str | None = None,
+    shard: tuple[int, int] | None = None,
+    max_questions: int | None = None,
+) -> list[dict[str, Any]]:
+    """Deterministic T1 subsetting: explicit ids, then round-robin shard, then cap.
+
+    Shards are disjoint by construction (index modulo N) and their union is the
+    full set, which is what the T1 acceptance check relies on.
+    """
+    if ids_file:
+        wanted = {
+            line.strip()
+            for line in Path(ids_file).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        found = [row for row in dataset if row["question_id"] in wanted]
+        missing = wanted - {row["question_id"] for row in found}
+        if missing:
+            raise ValueError(
+                f"ids-file: {len(missing)} ids not in the dataset (e.g. {sorted(missing)[:3]})"
+            )
+        if not found:
+            raise ValueError("ids-file selected zero questions")
+        dataset = found
+    if shard is not None:
+        index, count = shard
+        dataset = [row for i, row in enumerate(dataset) if i % count == index]
+    if max_questions:
+        dataset = dataset[:max_questions]
+    return dataset
+
+
+def session_rank_order(
+    results: list[dict[str, Any]], memory_session_ids: dict[str, str]
+) -> list[str]:
+    """First-occurrence session order from a ranked result list."""
+    ranked: list[str] = []
+    seen: set[str] = set()
+    for result in results:
+        mid = str(result.get("id", result.get("memory_id", "")))
+        sid = memory_session_ids.get(mid)
+        if sid and sid not in seen:
+            seen.add(sid)
+            ranked.append(sid)
+    return ranked
+
+
+def session_metrics(
+    ranked_sessions: list[str],
+    gold_sessions: set[str],
+    k_values: tuple[int, ...] = (1, 5, 10),
+) -> dict[str, float]:
+    """Official-style session Recall@k and NDCG@k (binary session relevance)."""
+    metrics: dict[str, float] = {}
+    for k in k_values:
+        metrics[f"session_recall_at_{k}"] = (
+            1.0 if any(sid in gold_sessions for sid in ranked_sessions[:k]) else 0.0
+        )
+    for k in k_values:
+        if not gold_sessions:
+            metrics[f"session_ndcg_at_{k}"] = 0.0
+            continue
+        dcg = sum(
+            1.0 / math.log2(rank + 1)
+            for rank, sid in enumerate(ranked_sessions[:k], 1)
+            if sid in gold_sessions
+        )
+        ideal = sum(
+            1.0 / math.log2(i + 1) for i in range(1, min(len(gold_sessions), k) + 1)
+        )
+        metrics[f"session_ndcg_at_{k}"] = dcg / ideal if ideal else 0.0
+    return metrics
+
+
+def build_retrieval_row(
+    item: dict[str, Any],
+    results: list[dict[str, Any]],
+    memory_session_ids: dict[str, str],
+    retrieval_metrics: dict[str, Any],
+    provenance: dict[str, Any],
+) -> dict[str, Any]:
+    """One row of the T1 retrieval.jsonl contract consumed by the reader."""
+    retrieved = []
+    for rank, result in enumerate(results, 1):
+        mid = str(result.get("id", result.get("memory_id", "")))
+        retrieved.append(
+            {
+                "rank": rank,
+                "memory_id": mid,
+                "session_id": memory_session_ids.get(mid, ""),
+                "content": str(result.get("content", result.get("content_preview", ""))),
+            }
+        )
+    return {
+        "question_id": item["question_id"],
+        "question": item.get("question", ""),
+        "question_type": item.get("question_type", ""),
+        "is_abstention": str(item["question_id"]).endswith("_abs"),
+        "retrieved": retrieved,
+        "retrieval": retrieval_metrics,
+        "provenance": provenance,
+    }
 
 
 def extract_search_keywords(content: str) -> list[str]:
@@ -501,6 +628,11 @@ def run_benchmark(
     trust_labels: bool = False,
     conformal: bool = False,
     store_path: str | None = None,
+    isolation: str = "per-question",
+    shard: tuple[int, int] | None = None,
+    ids_file: str | None = None,
+    retrieval_jsonl: str | None = None,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
     """Run the LongMemEval-S benchmark through the v5 MCP server.
 
@@ -525,10 +657,23 @@ def run_benchmark(
     print(f"Persistent server: {'on' if persistent else 'off'}")
     sys.stdout.flush()
 
-    # Load dataset
+    # Load dataset + T1 provenance (hashes bind the run to exact inputs)
+    dataset_sha256 = sha256_file(dataset_path)
+    binary_sha256 = sha256_file(binary)
+    run_id = run_id or f"t1-{time.strftime('%Y-%m-%d')}"
     dataset = json.loads(Path(dataset_path).read_text(encoding="utf-8"))
-    if max_questions:
-        dataset = dataset[:max_questions]
+    full_count = len(dataset)
+    dataset = filter_dataset(
+        dataset, ids_file=ids_file, shard=shard, max_questions=max_questions
+    )
+    if len(dataset) != full_count:
+        subset_note = (
+            f"T1 subset: {len(dataset)}/{full_count} questions"
+            + (f" (shard {shard[0]}/{shard[1]})" if shard else "")
+            + (f" (ids-file {os.path.basename(ids_file)})" if ids_file else "")
+            + f" (isolation {isolation}, run {run_id})"
+        )
+        print(subset_note)
 
     total_q = len(dataset)
     type_counts = Counter(item["question_type"] for item in dataset)
@@ -557,9 +702,28 @@ def run_benchmark(
     strict_source_r1 = 0
     strict_source_r5 = 0
     strict_coverage_sum = 0.0
+    # T1 session-level metrics (official retrieval semantics; `_abs` excluded)
+    session_scored = 0
+    session_excluded_abstention = 0
+    session_recall_sums: dict[int, float] = {1: 0.0, 5: 0.0, 10: 0.0}
+    session_ndcg_sums: dict[int, float] = {5: 0.0, 10: 0.0}
+    cat_session_stats: dict[str, dict[str, float]] = {}
 
     benchmark_start = time.perf_counter()
     loadavg_start = read_loadavg()
+    provenance = {
+        "isolation": isolation,
+        "shard": f"{shard[0]}/{shard[1]}" if shard else None,
+        "run_id": run_id,
+        "binary_sha256": binary_sha256,
+        "dataset_sha256": dataset_sha256,
+        "embedder": embedder_label(),
+        "loadavg": loadavg_start,
+    }
+    retrieval_handle = None
+    if retrieval_jsonl:
+        Path(retrieval_jsonl).parent.mkdir(parents=True, exist_ok=True)
+        retrieval_handle = open(retrieval_jsonl, "a", encoding="utf-8")
 
     # Persistent server mode: one long-running process for all questions.
     # Uses a single store; for memory.search, each question gets a unique galaxy
@@ -900,6 +1064,45 @@ def run_benchmark(
         strict_source_r1 += strict["relevant_source_hit_at_1"]
         strict_source_r5 += strict["relevant_source_hit_at_5"]
         strict_coverage_sum += strict["required_evidence_coverage_at_retrieval_limit"] or 0.0
+
+        # T1: session-level scoring + streaming retrieval.jsonl row. `_abs`
+        # abstention questions are excluded from retrieval denominators (the
+        # official protocol), so their rows carry the metrics but do not enter
+        # the aggregate.
+        gold_sessions = set(item.get("answer_session_ids") or []) or answer_session_ids
+        ranked_sessions = session_rank_order(results, memory_session_ids)
+        smetrics = session_metrics(ranked_sessions, gold_sessions)
+        if item["question_id"].endswith("_abs"):
+            session_excluded_abstention += 1
+        else:
+            session_scored += 1
+            for k in session_recall_sums:
+                session_recall_sums[k] += smetrics[f"session_recall_at_{k}"]
+            for k in session_ndcg_sums:
+                session_ndcg_sums[k] += smetrics[f"session_ndcg_at_{k}"]
+            bucket = cat_session_stats.setdefault(
+                qtype, {"total": 0.0, "r5": 0.0, "ndcg10": 0.0}
+            )
+            bucket["total"] += 1
+            bucket["r5"] += smetrics["session_recall_at_5"]
+            bucket["ndcg10"] += smetrics["session_ndcg_at_10"]
+        if retrieval_handle is not None:
+            row = build_retrieval_row(
+                item,
+                results,
+                memory_session_ids,
+                {
+                    **smetrics,
+                    "turn_recall_at_5": ev["recall_at_5"],
+                    "turn_recall_at_10": ev["recall_at_10"],
+                    "turn_mrr": round(ev["mrr"], 4),
+                    "recall_mode": search_recall_mode,
+                    "search_latency_ms": round(latency_ms, 2),
+                },
+                provenance,
+            )
+            retrieval_handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+            retrieval_handle.flush()
         recall_at_1 += ev["recall_at_1"]
         recall_at_5 += ev["recall_at_5"]
         recall_at_10 += ev["recall_at_10"]
@@ -1012,6 +1215,8 @@ def run_benchmark(
             persistent_server.stop()
             if persistent_store and not store_path:
                 shutil.rmtree(persistent_store, ignore_errors=True)
+        if retrieval_handle is not None:
+            retrieval_handle.close()
 
     # Compute final results
     total_elapsed = time.perf_counter() - benchmark_start
@@ -1105,6 +1310,30 @@ def run_benchmark(
         "valid_execution": not execution_failures,
         "execution_failures": execution_failures,
         "errors": errors,
+        "isolation": isolation,
+        "shard": f"{shard[0]}/{shard[1]}" if shard else None,
+        "run_id": run_id,
+        "dataset_sha256": dataset_sha256,
+        "binary_sha256": binary_sha256,
+        "embedder": embedder_label(),
+        "session_metrics": {
+            "protocol": "session-level Recall@k/NDCG@k (official retrieval semantics; `_abs` abstention questions excluded)",
+            "scored_questions": session_scored,
+            "excluded_abstention_questions": session_excluded_abstention,
+            "recall_at_1": session_recall_sums[1] / session_scored if session_scored else 0,
+            "recall_at_5": session_recall_sums[5] / session_scored if session_scored else 0,
+            "recall_at_10": session_recall_sums[10] / session_scored if session_scored else 0,
+            "ndcg_at_5": session_ndcg_sums[5] / session_scored if session_scored else 0,
+            "ndcg_at_10": session_ndcg_sums[10] / session_scored if session_scored else 0,
+        },
+        "category_session_results": {
+            cat: {
+                "total": int(stats["total"]),
+                "session_recall_at_5": stats["r5"] / stats["total"] if stats["total"] else 0,
+                "session_ndcg_at_10": stats["ndcg10"] / stats["total"] if stats["total"] else 0,
+            }
+            for cat, stats in cat_session_stats.items()
+        },
     }
     if trust_labels:
         results["trust_labels"] = {
@@ -1150,6 +1379,13 @@ def run_benchmark(
     print("\n  Category breakdown:")
     for cat, data in sorted(results["category_results"].items()):
         print(f"    {cat}: R@1={data['recall_at_1']:.2%} R@5={data['recall_at_5']:.2%} R@10={data['recall_at_10']:.2%} ({data['total']} q)")
+    sm = results["session_metrics"]
+    print(
+        f"\n  Session-level (n={sm['scored_questions']}, "
+        f"{sm['excluded_abstention_questions']} abstention excluded): "
+        f"R@5={sm['recall_at_5']:.2%} R@10={sm['recall_at_10']:.2%} "
+        f"NDCG@10={sm['ndcg_at_10']:.4f}"
+    )
     if errors:
         print(f"\n  Errors ({len(errors)}):")
         for e in errors[:5]:
@@ -1193,7 +1429,50 @@ def main() -> None:
     parser.add_argument("--conformal", action="store_true", help="V8 S8: record recall_feedback per question and measure needle-in-set coverage (requires --persistent)")
     parser.add_argument("--output", default=None, help="Output JSON path")
     parser.add_argument("--per-case", action="store_true", help="Include per-query results")
+    parser.add_argument(
+        "--isolation",
+        choices=("per-question", "growing"),
+        default=None,
+        help="per-question = fresh store per question (T1 default); growing = one accumulating store (fleet variant, requires --persistent)",
+    )
+    parser.add_argument(
+        "--shard",
+        default=None,
+        help="Run one deterministic shard: I/N (round-robin over dataset order; shards are disjoint and their union is the full set)",
+    )
+    parser.add_argument(
+        "--ids-file",
+        default=None,
+        help="File with one question_id per line (mutually exclusive with --shard)",
+    )
+    parser.add_argument(
+        "--retrieval-jsonl",
+        default=None,
+        help="Write the T1 retrieval.jsonl contract (one row per question, streamed as questions complete)",
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Run label recorded in every retrieval row and the summary (default t1-<date>)",
+    )
     args = parser.parse_args()
+
+    if args.ids_file and args.shard:
+        parser.error("--ids-file and --shard are mutually exclusive")
+    shard = None
+    if args.shard:
+        try:
+            index_str, count_str = args.shard.split("/")
+            shard = (int(index_str), int(count_str))
+        except ValueError:
+            parser.error("--shard must look like I/N (e.g. 0/4)")
+        if not (0 <= shard[0] < shard[1]):
+            parser.error(f"--shard {args.shard}: require 0 <= I < N")
+    isolation = args.isolation or ("growing" if args.persistent else "per-question")
+    if isolation == "growing" and not args.persistent:
+        parser.error("--isolation growing requires --persistent (one accumulating store)")
+    if isolation == "per-question" and args.persistent:
+        parser.error("--persistent is the growing mode; use one or the other")
 
     output_path = args.output
     if not output_path:
@@ -1215,6 +1494,10 @@ def main() -> None:
             suffix += "_composites"
         if args.persistent:
             suffix += "_persistent"
+        if args.isolation:
+            suffix += f"_{args.isolation}"
+        if shard:
+            suffix += f"_shard{shard[0]}of{shard[1]}"
         output_path = os.path.join(DEFAULT_OUTPUT, f"longmemeval_s_v5{suffix}.json")
 
     if args.conformal and not args.persistent:
@@ -1230,6 +1513,8 @@ def main() -> None:
             rerank=args.rerank, rerank_alpha=args.rerank_alpha, rerank_pool=args.rerank_pool,
             search_limit=args.search_limit,
             persistent=args.persistent, store_path=args.store,
+            isolation=isolation, shard=shard, ids_file=args.ids_file,
+            retrieval_jsonl=args.retrieval_jsonl, run_id=args.run_id,
         )
     except BaseException as exc:
         write_failure_receipt(
@@ -1248,6 +1533,11 @@ def main() -> None:
             "limit": args.limit,
             "candidate_limit": args.candidate_limit,
             "persistent": args.persistent,
+            "isolation": isolation,
+            "shard": args.shard,
+            "ids_file": args.ids_file,
+            "retrieval_jsonl": args.retrieval_jsonl,
+            "run_id": args.run_id,
             "keywords": args.keywords,
             "composites": args.composites,
             "contextual": args.contextual,

@@ -164,6 +164,7 @@ wm-leases.json
 !/scripts/zero_egress_test.sh
 !/scripts/tests/
 !/scripts/tests/test_eval_protocol.py
+!/scripts/tests/test_t1_scoring.py
 !/scripts/tests/test_version_truth.py
 
 # ── Private / companion + internal evidence (purged from public history
