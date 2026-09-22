@@ -3265,21 +3265,21 @@ impl McpServer {
                 (None, None) => String::new(),
             };
             let description = format!(
-                "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Say 'list tools' to enumerate the curated surface.",
+                "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Provide exactly one of thought or route. Say 'list tools' to enumerate the curated surface.",
                 self.profile_name, tool_count, mode_hint, scope
             );
             let (wm_title, wm_ro, wm_destructive, wm_idem) =
                 Self::catalog_annotations("wm", self.readonly);
+            // Gemini rejects a root-level `anyOf` in a tool schema ("only
+            // allowed for OBJECT type"), so the dispatcher's thought-or-route
+            // requirement is disclosed in the description and enforced at
+            // dispatch instead (2026-09-22, Gemini/MCP compatibility).
             tools.push(json!({
                 "name": wm.name(),
                 "title": wm_title,
                 "description": description,
                 "inputSchema": {
                     "type": "object",
-                    "anyOf": [
-                        { "required": ["thought"] },
-                        { "required": ["route"] },
-                    ],
                     "properties": {
                         "thought": {
                             "type": "string",
@@ -5110,14 +5110,21 @@ mod tests {
             Some("memory.hybrid_recall")
         );
         assert!(tools[0]["inputSchema"].is_object());
-        assert_eq!(
-            tools[0]["inputSchema"]["anyOf"],
-            json!([
-                { "required": ["thought"] },
-                { "required": ["route"] },
-            ]),
-            "wm discovery must disclose the dispatcher's unconditional thought-or-route requirement"
+        // Gemini rejects a root-level `anyOf` ("only allowed for OBJECT
+        // type"), so the schema carries plain optional properties and the
+        // thought-or-route requirement is disclosed in the description
+        // (2026-09-22, Gemini/MCP compatibility).
+        assert!(
+            tools[0]["inputSchema"].get("anyOf").is_none(),
+            "wm inputSchema must not carry a root-level anyOf: {tools:?}"
         );
+        let wm_desc = tools[0]["description"].as_str().unwrap_or_default();
+        assert!(
+            wm_desc.contains("exactly one of thought or route"),
+            "wm discovery must disclose the thought-or-route requirement: {wm_desc}"
+        );
+        assert!(tools[0]["inputSchema"]["properties"]["thought"].is_object());
+        assert!(tools[0]["inputSchema"]["properties"]["route"].is_object());
         // Discovery metadata: every catalog entry carries annotations and
         // an outputSchema (Smithery/Glama tool-quality surface).
         for t in &tools {

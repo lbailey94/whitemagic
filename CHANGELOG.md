@@ -67,6 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `track`; it now carries the real enum, 0–1 importance bounds, and the
   amendment/track arguments.
 
+### MCP compatibility — Gemini tool schema
+- **The `wm` meta-tool schema no longer carries a root-level `anyOf`.** Gemini
+  rejects `anyOf` outside OBJECT types ("only allowed for OBJECT type"), which
+  broke Gemini models whenever the wm MCP server advertised its tools. The
+  thought-or-route requirement is now disclosed in the tool description and
+  enforced at dispatch, so the schema is accepted by Gemini and unchanged for
+  every other client.
+
 ### Continuity — bounded output
 - **`session.continuity` is bounded by default.** A single 100,000-char turn
   produced a ~200 KB JSON-RPC response, duplicated across structuredContent

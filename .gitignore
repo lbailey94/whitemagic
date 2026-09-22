@@ -152,6 +152,7 @@ wm-leases.json
 !/scripts/release_health.py
 !/scripts/t1_reader.py
 !/scripts/t1_judge.py
+!/scripts/t1_oracle_to_retrieval.py
 !/scripts/token_ledger_report.py
 !/scripts/version_truth.py
 !/scripts/check_site_counts.py
