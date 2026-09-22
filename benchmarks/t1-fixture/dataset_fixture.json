@@ -1,0 +1,20 @@
+[
+  {
+    "question_id": "fixture-q1",
+    "question": "What did I say my favorite programming language was?",
+    "question_type": "single-session-user",
+    "answer": "Rust"
+  },
+  {
+    "question_id": "fixture-q2",
+    "question": "How many cups of coffee did I drink on Tuesday?",
+    "question_type": "single-session-user",
+    "answer": "Three"
+  },
+  {
+    "question_id": "fixture-q3_abs",
+    "question": "What is my sister's phone number?",
+    "question_type": "single-session-user",
+    "answer": "I don't know"
+  }
+]

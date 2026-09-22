@@ -85,6 +85,7 @@ wm-leases.json
 # --scale-turns N`; the tracked root seeds are the source of truth.
 /benchmarks/data/memorastrict/scale_*/
 /benchmarks/data/longmemeval_s/cleaned/
+/benchmarks/runs/
 
 # Internal estate expedition drills and local test runners
 /crates/wm-tools/examples/
@@ -149,6 +150,8 @@ wm-leases.json
 !/scripts/eval_matrix.sh
 !/scripts/release_manifest.py
 !/scripts/release_health.py
+!/scripts/t1_reader.py
+!/scripts/t1_judge.py
 !/scripts/token_ledger_report.py
 !/scripts/version_truth.py
 !/scripts/check_site_counts.py
