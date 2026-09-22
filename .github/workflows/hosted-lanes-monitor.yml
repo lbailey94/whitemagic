@@ -1,0 +1,47 @@
+name: Hosted lanes monitor
+
+# External uptime/health check for the hosted lanes, running on GitHub's
+# infrastructure (so it alerts even when the box is down). Public repo =
+# free Actions minutes; 30-minute cadence keeps the signal fresh without
+# competing with CI. A failed run notifies the repository owner.
+#
+# Probes only content-free surfaces: /health, keyless initialize/tools-list,
+# the server card, and the receipt API's /health + /info.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe mcp.whitemagic.dev
+        run: |
+          set -euo pipefail
+          health="$(curl -fsS --max-time 15 https://mcp.whitemagic.dev/health)"
+          [ "$health" = "ok" ] || { echo "health: $health"; exit 1; }
+          init="$(curl -fsS --max-time 20 -X POST https://mcp.whitemagic.dev/mcp \
+            -H 'Content-Type: application/json' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}')"
+          echo "$init" | grep -q '"result"' || { echo "initialize: $init"; exit 1; }
+          tools="$(curl -fsS --max-time 20 -X POST https://mcp.whitemagic.dev/mcp \
+            -H 'Content-Type: application/json' \
+            -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}')"
+          echo "$tools" | grep -q '"tools"' || { echo "tools/list: $tools"; exit 1; }
+          card="$(curl -fsS --max-time 15 https://mcp.whitemagic.dev/.well-known/mcp/server-card.json)"
+          echo "$card" | grep -q 'serverInfo' || { echo "card: $card"; exit 1; }
+          echo "mcp lane ok"
+
+      - name: Probe api.whitemagic.dev
+        run: |
+          set -euo pipefail
+          health="$(curl -fsS --max-time 15 https://api.whitemagic.dev/health)"
+          echo "$health" | grep -q 'true' || { echo "health: $health"; exit 1; }
+          info="$(curl -fsS --max-time 15 https://api.whitemagic.dev/info)"
+          echo "$info" | grep -q 'continuity-receipt-verify' || { echo "info: $info"; exit 1; }
+          echo "api lane ok"
