@@ -1037,6 +1037,21 @@ fn count_token_hits(content: &str, stripped_query: &str) -> usize {
         .count()
 }
 
+/// Fraction of a query's stopword-stripped content terms that appear in
+/// `content` (stemming-aware), for callers that need an abstention signal on
+/// retrieval paths without a `matched_terms` count (the FTS route). Score
+/// floors do not separate nonsense from real queries on the hosted corpus
+/// (measured 2026-09-22: nonsense up to 4.55, real from 2.06); coverage does.
+#[must_use]
+pub fn token_coverage(content: &str, query: &str) -> f64 {
+    let stripped = strip_stopwords(query);
+    let tokens = query_stem_tokens(&stripped);
+    if tokens.is_empty() {
+        return 0.0;
+    }
+    count_token_hits(content, &stripped) as f64 / tokens.len() as f64
+}
+
 /// Printable-character ratio used by the index/admission gate.
 ///
 /// Tab, newline, and carriage return are **formatting whitespace, not

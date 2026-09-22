@@ -129,6 +129,27 @@ fn weak_evidence_abstention_with(
                     "floor": floor,
                 }));
             }
+            // FTS results carry no `matched_terms` count, and raw score floors
+            // do not separate nonsense from real queries on the hosted corpus
+            // (measured 2026-09-22). Compute term coverage from the top hit's
+            // content instead.
+            if source == "fts" && coverage_floor > 0.0 {
+                if let Some(content) = top.get("content").and_then(serde_json::Value::as_str) {
+                    if !content.is_empty() {
+                        let coverage = wm_memory::token_coverage(content, query);
+                        if coverage < f64::from(coverage_floor) {
+                            return Some(json!({
+                                "status": "insufficient_evidence",
+                                "reason": "coverage_below_floor",
+                                "scope": "retrieval",
+                                "signal": "coverage",
+                                "coverage": coverage,
+                                "floor": coverage_floor,
+                            }));
+                        }
+                    }
+                }
+            }
         }
         "episodic" => {
             let matched = top
@@ -5249,5 +5270,25 @@ mod tests {
         // Non-retrieval sources are not judged.
         let association = vec![json!({"source": "association", "score": 0.1})];
         assert!(weak_evidence_abstention_with(&association, "alpha", 2.0, 0.5).is_none());
+    }
+
+    #[test]
+    fn weak_evidence_abstention_fts_uses_token_coverage() {
+        // FTS rows have no matched_terms; coverage comes from the top hit's
+        // content. 2 of 4 query terms present => 0.5 < 0.6 abstains.
+        let partial = vec![
+            json!({"source": "fts", "raw_score": 4.5, "content": "alpha beta only here"}),
+        ];
+        let hit = weak_evidence_abstention_with(&partial, "alpha beta gamma delta", 0.0, 0.6)
+            .expect("partial coverage abstains");
+        assert_eq!(hit["reason"], "coverage_below_floor");
+        assert_eq!(hit["signal"], "coverage");
+        assert!((hit["coverage"].as_f64().unwrap() - 0.5).abs() < 1e-6);
+
+        // Full coverage passes even with the knob on.
+        let full = vec![
+            json!({"source": "fts", "raw_score": 4.5, "content": "alpha beta gamma delta here"}),
+        ];
+        assert!(weak_evidence_abstention_with(&full, "alpha beta gamma delta", 0.0, 0.6).is_none());
     }
 }
