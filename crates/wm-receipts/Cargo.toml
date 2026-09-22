@@ -5,9 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+description = "Continuity receipts: signed, hash-chained evidence records for WhiteMagic task runs."
 repository.workspace = true
 homepage.workspace = true
-
+keywords = ["mcp", "receipts", "provenance", "continuity", "verification"]
 [dependencies]
 wm-core = { workspace = true }
 continuity-receipt = "0.3.1"
