@@ -67,13 +67,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `track`; it now carries the real enum, 0–1 importance bounds, and the
   amendment/track arguments.
 
-### MCP compatibility — Gemini tool schema
+### MCP compatibility — provider tool schemas
 - **The `wm` meta-tool schema no longer carries a root-level `anyOf`.** Gemini
   rejects `anyOf` outside OBJECT types ("only allowed for OBJECT type"), which
   broke Gemini models whenever the wm MCP server advertised its tools. The
   thought-or-route requirement is now disclosed in the tool description and
   enforced at dispatch, so the schema is accepted by Gemini and unchanged for
   every other client.
+- **Lifecycle discovery schemas match their tools.** The fallback catalog copy
+  for `session.start` advertised `session_id`/`topic` (the tool accepts
+  `title`/`user`); it now matches, and a discovery-parity test pins the
+  exposed parameter names for all nine lifecycle tools.
+- **`wm ledger --rollup` creates the store directory.** Folding on a store that
+  has no LMDB directory yet wrote into a missing path; the rollup writer now
+  creates the parent first (same robustness rule as the calibration file).
 
 ### Continuity — bounded output
 - **`session.continuity` is bounded by default.** A single 100,000-char turn

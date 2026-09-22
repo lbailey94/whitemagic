@@ -203,6 +203,7 @@ fn write_rollup(lmdb: &Path, rollup: &Rollup) -> Result<()> {
         "totals": rollup.totals,
         "folded_at": chrono::Utc::now().to_rfc3339(),
     });
+    std::fs::create_dir_all(lmdb)?;
     let path = lmdb.join(ROLLUP_FILE);
     let tmp = path.with_extension("tmp");
     std::fs::write(&tmp, serde_json::to_string_pretty(&payload)?)?;

@@ -3456,13 +3456,13 @@ impl McpServer {
                 json!({
                     "type": "object",
                     "properties": {
-                        "session_id": {
+                        "title": {
                             "type": "string",
-                            "description": "Session identifier (auto-generated if omitted)"
+                            "description": "Session title"
                         },
-                        "topic": {
+                        "user": {
                             "type": "string",
-                            "description": "Initial topic, task, or context summary"
+                            "description": "User identifier (default 'default')"
                         }
                     }
                 }),
@@ -5136,6 +5136,37 @@ mod tests {
             assert!(ann["title"].is_string(), "title: {t}");
             assert!(t["outputSchema"].is_object(), "outputSchema: {t}");
             assert!(t["title"].is_string(), "top-level title: {t}");
+        }
+        // Discovery parity (2026-09-22): exposed lifecycle schemas must carry
+        // the real tool parameters, not the historical fallback copies
+        // (session.start used to advertise session_id/topic, which the tool
+        // does not accept).
+        for (tool_name, params) in [
+            ("memory.create", vec!["content", "source", "title"]),
+            (
+                "memory.search",
+                vec!["query", "include_cold", "min_importance"],
+            ),
+            ("memory.list", vec!["limit", "exclude_tags"]),
+            ("memory.read", vec!["id"]),
+            ("memory.hybrid_recall", vec!["query"]),
+            ("session.start", vec!["title", "user"]),
+            ("session.record", vec!["turn_type", "track"]),
+            ("session.continuity", vec!["n", "max_content_bytes"]),
+        ] {
+            let entry = tools
+                .iter()
+                .find(|t| t["name"] == tool_name)
+                .unwrap_or_else(|| panic!("{tool_name} missing from the catalog"));
+            let props = entry["inputSchema"]["properties"]
+                .as_object()
+                .unwrap_or_else(|| panic!("{tool_name} has no properties"));
+            for param in params {
+                assert!(
+                    props.contains_key(param),
+                    "{tool_name} schema must expose '{param}': {entry}"
+                );
+            }
         }
         let search = tools.iter().find(|t| t["name"] == "memory.search").unwrap();
         assert_eq!(search["annotations"]["readOnlyHint"], true);
