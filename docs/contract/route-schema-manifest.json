@@ -2668,6 +2668,14 @@
           "description": "Session to exclude (optional)",
           "type": "string"
         },
+        "max_content_bytes": {
+          "description": "Per-turn content cap in bytes (256-262144, default 8192)",
+          "type": "integer"
+        },
+        "max_response_bytes": {
+          "description": "Turns budget in bytes (256-262144, default 49152)",
+          "type": "integer"
+        },
         "n": {
           "description": "Number of prior turns (default 10)",
           "type": "integer"
@@ -3483,5 +3491,5 @@
       "route": "workspace.stats"
     }
   ],
-  "version": "9.2.2"
+  "version": "9.2.3"
 }
