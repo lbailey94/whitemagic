@@ -20,7 +20,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tantivy::{
-    Index, IndexReader, IndexWriter, ReloadPolicy,
+    Index, IndexReader, IndexWriter, ReloadPolicy, Term,
     collector::TopDocs,
     doc,
     query::QueryParser,
@@ -760,9 +760,25 @@ impl SearchEngine {
 
         // Token-coverage floor: with OR semantics a document matching any
         // single common term would otherwise qualify.  For queries with
-        // ≥ 3 terms, require at least 2 to appear in the content.
+        // ≥ 3 terms, require at least 2 to appear in the content — but count
+        // only tokens that exist in the index at all.  A question word the
+        // corpus never contains ("many" in "how many capabilities are
+        // there?") must not raise the floor and filter every valid hit.
         let query_tokens = query_stem_tokens(&stripped);
-        let coverage_floor = if query_tokens.len() >= 3 { 2 } else { 1 };
+        let present_tokens = query_tokens
+            .iter()
+            .filter(|token| {
+                searcher
+                    .doc_freq(&Term::from_field_text(self.field_content, token))
+                    .unwrap_or(0)
+                    > 0
+            })
+            .count();
+        let coverage_floor = if query_tokens.len() >= 3 && present_tokens >= 2 {
+            2
+        } else {
+            1
+        };
 
         let mut results = Vec::new();
         for (score, doc_address) in top_docs {
@@ -933,12 +949,21 @@ fn term_needs_quoting(term: &str) -> bool {
 
 /// Strip common English stopwords from a query string.
 ///
-/// Tokens are compared case-insensitively against [`STOPWORDS`].
+/// Tokens are compared case-insensitively against [`STOPWORDS`] after
+/// trimming surrounding punctuation, so a question ending in `?`
+/// ("... are there?") strips exactly like the same words without it.
 #[must_use]
 pub fn strip_stopwords(query: &str) -> String {
     query
         .split_whitespace()
-        .filter(|term| !STOPWORDS.contains(&term.to_lowercase().as_str()))
+        .filter(|term| {
+            let normalized: String = term
+                .chars()
+                .filter(|character| character.is_alphanumeric())
+                .collect::<String>()
+                .to_lowercase();
+            !normalized.is_empty() && !STOPWORDS.contains(&normalized.as_str())
+        })
         .collect::<Vec<_>>()
         .join(" ")
 }
@@ -1637,6 +1662,48 @@ mod tests {
             )
             .unwrap();
         engine.commit(&mut writer).unwrap();
+    }
+
+    #[test]
+    fn strip_stopwords_ignores_trailing_punctuation() {
+        assert_eq!(
+            strip_stopwords("how many capabilities are there?"),
+            "many capabilities"
+        );
+    }
+
+    /// Regression: a natural-language question whose words are mostly absent
+    /// from the corpus returned zero results. The trailing "?" kept "there?"
+    /// from being recognized as a stopword, which pushed the query over the
+    /// token-coverage floor; the floor now counts only index-present tokens.
+    #[test]
+    fn question_with_absent_token_still_matches() {
+        let (_tmp, engine) = open_engine();
+        let mut writer = engine.writer().unwrap();
+        engine
+            .add_document(
+                &mut writer,
+                "33333333-3333-3333-3333-333333333333",
+                "codex",
+                "unique zebra content",
+                &[],
+                1700000002,
+            )
+            .unwrap();
+        engine.commit(&mut writer).unwrap();
+
+        // "many", "stripes", and "exist" are absent from the corpus; the old
+        // all-query-token floor (2 of 4) filtered the only valid hit.
+        let results = engine.search("how many zebra stripes exist?", 5).unwrap();
+        assert_eq!(
+            results.len(),
+            1,
+            "the single valid hit must survive the coverage floor"
+        );
+        assert_eq!(
+            results[0].memory_id,
+            "33333333-3333-3333-3333-333333333333"
+        );
     }
 
     #[test]
