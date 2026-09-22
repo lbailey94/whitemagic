@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scope: `planning/private/RECEIPTS_S1_SCOPE_2026-09-22.md` +
   `planning/private/s1_wm_receipts_20260922/` (the in-repo `receipts/` path is
   gitignored by design).
+- **Governed dispatch receipts (`mandala_pass`, S2)** — WM destructive routes accept an
+  optional gate-lite pass (`mandala_pass`): the pass is verified **offline** (compact JWS,
+  Ed25519 `did:key`, JCS canonical bytes), the token is stripped before execution, and a
+  governed receipt binds **pass → dispatch → termination** (`pass_token_id` carries the
+  token commitment until Mandala emits its own pass id). Policy:
+  `WM_MANDALA_PASS=off|optional|required` (default `optional`; `required` refuses
+  destructive dispatch without a pass), issuer pin `WM_MANDALA_GATE_ISSUER`, accepted
+  policy versions `WM_MANDALA_POLICY_VERSIONS`. Verified by a real gate-lite-issued token
+  fixture, dispatch-seam tests, and a governed bundle that verifies TRUSTED in both
+  implementations.
 
 ## [9.2.3] — 2026-09-22
 

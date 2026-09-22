@@ -317,6 +317,104 @@ pub fn karma_head_bundle(key: &ReceiptKey, input: &KarmaHeadInput) -> Result<Val
     Ok(chain.bundle())
 }
 
+/// Inputs for a pass-governed dispatch bundle (S2).
+#[derive(Debug, Clone)]
+pub struct GovernedDispatchInput {
+    /// WM route that was authorized.
+    pub route: String,
+    /// `sha256:` over the canonical dispatch args (excluding the pass token).
+    pub args_digest: String,
+    /// `sha256:` over the canonical dispatch result.
+    pub result_digest: String,
+    /// Whether the dispatch succeeded.
+    pub success: bool,
+    /// Emission timestamp (RFC 3339 UTC, second precision).
+    pub issued_at: String,
+    /// Verified gate-lite pass claims.
+    pub pass: crate::mandala::PassClaims,
+}
+
+/// Build a pass-governed dispatch bundle (S2).
+///
+/// Chain: `session.pass.created` → `task.decision` →
+/// `delivery.attestation` → `task.termination`, binding the pass token
+/// commitment (`pass_token_id`) to the dispatch and its result.
+pub fn governed_dispatch_bundle(key: &ReceiptKey, input: &GovernedDispatchInput) -> Result<Value> {
+    let pass = &input.pass;
+    let mandate_ref = digest_of(&json!({
+        "gate_did": pass.gate_did,
+        "issuer": pass.issuer,
+        "token": pass.token_digest,
+    }))?;
+    let (spend_minor, currency) = match &pass.budget {
+        Some(budget) => (budget.minor, budget.currency.clone()),
+        None => (0, "USD".to_string()),
+    };
+
+    let mut chain = TaskChain::new(key.clone());
+    chain.add(
+        "session.pass.created",
+        json!({
+            "gate_id": pass.issuer,
+            "mandala_class": pass.gate_class,
+            "quotas": {
+                "cpu_ms": pass.quotas.cpu_ms,
+                "mem_mb": pass.quotas.mem_mb,
+                "disk_mb": pass.quotas.disk_mb,
+                "wall_ms": pass.quotas.wall_ms,
+            },
+            "expires_at": pass.expires_at_rfc3339(),
+            "policy_version": pass.policy_version,
+            "mandate_ref": mandate_ref,
+            "agent_id": pass.subject,
+            // Spec field (continuity-receipt/0.2 §4.1); until Mandala emits its
+            // own pass id, the token commitment is the join key.
+            "pass_token_id": pass.token_digest,
+        }),
+        &input.issued_at,
+    )?;
+    chain.add(
+        "task.decision",
+        json!({
+            "action": input.route,
+            "action_args_hash": input.args_digest,
+            "model": ModelRef::wm_local("governed-dispatch").to_value(),
+            "input_provenance": {
+                "policy_id": "wm-local/mandala-v1",
+                "allowed_sources": ["gate-lite"],
+                "observed_sources_hash": pass.token_digest,
+            },
+            "decision": "allow",
+            "policy_version": pass.policy_version,
+        }),
+        &input.issued_at,
+    )?;
+    chain.add(
+        "delivery.attestation",
+        json!({
+            "request_hash": input.args_digest,
+            "response_hash": input.result_digest,
+            "counterparty": { "id": pass.gate_did },
+        }),
+        &input.issued_at,
+    )?;
+    chain.add(
+        "task.termination",
+        json!({
+            "reason": if input.success { "completed" } else { "error" },
+            "limits_at_stop": {
+                "cpu_ms": pass.quotas.cpu_ms,
+                "wall_ms": pass.quotas.wall_ms,
+                "spend_minor": spend_minor,
+                "currency": currency,
+            },
+            "remaining": {},
+        }),
+        &input.issued_at,
+    )?;
+    Ok(chain.bundle())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,5 +509,64 @@ mod tests {
         let a = turn_digest(&[turn(1), turn(2)]).expect("digest");
         let b = turn_digest(&[turn(2), turn(1)]).expect("digest");
         assert_ne!(a, b);
+    }
+
+    fn governed_pass() -> crate::mandala::PassClaims {
+        crate::mandala::PassClaims {
+            issuer: "gate:gate-lite-1".into(),
+            subject: "did:key:z6MkjAVo9y1rK5X8kMH3Ju2pjZEZ84A5qX9XyNr7Svxqdz4w".into(),
+            audience: "gate-lite".into(),
+            gate_class: "gate-lite".into(),
+            slot_class: "small".into(),
+            quotas: crate::mandala::PassQuotas {
+                cpu_ms: 300_000,
+                mem_mb: 1024,
+                disk_mb: 512,
+                wall_ms: 5_400_000,
+            },
+            budget: Some(crate::mandala::PassBudget {
+                minor: 1000,
+                currency: "USD".into(),
+            }),
+            policy_version: "2026-09-17.1".into(),
+            expires_at: 4_102_444_800,
+            jti: "0199a0c0-0000-7000-8000-00000000f17a".into(),
+            token_digest: digest_of(&json!("fixture-token")).expect("digest"),
+            gate_did: "did:key:z6MkjnSQ1n9Lg9GGsquYAx8bKxB2EB3FnE2SykrTzTquCWs6".into(),
+        }
+    }
+
+    #[test]
+    fn governed_dispatch_bundle_verifies_trusted_and_binds_the_pass() {
+        let input = GovernedDispatchInput {
+            route: "memory.delete".into(),
+            args_digest: digest_of(&json!({"id": "abc", "confirm": true})).expect("digest"),
+            result_digest: digest_of(&json!({"status": "success"})).expect("digest"),
+            success: true,
+            issued_at: "2026-09-22T10:00:00Z".into(),
+            pass: governed_pass(),
+        };
+        let bundle = governed_dispatch_bundle(&key(), &input).expect("bundle");
+        let outcome = verify_bundle(&bundle, false);
+        assert!(outcome.is_trusted(), "{:?}", outcome.to_value());
+        assert_eq!(
+            bundle["receipts"][0]["body"]["pass_token_id"],
+            input.pass.token_digest
+        );
+        assert_eq!(
+            bundle["receipts"][2]["body"]["counterparty"]["id"],
+            input.pass.gate_did
+        );
+        assert_eq!(
+            bundle["receipts"][2]["body"]["response_hash"],
+            input.result_digest
+        );
+        assert_eq!(bundle["receipts"][3]["body"]["reason"], "completed");
+
+        // Tampering with the bound result is caught.
+        let mut tampered = bundle;
+        tampered["receipts"][2]["body"]["response_hash"] =
+            json!(format!("sha256:{}", "00".repeat(32)));
+        assert!(!verify_bundle(&tampered, false).is_trusted());
     }
 }

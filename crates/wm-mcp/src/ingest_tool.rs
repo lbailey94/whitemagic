@@ -10,7 +10,7 @@
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use wm_core::{Capability, Context, EffectRow, Gana, Resource, Sandbox, Tool, ToolStats};
 
 /// Arguments accepted by `memory.ingest`, parsed without a runtime context so
@@ -33,10 +33,7 @@ pub(crate) fn parse_args(args: &Value) -> Result<IngestParams, String> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .ok_or_else(|| "source is required".to_string())?;
-    let dry_run = args
-        .get("dry_run")
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
+    let dry_run = args.get("dry_run").and_then(Value::as_bool).unwrap_or(true);
     let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(0) as usize;
     let galaxy = args
         .get("galaxy")

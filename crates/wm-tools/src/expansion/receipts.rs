@@ -25,9 +25,11 @@ use wm_memory::{Memory, MemoryStore};
 use wm_receipts::emit::{content_digest, digest_of, receipt_digest};
 use wm_receipts::error::ReceiptError;
 use wm_receipts::keys::{ReceiptKey, resolve_key};
+use wm_receipts::mandala::{PassVerifyOptions, verify_pass};
 use wm_receipts::profiles::{
-    KarmaHeadInput, ModelRef, SessionReceiptInput, TurnEvidence, gate_id_for_store,
-    karma_head_bundle, now_rfc3339, rfc3339_in_hours, session_bundle,
+    GovernedDispatchInput, KarmaHeadInput, ModelRef, SessionReceiptInput, TurnEvidence,
+    gate_id_for_store, governed_dispatch_bundle, karma_head_bundle, now_rfc3339, rfc3339_in_hours,
+    session_bundle,
 };
 use wm_receipts::verify::verify_bundle;
 
@@ -147,6 +149,18 @@ fn store_bundle(
     session_id: Option<&str>,
     variant: &str,
 ) -> Result<Memory, CoreError> {
+    store_bundle_with_tags(store, bundle, kind, session_id, variant, &[])
+}
+
+/// `store_bundle` plus extra lookup tags (e.g. the governed pass commitment).
+fn store_bundle_with_tags(
+    store: &MemoryStore,
+    bundle: &Value,
+    kind: &str,
+    session_id: Option<&str>,
+    variant: &str,
+    extra_tags: &[String],
+) -> Result<Memory, CoreError> {
     let task_id = bundle
         .get("task_id")
         .and_then(Value::as_str)
@@ -163,6 +177,7 @@ fn store_bundle(
     if let Some(session_id) = session_id {
         tags.push(format!("session:{session_id}"));
     }
+    tags.extend(extra_tags.iter().cloned());
     let mut memory = Memory::new(Galaxy::Receipts, text);
     memory.metadata.id = issue_memory_id();
     memory.metadata.tags = tags;
@@ -1121,22 +1136,27 @@ pub fn auto_emit_enabled() -> bool {
 }
 
 /// Authority-seam hook: attests the karma-chain head after a successful
-/// destructive dispatch.
+/// destructive dispatch, and emits a **governed dispatch receipt** whenever a
+/// verified gate-lite pass authorized the dispatch (S2).
 ///
-/// Bounded by `WM_RECEIPTS_AUTOEMIT_MIN_SECS` (default 60): at most one
-/// emission per window, so a burst of destructive dispatches cannot flood the
-/// evidence store. Failures are logged and never touch the dispatch result.
+/// The karma-head path is bounded by `WM_RECEIPTS_AUTOEMIT_MIN_SECS`
+/// (default 60); governed emissions are one per pass-authorized dispatch and
+/// are never throttled. Failures are logged and never touch the dispatch
+/// result.
 pub struct AutoEmitReceiptHook {
     store: Arc<MemoryStore>,
     karma: Option<Arc<KarmaLedger>>,
+    auto_emit: bool,
     min_interval_secs: u64,
     last_emit_secs: std::sync::atomic::AtomicU64,
 }
 
 impl AutoEmitReceiptHook {
     /// New hook over the store's receipts galaxy and karma ledger.
+    /// `auto_emit` enables the S1 karma-head path; governed emissions are
+    /// driven by pass evidence regardless.
     #[must_use]
-    pub fn new(store: Arc<MemoryStore>, karma: Option<Arc<KarmaLedger>>) -> Self {
+    pub fn new(store: Arc<MemoryStore>, karma: Option<Arc<KarmaLedger>>, auto_emit: bool) -> Self {
         let min_interval_secs = std::env::var("WM_RECEIPTS_AUTOEMIT_MIN_SECS")
             .ok()
             .and_then(|value| value.trim().parse::<u64>().ok())
@@ -1144,12 +1164,13 @@ impl AutoEmitReceiptHook {
         Self {
             store,
             karma,
+            auto_emit,
             min_interval_secs,
             last_emit_secs: std::sync::atomic::AtomicU64::new(0),
         }
     }
 
-    /// Reserve the emission slot; `false` means throttled or contended.
+    /// Reserve the karma-head emission slot; `false` means throttled.
     fn reserve(&self) -> bool {
         let now = Utc::now().timestamp().max(0) as u64;
         let last = self
@@ -1167,26 +1188,228 @@ impl AutoEmitReceiptHook {
             )
             .is_ok()
     }
+
+    /// Emit and store the pass-governed dispatch receipt.
+    fn emit_governed(
+        &self,
+        dispatch: &wm_dispatch::AuthorityDispatch<'_>,
+        evidence: &wm_dispatch::PassEvidence,
+    ) {
+        let key = match resolve_emitter_key(&self.store, None) {
+            Ok(key) => key,
+            Err(error) => {
+                tracing::warn!(error = %error, "receipts: governed emission key unavailable");
+                return;
+            }
+        };
+        let args_digest = match digest_of(dispatch.args) {
+            Ok(digest) => digest,
+            Err(error) => {
+                tracing::warn!(error = %error, "receipts: governed args digest failed");
+                return;
+            }
+        };
+        let output = dispatch.output.cloned().unwrap_or(Value::Null);
+        let result_digest = match digest_of(&output) {
+            Ok(digest) => digest,
+            Err(error) => {
+                tracing::warn!(error = %error, "receipts: governed result digest failed");
+                return;
+            }
+        };
+        let bundle = match governed_dispatch_bundle(
+            &key,
+            &GovernedDispatchInput {
+                route: dispatch.tool.to_string(),
+                args_digest,
+                result_digest,
+                success: dispatch.success,
+                issued_at: now_rfc3339(),
+                pass: pass_claims_from_evidence(evidence),
+            },
+        ) {
+            Ok(bundle) => bundle,
+            Err(error) => {
+                tracing::warn!(error = %error, "receipts: governed bundle build failed");
+                return;
+            }
+        };
+        let outcome = verify_bundle(&bundle, false);
+        if !outcome.is_trusted() {
+            tracing::warn!(
+                tool = dispatch.tool,
+                verdict = %outcome.verdict,
+                "receipts: governed bundle failed local verification — not stored"
+            );
+            return;
+        }
+        let tags = vec![format!("pass:{}", evidence.token_digest)];
+        match store_bundle_with_tags(
+            &self.store,
+            &bundle,
+            "governed",
+            None,
+            VARIANT_ORIGINAL,
+            &tags,
+        ) {
+            Ok(memory) => tracing::info!(
+                tool = dispatch.tool,
+                pass = %evidence.token_digest,
+                success = dispatch.success,
+                receipt = %memory.metadata.id,
+                "receipts: governed dispatch receipt emitted"
+            ),
+            Err(error) => tracing::warn!(
+                error = %error,
+                "receipts: governed receipt store failed (dispatch unaffected)"
+            ),
+        }
+    }
 }
 
 impl wm_dispatch::ReceiptDispatchHook for AutoEmitReceiptHook {
-    fn on_authority_dispatch(&self, tool: &str, elapsed: std::time::Duration) {
-        if !self.reserve() {
+    fn on_authority_dispatch(&self, dispatch: wm_dispatch::AuthorityDispatch<'_>) {
+        if let Some(evidence) = dispatch.pass {
+            self.emit_governed(&dispatch, evidence);
+            return;
+        }
+        if !self.auto_emit || !dispatch.success || !self.reserve() {
             return;
         }
         let emitter = ReceiptsEmitTool::new(self.store.clone(), self.karma.clone());
         match emitter.emit_karma_head(&json!({})) {
             Ok(_) => tracing::info!(
-                tool = tool,
-                elapsed_ms = elapsed.as_millis(),
+                tool = dispatch.tool,
+                elapsed_ms = dispatch.elapsed.as_millis(),
                 "receipts auto-emit: karma-chain head attested"
             ),
             Err(error) => tracing::warn!(
-                tool = tool,
+                tool = dispatch.tool,
                 error = %error,
                 "receipts auto-emit failed (dispatch unaffected)"
             ),
         }
+    }
+}
+
+// ── Mandala pass gate (S2) ─────────────────────────────────────────────
+
+/// Offline gate-lite pass verifier injected into the dispatch pipeline (S2).
+pub struct MandalaPassGate {
+    expected_issuer: Option<String>,
+    accepted_policy_versions: Vec<String>,
+}
+
+impl MandalaPassGate {
+    /// New verifier; `expected_issuer` pins the gate `did:key` when set.
+    /// Accepted policy versions come from `WM_MANDALA_POLICY_VERSIONS`
+    /// (comma-separated) or the default set.
+    #[must_use]
+    pub fn new(expected_issuer: Option<String>) -> Self {
+        let accepted = std::env::var("WM_MANDALA_POLICY_VERSIONS")
+            .ok()
+            .map(|value| {
+                value
+                    .split(',')
+                    .map(|part| part.trim().to_string())
+                    .filter(|part| !part.is_empty())
+                    .collect::<Vec<_>>()
+            })
+            .filter(|versions| !versions.is_empty())
+            .unwrap_or_else(|| {
+                wm_receipts::mandala::DEFAULT_POLICY_VERSIONS
+                    .iter()
+                    .map(|version| (*version).to_string())
+                    .collect()
+            });
+        Self {
+            expected_issuer,
+            accepted_policy_versions: accepted,
+        }
+    }
+}
+
+fn pass_evidence_from_claims(
+    claims: &wm_receipts::mandala::PassClaims,
+) -> wm_dispatch::PassEvidence {
+    wm_dispatch::PassEvidence {
+        issuer: claims.issuer.clone(),
+        subject: claims.subject.clone(),
+        audience: claims.audience.clone(),
+        gate_class: claims.gate_class.clone(),
+        slot_class: claims.slot_class.clone(),
+        gate_did: claims.gate_did.clone(),
+        policy_version: claims.policy_version.clone(),
+        expires_at: claims.expires_at,
+        quotas: wm_dispatch::PassQuotas {
+            cpu_ms: claims.quotas.cpu_ms,
+            mem_mb: claims.quotas.mem_mb,
+            disk_mb: claims.quotas.disk_mb,
+            wall_ms: claims.quotas.wall_ms,
+        },
+        budget: claims
+            .budget
+            .as_ref()
+            .map(|budget| wm_dispatch::PassBudget {
+                minor: budget.minor,
+                currency: budget.currency.clone(),
+            }),
+        jti: claims.jti.clone(),
+        token_digest: claims.token_digest.clone(),
+    }
+}
+
+fn pass_claims_from_evidence(
+    evidence: &wm_dispatch::PassEvidence,
+) -> wm_receipts::mandala::PassClaims {
+    wm_receipts::mandala::PassClaims {
+        issuer: evidence.issuer.clone(),
+        subject: evidence.subject.clone(),
+        audience: evidence.audience.clone(),
+        gate_class: evidence.gate_class.clone(),
+        slot_class: evidence.slot_class.clone(),
+        quotas: wm_receipts::mandala::PassQuotas {
+            cpu_ms: evidence.quotas.cpu_ms,
+            mem_mb: evidence.quotas.mem_mb,
+            disk_mb: evidence.quotas.disk_mb,
+            wall_ms: evidence.quotas.wall_ms,
+        },
+        budget: evidence
+            .budget
+            .as_ref()
+            .map(|budget| wm_receipts::mandala::PassBudget {
+                minor: budget.minor,
+                currency: budget.currency.clone(),
+            }),
+        policy_version: evidence.policy_version.clone(),
+        expires_at: evidence.expires_at,
+        jti: evidence.jti.clone(),
+        token_digest: evidence.token_digest.clone(),
+        gate_did: evidence.gate_did.clone(),
+    }
+}
+
+impl wm_dispatch::PassGate for MandalaPassGate {
+    fn verify(
+        &self,
+        token: &str,
+        _tool: &str,
+    ) -> std::result::Result<wm_dispatch::PassEvidence, String> {
+        let versions: Vec<&str> = self
+            .accepted_policy_versions
+            .iter()
+            .map(String::as_str)
+            .collect();
+        let claims = verify_pass(
+            token,
+            &PassVerifyOptions {
+                expected_issuer: self.expected_issuer.as_deref(),
+                accepted_policy_versions: &versions,
+                now: Utc::now().timestamp(),
+            },
+        )
+        .map_err(|error| error.to_string())?;
+        Ok(pass_evidence_from_claims(&claims))
     }
 }
 
@@ -1419,8 +1642,15 @@ mod tests {
 
         // No env key here: the hook resolves the store key file, creating it
         // on first use (the zero-setup default) — exercises that path too.
-        let hook = AutoEmitReceiptHook::new(store.clone(), Some(ledger));
-        hook.on_authority_dispatch("memory.delete", std::time::Duration::from_millis(1));
+        let hook = AutoEmitReceiptHook::new(store.clone(), Some(ledger), true);
+        hook.on_authority_dispatch(wm_dispatch::AuthorityDispatch {
+            tool: "memory.delete",
+            args: &json!({"id": "abc", "confirm": true}),
+            output: Some(&json!({"status": "success"})),
+            success: true,
+            elapsed: std::time::Duration::from_millis(1),
+            pass: None,
+        });
 
         let bundles = stored_bundles(&store).expect("stored bundles");
         assert_eq!(bundles.len(), 1, "one authority-seam emission");
@@ -1435,11 +1665,196 @@ mod tests {
         );
 
         // Throttle window: a second immediate dispatch must not emit again.
-        hook.on_authority_dispatch("memory.delete", std::time::Duration::from_millis(1));
+        hook.on_authority_dispatch(wm_dispatch::AuthorityDispatch {
+            tool: "memory.delete",
+            args: &json!({"id": "abc", "confirm": true}),
+            output: Some(&json!({"status": "success"})),
+            success: true,
+            elapsed: std::time::Duration::from_millis(1),
+            pass: None,
+        });
         assert_eq!(
             stored_bundles(&store).expect("stored bundles").len(),
             1,
             "throttled within WM_RECEIPTS_AUTOEMIT_MIN_SECS"
+        );
+    }
+
+    /// Real gate-lite-issued token fixture (see `wm-receipts::mandala`).
+    const FIXTURE_TOKEN: &str = "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2puU1ExbjlMZzlHR3NxdVlBeDhiS3hCMkVCM0ZuRTJTeWtyVHpUcXVDV3M2IiwidHlwIjoiSldUIn0.eyJhdWQiOiJnYXRlLWxpdGUiLCJidWRnZXQiOnsiY3VycmVuY3kiOiJVU0QiLCJtaW5vciI6MTAwMH0sImV4cCI6NDEwMjQ0NDgwMCwiaXNzIjoiZ2F0ZTpnYXRlLWxpdGUtMSIsImp0aSI6IjAxOTlhMGMwLTAwMDAtNzAwMC04MDAwLTAwMDAwMDAwZjE3YSIsIm1hbmRhbGEiOnsiY2xhc3MiOiJnYXRlLWxpdGUiLCJxdW90YXMiOnsiY3B1X21zIjozMDAwMDAsImRpc2tfbWIiOjUxMiwibWVtX21iIjoxMDI0LCJ3YWxsX21zIjo1NDAwMDAwfSwic2xvdF9jbGFzcyI6InNtYWxsIn0sInBvbGljeV92ZXJzaW9uIjoiMjAyNi0wOS0xNy4xIiwic3ViIjoiZGlkOmtleTp6Nk1rakFWbzl5MXJLNVg4a01IM0p1MnBqWkVaODRBNXFYOVh5TnI3U3Z4cWR6NHcifQ.07rDlytb7T2HFP6MRs_7OvAE5E5eTCEbChVam9YAk_3wVTCvCXBzXksrtqA30muxmxiPvrVMaZRyDv7U6mDMAw";
+    const FIXTURE_GATE_DID: &str = "did:key:z6MkjnSQ1n9Lg9GGsquYAx8bKxB2EB3FnE2SykrTzTquCWs6";
+
+    #[test]
+    fn mandala_pass_gate_verifies_a_real_gate_lite_token() {
+        let gate = MandalaPassGate::new(Some(FIXTURE_GATE_DID.to_string()));
+        let evidence = wm_dispatch::PassGate::verify(&gate, FIXTURE_TOKEN, "memory.delete")
+            .expect("fixture verifies");
+        assert_eq!(evidence.issuer, "gate:gate-lite-1");
+        assert_eq!(evidence.gate_did, FIXTURE_GATE_DID);
+        assert_eq!(evidence.gate_class, "gate-lite");
+        assert_eq!(evidence.quotas.wall_ms, 5_400_000);
+        assert!(evidence.token_digest.starts_with("sha256:"));
+
+        // A pinned issuer that does not match is refused.
+        let pinned = MandalaPassGate::new(Some("did:key:z6Mkother".to_string()));
+        assert!(wm_dispatch::PassGate::verify(&pinned, FIXTURE_TOKEN, "memory.delete").is_err());
+        // A tampered token is refused.
+        let tampered = format!("{FIXTURE_TOKEN}x");
+        assert!(wm_dispatch::PassGate::verify(&gate, &tampered, "memory.delete").is_err());
+    }
+
+    #[tokio::test]
+    async fn auto_emit_hook_stores_a_governed_receipt() {
+        use wm_dispatch::ReceiptDispatchHook as _;
+
+        let (_dir, store) = test_store();
+        let hook = AutoEmitReceiptHook::new(store.clone(), None, false);
+        let args = json!({"id": "abc", "confirm": true});
+        let output = json!({"status": "success"});
+        let evidence = wm_dispatch::PassEvidence {
+            issuer: "gate:gate-lite-1".into(),
+            subject: "did:key:zSubject".into(),
+            audience: "gate-lite".into(),
+            gate_class: "gate-lite".into(),
+            slot_class: "small".into(),
+            gate_did: FIXTURE_GATE_DID.into(),
+            policy_version: "2026-09-17.1".into(),
+            expires_at: 4_102_444_800,
+            quotas: wm_dispatch::PassQuotas {
+                cpu_ms: 300_000,
+                mem_mb: 1024,
+                disk_mb: 512,
+                wall_ms: 5_400_000,
+            },
+            budget: Some(wm_dispatch::PassBudget {
+                minor: 1000,
+                currency: "USD".into(),
+            }),
+            jti: "jti".into(),
+            token_digest: wm_receipts::emit::digest_of(&json!("token")).expect("digest"),
+        };
+        hook.on_authority_dispatch(wm_dispatch::AuthorityDispatch {
+            tool: "memory.delete",
+            args: &args,
+            output: Some(&output),
+            success: true,
+            elapsed: std::time::Duration::from_millis(1),
+            pass: Some(&evidence),
+        });
+
+        let bundles = stored_bundles(&store).expect("stored bundles");
+        assert_eq!(bundles.len(), 1, "one governed emission");
+        assert_eq!(tag_value(&bundles[0].0, "kind:"), Some("governed"));
+        assert!(verify_bundle(&bundles[0].1, false).is_trusted());
+        assert_eq!(
+            bundles[0].1["receipts"][2]["body"]["response_hash"],
+            digest_of(&output).expect("digest")
+        );
+        assert!(
+            bundles[0]
+                .0
+                .metadata
+                .tags
+                .iter()
+                .any(|tag| tag.starts_with("pass:")),
+            "the pass commitment is tagged for lookup"
+        );
+    }
+
+    /// Minimal destructive tool for the pipeline end-to-end test.
+    struct DestructiveTestTool {
+        stats: ToolStats,
+        effects: EffectRow,
+    }
+
+    impl DestructiveTestTool {
+        fn new() -> Self {
+            Self {
+                stats: ToolStats::default(),
+                effects: EffectRow {
+                    destructive: true,
+                    ..EffectRow::pure()
+                },
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl Tool for DestructiveTestTool {
+        fn name(&self) -> &str {
+            "test.destructive"
+        }
+        fn gana(&self) -> Gana {
+            Gana::Willow
+        }
+        fn effects(&self) -> &EffectRow {
+            &self.effects
+        }
+        async fn call(&self, _ctx: &mut Context, _args: Value) -> wm_core::Result<Value> {
+            Ok(json!({"status": "success", "writes": []}))
+        }
+        fn stats(&self) -> &ToolStats {
+            &self.stats
+        }
+    }
+
+    #[tokio::test]
+    async fn governed_dispatch_end_to_end_through_the_pipeline() {
+        let (_dir, store) = test_store();
+        let hook = Arc::new(AutoEmitReceiptHook::new(store.clone(), None, false));
+        let gate = Arc::new(MandalaPassGate::new(Some(FIXTURE_GATE_DID.to_string())));
+        let pipeline = wm_dispatch::DispatchPipeline::with_defaults()
+            .with_receipt_hook_option(Some(hook))
+            .with_pass_gate_option(Some(gate), wm_dispatch::PassMode::Optional);
+        let tool = DestructiveTestTool::new();
+
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut Context::new(wm_core::BrainWave::Beta),
+                json!({"confirm": true, "mandala_pass": FIXTURE_TOKEN}),
+            )
+            .await;
+        assert!(result.is_ok(), "{result:?}");
+
+        let bundles = stored_bundles(&store).expect("stored bundles");
+        assert_eq!(bundles.len(), 1, "one governed emission");
+        assert_eq!(tag_value(&bundles[0].0, "kind:"), Some("governed"));
+        assert!(verify_bundle(&bundles[0].1, false).is_trusted());
+        assert_eq!(
+            bundles[0].1["receipts"][0]["body"]["agent_id"],
+            "did:key:z6MkjAVo9y1rK5X8kMH3Ju2pjZEZ84A5qX9XyNr7Svxqdz4w"
+        );
+
+        // Acceptance capture: when WM_S2_EVIDENCE_DIR is set, dump the
+        // pipeline-produced bundle + the token fixture for external verifiers.
+        if let Ok(dir) = std::env::var("WM_S2_EVIDENCE_DIR") {
+            let dir = std::path::Path::new(&dir);
+            let _ = std::fs::create_dir_all(dir);
+            let _ = std::fs::write(
+                dir.join("governed-bundle.json"),
+                serde_json::to_vec_pretty(&bundles[0].1).unwrap_or_default(),
+            );
+            let _ = std::fs::write(dir.join("fixture-token.txt"), FIXTURE_TOKEN);
+        }
+
+        // Required mode without a pass: refused before execution.
+        let required = wm_dispatch::DispatchPipeline::with_defaults().with_pass_gate_option(
+            Some(Arc::new(MandalaPassGate::new(Some(
+                FIXTURE_GATE_DID.to_string(),
+            )))),
+            wm_dispatch::PassMode::Required,
+        );
+        let result = required
+            .dispatch(
+                &tool,
+                &mut Context::new(wm_core::BrainWave::Beta),
+                json!({"confirm": true}),
+            )
+            .await;
+        assert!(
+            matches!(result, Err(CoreError::Governance(_))),
+            "{result:?}"
         );
     }
 

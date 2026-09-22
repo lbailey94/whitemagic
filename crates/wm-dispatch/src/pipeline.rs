@@ -125,15 +125,124 @@ fn record_write_audit(
     }
 }
 
+/// Verified gate-lite pass evidence (S2) — plain data, no verifier dependency.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PassQuotas {
+    /// CPU budget (milliseconds).
+    pub cpu_ms: u64,
+    /// Memory cap (MiB).
+    pub mem_mb: u64,
+    /// Disk cap (MiB).
+    pub disk_mb: u64,
+    /// Wall-clock budget (milliseconds).
+    pub wall_ms: u64,
+}
+
+/// Optional spend budget carried by a pass.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PassBudget {
+    /// Amount in minor units.
+    pub minor: u64,
+    /// ISO-4217-like currency code.
+    pub currency: String,
+}
+
+/// Verified gate-lite pass evidence handed to the authority-seam hook.
+#[derive(Debug, Clone)]
+pub struct PassEvidence {
+    /// `iss` (`gate:<gate_id>`).
+    pub issuer: String,
+    /// `sub` (agent `did:key`).
+    pub subject: String,
+    /// `aud`.
+    pub audience: String,
+    /// `mandala.class`.
+    pub gate_class: String,
+    /// `mandala.slot_class`.
+    pub slot_class: String,
+    /// The gate's `did:key`.
+    pub gate_did: String,
+    /// `policy_version`.
+    pub policy_version: String,
+    /// `exp` (epoch seconds).
+    pub expires_at: i64,
+    /// `mandala.quotas`.
+    pub quotas: PassQuotas,
+    /// Budget when present.
+    pub budget: Option<PassBudget>,
+    /// `jti`.
+    pub jti: String,
+    /// `sha256:` of the raw token — the pass commitment.
+    pub token_digest: String,
+}
+
+/// Offline pass verifier injected by the deployment (wm-receipts in wm-mcp).
+pub trait PassGate: Send + Sync {
+    /// Verify a gate-lite pass token for `tool`; the error string is the
+    /// human-readable refusal reason.
+    fn verify(&self, token: &str, tool: &str) -> std::result::Result<PassEvidence, String>;
+}
+
+/// Pass enforcement mode (`WM_MANDALA_PASS`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PassMode {
+    /// No pass gate attached: `mandala_pass` args are inert (S1 behavior).
+    #[default]
+    Off,
+    /// A supplied pass must verify; no pass keeps S1 behavior.
+    Optional,
+    /// Destructive dispatches must carry a valid pass.
+    Required,
+}
+
+impl PassMode {
+    /// Parse `WM_MANDALA_PASS=off|optional|required` (unknown → `Optional`, loud).
+    #[must_use]
+    pub fn from_env() -> Self {
+        match std::env::var("WM_MANDALA_PASS") {
+            Ok(value) => match value.trim().to_ascii_lowercase().as_str() {
+                "off" | "0" | "false" => Self::Off,
+                "required" | "require" => Self::Required,
+                "optional" | "1" | "true" => Self::Optional,
+                other => {
+                    tracing::warn!(
+                        value = other,
+                        "WM_MANDALA_PASS is not off|optional|required — using optional"
+                    );
+                    Self::Optional
+                }
+            },
+            Err(_) => Self::Optional,
+        }
+    }
+}
+
+/// Evidence passed to the authority-seam hook after a destructive dispatch.
+pub struct AuthorityDispatch<'a> {
+    /// Tool route.
+    pub tool: &'a str,
+    /// Dispatch args (after pass-token removal).
+    pub args: &'a serde_json::Value,
+    /// Successful output (`None` on failure).
+    pub output: Option<&'a serde_json::Value>,
+    /// Whether the dispatch succeeded.
+    pub success: bool,
+    /// Dispatch elapsed time.
+    pub elapsed: Duration,
+    /// Verified pass evidence when a gate-lite pass authorized the dispatch.
+    pub pass: Option<&'a PassEvidence>,
+}
+
 /// Optional post-dispatch receipt hook (S1 receipts core).
 ///
-/// Called once per successful **destructive** dispatch — the authority seam —
-/// after karma recording. Implementations must be non-failing (log their own
+/// Called after a **destructive** dispatch — the authority seam — on success,
+/// and on failure when a pass was presented (the receipt then records an
+/// `error` termination). Implementations must be non-failing (log their own
 /// errors) and must never alter the dispatch result. The disabled default
 /// (`None`) costs one `Option::is_some` check on the success path.
 pub trait ReceiptDispatchHook: Send + Sync {
-    /// Called after a successful authority-seam dispatch.
-    fn on_authority_dispatch(&self, tool: &str, elapsed: Duration);
+    /// Called after a destructive dispatch at the authority seam.
+    fn on_authority_dispatch(&self, dispatch: AuthorityDispatch<'_>);
 }
 
 /// The dispatch pipeline processes tool calls through governance,
@@ -189,6 +298,9 @@ pub struct DispatchPipeline {
     /// dispatches). `None` (default) keeps the path unchanged; attached
     /// explicitly by the deployment via `WM_RECEIPTS_AUTOEMIT=1`.
     receipt_hook: Option<Arc<dyn ReceiptDispatchHook>>,
+    /// Optional gate-lite pass verifier (S2) and its enforcement mode.
+    pass_gate: Option<Arc<dyn PassGate>>,
+    pass_mode: PassMode,
 }
 
 impl DispatchPipeline {
@@ -234,6 +346,8 @@ impl DispatchPipeline {
             gana_registry: None,
             dispatch_timeout: None,
             receipt_hook: None,
+            pass_gate: None,
+            pass_mode: PassMode::Off,
         }
     }
 
@@ -360,6 +474,31 @@ impl DispatchPipeline {
     #[must_use]
     pub fn receipt_hook(&self) -> Option<&Arc<dyn ReceiptDispatchHook>> {
         self.receipt_hook.as_ref()
+    }
+
+    /// Attach a gate-lite pass verifier and its enforcement mode (S2).
+    /// `None` (default) makes `mandala_pass` args inert.
+    #[must_use]
+    pub fn with_pass_gate_option(
+        mut self,
+        gate: Option<Arc<dyn PassGate>>,
+        mode: PassMode,
+    ) -> Self {
+        self.pass_gate = gate;
+        self.pass_mode = mode;
+        self
+    }
+
+    /// The pass gate attached to this pipeline (if any).
+    #[must_use]
+    pub fn pass_gate(&self) -> Option<&Arc<dyn PassGate>> {
+        self.pass_gate.as_ref()
+    }
+
+    /// The pass enforcement mode.
+    #[must_use]
+    pub const fn pass_mode(&self) -> PassMode {
+        self.pass_mode
     }
 
     /// Attach the scoped-thread sandbox executor (P-SANDBOX-3). When
@@ -701,6 +840,39 @@ impl DispatchPipeline {
             None
         };
 
+        // 4b-bis. Mandala pass gate (S2) — an optional gate-lite pass
+        // authorizes a destructive dispatch. Verification is offline; the
+        // evidence rides to the authority-seam hook and the token is removed
+        // from args so it never reaches the tool or the args digest.
+        let mut pass_evidence: Option<PassEvidence> = None;
+        if let Some(ref gate) = self.pass_gate {
+            let token = args
+                .get("mandala_pass")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string);
+            if let Some(token) = token {
+                if let Some(object) = args.as_object_mut() {
+                    object.remove("mandala_pass");
+                }
+                if tool.effects().destructive {
+                    match gate.verify(&token, tool.name()) {
+                        Ok(evidence) => pass_evidence = Some(evidence),
+                        Err(reason) => {
+                            return Err(CoreError::Governance(format!(
+                                "mandala pass refused for '{}': {reason}",
+                                tool.name()
+                            )));
+                        }
+                    }
+                }
+            } else if tool.effects().destructive && self.pass_mode == PassMode::Required {
+                return Err(CoreError::Governance(format!(
+                    "tool '{}' requires a `mandala_pass` (WM_MANDALA_PASS=required)",
+                    tool.name()
+                )));
+            }
+        }
+
         // 4c. Firebreak — the promoted Jan-11 forbidden-command guardrail
         // (P1.4) plus the bulk-scope law (P1.6, the Jul-13 lesson). Blocks
         // before execution: forbidden patterns veto even a confirmed call;
@@ -887,6 +1059,13 @@ impl DispatchPipeline {
         // P-SANDBOX-3 (Landlock v1): a `StoreScoped` tool with an executor
         // attached runs on a confined scoped thread (synchronous — see
         // `sandbox_exec` for why, and for the timeout-parity v1 gap).
+        // The hook needs the post-pass args after `tool.call` consumes them.
+        let authority_args = if self.receipt_hook.is_some() && tool.effects().destructive {
+            Some(args.clone())
+        } else {
+            None
+        };
+        let null_output = serde_json::Value::Null;
         let result = if crate::sandbox_exec::ScopedSandboxExecutor::handles(tool)
             && let Some(executor) = self.sandbox_exec.as_deref()
         {
@@ -1018,11 +1197,18 @@ impl DispatchPipeline {
                 );
             }
 
-            // Authority-seam receipt hook (S1): successful destructive
-            // dispatches only; disabled = one `Option` check.
+            // Authority-seam receipt hook (S1/S2): successful destructive
+            // dispatches; disabled = one `Option` check.
             if tool.effects().destructive {
                 if let Some(ref hook) = self.receipt_hook {
-                    hook.on_authority_dispatch(tool.name(), elapsed);
+                    hook.on_authority_dispatch(AuthorityDispatch {
+                        tool: tool.name(),
+                        args: authority_args.as_ref().unwrap_or(&null_output),
+                        output: Some(output),
+                        success: true,
+                        elapsed,
+                        pass: pass_evidence.as_ref(),
+                    });
                 }
             }
         } else {
@@ -1059,6 +1245,21 @@ impl DispatchPipeline {
                     false,
                     confirm_gated,
                 );
+            }
+
+            // Governed failures still leave evidence: a pass-authorized
+            // destructive dispatch that failed emits an `error` termination.
+            if tool.effects().destructive && pass_evidence.is_some() {
+                if let Some(ref hook) = self.receipt_hook {
+                    hook.on_authority_dispatch(AuthorityDispatch {
+                        tool: tool.name(),
+                        args: authority_args.as_ref().unwrap_or(&null_output),
+                        output: None,
+                        success: false,
+                        elapsed,
+                        pass: pass_evidence.as_ref(),
+                    });
+                }
             }
         }
 
@@ -3291,13 +3492,31 @@ mod tests {
     /// Counting receipt hook for the authority-seam tests.
     struct CountingReceiptHook {
         calls: std::sync::atomic::AtomicU64,
+        passes: std::sync::atomic::AtomicU64,
+        pass_arg_seen: std::sync::atomic::AtomicBool,
     }
 
     impl ReceiptDispatchHook for CountingReceiptHook {
-        fn on_authority_dispatch(&self, _tool: &str, _elapsed: std::time::Duration) {
+        fn on_authority_dispatch(&self, dispatch: AuthorityDispatch<'_>) {
             self.calls
                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            if dispatch.pass.is_some() {
+                self.passes
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+            if dispatch.args.get("mandala_pass").is_some() {
+                self.pass_arg_seen
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+            }
         }
+    }
+
+    fn counting_hook() -> Arc<CountingReceiptHook> {
+        Arc::new(CountingReceiptHook {
+            calls: std::sync::atomic::AtomicU64::new(0),
+            passes: std::sync::atomic::AtomicU64::new(0),
+            pass_arg_seen: std::sync::atomic::AtomicBool::new(false),
+        })
     }
 
     fn destructive_tool(name: &str) -> TestTool {
@@ -3312,9 +3531,7 @@ mod tests {
 
     #[tokio::test]
     async fn receipt_hook_fires_only_for_successful_destructive_dispatch() {
-        let hook = Arc::new(CountingReceiptHook {
-            calls: std::sync::atomic::AtomicU64::new(0),
-        });
+        let hook = counting_hook();
         let pipeline =
             DispatchPipeline::with_defaults().with_receipt_hook_option(Some(hook.clone()));
         assert!(pipeline.receipt_hook().is_some());
@@ -3373,9 +3590,7 @@ mod tests {
         let disabled_ns = start.elapsed().as_nanos() / n;
 
         // Enabled with a no-op hook: one virtual call per dispatch.
-        let hook = Arc::new(CountingReceiptHook {
-            calls: std::sync::atomic::AtomicU64::new(0),
-        });
+        let hook = counting_hook();
         let hooked = DispatchPipeline::with_defaults().with_receipt_hook_option(Some(hook.clone()));
         let start = std::time::Instant::now();
         let mut successes: u128 = 0;
@@ -3409,6 +3624,108 @@ mod tests {
             u128::from(hook.calls.load(std::sync::atomic::Ordering::Relaxed)),
             successes,
             "hook must observe exactly the successful authority-seam dispatches"
+        );
+    }
+
+    /// Fake offline pass verifier for the S2 seam tests.
+    struct FakePassGate;
+
+    impl PassGate for FakePassGate {
+        fn verify(&self, token: &str, _tool: &str) -> std::result::Result<PassEvidence, String> {
+            if token == "good-token" {
+                Ok(PassEvidence {
+                    issuer: "gate:gate-lite-1".into(),
+                    subject: "did:key:zSubject".into(),
+                    audience: "gate-lite".into(),
+                    gate_class: "gate-lite".into(),
+                    slot_class: "small".into(),
+                    gate_did: "did:key:zGate".into(),
+                    policy_version: "2026-09-17.1".into(),
+                    expires_at: 4_102_444_800,
+                    quotas: PassQuotas {
+                        cpu_ms: 1,
+                        mem_mb: 2,
+                        disk_mb: 3,
+                        wall_ms: 4,
+                    },
+                    budget: None,
+                    jti: "jti".into(),
+                    token_digest: "sha256:00".into(),
+                })
+            } else {
+                Err("bad pass".into())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn pass_gate_required_refuses_without_a_pass_and_optional_is_unchanged() {
+        let tool = destructive_tool("test.pass.required");
+        let args = serde_json::json!({"confirm": true});
+
+        let required = DispatchPipeline::with_defaults()
+            .with_pass_gate_option(Some(Arc::new(FakePassGate)), PassMode::Required);
+        let result = required
+            .dispatch(&tool, &mut Context::new(BrainWave::Beta), args.clone())
+            .await;
+        assert!(
+            matches!(result, Err(CoreError::Governance(_))),
+            "{result:?}"
+        );
+
+        let optional = DispatchPipeline::with_defaults()
+            .with_pass_gate_option(Some(Arc::new(FakePassGate)), PassMode::Optional);
+        let result = optional
+            .dispatch(&tool, &mut Context::new(BrainWave::Beta), args)
+            .await;
+        assert!(result.is_ok(), "{result:?}");
+    }
+
+    #[tokio::test]
+    async fn pass_gate_verifies_and_strips_the_token_before_dispatch() {
+        let hook = counting_hook();
+        let tool = destructive_tool("test.pass.governed");
+        let pipeline = DispatchPipeline::with_defaults()
+            .with_receipt_hook_option(Some(hook.clone()))
+            .with_pass_gate_option(Some(Arc::new(FakePassGate)), PassMode::Optional);
+
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut Context::new(BrainWave::Beta),
+                serde_json::json!({"confirm": true, "mandala_pass": "good-token"}),
+            )
+            .await;
+        assert!(result.is_ok(), "{result:?}");
+        assert_eq!(hook.calls.load(std::sync::atomic::Ordering::Relaxed), 1);
+        assert_eq!(
+            hook.passes.load(std::sync::atomic::Ordering::Relaxed),
+            1,
+            "pass evidence must reach the authority-seam hook"
+        );
+        assert!(
+            !hook
+                .pass_arg_seen
+                .load(std::sync::atomic::Ordering::Relaxed),
+            "the pass token must be stripped before the tool/args digest"
+        );
+
+        // Invalid pass is refused before execution and emits nothing.
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut Context::new(BrainWave::Beta),
+                serde_json::json!({"confirm": true, "mandala_pass": "bad-token"}),
+            )
+            .await;
+        assert!(
+            matches!(result, Err(CoreError::Governance(_))),
+            "{result:?}"
+        );
+        assert_eq!(
+            hook.calls.load(std::sync::atomic::Ordering::Relaxed),
+            1,
+            "refused dispatch must not emit evidence"
         );
     }
 }

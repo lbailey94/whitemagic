@@ -16,6 +16,7 @@ pub mod disclose;
 pub mod emit;
 pub mod error;
 pub mod keys;
+pub mod mandala;
 pub mod profiles;
 pub mod verify;
 
@@ -23,8 +24,9 @@ pub use disclose::{attach_map, redact_bundle, reveal_paths};
 pub use emit::{RECORD_TYPES, SPEC_ID, TaskChain, content_digest, receipt_digest, unsigned_view};
 pub use error::{ReceiptError, Result};
 pub use keys::ReceiptKey;
+pub use mandala::{PassBudget, PassClaims, PassError, PassQuotas, PassVerifyOptions, verify_pass};
 pub use profiles::{
-    KarmaHeadInput, ModelRef, SessionReceiptInput, TurnEvidence, karma_head_bundle, session_bundle,
-    turn_digest,
+    GovernedDispatchInput, KarmaHeadInput, ModelRef, SessionReceiptInput, TurnEvidence,
+    governed_dispatch_bundle, karma_head_bundle, session_bundle, turn_digest,
 };
 pub use verify::{VerifyOutcome, verify_bundle};

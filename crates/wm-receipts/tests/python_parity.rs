@@ -156,6 +156,72 @@ fn python_reference_verifies_wm_karma_head_bundle_trusted() {
 }
 
 #[test]
+fn python_reference_verifies_wm_governed_dispatch_bundle_trusted() {
+    let (Some(repo), true) = (cr_repo(), python_available()) else {
+        eprintln!("skipping: python3 or WM_CR_REPO checkout unavailable");
+        return;
+    };
+    let pass = wm_receipts::mandala::PassClaims {
+        issuer: "gate:gate-lite-1".into(),
+        subject: "did:key:z6MkjAVo9y1rK5X8kMH3Ju2pjZEZ84A5qX9XyNr7Svxqdz4w".into(),
+        audience: "gate-lite".into(),
+        gate_class: "gate-lite".into(),
+        slot_class: "small".into(),
+        quotas: wm_receipts::mandala::PassQuotas {
+            cpu_ms: 300_000,
+            mem_mb: 1024,
+            disk_mb: 512,
+            wall_ms: 5_400_000,
+        },
+        budget: Some(wm_receipts::mandala::PassBudget {
+            minor: 1000,
+            currency: "USD".into(),
+        }),
+        policy_version: "2026-09-17.1".into(),
+        expires_at: 4_102_444_800,
+        jti: "0199a0c0-0000-7000-8000-00000000f17a".into(),
+        token_digest: wm_receipts::emit::digest_of(&json!("fixture-token")).expect("digest"),
+        gate_did: "did:key:z6MkjnSQ1n9Lg9GGsquYAx8bKxB2EB3FnE2SykrTzTquCWs6".into(),
+    };
+    let bundle = wm_receipts::profiles::governed_dispatch_bundle(
+        &key(),
+        &wm_receipts::profiles::GovernedDispatchInput {
+            route: "memory.delete".into(),
+            args_digest: wm_receipts::emit::digest_of(&json!({"id": "abc", "confirm": true}))
+                .expect("digest"),
+            result_digest: wm_receipts::emit::digest_of(&json!({"status": "success"}))
+                .expect("digest"),
+            success: true,
+            issued_at: "2026-09-22T10:00:00Z".into(),
+            pass,
+        },
+    )
+    .expect("governed bundle");
+    assert!(verify_bundle(&bundle, false).is_trusted());
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("governed-bundle.json");
+    std::fs::write(
+        &path,
+        serde_json::to_vec_pretty(&bundle).expect("serialize"),
+    )
+    .expect("write bundle");
+    let output = Command::new("python3")
+        .env("PYTHONPATH", &repo)
+        .args(["-m", "continuity_receipt.verify"])
+        .arg(&path)
+        .output()
+        .expect("run python verifier");
+    assert!(
+        output.status.success(),
+        "python verifier failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let verdict: Value = serde_json::from_slice(&output.stdout).expect("verdict json");
+    assert_eq!(verdict["verdict"], "TRUSTED", "python verdict: {verdict}");
+}
+
+#[test]
 fn python_reference_digest_matches_rust_digest() {
     let (Some(repo), true) = (cr_repo(), python_available()) else {
         eprintln!("skipping: python3 or WM_CR_REPO checkout unavailable");

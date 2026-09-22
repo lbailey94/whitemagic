@@ -1233,6 +1233,8 @@ impl McpServer {
                  mandala-sandbox not on PATH) — Sandbox::Subprocess tools will loud-degrade"
             );
         }
+        let pass_mode = wm_dispatch::PassMode::from_env();
+        let pass_gate_active = !matches!(pass_mode, wm_dispatch::PassMode::Off);
         let pipeline = Arc::new(
             DispatchPipeline::new(
                 std::sync::Arc::new(wm_dispatch::RateLimiter::from_config(
@@ -1260,19 +1262,40 @@ impl McpServer {
             .with_sandbox_executor(sandbox_exec)
             .with_subprocess_sandbox(Some(subprocess_sandbox))
             .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env())
-            // Authority-seam receipt emission (S1) — opt-in; the disabled
-            // default costs one Option check on the success path.
+            // Authority-seam receipt emission (S1) + governed dispatch (S2):
+            // the hook attaches when auto-emit is on OR a pass gate is active;
+            // the disabled default costs one Option check on the success path.
             .with_receipt_hook_option(
-                if readonly || !wm_tools::expansion::receipts::auto_emit_enabled() {
+                if readonly
+                    || !(wm_tools::expansion::receipts::auto_emit_enabled() || pass_gate_active)
+                {
                     None
                 } else {
                     Some(Arc::new(
                         wm_tools::expansion::receipts::AutoEmitReceiptHook::new(
                             store.clone(),
                             Some(karma_ledger.clone()),
+                            wm_tools::expansion::receipts::auto_emit_enabled(),
                         ),
                     ))
                 },
+            )
+            // Gate-lite pass gate (S2): offline verification of `mandala_pass`
+            // on destructive routes; WM_MANDALA_PASS=off|optional|required.
+            .with_pass_gate_option(
+                if readonly || !pass_gate_active {
+                    None
+                } else {
+                    Some(Arc::new(
+                        wm_tools::expansion::receipts::MandalaPassGate::new(
+                            std::env::var("WM_MANDALA_GATE_ISSUER")
+                                .ok()
+                                .map(|value| value.trim().to_string())
+                                .filter(|value| !value.is_empty()),
+                        ),
+                    ))
+                },
+                pass_mode,
             ),
         );
 
