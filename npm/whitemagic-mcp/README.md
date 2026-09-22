@@ -1,8 +1,13 @@
 # whitemagic-mcp
 
-[WhiteMagic](https://whitemagic.dev) — local-first memory and session
-continuity for AI coding agents, over MCP. One static Rust binary, no
-telemetry, no cloud service. MIT.
+[WhiteMagic](https://whitemagic.dev): local-first, governed memory and
+session continuity for AI coding agents, over MCP. One static Rust binary,
+no telemetry by default. MIT.
+
+Optional: a read-only hosted evaluation lane runs at
+`https://mcp.whitemagic.dev/mcp` (free evaluation keys), and the receipt
+format with its live verifier is documented at
+https://www.whitemagic.dev/trust.
 
 This package installs and runs the official `wm` binary from the
 [GitHub releases](https://github.com/lbailey94/whitemagic/releases)

@@ -51,9 +51,11 @@ The README lives only on the Hub (Manage Repository → Description), so
 the source of truth for its text is the block below — paste it, bump
 the `Current release:` line on each release:
 
-> **WhiteMagic** — local-first memory and session continuity for AI
-> coding agents, over MCP. Single static Rust binary, no telemetry, no
-> cloud service. MIT.
+> **WhiteMagic** — local-first, governed memory and session continuity for
+> AI coding agents, over MCP. Single static Rust binary, no telemetry by
+> default. MIT. Optional read-only hosted evaluation lane:
+> https://mcp.whitemagic.dev/mcp — free evaluation keys; receipts and the
+> live verifier are documented at https://www.whitemagic.dev/trust.
 >
 > - Docs & installer: https://whitemagic.dev
 > - Host installer (Linux x86-64, static): `curl -fsSL https://www.whitemagic.dev/install.sh?ref=dockerhub | sh`
