@@ -23,10 +23,18 @@
 # high-entropy fixture values that the tests assert are detected AND scrubbed
 # (wm-memory redact.rs / episodic.rs). Exact values only — both files stay
 # fully scanned for real findings.
+#
+# 2026-09-22: continuity-receipt (S2a) fixtures carry did:key public key
+# identifiers and deliberate FIXTURE_TOKEN / SIGNATURE_TOKEN test vectors.
+# did:key values are public by construction and the tokens are named test
+# data. Line-shape allowlist only — the receipt crates stay scanned for real
+# findings. (The single [allowlist] entry below migrated to the [[allowlists]]
+# list form: gitleaks 8.30 refuses to load a config that mixes both forms;
+# the fields are unchanged.)
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "credential-detector test fixtures (placeholder shapes only) + RFC 5869 HKDF vector + at-rest mode label + reviewer-round-2 synthetic redaction fixtures"
 paths = [
     '''(^|/)crates/wm-memory/src/credentials\.rs$''',
@@ -39,4 +47,13 @@ regexes = [
     '''argon2id_passphrase''',
     '''zq8x5v3p1k9r2m4n6w7a2s4d8''',
     '''m4n6p8q2r9t3v5w7y9b3c5f7''',
+]
+
+[[allowlists]]
+description = "continuity-receipt fixtures: did:key public identifiers + deliberate FIXTURE_TOKEN/SIGNATURE_TOKEN test vectors (2026-09-22)"
+regexTarget = "line"
+regexes = [
+    '''did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+''',
+    '''FIXTURE_TOKEN''',
+    '''SIGNATURE_TOKEN''',
 ]
