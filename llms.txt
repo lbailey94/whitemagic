@@ -29,6 +29,16 @@ Or download the binary from the [latest release](https://github.com/lbailey94/wh
 
 The server speaks stdio JSON-RPC and exposes a single `wm` meta-tool; explicit routing is the dependable contract.
 
+## Hosted lanes (read-only beta)
+
+A read-only hosted MCP endpoint for evaluation runs lives at
+<https://mcp.whitemagic.dev/mcp> (streamable-http; keyless
+`initialize`/`tools/list` for directory probes; free evaluation keys via
+whitemagic.dev/contact; no SLA). The hosted store is curated public content
+only — your local memory store is never uploaded. A stateless
+receipt-verification API runs at <https://api.whitemagic.dev> (`/health` and
+`/info` keyless; keyed `POST /verify` for continuity-receipt bundles).
+
 ## Verify
 
 ```bash

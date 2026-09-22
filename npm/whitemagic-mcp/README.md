@@ -13,7 +13,6 @@ without a manual download step.
 
 Point any MCP client (Claude Desktop, Cursor, Codex, Gemini CLI,
 opencode) at:
-
 ```json
 {
   "mcpServers": {
@@ -36,6 +35,13 @@ The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 (respects `XDG_CACHE_HOME`); the package version's major tracks the
 release tag (the `v9` tag line). Pin a different release with
 `WHITEMAGIC_RELEASE`.
+
+## Hosted option (read-only beta)
+
+For evaluation without a local install there is a read-only hosted
+endpoint at `https://mcp.whitemagic.dev/mcp` (streamable-http; keyless
+discovery, free evaluation keys, no SLA). The npm package remains the
+local, full-write path.
 
 ## Platforms
 

@@ -21,6 +21,15 @@ next session — without sending your memory store to any hosted service.
 }
 ```
 
+## Hosted lanes (read-only beta)
+
+- **Remote MCP** — `https://mcp.whitemagic.dev/mcp` (streamable-http):
+  read-only recall over a curated public corpus, keyless discovery, free
+  evaluation keys, no SLA. Your local store is never uploaded.
+- **Receipt verification API** — `https://api.whitemagic.dev`: stateless
+  `POST /verify` for continuity-receipt bundles (`/health` and `/info`
+  keyless).
+
 ## Status
 
 **WhiteMagic v9.** Release channel: **open alpha** — public alpha for MCP
