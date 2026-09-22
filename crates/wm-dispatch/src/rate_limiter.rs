@@ -10,9 +10,9 @@
 //!
 //! | Variable | Default | Description |
 //! |----------|---------|-------------|
-//! | `WM_DISPATCH_GLOBAL_RPM` | 300 | Max total dispatches/min across all tools |
-//! | `WM_DISPATCH_TOOL_RPM` | 60 | Default per-tool RPM limit |
-//! | `WM_DISPATCH_BURST` | 10 | Extra burst capacity per tool |
+//! | `WM_DISPATCH_GLOBAL_RPM` | 600 | Max total dispatches/min across all tools |
+//! | `WM_DISPATCH_TOOL_RPM` | 240 | Default per-tool RPM limit |
+//! | `WM_DISPATCH_BURST` | 20 | Extra burst capacity per tool |
 //! | `WM_DISPATCH_TOOL_OVERRIDES` | — | `tool:rpm,tool2:rpm2` per-tool overrides |
 //!
 //! Ported from v2-reference/safety/rate_limiter.rs — PyO3 and lazy_static removed.
@@ -23,9 +23,9 @@ use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Default limits — the values used by [`RateLimiter::default`].
-pub const DEFAULT_GLOBAL_RPM: u64 = 300;
-pub const DEFAULT_TOOL_RPM: u64 = 60;
-pub const DEFAULT_BURST: u64 = 10;
+pub const DEFAULT_GLOBAL_RPM: u64 = 600;
+pub const DEFAULT_TOOL_RPM: u64 = 240;
+pub const DEFAULT_BURST: u64 = 20;
 
 /// Configuration for a [`RateLimiter`].
 ///
@@ -470,9 +470,9 @@ mod tests {
     #[test]
     fn config_defaults_match_legacy_values() {
         let config = RateLimiterConfig::default();
-        assert_eq!(config.global_rpm, 300);
-        assert_eq!(config.default_tool_rpm, 60);
-        assert_eq!(config.burst_allowance, 10);
+        assert_eq!(config.global_rpm, 600);
+        assert_eq!(config.default_tool_rpm, 240);
+        assert_eq!(config.burst_allowance, 20);
         assert!(config.tool_overrides.is_empty());
     }
 

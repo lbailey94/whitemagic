@@ -3184,8 +3184,8 @@ impl McpServer {
     /// destructive, idempotent). openWorld is false for every entry — the
     /// server is local by construction. `wm` is marked destructive because it
     /// can route to destructive tools with explicit confirmation.
-    fn catalog_annotations(name: &str) -> (&'static str, bool, bool, bool) {
-        match name {
+    fn catalog_annotations(name: &str, readonly: bool) -> (&'static str, bool, bool, bool) {
+        let (title, read_only, destructive, idempotent) = match name {
             "wm" => (
                 "WhiteMagic memory and continuity meta-tool",
                 false,
@@ -3201,6 +3201,14 @@ impl McpServer {
             "session.record" => ("Record a session turn", false, false, false),
             "session.continuity" => ("Recall session continuity", true, false, true),
             _ => ("WhiteMagic tool", false, false, false),
+        };
+        // Read-only servers cannot mutate or destroy anything, whatever the
+        // catalog would do in read-write mode: advertise that honestly so
+        // directory graders and clients see the real contract.
+        if readonly {
+            (title, true, false, idempotent)
+        } else {
+            (title, read_only, destructive, idempotent)
         }
     }
 
@@ -3254,7 +3262,7 @@ impl McpServer {
                 "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Say 'list tools' to enumerate the curated surface.",
                 self.profile_name, tool_count, mode_hint, scope
             );
-            let (wm_title, wm_ro, wm_destructive, wm_idem) = Self::catalog_annotations("wm");
+            let (wm_title, wm_ro, wm_destructive, wm_idem) = Self::catalog_annotations("wm", self.readonly);
             tools.push(json!({
                 "name": wm.name(),
                 "title": wm_title,
@@ -3477,7 +3485,7 @@ impl McpServer {
                 } else {
                     desc
                 };
-                let (title, read_only, destructive, idempotent) = Self::catalog_annotations(alias);
+                let (title, read_only, destructive, idempotent) = Self::catalog_annotations(alias, self.readonly);
                 tools.push(json!({
                     "name": alias,
                     "title": title,
@@ -5140,6 +5148,32 @@ mod tests {
             description.contains(&format!("({expected_count} tools)")),
             "description must report the live active count ({expected_count}), got: {description}"
         );
+    }
+
+    #[tokio::test]
+    async fn tools_list_annotations_reflect_readonly_mode() {
+        // A read-only server cannot mutate or destroy anything, whatever the
+        // catalog would do in read-write mode. Directory graders and clients
+        // read these hints, so they must describe the real contract.
+        let mut server = test_server();
+        server.readonly = true;
+        let req = RpcRequest {
+            jsonrpc: "2.0".into(),
+            id: Some(json!(3)),
+            method: "tools/list".into(),
+            params: json!({}),
+        };
+        let resp = server.handle(&req).await;
+        assert!(resp.error.is_none());
+        let tools = resp.result.unwrap()["tools"].as_array().unwrap().clone();
+
+        let wm = tools.iter().find(|t| t["name"] == "wm").unwrap();
+        assert_eq!(wm["annotations"]["readOnlyHint"], true);
+        assert_eq!(wm["annotations"]["destructiveHint"], false);
+
+        let create = tools.iter().find(|t| t["name"] == "memory.create").unwrap();
+        assert_eq!(create["annotations"]["readOnlyHint"], true);
+        assert_eq!(create["annotations"]["destructiveHint"], false);
     }
 
     #[tokio::test]
