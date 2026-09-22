@@ -646,13 +646,16 @@ mod tests {
         let (request_tx, request_rx) = mpsc::channel();
         let server = thread::spawn(move || run_fake_completion_server(&listener, &request_tx));
         let mut partial = std::net::TcpStream::connect(address).unwrap();
-        partial
-            .write_all(b"POST /v1/chat/completions HTTP/1.1\r\nContent-Ty")
-            .unwrap();
+        // The client write is not the point of the test — a server-side close
+        // can surface as BrokenPipe here, and the fixture still observes the
+        // truncation. Ignore the write result.
+        let _ = partial.write_all(b"POST /v1/chat/completions HTTP/1.1\r\nContent-Ty");
         // Drop without finishing the request: the fixture observes EOF.
         drop(partial);
+        // CI-load bound: the fixture's own deadlines are 5 s accept + 500 ms
+        // read; 30 s keeps scheduling delays from flaking the test.
         let outcome = request_rx
-            .recv_timeout(Duration::from_secs(10))
+            .recv_timeout(Duration::from_secs(30))
             .expect("fixture did not finish within the test bound");
         assert!(
             outcome.unwrap_err().contains("EOF"),

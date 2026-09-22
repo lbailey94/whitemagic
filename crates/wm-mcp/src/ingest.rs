@@ -1592,8 +1592,11 @@ mod tests {
         assert!(store.count(Galaxy::Sessions).unwrap() >= 1);
 
         // Verify searchable index exists and re-ingest replaces documents.
+        // Read-only open: the count check is a reader, and a concurrent writer
+        // lock (another test in the same process, or a just-dropped ingest
+        // writer) must not flake the test (CI finding 2026-09-21).
         let search_path = store_path.join("lmdb").join("tantivy");
-        let search = SearchEngine::open(&search_path).unwrap();
+        let search = SearchEngine::open_readonly(&search_path).unwrap();
         let total = search.count_docs_in_galaxy("research").unwrap()
             + search.count_docs_in_galaxy("sessions").unwrap();
         assert!(total >= 3);

@@ -138,7 +138,14 @@ impl LeaseLedger {
                 .open(&lock)
             {
                 Ok(_) => return Ok(()),
-                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                // `AlreadyExists` is the normal contended path. Windows can
+                // also surface `PermissionDenied` while a just-deleted lock is
+                // still in the delete-pending state (observed on CI): treat it
+                // as transient contention, not a hard error.
+                Err(e)
+                    if e.kind() == std::io::ErrorKind::AlreadyExists
+                        || e.kind() == std::io::ErrorKind::PermissionDenied =>
+                {
                     if let Ok(meta) = std::fs::metadata(&lock) {
                         if let Ok(modified) = meta.modified() {
                             let age = DateTime::<Utc>::from(modified);
@@ -262,9 +269,14 @@ impl LeaseLedger {
                 version: 1,
                 leases: active,
             };
+            // Unique per writer: the pid alone collides when two tasks in the
+            // same process mutate (the 50-task stress tests); the lock is the
+            // primary guard, this is defense in depth.
+            static TMP_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let seq = TMP_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let tmp = self
                 .path
-                .with_file_name(format!("wm-leases.json.tmp.{}", std::process::id()));
+                .with_file_name(format!("wm-leases.json.tmp.{}.{seq}", std::process::id()));
             let body = serde_json::to_string_pretty(&file)
                 .map_err(|e| CoreError::Tool(format!("lease serialization failed: {e}")))?;
             std::fs::write(&tmp, body)
