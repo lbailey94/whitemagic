@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provider/harness prompt caching is context, not a WhiteMagic saving, and the
   token-equivalent is a disclosed estimate (`bytes / 4`, calibratable per store
   with `wm ledger --calibrate`), and `wm stats` prints a compact savings block.
+- **Rollups.** `wm ledger` and the `wm stats` savings block read a cursor-based
+  daily rollup (`<store>/lmdb/savings_rollup.json`, folded at the daemon
+  checkpoint and on demand with `wm ledger --rollup`) plus only the unfolded
+  tail, so reports stay cheap as the ledger grows; `wm ledger --full` scans
+  history for audits. Folded totals survive rotation/shrink; a torn final line
+  is re-read on the next pass.
 - **Backfill report.** `python3 scripts/token_ledger_report.py [--json]` scans
   every project store's dispatch counters and savings ledger plus the opencode
   session DB, entirely locally, and prints the cache-context (provider) and

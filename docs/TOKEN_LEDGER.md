@@ -12,12 +12,25 @@ Nothing in this file describes an off-device report; the ledger never leaves the
 ledger is local-only — nothing leaves the store):
 
 ```bash
-wm ledger            # human summary
+wm ledger            # human summary (rollups + unfolded tail)
 wm ledger --json     # machine-readable
+wm ledger --full     # full-history scan (audits)
+wm ledger --rollup   # fold the unfolded tail now
 wm ledger --calibrate 3.7   # set the per-store bytes/token divisor
 wm stats             # compact savings block at the end
 wm ledger --store ~/.local/share/whitemagic
 ```
+
+## Rollups
+
+`wm ledger` and the `wm stats` savings block read a cursor-based daily rollup
+(`<store>/lmdb/savings_rollup.json`) plus only the unfolded tail, so the report
+stays cheap as the ledger grows. The fold runs at the daemon checkpoint and on
+demand (`wm ledger --rollup`); it is idempotent, advances the cursor only past
+complete lines (a torn write is re-read next pass), and keeps folded totals if
+the ledger is rotated or shrunk. `wm ledger --full` scans everything for
+audits. The raw ledger remains the evidence of record — rollups aggregate, they
+do not replace it.
 
 The ledger is evidence, not a gate: a ledger write failure is logged and never
 fails the tool call. It is local diagnostic data — exportable and deletable with
@@ -65,6 +78,9 @@ the store.
 ## Status and next steps
 
 - **v0 (this slice):** record/continuity/recall rows + `wm ledger` aggregation.
+- **v0.1 (2026-09-22):** cursor-based daily rollups (`savings_rollup.json`,
+  folded at the daemon checkpoint and via `wm ledger --rollup`), so `wm ledger`
+  and `wm stats` read rollups + the unfolded tail; `--full` for audits.
 - **Backfill report:** `python3 scripts/token_ledger_report.py [--json]` scans every
   project store's dispatch counters and ledger plus the opencode session DB — entirely
   locally — and prints the cache-context and state-over-transcript picture. First run

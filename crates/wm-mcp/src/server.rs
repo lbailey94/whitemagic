@@ -2568,6 +2568,12 @@ impl McpServer {
                 {
                     tracing::warn!(error = %e, "Failed to append the daily usage rollup");
                 }
+                // Token-ledger v0 (2026-09-22): fold the savings ledger tail
+                // so `wm ledger` / `wm stats` stay O(tail) as it grows.
+                // Best-effort: a fold failure never blocks the checkpoint.
+                if let Err(e) = crate::ledger::rollup_in_lmdb(store_dir) {
+                    tracing::warn!(error = %e, "Failed to fold the savings ledger rollup");
+                }
             }
         }
 
@@ -3262,7 +3268,8 @@ impl McpServer {
                 "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Say 'list tools' to enumerate the curated surface.",
                 self.profile_name, tool_count, mode_hint, scope
             );
-            let (wm_title, wm_ro, wm_destructive, wm_idem) = Self::catalog_annotations("wm", self.readonly);
+            let (wm_title, wm_ro, wm_destructive, wm_idem) =
+                Self::catalog_annotations("wm", self.readonly);
             tools.push(json!({
                 "name": wm.name(),
                 "title": wm_title,
@@ -3485,7 +3492,8 @@ impl McpServer {
                 } else {
                     desc
                 };
-                let (title, read_only, destructive, idempotent) = Self::catalog_annotations(alias, self.readonly);
+                let (title, read_only, destructive, idempotent) =
+                    Self::catalog_annotations(alias, self.readonly);
                 tools.push(json!({
                     "name": alias,
                     "title": title,

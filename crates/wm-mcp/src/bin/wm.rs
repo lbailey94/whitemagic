@@ -283,6 +283,12 @@ enum Commands {
         /// representative sample with the tokenizer of your choice.
         #[arg(long)]
         calibrate: Option<f64>,
+        /// Fold the unfolded ledger tail into the local rollup now
+        #[arg(long)]
+        rollup: bool,
+        /// Full-history scan instead of rollups + unfolded tail (audits)
+        #[arg(long)]
+        full: bool,
     },
     /// Show resource usage and brain-wave state
     Stats {
@@ -2033,6 +2039,8 @@ fn run() -> anyhow::Result<()> {
             store,
             json,
             calibrate,
+            rollup,
+            full,
         } => {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             if let Some(divisor) = calibrate {
@@ -2041,8 +2049,10 @@ fn run() -> anyhow::Result<()> {
                     "Savings calibration set: {divisor} bytes/token (store {}). The default remains 4.0 for uncalibrated stores.",
                     store_path.display()
                 );
+            } else if rollup {
+                wm_mcp::ledger::run_rollup(&store_path, json)?;
             } else {
-                wm_mcp::ledger::run(&store_path, json)?;
+                wm_mcp::ledger::run(&store_path, json, full)?;
             }
         }
         Commands::Stats { store, week } => {

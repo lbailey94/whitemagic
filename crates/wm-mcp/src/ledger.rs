@@ -80,58 +80,219 @@ fn family_of(tool: &str) -> &'static str {
     }
 }
 
+/// Accumulated ledger counters (one row set per op family).
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+struct Counters {
+    record_calls: u64,
+    record_bytes_stored: u64,
+    continuity_calls: u64,
+    bytes_available: u64,
+    bytes_injected: u64,
+    turns_available: u64,
+    turns_returned: u64,
+    turns_omitted: u64,
+    recall_calls: u64,
+    recall_results: u64,
+    recall_bytes_available: u64,
+    recall_bytes_injected: u64,
+    malformed_rows: u64,
+}
+
+impl Counters {
+    fn fold_row(&mut self, row: &Value) {
+        let u = |key: &str| row.get(key).and_then(Value::as_u64).unwrap_or(0);
+        match row.get("op").and_then(Value::as_str) {
+            Some("record") => {
+                self.record_calls += 1;
+                self.record_bytes_stored += u("bytes_stored");
+            }
+            Some("continuity") => {
+                self.continuity_calls += 1;
+                self.bytes_available += u("bytes_available");
+                self.bytes_injected += u("bytes_injected");
+                self.turns_available += u("turns_available");
+                self.turns_returned += u("turns_returned");
+                self.turns_omitted += u("turns_omitted");
+            }
+            Some("recall") => {
+                self.recall_calls += 1;
+                self.recall_results += u("results");
+                self.recall_bytes_available += u("bytes_available");
+                self.recall_bytes_injected += u("bytes_injected");
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Fold every complete line in `bytes` into `counters` (and optional day
+/// buckets). Returns the bytes consumed through the last newline — a torn
+/// final line is left for the next pass, so a crash cannot double-count.
+fn fold_bytes(
+    bytes: &[u8],
+    counters: &mut Counters,
+    mut days: Option<&mut BTreeMap<String, Counters>>,
+) -> usize {
+    let Some(last_newline) = bytes.iter().rposition(|b| *b == b'\n') else {
+        return 0;
+    };
+    for line in bytes[..=last_newline].split(|b| *b == b'\n') {
+        if line.iter().all(u8::is_ascii_whitespace) {
+            continue;
+        }
+        let Ok(text) = std::str::from_utf8(line) else {
+            counters.malformed_rows += 1;
+            continue;
+        };
+        let Ok(row) = serde_json::from_str::<Value>(text) else {
+            counters.malformed_rows += 1;
+            continue;
+        };
+        counters.fold_row(&row);
+        if let Some(days) = days.as_deref_mut() {
+            let day = row
+                .get("ts_ms")
+                .and_then(Value::as_u64)
+                .and_then(|ms| chrono::DateTime::from_timestamp_millis(i64::try_from(ms).ok()?))
+                .map_or_else(
+                    || "unknown".to_string(),
+                    |dt| dt.format("%Y-%m-%d").to_string(),
+                );
+            days.entry(day).or_default().fold_row(&row);
+        }
+    }
+    last_newline + 1
+}
+
+const ROLLUP_FILE: &str = "savings_rollup.json";
+
+#[derive(Debug, Default)]
+struct Rollup {
+    cursor_bytes: u64,
+    days: BTreeMap<String, Counters>,
+    totals: Counters,
+}
+
+fn load_rollup(lmdb: &Path) -> Rollup {
+    let Ok(text) = std::fs::read_to_string(lmdb.join(ROLLUP_FILE)) else {
+        return Rollup::default();
+    };
+    let Ok(v) = serde_json::from_str::<Value>(&text) else {
+        tracing::warn!("savings rollup is unparseable; starting a fresh fold");
+        return Rollup::default();
+    };
+    Rollup {
+        cursor_bytes: v.get("cursor_bytes").and_then(Value::as_u64).unwrap_or(0),
+        days: v
+            .get("days")
+            .and_then(|d| serde_json::from_value(d.clone()).ok())
+            .unwrap_or_default(),
+        totals: v
+            .get("totals")
+            .and_then(|t| serde_json::from_value(t.clone()).ok())
+            .unwrap_or_default(),
+    }
+}
+
+fn write_rollup(lmdb: &Path, rollup: &Rollup) -> Result<()> {
+    let payload = json!({
+        "version": 1,
+        "ledger_file": LEDGER_FILE,
+        "cursor_bytes": rollup.cursor_bytes,
+        "days": rollup.days,
+        "totals": rollup.totals,
+        "folded_at": chrono::Utc::now().to_rfc3339(),
+    });
+    let path = lmdb.join(ROLLUP_FILE);
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, serde_json::to_string_pretty(&payload)?)?;
+    std::fs::rename(&tmp, &path)?;
+    Ok(())
+}
+
+/// Fold the unfolded ledger tail into `<lmdb>/savings_rollup.json`.
+///
+/// Idempotent and crash-safe: the cursor advances only past complete lines,
+/// and a shrunken/rotated ledger resets the cursor (folded totals stay as
+/// history). Best-effort callers (daemon checkpoint, shutdown) log failures
+/// instead of failing.
+pub fn rollup_in_lmdb(lmdb: &Path) -> Result<Value> {
+    let mut rollup = load_rollup(lmdb);
+    let Ok(bytes) = std::fs::read(lmdb.join(LEDGER_FILE)) else {
+        write_rollup(lmdb, &rollup)?;
+        return Ok(json!({
+            "status": "success",
+            "cursor_bytes": rollup.cursor_bytes,
+            "days": rollup.days.len(),
+            "note": "no ledger yet",
+        }));
+    };
+    if (bytes.len() as u64) < rollup.cursor_bytes {
+        tracing::warn!(
+            "savings ledger shrank below the rollup cursor; resetting the cursor (folded totals kept)"
+        );
+        rollup.cursor_bytes = 0;
+    }
+    let start = usize::try_from(rollup.cursor_bytes)
+        .unwrap_or(0)
+        .min(bytes.len());
+    let mut totals = rollup.totals.clone();
+    let consumed = fold_bytes(&bytes[start..], &mut totals, Some(&mut rollup.days));
+    rollup.totals = totals;
+    rollup.cursor_bytes += consumed as u64;
+    write_rollup(lmdb, &rollup)?;
+    Ok(json!({
+        "status": "success",
+        "cursor_bytes": rollup.cursor_bytes,
+        "days": rollup.days.len(),
+        "totals": {
+            "record": {"calls": rollup.totals.record_calls, "bytes_stored": rollup.totals.record_bytes_stored},
+            "continuity": {
+                "calls": rollup.totals.continuity_calls,
+                "bytes_available": rollup.totals.bytes_available,
+                "bytes_injected": rollup.totals.bytes_injected,
+            },
+            "recall": {
+                "calls": rollup.totals.recall_calls,
+                "bytes_available": rollup.totals.recall_bytes_available,
+                "bytes_injected": rollup.totals.recall_bytes_injected,
+            },
+        },
+    }))
+}
+
 /// Aggregate the local ledger + dispatch stats into one report value.
 ///
-/// Missing files are reported as zeros with `ledger_present: false` — a
-/// fresh store is not an error.
+/// Reads the folded rollup plus only the unfolded tail (O(tail)); missing
+/// files are reported as zeros with `ledger_present: false` — a fresh store
+/// is not an error.
 pub fn aggregate(store_root: &Path) -> Result<Value> {
+    aggregate_mode(store_root, true)
+}
+
+/// Full-history scan (`wm ledger --full`) — audits, never the hot path.
+pub fn aggregate_full(store_root: &Path) -> Result<Value> {
+    aggregate_mode(store_root, false)
+}
+
+fn aggregate_mode(store_root: &Path, use_rollup: bool) -> Result<Value> {
     let lmdb = lmdb_path(store_root);
     let ledger_path = lmdb.join(LEDGER_FILE);
+    let rollup_present = lmdb.join(ROLLUP_FILE).exists();
 
-    let mut record_calls = 0u64;
-    let mut record_bytes_stored = 0u64;
-    let mut continuity_calls = 0u64;
-    let mut bytes_available = 0u64;
-    let mut bytes_injected = 0u64;
-    let mut turns_available = 0u64;
-    let mut turns_returned = 0u64;
-    let mut turns_omitted = 0u64;
-    let mut recall_calls = 0u64;
-    let mut recall_results = 0u64;
-    let mut recall_bytes_available = 0u64;
-    let mut recall_bytes_injected = 0u64;
-    let mut malformed = 0u64;
-
+    let (mut counters, start) = if use_rollup {
+        let rollup = load_rollup(&lmdb);
+        (rollup.totals, rollup.cursor_bytes)
+    } else {
+        (Counters::default(), 0)
+    };
     let ledger_present = ledger_path.exists();
-    if let Ok(text) = std::fs::read_to_string(&ledger_path) {
-        for line in text.lines().filter(|l| !l.trim().is_empty()) {
-            let Ok(row) = serde_json::from_str::<Value>(line) else {
-                malformed += 1;
-                continue;
-            };
-            let u = |key: &str| row.get(key).and_then(Value::as_u64).unwrap_or(0);
-            match row.get("op").and_then(Value::as_str) {
-                Some("record") => {
-                    record_calls += 1;
-                    record_bytes_stored += u("bytes_stored");
-                }
-                Some("continuity") => {
-                    continuity_calls += 1;
-                    bytes_available += u("bytes_available");
-                    bytes_injected += u("bytes_injected");
-                    turns_available += u("turns_available");
-                    turns_returned += u("turns_returned");
-                    turns_omitted += u("turns_omitted");
-                }
-                Some("recall") => {
-                    recall_calls += 1;
-                    recall_results += u("results");
-                    recall_bytes_available += u("bytes_available");
-                    recall_bytes_injected += u("bytes_injected");
-                }
-                _ => {}
-            }
+    if let Ok(bytes) = std::fs::read(&ledger_path) {
+        let mut start = usize::try_from(start).unwrap_or(0);
+        if start > bytes.len() {
+            start = 0; // rotated/shrunken ledger: fold from the top, totals kept
         }
+        fold_bytes(&bytes[start..], &mut counters, None);
     }
 
     // Dispatch counters: every WM operation is local compute. The families
@@ -168,13 +329,14 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
     });
     top_tools.truncate(5);
 
-    let saved = bytes_available.saturating_sub(bytes_injected);
+    let c = counters;
+    let saved = c.bytes_available.saturating_sub(c.bytes_injected);
     let divisor = bytes_per_token(store_root);
     let token_equivalent = (saved as f64 / divisor).round() as u64;
-    let ratio = if bytes_injected == 0 {
+    let ratio = if c.bytes_injected == 0 {
         Value::Null
     } else {
-        json!((bytes_available as f64 / bytes_injected as f64 * 100.0).round() / 100.0)
+        json!((c.bytes_available as f64 / c.bytes_injected as f64 * 100.0).round() / 100.0)
     };
 
     Ok(json!({
@@ -182,22 +344,23 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
         "store": store_root.display().to_string(),
         "ledger_path": ledger_path.display().to_string(),
         "ledger_present": ledger_present,
+        "rollup_present": rollup_present,
         "stats_present": stats_present,
-        "malformed_rows": malformed,
-        "record": {"calls": record_calls, "bytes_stored": record_bytes_stored},
+        "malformed_rows": c.malformed_rows,
+        "record": {"calls": c.record_calls, "bytes_stored": c.record_bytes_stored},
         "continuity": {
-            "calls": continuity_calls,
-            "bytes_available": bytes_available,
-            "bytes_injected": bytes_injected,
-            "turns_available": turns_available,
-            "turns_returned": turns_returned,
-            "turns_omitted": turns_omitted,
+            "calls": c.continuity_calls,
+            "bytes_available": c.bytes_available,
+            "bytes_injected": c.bytes_injected,
+            "turns_available": c.turns_available,
+            "turns_returned": c.turns_returned,
+            "turns_omitted": c.turns_omitted,
         },
         "recall": {
-            "calls": recall_calls,
-            "results": recall_results,
-            "bytes_available": recall_bytes_available,
-            "bytes_injected": recall_bytes_injected,
+            "calls": c.recall_calls,
+            "results": c.recall_results,
+            "bytes_available": c.recall_bytes_available,
+            "bytes_injected": c.recall_bytes_injected,
         },
         "state_to_context_ratio": ratio,
         "token_equivalent_saved_estimate": token_equivalent,
@@ -212,8 +375,12 @@ pub fn aggregate(store_root: &Path) -> Result<Value> {
 }
 
 /// `wm ledger` — print the local report (human table or JSON).
-pub fn run(store_root: &Path, as_json: bool) -> Result<()> {
-    let report = aggregate(store_root)?;
+pub fn run(store_root: &Path, as_json: bool, full: bool) -> Result<()> {
+    let report = if full {
+        aggregate_full(store_root)?
+    } else {
+        aggregate(store_root)?
+    };
     if as_json {
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
@@ -268,6 +435,26 @@ pub fn run(store_root: &Path, as_json: bool) -> Result<()> {
         println!("  by family: {}", parts.join(" · "));
     }
     println!("{}", report["disclaimer"].as_str().unwrap_or(""));
+    Ok(())
+}
+
+/// `wm ledger --rollup` — fold the unfolded tail now and print a summary.
+pub fn run_rollup(store_root: &Path, as_json: bool) -> Result<()> {
+    let summary = rollup_in_lmdb(&lmdb_path(store_root))?;
+    if as_json {
+        println!("{}", serde_json::to_string_pretty(&summary)?);
+    } else {
+        println!(
+            "Savings rollup folded: cursor {} bytes · {} day(s) · {} record / {} continuity / {} recall calls",
+            summary["cursor_bytes"].as_u64().unwrap_or(0),
+            summary["days"].as_u64().unwrap_or(0),
+            summary["totals"]["record"]["calls"].as_u64().unwrap_or(0),
+            summary["totals"]["continuity"]["calls"]
+                .as_u64()
+                .unwrap_or(0),
+            summary["totals"]["recall"]["calls"].as_u64().unwrap_or(0),
+        );
+    }
     Ok(())
 }
 
@@ -375,5 +562,76 @@ mod tests {
 
         assert!(set_calibration(dir.path(), 0.5).is_err(), "below range");
         assert!(set_calibration(dir.path(), 20.0).is_err(), "above range");
+    }
+
+    #[test]
+    fn rollup_then_aggregate_equals_full_scan() {
+        let dir = tempfile::tempdir().unwrap();
+        fixture_store(dir.path());
+        let full = aggregate_full(dir.path()).unwrap();
+
+        let folded = rollup_in_lmdb(&dir.path().join("lmdb")).unwrap();
+        assert_eq!(folded["status"], "success");
+        assert!(folded["cursor_bytes"].as_u64().unwrap() > 0);
+
+        let report = aggregate(dir.path()).unwrap();
+        assert_eq!(report["rollup_present"], true);
+        assert_eq!(report["record"], full["record"]);
+        assert_eq!(report["continuity"], full["continuity"]);
+        assert_eq!(report["recall"], full["recall"]);
+        assert_eq!(report["malformed_rows"], full["malformed_rows"]);
+        assert_eq!(
+            report["state_to_context_ratio"],
+            full["state_to_context_ratio"]
+        );
+        assert_eq!(
+            report["token_equivalent_saved_estimate"],
+            full["token_equivalent_saved_estimate"]
+        );
+    }
+
+    #[test]
+    fn rollup_leaves_a_torn_line_for_the_next_pass() {
+        let dir = tempfile::tempdir().unwrap();
+        fixture_store(dir.path());
+        let lmdb = dir.path().join("lmdb");
+        let ledger = lmdb.join(LEDGER_FILE);
+        let mut text = std::fs::read_to_string(&ledger).unwrap();
+        text.push_str("{\"op\":\"record\",\"bytes_stored\":77,\"ts_ms\":4}"); // no newline: torn
+        std::fs::write(&ledger, &text).unwrap();
+
+        rollup_in_lmdb(&lmdb).unwrap();
+        let first = aggregate(dir.path()).unwrap();
+        assert_eq!(first["record"]["calls"], 1, "a torn line must not fold yet");
+
+        std::fs::write(&ledger, format!("{text}\n")).unwrap();
+        rollup_in_lmdb(&lmdb).unwrap();
+        let second = aggregate(dir.path()).unwrap();
+        assert_eq!(second["record"]["calls"], 2);
+        assert_eq!(second["record"]["bytes_stored"], 1077);
+    }
+
+    #[test]
+    fn shrunken_ledger_resets_cursor_and_keeps_totals() {
+        let dir = tempfile::tempdir().unwrap();
+        fixture_store(dir.path());
+        let lmdb = dir.path().join("lmdb");
+        rollup_in_lmdb(&lmdb).unwrap();
+
+        // Rotation/shrink: a fresh ledger with one new row.
+        std::fs::write(
+            lmdb.join(LEDGER_FILE),
+            "{\"op\":\"recall\",\"results\":1,\"bytes_available\":10,\"bytes_injected\":5,\"ts_ms\":5}\n",
+        )
+        .unwrap();
+        rollup_in_lmdb(&lmdb).unwrap();
+
+        let report = aggregate(dir.path()).unwrap();
+        // Folded history is kept (1 record, 1 continuity, 1 recall) and the
+        // fresh ledger's row is added once.
+        assert_eq!(report["record"]["calls"], 1);
+        assert_eq!(report["continuity"]["calls"], 1);
+        assert_eq!(report["recall"]["calls"], 2);
+        assert_eq!(report["recall"]["bytes_available"], 810);
     }
 }
