@@ -1259,7 +1259,21 @@ impl McpServer {
             .with_write_audit_option(if readonly { None } else { Some(write_audit) })
             .with_sandbox_executor(sandbox_exec)
             .with_subprocess_sandbox(Some(subprocess_sandbox))
-            .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env()),
+            .with_dispatch_timeout(wm_dispatch::DispatchPipeline::timeout_from_env())
+            // Authority-seam receipt emission (S1) — opt-in; the disabled
+            // default costs one Option check on the success path.
+            .with_receipt_hook_option(
+                if readonly || !wm_tools::expansion::receipts::auto_emit_enabled() {
+                    None
+                } else {
+                    Some(Arc::new(
+                        wm_tools::expansion::receipts::AutoEmitReceiptHook::new(
+                            store.clone(),
+                            Some(karma_ledger.clone()),
+                        ),
+                    ))
+                },
+            ),
         );
 
         // Curate the tool surface to the active profile BEFORE the meta-tools
@@ -1267,6 +1281,12 @@ impl McpServer {
         // curated surface, and direct dispatch of filtered tools fails with
         // "Unknown tool". Full-surface internals (karma, friction, governance
         // tools) were already constructed above and keep working internally.
+        // memory.ingest lives in wm-mcp (it owns the ingest pipeline). Register
+        // it before profile application so prefix-based profiles (curated)
+        // include it and the profile contract counts stay honest.
+        let registry = registry.register(std::sync::Arc::new(
+            crate::ingest_tool::MemoryIngestTool::new(store_path),
+        ));
         let full_registry = registry.clone();
         let registry = wm_tools::profiles::apply_profile(registry, profile);
         // Profile contract (Phase 5 surface-drift watch item): the

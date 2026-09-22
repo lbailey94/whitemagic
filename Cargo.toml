@@ -8,6 +8,7 @@ members = [
     "crates/wm-dispatch",
     "crates/wm-cognitive",
     "crates/wm-governance",
+    "crates/wm-receipts",
     "crates/wm-polyglot",
     "crates/wm-substrate",
     "crates/wm-tools",
@@ -108,6 +109,7 @@ wm-memory = { version = "9.2.3", path = "crates/wm-memory" }
 wm-dispatch = { version = "9.2.3", path = "crates/wm-dispatch" }
 wm-cognitive = { version = "9.2.3", path = "crates/wm-cognitive" }
 wm-governance = { version = "9.2.3", path = "crates/wm-governance" }
+wm-receipts = { version = "9.2.3", path = "crates/wm-receipts" }
 wm-polyglot = { version = "9.2.3", path = "crates/wm-polyglot" }
 wm-substrate = { version = "9.2.3", path = "crates/wm-substrate" }
 wm-tools = { version = "9.2.3", path = "crates/wm-tools" }

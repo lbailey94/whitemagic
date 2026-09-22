@@ -104,12 +104,13 @@ proptest! {
     }
 }
 
-// ── Galaxy: 16 variants (Valkyrie 2026-09-11; Telemetry 2026-09-13) ───
+// ── Galaxy: 17 variants (Valkyrie 2026-09-11; Telemetry 2026-09-13;
+//    Receipts 2026-09-22) ──────────────────────────────────────────────
 
 #[test]
-fn galaxy_has_exactly_16_variants() {
-    assert_eq!(Galaxy::COUNT, 16);
-    assert_eq!(Galaxy::all().len(), 16);
+fn galaxy_has_exactly_17_variants() {
+    assert_eq!(Galaxy::COUNT, 17);
+    assert_eq!(Galaxy::all().len(), 17);
 }
 
 #[test]

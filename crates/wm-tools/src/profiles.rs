@@ -30,7 +30,8 @@ pub static PROFILE_FULL: ToolProfile = ToolProfile {
 };
 
 /// The memory-hierarchy product surface: memory, sessions, transactions,
-/// the claims ledger, and read-only galaxy/observability helpers.
+/// the claims ledger, receipt evidence, and read-only galaxy/observability
+/// helpers.
 ///
 /// `tools.list` and `gnosis` need no prefix here: `tools.list` is layered
 /// on with the meta-tools *after* filtering, and `gnosis` matches its own
@@ -43,7 +44,14 @@ pub static PROFILE_FULL: ToolProfile = ToolProfile {
 /// under `--profile full`.
 pub static PROFILE_CURATED: ToolProfile = ToolProfile {
     name: "curated",
-    prefixes: &["memory", "session", "claims", "transaction", "gnosis"],
+    prefixes: &[
+        "memory",
+        "session",
+        "claims",
+        "receipts",
+        "transaction",
+        "gnosis",
+    ],
 };
 
 /// The tightest surface: create/read/list/query/search/chat + discovery.
@@ -89,11 +97,12 @@ pub struct ToolPack {
     pub prefixes: &'static [&'static str],
 }
 
-/// Capture and resume: the memory hierarchy plus session continuity.
+/// Capture and resume: the memory hierarchy, session continuity, and receipt
+/// evidence.
 pub static PACK_CONTINUITY: ToolPack = ToolPack {
     name: "continuity",
-    description: "capture, search, resume, replay and checkpoint sessions",
-    prefixes: &["memory", "session", "gnosis"],
+    description: "capture, search, resume, replay, checkpoint sessions and emit receipts",
+    prefixes: &["memory", "session", "receipts", "gnosis"],
 };
 
 /// Evidence-oriented retrieval: search/read with claims and gnosis.
@@ -470,7 +479,14 @@ mod tests {
     fn curated_is_the_product_surface() {
         assert_eq!(
             PROFILE_CURATED.prefixes,
-            &["memory", "session", "claims", "transaction", "gnosis"]
+            &[
+                "memory",
+                "session",
+                "claims",
+                "receipts",
+                "transaction",
+                "gnosis"
+            ]
         );
         assert!(
             !PROFILE_CURATED
@@ -645,6 +661,7 @@ mod tests {
             "memory.create",
             "session.start",
             "claims.list",
+            "receipts.verify",
             "transaction.begin",
             "gnosis",
             "tools.list",
@@ -659,8 +676,8 @@ mod tests {
         let c2 = profile_contract(&full2, &filtered2, &PROFILE_CURATED);
         assert_eq!(c2.destructive_tools, vec!["memory.delete".to_string()]);
         assert!(c2.ok);
-        assert_eq!(c2.expected_count, 6);
-        assert_eq!(c2.registered_count, 6);
+        assert_eq!(c2.expected_count, 7);
+        assert_eq!(c2.registered_count, 7);
     }
 
     #[test]

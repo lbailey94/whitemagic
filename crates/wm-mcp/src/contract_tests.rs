@@ -335,3 +335,24 @@ fn platform_story_is_consistent_across_surfaces() {
         "QUICKSTART must carry the Linux x86-64 + arm64 install gate"
     );
 }
+
+#[test]
+fn curated_profile_includes_memory_ingest_with_safe_contract() {
+    let (_tmp, server) = full_server();
+    let tool = server
+        .registry()
+        .get("memory.ingest")
+        .expect("memory.ingest must be registered in the curated profile");
+    let schema = tool.input_schema();
+    assert_eq!(schema["required"][0], "source");
+    assert_eq!(schema["properties"]["dry_run"]["default"], true);
+    assert_eq!(schema["properties"]["redact"]["default"], true);
+    assert!(
+        !tool.effects().destructive,
+        "memory.ingest only adds memories; it must not be marked destructive"
+    );
+    assert!(
+        !tool.effects().writes.is_empty(),
+        "memory.ingest writes memories and must declare the write effect"
+    );
+}

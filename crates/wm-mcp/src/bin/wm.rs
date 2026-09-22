@@ -290,6 +290,15 @@ enum Commands {
         #[arg(long)]
         full: bool,
     },
+    /// Continuity receipts: emit/verify/list/show local evidence bundles
+    ///
+    /// Emission is local-only (no network): standard `continuity-receipt/0.2`
+    /// bundles signed with the store's receipt key. Karma-chain-head
+    /// attestations make the local karma audit externally verifiable.
+    Receipt {
+        #[command(subcommand)]
+        command: ReceiptCommands,
+    },
     /// Show resource usage and brain-wave state
     Stats {
         /// Path to the LMDB store directory (default: ~/.local/share/whitemagic)
@@ -842,6 +851,73 @@ fn parse_importance_arg(value: &str) -> Result<f64, String> {
         ));
     }
     Ok(parsed)
+}
+
+/// Subcommands for `wm receipt` — local continuity-receipt evidence.
+///
+/// Emission is local-only (no network). `emit` signs a standard
+/// `continuity-receipt/0.2` bundle with the store's receipt key (see
+/// `WM_RECEIPT_KEY` / `WM_MESH_KEY` / `<store>/lmdb/.receipt_key`).
+#[derive(Subcommand)]
+enum ReceiptCommands {
+    /// Emit a receipt bundle (session evidence or karma-chain-head attestation)
+    Emit {
+        /// Bundle kind: session | karma_head
+        #[arg(long, default_value = "session")]
+        kind: String,
+        /// Session UUID (session kind; default: most recent session)
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Maximum turns covered (session kind)
+        #[arg(long)]
+        limit: Option<usize>,
+        /// Also write the bundle JSON to this path (for external verification)
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Path to the store root directory (default: configured store)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Verify a stored receipt id or a bundle file
+    Verify {
+        /// Stored receipt id (task UUID) or path to a bundle JSON file
+        target: String,
+        /// Stored variant (default: original)
+        #[arg(long)]
+        variant: Option<String>,
+        /// Fail-closed: without an anchor the verdict is PROVISIONAL
+        #[arg(long)]
+        require_anchor: bool,
+        /// Path to the store root directory (default: configured store)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// List stored receipts (evidence inventory)
+    List {
+        /// Maximum entries (default 20)
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+        /// Filter: session | karma_head
+        #[arg(long)]
+        kind: Option<String>,
+        /// Filter by session id
+        #[arg(long)]
+        session_id: Option<String>,
+        /// Path to the store root directory (default: configured store)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Show a stored receipt bundle (plus verification)
+    Show {
+        /// Stored receipt id (task UUID)
+        id: String,
+        /// Stored variant (default: original)
+        #[arg(long)]
+        variant: Option<String>,
+        /// Path to the store root directory (default: configured store)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
 }
 
 /// Subcommands for `wm session` — each maps 1:1 onto an MCP session route
@@ -2689,6 +2765,9 @@ fn run() -> anyhow::Result<()> {
             let store_path = store.unwrap_or_else(|| wm_config.store_path());
             run_redact_content(&store_path, &galaxy, tag.as_deref(), apply, wait)?;
         }
+        Commands::Receipt { command } => {
+            run_receipt_command(command)?;
+        }
         Commands::Session { command } => {
             run_session_command(command)?;
         }
@@ -4261,6 +4340,106 @@ fn run_session_command(command: SessionCommands) -> anyhow::Result<()> {
                     args["until"] = serde_json::json!(v);
                 }
                 SessionContinuityTool::new(store).call(&mut ctx, args).await
+            }
+        }
+    })?;
+    println!("{}", serde_json::to_string_pretty(&result)?);
+    Ok(())
+}
+
+/// Run `wm receipt ...` — local continuity-receipt evidence (S1).
+fn run_receipt_command(command: ReceiptCommands) -> anyhow::Result<()> {
+    use wm_core::{BrainWave, Context, Tool};
+    use wm_tools::expansion::receipts::{
+        ReceiptsEmitTool, ReceiptsListTool, ReceiptsReadTool, ReceiptsVerifyTool,
+    };
+
+    let store_root = match &command {
+        ReceiptCommands::Emit { store, .. }
+        | ReceiptCommands::Verify { store, .. }
+        | ReceiptCommands::List { store, .. }
+        | ReceiptCommands::Show { store, .. } => store.clone().unwrap_or_else(default_store_path),
+    };
+    let lmdb_path = store_root.join("lmdb");
+    if !lmdb_path.exists() {
+        anyhow::bail!(
+            "no store found at {} — run 'wm serve' first",
+            lmdb_path.display()
+        );
+    }
+    let store = std::sync::Arc::new(wm_memory::MemoryStore::open(
+        &lmdb_path,
+        4 * 1024 * 1024 * 1024,
+    )?);
+    let karma = wm_governance::KarmaLedger::new(store.clone())
+        .ok()
+        .map(std::sync::Arc::new);
+
+    let rt = tokio::runtime::Runtime::new()?;
+    let result = rt.block_on(async {
+        let mut ctx = Context::new(BrainWave::Beta);
+        match command {
+            ReceiptCommands::Emit {
+                kind,
+                session_id,
+                limit,
+                out,
+                ..
+            } => {
+                let mut args = serde_json::json!({ "kind": kind });
+                if let Some(value) = session_id {
+                    args["session_id"] = serde_json::json!(value);
+                }
+                if let Some(value) = limit {
+                    args["limit"] = serde_json::json!(value);
+                }
+                if let Some(value) = out {
+                    args["out"] = serde_json::json!(value);
+                }
+                ReceiptsEmitTool::new(store, karma)
+                    .call(&mut ctx, args)
+                    .await
+            }
+            ReceiptCommands::Verify {
+                target,
+                variant,
+                require_anchor,
+                ..
+            } => {
+                let mut args = serde_json::json!({ "require_anchor": require_anchor });
+                if std::path::Path::new(&target).is_file() {
+                    let bundle: serde_json::Value =
+                        serde_json::from_str(&std::fs::read_to_string(&target)?)?;
+                    args["bundle"] = bundle;
+                } else {
+                    args["id"] = serde_json::json!(target);
+                }
+                if let Some(value) = variant {
+                    args["variant"] = serde_json::json!(value);
+                }
+                ReceiptsVerifyTool::new(store).call(&mut ctx, args).await
+            }
+            ReceiptCommands::List {
+                limit,
+                kind,
+                session_id,
+                ..
+            } => {
+                let mut args = serde_json::json!({ "limit": limit });
+                if let Some(value) = kind {
+                    args["kind"] = serde_json::json!(value);
+                }
+                if let Some(value) = session_id {
+                    args["session_id"] = serde_json::json!(value);
+                }
+                ReceiptsListTool::new(store).call(&mut ctx, args).await
+            }
+            ReceiptCommands::Show { id, variant, .. } => {
+                let mut args = serde_json::json!({ "id": id });
+                if let Some(value) = variant {
+                    args["variant"] = serde_json::json!(value);
+                }
+                ReceiptsReadTool::new(store).call(&mut ctx, args).await
             }
         }
     })?;

@@ -1,7 +1,7 @@
 {
   "counts": {
-    "declared": 87,
-    "routes": 304,
+    "declared": 94,
+    "routes": 311,
     "undeclared": 217
   },
   "format_version": 1,
@@ -1779,6 +1779,48 @@
     {
       "declared": true,
       "properties": {
+        "dry_run": {
+          "default": true,
+          "description": "Report without writing or creating the store (default true).",
+          "type": "boolean"
+        },
+        "galaxy": {
+          "description": "Optional galaxy override for transcripts/documents.",
+          "type": "string"
+        },
+        "include_credential_files": {
+          "default": false,
+          "description": "Ingest credential-named files with redaction (requires redact=true).",
+          "type": "boolean"
+        },
+        "limit": {
+          "default": 0,
+          "description": "Only consider the first N files in walk order (0 = all).",
+          "type": "integer"
+        },
+        "redact": {
+          "default": true,
+          "description": "Scrub credential-shaped content before storage (default true).",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "Directory to harvest recursively.",
+          "type": "string"
+        },
+        "wait_secs": {
+          "default": 0,
+          "description": "Wait up to N seconds for a busy store before failing.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "route": "memory.ingest"
+    },
+    {
+      "declared": true,
+      "properties": {
         "exclude_tags": {
           "description": "Drop memories carrying any of these tags",
           "items": {
@@ -2268,6 +2310,152 @@
       "properties": {},
       "required": [],
       "route": "reasoning.bicameral"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "id": {
+          "description": "Stored receipt task id",
+          "type": "string"
+        },
+        "proof_path": {
+          "description": "Optional external proof file (its SHA-256 is recorded, never the file)",
+          "type": "string"
+        },
+        "variant": {
+          "description": "Stored variant (default original)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "receipts.anchor"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "action": {
+          "description": "redact (default; creates a variant) | reveal (subset of a map)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Stored receipt task id",
+          "type": "string"
+        },
+        "paths": {
+          "description": "Field paths, e.g. receipts[1].body.action",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "variant": {
+          "description": "Variant name (default redacted)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "paths"
+      ],
+      "route": "receipts.disclose"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "kind": {
+          "description": "Bundle kind: session (default) | karma_head",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum turns covered (session kind; default 200)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "out": {
+          "description": "Optional path to also write the bundle JSON for external verification",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Session UUID (session kind; default: most recent session)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "receipts.emit"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "kind": {
+          "description": "Filter: session | karma_head",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 20)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "description": "Skip this many entries (default 0)",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Filter by session id",
+          "type": "string"
+        },
+        "variant": {
+          "description": "Filter by variant (default: all variants)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "receipts.list"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "id": {
+          "description": "Stored receipt task id (UUID or urn:uuid:)",
+          "type": "string"
+        },
+        "require_anchor": {
+          "description": "Verify with anchor required",
+          "type": "boolean"
+        },
+        "variant": {
+          "description": "Stored variant (default original)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "receipts.read"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "bundle": {
+          "description": "Inline bundle to verify (alternative to id)",
+          "type": "object"
+        },
+        "id": {
+          "description": "Stored receipt task id (UUID or urn:uuid:)",
+          "type": "string"
+        },
+        "require_anchor": {
+          "description": "Fail-closed: without an anchor the verdict is PROVISIONAL",
+          "type": "boolean"
+        },
+        "variant": {
+          "description": "Stored variant (default original)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "route": "receipts.verify"
     },
     {
       "declared": false,

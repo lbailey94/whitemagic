@@ -21,7 +21,7 @@ pub mod write_gate;
 pub use circuit_breaker::{BreakerConfig, BreakerState, CircuitBreaker, CircuitBreakerRegistry};
 pub use composition::{CompositionConfig, CompositionPattern, CompositionTracker};
 pub use flight::{FlightEntry, FlightRecorder};
-pub use pipeline::DispatchPipeline;
+pub use pipeline::{DispatchPipeline, ReceiptDispatchHook};
 pub use rate_limiter::{RateLimiter, RateLimiterConfig, SlidingWindow};
 pub use registry::{ToolRegistry, ToolRegistryBuilder};
 pub use speculative::{CheckResult, SpeculativeExecutor, ValidationResult};

@@ -15,7 +15,7 @@ Usage:
       --answers benchmarks/runs/t1/answers.jsonl \
       --dataset benchmarks/data/longmemeval_s/cleaned/longmemeval_s_cleaned.json \
       --out benchmarks/runs/t1/verdicts-primary.jsonl \
-      --model opencode-go/kimi-k3 --role primary --variant strict \
+      --model opencode-go/deepseek-v4.1-flash --role primary --variant strict \
       [--limit N] [--offset N] [--dry-run] [--fake] [--timeout 180]
 
   python3 scripts/t1_judge.py --summarize verdicts-primary.jsonl verdicts-variance.jsonl \
@@ -208,7 +208,7 @@ def main() -> int:
     parser.add_argument("--answers")
     parser.add_argument("--dataset")
     parser.add_argument("--out")
-    parser.add_argument("--model", default="opencode-go/kimi-k3")
+    parser.add_argument("--model", default="opencode-go/deepseek-v4.1-flash")
     parser.add_argument("--role", choices=["primary", "variance"], default="primary")
     parser.add_argument("--variant", choices=sorted(TEMPLATES), default="strict")
     parser.add_argument("--limit", type=int, default=None)

@@ -125,6 +125,17 @@ fn record_write_audit(
     }
 }
 
+/// Optional post-dispatch receipt hook (S1 receipts core).
+///
+/// Called once per successful **destructive** dispatch — the authority seam —
+/// after karma recording. Implementations must be non-failing (log their own
+/// errors) and must never alter the dispatch result. The disabled default
+/// (`None`) costs one `Option::is_some` check on the success path.
+pub trait ReceiptDispatchHook: Send + Sync {
+    /// Called after a successful authority-seam dispatch.
+    fn on_authority_dispatch(&self, tool: &str, elapsed: Duration);
+}
+
 /// The dispatch pipeline processes tool calls through governance,
 /// rate limiting, circuit breaking, and karma tracking before and after
 /// the actual tool execution.
@@ -174,6 +185,10 @@ pub struct DispatchPipeline {
     /// future is dropped and a `CoreError::Tool` timeout error is returned, so
     /// one hung tool can't wedge the server's event loop or block shutdown.
     dispatch_timeout: Option<Duration>,
+    /// Optional receipt-emission hook at the authority seam (destructive
+    /// dispatches). `None` (default) keeps the path unchanged; attached
+    /// explicitly by the deployment via `WM_RECEIPTS_AUTOEMIT=1`.
+    receipt_hook: Option<Arc<dyn ReceiptDispatchHook>>,
 }
 
 impl DispatchPipeline {
@@ -218,6 +233,7 @@ impl DispatchPipeline {
             capability_mode: CapabilityGateMode::from_env(),
             gana_registry: None,
             dispatch_timeout: None,
+            receipt_hook: None,
         }
     }
 
@@ -329,6 +345,21 @@ impl DispatchPipeline {
     #[must_use]
     pub fn secret_scan(&self) -> Option<&crate::secret_scan::SecretSampler> {
         self.secret_scan.as_deref()
+    }
+
+    /// Attach an optional receipt-emission hook (S1 receipts core). Called
+    /// after each successful destructive dispatch; `None` (default) leaves
+    /// the dispatch path unchanged.
+    #[must_use]
+    pub fn with_receipt_hook_option(mut self, hook: Option<Arc<dyn ReceiptDispatchHook>>) -> Self {
+        self.receipt_hook = hook;
+        self
+    }
+
+    /// The receipt hook attached to this pipeline (if any).
+    #[must_use]
+    pub fn receipt_hook(&self) -> Option<&Arc<dyn ReceiptDispatchHook>> {
+        self.receipt_hook.as_ref()
     }
 
     /// Attach the scoped-thread sandbox executor (P-SANDBOX-3). When
@@ -985,6 +1016,14 @@ impl DispatchPipeline {
                     true,
                     confirm_gated,
                 );
+            }
+
+            // Authority-seam receipt hook (S1): successful destructive
+            // dispatches only; disabled = one `Option` check.
+            if tool.effects().destructive {
+                if let Some(ref hook) = self.receipt_hook {
+                    hook.on_authority_dispatch(tool.name(), elapsed);
+                }
             }
         } else {
             tool.stats().record_failure(elapsed);
@@ -3246,6 +3285,130 @@ mod tests {
         assert!(
             overhead_ns < 5_000,
             "Pipeline overhead {overhead_ns} ns/call exceeds 5µs budget"
+        );
+    }
+
+    /// Counting receipt hook for the authority-seam tests.
+    struct CountingReceiptHook {
+        calls: std::sync::atomic::AtomicU64,
+    }
+
+    impl ReceiptDispatchHook for CountingReceiptHook {
+        fn on_authority_dispatch(&self, _tool: &str, _elapsed: std::time::Duration) {
+            self.calls
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    fn destructive_tool(name: &str) -> TestTool {
+        TestTool::new(
+            name,
+            EffectRow {
+                destructive: true,
+                ..EffectRow::default()
+            },
+        )
+    }
+
+    #[tokio::test]
+    async fn receipt_hook_fires_only_for_successful_destructive_dispatch() {
+        let hook = Arc::new(CountingReceiptHook {
+            calls: std::sync::atomic::AtomicU64::new(0),
+        });
+        let pipeline =
+            DispatchPipeline::with_defaults().with_receipt_hook_option(Some(hook.clone()));
+        assert!(pipeline.receipt_hook().is_some());
+
+        // Non-destructive dispatch: the hook must not fire.
+        let read_tool = TestTool::new(
+            "test.read",
+            EffectRow::read_only(vec![wm_core::Resource::Galaxy("codex".into())]),
+        );
+        let result = pipeline
+            .dispatch(
+                &read_tool,
+                &mut Context::new(BrainWave::Beta),
+                Args::default(),
+            )
+            .await;
+        assert!(result.is_ok());
+        assert_eq!(
+            hook.calls.load(std::sync::atomic::Ordering::Relaxed),
+            0,
+            "read dispatch must not hit the authority seam"
+        );
+
+        // Successful destructive dispatch with confirm: fires once.
+        let tool = destructive_tool("test.destructive");
+        let result = pipeline
+            .dispatch(
+                &tool,
+                &mut Context::new(BrainWave::Beta),
+                serde_json::json!({"confirm": true}),
+            )
+            .await;
+        assert!(result.is_ok(), "{result:?}");
+        assert_eq!(
+            hook.calls.load(std::sync::atomic::Ordering::Relaxed),
+            1,
+            "one authority-seam emission per successful destructive dispatch"
+        );
+    }
+
+    #[tokio::test]
+    async fn receipt_hook_disabled_adds_no_measurable_dispatch_cost() {
+        let tool = destructive_tool("test.destructive.timing");
+        let args = serde_json::json!({"confirm": true});
+        let n: u128 = 2_000;
+
+        // Disabled (default): the seam is a single Option check.
+        let plain = DispatchPipeline::with_defaults();
+        assert!(plain.receipt_hook().is_none());
+        let start = std::time::Instant::now();
+        for _ in 0..n {
+            let _ = plain
+                .dispatch(&tool, &mut Context::new(BrainWave::Beta), args.clone())
+                .await;
+        }
+        let disabled_ns = start.elapsed().as_nanos() / n;
+
+        // Enabled with a no-op hook: one virtual call per dispatch.
+        let hook = Arc::new(CountingReceiptHook {
+            calls: std::sync::atomic::AtomicU64::new(0),
+        });
+        let hooked = DispatchPipeline::with_defaults().with_receipt_hook_option(Some(hook.clone()));
+        let start = std::time::Instant::now();
+        let mut successes: u128 = 0;
+        for _ in 0..n {
+            if hooked
+                .dispatch(&tool, &mut Context::new(BrainWave::Beta), args.clone())
+                .await
+                .is_ok()
+            {
+                successes += 1;
+            }
+        }
+        let enabled_ns = start.elapsed().as_nanos() / n;
+
+        println!(
+            "\n  receipts hook: disabled {disabled_ns} ns/call | noop-hook {enabled_ns} ns/call"
+        );
+        // A no-op hook is one virtual call; even debug builds must stay far
+        // under a 5µs/call delta. The disabled path itself has no work to
+        // budget — the Option check is folded into the success branch.
+        assert!(
+            enabled_ns.saturating_sub(disabled_ns) < 5_000,
+            "no-op receipt hook added {} ns/call (budget 5000)",
+            enabled_ns.saturating_sub(disabled_ns)
+        );
+        assert!(
+            successes > 0,
+            "timing loop observed no successful destructive dispatches"
+        );
+        assert_eq!(
+            u128::from(hook.calls.load(std::sync::atomic::Ordering::Relaxed)),
+            successes,
+            "hook must observe exactly the successful authority-seam dispatches"
         );
     }
 }

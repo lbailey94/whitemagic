@@ -332,7 +332,7 @@ pub struct AtRestStatusPresent {
     pub meta: KeyringMeta,
     /// Wrapped `dek:*` rows found in the keyring DBI.
     pub wrapped_deks: usize,
-    /// Galaxies the keyring is expected to cover (16 in this build).
+    /// Galaxies the keyring is expected to cover (17 in this build).
     pub galaxies: usize,
     /// Resolved key-file path when the RK came from a file (generated or
     /// explicitly configured); `None` for env material / passphrase.
@@ -925,7 +925,7 @@ fn dek_key(galaxy_db_name: &str) -> String {
     format!("{DEK_KEY_PREFIX}{galaxy_db_name}")
 }
 
-/// Initialize a fresh keyring: `meta`, `rk:check`, and all 16 wrapped DEKs in
+/// Initialize a fresh keyring: `meta`, `rk:check`, and all 17 wrapped DEKs in
 /// one write transaction. Re-checks for a concurrent first-init inside the
 /// transaction (last-writer-wins keyrings are a split-brain; the loser
 /// unlocks instead of overwriting).
@@ -1473,7 +1473,10 @@ mod tests {
             &AtRestConfig::keyfile_with_root_key(hex_a),
         )
         .unwrap();
-        assert_eq!(reopened.at_rest_state().unwrap().dek_count(), 16);
+        assert_eq!(
+            reopened.at_rest_state().unwrap().dek_count(),
+            wm_core::Galaxy::COUNT
+        );
     }
 
     #[test]
@@ -1501,8 +1504,8 @@ mod tests {
             match status {
                 AtRestStatus::Present(p) => {
                     assert_eq!(p.meta.mode, AtRestMode::Keyfile);
-                    assert_eq!(p.wrapped_deks, 16);
-                    assert_eq!(p.galaxies, 16);
+                    assert_eq!(p.wrapped_deks, wm_core::Galaxy::COUNT);
+                    assert_eq!(p.galaxies, wm_core::Galaxy::COUNT);
                     assert!(
                         p.key_file
                             .as_deref()
@@ -1675,7 +1678,10 @@ mod tests {
         assert!(MemoryStore::ensure_schema(tmp.path()).unwrap().is_empty());
         assert_eq!(raw_keyring_rows(tmp.path()), before);
         // And it still unlocks afterwards.
-        assert_eq!(collect_deks(&open_keyfile(tmp.path())).len(), 16);
+        assert_eq!(
+            collect_deks(&open_keyfile(tmp.path())).len(),
+            wm_core::Galaxy::COUNT
+        );
     }
 
     #[test]
@@ -1765,7 +1771,7 @@ mod tests {
 
         let store = open_keyfile(tmp.path());
         let state = store.at_rest_state().unwrap();
-        assert_eq!(state.dek_count(), 16);
+        assert_eq!(state.dek_count(), wm_core::Galaxy::COUNT);
         assert_eq!(state.meta().key_source, "generated_key_file");
         assert!(
             raw_keyring_rows(tmp.path())
@@ -1808,7 +1814,7 @@ mod tests {
         let loaded = store.get(Galaxy::Sessions, id).unwrap().unwrap();
         assert_eq!(loaded.content, "keyfile roundtrip record");
         let deks = collect_deks(&store);
-        assert_eq!(deks.len(), 16);
+        assert_eq!(deks.len(), wm_core::Galaxy::COUNT);
     }
 
     #[test]

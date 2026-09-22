@@ -18,6 +18,7 @@ workspace = true
 wm-core = { workspace = true }
 wm-memory = { workspace = true }
 wm-dispatch = { workspace = true }
+wm-receipts = { workspace = true }
 wm-cognitive = { workspace = true }
 wm-governance = { workspace = true }
 wm-substrate = { workspace = true }

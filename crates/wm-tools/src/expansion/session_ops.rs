@@ -71,7 +71,7 @@ fn filter_by_time(
         .collect())
 }
 
-fn turn_json(mem: &Memory) -> Option<Value> {
+pub(crate) fn turn_json(mem: &Memory) -> Option<Value> {
     let v: Value = serde_json::from_str(&mem.content).ok()?;
     if v.get("type").and_then(Value::as_str) == Some("session_turn") {
         Some(v)
@@ -85,7 +85,7 @@ fn turn_json(mem: &Memory) -> Option<Value> {
 /// Turns tagged `superseded-by:<id>` are excluded unless
 /// `include_superseded` — supersession is the amend mechanism for evolving
 /// stories, and consumers want the current story by default.
-fn load_turns(
+pub(crate) fn load_turns(
     store: &MemoryStore,
     session_id: Option<&str>,
     limit: usize,

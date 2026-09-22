@@ -1,12 +1,15 @@
-//! Galaxy — The 16 memory galaxies.
+//! Galaxy — The 17 memory galaxies.
 //!
 //! Each galaxy is a named LMDB sub-database storing related memories.
 //! The galaxy taxonomy is preserved from v2.
+//!
+//! Receipts (2026-09-22) joins Telemetry as evidence-not-cognition: excluded
+//! from default recall, queried explicitly by `receipts.*`.
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// The 16 memory galaxies.
+/// The 17 memory galaxies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Galaxy {
     /// Artistic/creative memories
@@ -42,15 +45,18 @@ pub enum Galaxy {
     /// OS telemetry windows (evidence, not cognition — excluded from
     /// default recall/consolidation; query it by galaxy).
     Telemetry,
+    /// Continuity receipts (evidence, not cognition — excluded from default
+    /// recall; emitted bundles are read by `receipts.*`).
+    Receipts,
 }
 
 impl Galaxy {
     /// Total number of galaxies.
-    pub const COUNT: usize = 16;
+    pub const COUNT: usize = 17;
 
     /// All galaxies in order.
     #[must_use]
-    pub const fn all() -> [Self; 16] {
+    pub const fn all() -> [Self; 17] {
         [
             Self::Aria,
             Self::Citta,
@@ -68,6 +74,7 @@ impl Galaxy {
             Self::Embeddings,
             Self::Valkyrie,
             Self::Telemetry,
+            Self::Receipts,
         ]
     }
 
@@ -115,6 +122,7 @@ impl Galaxy {
             Self::Embeddings => "embeddings",
             Self::Valkyrie => "valkyrie",
             Self::Telemetry => "telemetry",
+            Self::Receipts => "receipts",
         }
     }
 
@@ -138,6 +146,7 @@ impl Galaxy {
             Self::Embeddings => "Vector embeddings",
             Self::Valkyrie => "Valkyrie sanctuary/reflections",
             Self::Telemetry => "OS telemetry windows (evidence, not cognition)",
+            Self::Receipts => "Continuity receipts (evidence, not cognition)",
         }
     }
 
@@ -161,9 +170,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn galaxy_count_is_16() {
-        assert_eq!(Galaxy::COUNT, 16);
-        assert_eq!(Galaxy::all().len(), 16);
+    fn galaxy_count_is_17() {
+        assert_eq!(Galaxy::COUNT, 17);
+        assert_eq!(Galaxy::all().len(), 17);
     }
 
     #[test]
@@ -184,6 +193,10 @@ mod tests {
         assert!(
             !mg.contains(&Galaxy::Telemetry),
             "telemetry is evidence, not default recall"
+        );
+        assert!(
+            !mg.contains(&Galaxy::Receipts),
+            "receipts are evidence, not default recall"
         );
         assert!(mg.contains(&Galaxy::Valkyrie));
     }

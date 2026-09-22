@@ -1,0 +1,28 @@
+[package]
+name = "wm-receipts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+wm-core = { workspace = true }
+continuity-receipt = "0.3.1"
+ed25519-dalek = "2.2.0"
+bs58 = "0.5"
+base64 = "0.22"
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.10"
+thiserror = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true

@@ -19,6 +19,7 @@ pub mod daemon;
 pub mod gateway;
 pub mod grimoire;
 pub mod ingest;
+pub mod ingest_tool;
 pub mod input_validation;
 pub mod landlock_sandbox;
 pub mod ledger;

@@ -79,6 +79,7 @@ pub mod patterns;
 pub mod pipeline;
 pub mod pray;
 pub mod reasoning;
+pub mod receipts;
 pub mod research;
 pub mod resonance;
 pub mod rsi;
@@ -422,8 +423,10 @@ pub fn register_expansion(
         // Anti-loop & boundary (2)
         .register(Arc::new(AntiLoopCheckTool::new(store.clone())))
         .register(Arc::new(BoundaryEnforceTool::new(store.clone())))
-        // Karma (2) — only if karma ledger is available
-        ;
+    // Karma (2) — only if karma ledger is available
+    ;
+    // Receipts (6) — continuity-receipt emission/verification (S1)
+    reg = receipts::register_receipts(&reg, store, karma.clone());
     if let Some(k) = karma {
         reg = reg
             .register(Arc::new(KarmaHistoryTool::new(k.clone())))

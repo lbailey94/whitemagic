@@ -5,6 +5,27 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`memory.ingest` MCP tool** — exposes the knowledge ingest pipeline (`run_ingest`) to
+  agents with safe defaults: `dry_run=true`, `redact=true`, `source` required, non-destructive
+  write effect row, `Sandbox::Inherit` (session archives live outside the store). Included in
+  the curated profile automatically (prefix `memory`). Verified by unit tests, the curated
+  contract test (`curated_profile_includes_memory_ingest_with_safe_contract`), and a live
+  stdio dry-run call on a fresh curated server.
+- **Continuity receipts core (`receipts.*`, S1)** — local `continuity-receipt/0.2`
+  emission: `receipts.emit`/`verify`/`list`/`read`/`disclose`/`anchor` over a new
+  `Galaxy::Receipts` evidence store; session receipts and karma-chain-head
+  attestations signed with an Ed25519 `did:key` (key precedence `WM_RECEIPT_KEY`
+  → `WM_MESH_KEY` HKDF `wm/receipt-signing/v1` → `<store>/lmdb/.receipt_key`);
+  `wm receipt emit|verify|list|show`; optional authority-seam auto-emit hook
+  (`WM_RECEIPTS_AUTOEMIT=1`, default off). Emitted bundles verify TRUSTED in both
+  the Rust crate and the independent Python reference; acceptance evidence and
+  scope: `planning/private/RECEIPTS_S1_SCOPE_2026-09-22.md` +
+  `planning/private/s1_wm_receipts_20260922/` (the in-repo `receipts/` path is
+  gitignored by design).
+
 ## [9.2.3] — 2026-09-22
 
 ### Security — credential redaction actually redacts
