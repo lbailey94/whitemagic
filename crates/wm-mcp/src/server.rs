@@ -3103,19 +3103,17 @@ impl McpServer {
     fn handle_initialize(&self) -> Result<Value, RpcError> {
         use std::fmt::Write as _;
         let mut instructions = String::from(concat!(
-            "WhiteMagic gives you durable local project memory. Session rhythm:\n",
-            "1. Before starting work, call wm(route=\"session.continuity\") to recall where the previous session left off.\n",
-            "2. Start each working session with wm(route=\"session.start\", args={\"title\": \"...\"}).\n",
-            "3. Record selectively as you go — decisions, breakthroughs, errors worth remembering, and summaries — via wm(route=\"session.record\", args={\"content\": \"...\", \"role\": \"ai\", \"turn_type\": \"decision\"|\"breakthrough\"|\"error\"|\"summary\", \"importance\": 0.0-1.0}). Do not record everything; record what a future session needs.\n",
-            "4. Prefer the nine direct tools for the common lifecycle (memory.create/search/read/list/hybrid_recall, session.start/record/continuity) — they are the friction-free contract. The wm meta-tool with route=\"...\" reaches the wider curated catalog (update, delete, digest, claims, transactions, export/import); it is advertised as able to reach destructive routes, so some clients add confirmation friction around it.\n",
-            "5. At the end of a session, record a short summary turn, then wm(route=\"session.checkpoint\").\n",
-            "6. Discover the available surface with wm(route=\"tools.list\").\n",
-            "7. First-run onboarding: the CLI's `wm grimoire` walks host, memory layer, release, agent config, memory, load, vocabulary, and restart continuity in one pass (`--json` for machines, `--write` to patch detected client configs). To bring existing notes or transcripts in, run `wm ingest --source <folder>` (dry-run first; `--redact` scrubs credential-shaped content) — local-only and idempotent via a per-file SHA-256 ledger.\n",
-            "Privacy and backup: memory is stored locally under your store directory and is not encrypted — never record credentials or secrets. Back up the whole store directory regularly; privacy flags exclude memories from responses but do not encrypt them."
+            "WhiteMagic gives you durable local project memory (on-device store). Session rhythm:\n",
+            "1. wm(route=\"session.continuity\") before starting work — recall where the last session left off.\n",
+            "2. wm(route=\"session.start\", args={\"title\": \"...\"}) when you begin a session.\n",
+            "3. Record selectively via wm(route=\"session.record\") — turn_type decision/breakthrough/error/summary, importance 0.0-1.0 — only what a future session needs.\n",
+            "4. Finish with a short summary turn, then wm(route=\"session.checkpoint\").\n",
+            "Prefer the nine lifecycle tools emitted in tools/list; wm(route=\"...\") reaches the wider curated catalog and wm(route=\"tools.list\") enumerates the surface.\n",
+            "Onboarding: `wm grimoire`; pull existing notes in with `wm ingest --source <folder>`. Memory is not encrypted — Back up the store directory; never record sensitive values."
         ));
         if self.readonly {
             instructions.push_str(
-                "\nMode: READ-ONLY — every write (session.start/record/checkpoint, memory.create, memory.update) is refused by governance. Use this server for recall only; do not retry writes against it.",
+                "\nMode: READ-ONLY — writes (session.*, memory.create/update) are refused by governance; recall only, do not retry writes.",
             );
         } else {
             instructions
@@ -3142,15 +3140,15 @@ impl McpServer {
         // agent regardless of surface; tool usage is only advertised when
         // the coordination tools are actually registered (full profile).
         instructions.push_str(
-            "\nCoordination (multi-agent checkouts): one writer per checkout — if another session may be active on the same working tree, coordinate before editing. Claim a scope before shared-tree edits and release it when done. Hand off explicitly via wm(route=\"session.checkpoint\") structured fields (commit, next_queue, open_flags; lease_id names a claimed scope that stays held).",
+            "\nCoordination (multi-agent checkouts): one writer per checkout — Claim a scope before shared-tree edits, release it when done, and hand off via wm(route=\"session.checkpoint\") structured fields (commit, next_queue, open_flags; lease_id names a held scope).",
         );
         if self.registry.get("code.claim").is_some() {
             instructions.push_str(
-                "\nCoordination tools are on this server's surface: wm(route=\"code.claim\", args={\"scope\": \"...\", \"intent\": \"why\", \"owner_session\": \"<session id>\"}) with code.check / code.release / code.list — advisory leases with a TTL in the git common dir, visible across all worktrees. Claims are coordination signals, not locks.",
+                "\nCoordination tools are on this surface: wm(route=\"code.claim\"|\"code.check\"|\"code.release\"|\"code.list\") — advisory TTL leases in the git common dir; claims are coordination signals, not locks.",
             );
         }
         instructions.push_str(
-            "\nFailure ladder: if a call fails twice, do not retry unchanged — read the error and change something. If whitemagic tools vanish mid-session or every call errors, the server process has likely died: diagnose from bash (`wm doctor --store <store-path>`, `pgrep -af wm`) and restart your client session to respawn it. Never fall back to probing with shell no-ops.",
+            "\nFailure ladder: a call failing twice means change something — never retry unchanged. If tools vanish or every call errors, run `wm doctor`, restart the client session; do not probe with shell no-ops.",
         );
         Ok(json!({
             "protocolVersion": "2024-11-05",
