@@ -1,6 +1,6 @@
 # Security Policy
 
-> NOTE (2026-09-14; platform note updated 2026-09-21 for the 9.2.3 arm64
+> NOTE (2026-09-14; platform note updated 2026-09-21 for the arm64 static
 > gate): the support-window policy is decided. Supported releases are the
 > current minor and the previous minor on the install-gated Linux line
 > (x86-64 and arm64). macOS and Windows binaries are published in every
