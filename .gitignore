@@ -84,6 +84,7 @@ wm-leases.json
 # Memorastrict scale-stress fixtures — derived by `memorastrict_gen.py
 # --scale-turns N`; the tracked root seeds are the source of truth.
 /benchmarks/data/memorastrict/scale_*/
+/benchmarks/data/longmemeval_s/cleaned/
 
 # Internal estate expedition drills and local test runners
 /crates/wm-tools/examples/
