@@ -1700,10 +1700,7 @@ mod tests {
             1,
             "the single valid hit must survive the coverage floor"
         );
-        assert_eq!(
-            results[0].memory_id,
-            "33333333-3333-3333-3333-333333333333"
-        );
+        assert_eq!(results[0].memory_id, "33333333-3333-3333-3333-333333333333");
     }
 
     #[test]
