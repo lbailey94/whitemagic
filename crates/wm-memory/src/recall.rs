@@ -57,6 +57,10 @@ pub struct RecallResult {
     pub score: f32,
     /// BM25 text score (normalized 0.0–1.0).
     pub bm25_score: f32,
+    /// Raw (pre-normalization) BM25 text score — the **absolute** signal;
+    /// 0.0 on vector-only results. Unlike `bm25_score` this is not divided by
+    /// the top hit, so callers can apply absolute floors (abstention).
+    pub raw_bm25_score: f32,
     /// Vector cosine similarity (0.0–1.0).
     pub vector_score: f32,
     /// Memory importance (0.0–1.0).
@@ -1150,6 +1154,7 @@ impl RecallEngine {
                     galaxy: vr.galaxy,
                     score: vr.score,
                     bm25_score: 0.0,
+                    raw_bm25_score: 0.0,
                     vector_score: vr.score,
                     importance: 0.0,
                     graph_score: 0.0,
@@ -1177,6 +1182,7 @@ impl RecallEngine {
                     galaxy,
                     score: sr.score,
                     bm25_score: sr.score,
+                    raw_bm25_score: sr.score,
                     vector_score: 0.0,
                     importance: 0.0,
                     graph_score: 0.0,
@@ -1281,6 +1287,7 @@ impl RecallEngine {
                         galaxy: mem.metadata.galaxy,
                         score: contribution,
                         bm25_score: 0.0,
+                        raw_bm25_score: 0.0,
                         vector_score: 0.0,
                         importance: mem.metadata.importance,
                         graph_score: contribution,
@@ -1409,13 +1416,13 @@ fn fuse_results_inner(
         .max(0.001);
 
     // Build lookup maps
-    let mut bm25_map: HashMap<Uuid, (f32, String, Galaxy)> = HashMap::new();
+    let mut bm25_map: HashMap<Uuid, (f32, f32, String, Galaxy)> = HashMap::new();
     for sr in bm25_results {
         if let Ok(id) = Uuid::parse_str(&sr.memory_id) {
             match Galaxy::from_db_name(&sr.galaxy) {
                 Some(galaxy) => {
                     let normalized = sr.score / max_bm25;
-                    bm25_map.insert(id, (normalized, sr.content.clone(), galaxy));
+                    bm25_map.insert(id, (normalized, sr.score, sr.content.clone(), galaxy));
                 }
                 None => {
                     tracing::warn!(
@@ -1442,11 +1449,10 @@ fn fuse_results_inner(
     let mut results: Vec<RecallResult> = all_ids
         .into_iter()
         .map(|id| {
-            let (bm25_score, content, galaxy_bm25) = bm25_map
-                .get(&id)
-                .map_or((0.0, String::new(), Galaxy::Codex), |(s, c, g)| {
-                    (*s, c.clone(), *g)
-                });
+            let (bm25_score, raw_bm25_score, content, galaxy_bm25) = bm25_map.get(&id).map_or(
+                (0.0, 0.0, String::new(), Galaxy::Codex),
+                |(s, raw, c, g)| (*s, *raw, c.clone(), *g),
+            );
 
             let (vector_score, galaxy_vec) = vector_map
                 .get(&id)
@@ -1491,6 +1497,7 @@ fn fuse_results_inner(
                 galaxy,
                 score,
                 bm25_score,
+                raw_bm25_score,
                 vector_score,
                 importance,
                 graph_score: 0.0,
@@ -1930,6 +1937,7 @@ mod tests {
             galaxy: Galaxy::Codex,
             score: 0.85,
             bm25_score: 0.7,
+            raw_bm25_score: 3.5,
             vector_score: 0.9,
             importance: 0.5,
             graph_score: 0.0,
@@ -1940,6 +1948,7 @@ mod tests {
         };
         assert_eq!(result.score, 0.85);
         assert_eq!(result.bm25_score, 0.7);
+        assert_eq!(result.raw_bm25_score, 3.5);
         assert_eq!(result.vector_score, 0.9);
     }
 
@@ -2089,6 +2098,22 @@ mod tests {
         }];
         let results = fuse(&bm25, &[], 10);
         assert!((results[0].bm25_score - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn fuse_results_retains_raw_bm25_for_absolute_floors() {
+        let id = Uuid::new_v4();
+        let bm25 = vec![SearchResult {
+            memory_id: id.to_string(),
+            galaxy: Galaxy::Codex.db_name().to_string(),
+            score: 3.5,
+            normalized_score: 0.0,
+            content: "test".into(),
+        }];
+        let results = fuse(&bm25, &[], 10);
+        // Normalized stays relative (top == 1.0); raw stays absolute.
+        assert!((results[0].bm25_score - 1.0).abs() < 0.01);
+        assert!((results[0].raw_bm25_score - 3.5).abs() < f32::EPSILON);
     }
 
     // ── Embedding cache tests ──────────────────────────────────────────

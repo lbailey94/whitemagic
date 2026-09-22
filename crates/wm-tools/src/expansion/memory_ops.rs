@@ -64,6 +64,99 @@ fn with_navigation_disclosure(mut result: serde_json::Value, original: &str) -> 
     result
 }
 
+/// Absolute-BM25 abstention floor (`WM_RECALL_ABSTENTION_FLOOR`); 0 = off.
+fn abstention_floor() -> f32 {
+    std::env::var("WM_RECALL_ABSTENTION_FLOOR")
+        .ok()
+        .and_then(|value| value.trim().parse::<f32>().ok())
+        .filter(|value| *value > 0.0)
+        .unwrap_or(0.0)
+}
+
+/// Minimum matched-term coverage (`WM_RECALL_ABSTENTION_COVERAGE`, 0..=1); 0 = off.
+fn abstention_coverage() -> f32 {
+    std::env::var("WM_RECALL_ABSTENTION_COVERAGE")
+        .ok()
+        .and_then(|value| value.trim().parse::<f32>().ok())
+        .filter(|value| (0.0..=1.0).contains(value) && *value > 0.0)
+        .unwrap_or(0.0)
+}
+
+/// Weak-evidence abstention over already-assembled result JSON.
+///
+/// Per-query normalization makes the top hit's `score` 1.0 no matter how weak
+/// the match (2026-09-22 hosted-lane finding). Each result now also carries
+/// `raw_score` (absolute BM25) or `matched_terms` (episodic coverage); these
+/// opt-in knobs turn that absolute signal into an explicit abstention object.
+/// Results are never dropped here — the caller can still inspect them.
+fn weak_evidence_abstention(
+    results: &[serde_json::Value],
+    query: &str,
+) -> Option<serde_json::Value> {
+    weak_evidence_abstention_with(results, query, abstention_floor(), abstention_coverage())
+}
+
+/// Parameterized core of [`weak_evidence_abstention`] (deterministic tests).
+fn weak_evidence_abstention_with(
+    results: &[serde_json::Value],
+    query: &str,
+    floor: f32,
+    coverage_floor: f32,
+) -> Option<serde_json::Value> {
+    if floor <= 0.0 && coverage_floor <= 0.0 {
+        return None;
+    }
+    let top = results.first()?;
+    let source = top
+        .get("source")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
+    match source {
+        "hybrid" | "bm25" | "fts" => {
+            let raw = top
+                .get("raw_score")
+                .and_then(serde_json::Value::as_f64)
+                .unwrap_or(0.0);
+            // `raw == 0.0` marks vector-only evidence (cosine scale, not BM25):
+            // the BM25 floor does not apply — disclosed, not guessed.
+            if floor > 0.0 && raw > 0.0 && (raw as f32) < floor {
+                return Some(json!({
+                    "status": "insufficient_evidence",
+                    "reason": "top_below_floor",
+                    "scope": "retrieval",
+                    "signal": "bm25",
+                    "top_score": raw,
+                    "floor": floor,
+                }));
+            }
+        }
+        "episodic" => {
+            let matched = top
+                .get("matched_terms")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0);
+            let query_terms = wm_memory::strip_stopwords(query).split_whitespace().count() as u64;
+            if coverage_floor > 0.0 && query_terms > 0 {
+                let coverage = matched as f64 / query_terms as f64;
+                if coverage < f64::from(coverage_floor) {
+                    return Some(json!({
+                        "status": "insufficient_evidence",
+                        "reason": "coverage_below_floor",
+                        "scope": "retrieval",
+                        "signal": "coverage",
+                        "coverage": coverage,
+                        "matched_terms": matched,
+                        "query_terms": query_terms,
+                        "floor": coverage_floor,
+                    }));
+                }
+            }
+        }
+        _ => {}
+    }
+    None
+}
+
 /// Compact per-result evidence bundle (v0): exact identity, retrieval reason,
 /// source time, integrity, visibility, and coverage. Cold-only records report
 /// their time as unavailable rather than guessing.
@@ -1314,6 +1407,7 @@ impl Tool for MemoryHybridRecallTool {
                                     "content": navigation,
                                     "importance": mem.metadata.importance,
                                     "score": hr.score,
+                                    "raw_score": hr.raw_bm25_score,
                                     "trust_factor": hr.trust_factor,
                                     "corroboration": hr.corroboration,
                                     "in_conformal_set": hr.in_conformal_set,
@@ -1482,6 +1576,7 @@ impl Tool for MemoryHybridRecallTool {
                                                 mem.metadata.source_trust,
                                                 trust_weight,
                                             ),
+                                            "raw_score": hit.score,
                                             "normalized_score": hit.normalized_score,
                                             "trust": mem.metadata.source_trust,
                                             "source": "fts",
@@ -1840,6 +1935,15 @@ impl Tool for MemoryHybridRecallTool {
                 "reason": "no_results_above_floors",
                 "scope": "retrieval",
             });
+        } else if !query.is_empty() {
+            // Absolute-evidence gate (hosted-lane finding, 2026-09-22): per-query
+            // normalization makes the top hit score 1.0 no matter how weak the
+            // match, so nonsense queries look confident. `raw_score` on each
+            // result is the absolute signal; these opt-in knobs turn it into an
+            // explicit abstention object without dropping results.
+            if let Some(abstention) = weak_evidence_abstention(&results, query) {
+                out["abstention"] = abstention;
+            }
         }
         Ok(out)
     }
@@ -5104,5 +5208,46 @@ mod tests {
         assert_eq!(v["status"], "success", "{v}");
         let stored = store.get(Galaxy::Codex, id).unwrap().unwrap();
         assert!((stored.metadata.importance - 0.75).abs() < f32::EPSILON);
+    }
+
+    // ── Absolute-evidence abstention (2026-09-22) ──────────────────────
+
+    #[test]
+    fn weak_evidence_abstention_floor_and_coverage() {
+        // Knobs off: never abstains.
+        let fts = vec![json!({"source": "fts", "raw_score": 0.5})];
+        assert!(weak_evidence_abstention_with(&fts, "alpha", 0.0, 0.0).is_none());
+
+        // FTS/hybrid top below the absolute BM25 floor.
+        let weak =
+            weak_evidence_abstention_with(&fts, "alpha", 2.0, 0.0).expect("below floor abstains");
+        assert_eq!(weak["reason"], "top_below_floor");
+        assert_eq!(weak["signal"], "bm25");
+        assert_eq!(weak["scope"], "retrieval");
+        assert_eq!(weak["status"], "insufficient_evidence");
+
+        // Above the floor: no abstention.
+        let strong = vec![json!({"source": "hybrid", "raw_score": 4.0})];
+        assert!(weak_evidence_abstention_with(&strong, "alpha", 2.0, 0.0).is_none());
+
+        // Vector-only evidence (raw 0.0) is not judged by the BM25 floor.
+        let vector_only = vec![json!({"source": "hybrid", "raw_score": 0.0, "vector_score": 0.9})];
+        assert!(weak_evidence_abstention_with(&vector_only, "alpha", 2.0, 0.0).is_none());
+
+        // Episodic coverage: 1 of 4 stopword-stripped terms matched.
+        let episodic = vec![json!({"source": "episodic", "matched_terms": 1})];
+        let low = weak_evidence_abstention_with(&episodic, "alpha beta gamma delta", 0.0, 0.5)
+            .expect("low coverage abstains");
+        assert_eq!(low["reason"], "coverage_below_floor");
+        assert_eq!(low["signal"], "coverage");
+        assert_eq!(low["matched_terms"], 1);
+
+        // Full coverage passes.
+        let full = vec![json!({"source": "episodic", "matched_terms": 4})];
+        assert!(weak_evidence_abstention_with(&full, "alpha beta gamma delta", 0.0, 0.5).is_none());
+
+        // Non-retrieval sources are not judged.
+        let association = vec![json!({"source": "association", "score": 0.1})];
+        assert!(weak_evidence_abstention_with(&association, "alpha", 2.0, 0.5).is_none());
     }
 }

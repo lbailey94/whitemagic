@@ -35,6 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   policy versions `WM_MANDALA_POLICY_VERSIONS`. Verified by a real gate-lite-issued token
   fixture, dispatch-seam tests, and a governed bundle that verifies TRUSTED in both
   implementations.
+- **Absolute retrieval evidence: `raw_score` + opt-in abstention floors** — recall
+  results now carry `raw_score` (pre-normalization BM25; 0.0 on vector-only hits) so
+  callers can apply absolute thresholds; per-query normalization had made the top hit
+  score 1.0 no matter how weak the match (hosted-lane finding). `WM_RECALL_ABSTENTION_FLOOR`
+  (raw-BM25 floor) and `WM_RECALL_ABSTENTION_COVERAGE` (episodic matched-term coverage)
+  turn weak evidence into an explicit `abstention` object (`top_below_floor` /
+  `coverage_below_floor`) without dropping results; both default off, so behaviour is
+  byte-identical until configured.
 
 ## [9.2.3] — 2026-09-22
 
