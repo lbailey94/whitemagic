@@ -238,7 +238,7 @@ mod imp {
     use super::LandlockOutcome;
     use landlock::{
         ABI, AccessFs, CompatLevel, Compatible, LandlockStatus, PathBeneath, PathFd,
-        RestrictSelfAttr, RestrictionStatus, Ruleset, RulesetAttr, RulesetCreatedAttr,
+        RestrictionStatus, Ruleset, RulesetAttr, RulesetCreatedAttr,
         RulesetStatus,
     };
     use std::path::Path;
@@ -265,16 +265,33 @@ mod imp {
     /// ruleset — so probing is free and side-effect-free. Requesting exactly
     /// this set keeps `FullyEnforced` reachable on every Landlock-enabled
     /// kernel instead of permanently reporting a best-effort downgrade.
-    fn effective_write_abi() -> Option<ABI> {
+    pub(super) fn effective_write_abi() -> Option<ABI> {
         for abi in WRITE_ABI_LADDER {
+            // handle_access alone accepts a superset of the kernel's ABI:
+            // observed live 2026-09-22 on a 6.12 kernel (ABI <= 6) where the
+            // probe selected V8 and `restrict_self` then downgraded the whole
+            // ruleset to `partial`. Creating the ruleset under
+            // HardRequirement is what actually validates support, so the
+            // restriction below can reach FullyEnforced.
             let probe = Ruleset::default()
                 .set_compatibility(CompatLevel::HardRequirement)
-                .handle_access(AccessFs::from_write(abi));
+                .handle_access(AccessFs::from_write(abi))
+                .and_then(|ruleset| ruleset.create());
             if probe.is_ok() {
                 return Some(abi);
             }
         }
         None
+    }
+
+    /// Test hook: does the kernel actually accept this ABI's full write set?
+    #[cfg(test)]
+    pub(super) fn abi_creates(abi: ABI) -> bool {
+        Ruleset::default()
+            .set_compatibility(CompatLevel::HardRequirement)
+            .handle_access(AccessFs::from_write(abi))
+            .and_then(|ruleset| ruleset.create())
+            .is_ok()
     }
 
     /// Restrict outcome: outer layer = ruleset setup errors; inner layer =
@@ -285,7 +302,7 @@ mod imp {
 
     pub(super) fn restrict(
         store_root: &Path,
-        whole_process: bool,
+        _whole_process: bool,
         git_dir: Option<&Path>,
     ) -> RestrictOutcome {
         // PathFd::new yields its own error type; the report only needs the
@@ -331,9 +348,16 @@ mod imp {
                 .map_err(|e| e.to_string())?;
             grants.push(format!("git-dir {}", dir.display()));
         }
-        if whole_process {
-            created = created.all_threads(true).map_err(|e| e.to_string())?;
-        }
+        // Deliberately NO `all_threads` flag. It is a restrict_self flag that
+        // requires Landlock ABI v7; under BestEffort on an older kernel (the
+        // hosted box runs 6.12) the kernel silently drops it and reports the
+        // whole ruleset as `partial`. Probe-verified 2026-09-22: an identical
+        // ruleset is `fully_enforced` without the flag and
+        // `partially_enforced` with it. The flag is unnecessary at this call
+        // site anyway — the domain is applied before any worker thread
+        // exists, and threads created afterwards inherit the thread-local
+        // domain (the same inheritance property the v1 scoped-thread seam
+        // relies on).
         let status = created.restrict_self().map_err(|e| e.to_string())?;
         Ok(Ok((status, abi, grants)))
     }
@@ -376,6 +400,20 @@ mod imp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Regression: the ABI selector must only return an ABI whose ruleset
+    /// the kernel can actually create — the 2026-09-22 live report showed a
+    /// 6.12 kernel selecting V8 and downgrading to `partial`.
+    #[test]
+    fn effective_write_abi_is_actually_supported() {
+        if let Some(abi) = imp::effective_write_abi() {
+            assert!(
+                imp::abi_creates(abi),
+                "selected ABI v{} must create a ruleset under HardRequirement",
+                abi as u32
+            );
+        }
+    }
 
     /// P-SANDBOX-3 acceptance (Landlock v1): the scoped-thread executor's
     /// worker applies the thread-local ruleset via the SAME callback shape
