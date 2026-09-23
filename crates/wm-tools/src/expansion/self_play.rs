@@ -383,3 +383,91 @@ pub fn register_self_play(
         .register(Arc::new(SelfPlayStatusTool::new(loop_state.clone())))
         .register(Arc::new(SelfPlayExportTool::new(loop_state)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn open_store() -> (tempfile::TempDir, Arc<MemoryStore>) {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
+        (tmp, store)
+    }
+
+    #[tokio::test]
+    async fn selfplay_run_executes_requested_cycles_with_stub_handlers() {
+        let (_tmp, store) = open_store();
+        let state = new_shared_loop();
+
+        let result = SelfPlayRunTool::new(store, state.clone())
+            .call(&mut Context::default(), json!({"cycles": 1}))
+            .await
+            .unwrap();
+        assert_eq!(result["cycles_run"], 1);
+        assert_eq!(result["results"][0]["collected"], true);
+        assert_eq!(result["results"][0]["verified_correct"], true);
+        assert_eq!(result["stats"]["total_cycles"], 1);
+        assert_eq!(result["stats"]["samples_collected"], 1);
+        assert_eq!(result["stats"]["adapter_updates"], 0);
+    }
+
+    #[tokio::test]
+    async fn selfplay_status_discloses_uninitialized_then_initialized() {
+        let tmp = tempfile::tempdir().unwrap();
+        let state = new_shared_loop();
+
+        let uninit = SelfPlayStatusTool::new(state.clone())
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
+        assert_eq!(uninit["initialized"], false);
+        assert!(uninit["message"].as_str().unwrap().contains("not yet"));
+
+        {
+            let mut guard = state.lock().unwrap();
+            let mut loop_ = build_self_play_loop(tmp.path());
+            loop_.config.max_cycles_per_run = 1;
+            loop_.run("");
+            *guard = Some(loop_);
+        }
+
+        let init = SelfPlayStatusTool::new(state)
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
+        assert_eq!(init["initialized"], true);
+        assert_eq!(init["total_cycles"], 1);
+        assert_eq!(init["sample_count"], 1);
+    }
+
+    #[tokio::test]
+    async fn selfplay_export_jsonl_and_llama_cpp_formats_are_non_empty() {
+        let (_tmp, store) = open_store();
+        let state = new_shared_loop();
+
+        let empty = SelfPlayExportTool::new(state.clone())
+            .call(&mut Context::default(), json!({"format": "jsonl"}))
+            .await
+            .unwrap();
+        assert_eq!(empty["sample_count"], 0);
+        assert_eq!(empty["data"], "");
+
+        SelfPlayRunTool::new(store, state.clone())
+            .call(&mut Context::default(), json!({"cycles": 1}))
+            .await
+            .unwrap();
+
+        let jsonl = SelfPlayExportTool::new(state.clone())
+            .call(&mut Context::default(), json!({"format": "jsonl"}))
+            .await
+            .unwrap();
+        assert!(jsonl["sample_count"].as_u64().unwrap() >= 1);
+        assert!(jsonl["data"].as_str().unwrap().contains("2+2"));
+
+        let llama = SelfPlayExportTool::new(state)
+            .call(&mut Context::default(), json!({"format": "llama_cpp"}))
+            .await
+            .unwrap();
+        assert!(!llama["data"].as_str().unwrap().is_empty());
+    }
+}
