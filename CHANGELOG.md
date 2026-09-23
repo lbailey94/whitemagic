@@ -5,6 +5,22 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 9.2.7 in progress (2026-09-23)
+
+### Added
+- **Discrete lifecycle catalog expanded to 15 (Glama TDQS)** — `tools/list` now
+  exposes the `wm` meta-tool plus 14 lifecycle aliases, adding `memory.update`,
+  `memory.revisions`, `memory.ingest`, `session.checkpoint`, `receipts.emit`,
+  and `receipts.verify` with per-tool discovery annotations (title, read-only,
+  destructive, idempotent). Directory graders and explicit-schema clients get
+  the CRUD + lifecycle entrypoints directly; the curated profile and the
+  meta-router surface are unchanged.
+
+### Fixed
+- **Release tooling** — `scripts/release.sh --tail-only` derives `RUN_ID` and
+  the tag-date health window instead of crashing on unbound variables, and the
+  release-health probe gets a 60s timeout for the slow MCP registry search.
+
 ## [9.2.6] — 2026-09-23
 
 ### Added
