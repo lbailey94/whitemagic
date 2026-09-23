@@ -72,6 +72,20 @@ const WRITE_BUDGET_SAMPLE_INTERVAL_MS: u64 = 300_000;
 
 /// MCP server state.
 #[allow(dead_code)]
+/// Refuse non-loopback SSE binds: the transport carries no auth token/PSK
+/// (THREAT_MODEL_V9 §6), so it must stay loopback-only until the S7
+/// credential lands. Applies to `wm serve --transport sse` and the
+/// federated gateway's HTTP mode.
+pub(crate) fn validate_sse_bind(addr: &std::net::SocketAddr) -> anyhow::Result<()> {
+    if !addr.ip().is_loopback() {
+        anyhow::bail!(
+            "refusing non-loopback SSE bind {addr}: the SSE transport has no auth token/PSK \
+             (THREAT_MODEL_V9 §6) — bind 127.0.0.1 and front it with an authenticating proxy"
+        );
+    }
+    Ok(())
+}
+
 pub struct McpServer {
     registry: ToolRegistry,
     pipeline: Arc<DispatchPipeline>,
@@ -94,9 +108,16 @@ pub struct McpServer {
     drive_core: Arc<std::sync::Mutex<DriveCore>>,
     autonomic: Option<Arc<std::sync::Mutex<wm_cognitive::AutonomicLayer>>>,
     gan_ying_bus: Arc<std::sync::Mutex<GanYingBus>>,
+    /// Sangha governance components — the tool surface receives its own
+    /// clones via `register_sangha`; the server-side copies are retained
+    /// for future `/status` disclosure and are not read today.
+    #[allow(dead_code)]
     peer_discovery: Arc<std::sync::Mutex<PeerDiscovery>>,
+    #[allow(dead_code)]
     signal_broadcast: Arc<std::sync::Mutex<SignalBroadcast>>,
+    #[allow(dead_code)]
     sangha_chat: Arc<std::sync::Mutex<SanghaChat>>,
+    #[allow(dead_code)]
     lock_manager: Arc<std::sync::Mutex<ResourceLockManager>>,
     /// Sangha mesh transport slot (R0) — the CLI fills it with the live
     /// node after `MeshNode::start`; the `sangha.mesh.*` tools and
@@ -123,7 +144,10 @@ pub struct McpServer {
     request_budget: crate::input_validation::RequestBudget,
     /// Time-windowed rate limiter — throttles request bursts at the boundary.
     rate_window: crate::input_validation::RateWindow,
-    /// Transaction state for multi-tool snapshot/rollback
+    /// Transaction state for multi-tool snapshot/rollback — the transaction
+    /// tools receive their own clone via `register_all`; the server-side
+    /// copy is retained for future status use and is not read today.
+    #[allow(dead_code)]
     transaction_state: wm_tools::expansion::TransactionState,
     /// TriModelManager — tri-model lifecycle (autonomic/left/right)
     #[allow(dead_code)]
@@ -1897,6 +1921,7 @@ impl McpServer {
     /// tolerances. Concurrent-session latency stays bounded by per-tool
     /// dispatch timeouts (WM_DISPATCH_TIMEOUT_MS).
     pub async fn run_sse(&mut self, addr: std::net::SocketAddr) -> anyhow::Result<()> {
+        validate_sse_bind(&addr)?;
         let listener = tokio::net::TcpListener::bind(addr).await?;
         tracing::info!(%addr, "HTTP/SSE MCP server listening");
 
@@ -4522,6 +4547,18 @@ mod tests {
     use super::*;
     use crate::input_validation::MAX_PARAMS_SIZE;
     use std::sync::Arc;
+
+    #[test]
+    fn sse_bind_refuses_non_loopback() {
+        let loopback: std::net::SocketAddr = "127.0.0.1:18789".parse().unwrap();
+        let loopback6: std::net::SocketAddr = "[::1]:18789".parse().unwrap();
+        let wildcard: std::net::SocketAddr = "0.0.0.0:18789".parse().unwrap();
+        let lan: std::net::SocketAddr = "192.168.1.10:18789".parse().unwrap();
+        assert!(validate_sse_bind(&loopback).is_ok());
+        assert!(validate_sse_bind(&loopback6).is_ok());
+        assert!(validate_sse_bind(&wildcard).is_err());
+        assert!(validate_sse_bind(&lan).is_err());
+    }
 
     #[test]
     fn frozen_env_accepts_the_documented_pins_only() {

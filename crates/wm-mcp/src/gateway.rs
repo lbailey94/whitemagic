@@ -616,6 +616,7 @@ impl Gateway {
         self: std::sync::Arc<Self>,
         addr: std::net::SocketAddr,
     ) -> anyhow::Result<()> {
+        crate::server::validate_sse_bind(&addr)?;
         let listener = tokio::net::TcpListener::bind(addr).await?;
         tracing::info!(%addr, "federated gateway listening (HTTP)");
         loop {
