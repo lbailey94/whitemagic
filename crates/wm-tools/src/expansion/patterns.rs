@@ -237,3 +237,113 @@ impl Tool for SerendipitySurfaceTool {
         &self.stats
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wm_memory::{Association, LinkType, Memory};
+
+    fn open_store() -> (tempfile::TempDir, Arc<MemoryStore>) {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
+        (tmp, store)
+    }
+
+    #[tokio::test]
+    async fn pattern_search_is_case_insensitive_and_galaxy_scoped() {
+        let (_tmp, store) = open_store();
+        let mut codex = Memory::new(Galaxy::Codex, "Needle in the codex haystack".into());
+        codex.metadata.id = uuid::Uuid::from_u128(0x701);
+        store.put(Galaxy::Codex, &codex).unwrap();
+        let mut research = Memory::new(Galaxy::Research, "needle elsewhere entirely".into());
+        research.metadata.id = uuid::Uuid::from_u128(0x702);
+        store.put(Galaxy::Research, &research).unwrap();
+
+        let scoped = PatternSearchTool::new(store.clone())
+            .call(
+                &mut Context::default(),
+                json!({"pattern": "NEEDLE", "galaxies": ["codex"]}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(scoped["matches"], 1);
+        assert_eq!(
+            scoped["results"][0]["id"].as_str().unwrap(),
+            codex.metadata.id.to_string()
+        );
+
+        let absent = PatternSearchTool::new(store)
+            .call(&mut Context::default(), json!({"pattern": "zzz-absent"}))
+            .await
+            .unwrap();
+        assert_eq!(absent["matches"], 0);
+    }
+
+    #[tokio::test]
+    async fn salience_spotlight_filters_then_sorts_by_importance() {
+        let (_tmp, store) = open_store();
+        for (id, importance) in [(0x711u128, 0.9f32), (0x712, 0.85), (0x713, 0.2)] {
+            let mut memory = Memory::new(Galaxy::Codex, format!("importance fixture {id}"));
+            memory.metadata.id = uuid::Uuid::from_u128(id);
+            memory.metadata.importance = importance;
+            store.put(Galaxy::Codex, &memory).unwrap();
+        }
+
+        let result = SalienceSpotlightTool::new(store)
+            .call(
+                &mut Context::default(),
+                json!({"min_importance": 0.8, "limit": 1}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["count"], 1);
+        assert_eq!(
+            result["spotlight"][0]["id"].as_str().unwrap(),
+            uuid::Uuid::from_u128(0x711).to_string()
+        );
+        assert!((result["spotlight"][0]["importance"].as_f64().unwrap() - 0.9).abs() < 1e-6);
+    }
+
+    #[tokio::test]
+    async fn serendipity_surfaces_only_cross_galaxy_links() {
+        let (_tmp, store) = open_store();
+        let mut source = Memory::new(Galaxy::Codex, "origin".into());
+        source.metadata.id = uuid::Uuid::from_u128(0x721);
+        let mut cross = Memory::new(Galaxy::Research, "cross galaxy target".into());
+        cross.metadata.id = uuid::Uuid::from_u128(0x722);
+        let mut same = Memory::new(Galaxy::Codex, "same galaxy target".into());
+        same.metadata.id = uuid::Uuid::from_u128(0x723);
+        store.put(Galaxy::Codex, &source).unwrap();
+        store.put(Galaxy::Research, &cross).unwrap();
+        store.put(Galaxy::Codex, &same).unwrap();
+
+        let env = store.env();
+        let assoc_store = AssociationStore::open(env).unwrap();
+        assoc_store
+            .put(
+                env,
+                &Association::new(
+                    source.metadata.id,
+                    cross.metadata.id,
+                    LinkType::Related,
+                    0.9,
+                ),
+            )
+            .unwrap();
+        assoc_store
+            .put(
+                env,
+                &Association::new(source.metadata.id, same.metadata.id, LinkType::Related, 0.5),
+            )
+            .unwrap();
+
+        let result = SerendipitySurfaceTool::new(store)
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
+        assert_eq!(result["total_associations"], 2);
+        assert_eq!(result["cross_galaxy_links"], 1);
+        assert_eq!(result["serendipities"][0]["source_galaxy"], "codex");
+        assert_eq!(result["serendipities"][0]["target_galaxy"], "research");
+    }
+}
