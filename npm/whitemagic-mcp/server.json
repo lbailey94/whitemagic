@@ -9,12 +9,12 @@
     "source": "github",
     "subfolder": "npm/whitemagic-mcp"
   },
-  "version": "9.2.4",
+  "version": "9.2.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "whitemagic-mcp",
-      "version": "9.2.4",
+      "version": "9.2.5",
       "transport": {
         "type": "stdio"
       }

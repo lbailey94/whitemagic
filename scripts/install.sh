@@ -3,7 +3,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.sh | sh
-#   curl -fsSL ... | sh -s -- --version v9.2.4
+#   curl -fsSL ... | sh -s -- --version v9.2.5
 #   curl -fsSL ... | sh -s -- --ref hero      # install attribution (local marker)
 #
 # --ref (or WM_INSTALL_REF) is recorded locally in
@@ -104,7 +104,7 @@ if [ -z "$VERSION" ]; then
         | grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
     if [ -z "$VERSION" ]; then
         echo "Could not determine latest release version." >&2
-        echo "Specify --version explicitly, e.g.: $0 --version v9.2.4" >&2
+        echo "Specify --version explicitly, e.g.: $0 --version v9.2.5" >&2
         exit 1
     fi
 fi
