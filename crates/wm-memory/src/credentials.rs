@@ -335,7 +335,13 @@ fn uri_userinfo_span(text: &str) -> Option<(usize, usize)> {
         let authority_start = sep + 3;
         let scheme_start = text[..sep]
             .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == '+' || c == '.' || c == '-'))
-            .map_or(0, |i| i + 1);
+            .map_or(0, |i| {
+                // `rfind` returns the byte index of the char start; advance by
+                // its UTF-8 width so a multibyte neighbor (e.g. '†' before
+                // "://") cannot land the slice mid-character (2026-09-23
+                // ingest panic: "start byte index ... is not a char boundary").
+                i + text[i..].chars().next().map_or(1, char::len_utf8)
+            });
         let scheme = &text[scheme_start..sep];
         let scheme_ok = scheme.starts_with(|c: char| c.is_ascii_alphabetic());
         if scheme_ok {
@@ -705,5 +711,27 @@ mod tests {
                 "lookalike must stay clean: {text}"
             );
         }
+    }
+
+    /// Regression (2026-09-23 fleet report): a multibyte character directly
+    /// before the scheme separator made the backward scheme scan slice at
+    /// `char_start + 1`, panicking mid-character during `wm ingest` on Codex
+    /// session logs ("start byte index ... is not a char boundary").
+    #[test]
+    fn uri_scan_is_char_boundary_safe_next_to_multibyte_text() {
+        // '†' is 3 bytes; the old code produced a mid-char slice here.
+        let text = "†††https://alice:fakepassword123456@db.example.com/prod";
+        assert_eq!(
+            credential_shaped_content(text),
+            vec!["credential_uri".to_string()],
+            "multibyte neighbors must not break URI detection"
+        );
+        let (redacted, _) = redact_credential_content(text);
+        assert!(redacted.contains("[REDACTED:"), "{redacted}");
+        assert!(!redacted.contains("fakepassword123456"), "{redacted}");
+
+        // And a long multibyte run before a lookalike stays clean, no panic.
+        let lookalike = "†".repeat(64) + "https://example.com/path";
+        assert!(credential_shaped_content(&lookalike).is_empty());
     }
 }
