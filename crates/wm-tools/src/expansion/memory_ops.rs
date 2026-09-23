@@ -5276,9 +5276,8 @@ mod tests {
     fn weak_evidence_abstention_fts_uses_token_coverage() {
         // FTS rows have no matched_terms; coverage comes from the top hit's
         // content. 2 of 4 query terms present => 0.5 < 0.6 abstains.
-        let partial = vec![
-            json!({"source": "fts", "raw_score": 4.5, "content": "alpha beta only here"}),
-        ];
+        let partial =
+            vec![json!({"source": "fts", "raw_score": 4.5, "content": "alpha beta only here"})];
         let hit = weak_evidence_abstention_with(&partial, "alpha beta gamma delta", 0.0, 0.6)
             .expect("partial coverage abstains");
         assert_eq!(hit["reason"], "coverage_below_floor");

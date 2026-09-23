@@ -62,7 +62,10 @@ WhiteMagic v9 is a trusted local single-user process. Its security model:
 - **Exact transactions**: `transaction.begin/rollback` snapshot and restore
   byte-equivalent records; rollback failures stay retryable.
 - **Karma chain**: SHA-256 hash chain over dispatch records, with optional
-  external Merkle anchors for tamper evidence.
+  external Merkle anchors for tamper evidence. Pre-linkage (legacy) entries
+  are counted and disclosed per store by `wm doctor` as `N legacy
+  (linkage-only)` — they sit outside deep verification and must not be read
+  as chain-verified.
 - **Input validation**: request budgets, rate limiting, parameter caps,
   injection filtering, SSRF protection, and path-traversal protection at the
   MCP boundary.
