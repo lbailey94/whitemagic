@@ -1013,6 +1013,21 @@ enum SessionCommands {
     },
 }
 
+impl SessionCommands {
+    /// The MCP session route each CLI subcommand maps onto. Q08-G5: the CLI
+    /// dispatch path skips the firebreak pipeline (boundary-matrix divergence
+    /// D1), so this mapping is the guard surface — the CLI must never grow a
+    /// session subcommand that lands on a destructive route.
+    const fn tool_name(&self) -> &'static str {
+        match self {
+            Self::Start { .. } => "session.start",
+            Self::Record { .. } => "session.record",
+            Self::Checkpoint { .. } => "session.checkpoint",
+            Self::Continuity { .. } => "session.continuity",
+        }
+    }
+}
+
 fn default_store_path() -> PathBuf {
     std::env::var("XDG_DATA_HOME").map_or_else(
         |_| {
@@ -4200,6 +4215,11 @@ fn run_session_command(command: SessionCommands) -> anyhow::Result<()> {
         SessionCheckpointTool, SessionContinuityTool, SessionRecordTool, SessionStartTool,
     };
 
+    // Q08-G5 guard: the subcommand→route mapping is the CLI's non-destructive
+    // contract (this path skips the firebreak pipeline); surface it in the
+    // dispatch path so a future subcommand cannot silently diverge.
+    tracing::debug!(route = command.tool_name(), "wm session dispatch");
+
     let store_root = match &command {
         SessionCommands::Start { store, .. }
         | SessionCommands::Record { store, .. }
@@ -6984,6 +7004,104 @@ mod session_cli_tests {
         assert!(
             !root.exists(),
             "continuity on a missing store must not create one: {root:?}"
+        );
+    }
+
+    /// Q08-G5: `wm session` bypasses the dispatch pipeline (boundary-matrix
+    /// divergence D1), so the subcommand→route mapping is the guard: every
+    /// variant must land on a non-destructive session route and stay out of
+    /// the firebreak's destructive scope registry.
+    #[test]
+    fn session_cli_commands_are_non_destructive_and_unscoped() {
+        use wm_core::Tool as _;
+
+        let mapping = [
+            (
+                SessionCommands::Start {
+                    title: "t".into(),
+                    user: "u".into(),
+                    store: None,
+                },
+                "session.start",
+            ),
+            (
+                SessionCommands::Record {
+                    content: "c".into(),
+                    role: "user".into(),
+                    turn_type: "message".into(),
+                    importance: 0.5,
+                    session_id: None,
+                    supersedes: None,
+                    store: None,
+                },
+                "session.record",
+            ),
+            (
+                SessionCommands::Checkpoint {
+                    session_id: None,
+                    label: "checkpoint".into(),
+                    root: None,
+                    commit: None,
+                    branch: None,
+                    tests_green: None,
+                    next_queue: Vec::new(),
+                    open_flags: Vec::new(),
+                    lease_id: None,
+                    store: None,
+                },
+                "session.checkpoint",
+            ),
+            (
+                SessionCommands::Continuity {
+                    n: 10,
+                    session_id: None,
+                    since: None,
+                    until: None,
+                    store: None,
+                },
+                "session.continuity",
+            ),
+        ];
+        for (command, expected) in &mapping {
+            assert_eq!(command.tool_name(), *expected);
+            assert!(
+                !wm_governance::firebreak::SCOPE_REGISTRY
+                    .iter()
+                    .any(|(route, _)| route == expected),
+                "{expected} must not be a destructive scope-registry route"
+            );
+        }
+
+        let tmp = tempfile::tempdir().unwrap();
+        let store = std::sync::Arc::new(
+            wm_memory::MemoryStore::open_default(tmp.path().join("lmdb")).unwrap(),
+        );
+        macro_rules! check_tool {
+            ($tool:expr, $expected:expr) => {{
+                let tool = $tool;
+                assert_eq!(tool.name(), $expected);
+                assert!(
+                    !tool.effects().destructive,
+                    "{} must not be destructive",
+                    $expected
+                );
+            }};
+        }
+        check_tool!(
+            wm_tools::expansion::SessionStartTool::new(store.clone()),
+            "session.start"
+        );
+        check_tool!(
+            wm_tools::expansion::SessionRecordTool::new(store.clone()),
+            "session.record"
+        );
+        check_tool!(
+            wm_tools::expansion::SessionCheckpointTool::new(store.clone()),
+            "session.checkpoint"
+        );
+        check_tool!(
+            wm_tools::expansion::SessionContinuityTool::new(store),
+            "session.continuity"
         );
     }
 
