@@ -5,6 +5,25 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.6] — 2026-09-23
+
+### Added
+- **Opt-in product-telemetry emitter (schema 1, basic mode)** —
+  `wm telemetry product-preview|product-enable --share|product-disable`: the
+  site `/api/ingest` allowlist as a core emitter, with an explicit consent
+  ledger (`product_share.json`), the payload printed before the first send, no
+  install id in basic mode, validated client/channel labels, one spooled retry,
+  a `WM_PRODUCT_TELEMETRY_DISABLED` kill switch, and an endpoint override for
+  tests. Off by default; nothing is sent without `product-enable --share`.
+
+### Fixed
+- **`wm ingest` panic on multibyte text next to URI schemes** — the backward
+  scheme scan advanced past the matched character with `+ 1`, slicing
+  mid-character when the neighbor was multibyte (`†` before `://`); ingest of
+  Codex session logs panicked and left `fleet-sync` red. The scan now advances
+  by the character's UTF-8 width, with a regression test for multibyte
+  neighbors (verified against the reported repro: 49 files, 0 errors).
+
 ## [9.2.5] — 2026-09-22
 
 ### Added
