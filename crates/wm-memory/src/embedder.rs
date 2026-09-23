@@ -1151,6 +1151,97 @@ mod tests {
     }
 
     #[test]
+    fn http_embedder_fanout_propagates_chunk_failure() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+
+        let texts = ["alpha", "beta", "gamma", "please-fail", "epsilon", "zeta"];
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        // Mock llama-server: the chunk carrying "please-fail" answers 500;
+        // every other chunk answers normally. Chunk membership is decided by
+        // the request body, so the test is order-independent.
+        let server = std::thread::spawn(move || {
+            let mut served = 0usize;
+            let deadline = std::time::Instant::now() + Duration::from_secs(10);
+            while served < 2 && std::time::Instant::now() < deadline {
+                listener.set_nonblocking(true).unwrap();
+                let Ok((mut stream, _)) = listener.accept() else {
+                    std::thread::sleep(Duration::from_millis(5));
+                    continue;
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 2048];
+                let header_end = loop {
+                    let n = stream.read(&mut tmp).unwrap();
+                    buf.extend_from_slice(&tmp[..n]);
+                    if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                        break pos + 4;
+                    }
+                };
+                let headers = String::from_utf8_lossy(&buf[..header_end]).to_ascii_lowercase();
+                let content_length: usize = headers
+                    .lines()
+                    .find_map(|l| l.strip_prefix("content-length:"))
+                    .and_then(|v| v.trim().parse().ok())
+                    .unwrap_or(0);
+                while buf.len() < header_end + content_length {
+                    let n = stream.read(&mut tmp).unwrap();
+                    buf.extend_from_slice(&tmp[..n]);
+                }
+                let req: serde_json::Value =
+                    serde_json::from_slice(&buf[header_end..header_end + content_length]).unwrap();
+                let inputs = req["input"].as_array().unwrap();
+                let fails = inputs.iter().any(|v| v.as_str() == Some("please-fail"));
+                let (status, body) = if fails {
+                    (
+                        "500 Internal Server Error",
+                        "{\"error\":\"synthetic chunk failure\"}".to_string(),
+                    )
+                } else {
+                    let data: Vec<_> = inputs
+                        .iter()
+                        .map(|_| serde_json::json!({"embedding": [0.0]}))
+                        .collect();
+                    ("200 OK", serde_json::json!({"data": data}).to_string())
+                };
+                let response = format!(
+                    "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream.write_all(response.as_bytes()).unwrap();
+                served += 1;
+            }
+            served
+        });
+
+        let embedder = HttpEmbedder::new(EmbedderConfig {
+            endpoint: format!("http://{addr}"),
+            model: "mock".into(),
+            dimension: 1,
+            timeout: Duration::from_secs(10),
+        })
+        .with_concurrency(2);
+
+        let error = embedder.embed_batch(&texts).unwrap_err();
+        let message = format!("{error}");
+        assert!(
+            message.contains("Embedder HTTP error"),
+            "a failed chunk must surface as an embedder error, got: {message}"
+        );
+        assert!(
+            server.join().unwrap() >= 2,
+            "both chunks must have been attempted (one success, one failure)"
+        );
+    }
+
+    #[test]
     fn http_embedder_cache_namespace_separates_models_and_dims() {
         let make = |model: &str, dim: usize| {
             HttpEmbedder::new(EmbedderConfig {

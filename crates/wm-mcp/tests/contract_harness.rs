@@ -387,3 +387,90 @@ fn declared_schema_bounds_and_enums_are_coherent() {
         failures.join("\n")
     );
 }
+
+/// F. Command-bearing seam fields are actually veto-scanned (the complement
+/// of the prose exemption): for every on-seam tool, a forbidden pattern in
+/// any non-prose property must block, while the same payload in a declared
+/// prose field must not. This keeps `prose_fields` from hiding a command
+/// field behind a prose label.
+#[test]
+fn command_bearing_seam_fields_are_veto_scanned() {
+    use serde_json::json;
+    use wm_governance::firebreak::{
+        FirebreakOutcome, SCOPE_REGISTRY, ScopeRule, SeamToolDeclaration,
+    };
+
+    let (_tmp, server) = registry_for_test();
+    let firebreak = Firebreak::with_armed(true);
+
+    let mut checked = 0usize;
+    let mut failures: Vec<String> = Vec::new();
+
+    for tool in server.registry().all_ref() {
+        let effects = tool.effects();
+        if !Firebreak::is_on_seam(effects) {
+            continue;
+        }
+        let name = tool.name();
+        let schema = tool.input_schema();
+        let Some(props) = schema.get("properties").and_then(|v| v.as_object()) else {
+            continue;
+        };
+        let prose = SeamToolDeclaration::prose_fields_for(name);
+
+        // Satisfy the bulk-scope law so the only block under test is the
+        // pattern veto (destructive tools with named scope fields).
+        let scope_fill = if effects.destructive {
+            match SCOPE_REGISTRY
+                .iter()
+                .find(|(n, _)| *n == name)
+                .map(|(_, rule)| rule)
+            {
+                Some(ScopeRule::ArgFields(fields)) => fields.first().copied(),
+                _ => None,
+            }
+        } else {
+            None
+        };
+
+        for prop in props.keys() {
+            let mut args = serde_json::Map::new();
+            if let Some(field) = scope_fill {
+                args.insert(field.to_string(), json!("scope-under-test"));
+            }
+            args.insert(prop.clone(), json!("rm -rf /"));
+            let outcome = firebreak.enforce(name, effects, &Value::Object(args));
+            if prose.contains(&prop.as_str()) {
+                if let FirebreakOutcome::Blocked(reason) = &outcome {
+                    failures.push(format!(
+                        "{name}.{prop}: declared prose field blocked a forbidden-quoting \
+                         payload: {reason}"
+                    ));
+                }
+            } else {
+                checked += 1;
+                match &outcome {
+                    FirebreakOutcome::Blocked(reason) if reason.contains("FORBIDDEN") => {}
+                    FirebreakOutcome::Blocked(reason) => failures.push(format!(
+                        "{name}.{prop}: expected a FORBIDDEN veto, got another block: {reason}"
+                    )),
+                    FirebreakOutcome::Proceed { .. } => failures.push(format!(
+                        "{name}.{prop}: forbidden pattern not vetoed — command-bearing field is \
+                         not scanned"
+                    )),
+                }
+            }
+        }
+    }
+
+    assert!(
+        checked >= 5,
+        "expected command-bearing seam fields to check; found only {checked}"
+    );
+    assert!(
+        failures.is_empty(),
+        "seam scan coverage failures ({}):\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
