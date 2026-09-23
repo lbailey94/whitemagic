@@ -181,7 +181,10 @@ def probe_mcp_registry(version: str) -> dict:
         "https://registry.modelcontextprotocol.io/v0/servers"
         f"?search={query}&limit=100"
     )
-    status, data = fetch_json(url)
+    # The search endpoint is slow (24.8s observed 2026-09-23 for the full
+    # name + limit=100); the 20s default marked it unreachable and failed the
+    # v9.2.6 health gate three times while the entry was actually live.
+    status, data = fetch_json(url, timeout=60)
     if status is None:
         return {"status": "unreachable", "url": url, "error": data}
     servers = (data or {}).get("servers", [])
