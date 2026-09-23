@@ -773,6 +773,33 @@ enum TelemetryCommands {
         #[arg(long)]
         store: Option<PathBuf>,
     },
+    /// Show the opt-in product-telemetry payload (schema 1) this store would
+    /// send — display-only; no network I/O, nothing written
+    ProductPreview {
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
+    /// Opt in to product telemetry — prints the exact schema-1 payload first;
+    /// nothing is sent without that confirmation
+    ProductEnable {
+        /// The explicit opt-in signal (required: consent must be deliberate)
+        #[arg(long)]
+        share: bool,
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+        /// Skip the interactive confirmation (non-TTY scripts; the payload
+        /// is still printed)
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Stop sending product telemetry (the consent ledger stays for audit)
+    ProductDisable {
+        /// Store root (default: ~/.local/share/whitemagic)
+        #[arg(long)]
+        store: Option<PathBuf>,
+    },
 }
 
 #[derive(clap::Subcommand)]
@@ -2477,6 +2504,89 @@ fn run() -> anyhow::Result<()> {
                 if let Some(next) = state.install_id.as_deref() {
                     println!("Current:  {next}");
                 }
+            }
+            TelemetryCommands::ProductPreview { store } => {
+                let store_path = store.unwrap_or_else(default_store_path);
+                let counts = wm_memory::MemoryStore::open_inspection(store_path.join("lmdb"))
+                    .map(|opened| wm_tools::expansion::funnel_share::local_counts(&opened))
+                    .unwrap_or_default();
+                let Some(payload) =
+                    wm_tools::expansion::product_share::heartbeat_payload(counts.memories)
+                else {
+                    eprintln!("Could not build the schema-1 payload.");
+                    return Ok(());
+                };
+                println!("=== Product telemetry preview (display-only; nothing is sent) ===");
+                println!(
+                    "Endpoint: {}",
+                    wm_tools::expansion::product_share::endpoint()
+                );
+                println!("{}", serde_json::to_string_pretty(&payload)?);
+            }
+            TelemetryCommands::ProductEnable { share, store, yes } => {
+                if !share {
+                    eprintln!(
+                        "Refusing to enable: pass --share to opt in (consent must be deliberate). Nothing was sent."
+                    );
+                    return Ok(());
+                }
+                let store_path = store.unwrap_or_else(default_store_path);
+                let counts = wm_memory::MemoryStore::open_inspection(store_path.join("lmdb"))
+                    .map(|opened| wm_tools::expansion::funnel_share::local_counts(&opened))
+                    .unwrap_or_default();
+                let Some(payload) =
+                    wm_tools::expansion::product_share::heartbeat_payload(counts.memories)
+                else {
+                    eprintln!("Could not build the schema-1 payload.");
+                    return Ok(());
+                };
+                println!("=== Product telemetry (opt-in, schema 1) ===");
+                println!("This is the exact payload sent (aggregate counters only):");
+                println!("{}", serde_json::to_string_pretty(&payload)?);
+                println!();
+                println!("Content-free allowlist: no memory text, prompts, paths, hostnames, or");
+                println!("IPs, and no install id (basic mode). `wm telemetry product-disable`");
+                println!("stops sending.");
+                println!(
+                    "Endpoint: {}",
+                    wm_tools::expansion::product_share::endpoint()
+                );
+                let confirmed = if yes {
+                    true
+                } else if std::io::stdin().is_terminal() {
+                    print!("Type 'yes' to opt in: ");
+                    std::io::Write::flush(&mut std::io::stdout())?;
+                    let mut line = String::new();
+                    std::io::stdin().read_line(&mut line)?;
+                    line.trim().eq_ignore_ascii_case("yes")
+                } else {
+                    eprintln!(
+                        "Refusing to enable from a non-interactive shell without --yes: an agent may not consent for a human."
+                    );
+                    return Ok(());
+                };
+                if !confirmed {
+                    println!("Not enabled — nothing was sent.");
+                    return Ok(());
+                }
+                wm_tools::expansion::product_share::enable(&store_path)?;
+                let result = wm_tools::expansion::product_share::send_payload(
+                    &store_path,
+                    &payload,
+                    &wm_tools::expansion::funnel_share::UreqPoster,
+                );
+                if result == "ok" {
+                    println!("Product telemetry enabled — first payload sent.");
+                } else {
+                    println!(
+                        "Product telemetry enabled — first send did not complete ({result}); the payload is spooled and retried once."
+                    );
+                }
+            }
+            TelemetryCommands::ProductDisable { store } => {
+                let store_path = store.unwrap_or_else(default_store_path);
+                wm_tools::expansion::product_share::disable(&store_path)?;
+                println!("Product telemetry disabled. No further payloads will be sent.");
             }
         },
         Commands::Polyglot => {

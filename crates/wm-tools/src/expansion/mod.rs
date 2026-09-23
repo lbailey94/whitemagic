@@ -78,6 +78,7 @@ pub mod oss_bounty;
 pub mod patterns;
 pub mod pipeline;
 pub mod pray;
+pub mod product_share;
 pub mod reasoning;
 pub mod receipts;
 pub mod research;
