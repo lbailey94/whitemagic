@@ -102,7 +102,15 @@ if $TAIL_ONLY; then
   banner "TAIL-ONLY — post-release stages for an already-published v$VERSION"
   echo "skipping: version bump, CI gate, signed tag, Release workflow."
   echo "running: assets, registries, release health, contract manifest, site sync, Hub README."
-  TAG_PUSH_AT=$(date +%s)
+  # The tag stages are skipped, so derive the two anchors they would set:
+  # the tag's creation time (floor for the release-health lookup) and the
+  # tag-triggered Release run id (for advisory hints). 2026-09-23: tail-only
+  # crashed here with RUN_ID unbound under set -u.
+  TAG_PUSH_AT=$(git for-each-ref --format='%(taggerdate:unix)' "refs/tags/v$VERSION" 2>/dev/null || true)
+  [ -n "${TAG_PUSH_AT:-}" ] || TAG_PUSH_AT=$(date +%s)
+  RUN_ID=$(gh run list --workflow Release --limit 10 \
+    --json databaseId,headBranch \
+    --jq ".[] | select(.headBranch == \"v$VERSION\") | .databaseId" 2>/dev/null | head -n1 || true)
 else
 
 # ── version bump ─────────────────────────────────────────────────────────
@@ -295,7 +303,7 @@ else
   else
     echo "  WARN: MCP registry index did not show $VERSION within the probe window."
     echo "        The workflow reported the publish; confirm with:"
-    echo "        gh run view $RUN_ID --log | grep -A2 -i 'mcp registry'"
+    echo "        gh run view ${RUN_ID:-<release run>} --log | grep -A2 -i 'mcp registry'"
   fi
 fi
 
