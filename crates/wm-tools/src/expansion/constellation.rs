@@ -167,3 +167,76 @@ impl Tool for ConstellationListTool {
         &self.stats
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wm_memory::Memory;
+
+    fn open_store() -> (tempfile::TempDir, Arc<MemoryStore>) {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
+        (tmp, store)
+    }
+
+    fn put_tagged(store: &MemoryStore, tag: &str, count: usize) {
+        for i in 0..count {
+            let mut memory = Memory::new(Galaxy::Codex, format!("{tag} fixture {i}"));
+            memory.metadata.tags = vec![tag.to_string()];
+            store.put(Galaxy::Codex, &memory).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn constellation_detect_groups_tags_above_min_cluster_size() {
+        let (_tmp, store) = open_store();
+        put_tagged(&store, "alpha", 3);
+        put_tagged(&store, "beta", 1);
+
+        // `spatial: false` pins the documented tag-frequency fallback: the
+        // min_cluster_size argument is ignored on the spatial path.
+        let result = ConstellationDetectTool::new(store)
+            .call(
+                &mut Context::default(),
+                json!({"spatial": false, "min_cluster_size": 3}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["mode"], "tag_frequency_clustering");
+        assert_eq!(result["constellations"], 1);
+        let clusters = result["clusters"].as_array().unwrap();
+        assert_eq!(clusters.len(), 1);
+        assert_eq!(clusters[0]["tag"], "alpha");
+        assert_eq!(clusters[0]["count"], 3);
+    }
+
+    #[tokio::test]
+    async fn constellation_list_uses_the_fixed_three_memory_threshold() {
+        let (_tmp, store) = open_store();
+        put_tagged(&store, "alpha", 3);
+        put_tagged(&store, "beta", 2);
+
+        let result = ConstellationListTool::new(store)
+            .call(&mut Context::default(), json!({}))
+            .await
+            .unwrap();
+        let clusters = result["constellations"].as_array().unwrap();
+        let tags: Vec<&str> = clusters
+            .iter()
+            .map(|c| c["tag"].as_str().unwrap())
+            .collect();
+        assert!(
+            tags.contains(&"alpha"),
+            "alpha (3) must be listed: {tags:?}"
+        );
+        assert!(
+            !tags.contains(&"beta"),
+            "beta (2) must not be listed: {tags:?}"
+        );
+        // `total_tags` is the constellation count, not a raw tag total.
+        assert_eq!(
+            result["total_tags"].as_u64().unwrap() as usize,
+            clusters.len()
+        );
+    }
+}
