@@ -9,7 +9,7 @@
 ARG ALPINE_VERSION=3.21
 FROM alpine:${ALPINE_VERSION}
 
-ARG WM_VERSION=v9.2.6
+ARG WM_VERSION=v9.2.7
 ARG WM_TARGET=musl
 # Explicit arch override for classic `docker build`; with buildx, TARGETARCH
 # is mapped automatically (amd64 -> x86_64, arm64 -> aarch64).
@@ -20,7 +20,7 @@ ARG TARGETARCH
 # package reference in npm/whitemagic-mcp/server.json).
 LABEL io.modelcontextprotocol.server.name="io.github.lbailey94/whitemagic-mcp" \
       org.opencontainers.image.title="WhiteMagic MCP server" \
-      org.opencontainers.image.version="9.2.6" \
+      org.opencontainers.image.version="9.2.7" \
       org.opencontainers.image.url="https://whitemagic.dev" \
       org.opencontainers.image.source="https://github.com/lbailey94/whitemagic"
 

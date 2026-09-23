@@ -2,7 +2,7 @@
 
 **Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
 
-**Version**: 9.2.6
+**Version**: 9.2.7
 **Install path**: Linux x86-64 and Linux arm64 (aarch64) — install-gated,
 fully static (musl) builds selected automatically by the installer (a
 dynamically linked build remains for glibc 2.39+ hosts); releases also
@@ -64,7 +64,7 @@ mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ## 2. Verify
 
 ```bash
-wm --version   # wm 9.2.6
+wm --version   # wm 9.2.7
 wm doctor      # store, index, registry health check
 ```
 
