@@ -5,6 +5,51 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Spawned boundary E2E tests (Q08-G1/G2)** — `daemon_cycle_e2e.rs` drives a bounded
+  `run_daemon` on a disposable store (health-gated cycle skip vs run, empty write-audit
+  journal, canary unchanged); `federated_gateway_e2e.rs` spawns two backings plus a
+  federated gateway over real HTTP and pins the q03 gateway segment (federated read
+  labels both scopes; a pinned `code.claim` lands only on the named backing; unknown
+  scopes fail closed). Dedicated `Boundary E2E` CI job; boundary-matrix G1/G2 closed.
+- **Q04-UT tool-boundary tests** — 14 direct tests for previously zero-test expansion
+  tools: `pattern.search`/`salience.spotlight`/`serendipity.surface`,
+  `constellation.detect`/`list`, the autonomous-cycle tools (health gate, compression
+  primary, emergence, prune vs protected, sensorimotor fail-closed), and
+  `selfplay.run`/`status`/`export`.
+- **Non-loopback SSE binds are refused** — `wm serve --transport sse` and the federated
+  gateway's HTTP mode refuse a non-loopback bind with an actionable error until the S7
+  credential lands (THREAT_MODEL_V9 §6); loopback v4/v6 only.
+- **`wm session` subcommand→route guard (Q08-G5)** — the CLI mapping is pinned by test
+  against the destructive scope registry and each tool's effect row, so the CLI path
+  (which skips the firebreak pipeline) cannot silently grow a destructive subcommand.
+- **Contract harness check F** — command-bearing seam fields are proven veto-scanned:
+  a forbidden pattern placed in every non-prose property must block, while declared
+  prose fields stay exempt.
+
+### Fixed
+- **Landlock enforcement on ABI < 7 kernels** — the ABI probe now validates each
+  candidate by creating its ruleset under `HardRequirement` and never promotes with the
+  ABI-v7 `all_threads` flag (which silently downgraded the whole ruleset to `partial`
+  on the hosted 6.12 kernel); the box reports `enforced` from this release. Regression
+  test Linux-gated (macOS/Windows CI compile fixed).
+- **FTS-route abstention coverage** — `WM_RECALL_ABSTENTION_COVERAGE` now bites on the
+  fts route via a stemming-aware `token_coverage` of the top hit (`signal: coverage`),
+  closing the hosted "nonsense scores 1.0" gap for the full-text path.
+- **Embedder fan-out chunk failures propagate** — a failed chunk in a concurrent batch
+  surfaces as an embedder error instead of silent partial vectors (failure-injection
+  test).
+- **macOS CI** now runs nextest with the documented retry profile (the retries only
+  applied to nextest runs, so the FIN/RST and timing flakes were never absorbed);
+  clippy/rustfmt drift on the abstention commit cleared (workspace
+  `clippy --all-targets -D warnings` green again).
+
+### Changed
+- **Karma-chain disclosure** — `SECURITY.md`/AGENTS state that pre-linkage (legacy)
+  entries are linkage-only, counted per store by `wm doctor`, and not chain-verified.
+
 ## [9.2.4] — 2026-09-22
 
 ### Added
