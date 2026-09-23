@@ -1037,11 +1037,13 @@ fn count_token_hits(content: &str, stripped_query: &str) -> usize {
         .count()
 }
 
-/// Fraction of a query's stopword-stripped content terms that appear in
-/// `content` (stemming-aware), for callers that need an abstention signal on
-/// retrieval paths without a `matched_terms` count (the FTS route). Score
-/// floors do not separate nonsense from real queries on the hosted corpus
-/// (measured 2026-09-22: nonsense up to 4.55, real from 2.06); coverage does.
+/// Fraction of a query's stopword-stripped terms present in `content`
+/// (stemming-aware).
+///
+/// For callers that need an abstention signal on retrieval paths without a
+/// `matched_terms` count (the FTS route). Score floors do not separate
+/// nonsense from real queries on the hosted corpus (measured 2026-09-22:
+/// nonsense up to 4.55, real from 2.06); coverage does.
 #[must_use]
 pub fn token_coverage(content: &str, query: &str) -> f64 {
     let stripped = strip_stopwords(query);
@@ -1992,6 +1994,30 @@ mod tests {
         let results = engine.search("graduate degree", 10).unwrap();
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].memory_id, "11111111-1111-1111-1111-111111111111");
+    }
+
+    #[test]
+    fn token_coverage_counts_stemmed_whole_words() {
+        // Direct unit coverage for the FTS-route abstention signal.
+        let content = "Carried the stories for classes in Business Administration";
+        assert_eq!(
+            token_coverage(content, "carry stories classes business"),
+            1.0
+        );
+        assert_eq!(
+            token_coverage(content, "carry stories classes certificate"),
+            0.75
+        );
+        // Stemming-aware: query singular matches the plural in content.
+        // ("class" → "clas" but "classes" → "class": the conservative
+        // stemmer is intentionally asymmetric; use a clean -ies case.)
+        assert_eq!(token_coverage(content, "story"), 1.0);
+        assert_eq!(token_coverage(content, "unrelated nonsense"), 0.0);
+        // Stopword-only and empty queries carry no signal.
+        assert_eq!(token_coverage(content, "the and of"), 0.0);
+        assert_eq!(token_coverage(content, ""), 0.0);
+        // Case-insensitive, like the index.
+        assert_eq!(token_coverage(content, "BUSINESS administration"), 1.0);
     }
 
     #[test]

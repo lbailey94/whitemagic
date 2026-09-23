@@ -2116,6 +2116,37 @@ mod tests {
         assert!((results[0].raw_bm25_score - 3.5).abs() < f32::EPSILON);
     }
 
+    #[test]
+    fn fuse_results_near_ties_keep_absolute_raw_scores() {
+        // Two fused near-ties (raw 1.45 vs 1.18): the relative normalized
+        // score compresses to 1.0 / ~0.814, but the absolute raw BM25 stays
+        // available for the opt-in abstention floor.
+        let id_hi = Uuid::new_v4();
+        let id_lo = Uuid::new_v4();
+        let bm25 = vec![
+            SearchResult {
+                memory_id: id_hi.to_string(),
+                galaxy: Galaxy::Codex.db_name().to_string(),
+                score: 1.45,
+                normalized_score: 0.0,
+                content: "top".into(),
+            },
+            SearchResult {
+                memory_id: id_lo.to_string(),
+                galaxy: Galaxy::Codex.db_name().to_string(),
+                score: 1.18,
+                normalized_score: 0.0,
+                content: "near tie".into(),
+            },
+        ];
+        let results = fuse(&bm25, &[], 10);
+        assert_eq!(results.len(), 2);
+        assert!((results[0].bm25_score - 1.0).abs() < 0.01);
+        assert!((results[1].bm25_score - (1.18 / 1.45)).abs() < 0.01);
+        assert!((results[0].raw_bm25_score - 1.45).abs() < f32::EPSILON);
+        assert!((results[1].raw_bm25_score - 1.18).abs() < f32::EPSILON);
+    }
+
     // ── Embedding cache tests ──────────────────────────────────────────
 
     #[test]
