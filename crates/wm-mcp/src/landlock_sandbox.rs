@@ -238,8 +238,7 @@ mod imp {
     use super::LandlockOutcome;
     use landlock::{
         ABI, AccessFs, CompatLevel, Compatible, LandlockStatus, PathBeneath, PathFd,
-        RestrictionStatus, Ruleset, RulesetAttr, RulesetCreatedAttr,
-        RulesetStatus,
+        RestrictionStatus, Ruleset, RulesetAttr, RulesetCreatedAttr, RulesetStatus,
     };
     use std::path::Path;
 
@@ -260,11 +259,14 @@ mod imp {
 
     /// Highest ABI whose full write set the running kernel supports.
     ///
-    /// Pure userspace checks — the crate caches the kernel's Landlock ABI
-    /// and a HardRequirement `handle_access` errors without creating any
-    /// ruleset — so probing is free and side-effect-free. Requesting exactly
-    /// this set keeps `FullyEnforced` reachable on every Landlock-enabled
-    /// kernel instead of permanently reporting a best-effort downgrade.
+    /// The probe **creates** each candidate ruleset under `HardRequirement`
+    /// to validate it (no restriction is applied, so the probe stays
+    /// side-effect-free). `handle_access` alone accepts a superset of the
+    /// kernel's ABI — observed live 2026-09-22 on a 6.12 kernel (ABI <= 6)
+    /// where the old path selected V8 and `restrict_self` then downgraded
+    /// the whole ruleset to `partial`. Requesting exactly this set keeps
+    /// `FullyEnforced` reachable on every Landlock-enabled kernel instead
+    /// of permanently reporting a best-effort downgrade.
     pub(super) fn effective_write_abi() -> Option<ABI> {
         for abi in WRITE_ABI_LADDER {
             // handle_access alone accepts a superset of the kernel's ABI:
@@ -276,7 +278,7 @@ mod imp {
             let probe = Ruleset::default()
                 .set_compatibility(CompatLevel::HardRequirement)
                 .handle_access(AccessFs::from_write(abi))
-                .and_then(|ruleset| ruleset.create());
+                .and_then(Ruleset::create);
             if probe.is_ok() {
                 return Some(abi);
             }
@@ -290,7 +292,7 @@ mod imp {
         Ruleset::default()
             .set_compatibility(CompatLevel::HardRequirement)
             .handle_access(AccessFs::from_write(abi))
-            .and_then(|ruleset| ruleset.create())
+            .and_then(Ruleset::create)
             .is_ok()
     }
 
@@ -404,6 +406,7 @@ mod tests {
     /// Regression: the ABI selector must only return an ABI whose ruleset
     /// the kernel can actually create — the 2026-09-22 live report showed a
     /// 6.12 kernel selecting V8 and downgrading to `partial`.
+    #[cfg(target_os = "linux")]
     #[test]
     fn effective_write_abi_is_actually_supported() {
         if let Some(abi) = imp::effective_write_abi() {
