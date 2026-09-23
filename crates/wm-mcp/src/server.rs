@@ -3133,7 +3133,7 @@ impl McpServer {
             "2. wm(route=\"session.start\", args={\"title\": \"...\"}) when you begin a session.\n",
             "3. Record selectively via wm(route=\"session.record\") — turn_type decision/breakthrough/error/summary, importance 0.0-1.0 — only what a future session needs.\n",
             "4. Finish with a short summary turn, then wm(route=\"session.checkpoint\").\n",
-            "Prefer the nine lifecycle tools emitted in tools/list; wm(route=\"...\") reaches the wider curated catalog and wm(route=\"tools.list\") enumerates the surface.\n",
+            "Prefer the discrete lifecycle tools emitted in tools/list; wm(route=\"...\") reaches the wider curated catalog and wm(route=\"tools.list\") enumerates the surface.\n",
             "Onboarding: `wm grimoire`; pull existing notes in with `wm ingest --source <folder>`. Memory is not encrypted — Back up the store directory; never record sensitive values."
         ));
         if self.readonly {
@@ -3269,9 +3269,15 @@ impl McpServer {
             "memory.read" => ("Read memory", true, false, true),
             "memory.list" => ("List memories", true, false, true),
             "memory.hybrid_recall" => ("Hybrid recall", true, false, true),
+            "memory.update" => ("Update memory", false, false, false),
+            "memory.revisions" => ("Memory revision chain", true, false, true),
+            "memory.ingest" => ("Ingest documents into memory", false, false, false),
             "session.start" => ("Start or resume a session", false, false, false),
             "session.record" => ("Record a session turn", false, false, false),
+            "session.checkpoint" => ("Save a session checkpoint", false, false, false),
             "session.continuity" => ("Recall session continuity", true, false, true),
+            "receipts.emit" => ("Emit a continuity receipt", false, false, false),
+            "receipts.verify" => ("Verify a continuity receipt", true, false, true),
             _ => ("WhiteMagic tool", false, false, false),
         };
         // Read-only servers cannot mutate or destroy anything, whatever the
@@ -3530,6 +3536,101 @@ impl McpServer {
                             "type": "string",
                             "description": "User identifier (default 'default')"
                         }
+                    }
+                }),
+            ),
+            (
+                "memory.update",
+                "memory.update",
+                "Update an existing memory in place (content, tags, importance, title, topic); a content change appends to the memory's revision chain.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Memory UUID to update" },
+                        "content": { "type": "string", "description": "New content (optional)" },
+                        "tags": { "type": "array", "items": { "type": "string" }, "description": "Replacement tags (optional)" },
+                        "importance": { "type": "number", "minimum": 0.0, "maximum": 1.0, "description": "New importance (optional)" },
+                        "title": { "type": "string", "description": "New title (optional; null clears)" },
+                        "topic": { "type": "string", "description": "New topic label (optional; null clears)" },
+                        "galaxy": { "type": "string", "description": "Galaxy (default: codex)" }
+                    },
+                    "required": ["id"]
+                }),
+            ),
+            (
+                "memory.revisions",
+                "memory.revisions",
+                "List or verify a memory's content revision chain (tamper evidence): every content update is chained and head-checked.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Memory UUID to inspect" },
+                        "action": { "type": "string", "enum": ["list", "verify"], "description": "Action: list (default) | verify" },
+                        "galaxy": { "type": "string", "description": "Galaxy (default: codex)" }
+                    },
+                    "required": ["id"]
+                }),
+            ),
+            (
+                "session.checkpoint",
+                "session.checkpoint",
+                "Save a structured checkpoint (git state, next queue, open flags) so the next session can resume exactly here.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "session_id": { "type": "string", "description": "Target session (default: most recent)" },
+                        "label": { "type": "string", "description": "Checkpoint label" },
+                        "root": { "type": "string", "description": "Repository root for git auto-capture" },
+                        "commit": { "type": "string", "description": "Manual commit hash" },
+                        "branch": { "type": "string", "description": "Manual branch name" },
+                        "tests_green": { "type": "boolean", "description": "Whether the suite was green" },
+                        "next_queue": { "type": "array", "items": { "type": "string" }, "description": "Ordered next steps" },
+                        "open_flags": { "type": "array", "items": { "type": "string" }, "description": "Open concerns to surface on resume" },
+                        "lease_id": { "type": "string", "description": "Claimed scope (code.claim lease_id) still held" }
+                    }
+                }),
+            ),
+            (
+                "memory.ingest",
+                "memory.ingest",
+                "Harvest a folder of documents or session transcripts into the store (idempotent via a SHA-256 ledger; dry-run and redaction on by default).",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "source": { "type": "string", "description": "Directory to harvest recursively" },
+                        "dry_run": { "type": "boolean", "default": true, "description": "Report without writing (default true)" },
+                        "redact": { "type": "boolean", "default": true, "description": "Redact credential-shaped spans (default true)" },
+                        "limit": { "type": "integer", "default": 0, "description": "Only the first N files (0 = all)" },
+                        "galaxy": { "type": "string", "description": "Target galaxy (default: sessions)" }
+                    },
+                    "required": ["source"]
+                }),
+            ),
+            (
+                "receipts.emit",
+                "receipts.emit",
+                "Emit a signed continuity receipt (Ed25519 did:key): session evidence or a karma-chain-head attestation, verifiable offline.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "kind": { "type": "string", "enum": ["session", "karma_head"], "description": "Bundle kind (default: session)" },
+                        "session_id": { "type": "string", "description": "Session UUID (session kind)" },
+                        "limit": { "type": "integer", "description": "Maximum turns covered (default 200)" },
+                        "out": { "type": "string", "description": "Optional path to write the bundle JSON" }
+                    }
+                }),
+            ),
+            (
+                "receipts.verify",
+                "receipts.verify",
+                "Verify a stored receipt id or a bundle offline; fail-closed without an anchor (verdict PROVISIONAL).",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Stored receipt task id (UUID)" },
+                        "bundle": { "type": "object", "description": "Inline bundle to verify (alternative to id)" },
+                        "variant": { "type": "string", "description": "Stored variant (default: original)" },
+                        "require_anchor": { "type": "boolean", "description": "Fail-closed without an anchor" }
                     }
                 }),
             ),
@@ -4911,6 +5012,11 @@ mod tests {
             wm_tools::expansion::RegistryPersistenceMode::Normal,
             circuit_breakers.clone(),
         );
+        // Mirror the real construction: memory.ingest lives in wm-mcp and is
+        // part of the curated catalog, so the test server registers it too.
+        let registry = registry.register(std::sync::Arc::new(
+            crate::ingest_tool::MemoryIngestTool::new(tmp.path()),
+        ));
         let registry = wm_tools::expansion::v4::register_v4(
             &registry,
             Arc::clone(&reflex_table),
@@ -5156,13 +5262,23 @@ mod tests {
         // The wm meta-tool is first, followed by discrete tool aliases for MCP discovery
         assert!(!tools.is_empty());
         assert_eq!(tools[0]["name"], "wm");
+        // 15 total: the meta-tool + 14 discrete aliases (catalog expanded
+        // 2026-09-23 for directory graders and explicit clients).
+        assert_eq!(tools.len(), 15, "catalog shape changed: {tools:?}");
         assert!(tools.iter().any(|t| t["name"] == "memory.search"));
         assert!(tools.iter().any(|t| t["name"] == "memory.create"));
         for expected in [
             "memory.list",
             "memory.hybrid_recall",
+            "memory.update",
+            "memory.revisions",
+            "memory.ingest",
+            "session.start",
             "session.record",
+            "session.checkpoint",
             "session.continuity",
+            "receipts.emit",
+            "receipts.verify",
         ] {
             assert!(
                 tools.iter().any(|t| t["name"] == expected),
@@ -5614,12 +5730,14 @@ mod tests {
         let beta_result = resp.result.unwrap();
         let beta_count = beta_result["tools"].as_array().unwrap().len();
         // In Beta: wm meta-tool is exposed at index 0 plus the discrete
-        // lifecycle catalog (8 tools; citta/captain stay internally
-        // callable but are not catalog surface — coherence trim 2026-09-14).
+        // lifecycle catalog (14 tools; citta/captain stay internally
+        // callable but are not catalog surface — coherence trim 2026-09-14;
+        // catalog expanded 2026-09-23: +update/revisions/ingest/checkpoint/
+        // receipts.emit/verify).
         // In Delta: 0 tools
         assert!(beta_count > delta_count);
         assert_eq!(beta_result["tools"][0]["name"], "wm");
-        assert_eq!(beta_count, 9);
+        assert_eq!(beta_count, 15);
     }
 
     #[tokio::test]
