@@ -269,6 +269,18 @@ jobs:
       # the rest of the matrix).
       - run: cargo nextest run --lib --bins --tests --profile ci --no-fail-fast
 
+  boundary-e2e:
+    timeout-minutes: 20
+    name: Boundary E2E (daemon + federated gateway)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Bounded spawned-process acceptance: bounded daemon sweep (Q08-G1)
+      # and the two-backing federated gateway over real HTTP (Q08-G2).
+      - run: cargo test -p whitemagic --test daemon_cycle_e2e --test federated_gateway_e2e
+
   bench-compile:
     timeout-minutes: 25
     name: Benchmark Compile Check

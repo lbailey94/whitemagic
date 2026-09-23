@@ -381,8 +381,8 @@ dharma, resource rules, rate limit, audit).
 | B2 × destructive | **new** `wm-mcp/tests/dispatch_boundary_matrix.rs::destructive_alias_requires_confirm_and_preserves_the_record` (spawned binary: alias delete refused without confirm, record survives, confirmed delete admitted) |
 | B3 × read/write | `wm-tools/src/lib.rs::wm_route_destructive_*` neighbours, `nlu.rs`/`embedding_router.rs` router suites, `tests/abstention_contract.rs`; smoke-test NLU step |
 | B3 × destructive | `lib.rs::wm_thought_cannot_reach_destructive_tool{,_even_with_confirm}`, `nlu_cannot_reach_any_destructive_tool` (sweeps every registered destructive route) |
-| B4 × all classes | gap **Q08-G1**; nearest evidence `wm-cognitive/tests/redteam.rs::v4_autonomous_cycles_require_minimum_health` + time-budget/human-review unit tests |
-| B5 × read | `gateway.rs::federated_read_merges_labels_and_ranks`, `federated_read_degrades_visibly_when_a_scope_is_down` (mock backing); spawned E2E gap **Q08-G2** (manual `scripts/q03_acceptance.py`) |
+| B4 × all classes | `daemon_cycle_e2e.rs::daemon_cycle_e2e_health_gate_and_no_dispatch` — spawned, bounded daemon; health-gate skip vs run, empty write-audit journal, canary unchanged (closes **Q08-G1**) |
+| B5 × read | `gateway.rs::federated_read_merges_labels_and_ranks`, `federated_read_degrades_visibly_when_a_scope_is_down` (mock backing); spawned `federated_gateway_e2e.rs::federated_gateway_e2e_pins_scopes_and_preserves_inner_payload` (closes **Q08-G2**; `scripts/q03_acceptance.py` stays for live-unit acceptance) |
 | B5 × write | `gateway.rs::pinned_route_goes_to_exactly_one_scope`, `write_without_scope_or_home_fails_closed`, `unknown_scope_fails_closed_naming_reachable_scopes`, `inner_args_scope_does_not_satisfy_routing` |
 | B5 × destructive | gap **Q08-G3** (no live-gateway fixture propagates a destructive route end-to-end; the B1 gate stack is covered, the gateway transport leg is mock-tested only) |
 | B6 × peer actions | `wm-sangha/src/transport.rs::{chat,signal,lock}_authority_is_enforced`, replay/identity theft suites; `wm-mcp/tests/mesh_serve_e2e.rs::raw_frame_binding_and_authority_gates` (Unix-only; Windows lane gap already tracked in the work queue) |
@@ -399,7 +399,8 @@ dharma, resource rules, rate limit, audit).
   cycles operate on store APIs directly (`wm-cognitive/src/autonomous.rs`),
   gated by health/time/novelty and `requires_human_review` rather than the
   firebreak. No destructive registry route is reachable from a cycle body
-  today; E2E proof is **Q08-G1**.
+  today; E2E proof is `daemon_cycle_e2e.rs::daemon_cycle_e2e_health_gate_and_no_dispatch`
+  (bounded spawned run; **Q08-G1 closed 2026-09-22**).
 - **D3 — Two destructive routes were missing from `SCOPE_REGISTRY` (fixed
   2026-09-19).** `galaxy.cold_rotate` declared `destructive: true` but was
   absent from the scope registry, so unscoped dispatches took the
@@ -418,8 +419,8 @@ dharma, resource rules, rate limit, audit).
 
 | ID | Gap | Suggested first slice |
 |---|---|---|
-| Q08-G1 | Daemon-cycle boundary has no E2E (`run_daemon` never driven in tests) | bounded daemon run on a temp store asserting no destructive dispatch and health-gate refusal |
-| Q08-G2 | Federated gateway has no spawned multi-process E2E in CI (mock-only) | promote a bounded `scripts/q03_acceptance.py` gateway segment into `wm-mcp/tests/` |
+| Q08-G1 | **CLOSED 2026-09-22** — `daemon_cycle_e2e.rs::daemon_cycle_e2e_health_gate_and_no_dispatch` (bounded spawned daemon: health-gate skip vs run, empty write-audit, canary unchanged) | closed |
+| Q08-G2 | **CLOSED 2026-09-22** — `federated_gateway_e2e.rs::federated_gateway_e2e_pins_scopes_and_preserves_inner_payload` (spawned 2 backings + gateway: federated read labels, pinned write lands on `dev` only, release, unknown-scope refusal) | closed |
 | Q08-G3 | Destructive route through a live gateway (pinned + confirm + scope at backing) untested end-to-end | two-store federated fixture with a real destructive alias call |
 | Q08-G4 | `registry_classification` invariants exist only in this artifact's test | keep; extend if `EffectRow` grows classes |
 | Q08-G5 | No guard proving the `wm session` CLI surface stays bounded to non-destructive routes | enumeration fixture over the session subcommand map |
