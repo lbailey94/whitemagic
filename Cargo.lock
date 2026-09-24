@@ -1120,9 +1120,9 @@ checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "continuity-receipt"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1524859efb4db8ecb59b5be78d443a92e4db9ea148b1104820ef47d43ac9039f"
+checksum = "d25c3a3d0f7730ecae9af09b09d374486ccbbcfd05d872801cc368e416feac11"
 dependencies = [
  "base64 0.22.1",
  "bs58",
