@@ -1,18 +1,29 @@
 # whitemagic-mcp
 
-[WhiteMagic](https://whitemagic.dev): local-first, governed memory and
-session continuity for AI coding agents, over MCP. One static Rust binary,
-no telemetry by default. MIT.
+Persistent memory and session continuity for AI coding agents, over MCP.
+[WhiteMagic](https://whitemagic.dev) is one static Rust binary — local-first,
+no telemetry by default, MIT — and every handoff can be signed as a
+verifiable [continuity receipt](https://www.whitemagic.dev/trust).
 
-Optional: a read-only hosted evaluation lane runs at
-`https://mcp.whitemagic.dev/mcp` (free evaluation keys), and the receipt
-format with its live verifier is documented at
-https://www.whitemagic.dev/trust.
+Works with Claude Code, Claude Desktop, Cursor, Codex, VS Code, opencode,
+Antigravity, and Devin Desktop — per-client configs:
+https://www.whitemagic.dev/whitemagic/guide
 
 This package installs and runs the official `wm` binary from the
 [GitHub releases](https://github.com/lbailey94/whitemagic/releases)
 (checksum-verified at install time) so an MCP client can launch it
 without a manual download step.
+
+## Try it without installing (hosted read-only lane)
+
+The evaluation lane runs at `https://mcp.whitemagic.dev/mcp`
+(streamable-http; keyless discovery, free evaluation keys, no SLA):
+
+```bash
+claude mcp add whitemagic-mcp --transport http https://mcp.whitemagic.dev/mcp
+```
+
+The npm package remains the local, full-write path.
 
 ## Use
 
@@ -40,13 +51,6 @@ The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 (respects `XDG_CACHE_HOME`); the package version's major tracks the
 release tag (the `v9` tag line). Pin a different release with
 `WHITEMAGIC_RELEASE`.
-
-## Hosted option (read-only beta)
-
-For evaluation without a local install there is a read-only hosted
-endpoint at `https://mcp.whitemagic.dev/mcp` (streamable-http; keyless
-discovery, free evaluation keys, no SLA). The npm package remains the
-local, full-write path.
 
 ## Platforms
 

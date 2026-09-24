@@ -1,7 +1,7 @@
 {
   "name": "whitemagic-mcp",
   "version": "9.2.7",
-  "description": "WhiteMagic MCP server: local-first, governed memory and session continuity for AI coding agents. Installs and runs the wm binary; no telemetry by default; optional read-only hosted evaluation lane.",
+  "description": "Local-first persistent memory and session continuity for AI coding agents (Claude Code, Cursor, Codex), over MCP - one static Rust binary, no telemetry by default, verifiable handoffs.",
   "license": "MIT",
   "bin": {
     "whitemagic-mcp": "./bin/cli.mjs"
@@ -17,13 +17,21 @@
   "keywords": [
     "mcp",
     "mcp-server",
+    "memory",
     "agent-memory",
-    "ai-agents",
-    "local-first",
-    "whitemagic",
+    "ai-memory",
+    "persistent-memory",
     "session-continuity",
+    "context",
+    "local-first",
+    "claude-code",
+    "cursor",
+    "codex",
+    "model-context-protocol",
+    "ai-agents",
     "governance",
-    "receipts"
+    "receipts",
+    "whitemagic"
   ],
   "repository": {
     "type": "git",
