@@ -27,7 +27,7 @@ Or download the binary from the [latest release](https://github.com/lbailey94/wh
 }
 ```
 
-The server speaks stdio JSON-RPC and exposes a single `wm` meta-tool; explicit routing is the dependable contract.
+The server speaks stdio JSON-RPC and exposes the `wm` meta-tool plus a discrete lifecycle catalog (30 client-visible tools in the curated profile, 23 on read-only servers); the `wm` router reaches the full curated route catalog. Explicit routing is the dependable contract.
 
 ## Hosted lanes (read-only beta)
 

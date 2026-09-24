@@ -43,7 +43,9 @@ within 7 days.
 WhiteMagic v9 is a trusted local single-user process. Its security model:
 
 - **Local-first by default**: all data stays in the local LMDB store; no
-  telemetry is sent anywhere.
+  telemetry is sent anywhere by default — the only off-device paths are the
+  explicit opt-ins (install funnel, product telemetry) and the optional
+  read-only hosted evaluation lane.
 - **Curated tool surface**: the release profile exposes the memory/session
   workflow; the tool archive surface is opt-in (registered total 237 at the
   v5.8.0 release gate, 2026-08-20 — a dated figure, not today's exposure;

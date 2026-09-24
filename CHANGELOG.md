@@ -5,6 +5,34 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Read-only catalog expansion + honesty fix** — the lifecycle catalog is now
+  `wm` + 29 discrete aliases: 15 read-only entrypoints
+  (`memory.count/stats/tags/aggregate/associations/batch_read/query/filter/
+  nearby/vector.search`, `session.list/recall/replay`,
+  `gnosis.status/explain`) join the 14 lifecycle aliases. On `--readonly`
+  servers the seven write-class aliases (`memory.create/update/ingest`,
+  `session.start/record/checkpoint`, `receipts.emit`) are no longer
+  advertised — dispatch refuses them there, so listing them was a lie. The
+  hosted evaluation lane now advertises 23 truthful tools (was 15, 7 of them
+  refused).
+- **npm metadata refresh** — benefit-first description, 17 keywords including
+  client names (claude-code, cursor, codex), and a no-install quickstart in
+  the README; takes effect at this publish.
+- **MCP outputSchema on the catalog** — stable result fields named for every
+  lifecycle tool (Smithery/Glama tool-quality surface).
+
+### Fixed
+- **`memory.ingest` stdio purity** — the ingest report no longer prints human
+  lines into the stdio JSON-RPC stream (with a pinning test).
+
+### Changed
+- **Registry entry wording** — the official-registry description now reads
+  "no cloud backend; optional read-only hosted evaluation lane; no telemetry
+  by default" instead of "No cloud, no telemetry." beside a declared remote.
+
 ## [9.2.7] — 2026-09-23
 
 ### Added

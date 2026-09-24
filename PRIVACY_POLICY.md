@@ -23,8 +23,9 @@ machine:
   reports, prompts, memories, or analytics are sent to us or to any third
   party. WhiteMagic does keep local diagnostic evidence on-device for its
   own self-observation; it never leaves the machine unless you explicitly
-  opt in to sharing (the optional install funnel below is the only such
-  path).
+  opt in to sharing (the optional install funnel and the opt-in
+  product-telemetry emitter below are the only such paths; both are off by
+  default and print their exact payloads before sending).
 - **No accounts.** There is no sign-up, no email collection, no API keys
   managed by us.
 - **Optional install funnel (off by default).** `wm telemetry enable --share`

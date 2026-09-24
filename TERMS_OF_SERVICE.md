@@ -7,8 +7,10 @@
 
 WhiteMagic is free, open-source software (MIT License) that provides a
 local-first memory and session-continuity MCP server for AI agents. There is
-no hosted service, no account, and no billing. These terms apply to the
-software as distributed in this repository.
+no account and no billing. An optional read-only hosted evaluation lane
+(mcp.whitemagic.dev) exists for testing without an account; the software is
+fully functional without it. These terms apply to the software as
+distributed in this repository.
 
 ## 2. Acceptance
 
