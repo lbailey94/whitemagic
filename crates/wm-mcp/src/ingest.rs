@@ -917,15 +917,6 @@ pub fn run_ingest(
         );
     }
     let limit = if limit == 0 { usize::MAX } else { limit };
-    println!("=== WhiteMagic Knowledge Ingest ===");
-    println!();
-    println!("Source: {}", source.display());
-    println!("Store:  {}", store_path.display());
-    if dry_run {
-        println!("Mode:   DRY RUN (no writes)");
-    }
-    println!();
-
     let mut files = Vec::new();
     let mut skipped: Vec<(String, String)> = Vec::new();
     collect_files(
@@ -1271,6 +1262,28 @@ pub fn run_ingest(
     report.skipped.extend(skipped);
     report.skipped.sort();
 
+    Ok(report)
+}
+
+/// Human-readable ingest banner for the CLI.
+///
+/// Deliberately *not* printed by [`run_ingest`]: the same function serves the
+/// `memory.ingest` MCP tool, and over the stdio transport any stray stdout
+/// line corrupts the JSON-RPC stream (observed 2026-09-24: a human report
+/// line broke a stdio client).
+pub fn print_ingest_banner(source: &Path, store_path: &Path, dry_run: bool) {
+    println!("=== WhiteMagic Knowledge Ingest ===");
+    println!();
+    println!("Source: {}", source.display());
+    println!("Store:  {}", store_path.display());
+    if dry_run {
+        println!("Mode:   DRY RUN (no writes)");
+    }
+    println!();
+}
+
+/// Human-readable ingest report for the CLI (see [`print_ingest_banner`]).
+pub fn print_ingest_report(report: &IngestReport, ledger_path: &Path) {
     println!("Report: {}", report.summary_line());
     if !report.skipped.is_empty() {
         println!("Skipped ({}):", report.skipped.len());
@@ -1287,13 +1300,14 @@ pub fn run_ingest(
             println!("  - {path}: {err}");
         }
     }
-    println!(
-        "Ledger: {} ({} entries)",
-        ledger_path.display(),
-        ledger.entries.len()
-    );
-
-    Ok(report)
+    match IngestLedger::load(ledger_path) {
+        Ok(ledger) => println!(
+            "Ledger: {} ({} entries)",
+            ledger_path.display(),
+            ledger.entries.len()
+        ),
+        Err(_) => println!("Ledger: {}", ledger_path.display()),
+    }
 }
 
 /// First ≤4KB of `text` at a valid UTF-8 char boundary (for format sniffing).

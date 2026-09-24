@@ -2836,7 +2836,8 @@ fn run() -> anyhow::Result<()> {
             include_credential_files,
         } => {
             let store_path = store.unwrap_or_else(default_store_path);
-            wm_mcp::ingest::run_ingest(
+            wm_mcp::ingest::print_ingest_banner(&source, &store_path, dry_run);
+            let report = wm_mcp::ingest::run_ingest(
                 &source,
                 &store_path,
                 dry_run,
@@ -2846,6 +2847,7 @@ fn run() -> anyhow::Result<()> {
                 wait,
                 include_credential_files,
             )?;
+            wm_mcp::ingest::print_ingest_report(&report, &store_path.join("ingest_ledger.jsonl"));
         }
         Commands::Opencode { command } => match command {
             OpencodeCommands::Digest { db, since, json } => {
