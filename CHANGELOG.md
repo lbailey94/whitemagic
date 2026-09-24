@@ -30,8 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Registry entry wording** — the official-registry description now reads
-  "no cloud backend; optional read-only hosted evaluation lane; no telemetry
-  by default" instead of "No cloud, no telemetry." beside a declared remote.
+  "Local-first memory and continuity for AI coding agents. No cloud backend;
+  optional hosted lane." (100-char registry limit) instead of "No cloud, no
+  telemetry." beside a declared remote.
 
 ## [9.2.7] — 2026-09-23
 
