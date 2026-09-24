@@ -21,7 +21,7 @@ the image build:
 
 ```bash
 docker build --build-arg WM_VERSION=v9 -t lbailey94/whitemagic:9 . 
-docker run --rm lbailey94/whitemagic:9 --version   # wm 9.2.7
+docker run --rm lbailey94/whitemagic:9 --version   # wm 9.2.8
 ```
 
 - Uses `wm-linux-x86_64-musl` (fully static) + its `.sha256` from the
@@ -62,8 +62,8 @@ the `Current release:` line on each release:
 > - Source: https://github.com/lbailey94/whitemagic
 > - Image `9.x`/`latest`: v9 Rust binary (`wm`) — run
 >   `docker run -i lbailey94/whitemagic:9 serve --profile curated`
-> - Current release: v9.2.7 (2026-09-18) —
->   https://github.com/lbailey94/whitemagic/releases/tag/v9.2.7
+> - Current release: v9.2.8 (2026-09-18) —
+>   https://github.com/lbailey94/whitemagic/releases/tag/v9.2.8
 > - Tags `2.x` (2.1.0–2.3.1, Nov 2025): the historical Python MCP
 >   stack — retired 2026-09-19; digests archived in the lab's process
 >   archive.

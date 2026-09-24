@@ -10,7 +10,7 @@ Local-first memory and session continuity for coding agents, exposed over MCP. A
 
 ```bash
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-skill | sh
-wm --version         # expect: wm 9.2.7
+wm --version         # expect: wm 9.2.8
 wm grimoire          # guided first-run (when present); --json for a machine-readable report
 # builds without grimoire: use the step-by-step path below
 wm quickstart        # throwaway demo store — a decision survives a restart
