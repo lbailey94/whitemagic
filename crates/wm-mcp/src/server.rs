@@ -3278,6 +3278,21 @@ impl McpServer {
             "session.continuity" => ("Recall session continuity", true, false, true),
             "receipts.emit" => ("Emit a continuity receipt", false, false, false),
             "receipts.verify" => ("Verify a continuity receipt", true, false, true),
+            "memory.count" => ("Count memories", true, false, true),
+            "memory.stats" => ("Memory statistics", true, false, true),
+            "memory.tags" => ("List memory tags", true, false, true),
+            "memory.aggregate" => ("Aggregate memories", true, false, true),
+            "memory.associations" => ("Memory associations", true, false, true),
+            "memory.batch_read" => ("Batch read memories", true, false, true),
+            "memory.query" => ("Query memories", true, false, true),
+            "memory.filter" => ("Filter memories", true, false, true),
+            "memory.nearby" => ("Nearby memories", true, false, true),
+            "memory.vector.search" => ("Vector search memories", true, false, true),
+            "session.list" => ("List sessions", true, false, true),
+            "session.recall" => ("Recall a session", true, false, true),
+            "session.replay" => ("Replay a session", true, false, true),
+            "gnosis.status" => ("Knowledge status", true, false, true),
+            "gnosis.explain" => ("Explain provenance", true, false, true),
             _ => ("WhiteMagic tool", false, false, false),
         };
         // Read-only servers cannot mutate or destroy anything, whatever the
@@ -3844,10 +3859,190 @@ impl McpServer {
                     }
                 }),
             ),
+            (
+                "memory.count",
+                "memory.count",
+                "Count memories matching optional filters without returning content.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "galaxy": { "type": "string", "description": "Galaxy to count in, or 'all' (default)" },
+                        "tags": { "type": "array", "items": { "type": "string" }, "description": "Only count memories carrying these tags" }
+                    }
+                }),
+            ),
+            (
+                "memory.stats",
+                "memory.stats",
+                "Memory-store statistics: totals, galaxy spread, and index health.",
+                json!({ "type": "object", "properties": {} }),
+            ),
+            (
+                "memory.tags",
+                "memory.tags",
+                "List the tag vocabulary with usage counts.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "galaxy": { "type": "string", "description": "Limit to one galaxy (default: all)" },
+                        "limit": { "type": "integer", "description": "Maximum tags to return" }
+                    }
+                }),
+            ),
+            (
+                "memory.aggregate",
+                "memory.aggregate",
+                "Aggregate a numeric or categorical field over matched memories.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "field": { "type": "string", "description": "Field to aggregate (e.g. importance)" },
+                        "op": { "type": "string", "enum": ["count", "sum", "avg", "min", "max"], "description": "Aggregation operator (default: count)" },
+                        "galaxy": { "type": "string", "description": "Galaxy filter (default: all)" }
+                    }
+                }),
+            ),
+            (
+                "memory.associations",
+                "memory.associations",
+                "Associative neighbours of a memory (spreading activation over the association graph).",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Source memory UUID" },
+                        "depth": { "type": "integer", "description": "Traversal depth (default: 1)" },
+                        "limit": { "type": "integer", "description": "Maximum neighbours to return" }
+                    },
+                    "required": ["id"]
+                }),
+            ),
+            (
+                "memory.batch_read",
+                "memory.batch_read",
+                "Read several memories by id in one call.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "ids": { "type": "array", "items": { "type": "string" }, "description": "Memory UUIDs to read" }
+                    },
+                    "required": ["ids"]
+                }),
+            ),
+            (
+                "memory.query",
+                "memory.query",
+                "Structured query over memories with filters and ordering.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "query": { "type": "string", "description": "Text query (optional when filters are given)" },
+                        "filters": { "type": "object", "description": "Field filters (galaxy, tags, importance range)" },
+                        "limit": { "type": "integer", "description": "Maximum results (default: 10)" }
+                    }
+                }),
+            ),
+            (
+                "memory.filter",
+                "memory.filter",
+                "Filter memories by metadata (tags, importance, recency).",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "tags": { "type": "array", "items": { "type": "string" }, "description": "Required tags" },
+                        "min_importance": { "type": "number", "description": "Minimum importance (0-1)" },
+                        "limit": { "type": "integer", "description": "Maximum results (default: 10)" }
+                    }
+                }),
+            ),
+            (
+                "memory.nearby",
+                "memory.nearby",
+                "Memories near a coordinate address (5D spatial neighbourhood).",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Anchor memory UUID" },
+                        "limit": { "type": "integer", "description": "Maximum neighbours (default: 10)" }
+                    },
+                    "required": ["id"]
+                }),
+            ),
+            (
+                "memory.vector.search",
+                "memory.vector.search",
+                "Vector-similarity search over memory embeddings.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "query": { "type": "string", "description": "Query text to embed and match" },
+                        "limit": { "type": "integer", "description": "Maximum results (default: 10)" }
+                    },
+                    "required": ["query"]
+                }),
+            ),
+            (
+                "session.list",
+                "session.list",
+                "List sessions with titles and summaries.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "limit": { "type": "integer", "description": "Maximum sessions (default: 20)" },
+                        "since": { "type": "string", "description": "Only sessions active since this date" }
+                    }
+                }),
+            ),
+            (
+                "session.recall",
+                "session.recall",
+                "Recall a session's turns without continuity packaging.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "session_id": { "type": "string", "description": "Session UUID (default: current)" },
+                        "n": { "type": "integer", "description": "Number of recent turns (default: 10)" }
+                    }
+                }),
+            ),
+            (
+                "session.replay",
+                "session.replay",
+                "Replay a session's recorded turns in order.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "session_id": { "type": "string", "description": "Session UUID to replay" }
+                    },
+                    "required": ["session_id"]
+                }),
+            ),
+            (
+                "gnosis.status",
+                "gnosis.status",
+                "Knowledge-surface status: galaxies, counts, and index health.",
+                json!({ "type": "object", "properties": {} }),
+            ),
+            (
+                "gnosis.explain",
+                "gnosis.explain",
+                "Explain why a memory or route was selected (provenance readout).",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Memory UUID to explain" },
+                        "query": { "type": "string", "description": "Query to explain instead" }
+                    }
+                }),
+            ),
         ];
 
         for (alias, canonical, desc, fallback_schema) in discrete_definitions {
             if let Some(tool) = self.registry.get(canonical) {
+                if self.readonly && !tool.effects().writes.is_empty() {
+                    // Read-only servers refuse write-class tools at dispatch
+                    // time; advertising them would be a lie (2026-09-24).
+                    continue;
+                }
                 if !tool.effects().is_available_in(brain_wave) {
                     continue;
                 }
@@ -5468,9 +5663,9 @@ mod tests {
         // The wm meta-tool is first, followed by discrete tool aliases for MCP discovery
         assert!(!tools.is_empty());
         assert_eq!(tools[0]["name"], "wm");
-        // 15 total: the meta-tool + 14 discrete aliases (catalog expanded
-        // 2026-09-23 for directory graders and explicit clients).
-        assert_eq!(tools.len(), 15, "catalog shape changed: {tools:?}");
+        // 30 total: the meta-tool + 29 discrete aliases (writable catalog;
+        // expanded 2026-09-24 with read-only memory/session/gnosis reads).
+        assert_eq!(tools.len(), 30, "catalog shape changed: {tools:?}");
         assert!(tools.iter().any(|t| t["name"] == "memory.search"));
         assert!(tools.iter().any(|t| t["name"] == "memory.create"));
         for expected in [
@@ -5485,6 +5680,21 @@ mod tests {
             "session.continuity",
             "receipts.emit",
             "receipts.verify",
+            "memory.count",
+            "memory.stats",
+            "memory.tags",
+            "memory.aggregate",
+            "memory.associations",
+            "memory.batch_read",
+            "memory.query",
+            "memory.filter",
+            "memory.nearby",
+            "memory.vector.search",
+            "session.list",
+            "session.recall",
+            "session.replay",
+            "gnosis.status",
+            "gnosis.explain",
         ] {
             assert!(
                 tools.iter().any(|t| t["name"] == expected),
@@ -5670,9 +5880,31 @@ mod tests {
         assert_eq!(wm["annotations"]["readOnlyHint"], true);
         assert_eq!(wm["annotations"]["destructiveHint"], false);
 
-        let create = tools.iter().find(|t| t["name"] == "memory.create").unwrap();
-        assert_eq!(create["annotations"]["readOnlyHint"], true);
-        assert_eq!(create["annotations"]["destructiveHint"], false);
+        // Write-class aliases are not advertised at all on a read-only
+        // server — they are refused at dispatch, so listing them would lie.
+        for write_alias in [
+            "memory.create",
+            "memory.update",
+            "memory.ingest",
+            "session.start",
+            "session.record",
+            "session.checkpoint",
+            "receipts.emit",
+        ] {
+            assert!(
+                tools.iter().all(|t| t["name"] != write_alias),
+                "{write_alias} must not be advertised on a read-only server"
+            );
+        }
+        let search = tools.iter().find(|t| t["name"] == "memory.search").unwrap();
+        assert_eq!(search["annotations"]["readOnlyHint"], true);
+        assert_eq!(search["annotations"]["destructiveHint"], false);
+        // wm + 7 admitted reads + 15 read-only aliases = 23.
+        assert_eq!(
+            tools.len(),
+            23,
+            "read-only catalog shape changed: {tools:?}"
+        );
     }
 
     #[tokio::test]
@@ -5989,14 +6221,14 @@ mod tests {
         let beta_result = resp.result.unwrap();
         let beta_count = beta_result["tools"].as_array().unwrap().len();
         // In Beta: wm meta-tool is exposed at index 0 plus the discrete
-        // lifecycle catalog (14 tools; citta/captain stay internally
-        // callable but are not catalog surface — coherence trim 2026-09-14;
-        // catalog expanded 2026-09-23: +update/revisions/ingest/checkpoint/
-        // receipts.emit/verify).
+        // lifecycle catalog (29 aliases in the writable catalog; citta/captain
+        // stay internally callable but are not catalog surface — coherence
+        // trim 2026-09-14; expanded 2026-09-23 and again 2026-09-24 with
+        // read-only memory/session/gnosis reads).
         // In Delta: 0 tools
         assert!(beta_count > delta_count);
         assert_eq!(beta_result["tools"][0]["name"], "wm");
-        assert_eq!(beta_count, 15);
+        assert_eq!(beta_count, 30);
     }
 
     #[tokio::test]

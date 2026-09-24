@@ -1,7 +1,7 @@
 [
   {
     "name": "wm",
-    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (61 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.",
+    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (69 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.",
     "inputSchema": {
       "properties": {
         "args": {
@@ -22,7 +22,27 @@
     "title": "WhiteMagic memory and continuity meta-tool",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "The dispatched tool's result envelope; fields vary by route.",
+      "description": "The dispatched tool's result envelope plus `_wm_route` dispatch metadata; fields vary by route.",
+      "properties": {
+        "_wm_route": {
+          "description": "Dispatch metadata: resolved tool, routing confidence, matched input.",
+          "properties": {
+            "confidence": {
+              "description": "Routing confidence (1.0 for explicit routes)",
+              "type": "number"
+            },
+            "input": {
+              "description": "Routing input that produced the match",
+              "type": "string"
+            },
+            "tool": {
+              "description": "Resolved route name",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -48,6 +68,8 @@
         },
         "importance": {
           "description": "Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)",
+          "maximum": 1.0,
+          "minimum": 0.0,
           "type": "number"
         },
         "source": {
@@ -78,7 +100,44 @@
     "title": "Create memory",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "Creation receipt for the stored memory.",
+      "properties": {
+        "attested": {
+          "description": "Whether a record attestation was attached",
+          "type": "boolean"
+        },
+        "attested_reason": {
+          "description": "Why attestation was skipped when it was not attached",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_hash": {
+          "description": "SHA-256 of the stored content",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy the memory landed in",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID",
+          "type": "string"
+        },
+        "source": {
+          "description": "Authorship class (user, agent, ...)",
+          "type": "string"
+        },
+        "source_trust": {
+          "description": "Trust weight recorded for the authorship class",
+          "type": "number"
+        },
+        "status": {
+          "description": "Operation status ('success' when stored)",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -99,15 +158,16 @@
           "type": "integer"
         },
         "galaxy": {
-          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled)",
+          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled; \"all\" is accepted as an alias for the unfiltered default)",
           "type": "string"
         },
         "include_cold": {
-          "description": "Opt-in cold-storage discovery: scan, hydrate and integrity-verify cold originals by content (bounded, no thaw)",
+          "description": "Opt-in unranked cold recovery (no thaw). Trust/importance floors apply; BM25 floors do not apply to unscored recovery. Search content is scrubbed navigation capped at 8192 characters; read by id/galaxy for the exact original.",
           "type": "boolean"
         },
         "limit": {
-          "description": "Maximum results (default 10)",
+          "description": "Maximum results (default 10; must be >= 1)",
+          "minimum": 1,
           "type": "integer"
         },
         "min_importance": {
@@ -139,7 +199,40 @@
     "title": "Search memories",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "Ranked recall results with an evidence bundle and recall-mode disclosure.",
+      "properties": {
+        "count": {
+          "description": "Number of results returned",
+          "type": "integer"
+        },
+        "evidence_bundle": {
+          "description": "Per-result provenance (coverage, history, integrity, retrieval, source_time, visibility) plus conflicts.",
+          "type": "object"
+        },
+        "galaxy": {
+          "description": "Galaxy scope the query ran against",
+          "type": "string"
+        },
+        "hint": {
+          "description": "Optional recovery hint when results are thin",
+          "type": "string"
+        },
+        "recall_mode": {
+          "description": "Retrieval path used (hybrid, episodic, fts, importance, none)",
+          "type": "string"
+        },
+        "results": {
+          "description": "Ranked memories (id, content, score, galaxy, source)",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -172,7 +265,36 @@
     "title": "Read memory",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "The exact stored memory record.",
+      "properties": {
+        "content": {
+          "description": "Full memory content",
+          "type": "string"
+        },
+        "created_at": {
+          "description": "RFC 3339 creation timestamp",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy containing the memory",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID",
+          "type": "string"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Memory tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -214,7 +336,40 @@
     "title": "List memories",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "A page of memory records with pagination counters.",
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy scope listed",
+          "type": "string"
+        },
+        "matched": {
+          "description": "Total records matching the filter",
+          "type": "integer"
+        },
+        "memories": {
+          "description": "Records (id, content_preview, created_at, tags)",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "offset": {
+          "description": "Pagination offset applied",
+          "type": "integer"
+        },
+        "returned": {
+          "description": "Records in this page",
+          "type": "integer"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "total": {
+          "description": "Total records in scope",
+          "type": "integer"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -235,15 +390,16 @@
           "type": "integer"
         },
         "galaxy": {
-          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled)",
+          "description": "Galaxy filter (optional; default: search all memory galaxies, results labeled; \"all\" is accepted as an alias for the unfiltered default)",
           "type": "string"
         },
         "include_cold": {
-          "description": "Opt-in cold-storage discovery: scan, hydrate and integrity-verify cold originals by content (bounded, no thaw)",
+          "description": "Opt-in unranked cold recovery (no thaw). Trust/importance floors apply; BM25 floors do not apply to unscored recovery. Search content is scrubbed navigation capped at 8192 characters; read by id/galaxy for the exact original.",
           "type": "boolean"
         },
         "limit": {
-          "description": "Maximum results (default 10)",
+          "description": "Maximum results (default 10; must be >= 1)",
+          "minimum": 1,
           "type": "integer"
         },
         "min_importance": {
@@ -275,7 +431,40 @@
     "title": "Hybrid recall",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "Fused recall results with an evidence bundle and recall-mode disclosure.",
+      "properties": {
+        "count": {
+          "description": "Number of results returned",
+          "type": "integer"
+        },
+        "evidence_bundle": {
+          "description": "Per-result provenance (coverage, history, integrity, retrieval, source_time, visibility) plus conflicts.",
+          "type": "object"
+        },
+        "galaxy": {
+          "description": "Galaxy scope the query ran against",
+          "type": "string"
+        },
+        "hint": {
+          "description": "Optional recovery hint when results are thin",
+          "type": "string"
+        },
+        "recall_mode": {
+          "description": "Retrieval path used (hybrid, episodic, fts, importance, none)",
+          "type": "string"
+        },
+        "results": {
+          "description": "Ranked memories with per-result source labels",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -297,6 +486,8 @@
         },
         "importance": {
           "description": "0-1 importance (default 0.5)",
+          "maximum": 1.0,
+          "minimum": 0.0,
           "type": "number"
         },
         "role": {
@@ -311,8 +502,23 @@
           "description": "Memory id of an earlier turn this record corrects/replaces (amend-with-supersede)",
           "type": "string"
         },
+        "track": {
+          "description": "Optional track slug (lowercase; a-z0-9 start, then a-z0-9-_. /) \u2014 tags this turn into that track's implementation log (session.track_log)",
+          "type": "string"
+        },
         "turn_type": {
-          "description": "message, decision, breakthrough, question, answer, code_change, error, summary, context",
+          "description": "Turn type (default message)",
+          "enum": [
+            "message",
+            "decision",
+            "breakthrough",
+            "question",
+            "answer",
+            "code_change",
+            "error",
+            "summary",
+            "context"
+          ],
           "type": "string"
         }
       },
@@ -324,7 +530,25 @@
     "title": "Record a session turn",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "Receipt for the recorded turn.",
+      "properties": {
+        "memory_id": {
+          "description": "Memory UUID of the stored turn",
+          "type": "string"
+        },
+        "sequence": {
+          "description": "Turn position within the session",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Session the turn landed in",
+          "type": "string"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -343,6 +567,14 @@
         "current_session_id": {
           "description": "Session to exclude (optional)",
           "type": "string"
+        },
+        "max_content_bytes": {
+          "description": "Per-turn content cap in bytes (256-262144, default 8192)",
+          "type": "integer"
+        },
+        "max_response_bytes": {
+          "description": "Turns budget in bytes (256-262144, default 49152)",
+          "type": "integer"
         },
         "n": {
           "description": "Number of prior turns (default 10)",
@@ -363,7 +595,58 @@
     "title": "Recall session continuity",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "Recent turns plus the latest checkpoint handoff for the prior session.",
+      "properties": {
+        "checkpoint": {
+          "description": "Latest checkpoint handoff, or null",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "checkpoint_id": {
+          "description": "Memory UUID of the checkpoint, or null",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "count": {
+          "description": "Turns returned",
+          "type": "integer"
+        },
+        "max_content_bytes": {
+          "description": "Per-turn byte cap applied",
+          "type": "integer"
+        },
+        "max_response_bytes": {
+          "description": "Total response byte budget applied",
+          "type": "integer"
+        },
+        "previous_session": {
+          "description": "Session the turns were read from",
+          "type": "string"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "truncated": {
+          "description": "Whether the response hit its byte budget",
+          "type": "boolean"
+        },
+        "turns": {
+          "description": "Turns (memory_id, role, turn_type, sequence, content, content_bytes, content_truncated, importance)",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "turns_omitted": {
+          "description": "Turns dropped by the response budget",
+          "type": "integer"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -394,7 +677,25 @@
     "title": "Start or resume a session",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Result envelope for this tool; fields vary by operation.",
+      "description": "Session identity for the started or resumed session.",
+      "properties": {
+        "session_id": {
+          "description": "Session UUID to pass to record/checkpoint",
+          "type": "string"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "title": {
+          "description": "Session title",
+          "type": "string"
+        },
+        "user": {
+          "description": "User identifier the session belongs to",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "annotations": {
@@ -403,6 +704,1119 @@
       "openWorldHint": false,
       "readOnlyHint": false,
       "title": "Start or resume a session"
+    }
+  },
+  {
+    "name": "memory.update",
+    "description": "Update an existing memory in place (content, tags, importance, title, topic); a content change appends to the memory's revision chain.",
+    "inputSchema": {
+      "properties": {
+        "content": {
+          "description": "New content (optional)",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to update",
+          "type": "string"
+        },
+        "importance": {
+          "description": "New importance 0.0-1.0 (optional)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "tags": {
+          "description": "Replacement tags (optional)",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "description": "New title (optional)",
+          "type": "string"
+        },
+        "topic": {
+          "description": "New topic label (optional)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "title": "Update memory",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Update receipt for the modified memory.",
+      "properties": {
+        "content_hash": {
+          "description": "SHA-256 of the content after the update",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy containing the memory",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID",
+          "type": "string"
+        },
+        "importance": {
+          "description": "Importance after the update",
+          "type": "number"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Tags after the update",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Update memory"
+    }
+  },
+  {
+    "name": "memory.revisions",
+    "description": "List or verify a memory's content revision chain (tamper evidence): every content update is chained and head-checked.",
+    "inputSchema": {
+      "properties": {
+        "action": {
+          "description": "Action: list (default) | verify",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to inspect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "title": "Memory revision chain",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Revision chain for a memory (newest first).",
+      "properties": {
+        "action": {
+          "description": "Action performed (list, restore, ...)",
+          "type": "string"
+        },
+        "count": {
+          "description": "Number of revisions returned",
+          "type": "integer"
+        },
+        "galaxy": {
+          "description": "Galaxy containing the memory",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID",
+          "type": "string"
+        },
+        "revisions": {
+          "description": "Revision records with content hashes and timestamps",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Memory revision chain"
+    }
+  },
+  {
+    "name": "session.checkpoint",
+    "description": "Save a structured checkpoint (git state, next queue, open flags) so the next session can resume exactly here.",
+    "inputSchema": {
+      "properties": {
+        "branch": {
+          "description": "Manual branch name (auto-captured when git is available)",
+          "type": "string"
+        },
+        "commit": {
+          "description": "Manual commit hash (auto-captured from git when root/WM_PROJECT_ROOT is set)",
+          "type": "string"
+        },
+        "data": {
+          "description": "Legacy free-form passthrough stored beside the handoff.",
+          "type": "object"
+        },
+        "label": {
+          "description": "Checkpoint label (default 'checkpoint')",
+          "type": "string"
+        },
+        "lease_id": {
+          "description": "Claimed scope (code.claim lease_id) that remains held at this handoff",
+          "type": "string"
+        },
+        "next_queue": {
+          "description": "Ordered next-step strings for the next session.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "open_flags": {
+          "description": "Open concerns/flags worth surfacing on resume.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "root": {
+          "description": "Repository root for auto git-capture (default: WM_PROJECT_ROOT env)",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Target session (default: most recent session)",
+          "type": "string"
+        },
+        "tests_green": {
+          "description": "Whether the test suite was green at checkpoint time.",
+          "type": "boolean"
+        },
+        "track": {
+          "description": "Optional track slug \u2014 tags this checkpoint into that track's log (session.track_log)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Save a session checkpoint",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Checkpoint receipt with the stored structured handoff.",
+      "properties": {
+        "checkpoint_id": {
+          "description": "Memory UUID of the checkpoint",
+          "type": "string"
+        },
+        "handoff": {
+          "description": "Structured handoff (next_queue, open_flags, git, tests_green, lease_id) as supplied.",
+          "type": "object"
+        },
+        "label": {
+          "description": "Optional checkpoint label",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Session that was checkpointed",
+          "type": "string"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "warnings": {
+          "description": "Non-fatal capture warnings",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Save a session checkpoint"
+    }
+  },
+  {
+    "name": "memory.ingest",
+    "description": "Harvest a folder of documents or session transcripts into the store (idempotent via a SHA-256 ledger; dry-run and redaction on by default).",
+    "inputSchema": {
+      "properties": {
+        "dry_run": {
+          "default": true,
+          "description": "Report without writing or creating the store (default true).",
+          "type": "boolean"
+        },
+        "galaxy": {
+          "description": "Optional galaxy override for transcripts/documents.",
+          "type": "string"
+        },
+        "include_credential_files": {
+          "default": false,
+          "description": "Ingest credential-named files with redaction (requires redact=true).",
+          "type": "boolean"
+        },
+        "limit": {
+          "default": 0,
+          "description": "Only consider the first N files in walk order (0 = all).",
+          "type": "integer"
+        },
+        "redact": {
+          "default": true,
+          "description": "Scrub credential-shaped content before storage (default true).",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "Directory to harvest recursively.",
+          "type": "string"
+        },
+        "wait_secs": {
+          "default": 0,
+          "description": "Wait up to N seconds for a busy store before failing.",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "type": "object"
+    },
+    "title": "Ingest documents into memory",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Ingest report for the source folder.",
+      "properties": {
+        "chunks_written": {
+          "description": "Chunks written across ingested files",
+          "type": "integer"
+        },
+        "dry_run": {
+          "description": "True when nothing was written",
+          "type": "boolean"
+        },
+        "errors": {
+          "description": "Per-file errors",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "files_found": {
+          "description": "Candidate files discovered",
+          "type": "integer"
+        },
+        "files_ingested": {
+          "description": "Files written to the store",
+          "type": "integer"
+        },
+        "files_unchanged": {
+          "description": "Files skipped as unchanged (ledger match)",
+          "type": "integer"
+        },
+        "redactions": {
+          "description": "Files whose credential-shaped spans were redacted",
+          "type": "integer"
+        },
+        "skipped": {
+          "description": "Skipped files with reasons",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "source": {
+          "description": "Source path that was ingested",
+          "type": "string"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "store": {
+          "description": "Store path that received the chunks",
+          "type": "string"
+        },
+        "summary": {
+          "description": "One-line human summary of the run",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Ingest documents into memory"
+    }
+  },
+  {
+    "name": "receipts.emit",
+    "description": "Emit a signed continuity receipt (Ed25519 did:key): session evidence or a karma-chain-head attestation, verifiable offline.",
+    "inputSchema": {
+      "properties": {
+        "kind": {
+          "description": "Bundle kind: session (default) | karma_head",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum turns covered (session kind; default 200)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "out": {
+          "description": "Optional path to also write the bundle JSON for external verification",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Session UUID (session kind; default: most recent session)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Emit a continuity receipt",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Continuity receipt emission receipt.",
+      "properties": {
+        "digest": {
+          "description": "sha256: digest of the signed bundle",
+          "type": "string"
+        },
+        "id": {
+          "description": "Receipt UUID",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Receipt profile (session, karma-chain-head, ...)",
+          "type": "string"
+        },
+        "memory_id": {
+          "description": "Memory UUID the receipt was stored as",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "Session the receipt covers",
+          "type": "string"
+        },
+        "status": {
+          "description": "Operation status",
+          "type": "string"
+        },
+        "task_id": {
+          "description": "URN identifying the receipted task",
+          "type": "string"
+        },
+        "turn_count": {
+          "description": "Turns covered by the receipt",
+          "type": "integer"
+        },
+        "verdict": {
+          "description": "Local verification verdict (TRUSTED, ...)",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Emit a continuity receipt"
+    }
+  },
+  {
+    "name": "receipts.verify",
+    "description": "Verify a stored receipt id or a bundle offline; fail-closed without an anchor (verdict PROVISIONAL).",
+    "inputSchema": {
+      "properties": {
+        "bundle": {
+          "description": "Inline bundle to verify (alternative to id)",
+          "type": "object"
+        },
+        "id": {
+          "description": "Stored receipt task id (UUID or urn:uuid:)",
+          "type": "string"
+        },
+        "require_anchor": {
+          "description": "Fail-closed: without an anchor the verdict is PROVISIONAL",
+          "type": "boolean"
+        },
+        "variant": {
+          "description": "Stored variant (default original)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Verify a continuity receipt",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Verification report for a receipt or bundle.",
+      "properties": {
+        "id": {
+          "description": "Receipt UUID that was verified",
+          "type": "string"
+        },
+        "require_anchor": {
+          "description": "Whether an external anchor was required",
+          "type": "boolean"
+        },
+        "result": {
+          "description": "Verdict detail: errors, insufficient/provisional reasons, and a summary (attestations, issuers, receipts, settled, terminated, types).",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Verify a continuity receipt"
+    }
+  },
+  {
+    "name": "memory.count",
+    "description": "Count memories matching optional filters without returning content.",
+    "inputSchema": {
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy to count (optional; all memory galaxies when absent)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Count memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Count memories"
+    }
+  },
+  {
+    "name": "memory.stats",
+    "description": "Memory-store statistics: totals, galaxy spread, and index health.",
+    "inputSchema": {
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy to summarize (optional; default codex)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Memory statistics",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Memory statistics"
+    }
+  },
+  {
+    "name": "memory.tags",
+    "description": "List the tag vocabulary with usage counts.",
+    "inputSchema": {
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy whose tags to list (optional; default codex)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "List memory tags",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "List memory tags"
+    }
+  },
+  {
+    "name": "memory.aggregate",
+    "description": "Aggregate a numeric or categorical field over matched memories.",
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "description": "Maximum candidates considered (default 50; must be >= 1)",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "metric": {
+          "description": "Aggregate metric: count | session_count | session_span",
+          "type": "string"
+        },
+        "query": {
+          "description": "Full-text query selecting the memories to aggregate over",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query",
+        "metric"
+      ],
+      "type": "object"
+    },
+    "title": "Aggregate memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Aggregate memories"
+    }
+  },
+  {
+    "name": "memory.associations",
+    "description": "Associative neighbours of a memory (spreading activation over the association graph).",
+    "inputSchema": {
+      "properties": {
+        "direction": {
+          "description": "Direction: from | to | both (default: both)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to inspect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    },
+    "title": "Memory associations",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Memory associations"
+    }
+  },
+  {
+    "name": "memory.batch_read",
+    "description": "Read several memories by id in one call.",
+    "inputSchema": {
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "ids": {
+          "description": "Memory UUIDs to read",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "ids"
+      ],
+      "type": "object"
+    },
+    "title": "Batch read memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Batch read memories"
+    }
+  },
+  {
+    "name": "memory.query",
+    "description": "Structured query over memories with filters and ordering.",
+    "inputSchema": {
+      "properties": {
+        "created_after": {
+          "description": "Filter: only memories created at or after this RFC 3339 timestamp (e.g. 2026-08-01T00:00:00Z)",
+          "type": "string"
+        },
+        "created_before": {
+          "description": "Filter: only memories created at or before this RFC 3339 timestamp",
+          "type": "string"
+        },
+        "galaxy": {
+          "description": "Galaxy to query (default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 50)",
+          "type": "integer"
+        },
+        "max_importance": {
+          "description": "Filter: maximum importance (0-1)",
+          "type": "number"
+        },
+        "min_importance": {
+          "description": "Filter: minimum importance (0-1)",
+          "type": "number"
+        },
+        "query": {
+          "description": "Case-insensitive substring filter over content (literal match). For tokenized, ranked full-text retrieval use memory.search",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Filter: memories with all of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Query memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Query memories"
+    }
+  },
+  {
+    "name": "memory.filter",
+    "description": "Filter memories by metadata (tags, importance, recency).",
+    "inputSchema": {
+      "properties": {
+        "created_after": {
+          "description": "Filter: only memories created at or after this RFC 3339 timestamp (e.g. 2026-08-01T00:00:00Z)",
+          "type": "string"
+        },
+        "created_before": {
+          "description": "Filter: only memories created at or before this RFC 3339 timestamp",
+          "type": "string"
+        },
+        "exclude_tags": {
+          "description": "Filter: drop memories carrying any of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "galaxy": {
+          "description": "Galaxy to filter (default codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum entries (default 50)",
+          "type": "integer"
+        },
+        "max_importance": {
+          "description": "Filter: maximum importance (0-1)",
+          "type": "number"
+        },
+        "min_importance": {
+          "description": "Filter: minimum importance (0-1)",
+          "type": "number"
+        },
+        "offset": {
+          "description": "Skip this many matching entries before returning (default 0)",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Filter: every whitespace-separated term must appear (case-insensitive) in the content or title",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Filter: memories with all of these tags",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Filter memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Filter memories"
+    }
+  },
+  {
+    "name": "memory.nearby",
+    "description": "Memories near a coordinate address (5D spatial neighbourhood).",
+    "inputSchema": {
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "query": {
+          "description": "Query text to locate in 5D space",
+          "type": "string"
+        },
+        "radius": {
+          "description": "Spatial radius cutoff (optional)",
+          "type": "number"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "title": "Nearby memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Nearby memories"
+    }
+  },
+  {
+    "name": "memory.vector.search",
+    "description": "Vector-similarity search over memory embeddings.",
+    "inputSchema": {
+      "properties": {
+        "embedding": {
+          "description": "Raw embedding vector (alternative to memory_id)",
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        "galaxy": {
+          "description": "Galaxy filter (optional)",
+          "type": "string"
+        },
+        "limit": {
+          "description": "Maximum results (default 10)",
+          "type": "integer"
+        },
+        "memory_id": {
+          "description": "Memory UUID whose stored embedding is the query",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memory_id"
+      ],
+      "type": "object"
+    },
+    "title": "Vector search memories",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Vector search memories"
+    }
+  },
+  {
+    "name": "session.list",
+    "description": "List sessions with titles and summaries.",
+    "inputSchema": {
+      "properties": {
+        "sequence": {
+          "description": "Filter by start sequence number",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Filter by session UUID",
+          "type": "string"
+        },
+        "title": {
+          "description": "Filter by title substring",
+          "type": "string"
+        },
+        "type": {
+          "description": "Filter by session type",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "List sessions",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "List sessions"
+    }
+  },
+  {
+    "name": "session.recall",
+    "description": "Recall a session's turns without continuity packaging.",
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "description": "Maximum turns to return (default 50)",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Session UUID to recall (defaults to the most recent session)",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Recall a session",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Recall a session"
+    }
+  },
+  {
+    "name": "session.replay",
+    "description": "Replay a session's recorded turns in order.",
+    "inputSchema": {
+      "properties": {
+        "cursor": {
+          "description": "Lossless mode opaque placement cursor",
+          "type": "string"
+        },
+        "include_superseded": {
+          "description": "Also return turns replaced via supersedes (default false).",
+          "type": "boolean"
+        },
+        "max_wire_bytes": {
+          "description": "Lossless mode serialized JSON ceiling (1024-49152)",
+          "type": "integer"
+        },
+        "min_importance": {
+          "description": "Selective mode floor (default 0.7)",
+          "type": "number"
+        },
+        "mode": {
+          "description": "full | selective | progressive | lossless (default full)",
+          "type": "string"
+        },
+        "n": {
+          "description": "Maximum turns (default 50)",
+          "type": "integer"
+        },
+        "page_size": {
+          "description": "Lossless mode records per page (1-64, default 16)",
+          "type": "integer"
+        },
+        "session_id": {
+          "description": "Target session (required explicit UUID for lossless; otherwise default most recent)",
+          "type": "string"
+        },
+        "since": {
+          "description": "Time-range floor: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        },
+        "token_budget": {
+          "description": "Progressive mode token budget (default 2000)",
+          "type": "integer"
+        },
+        "turn_types": {
+          "description": "Selective mode: turn types to keep",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "until": {
+          "description": "Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Replay a session",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Replay a session"
+    }
+  },
+  {
+    "name": "gnosis.status",
+    "description": "Knowledge-surface status: galaxies, counts, and index health.",
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "title": "Knowledge status",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Knowledge status"
+    }
+  },
+  {
+    "name": "gnosis.explain",
+    "description": "Explain why a memory or route was selected (provenance readout).",
+    "inputSchema": {
+      "properties": {
+        "args_hash": {
+          "description": "Hash of the arguments under evaluation",
+          "type": "string"
+        },
+        "has_purpose": {
+          "description": "Claim: the invocation carries a purpose",
+          "type": "boolean"
+        },
+        "is_network": {
+          "description": "Claim: the invocation uses the network",
+          "type": "boolean"
+        },
+        "is_spawn": {
+          "description": "Claim: the invocation spawns a process",
+          "type": "boolean"
+        },
+        "is_write": {
+          "description": "Claim: the invocation writes",
+          "type": "boolean"
+        },
+        "tool_name": {
+          "description": "Tool name to explain",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "title": "Explain provenance",
+    "outputSchema": {
+      "additionalProperties": true,
+      "description": "Result envelope for this tool; fields vary by operation.",
+      "type": "object"
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Explain provenance"
     }
   }
 ]
