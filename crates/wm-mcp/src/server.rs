@@ -3290,6 +3290,220 @@ impl McpServer {
         }
     }
 
+    /// Per-tool result schemas for the discovery catalog (Smithery/Glama
+    /// tool-quality surface; PayAI lesson — machine metadata, not prose).
+    /// Each schema names the stable fields a client can rely on and stays
+    /// open (`additionalProperties: true`): envelopes gain fields over time,
+    /// so the schema is a floor, not a closed contract.
+    fn catalog_output_schema(name: &str) -> Value {
+        let envelope = |description: &str, properties: Value| {
+            json!({
+                "type": "object",
+                "description": description,
+                "properties": properties,
+                "additionalProperties": true,
+            })
+        };
+        match name {
+            "wm" => envelope(
+                "The dispatched tool's result envelope plus `_wm_route` dispatch metadata; fields vary by route.",
+                json!({
+                    "_wm_route": {
+                        "type": "object",
+                        "description": "Dispatch metadata: resolved tool, routing confidence, matched input.",
+                        "properties": {
+                            "tool": { "type": "string", "description": "Resolved route name" },
+                            "confidence": { "type": "number", "description": "Routing confidence (1.0 for explicit routes)" },
+                            "input": { "type": "string", "description": "Routing input that produced the match" },
+                        },
+                    },
+                }),
+            ),
+            "memory.create" => envelope(
+                "Creation receipt for the stored memory.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status ('success' when stored)" },
+                    "id": { "type": "string", "description": "Memory UUID" },
+                    "galaxy": { "type": "string", "description": "Galaxy the memory landed in" },
+                    "source": { "type": "string", "description": "Authorship class (user, agent, ...)" },
+                    "source_trust": { "type": "number", "description": "Trust weight recorded for the authorship class" },
+                    "content_hash": { "type": "string", "description": "SHA-256 of the stored content" },
+                    "attested": { "type": "boolean", "description": "Whether a record attestation was attached" },
+                    "attested_reason": { "type": ["string", "null"], "description": "Why attestation was skipped when it was not attached" },
+                }),
+            ),
+            "memory.search" => envelope(
+                "Ranked recall results with an evidence bundle and recall-mode disclosure.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "count": { "type": "integer", "description": "Number of results returned" },
+                    "galaxy": { "type": "string", "description": "Galaxy scope the query ran against" },
+                    "recall_mode": { "type": "string", "description": "Retrieval path used (hybrid, episodic, fts, importance, none)" },
+                    "results": { "type": "array", "items": { "type": "object" }, "description": "Ranked memories (id, content, score, galaxy, source)" },
+                    "evidence_bundle": {
+                        "type": "object",
+                        "description": "Per-result provenance (coverage, history, integrity, retrieval, source_time, visibility) plus conflicts.",
+                    },
+                    "hint": { "type": "string", "description": "Optional recovery hint when results are thin" },
+                }),
+            ),
+            "memory.read" => envelope(
+                "The exact stored memory record.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "id": { "type": "string", "description": "Memory UUID" },
+                    "content": { "type": "string", "description": "Full memory content" },
+                    "galaxy": { "type": "string", "description": "Galaxy containing the memory" },
+                    "created_at": { "type": "string", "description": "RFC 3339 creation timestamp" },
+                    "tags": { "type": "array", "items": { "type": "string" }, "description": "Memory tags" },
+                }),
+            ),
+            "memory.list" => envelope(
+                "A page of memory records with pagination counters.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "galaxy": { "type": "string", "description": "Galaxy scope listed" },
+                    "memories": { "type": "array", "items": { "type": "object" }, "description": "Records (id, content_preview, created_at, tags)" },
+                    "matched": { "type": "integer", "description": "Total records matching the filter" },
+                    "returned": { "type": "integer", "description": "Records in this page" },
+                    "total": { "type": "integer", "description": "Total records in scope" },
+                    "offset": { "type": "integer", "description": "Pagination offset applied" },
+                }),
+            ),
+            "memory.hybrid_recall" => envelope(
+                "Fused recall results with an evidence bundle and recall-mode disclosure.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "count": { "type": "integer", "description": "Number of results returned" },
+                    "galaxy": { "type": "string", "description": "Galaxy scope the query ran against" },
+                    "recall_mode": { "type": "string", "description": "Retrieval path used (hybrid, episodic, fts, importance, none)" },
+                    "results": { "type": "array", "items": { "type": "object" }, "description": "Ranked memories with per-result source labels" },
+                    "evidence_bundle": {
+                        "type": "object",
+                        "description": "Per-result provenance (coverage, history, integrity, retrieval, source_time, visibility) plus conflicts.",
+                    },
+                    "hint": { "type": "string", "description": "Optional recovery hint when results are thin" },
+                }),
+            ),
+            "memory.update" => envelope(
+                "Update receipt for the modified memory.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "id": { "type": "string", "description": "Memory UUID" },
+                    "galaxy": { "type": "string", "description": "Galaxy containing the memory" },
+                    "content_hash": { "type": "string", "description": "SHA-256 of the content after the update" },
+                    "importance": { "type": "number", "description": "Importance after the update" },
+                    "tags": { "type": "array", "items": { "type": "string" }, "description": "Tags after the update" },
+                }),
+            ),
+            "memory.revisions" => envelope(
+                "Revision chain for a memory (newest first).",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "id": { "type": "string", "description": "Memory UUID" },
+                    "galaxy": { "type": "string", "description": "Galaxy containing the memory" },
+                    "action": { "type": "string", "description": "Action performed (list, restore, ...)" },
+                    "count": { "type": "integer", "description": "Number of revisions returned" },
+                    "revisions": { "type": "array", "items": { "type": "object" }, "description": "Revision records with content hashes and timestamps" },
+                }),
+            ),
+            "memory.ingest" => envelope(
+                "Ingest report for the source folder.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "source": { "type": "string", "description": "Source path that was ingested" },
+                    "store": { "type": "string", "description": "Store path that received the chunks" },
+                    "dry_run": { "type": "boolean", "description": "True when nothing was written" },
+                    "files_found": { "type": "integer", "description": "Candidate files discovered" },
+                    "files_ingested": { "type": "integer", "description": "Files written to the store" },
+                    "files_unchanged": { "type": "integer", "description": "Files skipped as unchanged (ledger match)" },
+                    "chunks_written": { "type": "integer", "description": "Chunks written across ingested files" },
+                    "redactions": { "type": "integer", "description": "Files whose credential-shaped spans were redacted" },
+                    "skipped": { "type": "array", "items": { "type": "object" }, "description": "Skipped files with reasons" },
+                    "errors": { "type": "array", "items": { "type": "object" }, "description": "Per-file errors" },
+                    "summary": { "type": "string", "description": "One-line human summary of the run" },
+                }),
+            ),
+            "session.start" => envelope(
+                "Session identity for the started or resumed session.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "session_id": { "type": "string", "description": "Session UUID to pass to record/checkpoint" },
+                    "title": { "type": "string", "description": "Session title" },
+                    "user": { "type": "string", "description": "User identifier the session belongs to" },
+                }),
+            ),
+            "session.record" => envelope(
+                "Receipt for the recorded turn.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "memory_id": { "type": "string", "description": "Memory UUID of the stored turn" },
+                    "session_id": { "type": "string", "description": "Session the turn landed in" },
+                    "sequence": { "type": "integer", "description": "Turn position within the session" },
+                }),
+            ),
+            "session.checkpoint" => envelope(
+                "Checkpoint receipt with the stored structured handoff.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "checkpoint_id": { "type": "string", "description": "Memory UUID of the checkpoint" },
+                    "session_id": { "type": "string", "description": "Session that was checkpointed" },
+                    "label": { "type": "string", "description": "Optional checkpoint label" },
+                    "handoff": {
+                        "type": "object",
+                        "description": "Structured handoff (next_queue, open_flags, git, tests_green, lease_id) as supplied.",
+                    },
+                    "warnings": { "type": "array", "items": { "type": "string" }, "description": "Non-fatal capture warnings" },
+                }),
+            ),
+            "session.continuity" => envelope(
+                "Recent turns plus the latest checkpoint handoff for the prior session.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "previous_session": { "type": "string", "description": "Session the turns were read from" },
+                    "turns": { "type": "array", "items": { "type": "object" }, "description": "Turns (memory_id, role, turn_type, sequence, content, content_bytes, content_truncated, importance)" },
+                    "count": { "type": "integer", "description": "Turns returned" },
+                    "turns_omitted": { "type": "integer", "description": "Turns dropped by the response budget" },
+                    "truncated": { "type": "boolean", "description": "Whether the response hit its byte budget" },
+                    "checkpoint": { "type": ["object", "null"], "description": "Latest checkpoint handoff, or null" },
+                    "checkpoint_id": { "type": ["string", "null"], "description": "Memory UUID of the checkpoint, or null" },
+                    "max_content_bytes": { "type": "integer", "description": "Per-turn byte cap applied" },
+                    "max_response_bytes": { "type": "integer", "description": "Total response byte budget applied" },
+                }),
+            ),
+            "receipts.emit" => envelope(
+                "Continuity receipt emission receipt.",
+                json!({
+                    "status": { "type": "string", "description": "Operation status" },
+                    "id": { "type": "string", "description": "Receipt UUID" },
+                    "kind": { "type": "string", "description": "Receipt profile (session, karma-chain-head, ...)" },
+                    "digest": { "type": "string", "description": "sha256: digest of the signed bundle" },
+                    "memory_id": { "type": "string", "description": "Memory UUID the receipt was stored as" },
+                    "session_id": { "type": "string", "description": "Session the receipt covers" },
+                    "task_id": { "type": "string", "description": "URN identifying the receipted task" },
+                    "turn_count": { "type": "integer", "description": "Turns covered by the receipt" },
+                    "verdict": { "type": "string", "description": "Local verification verdict (TRUSTED, ...)" },
+                }),
+            ),
+            "receipts.verify" => envelope(
+                "Verification report for a receipt or bundle.",
+                json!({
+                    "id": { "type": "string", "description": "Receipt UUID that was verified" },
+                    "require_anchor": { "type": "boolean", "description": "Whether an external anchor was required" },
+                    "result": {
+                        "type": "object",
+                        "description": "Verdict detail: errors, insufficient/provisional reasons, and a summary (attestations, issuers, receipts, settled, terminated, types).",
+                    },
+                }),
+            ),
+            _ => json!({
+                "type": "object",
+                "description": "Result envelope for this tool; fields vary by operation.",
+                "additionalProperties": true,
+            }),
+        }
+    }
+
     /// Handle `tools/list` — `wm` meta-tool plus the discrete lifecycle catalog.
     ///
     /// The `wm` meta-tool is the single entry point for MCP clients. It routes
@@ -3367,11 +3581,7 @@ impl McpServer {
                         },
                     },
                 },
-                "outputSchema": {
-                    "type": "object",
-                    "description": "The dispatched tool's result envelope; fields vary by route.",
-                    "additionalProperties": true,
-                },
+                "outputSchema": Self::catalog_output_schema("wm"),
                 "annotations": {
                     "title": wm_title,
                     "readOnlyHint": wm_ro,
@@ -3666,11 +3876,7 @@ impl McpServer {
                     "title": title,
                     "description": final_desc,
                     "inputSchema": final_schema,
-                    "outputSchema": {
-                        "type": "object",
-                        "description": "Result envelope for this tool; fields vary by operation.",
-                        "additionalProperties": true,
-                    },
+                    "outputSchema": Self::catalog_output_schema(alias),
                     "annotations": {
                         "title": title,
                         "readOnlyHint": read_only,
@@ -5330,6 +5536,59 @@ mod tests {
             assert!(ann["title"].is_string(), "title: {t}");
             assert!(t["outputSchema"].is_object(), "outputSchema: {t}");
             assert!(t["title"].is_string(), "top-level title: {t}");
+        }
+        // Discovery metadata depth (2026-09-24): catalog outputSchemas name
+        // the stable result fields per tool (machine metadata, not a generic
+        // open object) while staying open for envelope growth.
+        for (tool_name, fields) in [
+            ("wm", vec!["_wm_route"]),
+            ("memory.create", vec!["id", "galaxy", "content_hash"]),
+            ("memory.search", vec!["count", "recall_mode", "results"]),
+            ("memory.read", vec!["id", "content", "galaxy"]),
+            ("memory.list", vec!["memories", "matched", "returned"]),
+            (
+                "memory.hybrid_recall",
+                vec!["count", "recall_mode", "evidence_bundle"],
+            ),
+            ("memory.update", vec!["id", "importance", "content_hash"]),
+            ("memory.revisions", vec!["id", "revisions", "count"]),
+            (
+                "memory.ingest",
+                vec!["files_found", "files_ingested", "chunks_written"],
+            ),
+            ("session.start", vec!["session_id", "status"]),
+            (
+                "session.record",
+                vec!["memory_id", "session_id", "sequence"],
+            ),
+            (
+                "session.checkpoint",
+                vec!["checkpoint_id", "session_id", "handoff"],
+            ),
+            (
+                "session.continuity",
+                vec!["turns", "checkpoint", "previous_session"],
+            ),
+            ("receipts.emit", vec!["id", "digest", "verdict"]),
+            ("receipts.verify", vec!["id", "result"]),
+        ] {
+            let entry = tools
+                .iter()
+                .find(|t| t["name"] == tool_name)
+                .unwrap_or_else(|| panic!("{tool_name} missing from catalog"));
+            let props = entry["outputSchema"]["properties"]
+                .as_object()
+                .unwrap_or_else(|| panic!("{tool_name} outputSchema.properties missing"));
+            for field in fields {
+                assert!(
+                    props.contains_key(field),
+                    "{tool_name} outputSchema must describe '{field}': {entry}"
+                );
+            }
+            assert!(
+                entry["outputSchema"]["additionalProperties"] == true,
+                "{tool_name} outputSchema must stay open: {entry}"
+            );
         }
         // Discovery parity (2026-09-22): exposed lifecycle schemas must carry
         // the real tool parameters, not the historical fallback copies
