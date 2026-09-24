@@ -1493,6 +1493,28 @@ mod tests {
         fs::write(root.join("node_modules/x/y.md"), "# should be skipped").unwrap();
     }
 
+    /// `run_ingest` with a bounded retry on a transient Tantivy writer lock.
+    ///
+    /// CI finding 2026-09-24 (run 36019731286): the second writer open in a
+    /// test can observe the just-dropped writer lock as busy on a loaded
+    /// runner — the same flake class as the 2026-09-21 reader-lock finding
+    /// (see `ledger_roundtrip_and_unchanged_skip`), now on the writer side.
+    /// The lock is released by the drop before the next call; on slow
+    /// filesystems the release can be observed a beat late. Retry briefly —
+    /// a genuinely leaked writer still fails this test after the window.
+    fn ingest_ok(root: &Path, store_path: &Path) -> IngestReport {
+        for attempt in 0..10 {
+            match run_ingest(root, store_path, false, 0, None, false, 0, false) {
+                Ok(report) => return report,
+                Err(e) if attempt < 9 && e.to_string().contains("lock busy") => {
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                }
+                Err(e) => panic!("run_ingest failed: {e}"),
+            }
+        }
+        unreachable!("retry loop returns or panics")
+    }
+
     #[test]
     fn credential_file_detection() {
         assert!(is_credential_file(".env"));
@@ -1588,14 +1610,14 @@ mod tests {
         write_tree(root);
         let store_path = tmp.path().join("store");
 
-        let first = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        let first = ingest_ok(root, &store_path);
         assert_eq!(first.files_found, 3, "md + jsonl + txt (env excluded)");
         assert_eq!(first.files_ingested, 3);
         assert!(first.chunks_written >= 3);
         assert!(first.skipped.iter().any(|(p, _)| p.contains(".env")));
 
         // Second run: everything unchanged → no-op.
-        let second = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        let second = ingest_ok(root, &store_path);
         assert_eq!(second.files_unchanged, 3);
         assert_eq!(second.files_ingested, 0);
         assert_eq!(second.chunks_written, 0);
@@ -1625,13 +1647,13 @@ mod tests {
         fs::write(&f, "# One\n\nFirst version paragraph of some length here.").unwrap();
         let store_path = tmp.path().join("store");
 
-        let first = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        let first = ingest_ok(root, &store_path);
         assert_eq!(first.chunks_written, 1);
 
         // New version: two long sections → two chunks (different id set).
         let long = "A long second section here. ".repeat(200);
         fs::write(&f, format!("# One\n\nRevised version.\n\n# Two\n\n{long}")).unwrap();
-        let second = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        let second = ingest_ok(root, &store_path);
         assert_eq!(second.files_ingested, 1);
         assert_eq!(second.chunks_written, 2);
 
@@ -1680,7 +1702,7 @@ mod tests {
         let store_path = tmp.path().join("store");
 
         // Default posture: credential-bearing content is skipped.
-        let strict = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        let strict = ingest_ok(root, &store_path);
         assert_eq!(strict.files_ingested, 0);
         assert!(
             strict
@@ -1749,7 +1771,7 @@ mod tests {
         let store_path = tmp.path().join("store");
 
         // Default: never ingested.
-        let strict = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        let strict = ingest_ok(root, &store_path);
         assert_eq!(strict.files_ingested, 0);
         assert!(
             strict
@@ -1815,7 +1837,7 @@ mod tests {
         .unwrap();
         let store_path = tmp.path().join("store");
 
-        let report = run_ingest(root, &store_path, false, 0, None, false, 0, false).unwrap();
+        let report = ingest_ok(root, &store_path);
         assert_eq!(report.files_ingested, 1);
         assert!(
             report
