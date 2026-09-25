@@ -3268,7 +3268,7 @@ impl McpServer {
             "memory.search" => ("Search memories", true, false, true),
             "memory.read" => ("Read memory", true, false, true),
             "memory.list" => ("List memories", true, false, true),
-            "memory.hybrid_recall" => ("Hybrid recall", true, false, true),
+            "memory.hybrid_recall" => ("Hybrid recall (compatibility alias)", true, false, true),
             "memory.update" => ("Update memory", false, false, false),
             "memory.revisions" => ("Memory revision chain", true, false, true),
             "memory.ingest" => ("Ingest documents into memory", false, false, false),
@@ -3386,7 +3386,7 @@ impl McpServer {
                 }),
             ),
             "memory.hybrid_recall" => envelope(
-                "Fused recall results with an evidence bundle and recall-mode disclosure.",
+                "Recall results (memory.search implementation) with an evidence bundle and recall-mode disclosure.",
                 json!({
                     "status": { "type": "string", "description": "Operation status" },
                     "count": { "type": "integer", "description": "Number of results returned" },
@@ -3566,7 +3566,7 @@ impl McpServer {
                 (None, None) => String::new(),
             };
             let description = format!(
-                "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Provide exactly one of thought or route. Say 'list tools' to enumerate the curated surface.",
+                "WhiteMagic meta-tool — memory and continuity kernel over the {} tool surface ({} tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.{}{} Invoke with thought=<natural language> (auto-routed), route=<exact tool id> (e.g. 'memory.search', 'session.continuity'), or args=<object> (passthrough). Provide exactly one of thought or route. Say 'list tools' to enumerate the curated surface. Prefer a discrete lifecycle tool when one matches your task; use wm for natural-language routing and the wider curated catalog.",
                 self.profile_name, tool_count, mode_hint, scope
             );
             let (wm_title, wm_ro, wm_destructive, wm_idem) =
@@ -3645,7 +3645,7 @@ impl McpServer {
             (
                 "memory.search",
                 "memory.search",
-                "Search and recall memories across galaxies using hybrid semantic, BM25, and associative retrieval.",
+                "Search memories: hybrid BM25 + vector fusion with deterministic episodic and full-text fallbacks; each result discloses its recall_mode. The preferred recall tool.",
                 json!({
                     "type": "object",
                     "properties": {
@@ -3700,7 +3700,7 @@ impl McpServer {
             (
                 "memory.hybrid_recall",
                 "memory.hybrid_recall",
-                "Fused recall across full-text, vector, graph, and coordinate lookup with recall_mode disclosure.",
+                "Compatibility alias of memory.search — same implementation, same arguments, same results. Kept for clients pinned to this name; prefer memory.search.",
                 json!({
                     "type": "object",
                     "properties": {
