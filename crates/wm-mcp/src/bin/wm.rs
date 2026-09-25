@@ -1753,7 +1753,7 @@ fn run() -> anyhow::Result<()> {
                 }
                 Some(id) => match wm_mcp::setup::find(&id) {
                     None => anyhow::bail!(
-                        "unknown client '{id}' (expected: opencode, claude, cursor, windsurf, codex)"
+                        "unknown client '{id}' (expected: opencode, claude, cursor, windsurf, codex, muse)"
                     ),
                     Some(spec) => {
                         if remove {

@@ -1,8 +1,9 @@
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "npx",
-      "args": ["-y", "whitemagic-mcp@latest", "serve"]
+      "type": "stdio",
+      "command": "wm",
+      "args": ["serve", "--profile", "curated"]
     }
   }
 }

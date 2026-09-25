@@ -25,6 +25,9 @@ pub enum Kind {
     OpencodeJsonc,
     /// Codex `config.toml` (`[mcp_servers.<name>]`).
     CodexToml,
+    /// Muse Code `settings.json` (`mcpServers` plus a mandatory
+    /// `schema_version: 1` root member and a per-server `type: "stdio"`).
+    MuseJson,
 }
 
 /// A supported client.
@@ -77,6 +80,12 @@ pub fn specs() -> Vec<ClientSpec> {
             label: "Codex CLI",
             config_path: home().join(".codex/config.toml"),
             kind: Kind::CodexToml,
+        },
+        ClientSpec {
+            id: "muse",
+            label: "Muse Code",
+            config_path: xdg_config().join("muse/settings.json"),
+            kind: Kind::MuseJson,
         },
     ]
 }
@@ -204,6 +213,17 @@ pub fn entry(exe: &Path) -> Value {
     })
 }
 
+/// The Muse Code `mcpServers.<name>` entry: Muse needs an explicit transport
+/// `type` (stdio) and reads `mcpServers` from `~/.config/muse/settings.json`
+/// or a trusted checkout's `.mcp.json`.
+fn muse_entry(exe: &Path) -> Value {
+    json!({
+        "type": "stdio",
+        "command": exe.display().to_string(),
+        "args": serve_args(),
+    })
+}
+
 /// The OpenCode JSONC `mcp.<name>` entry (command is an array).
 fn opencode_entry(exe: &Path) -> Value {
     let mut command = vec![exe.display().to_string()];
@@ -222,6 +242,11 @@ pub fn proposal(spec: &ClientSpec, exe: &Path) -> String {
     match spec.kind {
         Kind::McpServersJson => json!({
             "mcpServers": { "whitemagic": entry(exe) }
+        })
+        .to_string(),
+        Kind::MuseJson => json!({
+            "schema_version": 1,
+            "mcpServers": { "whitemagic": muse_entry(exe) }
         })
         .to_string(),
         Kind::OpencodeJsonc => json!({
@@ -302,8 +327,30 @@ pub fn write_mcp_servers_json(
     spec: &ClientSpec,
     exe: &Path,
 ) -> anyhow::Result<(String, Option<PathBuf>)> {
-    if spec.kind != Kind::McpServersJson {
-        anyhow::bail!("write_mcp_servers_json called with the wrong config kind");
+    write_servers_json(spec, exe, entry(exe), &[])
+}
+
+/// Patch a Muse Code `settings.json`. Same `mcpServers` shape as Claude et
+/// al., plus the two Muse-specific requirements: a mandatory root
+/// `schema_version: 1` (a missing one fails every Muse command) and the
+/// per-server `type: "stdio"` (see [`muse_entry`]).
+///
+/// # Errors
+/// Any IO or parse failure (the file is never modified on error).
+fn write_muse_json(spec: &ClientSpec, exe: &Path) -> anyhow::Result<(String, Option<PathBuf>)> {
+    write_servers_json(spec, exe, muse_entry(exe), &[("schema_version", json!(1))])
+}
+
+/// Shared writer for `mcpServers` JSON configs: `root_defaults` are inserted
+/// only when absent, so an existing config's values are never overwritten.
+fn write_servers_json(
+    spec: &ClientSpec,
+    _exe: &Path,
+    desired: Value,
+    root_defaults: &[(&str, Value)],
+) -> anyhow::Result<(String, Option<PathBuf>)> {
+    if !matches!(spec.kind, Kind::McpServersJson | Kind::MuseJson) {
+        anyhow::bail!("write_servers_json called with the wrong config kind");
     }
 
     let existing = spec.config_path.exists();
@@ -319,19 +366,28 @@ pub fn write_mcp_servers_json(
         json!({})
     };
 
+    let entry_current =
+        config.get("mcpServers").and_then(|s| s.get("whitemagic")) == Some(&desired);
+    let roots_current = root_defaults
+        .iter()
+        .all(|(key, value)| config.get(*key) == Some(value));
+    if entry_current && roots_current {
+        return Ok(("already configured".to_string(), None));
+    }
+
     let obj = config
         .as_object_mut()
         .ok_or_else(|| anyhow::anyhow!("config root is not an object"))?;
+    for (key, value) in root_defaults {
+        obj.entry((*key).to_string())
+            .or_insert_with(|| value.clone());
+    }
     let servers = obj
         .entry("mcpServers")
         .or_insert_with(|| json!({}))
         .as_object_mut()
         .ok_or_else(|| anyhow::anyhow!("mcpServers is not an object"))?;
 
-    let desired = entry(exe);
-    if servers.get("whitemagic") == Some(&desired) {
-        return Ok(("already configured".to_string(), None));
-    }
     servers.insert("whitemagic".to_string(), desired);
 
     let backup = if existing {
@@ -949,6 +1005,7 @@ pub fn write(spec: &ClientSpec, exe: &Path) -> anyhow::Result<(String, Option<Pa
         Kind::McpServersJson => write_mcp_servers_json(spec, exe),
         Kind::OpencodeJsonc => write_opencode_jsonc(spec, exe),
         Kind::CodexToml => write_codex_toml(spec, exe),
+        Kind::MuseJson => write_muse_json(spec, exe),
     }
 }
 
@@ -964,7 +1021,7 @@ pub fn write(spec: &ClientSpec, exe: &Path) -> anyhow::Result<(String, Option<Pa
 /// Any IO or parse failure; the original file is never modified on error.
 pub fn remove(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
     match spec.kind {
-        Kind::McpServersJson => remove_mcp_servers_json(spec),
+        Kind::McpServersJson | Kind::MuseJson => remove_mcp_servers_json(spec),
         Kind::OpencodeJsonc => remove_opencode_jsonc(spec),
         Kind::CodexToml => remove_codex_toml(spec),
     }
@@ -1120,6 +1177,13 @@ pub fn entry_matches(spec: &ClientSpec, exe: &Path) -> bool {
             .ok()
             .and_then(|t| serde_json::from_str::<Value>(&t).ok())
             .is_some_and(|v| v["mcpServers"]["whitemagic"] == entry(exe)),
+        Kind::MuseJson => std::fs::read_to_string(&spec.config_path)
+            .ok()
+            .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+            .is_some_and(|v| {
+                v["mcpServers"]["whitemagic"] == muse_entry(exe)
+                    && v["schema_version"] == json!(1)
+            }),
         Kind::OpencodeJsonc => std::fs::read_to_string(&spec.config_path)
             .ok()
             .and_then(|t| parse_jsonc(&t).ok())
@@ -1365,6 +1429,41 @@ mod tests {
         let codex = specs.iter().find(|s| s.id == "codex").unwrap();
         let snippet = proposal(codex, exe);
         assert!(snippet.contains("[mcp_servers.whitemagic]"));
+
+        let muse = specs.iter().find(|s| s.id == "muse").unwrap();
+        let p: Value = serde_json::from_str(&proposal(muse, exe)).unwrap();
+        assert_eq!(p["schema_version"], 1, "Muse requires schema_version: 1");
+        assert_eq!(p["mcpServers"]["whitemagic"]["type"], "stdio");
+        assert_eq!(p["mcpServers"]["whitemagic"]["command"], "/opt/wm");
+    }
+
+    #[test]
+    fn muse_settings_get_schema_version_and_stdio_type() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("muse/settings.json");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, r#"{"theme":"dark"}"#).unwrap();
+        let muse = spec(Kind::MuseJson, path.clone());
+        let exe = Path::new("/opt/wm");
+
+        let (msg, backup) = write(&muse, exe).unwrap();
+        assert!(msg.contains("updated"));
+        assert!(backup.unwrap().exists());
+        let v: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(v["schema_version"], 1);
+        assert_eq!(v["theme"], "dark", "unrelated settings survive");
+        assert_eq!(v["mcpServers"]["whitemagic"]["type"], "stdio");
+        assert_eq!(v["mcpServers"]["whitemagic"]["command"], "/opt/wm");
+
+        let (msg2, backup2) = write(&muse, exe).unwrap();
+        assert_eq!(msg2, "already configured");
+        assert!(backup2.is_none());
+
+        let (msg3, _) = remove(&muse).unwrap();
+        assert!(msg3.contains("removed"));
+        let v2: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert!(v2["mcpServers"].get("whitemagic").is_none());
+        assert_eq!(v2["schema_version"], 1, "remove keeps the root schema");
     }
 
     #[test]
