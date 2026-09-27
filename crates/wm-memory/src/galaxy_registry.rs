@@ -38,11 +38,25 @@ pub struct GalaxyRegistry {
 }
 
 impl GalaxyRegistry {
-    /// Open or create a galaxy registry in the given LMDB environment.
+    /// Open an existing galaxy registry, creating it when the environment
+    /// allows writes.
+    ///
+    /// Read-only environments (`wm serve --readonly`) refuse `MDB_CREATE`
+    /// even when the database already exists, so a refused create falls back
+    /// to opening the existing registry. A genuinely missing registry still
+    /// errors — the failure stays visible instead of becoming an implicit
+    /// schema mutation. Same shape as `AssociationStore::open` (2026-09-27
+    /// read-path audit; this constructor is not on a read route today, but
+    /// the class recurs).
     pub fn open(env: &Environment) -> Result<Self> {
-        let registry_db = env
-            .create_db(Some("_galaxy_registry"), DatabaseFlags::default())
-            .map_err(|e| CoreError::Memory(format!("LMDB create_db for galaxy registry: {e}")))?;
+        let registry_db = match env.create_db(Some("_galaxy_registry"), DatabaseFlags::default()) {
+            Ok(db) => db,
+            Err(create_err) => env.open_db(Some("_galaxy_registry")).map_err(|open_err| {
+                CoreError::Memory(format!(
+                    "LMDB create_db for galaxy registry: {create_err}; open existing: {open_err}"
+                ))
+            })?,
+        };
 
         Ok(Self {
             registry_db,
@@ -251,6 +265,65 @@ mod tests {
     fn get_nonexistent_returns_none() {
         let (_tmp, env, registry) = test_registry();
         assert!(registry.get(&env, "nonexistent").unwrap().is_none());
+    }
+
+    #[test]
+    fn open_falls_back_to_existing_registry_in_read_only_env() {
+        let tmp = tempdir().unwrap();
+        {
+            let env = Environment::new()
+                .set_map_size(1024 * 1024)
+                .set_max_dbs(32)
+                .open(tmp.path())
+                .unwrap();
+            GalaxyRegistry::open(&env).unwrap();
+        }
+        // Read-only environments refuse MDB_CREATE even for an existing
+        // database; `open` must fall back to opening it (the same
+        // create-on-read class the 2026-09-27 audit swept).
+        let env_ro = Environment::new()
+            .set_map_size(1024 * 1024)
+            .set_max_dbs(32)
+            .set_flags(lmdb::EnvironmentFlags::READ_ONLY)
+            .open(tmp.path())
+            .unwrap();
+        GalaxyRegistry::open(&env_ro)
+            .expect("read-only open must find the existing galaxy registry");
+    }
+
+    #[test]
+    fn open_read_only_env_without_registry_still_fails_visible() {
+        let tmp = tempdir().unwrap();
+        {
+            let env = Environment::new()
+                .set_map_size(1024 * 1024)
+                .set_max_dbs(32)
+                .open(tmp.path())
+                .unwrap();
+            // Materialize the environment with an unrelated database, but no
+            // galaxy registry, so the read-only open succeeds and the missing
+            // registry is what fails.
+            env.create_db(Some("unrelated"), DatabaseFlags::default())
+                .unwrap();
+        }
+        let env_ro = Environment::new()
+            .set_map_size(1024 * 1024)
+            .set_max_dbs(32)
+            .set_flags(lmdb::EnvironmentFlags::READ_ONLY)
+            .open(tmp.path())
+            .unwrap();
+        let err = match GalaxyRegistry::open(&env_ro) {
+            Ok(_) => panic!("read-only open without a registry must fail"),
+            Err(err) => err.to_string(),
+        };
+        assert!(
+            err.contains("create_db for galaxy registry"),
+            "error must name the constructor: {err}"
+        );
+        assert!(
+            err.contains("open existing"),
+            "error must disclose the fallback attempt: {err}"
+        );
     }
 
     #[test]
