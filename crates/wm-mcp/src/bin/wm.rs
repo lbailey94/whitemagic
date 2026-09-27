@@ -249,6 +249,11 @@ enum Commands {
         /// (alias for `wm report`; same read-only, nothing-transmitted contract)
         #[arg(long)]
         report: bool,
+        /// Complete a pre-cold store's missing named databases with a one-time
+        /// writable open, then diagnose normally (2026-09-27 field report:
+        /// upgraded stores failed inspection with a cryptic MDB_NOTFOUND).
+        #[arg(long)]
+        complete_schema: bool,
     },
     /// Analyze git history and mine codebase patterns with longevity scores (read-only)
     #[command(hide = true)]
@@ -2073,6 +2078,7 @@ fn run() -> anyhow::Result<()> {
             kaizen,
             deep,
             report,
+            complete_schema,
         } => {
             // `wm doctor --report` is the documented alias for `wm report`.
             if report {
@@ -2082,6 +2088,31 @@ fn run() -> anyhow::Result<()> {
                     false,
                 )?;
                 return Ok(());
+            }
+            // One-time schema completion for stores that predate the current
+            // named databases (2026-09-27 field report: the remedy for the
+            // cryptic inspection MDB_NOTFOUND). Writable open; refuses loudly
+            // while a server holds the store.
+            if complete_schema {
+                let store_path = store.clone().unwrap_or_else(|| wm_config.store_path());
+                let lmdb_dir = store_path.join("lmdb");
+                let schema_path = if lmdb_dir.is_dir() {
+                    lmdb_dir
+                } else {
+                    store_path.clone()
+                };
+                match wm_memory::MemoryStore::ensure_schema(&schema_path) {
+                    Ok(created) if !created.is_empty() => println!(
+                        "Schema completed: created {} missing database(s): {}",
+                        created.len(),
+                        created.join(", ")
+                    ),
+                    Ok(_) => println!("Schema already complete — nothing to create."),
+                    Err(e) => anyhow::bail!(
+                        "Schema completion failed for {}: {e}",
+                        schema_path.display()
+                    ),
+                }
             }
             // Posture-by-observation is store-independent: `--network` runs
             // the socket audit alone and never opens the LMDB env.

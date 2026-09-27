@@ -1876,7 +1876,36 @@ impl McpServer {
                         } else {
                             DreamContext::new(&self.store, &self.associations)
                         };
+                        let audit_baseline = self
+                            .pipeline
+                            .write_audit()
+                            .map(|journal| (journal, journal.dispatch_baseline()));
                         let dream_result = self.dream.run(&ctx);
+                        // Declare the dream window's store mutations to the
+                        // write-audit journal (2026-09-27 field report:
+                        // autonomous consolidation deletes were invisible —
+                        // doctor could only show them as undeclared mutations).
+                        if let Some((journal, baseline)) = audit_baseline {
+                            let delta = self.store.mutation_count().saturating_sub(baseline);
+                            let actor = wm_governance::ActorIdentity {
+                                session: None,
+                                user: None,
+                                compartment: None,
+                                operation_id: Some("dream-cycle".to_string()),
+                                act: None,
+                                on_behalf_of: None,
+                                delegation_chain: Vec::new(),
+                            };
+                            let _ = journal.record(
+                                "dream.cycle",
+                                actor,
+                                None,
+                                None,
+                                true,
+                                delta.min(u64::from(u32::MAX)) as u32,
+                                true,
+                            );
+                        }
                         tracing::info!(
                             phases = dream_result.phases.len(),
                             duration_ms = dream_result.total_duration.as_millis(),

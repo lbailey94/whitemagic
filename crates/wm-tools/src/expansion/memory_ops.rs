@@ -2693,7 +2693,7 @@ impl Tool for MemoryFilterTool {
         &self.effects
     }
     fn description(&self) -> &str {
-        "Filter memories by tags, date range, importance thresholds, and a content query substring"
+        "Filter memories by tags, date range, importance thresholds, and a content query substring (scans up to 10,000 records per galaxy; `truncated: true` discloses when the cap was hit, so `matched` is a floor in that case)"
     }
     fn input_schema(&self) -> Value {
         super::common::schema(
@@ -2773,7 +2773,11 @@ impl Tool for MemoryFilterTool {
             .map(|q| q.split_whitespace().map(str::to_lowercase).collect())
             .unwrap_or_default();
 
-        let memories = self.store.scan(galaxy, 10_000)?;
+        // Scan bound (2026-09-27 field report): counts are exact only when the
+        // galaxy fits the cap; `truncated` discloses the sampled case so
+        // `matched` is never mistaken for a full-galaxy count.
+        const FILTER_SCAN_CAP: usize = 10_000;
+        let memories = self.store.scan(galaxy, FILTER_SCAN_CAP)?;
 
         let matched: Vec<&wm_memory::Memory> = memories
             .iter()
@@ -2825,6 +2829,7 @@ impl Tool for MemoryFilterTool {
         let filtered: Vec<&&wm_memory::Memory> = matched.iter().skip(offset).take(limit).collect();
 
         let total_scanned = memories.len();
+        let scan_truncated = total_scanned >= FILTER_SCAN_CAP;
         let results: Vec<Value> = filtered
             .iter()
             .map(|m| {
@@ -2838,10 +2843,12 @@ impl Tool for MemoryFilterTool {
             })
             .collect();
 
-        Ok(json!({
+        let mut out = json!({
             "status": "success",
             "galaxy": galaxy_name(galaxy),
             "scanned": total_scanned,
+            "scan_cap": FILTER_SCAN_CAP,
+            "truncated": scan_truncated,
             "matched": matched.len(),
             "offset": offset,
             "returned": results.len(),
@@ -2855,7 +2862,13 @@ impl Tool for MemoryFilterTool {
                 "created_before": created_before.map(|t| t.to_rfc3339()),
             },
             "memories": results,
-        }))
+        });
+        if scan_truncated {
+            out["hint"] = json!(
+                "scan cap reached: `matched` covers only the first 10,000 records scanned, not the whole galaxy — narrow the filters or raise the cap per store"
+            );
+        }
+        Ok(out)
     }
     fn stats(&self) -> &ToolStats {
         &self.stats
@@ -4285,6 +4298,14 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(v["matched"], 2);
+        // 2026-09-27 field report: the scan bound must be disclosed so a
+        // `matched` count is never mistaken for a full-galaxy count.
+        assert_eq!(v["scan_cap"], 10_000);
+        assert_eq!(v["truncated"], false);
+        assert!(
+            v.get("hint").is_none(),
+            "no hint when the whole galaxy fit the scan"
+        );
     }
 
     #[tokio::test]

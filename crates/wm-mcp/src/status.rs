@@ -217,6 +217,81 @@ fn backup_target_from(text: &str) -> Option<String> {
     None
 }
 
+/// Newest v2 backup on disk under `~/whitemagic-backups` (the directory
+/// itself is the durable record when the runner log is missing or rotated).
+///
+/// Accepts both layouts: `whitemagic-backup-<ts>/{envelope.json,data/,
+/// SHA256SUMS}` directly under the root (the `wm backup` default), and one
+/// level deeper per store. Age comes from the directory mtime, falling back
+/// to the envelope's `created_at`. 2026-09-27 field report: 10+ backups on
+/// disk while `wm status` said `Last backup: none found`.
+fn last_backup_from_disk(root: &Path) -> Option<(String, u64)> {
+    let mut candidates = Vec::new();
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return None;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        if entry
+            .file_name()
+            .to_string_lossy()
+            .starts_with("whitemagic-backup-")
+        {
+            candidates.push(path);
+            continue;
+        }
+        if let Ok(children) = std::fs::read_dir(&path) {
+            for child in children.flatten() {
+                let child_path = child.path();
+                if child_path.is_dir()
+                    && child
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with("whitemagic-backup-")
+                {
+                    candidates.push(child_path);
+                }
+            }
+        }
+    }
+
+    let mut newest: Option<(String, u64)> = None;
+    for path in candidates {
+        let name = path
+            .file_name()
+            .map_or_else(String::new, |n| n.to_string_lossy().to_string());
+        let envelope_ts = std::fs::read_to_string(path.join("envelope.json"))
+            .ok()
+            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+            .and_then(|v| {
+                v.get("created_at")
+                    .and_then(|t| t.as_str())
+                    .map(str::to_string)
+            });
+        let label = envelope_ts
+            .unwrap_or_else(|| name.trim_start_matches("whitemagic-backup-").to_string());
+        let age = std::fs::metadata(&path)
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| std::time::SystemTime::now().duration_since(t).ok())
+            .map(|d| d.as_secs())
+            .or_else(|| {
+                chrono::DateTime::parse_from_rfc3339(&label).ok().map(|t| {
+                    let now = chrono::Utc::now();
+                    (now.timestamp() - t.with_timezone(&chrono::Utc).timestamp()).max(0) as u64
+                })
+            });
+        let Some(age) = age else { continue };
+        if newest.as_ref().map_or(true, |(_, a)| age < *a) {
+            newest = Some((label, age));
+        }
+    }
+    newest
+}
+
 /// Snapshot dirs (`whitemagic-backup-*`) one level below `root`, skipping the
 /// named subtrees (e.g. `nvme-fallback`, `logs`, `seals`, `anchors`, `trust`).
 fn snapshot_dirs(root: &Path, skip: &[&str]) -> Vec<PathBuf> {
@@ -308,8 +383,17 @@ pub fn collect(store_root: &Path) -> StatusReport {
     let project = std::env::var("WM_PROJECT").ok().filter(|s| !s.is_empty());
     let home_backups = dirs_home().join("whitemagic-backups");
     let log_text = std::fs::read_to_string(backup_log_path()).ok();
-    let (last_backup, last_backup_age_secs) =
+    let (mut last_backup, mut last_backup_age_secs) =
         log_text.as_deref().map_or((None, None), last_backup_from);
+    // Disk fallback (2026-09-27 field report): the runner log can be absent
+    // or rotated while v2 backups sit in ~/whitemagic-backups.
+    let disk_last_backup = last_backup_from_disk(&home_backups);
+    if last_backup_age_secs.is_none() {
+        if let Some((ts, age)) = disk_last_backup.as_ref() {
+            last_backup = Some(ts.clone());
+            last_backup_age_secs = Some(*age);
+        }
+    }
     let backup_target = log_text.as_deref().and_then(backup_target_from);
     let staging_root = home_backups.join("nvme-fallback");
     let backup_staging_pending = !snapshot_dirs(&staging_root, &[]).is_empty();
@@ -318,7 +402,8 @@ pub fn collect(store_root: &Path) -> StatusReport {
         .as_deref()
         .map(Path::new)
         .and_then(|root| newest_snapshot_age_in(root, &[]))
-        .or_else(|| newest_snapshot_age_in(&staging_root, &[]));
+        .or_else(|| newest_snapshot_age_in(&staging_root, &[]))
+        .or_else(|| disk_last_backup.as_ref().map(|(_, age)| *age));
 
     let mut memories = 0u64;
     let mut sessions = 0u64;
@@ -784,6 +869,49 @@ mod tests {
             age < 60,
             "a snapshot just created must read as fresh: {age}s"
         );
+    }
+
+    fn set_mtime_secs_ago(path: &std::path::Path, secs_ago: u64) {
+        let when = std::time::SystemTime::now() - std::time::Duration::from_secs(secs_ago);
+        let file = std::fs::File::open(path).unwrap();
+        file.set_times(std::fs::FileTimes::new().set_modified(when))
+            .unwrap();
+    }
+
+    #[test]
+    fn disk_backup_detection_reads_v2_envelopes_and_both_layouts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        // v2 default layout: direct child with envelope.json, fresh.
+        let v2 = home.join("whitemagic-backup-20260927T033033Z");
+        std::fs::create_dir_all(v2.join("data")).unwrap();
+        std::fs::write(
+            v2.join("envelope.json"),
+            r#"{"format_version":2,"kind":"store_backup","created_at":"2026-09-27T03:30:33Z","count":1,"generator":"wm 9.2.8"}"#,
+        )
+        .unwrap();
+        // Per-store layout, an hour old.
+        let deep = home.join("wmv9/whitemagic-backup-20260901T000000Z");
+        std::fs::create_dir_all(&deep).unwrap();
+        set_mtime_secs_ago(&deep, 3600);
+        let (label, age) = last_backup_from_disk(home).expect("v2 backup detected");
+        assert_eq!(label, "2026-09-27T03:30:33Z", "newest v2 envelope wins");
+        assert!(age < 60, "fresh backup: {age}s");
+    }
+
+    #[test]
+    fn disk_backup_detection_prefers_the_newest_and_ignores_others() {
+        let tmp = tempfile::tempdir().unwrap();
+        let home = tmp.path();
+        let older = home.join("whitemagic-backup-20260101T000000Z");
+        std::fs::create_dir_all(&older).unwrap();
+        set_mtime_secs_ago(&older, 7200);
+        let newer = home.join("whitemagic-backup-20260102T000000Z");
+        std::fs::create_dir_all(&newer).unwrap();
+        std::fs::create_dir_all(home.join("not-a-backup")).unwrap();
+        let (label, age) = last_backup_from_disk(home).expect("name-only backup detected");
+        assert_eq!(label, "20260102T000000Z", "newest directory wins");
+        assert!(age < 60, "fresh backup: {age}s");
     }
 
     #[test]

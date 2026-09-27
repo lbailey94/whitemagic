@@ -785,15 +785,34 @@ impl DreamCycle {
         }
 
         // Also deduplicate within each galaxy (remove content_hash duplicates)
+        // 2026-09-27 field report: the deletes were silent (no report, no
+        // metadata carry-over). Count them, and merge the duplicate's tags
+        // into the surviving record before removing the copy — content is
+        // identical by hash, metadata is not.
+        let mut dedup_deleted = 0usize;
         for (galaxy, mems) in &galaxy_mems {
             let mut seen_hashes: HashMap<String, uuid::Uuid> = HashMap::new();
             for mem in mems {
                 processed += 1;
                 if let Some(&existing_id) = seen_hashes.get(&mem.metadata.content_hash) {
-                    // Duplicate found — delete the newer one
+                    // Duplicate found — keep the older record, fold metadata.
                     if mem.metadata.id != existing_id {
-                        let _ = ctx.store.delete(*galaxy, mem.metadata.id);
-                        modified += 1;
+                        if let Ok(Some(mut kept)) = ctx.store.get(*galaxy, existing_id) {
+                            let mut changed = false;
+                            for tag in &mem.metadata.tags {
+                                if !kept.metadata.tags.contains(tag) {
+                                    kept.metadata.tags.push(tag.clone());
+                                    changed = true;
+                                }
+                            }
+                            if changed {
+                                let _ = ctx.store.put(*galaxy, &kept);
+                            }
+                        }
+                        if ctx.store.delete(*galaxy, mem.metadata.id).is_ok() {
+                            dedup_deleted += 1;
+                            modified += 1;
+                        }
                     }
                 } else {
                     seen_hashes.insert(mem.metadata.content_hash.clone(), mem.metadata.id);
@@ -831,9 +850,10 @@ impl DreamCycle {
             smarana_synapses,
             true,
             format!(
-                "consolidated {} memories, {} transferred/deduplicated, {} strategies synthesized, {} turns consolidated, {} tier moves over {} inspected, {} validity moves over {} inspected, {} smarana synapses consolidated",
+                "consolidated {} memories, {} transferred/deduplicated, {} duplicate copies removed (tags folded into survivors), {} strategies synthesized, {} turns consolidated, {} tier moves over {} inspected, {} validity moves over {} inspected, {} smarana synapses consolidated",
                 processed,
                 modified,
+                dedup_deleted,
                 strategies_created,
                 self.consolidation.consolidated(),
                 tier_moved,
@@ -1342,6 +1362,7 @@ impl DreamCycle {
         let mut hubs = 0;
         let mut hypotheses_stored = 0;
         let mut hypotheses_novelty_rejected = 0;
+        let mut hypotheses_dedup_rejected = 0;
         let mut counterfactuals = 0;
         let sa = SpreadingActivation::new(0.6, 2, 0.1);
 
@@ -1412,8 +1433,15 @@ impl DreamCycle {
                                     format!("predicate:{predicate_hash}"),
                                 ];
                                 hyp.metadata.importance = 0.5;
-                                if ctx.store.put(Galaxy::Research, &hyp).is_ok() {
-                                    hypotheses_stored += 1;
+                                // Exact content dedup at store time (2026-09-27
+                                // field report: the predicate gate let identical
+                                // hypothesis text accumulate across cycles).
+                                match ctx.store.put_dedup(Galaxy::Research, &hyp) {
+                                    Ok(existing) if existing != hyp.metadata.id => {
+                                        hypotheses_dedup_rejected += 1;
+                                    }
+                                    Ok(_) => hypotheses_stored += 1,
+                                    Err(_) => {}
                                 }
                             } else {
                                 hypotheses_novelty_rejected += 1;
@@ -1442,8 +1470,12 @@ impl DreamCycle {
                                     format!("predicate:{predicate_hash}"),
                                 ];
                                 hyp.metadata.importance = 0.4;
-                                if ctx.store.put(Galaxy::Research, &hyp).is_ok() {
-                                    hypotheses_stored += 1;
+                                match ctx.store.put_dedup(Galaxy::Research, &hyp) {
+                                    Ok(existing) if existing != hyp.metadata.id => {
+                                        hypotheses_dedup_rejected += 1;
+                                    }
+                                    Ok(_) => hypotheses_stored += 1,
+                                    Err(_) => {}
                                 }
                             } else {
                                 hypotheses_novelty_rejected += 1;
@@ -1466,7 +1498,7 @@ impl DreamCycle {
             0,
             true,
             format!(
-                "oracle scanned {processed} memories, found {hubs} hubs, stored {hypotheses_stored} hypotheses ({hypotheses_novelty_rejected} novelty-rejected){cf_note}"
+                "oracle scanned {processed} memories, found {hubs} hubs, stored {hypotheses_stored} hypotheses ({hypotheses_novelty_rejected} novelty-rejected, {hypotheses_dedup_rejected} duplicate-content rejected){cf_note}"
             ),
         )
     }
@@ -2143,6 +2175,52 @@ mod tests {
         assert!(
             updated.metadata.importance < 0.05,
             "importance should have been decayed"
+        );
+    }
+
+    /// 2026-09-27 field report: consolidation removed content-hash duplicates
+    /// silently. It must fold the duplicate's tags into the survivor and say
+    /// so in the phase notes.
+    #[test]
+    fn consolidation_folds_duplicate_metadata_and_reports_removals() {
+        let (_tmp, store, assoc) = test_ctx();
+        let ctx = DreamContext::new(&store, &assoc);
+
+        // Same content (same content hash), different tags.
+        let older = Memory::new(Galaxy::Codex, "identical duplicate content".into())
+            .with_importance(0.2)
+            .with_tags(vec!["keep".into()]);
+        let newer = Memory::new(Galaxy::Codex, "identical duplicate content".into())
+            .with_importance(0.2)
+            .with_tags(vec!["folded".into()]);
+        store.put(Galaxy::Codex, &older).unwrap();
+        store.put(Galaxy::Codex, &newer).unwrap();
+
+        let mut cycle = DreamCycle::new();
+        let result = cycle.run(&ctx);
+        assert!(result.success);
+        let consol = result
+            .phases
+            .iter()
+            .find(|p| p.phase == DreamPhase::Consolidation)
+            .unwrap();
+        assert!(
+            consol.notes.contains("duplicate copies removed"),
+            "phase notes must disclose removals: {}",
+            consol.notes
+        );
+        let remaining = store.scan(Galaxy::Codex, 100).unwrap();
+        let copies: Vec<_> = remaining
+            .iter()
+            .filter(|m| m.content == "identical duplicate content")
+            .collect();
+        assert_eq!(copies.len(), 1, "exactly one copy survives");
+        let survivor = copies[0];
+        assert!(
+            survivor.metadata.tags.contains(&"keep".to_string())
+                && survivor.metadata.tags.contains(&"folded".to_string()),
+            "duplicate tags must fold into the survivor: {:?}",
+            survivor.metadata.tags
         );
     }
 

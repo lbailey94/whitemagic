@@ -505,7 +505,35 @@ pub fn run_daemon(server: &mut McpServer, config: &DaemonConfig) -> anyhow::Resu
                 let ctx = wm_cognitive::DreamContext::new(&store, &associations)
                     .with_imagination(&scenario_engine)
                     .with_yama(yama.as_ref(), server.dharma_gate().homeostasis(), bw);
+                let audit_baseline = server.store().mutation_count();
                 if let Some(result) = resilient("dream_cycle", || server.dream_mut().run(&ctx)) {
+                    // Declare the dream window's store mutations to the
+                    // write-audit journal (2026-09-27 field report:
+                    // autonomous consolidation deletes were invisible).
+                    if let Some(journal) = server.pipeline().write_audit() {
+                        let delta = server
+                            .store()
+                            .mutation_count()
+                            .saturating_sub(audit_baseline);
+                        let actor = wm_governance::ActorIdentity {
+                            session: None,
+                            user: None,
+                            compartment: None,
+                            operation_id: Some("dream-cycle".to_string()),
+                            act: None,
+                            on_behalf_of: None,
+                            delegation_chain: Vec::new(),
+                        };
+                        let _ = journal.record(
+                            "dream.cycle",
+                            actor,
+                            None,
+                            None,
+                            true,
+                            delta.min(u64::from(u32::MAX)) as u32,
+                            true,
+                        );
+                    }
                     tracing::info!(
                         cycles = server.dream().cycles_completed(),
                         success = result.success,

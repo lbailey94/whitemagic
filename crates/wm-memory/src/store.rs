@@ -596,7 +596,16 @@ impl MemoryStore {
         let index_dbs = IndexDbs::open(&env)?;
         let open_named = |name: &str| {
             env.open_db(Some(name)).map_err(|e| {
-                CoreError::Memory(format!("Read-only LMDB missing database {name}: {e}"))
+                if matches!(e, lmdb::Error::NotFound) {
+                    CoreError::Memory(format!(
+                        "Read-only LMDB is missing database '{name}': this store \
+                         predates the current schema. Complete it with a one-time \
+                         writable open: `wm doctor --complete-schema --store <store>` \
+                         (or start `wm serve` once). Underlying: {e}"
+                    ))
+                } else {
+                    CoreError::Memory(format!("Read-only LMDB missing database {name}: {e}"))
+                }
             })
         };
         let episodic_db = open_named("episodic_records")?;
@@ -686,7 +695,19 @@ impl MemoryStore {
         let index_dbs = IndexDbs::open(&env)?;
         let open_named = |name: &str| {
             env.open_db(Some(name)).map_err(|e| {
-                CoreError::Memory(format!("Inspection LMDB missing database {name}: {e}"))
+                if matches!(e, lmdb::Error::NotFound) {
+                    // 2026-09-27 field report: an upgraded pre-cold store failed
+                    // here with a bare MDB_NOTFOUND and no remedy. Name the
+                    // condition and the one-time fix.
+                    CoreError::Memory(format!(
+                        "Inspection LMDB is missing database '{name}': this store \
+                         predates the current schema. Complete it with a one-time \
+                         writable open: `wm doctor --complete-schema --store <store>` \
+                         (or start `wm serve` once). Underlying: {e}"
+                    ))
+                } else {
+                    CoreError::Memory(format!("Inspection LMDB missing database {name}: {e}"))
+                }
             })
         };
         let episodic_db = open_named("episodic_records")?;
@@ -2675,6 +2696,41 @@ mod tests {
         for galaxy in Galaxy::all() {
             let _db = store.galaxy_db(galaxy).unwrap();
         }
+    }
+
+    /// 2026-09-27 field report: a pre-cold store failed inspection with a bare
+    /// `MDB_NOTFOUND` and no remedy. The error must name the condition and the
+    /// one-time fix.
+    #[test]
+    fn inspection_names_the_remedy_for_a_pre_cold_store() {
+        use lmdb::{DatabaseFlags as LmdbFlags, Environment as LmdbEnv};
+
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("old-store");
+        std::fs::create_dir_all(&path).unwrap();
+        {
+            let env = LmdbEnv::new().set_max_dbs(64).open(&path).unwrap();
+            for galaxy in Galaxy::all() {
+                env.create_db(Some(galaxy.db_name()), LmdbFlags::default())
+                    .unwrap();
+            }
+            for (name, flags) in crate::indexes::INDEX_DBS {
+                env.create_db(Some(name), *flags).unwrap();
+            }
+            // No cold_storage / embedding_cache: the store predates the schema.
+        }
+        let err = match MemoryStore::open_inspection(&path) {
+            Ok(_) => panic!("a pre-cold store must fail strict inspection"),
+            Err(e) => e.to_string(),
+        };
+        assert!(
+            err.contains("predates the current schema"),
+            "condition must be named: {err}"
+        );
+        assert!(
+            err.contains("wm doctor --complete-schema"),
+            "remedy must be named: {err}"
+        );
     }
 
     #[test]

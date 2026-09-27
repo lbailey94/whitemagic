@@ -23,6 +23,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The npm launcher downloaded the full ~27 MB binary while the shell
     installer used the ~11.6 MB `.gz`; it now prefers the compressed
     distributable with a raw fallback.
+- **Field-report fixes (miranda-macbook, 2026-09-27)**:
+  - **Dream-cycle auditability** — consolidation's duplicate removals were
+    silent (no report, no metadata carry-over, invisible to the write-audit
+    journal). Removals are now counted and reported, the duplicate's tags
+    fold into the surviving record, and the dream window declares its store
+    mutations to the write-audit journal (`dream.cycle`) on both the server
+    and daemon paths.
+  - **Oracle hypothesis duplicates** — hypotheses store through content-hash
+    dedup instead of the predicate gate alone; exact duplicates are rejected
+    and disclosed in the phase notes.
+  - **Backup detection** — `wm status` now reads v2 backup envelopes
+    (`envelope.json`) on disk when the runner log is missing or rotated,
+    covering both the default and per-store layouts.
+  - **Pre-cold store remedy** — inspection errors name the condition and the
+    one-time fix (`wm doctor --complete-schema`), instead of a bare
+    `MDB_NOTFOUND`.
+  - **`memory.filter` scan bound** — the output discloses `scan_cap` and
+    `truncated` (with a hint) when the 10,000-record scan cap is hit, so
+    `matched` is never mistaken for a full-galaxy count.
 
 ### Changed
 - **Onboarding order** — the canonical journey is `wm grimoire` (prove the
