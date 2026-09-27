@@ -218,13 +218,13 @@ impl AssociationStore {
             DatabaseFlags::default(),
         ) {
             Ok(db) => db,
-            Err(create_err) => env
-                .open_db(Some(Galaxy::Associations.db_name()))
-                .map_err(|open_err| {
+            Err(create_err) => env.open_db(Some(Galaxy::Associations.db_name())).map_err(
+                |open_err| {
                     CoreError::Memory(format!(
                         "LMDB create_db for associations: {create_err}; open existing: {open_err}"
                     ))
-                })?,
+                },
+            )?,
         };
         Ok(Self { db })
     }
