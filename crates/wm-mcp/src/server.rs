@@ -3388,7 +3388,7 @@ impl McpServer {
                         "type": "object",
                         "description": "Per-result provenance (coverage, history, integrity, retrieval, source_time, visibility) plus conflicts.",
                     },
-                    "hint": { "type": "string", "description": "Optional recovery hint when results are thin" },
+                    "hint": { "type": ["string", "null"], "description": "Optional recovery hint when results are thin (null when there is none)" },
                 }),
             ),
             "memory.read" => envelope(
@@ -3426,7 +3426,7 @@ impl McpServer {
                         "type": "object",
                         "description": "Per-result provenance (coverage, history, integrity, retrieval, source_time, visibility) plus conflicts.",
                     },
-                    "hint": { "type": "string", "description": "Optional recovery hint when results are thin" },
+                    "hint": { "type": ["string", "null"], "description": "Optional recovery hint when results are thin (null when there is none)" },
                 }),
             ),
             "memory.update" => envelope(
@@ -5827,6 +5827,23 @@ mod tests {
             assert!(
                 entry["outputSchema"]["additionalProperties"] == true,
                 "{tool_name} outputSchema must stay open: {entry}"
+            );
+        }
+        // Nullable contract fields (2026-09-27, issue #4): `hint` is null on
+        // the calm path (no recovery suggestion). The advertised schema must
+        // allow null, or strict clients reject the whole result (-32602:
+        // "data/hint must be string") even though the retrieval succeeded.
+        for tool_name in ["memory.search", "memory.hybrid_recall"] {
+            let entry = tools
+                .iter()
+                .find(|t| t["name"] == tool_name)
+                .unwrap_or_else(|| panic!("{tool_name} missing from catalog"));
+            let hint_types = entry["outputSchema"]["properties"]["hint"]["type"]
+                .as_array()
+                .unwrap_or_else(|| panic!("{tool_name} hint.type must be a type array: {entry}"));
+            assert!(
+                hint_types.iter().any(|t| t == "null"),
+                "{tool_name} hint must allow null (the no-hint path returns null): {entry}"
             );
         }
         // Discovery parity (2026-09-22): exposed lifecycle schemas must carry
