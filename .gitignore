@@ -150,6 +150,7 @@ wm-leases.json
 !/scripts/eval_matrix.sh
 !/scripts/release_manifest.py
 !/scripts/release_health.py
+!/scripts/release_notes.py
 !/scripts/t1_reader.py
 !/scripts/t1_judge.py
 !/scripts/t1_oracle_to_retrieval.py

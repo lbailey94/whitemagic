@@ -248,11 +248,19 @@ jobs:
             echo "::warning::RELEASE_SIGNING_KEY not set — publishing an unsigned manifest (update check will require --insecure-checksum)"
           fi
 
+      - name: Generate release notes (changelog digest + install + platforms)
+        # The Releases page is an onboarding surface (2026-09-27 external
+        # review): every release body carries what changed, how to install,
+        # and the platform gate matrix — not a bare benchmark pointer.
+        run: |
+          python3 scripts/release_notes.py --version "${GITHUB_REF_NAME#v}" \
+            --changelog CHANGELOG.md --out release-notes.md
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/*
-          generate_release_notes: true
+          body_path: release-notes.md
 
   certify-install:
     name: Certify install.sh (${{ matrix.arch }})
