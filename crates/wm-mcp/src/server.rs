@@ -5905,6 +5905,278 @@ mod tests {
         );
     }
 
+    /// JSON-Schema-subset validator for the advertised `outputSchema`
+    /// contracts (type/properties/required/items; `additionalProperties:
+    /// true` everywhere, so unknown fields pass).
+    fn assert_value_matches_schema(schema: &Value, value: &Value, path: &str) {
+        if let Some(types) = schema.get("type") {
+            let matches = match types {
+                Value::String(t) => type_matches(t, value),
+                Value::Array(list) => list
+                    .iter()
+                    .any(|t| t.as_str().is_some_and(|t| type_matches(t, value))),
+                _ => true,
+            };
+            assert!(
+                matches,
+                "{path}: value {value} does not match schema type {types}"
+            );
+        }
+        if let Some(obj) = value.as_object() {
+            if let Some(props) = schema.get("properties").and_then(Value::as_object) {
+                for (key, sub) in props {
+                    if let Some(v) = obj.get(key) {
+                        assert_value_matches_schema(sub, v, &format!("{path}.{key}"));
+                    }
+                }
+            }
+            if let Some(required) = schema.get("required").and_then(Value::as_array) {
+                for req in required.iter().filter_map(Value::as_str) {
+                    assert!(
+                        obj.contains_key(req),
+                        "{path}: required property '{req}' missing from {value}"
+                    );
+                }
+            }
+        }
+        if let Some(items) = schema.get("items") {
+            if let Some(list) = value.as_array() {
+                for (i, v) in list.iter().enumerate() {
+                    assert_value_matches_schema(items, v, &format!("{path}[{i}]"));
+                }
+            }
+        }
+    }
+
+    fn type_matches(json_type: &str, value: &Value) -> bool {
+        match json_type {
+            "object" => value.is_object(),
+            "array" => value.is_array(),
+            "string" => value.is_string(),
+            "number" => value.is_number(),
+            "integer" => value.is_i64() || value.is_u64(),
+            "boolean" => value.is_boolean(),
+            "null" => value.is_null(),
+            _ => true,
+        }
+    }
+
+    /// Issue #4 class (2026-09-27): the advertised `outputSchema` is a
+    /// contract with strict clients — one value that does not match it makes
+    /// the whole tool result unusable (`-32602`), even when the work
+    /// succeeded. This sweep calls every catalog tool with minimal valid
+    /// arguments and validates the returned `structuredContent` against the
+    /// advertised schema, so a null-vs-string class bug cannot ship silently.
+    /// New catalog tools fail the coverage assertion until probed.
+    #[tokio::test]
+    async fn catalog_structured_content_matches_advertised_output_schema() {
+        async fn call(server: &mut McpServer, name: &str, args: Value) -> Value {
+            let req = RpcRequest {
+                jsonrpc: "2.0".into(),
+                id: Some(json!(1)),
+                method: "tools/call".into(),
+                params: json!({ "name": name, "arguments": args }),
+            };
+            let resp = server.handle(&req).await;
+            assert!(
+                resp.error.is_none(),
+                "tools/call {name} returned an RPC error: {:?}",
+                resp.error
+            );
+            let result = resp.result.expect("tools/call result");
+            assert_eq!(result["content"][0]["type"], "text");
+            let structured = result.get("structuredContent").unwrap_or_else(|| {
+                panic!("{name} returned no structuredContent — object results are the contract")
+            });
+            structured.clone()
+        }
+
+        macro_rules! probe {
+            ($server:ident, $results:ident, $name:literal, $args:expr) => {{
+                let value = call(&mut $server, $name, $args).await;
+                $results.push(($name.to_string(), value));
+            }};
+        }
+
+        let mut server = test_server();
+        // `test_server` drops its tempdir handle, unlinking the store root
+        // while the LMDB environment stays mapped. Recreate the same path so
+        // lazily created files (the receipt key at first emit, ledgers) have
+        // a home for this sweep.
+        let store_root = server.store.path().to_path_buf();
+        std::fs::create_dir_all(&store_root).unwrap();
+        // Writable catalog entries are brain-wave-gated; move to Beta so the
+        // full advertised surface (writes included) is the one under test.
+        for _ in 0..3 {
+            let _ = server.eco_mode_mut().record_event();
+        }
+        let tools = server.handle_tools_list().unwrap()["tools"]
+            .as_array()
+            .unwrap()
+            .clone();
+        let mut results: Vec<(String, Value)> = Vec::new();
+
+        let ingest_dir = tempfile::tempdir().unwrap();
+        std::fs::write(ingest_dir.path().join("probe.md"), "# schema sweep\n").unwrap();
+
+        // Write a target record first so read/update/revisions/nearby probes
+        // exercise their success paths.
+        probe!(
+            server,
+            results,
+            "memory.create",
+            json!({"content": "outputSchema sweep probe", "importance": 0.1})
+        );
+        let id = results
+            .last()
+            .and_then(|(_, v)| v["id"].as_str())
+            .expect("memory.create must return an id")
+            .to_string();
+
+        probe!(
+            server,
+            results,
+            "wm",
+            json!({"route": "memory.count", "args": {}})
+        );
+        probe!(
+            server,
+            results,
+            "memory.search",
+            json!({"query": "sweep", "limit": 2})
+        );
+        probe!(server, results, "memory.read", json!({"id": id}));
+        probe!(server, results, "memory.list", json!({"limit": 2}));
+        probe!(
+            server,
+            results,
+            "memory.hybrid_recall",
+            json!({"query": "sweep", "limit": 2})
+        );
+        probe!(
+            server,
+            results,
+            "memory.update",
+            json!({"id": id, "importance": 0.2})
+        );
+        probe!(server, results, "memory.revisions", json!({"id": id}));
+        probe!(
+            server,
+            results,
+            "memory.ingest",
+            json!({"source": ingest_dir.path().to_string_lossy(), "dry_run": true})
+        );
+        probe!(
+            server,
+            results,
+            "session.start",
+            json!({"title": "outputSchema sweep", "user": "sweep"})
+        );
+        let session_id = results
+            .iter()
+            .rev()
+            .find(|(n, _)| n == "session.start")
+            .and_then(|(_, v)| v["session_id"].as_str())
+            .expect("session.start must return a session_id")
+            .to_string();
+        probe!(
+            server,
+            results,
+            "session.record",
+            json!({"content": "sweep turn", "turn_type": "context"})
+        );
+        probe!(server, results, "session.continuity", json!({"n": 2}));
+        probe!(
+            server,
+            results,
+            "session.checkpoint",
+            json!({"label": "sweep", "data": {"probe": true}})
+        );
+        probe!(server, results, "receipts.emit", json!({}));
+        let receipt_id = results
+            .iter()
+            .rev()
+            .find(|(n, _)| n == "receipts.emit")
+            .and_then(|(_, v)| v["id"].as_str())
+            .expect("receipts.emit must return an id")
+            .to_string();
+        probe!(
+            server,
+            results,
+            "receipts.verify",
+            json!({"id": receipt_id})
+        );
+        probe!(server, results, "memory.count", json!({}));
+        probe!(server, results, "memory.stats", json!({}));
+        probe!(server, results, "memory.tags", json!({}));
+        probe!(
+            server,
+            results,
+            "memory.aggregate",
+            json!({"query": "sweep", "metric": "count"})
+        );
+        probe!(server, results, "memory.associations", json!({"id": id}));
+        probe!(server, results, "memory.batch_read", json!({"ids": [id]}));
+        probe!(
+            server,
+            results,
+            "memory.query",
+            json!({"query": "sweep", "limit": 2})
+        );
+        probe!(server, results, "memory.filter", json!({"limit": 2}));
+        probe!(
+            server,
+            results,
+            "memory.nearby",
+            json!({"query": "sweep", "limit": 2})
+        );
+        probe!(
+            server,
+            results,
+            "memory.vector.search",
+            json!({"memory_id": id, "limit": 2})
+        );
+        probe!(server, results, "session.list", json!({}));
+        probe!(
+            server,
+            results,
+            "session.recall",
+            json!({"session_id": session_id})
+        );
+        probe!(
+            server,
+            results,
+            "session.replay",
+            json!({"session_id": session_id})
+        );
+        probe!(server, results, "gnosis.status", json!({}));
+        probe!(
+            server,
+            results,
+            "gnosis.explain",
+            json!({"tool_name": "memory.search"})
+        );
+
+        // Every advertised tool must be covered; a new catalog entry fails
+        // here until its minimal probe is added.
+        let probed: Vec<&str> = results.iter().map(|(n, _)| n.as_str()).collect();
+        for tool in &tools {
+            let name = tool["name"].as_str().unwrap();
+            assert!(
+                probed.contains(&name),
+                "catalog tool '{name}' is not covered by the structuredContent sweep — add a minimal probe"
+            );
+        }
+        // And every probed result must match its advertised outputSchema.
+        for (name, value) in &results {
+            let entry = tools
+                .iter()
+                .find(|t| t["name"].as_str() == Some(name.as_str()))
+                .unwrap_or_else(|| panic!("{name} missing from the advertised catalog"));
+            assert_value_matches_schema(&entry["outputSchema"], value, name);
+        }
+    }
+
     #[tokio::test]
     async fn tools_list_annotations_reflect_readonly_mode() {
         // A read-only server cannot mutate or destroy anything, whatever the
