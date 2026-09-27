@@ -206,13 +206,26 @@ pub struct AssociationStore {
 
 impl AssociationStore {
     /// Open the association store from an LMDB environment.
+    ///
+    /// Read-only environments (`wm serve --readonly`) refuse `MDB_CREATE`
+    /// even when the database already exists, so a refused create falls back
+    /// to opening the existing database. A genuinely missing database still
+    /// errors — the failure stays visible instead of becoming an implicit
+    /// schema mutation.
     pub fn open(env: &Environment) -> Result<Self> {
-        let db = env
-            .create_db(
-                Some(Galaxy::Associations.db_name()),
-                DatabaseFlags::default(),
-            )
-            .map_err(|e| CoreError::Memory(format!("LMDB create_db for associations: {e}")))?;
+        let db = match env.create_db(
+            Some(Galaxy::Associations.db_name()),
+            DatabaseFlags::default(),
+        ) {
+            Ok(db) => db,
+            Err(create_err) => env.open_db(Some(Galaxy::Associations.db_name())).map_err(
+                |open_err| {
+                    CoreError::Memory(format!(
+                        "LMDB create_db for associations: {create_err}; open existing: {open_err}"
+                    ))
+                },
+            )?,
+        };
         Ok(Self { db })
     }
 
@@ -447,6 +460,7 @@ impl AssociationStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lmdb::EnvironmentFlags;
     use tempfile::tempdir;
 
     fn open_store() -> (tempfile::TempDir, Environment, AssociationStore) {
@@ -458,6 +472,54 @@ mod tests {
             .unwrap();
         let store = AssociationStore::open(&env).unwrap();
         (tmp, env, store)
+    }
+
+    #[test]
+    fn open_falls_back_to_existing_db_in_read_only_env() {
+        let tmp = tempdir().unwrap();
+        {
+            let env = Environment::new()
+                .set_map_size(1024 * 1024)
+                .set_max_dbs(16)
+                .open(tmp.path())
+                .unwrap();
+            AssociationStore::open(&env).unwrap();
+        }
+        // Read-only environments refuse MDB_CREATE even for an existing
+        // database; `open` must fall back to opening it (serve --readonly
+        // read paths construct the store per call).
+        let env_ro = Environment::new()
+            .set_map_size(1024 * 1024)
+            .set_max_dbs(16)
+            .set_flags(EnvironmentFlags::READ_ONLY)
+            .open(tmp.path())
+            .unwrap();
+        AssociationStore::open(&env_ro)
+            .expect("read-only open must find the existing associations database");
+    }
+
+    #[test]
+    fn open_read_only_env_without_db_still_fails_visible() {
+        let tmp = tempdir().unwrap();
+        {
+            let env = Environment::new()
+                .set_map_size(1024 * 1024)
+                .set_max_dbs(16)
+                .open(tmp.path())
+                .unwrap();
+            // Writable open without touching the associations database.
+            let _ = env;
+        }
+        let env_ro = Environment::new()
+            .set_map_size(1024 * 1024)
+            .set_max_dbs(16)
+            .set_flags(EnvironmentFlags::READ_ONLY)
+            .open(tmp.path())
+            .unwrap();
+        assert!(
+            AssociationStore::open(&env_ro).is_err(),
+            "a missing database must stay a visible failure, not a silent empty store"
+        );
     }
 
     #[test]
