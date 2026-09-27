@@ -1,6 +1,6 @@
 /**
  * Launcher tests (node --test). No network: fetch is injected.
- * Run from npm/whitemagic-mcp:  node --test test/
+ * Run from npm/whitemagic-mcp:  node --test
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 
 import {
   assetFor,
@@ -23,6 +24,8 @@ const TAG = "v9.9.9";
 const ASSET = "wm-linux-x86_64-musl";
 const BINARY = Buffer.from("#!/bin/sh\necho fake wm 9.9.9\n");
 const DIGEST = createHash("sha256").update(BINARY).digest("hex");
+const GZ = gzipSync(BINARY);
+const GZ_DIGEST = createHash("sha256").update(GZ).digest("hex");
 
 function tempCache() {
   return mkdtempSync(join(tmpdir(), "wm-npm-test-"));
@@ -37,6 +40,14 @@ function okFetch(bodyFor) {
 }
 
 const releaseFetch = okFetch((url) => {
+  if (url.endsWith(`/${ASSET}.sha256`)) return Buffer.from(`${DIGEST}  wm\n`);
+  if (url.endsWith(`/${ASSET}`)) return BINARY;
+  return null;
+});
+
+const releaseFetchGz = okFetch((url) => {
+  if (url.endsWith(`/${ASSET}.gz.sha256`)) return Buffer.from(`${GZ_DIGEST}  ${ASSET}.gz\n`);
+  if (url.endsWith(`/${ASSET}.gz`)) return GZ;
   if (url.endsWith(`/${ASSET}.sha256`)) return Buffer.from(`${DIGEST}  wm\n`);
   if (url.endsWith(`/${ASSET}`)) return BINARY;
   return null;
@@ -160,7 +171,94 @@ test("ensureBinary self-heals a corrupted cache entry", async () => {
       messages.some((m) => m.includes("failed verification")),
       `re-download disclosed: ${messages.join(" | ")}`,
     );
-    assert.equal(calls, 4, "one failed-verification refetch (2 calls: bin + sha)");
+    assert.equal(calls, 6, "one failed-verification refetch (3 calls: gz probe + bin + sha)");
+  } finally {
+    rmSync(cache, { recursive: true, force: true });
+  }
+});
+
+test("ensureBinary prefers the gzipped distributable when present", async () => {
+  const cache = tempCache();
+  try {
+    const urls = [];
+    const fetchImpl = async (url) => {
+      urls.push(url);
+      return releaseFetchGz(url);
+    };
+    const messages = [];
+    const bin = await ensureBinary({
+      fetchImpl,
+      cacheRoot: cache,
+      tag: TAG,
+      p: "linux",
+      a: "x64",
+      log: (m) => messages.push(m),
+    });
+    assert.deepEqual(readFileSync(bin), BINARY, "gunzip restores the exact binary");
+    assert.ok(cacheIsValid(bin), "cache entry verifies after the compressed download");
+    assert.equal(urls.length, 2, `only the .gz pair is fetched: ${urls.join(" | ")}`);
+    assert.ok(
+      urls.every((u) => u.includes(".gz")),
+      `no raw fetch when the .gz exists: ${urls.join(" | ")}`,
+    );
+    assert.ok(messages.some((m) => m.includes("compressed")));
+  } finally {
+    rmSync(cache, { recursive: true, force: true });
+  }
+});
+
+test("ensureBinary falls back to the raw binary when the .gz is absent", async () => {
+  const cache = tempCache();
+  try {
+    const urls = [];
+    const fetchImpl = async (url) => {
+      urls.push(url);
+      return releaseFetch(url);
+    };
+    const bin = await ensureBinary({
+      fetchImpl,
+      cacheRoot: cache,
+      tag: TAG,
+      p: "linux",
+      a: "x64",
+      log: () => {},
+    });
+    assert.deepEqual(readFileSync(bin), BINARY);
+    assert.equal(urls.length, 3, "gz probe (404) + raw binary + raw checksum");
+    assert.ok(urls[0].endsWith(`/${ASSET}.gz`), "the probe happens first");
+  } finally {
+    rmSync(cache, { recursive: true, force: true });
+  }
+});
+
+test("windows .exe assets skip the .gz probe (no .gz is published)", async () => {
+  const cache = tempCache();
+  const exe = "wm-windows-x86_64.exe";
+  try {
+    const urls = [];
+    const winFetch = okFetch((url) => {
+      if (url.endsWith(`/${exe}.sha256`)) return Buffer.from(`${DIGEST}  ${exe}\n`);
+      if (url.endsWith(`/${exe}`)) return BINARY;
+      return null;
+    });
+    const fetchImpl = async (url) => {
+      urls.push(url);
+      return winFetch(url);
+    };
+    const bin = await ensureBinary({
+      fetchImpl,
+      cacheRoot: cache,
+      tag: TAG,
+      p: "win32",
+      a: "x64",
+      log: () => {},
+    });
+    assert.deepEqual(readFileSync(bin), BINARY);
+    assert.equal(urls.length, 2, "raw binary + checksum only");
+    assert.ok(
+      urls.every((u) => !u.includes(".gz")),
+      `no gz probe for .exe: ${urls.join(" | ")}`,
+    );
   } finally {
     rmSync(cache, { recursive: true, force: true });
   }

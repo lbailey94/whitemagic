@@ -20,6 +20,7 @@ import {
 } from "node:fs";
 import { homedir, platform, arch, tmpdir } from "node:os";
 import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 
 export const REPO = "lbailey94/whitemagic";
 const SHA256_RE = /^[0-9a-f]{64}$/i;
@@ -121,9 +122,31 @@ export async function fetchTo(url, dest, fetchImpl) {
 }
 
 /**
+ * Parse a release `.sha256` sidecar (first whitespace-delimited token) and
+ * refuse anything that is not a well-formed digest.
+ */
+function parseDigestFile(path, label) {
+  const expected = (readFileSync(path, "utf8").trim().split(/\s+/)[0] ?? "").toLowerCase();
+  if (!SHA256_RE.test(expected)) {
+    throw new Error(`release checksum for ${label} is malformed — refusing to install it`);
+  }
+  return expected;
+}
+
+function checksumMismatch(label, expected, actual) {
+  return new Error(
+    `checksum mismatch for ${label} (expected ${expected.slice(0, 12)}…, got ${actual.slice(0, 12)}…) — the download may be corrupted; retry`,
+  );
+}
+
+/**
  * Ensure a verified `wm` binary for this platform exists in the cache and
  * return its path. Fresh downloads go temp -> checksum -> chmod -> rename;
  * a cache entry that fails re-verification is replaced (self-healing).
+ *
+ * The launcher prefers the gzipped distributable (~58% smaller; published
+ * for Linux/macOS) exactly like `scripts/install.sh` does. Windows `.exe`
+ * assets ship raw, and releases that predate the `.gz` fall back on a 404.
  */
 export async function ensureBinary({
   fetchImpl = fetch,
@@ -155,22 +178,45 @@ export async function ensureBinary({
   const tmp = mkdtempSync(join(binDir, ".download-"));
   try {
     const tmpBin = join(tmp, asset);
-    const tmpSha = join(tmp, `${asset}.sha256`);
-    await fetchTo(`${BASE_URL(resolvedTag)}/${asset}`, tmpBin, fetchImpl);
-    await fetchTo(`${BASE_URL(resolvedTag)}/${asset}.sha256`, tmpSha, fetchImpl);
-    const expected = (readFileSync(tmpSha, "utf8").trim().split(/\s+/)[0] ?? "").toLowerCase();
-    if (!SHA256_RE.test(expected)) {
-      throw new Error(`release checksum for ${asset} is malformed — refusing to install it`);
+    let compressed = false;
+    if (!asset.endsWith(".exe")) {
+      try {
+        await fetchTo(`${BASE_URL(resolvedTag)}/${asset}.gz`, join(tmp, `${asset}.gz`), fetchImpl);
+        await fetchTo(
+          `${BASE_URL(resolvedTag)}/${asset}.gz.sha256`,
+          join(tmp, `${asset}.gz.sha256`),
+          fetchImpl,
+        );
+        compressed = true;
+      } catch (err) {
+        if (!String(err?.message ?? "").includes("HTTP 404")) throw err;
+      }
     }
-    const actual = digestFile(tmpBin);
-    if (actual !== expected) {
-      throw new Error(
-        `checksum mismatch for ${asset} (expected ${expected.slice(0, 12)}…, got ${actual.slice(0, 12)}…) — the download may be corrupted; retry`,
+    if (compressed) {
+      const gzPath = join(tmp, `${asset}.gz`);
+      const expectedGz = parseDigestFile(join(tmp, `${asset}.gz.sha256`), `${asset}.gz`);
+      const actualGz = digestFile(gzPath);
+      if (actualGz !== expectedGz) {
+        throw checksumMismatch(`${asset}.gz`, expectedGz, actualGz);
+      }
+      writeFileSync(tmpBin, gunzipSync(readFileSync(gzPath)));
+      log(`whitemagic-mcp: using the compressed distributable (${asset}.gz)`);
+    } else {
+      await fetchTo(`${BASE_URL(resolvedTag)}/${asset}`, tmpBin, fetchImpl);
+      await fetchTo(
+        `${BASE_URL(resolvedTag)}/${asset}.sha256`,
+        join(tmp, `${asset}.sha256`),
+        fetchImpl,
       );
+      const expected = parseDigestFile(join(tmp, `${asset}.sha256`), asset);
+      const actual = digestFile(tmpBin);
+      if (actual !== expected) {
+        throw checksumMismatch(asset, expected, actual);
+      }
     }
     chmodSync(tmpBin, 0o755);
     renameSync(tmpBin, cached);
-    writeFileSync(sidecarFor(cached), `${expected}\n`);
+    writeFileSync(sidecarFor(cached), `${digestFile(cached)}\n`);
     return cached;
   } finally {
     rmSync(tmp, { recursive: true, force: true });
