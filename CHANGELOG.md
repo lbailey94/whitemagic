@@ -5,6 +5,41 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Doors that told different stories** (2026-09-27 external first-install
+  review; every finding re-verified on hardware before fixing):
+  - `wm grimoire` classified Linux arm64 — a valid install-gated target — as
+    outside the supported platforms. `host_support()` now carries the gate
+    matrix in code and is pinned by a unit test.
+  - `install.sh` treated a PATH entry that merely contained the install
+    directory's name (`…/bin-old`) as already-wired and skipped profile
+    wiring; membership is now element-wise.
+  - `install.sh` appended the PATH line to every existing shell profile; it
+    now wires one shell-appropriate file (`$SHELL`-based) and names it.
+  - README's manual install used the wrong artifact filename (`wm` instead of
+    the distributed name) — a stranger following it hit a dead command.
+  - The npm launcher downloaded the full ~27 MB binary while the shell
+    installer used the ~11.6 MB `.gz`; it now prefers the compressed
+    distributable with a raw fallback.
+
+### Changed
+- **Onboarding order** — the canonical journey is `wm grimoire` (prove the
+  environment) → `wm connect --write` (activate) → optional `wm quickstart`
+  (demo); `wm doctor` is troubleshooting only. Applied across README,
+  QUICKSTART (EN/es/fr/pt-BR), and the installer's closing output.
+- **macOS arm64 is install-gated** (hardware field smoke evidence, upstream
+  issue #2): README/QUICKSTART/SECURITY/install.sh/npm/site copy updated,
+  and the signed release manifest declares `macos-aarch64` gated from this
+  release. macOS x86_64 and Windows remain published, not gated.
+- **Release pages carry onboarding** — `scripts/release_notes.py` renders a
+  changelog digest + install command + platform matrix into every GitHub
+  release body (the published v9.2.8 body was repaired).
+- **Pricing machine-readability** — `/pricing.json` states `billing_basis`,
+  `billing_period`, and `subscription_required: false`; the work-with-us
+  page (EN + zh) and its JSON-LD label one-time vs recurring explicitly.
+
 ## [9.2.8] — 2026-09-24
 
 ### Added

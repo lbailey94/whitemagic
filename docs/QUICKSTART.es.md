@@ -3,21 +3,21 @@
 **Idiomas:** [English](QUICKSTART.md) · **Español** · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
 
 **Versión**: consulta la versión actual en el [README](../README.md).
-**Plataforma**: Linux x86-64 y Linux arm64 (aarch64) — rutas de instalación
-verificadas, builds estáticos musl seleccionados automáticamente por el
-instalador (también hay builds dinámicos para hosts con glibc 2.39+); las
-versiones publican además distribuciones comprimidas en gzip para enlaces
-lentos. Los binarios de macOS y Windows se publican en cada versión, pero sus
-rutas de instalación aún no están verificadas.
+**Plataforma**: Linux x86-64, Linux arm64 y macOS arm64 — rutas de
+instalación verificadas. Linux ofrece builds estáticos musl seleccionados
+automáticamente por el instalador (también hay builds dinámicos para hosts con
+glibc 2.39+); las versiones publican además distribuciones comprimidas en gzip
+para enlaces lentos. Los binarios de macOS x86_64 y Windows x86_64 se publican
+en cada versión, pero sus rutas de instalación aún no están verificadas.
 
 De cero a memoria de agente funcionando en menos de cinco minutos.
 
 ## Ruta de 30 segundos
 
 ```bash
-wm grimoire     # primera ejecución guiada: host, capa de memoria, agentes, memoria, vocabulario, continuidad
-wm quickstart   # demo de continuidad entre dos procesos sobre un almacén aislado
-wm selftest     # verificación de invariantes de extremo a extremo (~1 segundo, almacén temporal)
+wm grimoire          # primera ejecución guiada: host, capa de memoria, agentes, memoria, vocabulario, continuidad
+wm connect --write   # conecta cada cliente MCP detectado (simulación primero: wm connect)
+wm quickstart        # opcional: demo de continuidad entre dos procesos sobre un almacén aislado
 ```
 
 Verás una decisión registrada en una sesión sobrevivir a un cierre y arranque
@@ -40,7 +40,7 @@ export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Equivalente manual: descarga el binario de tu plataforma (los builds
-estáticos `wm-linux-x86_64-musl` / `wm-linux-aarch64-musl`, o los builds
+estáticos `wm-linux-x86_64-musl` / `wm-linux-aarch64-musl` / `wm-macos-aarch64`, o los builds
 glibc 2.39+ `wm-linux-x86_64` / `wm-linux-aarch64`, con su variante `.gz`)
 y su archivo `.sha256` desde la
 [página de releases](https://github.com/lbailey94/whitemagic/releases), y
@@ -64,26 +64,17 @@ cargo build --release
 mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ```
 
-## 2. Verificar
+## 2. Verificar y activar
 
 ```bash
 wm --version   # imprime la versión instalada
-wm doctor      # salud del almacén, del índice y del registro de herramientas
+wm grimoire    # comprobación guiada; termina nombrando el paso de activación
 ```
 
-## 3. Ejecutar la demo
+`wm grimoire` comprueba el entorno y muestra la configuración de clientes; la
+activación es el paso `wm connect --write` de abajo.
 
-```bash
-wm quickstart
-```
-
-La demo usa un almacén aislado en `~/.local/share/whitemagic-quickstart`
-(tus datos reales nunca se tocan). Muestra: inicio de sesión → registro de una
-decisión → parada del proceso → proceso nuevo → la continuidad recupera la
-decisión → replay con presupuesto. Puedes borrarla cuando quieras con
-`rm -rf ~/.local/share/whitemagic-quickstart`.
-
-## 4. Conectar tu cliente MCP
+## 3. Conectar tu cliente MCP
 
 ```bash
 wm connect           # simulación: lista los clientes detectados y el cambio exacto
@@ -103,6 +94,21 @@ configuración manual equivalente:
   }
 }
 ```
+
+## 4. Opcional: ejecutar la demo de continuidad
+
+```bash
+wm quickstart
+```
+
+La demo usa un almacén aislado en `~/.local/share/whitemagic-quickstart`
+(tus datos reales nunca se tocan). Muestra: inicio de sesión → registro de una
+decisión → parada del proceso → proceso nuevo → la continuidad recupera la
+decisión → replay con presupuesto. Puedes borrarla cuando quieras con
+`rm -rf ~/.local/share/whitemagic-quickstart`.
+
+Si algo va mal, `wm doctor` es la herramienta de diagnóstico (salud del
+almacén, del índice y del registro) — no es un paso de instalación.
 
 El servidor habla JSON-RPC sobre stdio y expone una sola meta-herramienta
 `wm`. El enrutado explícito es el contrato confiable:

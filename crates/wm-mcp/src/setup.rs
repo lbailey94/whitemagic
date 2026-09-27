@@ -1181,8 +1181,7 @@ pub fn entry_matches(spec: &ClientSpec, exe: &Path) -> bool {
             .ok()
             .and_then(|t| serde_json::from_str::<Value>(&t).ok())
             .is_some_and(|v| {
-                v["mcpServers"]["whitemagic"] == muse_entry(exe)
-                    && v["schema_version"] == json!(1)
+                v["mcpServers"]["whitemagic"] == muse_entry(exe) && v["schema_version"] == json!(1)
             }),
         Kind::OpencodeJsonc => std::fs::read_to_string(&spec.config_path)
             .ok()

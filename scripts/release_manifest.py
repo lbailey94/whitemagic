@@ -49,10 +49,11 @@ TARGETS = {
     "wm-windows-x86_64.exe": "windows-x86_64",
 }
 
-# Targets whose install path is gated (README §Install path: Linux x86-64 and
-# arm64 since 9.2.3 ships arm64 with native CI smoke; macOS/Windows binaries
-# are published but not yet install-gated).
-DEFAULT_INSTALL_GATED = ["linux-x86_64", "linux-aarch64"]
+# Targets whose install path is gated (README §Install path: Linux x86-64,
+# Linux arm64, and macOS arm64 as of 9.2.9 — Linux via native CI smoke,
+# macOS arm64 via hardware field smoke evidence in issue #2; macOS x86_64
+# and Windows binaries are published but not install-gated).
+DEFAULT_INSTALL_GATED = ["linux-x86_64", "linux-aarch64", "macos-aarch64"]
 
 
 def sha256_file(path: Path) -> str:

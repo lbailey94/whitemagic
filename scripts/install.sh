@@ -14,10 +14,11 @@
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
 #
-# Install gate (alpha): Linux (x86-64, aarch64) is install-gated. macOS
-# (x86_64/aarch64) installs are checksum-verified like Linux; the public
-# label says "installer available — hardware smoke gate pending" until a
-# real-Mac smoke test passes.
+# Install gate (alpha): Linux (x86-64, aarch64) and macOS arm64 are
+# install-gated — checksum-verified installs plus a passing hardware smoke
+# test (macOS arm64 field evidence: github.com/lbailey94/whitemagic/issues/2).
+# macOS x86_64 installs are checksum-verified like the gated targets; the
+# public label says "published binary; install path not gated yet".
 # Windows binaries are published in every release; this script refuses them
 # rather than guessing (a preview scripts/install.ps1 exists, not gated yet).
 # On Linux the fully static (musl) build is preferred when the target
@@ -111,10 +112,13 @@ fi
 
 echo "Installing WhiteMagic ${VERSION} for ${TARGET}..."
 
-# Map target to artifact name. Only Linux x86-64 has passed an install gate;
-# other targets are refused rather than pointed at artifacts that do not exist.
-# On Linux x86-64 the static musl build wins when present; otherwise fall back
-# to the glibc build after verifying the local glibc meets its minimum.
+# Map target to artifact name. The gate matrix (one story across README,
+# QUICKSTART, SECURITY, grimoire): Linux x86-64 / aarch64 and macOS arm64
+# are install-gated; macOS x86_64 is published with the same checksum
+# verification; Windows is refused rather than pointed at artifacts that
+# do not exist. On Linux the static musl build wins when present; otherwise
+# fall back to the glibc build after verifying the local glibc meets its
+# minimum.
 glibc_at_least() {
     # $1 = major, $2 = minor
     _v="$(getconf GNU_LIBC_VERSION 2>/dev/null || true)"
@@ -183,8 +187,8 @@ case "$TARGET" in
         ;;
     *)
         echo "Unsupported target for this release: ${TARGET}" >&2
-        echo "This installer supports Linux x86-64, Linux aarch64, and macOS (x86_64/aarch64)." >&2
-        echo "Windows is not install-gated yet — binaries are published: https://github.com/${REPO}/releases" >&2
+        echo "This installer supports Linux x86-64, Linux aarch64, and macOS arm64 (install-gated), plus macOS x86_64 (published; not gated yet)." >&2
+        echo "Windows binaries are published, but Windows is not install-gated yet: https://github.com/${REPO}/releases" >&2
         exit 1
         ;;
 esac
@@ -257,44 +261,40 @@ echo ""
 echo "Verify installation:"
 echo "  wm --version"
 echo ""
-echo "Get started:"
-echo "  wm grimoire"
+echo "Get started (in this order):"
+echo "  1. wm grimoire                        # guided first-run check"
+echo "  2. wm connect                         # dry run; add --write to apply"
 echo ""
-echo "Fallbacks:"
-echo "  wm quickstart                 # 30-second continuity demo (throwaway store)"
-echo "  wm serve --profile curated    # dispatch-only MCP server"
-echo "  wm doctor                     # diagnostics when something is wrong"
+echo "Optional:"
+echo "  wm quickstart                         # 30-second continuity demo (throwaway store)"
 echo ""
-if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
-    # Self-wire the shell profile so `wm` works in new terminals — a fresh
-    # stranger should never see "wm: not found" right after installing.
+echo "Troubleshooting:"
+echo "  wm doctor                             # diagnostics when something is wrong"
+echo "  wm serve --profile curated            # dispatch-only MCP server"
+echo ""
+# Self-wire the shell profile so `wm` works in new terminals — a fresh
+# stranger should never see "wm: not found" right after installing. One
+# file only, named in the output (2026-09-27 external review: the old loop
+# appended the PATH line to every existing profile).
+case ":${PATH}:" in
+    *":${INSTALL_DIR}:"*) path_wired=1 ;;
+    *) path_wired=0 ;;
+esac
+if [ "$path_wired" = "0" ]; then
     path_line="export PATH=\"${INSTALL_DIR}:\$PATH\""
-    path_fixed=0
-    profile_found=0
-    for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
-        [ -f "$rc" ] || continue
-        profile_found=1
-        # Whole-line match only: a commented or stale mention of the path
-        # must not count as "already wired" (2026-09-15 review).
-        if ! grep -qsxF "$path_line" "$rc"; then
-            if printf '\n# Added by the WhiteMagic installer\n%s\n' "$path_line" >> "$rc"; then
-                path_fixed=1
-            else
-                echo "warning: could not write the PATH line to $rc" >&2
-            fi
-        fi
-    done
-    if [ "$path_fixed" = "1" ]; then
-        echo "PATH wired into your shell profile — open a new terminal, or run now:"
-    elif [ "$profile_found" = "1" ]; then
-        # A profile exists and already exports the path: never rewrite it.
-        # (Reinstall case — the old logic overwrote ~/.profile with `>` here,
-        # destroying every unrelated line.)
-        echo "PATH already wired in your shell profile — open a new terminal, or run now:"
+    # Pick the profile the current shell reads; the login-shell fallback is
+    # ~/.profile (POSIX). The file is created when missing.
+    case "$(basename "${SHELL:-sh}")" in
+        zsh) profile="$HOME/.zshrc" ;;
+        bash) profile="$HOME/.bashrc" ;;
+        *) profile="$HOME/.profile" ;;
+    esac
+    if [ -f "$profile" ] && grep -qsxF "$path_line" "$profile"; then
+        echo "PATH already wired in ${profile} — open a new terminal, or run the export now:"
+    elif printf '\n# Added by the WhiteMagic installer\n%s\n' "$path_line" >> "$profile" 2>/dev/null; then
+        echo "PATH wired into ${profile} — open a new terminal, or run the export now:"
     else
-        # No profile file existed (minimal containers/boxes) — create ~/.profile,
-        # which POSIX login shells read.
-        printf '# Added by the WhiteMagic installer\n%s\n' "$path_line" > "$HOME/.profile"
-        echo "PATH wired into ~/.profile (created) — open a new terminal, or run now:"
+        echo "Could not write the PATH line to ${profile} — add it yourself:" >&2
     fi
+    echo "  ${path_line}"
 fi

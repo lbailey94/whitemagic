@@ -37,8 +37,8 @@ agents. The version number is a compatibility signal; the channel is
 an evidence claim (beta and stable each require their own exit conditions,
 not a version milestone).
 
-- **Install path: Linux x86-64 and arm64** — fully static (musl) builds with no glibc or distribution requirements, selected automatically by the installer; dynamically linked builds remain available for glibc 2.39+ hosts, and releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS and Windows binaries are published in every release but are not yet install-gated.
-- **Support window:** the current minor and the previous minor on the install-gated Linux line (x86-64 and arm64) receive fixes; older minors are archival. macOS and Windows remain published but unsupported — see [`SECURITY.md`](SECURITY.md).
+- **Install path: Linux x86-64, Linux arm64, and macOS arm64** — install-gated. Linux ships fully static (musl) builds with no glibc or distribution requirements, selected automatically by the installer; dynamically linked builds remain available for glibc 2.39+ hosts, and releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS arm64 installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)). macOS x86_64 and Windows x86_64 binaries are published in every release but their install paths are not gated yet.
+- **Support window:** the current minor and the previous minor on the install-gated lines (Linux x86-64, Linux arm64, macOS arm64) receive fixes; older minors are archival. macOS x86_64 and Windows remain published but unsupported — see [`SECURITY.md`](SECURITY.md).
 - Trusted, local-first, single-user operation with Landlock containment and firebreak guards.
 
 ## What it does
@@ -56,12 +56,15 @@ The supported alpha contract:
 ## Install
 
 Download the binary and its checksum from the
-[latest release](https://github.com/lbailey94/whitemagic/releases), then:
+[latest release](https://github.com/lbailey94/whitemagic/releases), then
+(substituting your platform's artifact name — for example
+`wm-linux-x86_64-musl`, `wm-linux-aarch64-musl`, or `wm-macos-aarch64`; the
+`.gz` variants decompress with `gunzip -c <file>.gz > <file>`):
 
 ```bash
-sha256sum -c wm-linux-x86_64.sha256
-chmod +x wm
-mkdir -p ~/.local/bin && mv wm ~/.local/bin/
+sha256sum -c wm-linux-x86_64-musl.sha256
+chmod +x wm-linux-x86_64-musl
+mkdir -p ~/.local/bin && mv wm-linux-x86_64-musl ~/.local/bin/wm
 ```
 
 If `~/.local/bin` is not on your `PATH`:
@@ -70,8 +73,8 @@ If `~/.local/bin` is not on your `PATH`:
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Or use the install script (resolves the latest release and verifies the
-checksum automatically):
+Or use the install script (resolves the latest release, picks the right
+artifact for your platform, and verifies the checksum automatically):
 
 ```bash
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=readme | sh
@@ -89,14 +92,18 @@ Adoption snapshot (2026-09-13): 759 npm downloads/30d · 1,846 Docker pulls ·
 67 crates.io downloads. Package installs are independent of the installer and
 grew without any website CTA — the memory layer chooses its own doors.
 
-Verify the installation and see the product work end to end:
+Verify the installation, activate it, and see the product work end to end:
 
 ```bash
 wm --version    # wm 9.2.8
-wm quickstart   # 30-second two-process continuity demo (isolated store)
 wm grimoire     # guided first-run: host, memory layer, agent wiring, vocabulary, continuity
+wm connect      # dry run: list detected MCP clients and the exact change
+wm connect --write  # apply, with timestamped backups
 ```
 
+`wm grimoire` proves the environment and previews client wiring; it ends by
+telling you activation itself needs `wm connect --write`. `wm quickstart` is
+the optional 30-second two-process continuity demo on an isolated store, and
 `wm doctor` is a troubleshooting tool, not a setup step — run
 `wm doctor --deep` when something looks wrong.
 
@@ -104,7 +111,7 @@ wm grimoire     # guided first-run: host, memory layer, agent wiring, vocabulary
 
 ```bash
 wm status         # is WhiteMagic ready? (store, counts, index, last backup)
-wm selftest       # 5-second end-to-end invariant check (throwaway store)
+wm selftest       # ~1-second end-to-end invariant check (throwaway store)
 wm connect        # wire every detected MCP client (dry run first; add --write)
 wm setup          # list clients / per-client setup (wm setup <client> --write)
 wm update check   # is a newer signed release available? (notify-only)

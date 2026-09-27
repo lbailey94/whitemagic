@@ -3,20 +3,21 @@
 **Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
 
 **Version**: 9.2.8
-**Install path**: Linux x86-64 and Linux arm64 (aarch64) — install-gated,
-fully static (musl) builds selected automatically by the installer (a
-dynamically linked build remains for glibc 2.39+ hosts); releases also
-publish gzipped distributables for slow links. macOS and Windows binaries
-ship in every release but their install paths are not gated yet.
+**Install path**: Linux x86-64, Linux arm64, and macOS arm64 — install-gated.
+Linux ships fully static (musl) builds selected automatically by the installer
+(a dynamically linked build remains for glibc 2.39+ hosts); releases also
+publish gzipped distributables for slow links. macOS x86_64 and Windows
+x86_64 binaries ship in every release but their install paths are not gated
+yet.
 
 Get from zero to working agent memory in under five minutes.
 
 ## 30-second path
 
 ```bash
-wm grimoire     # guided first-run: host, memory layer, agents, memory, vocabulary, continuity
-wm quickstart   # two-process continuity demo on an isolated store
-wm selftest     # end-to-end invariant check (throwaway store, ~1 second)
+wm grimoire          # guided first-run: host, memory layer, agents, memory, vocabulary, continuity
+wm connect --write   # wire every detected MCP client (dry run first: wm connect)
+wm quickstart        # optional: two-process continuity demo on an isolated store
 ```
 
 You will see a project decision recorded in one session survive a full
@@ -61,26 +62,17 @@ cargo build --release
 mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ```
 
-## 2. Verify
+## 2. Verify and activate
 
 ```bash
 wm --version   # wm 9.2.8
-wm doctor      # store, index, registry health check
+wm grimoire    # guided first-run check; ends by naming the activation step
 ```
 
-## 3. Run the demo
+`wm grimoire` proves the environment and previews client wiring; activation
+itself is the `wm connect --write` step below.
 
-```bash
-wm quickstart
-```
-
-The demo uses an isolated store at `~/.local/share/whitemagic-quickstart`
-(your real data is never touched). It shows: session start → record a
-decision → process stop → new process → continuity recovers the decision →
-budgeted replay. Remove it any time with
-`rm -rf ~/.local/share/whitemagic-quickstart`.
-
-## 4. Connect your MCP client
+## 3. Connect your MCP client
 
 ```bash
 wm connect           # dry run: list detected clients and the exact change
@@ -100,6 +92,21 @@ equivalent manual config:
   }
 }
 ```
+
+## 4. Optional: run the continuity demo
+
+```bash
+wm quickstart
+```
+
+The demo uses an isolated store at `~/.local/share/whitemagic-quickstart`
+(your real data is never touched). It shows: session start → record a
+decision → process stop → new process → continuity recovers the decision →
+budgeted replay. Remove it any time with
+`rm -rf ~/.local/share/whitemagic-quickstart`.
+
+If something looks wrong, `wm doctor` is the troubleshooting tool (store,
+index, and registry health) — it is not a setup step.
 
 The server speaks JSON-RPC over stdio and exposes one `wm` meta-tool.
 Explicit routing is the dependable contract:

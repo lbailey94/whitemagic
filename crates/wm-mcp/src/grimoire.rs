@@ -133,6 +133,27 @@ fn has_avx2() -> bool {
     std::fs::read_to_string("/proc/cpuinfo").is_ok_and(|t| t.contains(" avx2 "))
 }
 
+/// Install-gate classification for the host platform (9.2.9, 2026-09-27).
+///
+/// One matrix across README/QUICKSTART/install.sh/SECURITY: Linux x86-64 +
+/// aarch64 and macOS arm64 are install-gated; macOS x86_64 and Windows x86_64
+/// binaries are published but their install paths are not gated yet; any other
+/// platform has no published build.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HostSupport {
+    Gated,
+    Published,
+    Unsupported,
+}
+
+fn host_support(os: &str, arch: &str) -> HostSupport {
+    match (os, arch) {
+        ("linux", "x86_64" | "aarch64") | ("macos", "aarch64") => HostSupport::Gated,
+        ("macos" | "windows", "x86_64") => HostSupport::Published,
+        _ => HostSupport::Unsupported,
+    }
+}
+
 fn host_step() -> Step {
     let t = Instant::now();
     let os = std::env::consts::OS;
@@ -142,10 +163,7 @@ fn host_step() -> Step {
         .map(|s| s.trim().to_string());
     let cores = std::thread::available_parallelism().map_or(0, std::num::NonZero::get);
 
-    let supported = matches!(
-        (os, arch),
-        ("linux" | "windows", "x86_64") | ("macos", "x86_64" | "aarch64")
-    );
+    let support = host_support(os, arch);
 
     let mut detail = format!("{os} {arch}");
     if let Some(k) = &kernel {
@@ -160,16 +178,22 @@ fn host_step() -> Step {
     if has_avx2() {
         detail.push_str(", AVX2");
     }
-    if !supported {
-        detail.push_str(" (outside the install-gated alpha targets)");
+    match support {
+        HostSupport::Gated => {}
+        HostSupport::Published => {
+            detail.push_str(" (published binary; install path not gated yet)");
+        }
+        HostSupport::Unsupported => {
+            detail.push_str(" (no published binary for this platform)");
+        }
     }
 
     step(
         "host",
-        if supported {
-            StepStatus::Ok
-        } else {
+        if matches!(support, HostSupport::Unsupported) {
             StepStatus::Warn
+        } else {
+            StepStatus::Ok
         },
         detail,
         t,
@@ -639,6 +663,21 @@ mod tests {
         assert!(matches!(s.status, StepStatus::Ok | StepStatus::Warn));
         assert!(s.detail.contains(std::env::consts::OS));
         assert!(s.detail.contains(std::env::consts::ARCH));
+    }
+
+    /// The gate matrix is one story across README/QUICKSTART/install.sh/
+    /// SECURITY. Linux aarch64 was accidentally omitted here while the
+    /// installer and release matrix supported it (2026-09-27 external review).
+    #[test]
+    fn host_support_matches_the_documented_install_gate() {
+        use HostSupport::{Gated, Published, Unsupported};
+        assert_eq!(host_support("linux", "x86_64"), Gated);
+        assert_eq!(host_support("linux", "aarch64"), Gated);
+        assert_eq!(host_support("macos", "aarch64"), Gated);
+        assert_eq!(host_support("macos", "x86_64"), Published);
+        assert_eq!(host_support("windows", "x86_64"), Published);
+        assert_eq!(host_support("linux", "riscv64"), Unsupported);
+        assert_eq!(host_support("freebsd", "x86_64"), Unsupported);
     }
 
     #[test]

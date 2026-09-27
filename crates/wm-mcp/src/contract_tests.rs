@@ -294,45 +294,83 @@ fn platform_story_is_consistent_across_surfaces() {
     let quickstart =
         std::fs::read_to_string(root.join("docs/QUICKSTART.md")).expect("QUICKSTART.md");
     let installer = std::fs::read_to_string(root.join("scripts/install.sh")).expect("install.sh");
+    let security = std::fs::read_to_string(root.join("SECURITY.md")).expect("SECURITY.md");
 
+    // One gate matrix everywhere (2026-09-27): Linux x86-64 + aarch64 and
+    // macOS arm64 are install-gated; macOS x86_64 and Windows x86_64 are
+    // published but not gated. grimoire's host_support carries the same
+    // matrix in code (crates/wm-mcp/src/grimoire.rs).
     assert!(
-        readme.contains("Install path: Linux x86-64"),
-        "README must state the Linux x86-64 install path"
+        readme.contains("Install path: Linux x86-64, Linux arm64, and macOS arm64"),
+        "README must carry the Linux + macOS arm64 install gate"
     );
     assert!(
-        quickstart.contains("**Install path**: Linux x86-64"),
-        "QUICKSTART must state the Linux x86-64 install path"
+        quickstart.contains("**Install path**: Linux x86-64, Linux arm64, and macOS arm64")
+            && quickstart.contains("install-gated")
+            && quickstart.contains("not gated"),
+        "QUICKSTART must carry the gate matrix and the not-gated caveat"
     );
-    // 2026-09-20: the installer gained a checksum-verified macOS path while
-    // the documented support gate stays Linux x86-64 until the real-Mac
-    // smoke test. The refusal message must name the targets the installer
-    // actually supports and keep Windows explicitly refused — without
-    // claiming a macOS gate that has not been announced.
     assert!(
-        installer.contains("Linux x86-64") && installer.contains("macOS (x86_64/aarch64)"),
-        "install.sh refusal message must name the supported install targets"
+        security.contains("Linux x86-64, Linux arm64, macOS arm64"),
+        "SECURITY must carry the same install-gated lines"
     );
-    // 2026-09-21: Linux aarch64 joins the release matrix with native arm64
-    // CI smoke coverage; the installer maps the target and refuses clearly
-    // when a release predates the arm64 artifacts.
+    assert!(
+        installer.contains("Linux x86-64, Linux aarch64, and macOS arm64 (install-gated)")
+            && installer.contains("macOS x86_64 (published; not gated yet)"),
+        "install.sh refusal message must name the gate matrix"
+    );
+    // 2026-09-21: Linux aarch64 target mapping with clear refusals on old
+    // releases (native arm64 CI smoke coverage).
     assert!(
         installer.contains("aarch64-unknown-linux-gnu") && installer.contains("wm-linux-aarch64"),
         "install.sh must map the Linux aarch64 target (arm64 releases)"
     );
     assert!(
-        installer.contains("Windows is not install-gated"),
+        installer.contains("Windows binaries are published, but Windows is not install-gated yet"),
         "install.sh must refuse Windows explicitly (preview install.ps1, not gated yet)"
     );
-    // 2026-09-21 (9.2.3 prep): the gate flips to Linux x86-64 + arm64 with
-    // the release that ships arm64 assets; README and QUICKSTART must name it.
+}
+
+/// The first-run story is Install -> prove -> connect -> use, in the same
+/// order on every surface (2026-09-27 external review). grimoire proves the
+/// environment, `wm connect --write` is the activation moment, quickstart is
+/// the optional demo, and doctor is troubleshooting — never a setup step.
+#[test]
+fn onboarding_journey_is_one_story_across_surfaces() {
+    let root = workspace_root();
+    let readme = std::fs::read_to_string(root.join("README.md")).expect("README.md");
+    let quickstart =
+        std::fs::read_to_string(root.join("docs/QUICKSTART.md")).expect("QUICKSTART.md");
+    let installer = std::fs::read_to_string(root.join("scripts/install.sh")).expect("install.sh");
+
+    let grimoire = readme.find("wm grimoire").expect("README start block");
+    let connect = readme.find("wm connect").expect("README start block");
+    let quick = readme.find("wm quickstart").expect("README start block");
     assert!(
-        readme.contains("Install path: Linux x86-64 and arm64"),
-        "README must carry the Linux x86-64 + arm64 install gate"
+        grimoire < connect && connect < quick,
+        "README start order must be grimoire, then connect, then quickstart"
     );
     assert!(
-        quickstart.contains("**Install path**: Linux x86-64 and Linux arm64")
-            && quickstart.contains("install-gated"),
-        "QUICKSTART must carry the Linux x86-64 + arm64 install gate"
+        readme.contains("troubleshooting tool, not a setup step"),
+        "README must keep doctor out of the setup path"
+    );
+    assert!(
+        quickstart.contains("it is not a setup step"),
+        "QUICKSTART must keep doctor out of the setup path"
+    );
+    assert!(
+        !quickstart.contains("wm doctor      # store, index, registry health check"),
+        "QUICKSTART's verify step must not make doctor a setup step"
+    );
+    assert!(
+        installer.contains("1. wm grimoire") && installer.contains("2. wm connect"),
+        "installer must print the same two-step activation order"
+    );
+    // One honest selftest figure: ~1 second, measured 2026-09-27 on a debug
+    // build (1.075s wall) — the old README "5-second" promise was stale.
+    assert!(
+        !readme.contains("5-second end-to-end"),
+        "README must not promise a 5-second selftest"
     );
 }
 

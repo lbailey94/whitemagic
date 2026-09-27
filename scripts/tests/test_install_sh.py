@@ -112,7 +112,13 @@ class InstallScriptProfileTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def run_installer(self, *extra_args, target="x86_64-unknown-linux-musl", env_extra=None):
+    def run_installer(
+        self,
+        *extra_args,
+        target="x86_64-unknown-linux-musl",
+        env_extra=None,
+        path_prefix=None,
+    ):
         env = dict(os.environ)
         env["HOME"] = self.home
         env["STUB_BINARY"] = self.stub_binary
@@ -120,11 +126,15 @@ class InstallScriptProfileTest(unittest.TestCase):
         # The host's store location must never be touched by a test run.
         env.pop("XDG_DATA_HOME", None)
         env.pop("WM_INSTALL_REF", None)
+        # Deterministic shell-profile target (the installer wires the profile
+        # the current shell reads; default tests exercise the POSIX fallback).
+        env["SHELL"] = "/bin/sh"
         if env_extra:
             env.update(env_extra)
         # PATH must not already contain the install dir, so the wiring branch
         # under test is actually reached.
-        env["PATH"] = self.shim_dir + ":/usr/bin:/bin"
+        prefix = f"{path_prefix}:" if path_prefix else ""
+        env["PATH"] = prefix + self.shim_dir + ":/usr/bin:/bin"
         return subprocess.run(
             [
                 "sh",
@@ -154,12 +164,16 @@ class InstallScriptProfileTest(unittest.TestCase):
         with open(path, encoding="utf-8") as fh:
             return fh.read()
 
-    def read_profile(self):
-        path = os.path.join(self.home, ".profile")
+    def read_profile(self, name=".profile"):
+        path = os.path.join(self.home, name)
         if not os.path.exists(path):
             return None
         with open(path, encoding="utf-8") as fh:
             return fh.read()
+
+    def write_profile(self, name, text):
+        with open(os.path.join(self.home, name), "w", encoding="utf-8") as fh:
+            fh.write(text)
 
     def test_reinstall_preserves_existing_profile_lines(self):
         # The exact audit reproduction: sentinel + the WM path line already
@@ -222,6 +236,44 @@ class InstallScriptProfileTest(unittest.TestCase):
         second = self.run_installer()
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(profile, self.read_profile())
+
+    # ── Single-profile wiring + PATH element matching (2026-09-27 review) ──
+
+    def test_wires_only_the_active_shell_profile(self):
+        self.write_profile(".profile", "export SENTINEL=keepme\n")
+        self.write_profile(".bashrc", "export BASH_SENTINEL=keepme\n")
+        self.write_profile(".zshrc", "export ZSH_SENTINEL=keepme\n")
+
+        result = self.run_installer(env_extra={"SHELL": "/bin/bash"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        bashrc = self.read_profile(".bashrc")
+        self.assertEqual(bashrc.count(self.expected_line()), 1)
+        self.assertIn("export BASH_SENTINEL=keepme", bashrc)
+        self.assertIn(".bashrc", result.stdout)
+        # Every other profile stays byte-identical.
+        self.assertEqual(self.read_profile(".profile"), "export SENTINEL=keepme\n")
+        self.assertEqual(self.read_profile(".zshrc"), "export ZSH_SENTINEL=keepme\n")
+
+    def test_zsh_wires_zshrc_and_creates_it_when_missing(self):
+        self.write_profile(".profile", "export SENTINEL=keepme\n")
+        result = self.run_installer(env_extra={"SHELL": "/bin/zsh"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        zshrc = self.read_profile(".zshrc")
+        self.assertIsNotNone(zshrc, "zsh users get ~/.zshrc (created when missing)")
+        self.assertEqual(zshrc.count(self.expected_line()), 1)
+        self.assertIn(".zshrc", result.stdout)
+        self.assertEqual(self.read_profile(".profile"), "export SENTINEL=keepme\n")
+
+    def test_path_substring_is_not_a_match(self):
+        # 2026-09-27 review: the old `echo "$PATH" | grep -q "$INSTALL_DIR"`
+        # treated "<home>/.local/bin-old" as already-wired, skipped profile
+        # wiring, and left `wm` "not found" in new terminals.
+        self.write_profile(".profile", "export SENTINEL=keepme\n")
+        result = self.run_installer(path_prefix=f"{self.home}/.local/bin-old")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        profile = self.read_profile(".profile")
+        self.assertIn("export SENTINEL=keepme", profile)
+        self.assertEqual(profile.count(self.expected_line()), 1)
 
     def test_binary_installed_and_executable(self):
         result = self.run_installer()
