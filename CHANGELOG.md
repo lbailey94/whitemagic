@@ -5,6 +5,37 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.0] — 2026-09-28
+
+### Added
+- **Pins** — `memory.pin` sets or clears `is_protected` (idempotent; reports
+  the previous state). Pinned memories are anchored against decay,
+  forgetting, and cold migration by the existing lifecycle machinery; the
+  pin route is the operator-facing setter that was missing.
+- **As-of memory** — `MemoryMetadata` gains a first-class `event_time`
+  (when the recorded event happened, as declared). `memory.create` accepts
+  epoch seconds or RFC 3339; `memory.read` and the recall evidence bundle
+  disclose it with an explicit basis (`declared` | `not_tracked`) — write
+  time is never presented as event time.
+- **Fold provenance** — `MemoryMetadata` gains `derived_from` (source
+  memory ids) and `fold_level` (L1 day / L2 arc / L3 era). Dream
+  distillates stamp L1 (single session) or L2 (cross-session topic
+  summaries); Smarana gists stamp their source memories at L2. Pre-9.3
+  rows decode as unknown/empty — a level is never fabricated.
+- **Continuity briefing** — `session.continuity` returns a `briefing`
+  block (format `wm-briefing/1`): deterministic rendering (checkpoint
+  hash first, delivered turns oldest-to-newest), per-turn memory-addressed
+  hashes, `briefing_hash`, `briefing_bytes`, `estimated_tokens`, and
+  `recent_verbatim: true`. Same stored state renders byte-identical; turn
+  hashes never change as history grows. The ready-to-inject `text` is
+  opt-in via `include_briefing_text` so the bounded turns budget stays
+  truthful.
+
+### Changed
+- **Active edge** — the dream narrative never folds a session that ended
+  within 24 hours (`distill::FOLD_ACTIVE_EDGE_MS`): compression happens
+  only behind the live edge, and an unknown session span counts as inside.
+
 ## [9.2.9] — 2026-09-27
 
 ### Fixed
