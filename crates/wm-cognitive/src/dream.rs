@@ -1172,6 +1172,14 @@ impl DreamCycle {
         let digested: Vec<&crate::distill::SessionFile> = files
             .iter()
             .filter(|f| f.turns.len() >= crate::distill::MIN_TURNS_PER_SESSION)
+            // V9.3 active edge: never fold a session that ended inside the
+            // window — the live edge stays verbatim until it ages out.
+            .filter(|f| {
+                !crate::distill::within_active_edge(
+                    f.span_end_ms,
+                    chrono::Utc::now().timestamp_millis(),
+                )
+            })
             .collect();
 
         // ── 2. Write session digests (Yama-gated, deduped) ─────────────
@@ -2387,6 +2395,65 @@ mod tests {
             store.put(Galaxy::Sessions, &tm).unwrap();
         }
         session_id
+    }
+
+    /// V9.3 active edge: a session that is still inside the window is never
+    /// folded — no digest or topic summary references it.
+    #[test]
+    fn s7_active_edge_skips_recent_sessions() {
+        let (_tmp, store, assoc) = test_ctx();
+        let mut start = Memory::new(
+            Galaxy::Sessions,
+            serde_json::json!({"type": "session_start", "title": "still live", "user": "lucas"})
+                .to_string(),
+        );
+        start.metadata.tags = vec!["session".into(), "start".into()];
+        store.put(Galaxy::Sessions, &start).unwrap();
+        let start_id = start.metadata.id;
+        let mut timestamp = chrono::Utc::now().timestamp_millis() - 5_000;
+        for (i, (role, turn_type, text)) in [
+            ("user", "question", "is the live session folded?"),
+            ("ai", "decision", "no — the active edge stays verbatim"),
+        ]
+        .iter()
+        .enumerate()
+        {
+            let mut tm = Memory::new(
+                Galaxy::Sessions,
+                serde_json::json!({
+                    "type": "session_turn",
+                    "session_id": start_id.to_string(),
+                    "sequence": i,
+                    "role": role,
+                    "turn_type": turn_type,
+                    "importance": 0.7,
+                    "content": text,
+                    "timestamp": timestamp,
+                })
+                .to_string(),
+            );
+            tm.metadata.tags = vec![
+                "session".into(),
+                "turn".into(),
+                (*role).into(),
+                (*turn_type).into(),
+            ];
+            store.put(Galaxy::Sessions, &tm).unwrap();
+            timestamp += 1_000;
+        }
+
+        let ctx = DreamContext::new(&store, &assoc);
+        let mut cycle = DreamCycle::new();
+        let result = cycle.run(&ctx);
+        assert!(result.success);
+
+        let dreams = store.scan(Galaxy::Dreams, 1_000).unwrap();
+        assert!(
+            !dreams
+                .iter()
+                .any(|m| m.metadata.derived_from.contains(&start_id)),
+            "a session inside the active edge must not be folded"
+        );
     }
 
     /// ACCEPTANCE (S7): a cross-session topic summary for a real corpus

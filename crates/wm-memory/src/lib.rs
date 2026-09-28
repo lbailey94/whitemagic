@@ -83,7 +83,7 @@ pub use galaxy_registry::{GalaxyMetadata, GalaxyRegistry};
 pub use lifecycle::{ConsolidationResult, ForgettingResult, Lifecycle, LifecycleConfig};
 pub use mandala::{Compartment, CompartmentConfig, MandalaLevel, MandalaManager};
 pub use memory::{
-    Memory, MemoryId, MemoryMetadata, MemoryType, Tier, content_hash, decode_embedding,
+    FoldLevel, Memory, MemoryId, MemoryMetadata, MemoryType, Tier, content_hash, decode_embedding,
     encode_embedding, trust_weighted_score,
 };
 pub use migration::{

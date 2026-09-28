@@ -104,6 +104,34 @@ impl Tier {
     }
 }
 
+/// Fold resolution for a distilled (folded) memory (V9.3).
+///
+/// Folded records trade detail for reach: L1 keeps day-level specifics, L2
+/// merges a span of days, L3 is the coarse deep past. `None` on a record
+/// means "not a fold" — a level is never fabricated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FoldLevel {
+    /// Day-level folded memory (single session).
+    L1,
+    /// Arc-level folded memory (merged across sessions).
+    L2,
+    /// Era-level folded memory (deep past, coarse).
+    L3,
+}
+
+impl FoldLevel {
+    /// String label for JSON / display.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::L1 => "l1",
+            Self::L2 => "l2",
+            Self::L3 => "l3",
+        }
+    }
+}
+
 /// Metadata for a memory entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryMetadata {
@@ -213,6 +241,22 @@ pub struct MemoryMetadata {
     /// itself lives in the store's `revisions` DBI (`memory.revisions`).
     #[serde(default)]
     pub revision_count: u32,
+    /// Event time (V9.3) — when the event being recorded actually happened,
+    /// as declared by the caller. `None` = unknown; never fabricated from
+    /// `created_at` (reading the clock at write time is a different claim).
+    /// Evidence readers disclose the basis: `declared` when present,
+    /// `not_tracked` when absent.
+    #[serde(default)]
+    pub event_time: Option<DateTime<Utc>>,
+    /// Fold provenance (V9.3) — the source memories this record was
+    /// distilled from. Set by distillation (dream narrative / Smarana gist),
+    /// never inferred; empty = not a folded record.
+    #[serde(default)]
+    pub derived_from: Vec<MemoryId>,
+    /// Fold resolution (V9.3) — how much detail a folded record carries;
+    /// `None` = not a fold.
+    #[serde(default)]
+    pub fold_level: Option<FoldLevel>,
 }
 
 const fn default_coord5d() -> Coordinate5D {
@@ -375,6 +419,9 @@ impl Memory {
                 validity: wm_core::episodic::ValidityState::default(),
                 corroborated_by: Vec::new(),
                 revision_count: 0,
+                event_time: None,
+                derived_from: Vec::new(),
+                fold_level: None,
             },
             content,
             embedding: None,
@@ -415,6 +462,23 @@ impl Memory {
     #[must_use]
     pub const fn with_protection(mut self, protected: bool) -> Self {
         self.metadata.is_protected = protected;
+        self
+    }
+
+    /// Set the event time — when the recorded event actually happened, as
+    /// declared by the caller. `created_at` is unaffected.
+    #[must_use]
+    pub const fn with_event_time(mut self, event_time: DateTime<Utc>) -> Self {
+        self.metadata.event_time = Some(event_time);
+        self
+    }
+
+    /// Mark this record as a fold of `sources` at `level` (distillation
+    /// provenance; never inferred at read time).
+    #[must_use]
+    pub fn with_fold(mut self, level: FoldLevel, sources: Vec<MemoryId>) -> Self {
+        self.metadata.fold_level = Some(level);
+        self.metadata.derived_from = sources;
         self
     }
 
@@ -944,6 +1008,37 @@ mod tests {
         let score = mem.metadata.neuro_score;
         mem.decay(Utc::now());
         assert!((mem.metadata.neuro_score - score).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn new_fields_default_when_absent() {
+        // V9.3: records written before the fold fields existed must decode
+        // with honest defaults (None / empty), never fabricated values.
+        let mut v = serde_json::to_value(Memory::new(Galaxy::Codex, "old row".into())).unwrap();
+        let meta = v["metadata"].as_object_mut().unwrap();
+        meta.remove("event_time");
+        meta.remove("derived_from");
+        meta.remove("fold_level");
+        let m: Memory = serde_json::from_value(v).unwrap();
+        assert!(m.metadata.event_time.is_none());
+        assert!(m.metadata.derived_from.is_empty());
+        assert!(m.metadata.fold_level.is_none());
+    }
+
+    #[test]
+    fn event_time_and_fold_roundtrip() {
+        let src = uuid::Uuid::new_v4();
+        let when = chrono::DateTime::parse_from_rfc3339("2026-09-27T10:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let mem = Memory::new(Galaxy::Codex, "folded".into())
+            .with_event_time(when)
+            .with_fold(FoldLevel::L2, vec![src]);
+        let back: Memory = serde_json::from_value(serde_json::to_value(&mem).unwrap()).unwrap();
+        assert_eq!(back.metadata.event_time, Some(when));
+        assert_eq!(back.metadata.fold_level, Some(FoldLevel::L2));
+        assert_eq!(back.metadata.derived_from, vec![src]);
+        assert_eq!(FoldLevel::L1.as_str(), "l1");
     }
 
     #[test]

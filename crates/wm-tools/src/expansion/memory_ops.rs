@@ -198,7 +198,7 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
             let resolved = uuid::Uuid::parse_str(&id)
                 .ok()
                 .and_then(|key| resolve_memory_across_galaxies(store, key));
-            let (source_time, visibility, history) = match &resolved {
+            let (source_time, visibility, history, fold) = match &resolved {
                 Some((_, mem)) => {
                     let revisions = store
                         .revisions(mem.metadata.galaxy, mem.metadata.id)
@@ -210,8 +210,12 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                         json!({
                             "created_at": mem.metadata.created_at,
                             "basis": "recorded_at",
-                            "event_time": serde_json::Value::Null,
-                            "event_time_basis": "not_tracked",
+                            "event_time": mem.metadata.event_time,
+                            "event_time_basis": if mem.metadata.event_time.is_some() {
+                                "declared"
+                            } else {
+                                "not_tracked"
+                            },
                         }),
                         json!({
                             "private": mem.metadata.is_private,
@@ -223,6 +227,26 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                             "chain_valid": chain_valid,
                             "current": true,
                         }),
+                        // V9.3 fold provenance: where a folded record came
+                        // from. Null for ordinary records — never inferred.
+                        if mem.metadata.fold_level.is_some()
+                            || !mem.metadata.derived_from.is_empty()
+                        {
+                            json!({
+                                "level": mem
+                                    .metadata
+                                    .fold_level
+                                    .map(wm_memory::FoldLevel::as_str),
+                                "derived_from": mem
+                                    .metadata
+                                    .derived_from
+                                    .iter()
+                                    .map(ToString::to_string)
+                                    .collect::<Vec<_>>(),
+                            })
+                        } else {
+                            serde_json::Value::Null
+                        },
                     )
                 }
                 None => (
@@ -246,6 +270,7 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                         "current": true,
                         "basis": "unavailable_cold_record",
                     }),
+                    serde_json::Value::Null,
                 ),
             };
             let mut retrieval = json!({
@@ -264,6 +289,7 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                 "retrieval": retrieval,
                 "source_time": source_time,
                 "history": history,
+                "fold": fold,
                 "integrity": r
                     .get("integrity")
                     .cloned()

@@ -848,6 +848,13 @@ impl GistDistiller {
         for kw in &gist.salient_keywords {
             mem.metadata.tags.push(format!("kw:{kw}"));
         }
+        // V9.3 fold provenance: the gist knows exactly which memories it
+        // absorbed; record them as first-class fold sources (L2 = merged
+        // across its cluster).
+        mem.metadata
+            .derived_from
+            .clone_from(&gist.source_memory_ids);
+        mem.metadata.fold_level = Some(wm_memory::FoldLevel::L2);
         mem
     }
 }

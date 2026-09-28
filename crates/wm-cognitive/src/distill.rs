@@ -55,6 +55,22 @@ pub const MIN_SESSIONS_PER_TOPIC: usize = 2;
 /// bounded so a slow endpoint (see `WM_LLM_TIMEOUT_MS`) cannot stall sleep.
 pub const MAX_LLM_SYNTH_PER_CYCLE: usize = 2;
 
+/// Active-edge window in milliseconds (V9.3).
+///
+/// Sessions that ended within this window of a dream run are never folded —
+/// the live edge stays verbatim until it ages out. The WM analog of
+/// "compress only behind the active edge": a session is history once
+/// nothing is still writing to it, and overnight is long enough to know.
+pub const FOLD_ACTIVE_EDGE_MS: i64 = 24 * 60 * 60 * 1000;
+
+/// Whether a session that ended at `span_end_ms` is still inside the active
+/// edge and therefore must not be folded. An unknown span (`0`) counts as
+/// inside — freshness is never assumed.
+#[must_use]
+pub const fn within_active_edge(span_end_ms: i64, now_ms: i64) -> bool {
+    span_end_ms <= 0 || now_ms.saturating_sub(span_end_ms) < FOLD_ACTIVE_EDGE_MS
+}
+
 /// Tags that describe the *logging* of a turn rather than its subject —
 /// excluded from topic derivation.
 const STRUCTURAL_TAGS: [&str; 10] = [
@@ -637,6 +653,21 @@ pub fn distill_memory(
     }
     tags.dedup();
     mem.metadata.tags = tags;
+    // V9.3 fold provenance: a distillate is a fold of its source sessions
+    // (session-start memory ids). One session = L1; merged cross-session
+    // topic summary = L2. Never inferred at read time.
+    let sources: Vec<uuid::Uuid> = source_sessions
+        .iter()
+        .filter_map(|sid| uuid::Uuid::parse_str(sid).ok())
+        .collect();
+    if !sources.is_empty() {
+        mem.metadata.fold_level = Some(if sources.len() > 1 {
+            wm_memory::FoldLevel::L2
+        } else {
+            wm_memory::FoldLevel::L1
+        });
+        mem.metadata.derived_from = sources;
+    }
     mem
 }
 
@@ -973,5 +1004,24 @@ mod tests {
         let idx = index_markdown(&files, &[]);
         assert!(idx.contains("## distill:index"));
         assert!(idx.contains("| s1 |"));
+    }
+
+    #[test]
+    fn active_edge_holds_recent_sessions_verbatim() {
+        let now = 1_700_000_000_000i64;
+        assert!(within_active_edge(now - 60_000, now), "one minute old");
+        assert!(within_active_edge(now, now), "still being written");
+        assert!(
+            within_active_edge(0, now),
+            "unknown span is never assumed old"
+        );
+        assert!(
+            !within_active_edge(now - FOLD_ACTIVE_EDGE_MS - 1, now),
+            "past the edge folds"
+        );
+        assert!(
+            !within_active_edge(now - FOLD_ACTIVE_EDGE_MS, now),
+            "exactly at the edge is behind it"
+        );
     }
 }

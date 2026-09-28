@@ -437,6 +437,10 @@ impl Tool for MemoryCreateTool {
                 "tags": str_array_prop("Optional tags"),
                 "title": str_prop("Optional human-readable title (envelope v2)"),
                 "topic": str_prop("Optional topic label for subject-scoped retrieval (envelope v2)"),
+                "event_time": json!({
+                    "type": ["string", "integer"],
+                    "description": "Optional event time: when the recorded event actually happened (RFC 3339 string or epoch seconds). Absent = not tracked; never inferred from write time.",
+                }),
                             "importance": bounded_num_prop("Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)", 0.0, 1.0),
                 "source": str_prop("Authorship claim: user (user-dictated content, trust 1.0) | agent (default, trust 0.7) | other free-form class (trust 0.7)"),
             }),
@@ -510,6 +514,26 @@ impl Tool for MemoryCreateTool {
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .map(String::from);
+        // V9.3: optional event_time — when the event happened, as declared.
+        // Accepts epoch seconds (integer) or RFC 3339 (string); malformed
+        // values are caller errors, never silently dropped.
+        if let Some(raw) = args.get("event_time").filter(|v| !v.is_null()) {
+            let parsed = match raw {
+                Value::Number(n) => n
+                    .as_i64()
+                    .and_then(|secs| chrono::DateTime::<chrono::Utc>::from_timestamp(secs, 0)),
+                Value::String(s) => chrono::DateTime::parse_from_rfc3339(s.trim())
+                    .ok()
+                    .map(|dt| dt.with_timezone(&chrono::Utc)),
+                _ => None,
+            };
+            let Some(event_time) = parsed else {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "event_time must be epoch seconds or an RFC 3339 timestamp".into(),
+                ));
+            };
+            memory.metadata.event_time = Some(event_time);
+        }
         // V8 S5: optional importance (the write gate rewrites this to the
         // class-policy value when it recognizes the content); class/tier
         // re-stamped now that tags are known. String forms are accepted
@@ -1103,6 +1127,14 @@ impl Tool for MemoryReadTool {
             "content": memory.content,
             "tags": memory.metadata.tags,
             "created_at": memory.metadata.created_at.to_rfc3339(),
+            "event_time": memory.metadata.event_time.map(|t| t.to_rfc3339()),
+            "derived_from": memory
+                .metadata
+                .derived_from
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            "fold_level": memory.metadata.fold_level.map(wm_memory::FoldLevel::as_str),
         }))
     }
     fn stats(&self) -> &ToolStats {
@@ -4305,6 +4337,82 @@ mod tests {
             .unwrap()
             .expect("explicit memory writes mirror into episodic storage");
         assert_eq!(episodic.content, "test memory content");
+    }
+
+    /// V9.3 as-of: event_time is declared, stored, and disclosed; malformed
+    /// values are caller errors, never silently dropped.
+    #[tokio::test]
+    async fn memory_create_event_time_roundtrip_and_read_disclosure() {
+        let store = test_store();
+        let tool = MemoryCreateTool::new(store.clone(), None, None);
+        let mut ctx = Context::new(BrainWave::Gamma);
+
+        // RFC 3339 form.
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"content": "happened yesterday", "event_time": "2026-09-27T10:00:00Z"}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
+        let id = result["id"].as_str().unwrap().to_string();
+        let mem = store
+            .get(Galaxy::Codex, uuid::Uuid::parse_str(&id).unwrap())
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            mem.metadata
+                .event_time
+                .expect("event_time persisted")
+                .to_rfc3339(),
+            "2026-09-27T10:00:00+00:00"
+        );
+
+        let read = MemoryReadTool::new(store.clone())
+            .call(&mut ctx, json!({"id": id}))
+            .await
+            .unwrap();
+        assert_eq!(read["event_time"], "2026-09-27T10:00:00+00:00");
+        assert!(read["derived_from"].as_array().unwrap().is_empty());
+        assert!(read["fold_level"].is_null());
+
+        // Epoch seconds form.
+        let result = tool
+            .call(
+                &mut ctx,
+                json!({"content": "epoch form", "event_time": 1_700_000_000i64}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["status"], "success");
+        let id2 = result["id"].as_str().unwrap();
+        let read2 = MemoryReadTool::new(store.clone())
+            .call(&mut ctx, json!({"id": id2}))
+            .await
+            .unwrap();
+        assert_eq!(read2["event_time"], "2023-11-14T22:13:20+00:00");
+
+        // Absent event_time stays honestly null.
+        let result = tool
+            .call(&mut ctx, json!({"content": "no declared time"}))
+            .await
+            .unwrap();
+        let read3 = MemoryReadTool::new(store)
+            .call(&mut ctx, json!({"id": result["id"].as_str().unwrap()}))
+            .await
+            .unwrap();
+        assert!(read3["event_time"].is_null());
+
+        // Malformed values are caller errors.
+        let err = tool
+            .call(
+                &mut ctx,
+                json!({"content": "bad", "event_time": "yesterday"}),
+            )
+            .await
+            .unwrap_err();
+        assert!(format!("{err:?}").contains("event_time"), "{err:?}");
     }
 
     /// 2026-09-15 audit: a succeeded-but-partial write must say so on the

@@ -91,3 +91,67 @@ async fn corrected_fact_stays_reconstructible_and_disclosed() {
         .unwrap();
     assert_eq!(read["content"], "zxqtemporalcontract drink is tea");
 }
+
+/// V9.3: a declared event time and fold provenance are disclosed as
+/// declared — never silently upgraded from `not_tracked`, never inferred.
+#[tokio::test]
+async fn declared_event_time_and_fold_provenance_are_disclosed() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(MemoryStore::open_default(dir.path().join("lmdb")).unwrap());
+    let source = Memory::new(Galaxy::Research, "zxqfoldsource raw detail".to_string());
+    let source_id = source.metadata.id;
+    store.put(Galaxy::Research, &source).unwrap();
+    let when = chrono::DateTime::parse_from_rfc3339("2026-09-27T10:00:00Z")
+        .unwrap()
+        .with_timezone(&chrono::Utc);
+    let mut folded = Memory::new(Galaxy::Research, "zxqfoldsource folded summary".to_string())
+        .with_event_time(when)
+        .with_fold(wm_memory::FoldLevel::L2, vec![source_id]);
+    folded.metadata.importance = 0.9;
+    let folded_id = folded.metadata.id;
+    store.put(Galaxy::Research, &folded).unwrap();
+    // The episodic route (no embedder, no search engine) reads the raw
+    // lane; mirror the folded record there like every write path does.
+    let mut record = EpisodicRecord::new(
+        None,
+        1,
+        EpisodicKind::Observation,
+        "zxqfoldsource folded summary".to_string(),
+        Provenance::new(ProvenanceSource::Agent),
+    );
+    record.id = folded_id;
+    store.episodic().append(&record).unwrap();
+
+    let response = MemoryHybridRecallTool::as_search(store.clone(), None, None)
+        .call(
+            &mut Context::default(),
+            json!({"query": "zxqfoldsource", "limit": 5}),
+        )
+        .await
+        .unwrap();
+    let entries = response["evidence_bundle"]["entries"].as_array().unwrap();
+    let entry = entries
+        .iter()
+        .find(|e| e["id"] == folded_id.to_string())
+        .unwrap_or_else(|| panic!("folded hit missing from evidence: {response}"));
+    assert_eq!(entry["source_time"]["event_time_basis"], "declared");
+    assert!(
+        entry["source_time"]["event_time"]
+            .as_str()
+            .unwrap()
+            .starts_with("2026-09-27T10:00:00"),
+        "{entry}"
+    );
+    assert_eq!(entry["fold"]["level"], "l2");
+    assert_eq!(entry["fold"]["derived_from"][0], source_id.to_string());
+
+    let read = MemoryReadTool::new(store.clone())
+        .call(
+            &mut Context::default(),
+            json!({"id": folded_id, "galaxy": "research"}),
+        )
+        .await
+        .unwrap();
+    assert_eq!(read["fold_level"], "l2");
+    assert_eq!(read["derived_from"][0], source_id.to_string());
+}
