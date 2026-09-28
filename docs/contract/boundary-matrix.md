@@ -37,7 +37,7 @@ boundary · `—` boundary does not carry registry routes.
 ## 2. Route inventory (generated)
 
 <!-- BEGIN GENERATED: q08-route-matrix -->
-Routes: 311 — read 204, write 85, destructive 12, spawn 3, coordination 2, meta 5 (exclusive class; first match wins in that order, meta by route name).
+Routes: 312 — read 204, write 86, destructive 12, spawn 3, coordination 2, meta 5 (exclusive class; first match wins in that order, meta by route name).
 
 | Route | Gana | Class | Effects | B1 direct | B2 wrapper | B3 NLU | B4 daemon | B5 gateway | B6 mesh |
 |---|---|---|---|---|---|---|---|---|---|
@@ -208,6 +208,7 @@ Routes: 311 — read 204, write 85, destructive 12, spawn 3, coordination 2, met
 | memory.ingest | Encampment | write | rwi | A | A | A | N | P | — |
 | memory.list | WinnowingBasket | read | r | A | A | A | N | F | — |
 | memory.nearby | Star | read | r | A | A | A | N | P | — |
+| memory.pin | Encampment | write | rwx | A | A | A | N | P | — |
 | memory.query | WinnowingBasket | read | r | A | A | A | N | F | — |
 | memory.read | WinnowingBasket | read | r | A | A | A | N | P | — |
 | memory.recall_feedback | WinnowingBasket | write | w | A | A | A | N | P | — |

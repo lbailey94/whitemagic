@@ -806,6 +806,98 @@ impl Tool for MemoryUpdateTool {
     }
 }
 
+/// `memory.pin` — set or clear hard protection (`is_protected`).
+///
+/// Protected memories are never decayed, forgotten, or cold-migrated
+/// (`Memory::decay` / `should_forget`, lifecycle, and Phagic all check the
+/// flag). This is the operator-facing setter for that machinery — the
+/// anchor a caller relies on when a memory must survive any fold or prune.
+pub struct MemoryPinTool {
+    store: Arc<MemoryStore>,
+    stats: ToolStats,
+    effects: EffectRow,
+}
+
+impl MemoryPinTool {
+    #[must_use]
+    pub fn new(store: Arc<MemoryStore>) -> Self {
+        Self {
+            store,
+            stats: ToolStats::default(),
+            effects: EffectRow {
+                writes: super::common::memory_galaxy_writes(),
+                reads: super::common::memory_galaxy_reads(),
+                // Landlock v1: store-root-only body.
+                sandbox: wm_core::Sandbox::StoreScoped,
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl Tool for MemoryPinTool {
+    fn name(&self) -> &str {
+        "memory.pin"
+    }
+    fn gana(&self) -> Gana {
+        Gana::Encampment
+    }
+    fn effects(&self) -> &EffectRow {
+        &self.effects
+    }
+    fn description(&self) -> &str {
+        "Pin or unpin a memory: pinned=true (default) sets is_protected, anchoring it against decay, forgetting, and cold migration; pinned=false releases it. Idempotent; reports the previous state."
+    }
+    fn input_schema(&self) -> Value {
+        super::common::schema(
+            &json!({
+                "id": super::common::str_prop("Memory UUID to pin or unpin"),
+                "pinned": super::common::bool_prop("true (default) = protect; false = release"),
+                "galaxy": super::common::str_prop("Galaxy (default: codex)"),
+            }),
+            &["id"],
+        )
+    }
+    async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
+        let galaxy = parse_galaxy_or(args.get("galaxy").and_then(|v| v.as_str()), Galaxy::Codex)?;
+        let id_str = args
+            .get("id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| wm_core::CoreError::InvalidArgs("Missing 'id'".into()))?;
+        let id = uuid::Uuid::parse_str(id_str)
+            .map_err(|e| wm_core::CoreError::InvalidArgs(format!("Invalid UUID: {e}")))?;
+        let pinned = args.get("pinned").and_then(Value::as_bool).unwrap_or(true);
+        let mut mem = self.store.get(galaxy, id)?.ok_or_else(|| {
+            wm_core::CoreError::NotFound(format!(
+                "Memory {id} not found in {}",
+                galaxy_name(galaxy)
+            ))
+        })?;
+        let previous = mem.metadata.is_protected;
+        let changed = previous != pinned;
+        if changed {
+            mem.metadata.is_protected = pinned;
+            self.store.put(galaxy, &mem)?;
+        }
+        Ok(json!({
+            "status": "success",
+            "id": mem.metadata.id,
+            "galaxy": galaxy_name(galaxy),
+            "pinned": mem.metadata.is_protected,
+            "previous_pinned": previous,
+            "changed": changed,
+            // The write-audit journal scrapes `content_hash` from tool
+            // output; pinning never changes content, so the stable hash is
+            // disclosed to give the journal a truthful entry.
+            "content_hash": mem.metadata.content_hash,
+        }))
+    }
+    fn stats(&self) -> &ToolStats {
+        &self.stats
+    }
+}
+
 /// `memory.revisions` — list or verify a memory's content revision chain
 /// (V8 S11c).
 ///
@@ -3577,6 +3669,80 @@ mod tests {
             after.metadata.tags,
             vec!["x".to_string()],
             "whitelisted fields still apply"
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_pin_sets_protection_and_unpin_releases() {
+        let store = test_store();
+        let mem = Memory::new(Galaxy::Codex, "must survive the fold".into());
+        let id = mem.metadata.id;
+        store.put(Galaxy::Codex, &mem).unwrap();
+
+        let tool = MemoryPinTool::new(store.clone());
+        let mut ctx = Context::default();
+        let v = tool
+            .call(&mut ctx, json!({"galaxy": "codex", "id": id.to_string()}))
+            .await
+            .unwrap();
+        assert_eq!(v["status"], "success");
+        assert_eq!(v["pinned"], true);
+        assert_eq!(v["previous_pinned"], false);
+        assert_eq!(v["changed"], true);
+        assert!(
+            store
+                .get(Galaxy::Codex, id)
+                .unwrap()
+                .unwrap()
+                .metadata
+                .is_protected,
+            "pin must persist is_protected"
+        );
+
+        // Idempotent re-pin reports unchanged.
+        let v2 = tool
+            .call(&mut ctx, json!({"galaxy": "codex", "id": id.to_string()}))
+            .await
+            .unwrap();
+        assert_eq!(v2["changed"], false);
+        assert_eq!(v2["previous_pinned"], true);
+
+        // Release.
+        let v3 = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": id.to_string(), "pinned": false}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v3["pinned"], false);
+        assert_eq!(v3["changed"], true);
+        assert!(
+            !store
+                .get(Galaxy::Codex, id)
+                .unwrap()
+                .unwrap()
+                .metadata
+                .is_protected
+        );
+    }
+
+    #[tokio::test]
+    async fn memory_pin_missing_id_is_not_found() {
+        let store = test_store();
+        let tool = MemoryPinTool::new(store);
+        let mut ctx = Context::default();
+        let missing = uuid::Uuid::new_v4();
+        let err = tool
+            .call(
+                &mut ctx,
+                json!({"galaxy": "codex", "id": missing.to_string()}),
+            )
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, wm_core::CoreError::NotFound(_)),
+            "expected NotFound, got {err:?}"
         );
     }
 
