@@ -126,19 +126,28 @@ impl VectorStore {
 
         // Pass 2: Look up galaxy for each embedding (separate txn per lookup)
         let mut count = 0;
+        let mut orphaned = 0u64;
+        let mut orphan_sample: Vec<Uuid> = Vec::new();
         for (id, embedding) in entries {
-            match self.find_memory_galaxy(store, id) {
-                Some(galaxy) => {
-                    self.vectors.insert(id, (galaxy, embedding));
-                    count += 1;
-                }
-                None => {
-                    tracing::warn!(
-                        "Skipping orphaned embedding (memory not found in any galaxy, id={})",
-                        id
-                    );
+            if let Some(galaxy) = self.find_memory_galaxy(store, id) {
+                self.vectors.insert(id, (galaxy, embedding));
+                count += 1;
+            } else {
+                // Aggregate: a store can carry thousands of orphans whose
+                // memories were deleted; one line per orphan flooded the
+                // journal (1404 lines on a live store, 2026-09-28).
+                orphaned += 1;
+                if orphan_sample.len() < 3 {
+                    orphan_sample.push(id);
                 }
             }
+        }
+        if orphaned > 0 {
+            tracing::warn!(
+                orphaned,
+                sample = ?orphan_sample,
+                "Skipped orphaned embeddings (memory not found in any galaxy)"
+            );
         }
 
         self.loaded = true;

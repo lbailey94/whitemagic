@@ -117,6 +117,12 @@ struct ChainState {
     total_debt: f32,
     /// Unix timestamp of last debt decay computation.
     last_decay_timestamp: u64,
+    /// Per-tool debt aggregate, maintained incrementally on every append
+    /// (and rebuilt once at open). Reporting must not scan the ledger:
+    /// a store with 545k entries made `karma.report` cost ~2-3 CPU-seconds
+    /// per call (live field report, 2026-09-28) because `tool_debt()`
+    /// re-summed every entry.
+    tool_debt: std::collections::HashMap<String, f32>,
 }
 
 /// Pending writes buffer for batched LMDB flush.
@@ -158,6 +164,9 @@ const NEXT_ID_KEY: &[u8] = b"__next_id__";
 const MERKLE_ROOT_KEY: &[u8] = b"__merkle_root__";
 /// LMDB key for the Merkle root's entry count.
 const MERKLE_COUNT_KEY: &[u8] = b"__merkle_count__";
+
+/// Minimum backwards-walk budget (probes) for [`KarmaLedger::recent`].
+const RECENT_PROBE_CAP_MIN: usize = 256;
 
 /// Result of a chain integrity verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -231,6 +240,7 @@ impl KarmaLedger {
                 chain_head: GENESIS_BINDU.to_string(),
                 total_debt: 0.0,
                 last_decay_timestamp: 0,
+                tool_debt: std::collections::HashMap::new(),
             }),
             pending: std::sync::Mutex::new(PendingWrites::new()),
             flush_threshold,
@@ -260,11 +270,18 @@ impl KarmaLedger {
             }
         }
 
-        // Load total debt by scanning entries
+        // Load total debt and the per-tool aggregate from the single scan
+        // the open path already performs (reporting then never re-scans).
         let entries = self.scan_entries()?;
+        let mut tool_debt: std::collections::HashMap<String, f32> =
+            std::collections::HashMap::new();
+        for entry in &entries {
+            *tool_debt.entry(entry.tool.clone()).or_insert(0.0) += entry.debt_delta;
+        }
         if let Some(last) = entries.last() {
             state.total_debt = last.total_debt;
         }
+        state.tool_debt = tool_debt;
 
         Ok(())
     }
@@ -331,9 +348,11 @@ impl KarmaLedger {
         let val = serde_json::to_vec(&entry)
             .map_err(|e| CoreError::Memory(format!("karma serialize failed: {e}")))?;
 
-        // Update in-memory chain head and total debt
+        // Update in-memory chain head, total debt, and the per-tool map
+        // (kept in lockstep with appended entries — reports read this).
         state.chain_head.clone_from(&entry_hash);
         state.total_debt = new_total;
+        *state.tool_debt.entry(entry.tool.clone()).or_insert(0.0) += debt_delta;
         let next_id_val = self.next_id.load(Ordering::Relaxed);
         drop(state);
 
@@ -482,6 +501,7 @@ impl KarmaLedger {
 
         state.chain_head.clone_from(&entry_hash);
         state.total_debt = new_total;
+        *state.tool_debt.entry(entry.tool.clone()).or_insert(0.0) += debt_delta;
         let next_id_val = self.next_id.load(Ordering::Relaxed);
         drop(state);
 
@@ -539,6 +559,7 @@ impl KarmaLedger {
 
         state.chain_head.clone_from(&entry_hash);
         state.total_debt = new_total;
+        *state.tool_debt.entry(entry.tool.clone()).or_insert(0.0) += debt_delta;
         let next_id_val = self.next_id.load(Ordering::Relaxed);
         drop(state);
 
@@ -627,22 +648,54 @@ impl KarmaLedger {
         Ok(entries)
     }
 
-    /// Get recent entries (last N).
+    /// Get recent entries (last N, oldest first).
+    ///
+    /// Walks the sequential key space backwards from the head instead of
+    /// scanning the whole ledger: cost is O(N + tombstones encountered),
+    /// independent of total ledger size. The backwards walk is capped
+    /// ([`RECENT_PROBE_CAP_MIN`] probes at least, 64×N otherwise) so a
+    /// pathological tombstone run cannot silently degrade into a full scan —
+    /// in that rare case fewer than `n` entries are returned.
     pub fn recent(&self, n: usize) -> Result<Vec<KarmaEntry>> {
-        let mut entries = self.scan_entries()?;
-        let start = entries.len().saturating_sub(n);
-        entries.drain(..start);
+        self.flush()?;
+        if n == 0 {
+            return Ok(Vec::new());
+        }
+        let mut id = self.next_id.load(Ordering::Relaxed);
+        if id == 0 {
+            return Ok(Vec::new());
+        }
+
+        let probe_cap = n.saturating_mul(64).max(RECENT_PROBE_CAP_MIN) as u64;
+        let mut entries = Vec::with_capacity(n);
+        let mut probed = 0u64;
+        while id > 0 && entries.len() < n && probed < probe_cap {
+            id -= 1;
+            probed += 1;
+            let Some(val) = self.store.get_raw(Galaxy::Karma, &id.to_be_bytes())? else {
+                continue;
+            };
+            if let Ok(entry) = serde_json::from_slice::<KarmaEntry>(&val) {
+                if !entry.tombstone {
+                    entries.push(entry);
+                }
+            }
+        }
+        entries.reverse();
         Ok(entries)
     }
 
     /// Get karma debt per tool.
+    ///
+    /// Reads the incrementally maintained per-tool aggregate in
+    /// [`ChainState`] — never scans the ledger (a 545k-entry store made the
+    /// old scan-based implementation cost ~2-3 CPU-seconds per call).
     pub fn tool_debt(&self) -> Result<Vec<(String, f32)>> {
-        let entries = self.scan_entries()?;
-        let mut debt_map: std::collections::HashMap<String, f32> = std::collections::HashMap::new();
-        for entry in entries {
-            *debt_map.entry(entry.tool.clone()).or_insert(0.0) += entry.debt_delta;
-        }
-        let mut result: Vec<_> = debt_map.into_iter().collect();
+        let mut result: Vec<(String, f32)> = lock_or_err(&self.chain_state, "chain-state")?
+            .tool_debt
+            .iter()
+            .map(|(tool, debt)| (tool.clone(), *debt))
+            .collect();
         result.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         Ok(result)
     }
@@ -671,6 +724,14 @@ impl KarmaLedger {
                 .map_err(|e| CoreError::Memory(format!("karma serialize failed: {e}")))?;
             self.store.put_raw(Galaxy::Karma, &key, &val)?;
             tombstoned += 1;
+        }
+        // Keep the per-tool aggregate consistent with `scan_entries()`
+        // (which excludes tombstones): subtract each newly tombstoned delta.
+        {
+            let mut state = lock_or_err(&self.chain_state, "chain-state")?;
+            for entry in entries.iter().take(to_tombstone) {
+                *state.tool_debt.entry(entry.tool.clone()).or_insert(0.0) -= entry.debt_delta;
+            }
         }
         Ok(tombstoned)
     }
@@ -1315,6 +1376,55 @@ mod tests {
 
         let remaining = ledger.scan_entries().unwrap();
         assert_eq!(remaining.len(), 2);
+    }
+
+    #[test]
+    fn recent_skips_tombstones() {
+        let store = Arc::new(make_store());
+        let ledger = KarmaLedger::new(store).unwrap();
+        for i in 0..5 {
+            ledger.record(&format!("tool_{i}"), false, 0, true).unwrap();
+        }
+
+        // Tombstone the three oldest (ids 0-2); live ids are 3 and 4.
+        assert_eq!(ledger.clear_old(2).unwrap(), 3);
+
+        let recent = ledger.recent(2).unwrap();
+        assert_eq!(recent.len(), 2);
+        assert_eq!(recent[0].id, 3);
+        assert_eq!(recent[1].id, 4);
+
+        // Asking for more than live entries walks into the tombstone region
+        // and must skip it (or stop at the probe cap) without erroring.
+        let recent = ledger.recent(10).unwrap();
+        assert_eq!(recent.len(), 2, "only live entries are returned");
+    }
+
+    #[test]
+    fn tool_debt_survives_restart_and_tombstones() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = Arc::new(MemoryStore::open_default(tmp.path()).unwrap());
+        let ledger = KarmaLedger::new(Arc::clone(&store)).unwrap();
+        ledger.record("tool_a", false, 1, true).unwrap(); // +1.0
+        ledger.record("tool_a", false, 1, true).unwrap(); // +1.0
+        ledger.record("tool_b", false, 1, true).unwrap(); // +1.0
+        ledger.flush().unwrap();
+
+        // A fresh ledger rebuilds the aggregate from the open-path scan.
+        let ledger2 = KarmaLedger::new(store).unwrap();
+        let debt = ledger2.tool_debt().unwrap();
+        assert_eq!(debt[0], ("tool_a".to_string(), 2.0));
+        assert_eq!(debt.len(), 2);
+
+        // Tombstoning the oldest entry (tool_a, +1.0) drops its contribution.
+        assert_eq!(ledger2.clear_old(2).unwrap(), 1);
+        let debt = ledger2.tool_debt().unwrap();
+        let tool_a = debt
+            .iter()
+            .find(|(tool, _)| tool == "tool_a")
+            .map(|(_, d)| *d)
+            .unwrap();
+        assert_eq!(tool_a, 1.0);
     }
 
     #[test]

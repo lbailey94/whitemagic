@@ -5,6 +5,29 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **`karma.report` no longer scans the whole ledger** (live field report,
+  2026-09-28: a 545k-entry store spent ~2-3 CPU-seconds per call — `recent()`
+  and `tool_debt()` each read and JSON-deserialized every entry — and a 5s
+  telemetry poll pinned ~0.5 core on `wm-serve@wmv9`). `recent()` now walks
+  the sequential key space backwards from the head (O(N + tombstones),
+  probe-capped so it cannot degrade into a full scan) and `tool_debt()` reads
+  a per-tool aggregate maintained incrementally on every append and rebuilt
+  once on the open-path scan — `karma.report` is now O(returned) regardless
+  of ledger size.
+- **HTTP embedder no longer rejects dense payloads**: the character budget
+  was 1024 chars on the assumption of ~2 chars/token, but punctuation-dense
+  memory (telemetry JSON) rejects at 1007/1008 chars (measured live
+  2026-09-28 — a 1243-char window failed HTTP 400 every emit). The default
+  budget is now 768 (env-tunable via `WM_EMBEDDER_MAX_CHARS`, floor 64), and
+  an HTTP 400 triggers a bounded halved-budget retry (floor 128 chars), so a
+  dense outlier degrades to a truncated embed instead of failing the write.
+- **Orphaned-embedding log flood**: the vector loaders emitted one WARN per
+  orphaned vector (1404 lines on a live store at boot); they now emit a
+  single line with the count and a 3-id sample.
+
 ## [9.2.9] — 2026-09-27
 
 ### Fixed
