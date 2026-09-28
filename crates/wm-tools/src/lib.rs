@@ -438,8 +438,8 @@ impl Tool for MemoryCreateTool {
                 "title": str_prop("Optional human-readable title (envelope v2)"),
                 "topic": str_prop("Optional topic label for subject-scoped retrieval (envelope v2)"),
                 "event_time": json!({
-                    "type": ["string", "integer"],
-                    "description": "Optional event time: when the recorded event actually happened (RFC 3339 string or epoch seconds). Absent = not tracked; never inferred from write time.",
+                    "type": "string",
+                    "description": "Optional event time: when the recorded event actually happened, as RFC 3339 (epoch seconds are also accepted at runtime). Absent = not tracked; never inferred from write time.",
                 }),
                             "importance": bounded_num_prop("Optional importance 0.0-1.0 (write gate applies class ceilings/floors when the class is recognized)", 0.0, 1.0),
                 "source": str_prop("Authorship claim: user (user-dictated content, trust 1.0) | agent (default, trust 0.7) | other free-form class (trust 0.7)"),
