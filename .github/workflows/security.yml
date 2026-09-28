@@ -20,8 +20,16 @@ jobs:
         with:
           fetch-depth: 0 # full history so the scan covers every commit
       - uses: gitleaks/gitleaks-action@v2
+        with:
+          # The scheduled full-history scan found fixture-shaped strings in
+          # test files (credential-detector vectors, receipt JWT samples,
+          # the RFC 5869 vector). The repo config allowlists exactly those;
+          # without this the action ran with default rules and alerted on
+          # every historical fixture (33 findings, 2026-09-28).
+          config-path: .gitleaks.toml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
 
   public-surface:
     name: public-surface guard
