@@ -2099,7 +2099,7 @@ fn run() -> anyhow::Result<()> {
                 let schema_path = if lmdb_dir.is_dir() {
                     lmdb_dir
                 } else {
-                    store_path.clone()
+                    store_path
                 };
                 match wm_memory::MemoryStore::ensure_schema(&schema_path) {
                     Ok(created) if !created.is_empty() => println!(

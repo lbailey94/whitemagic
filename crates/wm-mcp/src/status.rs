@@ -285,7 +285,7 @@ fn last_backup_from_disk(root: &Path) -> Option<(String, u64)> {
                 })
             });
         let Some(age) = age else { continue };
-        if newest.as_ref().map_or(true, |(_, a)| age < *a) {
+        if newest.as_ref().is_none_or(|(_, a)| age < *a) {
             newest = Some((label, age));
         }
     }
@@ -873,9 +873,27 @@ mod tests {
 
     fn set_mtime_secs_ago(path: &std::path::Path, secs_ago: u64) {
         let when = std::time::SystemTime::now() - std::time::Duration::from_secs(secs_ago);
-        let file = std::fs::File::open(path).unwrap();
-        file.set_times(std::fs::FileTimes::new().set_modified(when))
-            .unwrap();
+        let times = std::fs::FileTimes::new().set_modified(when);
+        // The target is a directory: Unix updates times through a read handle,
+        // while Windows needs FILE_FLAG_BACKUP_SEMANTICS + write access — a
+        // bare read handle cannot even open a directory there (CI Tests
+        // (Windows), 2026-09-27).
+        #[cfg(unix)]
+        {
+            let file = std::fs::File::open(path).unwrap();
+            file.set_times(times).unwrap();
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
+            let file = std::fs::OpenOptions::new()
+                .write(true)
+                .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+                .open(path)
+                .unwrap();
+            file.set_times(times).unwrap();
+        }
     }
 
     #[test]
