@@ -248,7 +248,43 @@ impl HttpEmbedder {
     }
 
     /// POST one OpenAI-compatible embeddings request for a contiguous chunk.
+    ///
+    /// On HTTP 400 — llama-server rejects inputs beyond the model window —
+    /// retries with progressively halved character budgets down to
+    /// [`MIN_EMBED_CHARS`], so a dense outlier (telemetry JSON, code, CJK)
+    /// degrades to a truncated embed instead of failing the write. The
+    /// shrink is logged; the retry chain is bounded (one request per halving).
     fn embed_chunk(&self, url: &str, prepared: &[&str]) -> Result<Vec<Vec<f32>>> {
+        match self.embed_chunk_once(url, prepared) {
+            Ok(vectors) => Ok(vectors),
+            Err(error) if is_http_status_400(&error) => {
+                let mut cap = http_embed_max_chars() / 2;
+                loop {
+                    if cap < MIN_EMBED_CHARS {
+                        return Err(error);
+                    }
+                    let shrunk: Vec<String> = prepared
+                        .iter()
+                        .map(|text| truncate_chars(text, cap).to_string())
+                        .collect();
+                    let refs: Vec<&str> = shrunk.iter().map(String::as_str).collect();
+                    tracing::warn!(
+                        cap,
+                        "embedder rejected inputs (HTTP 400) — retrying with a shrunken budget"
+                    );
+                    match self.embed_chunk_once(url, &refs) {
+                        Ok(vectors) => return Ok(vectors),
+                        Err(retry_error) if is_http_status_400(&retry_error) => cap /= 2,
+                        Err(retry_error) => return Err(retry_error),
+                    }
+                }
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    /// The single-attempt body of [`Self::embed_chunk`].
+    fn embed_chunk_once(&self, url: &str, prepared: &[&str]) -> Result<Vec<Vec<f32>>> {
         let request = EmbeddingsRequest {
             model: &self.config.model,
             input: prepared,
@@ -280,22 +316,52 @@ impl HttpEmbedder {
 
 /// Conservative character budget per HTTP-embedder input.
 ///
-/// The served model family (bge-small) has a 512-token window; dense text
-/// can tokenize at ~2 chars/token, so 1024 chars stays inside the window
-/// without a client-side tokenizer. Only the embedding input is truncated —
-/// stored content and the BM25 index keep the full text.
-const HTTP_EMBED_MAX_CHARS: usize = 1024;
+/// The served model family (bge-small) has a 512-token window. Prose
+/// tokenizes near 4 chars/token, but punctuation-dense payloads (telemetry
+/// JSON, code) run ~1.5-2 chars/token: a live 1243-char telemetry window
+/// failed at the old 1024-char budget on 2026-09-28 — the rejection
+/// boundary measured at 1007/1008 chars for that payload. 768 keeps ~20%
+/// margin on that worst case without a client-side tokenizer. Only the
+/// embedding input is truncated — stored content and the BM25 index keep
+/// the full text. `WM_EMBEDDER_MAX_CHARS` overrides the budget for
+/// operators who know their model's tokenizer (values < 64 are ignored).
+const HTTP_EMBED_MAX_CHARS: usize = 768;
 
-/// Truncate an embedding input to the character budget on a UTF-8 boundary.
-fn truncate_for_embedding(text: &str) -> &str {
-    if text.len() <= HTTP_EMBED_MAX_CHARS {
+/// Floor for the on-400 shrink retry — a truncated embed beats a failed write.
+const MIN_EMBED_CHARS: usize = 128;
+
+/// Effective per-input character budget (env override resolved once).
+fn http_embed_max_chars() -> usize {
+    static MAX: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *MAX.get_or_init(|| {
+        std::env::var("WM_EMBEDDER_MAX_CHARS")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .filter(|n| *n >= 64)
+            .unwrap_or(HTTP_EMBED_MAX_CHARS)
+    })
+}
+
+/// True when a mapped embedder error carries an HTTP 400 status.
+fn is_http_status_400(error: &CoreError) -> bool {
+    error.to_string().contains("http status: 400")
+}
+
+/// Truncate an embedding input to `cap` bytes on a UTF-8 boundary.
+fn truncate_chars(text: &str, cap: usize) -> &str {
+    if text.len() <= cap {
         return text;
     }
-    let mut end = HTTP_EMBED_MAX_CHARS;
-    while !text.is_char_boundary(end) {
+    let mut end = cap;
+    while end > 0 && !text.is_char_boundary(end) {
         end -= 1;
     }
     &text[..end]
+}
+
+/// Truncate an embedding input to the effective character budget.
+fn truncate_for_embedding(text: &str) -> &str {
+    truncate_chars(text, http_embed_max_chars())
 }
 
 impl Embedder for HttpEmbedder {
@@ -310,14 +376,12 @@ impl Embedder for HttpEmbedder {
         // 2026-09-12: a 2033-char memory failed memory.reembed). Truncate to
         // the model window instead of failing the whole batch.
         let prepared: Vec<&str> = texts.iter().map(|t| truncate_for_embedding(t)).collect();
-        let truncated = texts
-            .iter()
-            .filter(|t| t.len() > HTTP_EMBED_MAX_CHARS)
-            .count();
+        let budget = http_embed_max_chars();
+        let truncated = texts.iter().filter(|t| t.len() > budget).count();
         if truncated > 0 {
             tracing::debug!(
                 truncated,
-                budget_chars = HTTP_EMBED_MAX_CHARS,
+                budget_chars = budget,
                 "http embedder truncated oversized input(s) to the model window"
             );
         }
@@ -1239,6 +1303,117 @@ mod tests {
             server.join().unwrap() >= 2,
             "both chunks must have been attempted (one success, one failure)"
         );
+    }
+
+    #[test]
+    fn http_embedder_retries_shrunk_on_400() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::sync::{Arc, Mutex};
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let seen: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
+        let seen_server = Arc::clone(&seen);
+
+        // Mock llama-server: the first request answers 400 (input beyond the
+        // window), the shrink retry answers 200. Each request's first input
+        // length is recorded so the test can prove the retry shrank it.
+        let server = std::thread::spawn(move || {
+            let mut served = 0usize;
+            let deadline = std::time::Instant::now() + Duration::from_secs(10);
+            while served < 2 && std::time::Instant::now() < deadline {
+                listener.set_nonblocking(true).unwrap();
+                let Ok((mut stream, _)) = listener.accept() else {
+                    std::thread::sleep(Duration::from_millis(5));
+                    continue;
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut buf = Vec::new();
+                let mut tmp = [0u8; 2048];
+                let header_end = loop {
+                    let n = stream.read(&mut tmp).unwrap();
+                    buf.extend_from_slice(&tmp[..n]);
+                    if let Some(pos) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                        break pos + 4;
+                    }
+                };
+                let headers = String::from_utf8_lossy(&buf[..header_end]).to_ascii_lowercase();
+                let content_length: usize = headers
+                    .lines()
+                    .find_map(|l| l.strip_prefix("content-length:"))
+                    .and_then(|v| v.trim().parse().ok())
+                    .unwrap_or(0);
+                while buf.len() < header_end + content_length {
+                    let n = stream.read(&mut tmp).unwrap();
+                    buf.extend_from_slice(&tmp[..n]);
+                }
+                let req: serde_json::Value =
+                    serde_json::from_slice(&buf[header_end..header_end + content_length]).unwrap();
+                let inputs = req["input"].as_array().unwrap();
+                seen_server
+                    .lock()
+                    .unwrap()
+                    .push(inputs[0].as_str().unwrap().len());
+
+                let response = if served == 0 {
+                    let body = "{\"error\":\"input too long\"}";
+                    format!(
+                        "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    )
+                } else {
+                    let data: Vec<_> = inputs
+                        .iter()
+                        .map(|_| serde_json::json!({"embedding": [1.0]}))
+                        .collect();
+                    let body = serde_json::json!({"data": data}).to_string();
+                    format!(
+                        "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    )
+                };
+                stream.write_all(response.as_bytes()).unwrap();
+                served += 1;
+            }
+            served
+        });
+
+        let embedder = HttpEmbedder::new(EmbedderConfig {
+            endpoint: format!("http://{addr}"),
+            model: "mock".into(),
+            dimension: 1,
+            timeout: Duration::from_secs(10),
+        });
+
+        let long = "dense ".repeat(400);
+        let vectors = embedder.embed_batch(&[long.as_str()]).unwrap();
+        assert_eq!(vectors, vec![vec![1.0]]);
+        assert_eq!(server.join().unwrap(), 2, "one 400 + one shrink retry");
+        let lengths = seen.lock().unwrap().clone();
+        assert_eq!(lengths.len(), 2);
+        assert!(
+            lengths[0] <= 768,
+            "first attempt must ride the default budget: {lengths:?}"
+        );
+        assert!(
+            lengths[1] <= 384,
+            "retry must halve the budget: {lengths:?}"
+        );
+    }
+
+    #[test]
+    fn truncate_chars_respects_utf8_boundaries() {
+        let text = "éééé"; // 2 bytes per char
+        assert_eq!(truncate_chars(text, 8), text);
+        let cut = truncate_chars(text, 5);
+        assert_eq!(cut, "éé");
+        assert_eq!(cut.len(), 4);
     }
 
     #[test]

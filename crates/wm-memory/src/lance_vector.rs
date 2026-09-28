@@ -469,6 +469,8 @@ impl VectorSearchEngine for LanceVectorStore {
 
         // Pass 2: Look up galaxy for each embedding (separate txn per lookup)
         let mut rows: Vec<(String, String, Vec<f32>)> = Vec::new();
+        let mut orphaned = 0u64;
+        let mut orphan_sample: Vec<String> = Vec::new();
         for (id, embedding) in entries {
             let galaxy = Galaxy::all()
                 .into_iter()
@@ -480,12 +482,20 @@ impl VectorSearchEngine for LanceVectorStore {
                     rows.push((id.to_string(), g.db_name().to_string(), embedding));
                 }
                 None => {
-                    tracing::warn!(
-                        "Skipping orphaned embedding (memory not found in any galaxy, id={})",
-                        id
-                    );
+                    // Aggregate — one line per orphan floods the journal.
+                    orphaned += 1;
+                    if orphan_sample.len() < 3 {
+                        orphan_sample.push(id.to_string());
+                    }
                 }
             }
+        }
+        if orphaned > 0 {
+            tracing::warn!(
+                orphaned,
+                sample = ?orphan_sample,
+                "Skipped orphaned embeddings (memory not found in any galaxy)"
+            );
         }
 
         if rows.is_empty() {
