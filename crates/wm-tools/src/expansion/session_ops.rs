@@ -206,6 +206,64 @@ fn format_continuity_turn(mem: &Memory, v: &Value, max_content_bytes: usize) -> 
     })
 }
 
+/// Format version of the continuity briefing contract (V9.3).
+const BRIEFING_FORMAT_VERSION: &str = "wm-briefing/1";
+
+/// Build the cache-friendly briefing view of a continuity response (V9.3).
+///
+/// The client owns its prompt; WM's side of the bytes is this block: a
+/// deterministic rendering (checkpoint hash first, then the delivered turns
+/// oldest-to-newest) plus per-turn hashes. Contract:
+/// - identical stored state renders a byte-identical briefing;
+/// - a delivered turn's hash identifies the turn memory and never changes,
+///   so clients can cache per turn;
+/// - while the requested window still covers every delivered turn, added
+///   history appends blocks and leaves prior bytes untouched (a sliding
+///   window rotates the oldest out — disclosed by `turns_omitted`).
+///
+/// `recent_verbatim` marks the flat zone: delivered turns are the stored
+/// words (per-turn caps and omissions are disclosed), never summaries.
+fn build_briefing(
+    turns: &[Value],
+    checkpoint: &Value,
+    previous_session: &str,
+    include_text: bool,
+) -> Value {
+    use std::fmt::Write as _;
+    let checkpoint_json = serde_json::to_string(checkpoint).unwrap_or_default();
+    let checkpoint_hash = wm_memory::content_hash(&checkpoint_json);
+    let mut text = format!(
+        "{BRIEFING_FORMAT_VERSION}\nsession:{previous_session}\ncheckpoint:{checkpoint_hash}\n"
+    );
+    let mut turn_hashes = Vec::with_capacity(turns.len());
+    for turn in turns {
+        let memory_id = turn.get("memory_id").and_then(Value::as_str).unwrap_or("");
+        let role = turn.get("role").and_then(Value::as_str).unwrap_or("?");
+        let turn_type = turn.get("turn_type").and_then(Value::as_str).unwrap_or("?");
+        let sequence = turn.get("sequence").and_then(Value::as_u64).unwrap_or(0);
+        let content = turn.get("content").and_then(Value::as_str).unwrap_or("");
+        let hash = wm_memory::content_hash(&format!(
+            "{memory_id}\n{role}\n{turn_type}\n{sequence}\n{content}"
+        ));
+        turn_hashes.push(json!({"memory_id": memory_id, "hash": hash}));
+        let _ = writeln!(text, "[{sequence}|{role}|{turn_type}] {content}");
+    }
+    let briefing_hash = wm_memory::content_hash(&text);
+    let mut briefing = json!({
+        "format_version": BRIEFING_FORMAT_VERSION,
+        "ordering": "checkpoint-hash, then turns oldest-to-newest",
+        "recent_verbatim": true,
+        "turn_hashes": turn_hashes,
+        "briefing_hash": briefing_hash,
+        "briefing_bytes": text.len(),
+        "estimated_tokens": text.len().div_ceil(4),
+    });
+    if include_text {
+        briefing["text"] = json!(text);
+    }
+    briefing
+}
+
 const LOSSLESS_MAX_PAGE_SIZE: usize = 64;
 const LOSSLESS_DEFAULT_PAGE_SIZE: usize = 16;
 const LOSSLESS_MIN_WIRE_BYTES: usize = 1024;
@@ -1110,12 +1168,13 @@ impl Tool for SessionContinuityTool {
                 "until": super::common::str_prop("Time-range ceiling: epoch seconds, RFC 3339, or YYYY-MM-DD"),
                 "max_content_bytes": super::common::int_prop("Per-turn content cap in bytes (256-262144, default 8192)"),
                 "max_response_bytes": super::common::int_prop("Turns budget in bytes (256-262144, default 49152)"),
+                "include_briefing_text": super::common::bool_prop("Include the ready-to-inject briefing.text block (default false; adds bytes outside the turns budget)"),
             }),
             &[],
         )
     }
     fn description(&self) -> &str {
-        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off') plus that session's latest checkpoint handoff (next_queue, open_flags, git state, tests_green, lease_id) when one exists. Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD), max_content_bytes (per-turn cap, default 8192), max_response_bytes (turns budget, default 49152). Output is bounded: each turn carries memory_id, content_bytes, and content_truncated; the newest turns win when the budget is exceeded (turns_omitted), and an oversized checkpoint handoff is replaced by a truncation marker. Read exact originals with memory.read id=<memory_id>."
+        "Get cross-session continuity — the last N turns of the most recent prior session ('where we left off') plus that session's latest checkpoint handoff (next_queue, open_flags, git state, tests_green, lease_id) when one exists. Args: current_session_id (optional, excluded), n (default 10), since/until (epoch seconds | RFC 3339 | YYYY-MM-DD), max_content_bytes (per-turn cap, default 8192), max_response_bytes (turns budget, default 49152). Output is bounded: each turn carries memory_id, content_bytes, and content_truncated; the newest turns win when the budget is exceeded (turns_omitted), and an oversized checkpoint handoff is replaced by a truncation marker. Read exact originals with memory.read id=<memory_id>. Also returns `briefing` (format wm-briefing/1): a deterministic text block with per-turn hashes and briefing_hash/bytes/estimated_tokens for cache-stable client prompts — stable while the window covers all delivered turns, per-turn hashes always stable; set include_briefing_text=true to include the ready-to-inject `text` (adds bytes outside the turns budget)."
     }
     async fn call(&self, _ctx: &mut Context, args: Value) -> wm_core::Result<Value> {
         let current = args
@@ -1263,6 +1322,14 @@ impl Tool for SessionContinuityTool {
             None => (Value::Null, Value::Null),
         };
 
+        let briefing = build_briefing(
+            &tail,
+            &checkpoint,
+            &prev_id,
+            args.get("include_briefing_text")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+        );
         let mut response = json!({
             "status": "success",
             "previous_session": prev_id,
@@ -1274,6 +1341,7 @@ impl Tool for SessionContinuityTool {
             "turns_omitted": turns_omitted,
             "max_content_bytes": per_turn_cap,
             "max_response_bytes": max_response_bytes,
+            "briefing": briefing,
         });
         if truncated {
             response["hint"] = json!(format!(
@@ -3790,6 +3858,100 @@ mod tests {
         assert!(
             v["checkpoint"].is_null() && v["checkpoint_id"].is_null(),
             "no checkpoint recorded — the fields must be present but null: {v}"
+        );
+    }
+
+    /// V9.3 briefing: deterministic across calls, per-turn hashes stable
+    /// when history grows, and the text is append-shaped while the window
+    /// covers every delivered turn.
+    #[tokio::test]
+    async fn continuity_briefing_is_stable_and_append_shaped() {
+        let store = test_store();
+        let sid1 = start_session(&store);
+        let record = SessionRecordTool::new(store.clone());
+        let mut ctx = Context::default();
+        for i in 0..3 {
+            record
+                .call(
+                    &mut ctx,
+                    json!({"role": "user", "content": format!("turn {i}"), "session_id": sid1}),
+                )
+                .await
+                .unwrap();
+        }
+        let sid2 = start_session(&store);
+        let continuity = SessionContinuityTool::new(store.clone());
+        let a = continuity
+            .call(
+                &mut ctx,
+                json!({"current_session_id": sid2, "n": 20, "include_briefing_text": true}),
+            )
+            .await
+            .unwrap();
+        let b = continuity
+            .call(
+                &mut ctx,
+                json!({"current_session_id": sid2, "n": 20, "include_briefing_text": true}),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            a["briefing"], b["briefing"],
+            "same stored state must render a byte-identical briefing"
+        );
+        assert_eq!(a["briefing"]["format_version"], "wm-briefing/1");
+        assert_eq!(a["briefing"]["recent_verbatim"], true);
+        let text_a = a["briefing"]["text"].as_str().unwrap().to_string();
+        assert!(
+            text_a.contains("[1|user|message] turn 0"),
+            "briefing is chronological and turn-addressed: {text_a}"
+        );
+        let hashes: Vec<String> = a["briefing"]["turn_hashes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|h| h["hash"].as_str().unwrap().to_string())
+            .collect();
+        assert_eq!(hashes.len(), 3);
+
+        // One more turn: prior per-turn hashes unchanged and the text
+        // extends from the previous bytes (window covers all turns).
+        record
+            .call(
+                &mut ctx,
+                json!({"role": "ai", "content": "turn 3", "session_id": sid1}),
+            )
+            .await
+            .unwrap();
+        let c = continuity
+            .call(
+                &mut ctx,
+                json!({"current_session_id": sid2, "n": 20, "include_briefing_text": true}),
+            )
+            .await
+            .unwrap();
+        let hashes_c: Vec<String> = c["briefing"]["turn_hashes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|h| h["hash"].as_str().unwrap().to_string())
+            .collect();
+        assert_eq!(
+            hashes_c[..3],
+            hashes[..],
+            "existing turn hashes must never change when history grows"
+        );
+        assert!(
+            c["briefing"]["text"].as_str().unwrap().starts_with(&text_a),
+            "new history appends; prior bytes stay untouched"
+        );
+        assert_ne!(
+            c["briefing"]["briefing_hash"],
+            a["briefing"]["briefing_hash"]
+        );
+        assert!(
+            c["briefing"]["briefing_bytes"].as_u64().unwrap()
+                > a["briefing"]["briefing_bytes"].as_u64().unwrap()
         );
     }
 
