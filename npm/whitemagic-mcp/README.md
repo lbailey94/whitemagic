@@ -43,7 +43,7 @@ opencode) at:
 Or try it directly:
 
 ```bash
-npx whitemagic-mcp --version   # wm 9.2.9
+npx whitemagic-mcp --version   # wm 9.3.0
 npx whitemagic-mcp doctor      # environment health check
 ```
 

@@ -2,7 +2,7 @@
 
 **Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
 
-**Version**: 9.2.9
+**Version**: 9.3.0
 **Install path**: Linux x86-64, Linux arm64, and macOS arm64 — install-gated.
 Linux ships fully static (musl) builds selected automatically by the installer
 (a dynamically linked build remains for glibc 2.39+ hosts); releases also
@@ -65,7 +65,7 @@ mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ## 2. Verify and activate
 
 ```bash
-wm --version   # wm 9.2.9
+wm --version   # wm 9.3.0
 wm grimoire    # guided first-run check; ends by naming the activation step
 ```
 
