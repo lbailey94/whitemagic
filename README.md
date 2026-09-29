@@ -21,14 +21,28 @@ next session — without sending your memory store to any hosted service.
 }
 ```
 
-## Hosted lanes (read-only beta)
+## Hosted services (separate from the local package)
 
 - **Remote MCP** — `https://mcp.whitemagic.dev/mcp` (streamable-http):
-  read-only recall over a curated public corpus, keyless discovery, free
-  evaluation keys, no SLA. Your local store is never uploaded.
-- **Receipt verification API** — `https://api.whitemagic.dev`: stateless
-  `POST /verify` for continuity-receipt bundles (`/health` and `/info`
-  keyless).
+  read-only recall over a curated public corpus; keyless discovery; evaluation
+  keys with a published 50 recalls/day allowance; OAuth 2.1; x402 session lease
+  options published as $0.01 for 5 minutes or $0.50 for 24 hours, with a
+  published 10,000 RPM limit; and `memory.search_batch` for up to 10 queries in
+  one MCP call. These limits and options are described by the [live server
+  card](https://mcp.whitemagic.dev/.well-known/mcp/server-card.json); the batch
+  tool is also present in the live `tools/list` response. Your local store is
+  not uploaded to this read-only recall lane.
+- **Receipt verification and agent trust API** — `https://api.whitemagic.dev`:
+  stateless `POST /verify` for continuity-receipt bundles (`/health` and `/info`
+  keyless), plus a published `/erc8004/validate` adapter targeting Base. See the
+  API's [live service metadata](https://api.whitemagic.dev/info) and [endpoint
+  documentation](https://api.whitemagic.dev/docs) for the advertised contract.
+- **Memory Crystal client and API** — [`scripts/crystal_client.py`](scripts/crystal_client.py)
+  seals and opens crystal envelopes locally with AES-256-GCM or
+  ChaCha20-Poly1305 (install the optional dependency with
+  `python3 -m pip install cryptography`). The [API documentation](https://api.whitemagic.dev/docs)
+  lists crystal store, fetch, and lineage endpoints; successful hosted
+  persistence and retrieval are not implied by local encryption support.
 
 ## Status
 

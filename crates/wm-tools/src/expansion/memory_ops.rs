@@ -220,6 +220,7 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                         json!({
                             "private": mem.metadata.is_private,
                             "model_exclude": mem.metadata.model_exclude,
+                            "protected": mem.metadata.is_protected,
                         }),
                         json!({
                             "revision_count": revisions.len(),
@@ -262,6 +263,9 @@ fn build_evidence_bundle(store: &MemoryStore, results: &[serde_json::Value]) -> 
                             .get("model_visible")
                             .and_then(serde_json::Value::as_bool)
                             .unwrap_or(false),
+                        // The retrieval result has no protection metadata for
+                        // a cold-only source. Preserve that uncertainty.
+                        "protected": serde_json::Value::Null,
                     }),
                     json!({
                         "revision_count": 0,
@@ -3725,6 +3729,12 @@ mod tests {
             "pin must persist is_protected"
         );
 
+        let read = crate::MemoryReadTool::new(store.clone())
+            .call(&mut ctx, json!({"id": id.to_string()}))
+            .await
+            .unwrap();
+        assert_eq!(read["protected"], true);
+
         // Idempotent re-pin reports unchanged.
         let v2 = tool
             .call(&mut ctx, json!({"galaxy": "codex", "id": id.to_string()}))
@@ -3750,6 +3760,18 @@ mod tests {
                 .unwrap()
                 .metadata
                 .is_protected
+        );
+    }
+
+    #[test]
+    fn evidence_bundle_keeps_unresolved_protection_unknown() {
+        let store = test_store();
+        let id = uuid::Uuid::new_v4();
+        let bundle =
+            build_evidence_bundle(&store, &[json!({"id": id.to_string(), "galaxy": "codex"})]);
+        assert_eq!(
+            bundle["entries"][0]["visibility"]["protected"],
+            serde_json::Value::Null
         );
     }
 

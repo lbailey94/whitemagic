@@ -1128,6 +1128,12 @@ impl Tool for MemoryReadTool {
             "tags": memory.metadata.tags,
             "created_at": memory.metadata.created_at.to_rfc3339(),
             "event_time": memory.metadata.event_time.map(|t| t.to_rfc3339()),
+            "event_time_basis": if memory.metadata.event_time.is_some() {
+                "declared"
+            } else {
+                "not_tracked"
+            },
+            "protected": memory.metadata.is_protected,
             "derived_from": memory
                 .metadata
                 .derived_from
@@ -4374,6 +4380,8 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(read["event_time"], "2026-09-27T10:00:00+00:00");
+        assert_eq!(read["event_time_basis"], "declared");
+        assert_eq!(read["protected"], false);
         assert!(read["derived_from"].as_array().unwrap().is_empty());
         assert!(read["fold_level"].is_null());
 
@@ -4392,6 +4400,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(read2["event_time"], "2023-11-14T22:13:20+00:00");
+        assert_eq!(read2["event_time_basis"], "declared");
 
         // Absent event_time stays honestly null.
         let result = tool
@@ -4403,6 +4412,8 @@ mod tests {
             .await
             .unwrap();
         assert!(read3["event_time"].is_null());
+        assert_eq!(read3["event_time_basis"], "not_tracked");
+        assert_eq!(read3["protected"], false);
 
         // Malformed values are caller errors.
         let err = tool
@@ -4463,6 +4474,8 @@ mod tests {
             .unwrap();
         assert_eq!(result["status"], "success");
         assert_eq!(result["content"], content);
+        assert_eq!(result["protected"], false);
+        assert_eq!(result["event_time_basis"], "not_tracked");
 
         // A cold read is not a thaw: the hot galaxy stays empty and the exact
         // cold record remains present and unchanged after the read/reopen.

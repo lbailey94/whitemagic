@@ -30,6 +30,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hashes never change as history grows. The ready-to-inject `text` is
   opt-in via `include_briefing_text` so the bounded turns budget stays
   truthful.
+- **Hosted recall service metadata and batch tool** — separate from the local
+  Rust package, the live `mcp.whitemagic.dev` server card advertises free keys
+  (50 recalls/day), OAuth 2.1, and x402 Base session leases: 5 minutes for
+  $0.01 (10,000 atomic USDC) or 24 hours for $0.50 (500,000 atomic USDC), with
+  a published 10,000 RPM limit. Live `tools/list` exposes
+  `memory.search_batch` for up to 10 queries in one MCP call. These
+  are published service terms and route metadata; live discovery does not
+  establish successful payment settlement or sustained paid throughput.
+- **Memory Crystal client and hosted API contract** — `scripts/crystal_client.py`
+  seals and opens envelopes locally using AES-256-GCM or ChaCha20-Poly1305,
+  deterministic tenant hashing, and authenticated associated data binding the
+  cipher, tenant hash, parent crystal ID, and creation timestamp. Other
+  envelope fields, including `metadata_public`, are not authenticated by that
+  data. The live API metadata documents crystal store, fetch, and lineage
+  routes. Hosted persistence and retrieval were not verified as successful in
+  this review.
 
 ### Changed
 - **Active edge** — the dream narrative never folds a session that ended
