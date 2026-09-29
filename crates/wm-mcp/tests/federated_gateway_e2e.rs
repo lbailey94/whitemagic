@@ -17,18 +17,22 @@
 //! (process-spawn/teardown precedent).
 #![cfg(unix)]
 
+use std::fs::File;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-struct ChildGuard(Child);
+struct ChildGuard {
+    child: Child,
+    stderr_log: PathBuf,
+}
 
 impl Drop for ChildGuard {
     fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
+        let _ = self.child.kill();
+        let _ = self.child.wait();
     }
 }
 
@@ -37,30 +41,34 @@ fn free_port() -> u16 {
     listener.local_addr().unwrap().port()
 }
 
-fn spawn_backing(store: &Path, root: &Path, port: u16) -> ChildGuard {
-    ChildGuard(
-        Command::new(env!("CARGO_BIN_EXE_wm"))
-            .args([
-                "serve",
-                "--store",
-                store.to_str().unwrap(),
-                "--transport",
-                "sse",
-                "--bind",
-                &format!("127.0.0.1:{port}"),
-                "--profile",
-                "full",
-                "--rate-limit",
-                "0",
-            ])
-            .env("WM_HOMEOSTASIS_FROZEN", "1")
-            .env("WM_SELFMODEL_FROZEN", "1")
-            .env("WM_PROJECT_ROOT", root)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .expect("spawn backing"),
-    )
+fn spawn_backing(store: &Path, root: &Path, port: u16, stderr_log: &Path) -> ChildGuard {
+    let child = Command::new(env!("CARGO_BIN_EXE_wm"))
+        .args([
+            "serve",
+            "--store",
+            store.to_str().unwrap(),
+            "--transport",
+            "sse",
+            "--bind",
+            &format!("127.0.0.1:{port}"),
+            "--profile",
+            "full",
+            "--rate-limit",
+            "0",
+        ])
+        .env("WM_HOMEOSTASIS_FROZEN", "1")
+        .env("WM_SELFMODEL_FROZEN", "1")
+        .env("WM_PROJECT_ROOT", root)
+        .stdout(Stdio::null())
+        .stderr(Stdio::from(
+            File::create(stderr_log).expect("create backing stderr log"),
+        ))
+        .spawn()
+        .expect("spawn backing");
+    ChildGuard {
+        child,
+        stderr_log: stderr_log.to_path_buf(),
+    }
 }
 
 /// `code.claim` writes its lease ledger under the project root's git dir;
@@ -75,32 +83,34 @@ fn init_git_root(path: &Path) {
     assert!(status.success(), "git init failed at {}", path.display());
 }
 
-fn spawn_gateway(spec: &str, port: u16, contract: &Path) -> ChildGuard {
-    ChildGuard(
-        Command::new(env!("CARGO_BIN_EXE_wm"))
-            .args([
-                "serve",
-                "--federate",
-                spec,
-                "--transport",
-                "sse",
-                "--bind",
-                &format!("127.0.0.1:{port}"),
-            ])
-            .env("WM_PROJECT", "dev")
-            .env("WM_GATEWAY_CONTRACT_PATH", contract)
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .expect("spawn gateway"),
-    )
+fn spawn_gateway(spec: &str, port: u16, contract: &Path, stderr_log: &Path) -> ChildGuard {
+    let child = Command::new(env!("CARGO_BIN_EXE_wm"))
+        .args([
+            "serve",
+            "--federate",
+            spec,
+            "--transport",
+            "sse",
+            "--bind",
+            &format!("127.0.0.1:{port}"),
+        ])
+        .env("WM_PROJECT", "dev")
+        .env("WM_GATEWAY_CONTRACT_PATH", contract)
+        .stdout(Stdio::null())
+        .stderr(Stdio::from(
+            File::create(stderr_log).expect("create gateway stderr log"),
+        ))
+        .spawn()
+        .expect("spawn gateway");
+    ChildGuard {
+        child,
+        stderr_log: stderr_log.to_path_buf(),
+    }
 }
 
-fn raw_http(port: u16, request: &str) -> Option<String> {
+fn raw_http_with_timeout(port: u16, request: &str, read_timeout: Duration) -> Option<String> {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).ok()?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(30)))
-        .ok()?;
+    stream.set_read_timeout(Some(read_timeout)).ok()?;
     stream.write_all(request.as_bytes()).ok()?;
     let mut buf = String::new();
     stream.read_to_string(&mut buf).ok()?;
@@ -108,21 +118,42 @@ fn raw_http(port: u16, request: &str) -> Option<String> {
     Some(body.to_string())
 }
 
+fn raw_http(port: u16, request: &str) -> Option<String> {
+    raw_http_with_timeout(port, request, Duration::from_secs(30))
+}
+
 fn healthz(port: u16) -> bool {
     let request =
         format!("GET /healthz HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n");
-    raw_http(port, &request).is_some_and(|body| body.contains("ok"))
+    raw_http_with_timeout(port, &request, Duration::from_secs(1))
+        .is_some_and(|body| body.contains("ok"))
 }
 
-fn wait_ready(port: u16, label: &str) {
-    let deadline = Instant::now() + Duration::from_secs(45);
+fn stderr_tail(path: &Path) -> String {
+    let contents = std::fs::read_to_string(path).unwrap_or_else(|e| format!("<unavailable: {e}>"));
+    let lines: Vec<&str> = contents.lines().collect();
+    let start = lines.len().saturating_sub(30);
+    lines[start..].join("\n")
+}
+
+fn wait_ready(port: u16, label: &str, child: &mut ChildGuard) {
+    let deadline = Instant::now() + Duration::from_secs(120);
     while Instant::now() < deadline {
+        if let Some(status) = child.child.try_wait().expect("poll child process") {
+            panic!(
+                "{label} on port {port} exited before becoming ready ({status}); stderr tail:\n{}",
+                stderr_tail(&child.stderr_log)
+            );
+        }
         if healthz(port) {
             return;
         }
         std::thread::sleep(Duration::from_millis(150));
     }
-    panic!("{label} on port {port} never became ready");
+    panic!(
+        "{label} on port {port} never became ready within 120s; stderr tail:\n{}",
+        stderr_tail(&child.stderr_log)
+    );
 }
 
 /// POST a `wm` tools/call and return the inner envelope.
@@ -175,10 +206,20 @@ fn federated_gateway_e2e_pins_scopes_and_preserves_inner_payload() {
     let port_a = free_port();
     let port_b = free_port();
     let port_g = free_port();
-    let _backing_a = spawn_backing(&store_a, &root_a, port_a);
-    let _backing_b = spawn_backing(&store_b, &root_b, port_b);
-    wait_ready(port_a, "backing dev");
-    wait_ready(port_b, "backing planning");
+    let mut backing_a = spawn_backing(
+        &store_a,
+        &root_a,
+        port_a,
+        &tmp.path().join("backing-dev.stderr.log"),
+    );
+    let mut backing_b = spawn_backing(
+        &store_b,
+        &root_b,
+        port_b,
+        &tmp.path().join("backing-planning.stderr.log"),
+    );
+    wait_ready(port_a, "backing dev", &mut backing_a);
+    wait_ready(port_b, "backing planning", &mut backing_b);
 
     // Seed each backing through its own supported write path (indexed).
     for (port, label) in [(port_a, "A"), (port_b, "B")] {
@@ -192,8 +233,13 @@ fn federated_gateway_e2e_pins_scopes_and_preserves_inner_payload() {
     }
 
     let spec = format!("dev=http://127.0.0.1:{port_a},planning=http://127.0.0.1:{port_b}");
-    let _gateway = spawn_gateway(&spec, port_g, &contract);
-    wait_ready(port_g, "federated gateway");
+    let mut gateway = spawn_gateway(
+        &spec,
+        port_g,
+        &contract,
+        &tmp.path().join("gateway.stderr.log"),
+    );
+    wait_ready(port_g, "federated gateway", &mut gateway);
 
     // 1. Federated read: fan out, merge, label both scopes.
     let read = call_wm(

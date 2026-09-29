@@ -795,23 +795,46 @@ impl DreamCycle {
             for mem in mems {
                 processed += 1;
                 if let Some(&existing_id) = seen_hashes.get(&mem.metadata.content_hash) {
-                    // Duplicate found — keep the older record, fold metadata.
+                    // A pin is attached to this record ID. Never delete a
+                    // protected duplicate or transfer its protection to a
+                    // different record.
                     if mem.metadata.id != existing_id {
-                        if let Ok(Some(mut kept)) = ctx.store.get(*galaxy, existing_id) {
-                            let mut changed = false;
-                            for tag in &mem.metadata.tags {
-                                if !kept.metadata.tags.contains(tag) {
-                                    kept.metadata.tags.push(tag.clone());
-                                    changed = true;
+                        let existing = ctx.store.get(*galaxy, existing_id);
+                        match existing {
+                            Ok(Some(kept))
+                                if mem.metadata.event_time != kept.metadata.event_time
+                                    || mem.metadata.fold_level != kept.metadata.fold_level
+                                    || mem.metadata.derived_from != kept.metadata.derived_from =>
+                            {
+                                // Equal content hashes do not imply equal
+                                // lineage. Retain both records when their
+                                // declared temporal or fold provenance differs.
+                            }
+                            Ok(Some(kept))
+                                if mem.metadata.is_protected || kept.metadata.is_protected =>
+                            {
+                                // Preserve both IDs: tags and other record
+                                // metadata belong to their original records.
+                            }
+                            Ok(Some(mut kept)) => {
+                                let mut changed = false;
+                                for tag in &mem.metadata.tags {
+                                    if !kept.metadata.tags.contains(tag) {
+                                        kept.metadata.tags.push(tag.clone());
+                                        changed = true;
+                                    }
+                                }
+                                if changed && ctx.store.put(*galaxy, &kept).is_err() {
+                                    // Keep the source copy if the merged
+                                    // metadata was not persisted.
+                                    continue;
+                                }
+                                if matches!(ctx.store.delete(*galaxy, mem.metadata.id), Ok(true)) {
+                                    dedup_deleted += 1;
+                                    modified += 1;
                                 }
                             }
-                            if changed {
-                                let _ = ctx.store.put(*galaxy, &kept);
-                            }
-                        }
-                        if ctx.store.delete(*galaxy, mem.metadata.id).is_ok() {
-                            dedup_deleted += 1;
-                            modified += 1;
+                            Ok(None) | Err(_) => {}
                         }
                     }
                 } else {
@@ -1810,7 +1833,7 @@ impl Default for DreamCycle {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-    use wm_memory::AssociationStore;
+    use wm_memory::{AssociationStore, FoldLevel};
 
     /// Test helper: create a `DreamContext` with a temp LMDB store.
     fn test_ctx() -> (tempfile::TempDir, MemoryStore, AssociationStore) {
@@ -1818,6 +1841,112 @@ mod tests {
         let store = MemoryStore::open_default(tmp.path()).unwrap();
         let assoc = AssociationStore::open(store.env()).unwrap();
         (tmp, store, assoc)
+    }
+
+    #[test]
+    fn consolidation_dedup_preserves_pinned_duplicate_id_and_metadata() {
+        let (_tmp, store, assoc) = test_ctx();
+        let content = "same content with different record identity";
+        let event_time = chrono::DateTime::parse_from_rfc3339("2026-09-29T12:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let mut ordinary = Memory::new(Galaxy::Codex, content.into());
+        ordinary.metadata.tags = vec!["ordinary".into()];
+        ordinary.metadata.event_time = Some(event_time);
+        let ordinary_id = ordinary.metadata.id;
+        store.put(Galaxy::Codex, &ordinary).unwrap();
+
+        let mut pinned = Memory::new(Galaxy::Codex, content.into());
+        pinned.metadata.tags = vec!["pinned".into(), "keeper".into()];
+        pinned.metadata.is_protected = true;
+        pinned.metadata.event_time = Some(event_time);
+        pinned.metadata.importance = 0.93;
+        let pinned_id = pinned.metadata.id;
+        let pinned_event_time = pinned.metadata.event_time;
+        let pinned_tags = pinned.metadata.tags.clone();
+        let pinned_fold_level = pinned.metadata.fold_level;
+        let pinned_derived_from = pinned.metadata.derived_from.clone();
+        store.put(Galaxy::Codex, &pinned).unwrap();
+
+        let ctx = DreamContext::new(&store, &assoc);
+        let mut cycle = DreamCycle::new();
+        assert!(cycle.run(&ctx).success);
+
+        let preserved = store
+            .get(Galaxy::Codex, pinned_id)
+            .unwrap()
+            .expect("consolidation must retain the pinned record ID");
+        assert!(preserved.metadata.is_protected);
+        assert_eq!(preserved.metadata.event_time, pinned_event_time);
+        assert_eq!(preserved.metadata.tags, pinned_tags);
+        assert_eq!(preserved.metadata.fold_level, pinned_fold_level);
+        assert_eq!(preserved.metadata.derived_from, pinned_derived_from);
+        assert!(
+            store.get(Galaxy::Codex, ordinary_id).unwrap().is_some(),
+            "a pinned duplicate pair is retained without transferring or merging metadata"
+        );
+    }
+
+    #[test]
+    fn consolidation_dedup_keeps_distinct_fold_provenance() {
+        let (_tmp, store, assoc) = test_ctx();
+        let content = "same digest body with different provenance";
+        let first = Memory::new(Galaxy::Codex, content.into())
+            .with_event_time(
+                chrono::DateTime::parse_from_rfc3339("2026-09-01T12:00:00Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            )
+            .with_fold(FoldLevel::L1, vec![uuid::Uuid::new_v4()]);
+        let first_id = first.metadata.id;
+        store.put(Galaxy::Codex, &first).unwrap();
+
+        let second = Memory::new(Galaxy::Codex, content.into())
+            .with_event_time(
+                chrono::DateTime::parse_from_rfc3339("2026-09-02T12:00:00Z")
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            )
+            .with_fold(FoldLevel::L2, vec![uuid::Uuid::new_v4()]);
+        let second_id = second.metadata.id;
+        store.put(Galaxy::Codex, &second).unwrap();
+
+        let ctx = DreamContext::new(&store, &assoc);
+        let mut cycle = DreamCycle::new();
+        assert!(cycle.run(&ctx).success);
+
+        let retained_first = store
+            .get(Galaxy::Codex, first_id)
+            .unwrap()
+            .expect("first provenance-bearing record must remain");
+        let retained_second = store
+            .get(Galaxy::Codex, second_id)
+            .unwrap()
+            .expect("different provenance must not be deduplicated away");
+        assert_eq!(
+            retained_first.metadata.event_time,
+            first.metadata.event_time
+        );
+        assert_eq!(
+            retained_first.metadata.fold_level,
+            first.metadata.fold_level
+        );
+        assert_eq!(
+            retained_first.metadata.derived_from,
+            first.metadata.derived_from
+        );
+        assert_eq!(
+            retained_second.metadata.event_time,
+            second.metadata.event_time
+        );
+        assert_eq!(
+            retained_second.metadata.fold_level,
+            second.metadata.fold_level
+        );
+        assert_eq!(
+            retained_second.metadata.derived_from,
+            second.metadata.derived_from
+        );
     }
 
     #[test]

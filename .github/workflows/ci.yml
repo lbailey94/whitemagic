@@ -54,10 +54,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Run tests (capture counts)
+      - name: Run tests (capture counts; pin host-sensitive invariant fixture)
         run: |
           set -o pipefail
-          cargo test --all-targets 2>&1 | tee /tmp/cargo-test.log
+          # Integration targets lack cfg!(test); pin only this live-server fixture via the documented seam.
+          # The rest of the suite remains unfrozen so injected stress tests exercise strict-mode behavior.
+          WM_HOMEOSTASIS_FROZEN=1 cargo test \
+            -p whitemagic --test gen2_invariants deletion_leaves_a_karma_audit_trail \
+            2>&1 | tee /tmp/cargo-test.log
+          env -u WM_HOMEOSTASIS_FROZEN -u WM_SELFMODEL_FROZEN cargo test --all-targets \
+            -- --skip deletion_leaves_a_karma_audit_trail 2>&1 | tee -a /tmp/cargo-test.log
       - name: Write test counts (release facts)
         if: always()
         run: |

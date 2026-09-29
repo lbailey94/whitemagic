@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only behind the live edge, and an unknown session span counts as inside.
 
 ### Fixed
+- **Dream dedup preserves protected record IDs and distinct event/fold
+  provenance**; ordinary duplicate sources are removed only after merged tags
+  persist successfully.
 - **`karma.report` no longer scans the whole ledger** (live field report,
   2026-09-28: a 545k-entry store spent ~2-3 CPU-seconds per call — `recent()`
   and `tool_debt()` each read and JSON-deserialized every entry — and a 5s

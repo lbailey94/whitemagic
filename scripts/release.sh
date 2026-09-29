@@ -2,7 +2,7 @@
 # WhiteMagic release script — orchestration + verification (F4, 9.1.9).
 #
 # Usage:
-#   scripts/release.sh <version> [--dry-run] [--skip-ci-wait] [--tail-only]
+#   scripts/release.sh <version> [--dry-run] [--skip-ci-wait] [--tail-only] [--skip-site]
 #
 # Example:
 #   scripts/release.sh 9.1.9
@@ -38,13 +38,14 @@
 #   - registry identifier: docker.io/lbailey94/whitemagic:X (major)
 set -euo pipefail
 
-VERSION="${1:?usage: scripts/release.sh <version> [--dry-run] [--skip-ci-wait] [--tail-only]}"
-DRY_RUN=false; SKIP_CI_WAIT=false; TAIL_ONLY=false
+VERSION="${1:?usage: scripts/release.sh <version> [--dry-run] [--skip-ci-wait] [--tail-only] [--skip-site]}"
+DRY_RUN=false; SKIP_CI_WAIT=false; TAIL_ONLY=false; SKIP_SITE=false
 for arg in "${@:2}"; do
   case "$arg" in
     --dry-run) DRY_RUN=true ;;
     --skip-ci-wait) SKIP_CI_WAIT=true ;;
     --tail-only) TAIL_ONLY=true ;;
+    --skip-site) SKIP_SITE=true ;;
     *) echo "unknown flag: $arg"; exit 1 ;;
   esac
 done
@@ -359,7 +360,9 @@ fi
 # ── site sync (facts, gates, push master) ────────────────────────────────
 banner "SITE SYNC"
 SITE_DIR="${WM_SITE_DIR:-$HOME/Desktop/WHITEMAGIC/whitemagic-site}"
-if $DRY_RUN; then
+if $SKIP_SITE; then
+  echo "site sync skipped (--skip-site); defer until the rendered site preview is reviewed"
+elif $DRY_RUN; then
   echo "[dry-run] in $SITE_DIR: verify capability counts vs the released binary,"
   echo "[dry-run]   verify the public installer copy matches scripts/install.sh,"
   echo "[dry-run]   verify guide commands/flags vs the released binary,"
@@ -482,4 +485,8 @@ cat <<'EOF'
  2. if any WARN above fired (site counts moved, binary unavailable, Hub dispatch
     failed), resolve it before the next release
 EOF
-banner "DONE — v$VERSION verified on all channels"
+if $DRY_RUN; then
+  banner "DRY RUN COMPLETE — v$VERSION ceremony rehearsed; no channels verified"
+else
+  banner "RELEASE CEREMONY COMPLETE — v$VERSION release checks finished"
+fi
