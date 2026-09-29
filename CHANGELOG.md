@@ -5,17 +5,17 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.3.0] — 2026-09-28
+## [9.3.0] — 2026-09-29
 
 ### Added
 - **Pins** — `memory.pin` sets or clears `is_protected` (idempotent; reports
   the previous state). Pinned memories are anchored against decay,
   forgetting, and cold migration by the existing lifecycle machinery; the
   pin route is the operator-facing setter that was missing.
-- **As-of memory** — `MemoryMetadata` gains a first-class `event_time`
-  (when the recorded event happened, as declared). `memory.create` accepts
-  epoch seconds or RFC 3339; `memory.read` and the recall evidence bundle
-  disclose it with an explicit basis (`declared` | `not_tracked`) — write
+- **Declared event-time provenance** — `MemoryMetadata` gains a first-class
+  `event_time` (when the recorded event happened, as declared). `memory.create`
+  accepts epoch seconds or RFC 3339; `memory.read` and the recall evidence
+  bundle disclose it with an explicit basis (`declared` | `not_tracked`) — write
   time is never presented as event time.
 - **Fold provenance** — `MemoryMetadata` gains `derived_from` (source
   memory ids) and `fold_level` (L1 day / L2 arc / L3 era). Dream
