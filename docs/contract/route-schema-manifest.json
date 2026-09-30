@@ -1,7 +1,7 @@
 {
   "counts": {
-    "declared": 94,
-    "routes": 311,
+    "declared": 95,
+    "routes": 312,
     "undeclared": 217
   },
   "format_version": 1,
@@ -1512,6 +1512,10 @@
           "description": "Memory content (text)",
           "type": "string"
         },
+        "event_time": {
+          "description": "Optional event time: when the recorded event actually happened, as RFC 3339 (epoch seconds are also accepted at runtime). Absent = not tracked; never inferred from write time.",
+          "type": "string"
+        },
         "galaxy": {
           "description": "Target galaxy (default codex)",
           "type": "string"
@@ -1868,6 +1872,27 @@
         "query"
       ],
       "route": "memory.nearby"
+    },
+    {
+      "declared": true,
+      "properties": {
+        "galaxy": {
+          "description": "Galaxy (default: codex)",
+          "type": "string"
+        },
+        "id": {
+          "description": "Memory UUID to pin or unpin",
+          "type": "string"
+        },
+        "pinned": {
+          "description": "true (default) = protect; false = release",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "route": "memory.pin"
     },
     {
       "declared": true,
@@ -2856,6 +2881,10 @@
           "description": "Session to exclude (optional)",
           "type": "string"
         },
+        "include_briefing_text": {
+          "description": "Include the ready-to-inject briefing.text block (default false; adds bytes outside the turns budget)",
+          "type": "boolean"
+        },
         "max_content_bytes": {
           "description": "Per-turn content cap in bytes (256-262144, default 8192)",
           "type": "integer"
@@ -3679,5 +3708,5 @@
       "route": "workspace.stats"
     }
   ],
-  "version": "9.2.9"
+  "version": "9.3.0"
 }
