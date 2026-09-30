@@ -3716,7 +3716,7 @@ impl McpServer {
             (
                 "memory.list",
                 "memory.list",
-                "List memories with filters (galaxy, tags, limit, offset) for inventory and discovery.",
+                "List memories with filters (galaxy, tags, limit, offset) for browsing and discovery.",
                 json!({
                     "type": "object",
                     "properties": {
@@ -3877,13 +3877,13 @@ impl McpServer {
             (
                 "receipts.verify",
                 "receipts.verify",
-                "Verify a stored receipt id or a bundle offline; fail-closed without an anchor (verdict PROVISIONAL).",
+                "Verify a receipt id or a bundle offline; fail-closed without an anchor (verdict PROVISIONAL).",
                 json!({
                     "type": "object",
                     "properties": {
-                        "id": { "type": "string", "description": "Stored receipt task id (UUID)" },
+                        "id": { "type": "string", "description": "Receipt task id (UUID)" },
                         "bundle": { "type": "object", "description": "Inline bundle to verify (alternative to id)" },
-                        "variant": { "type": "string", "description": "Stored variant (default: original)" },
+                        "variant": { "type": "string", "description": "Receipt variant (default: original)" },
                         "require_anchor": { "type": "boolean", "description": "Fail-closed without an anchor" }
                     }
                 }),
@@ -3903,7 +3903,7 @@ impl McpServer {
             (
                 "memory.stats",
                 "memory.stats",
-                "Memory-store statistics: totals, galaxy spread, and index health.",
+                "Memory index statistics: totals, galaxy spread, and index health.",
                 json!({ "type": "object", "properties": {} }),
             ),
             (

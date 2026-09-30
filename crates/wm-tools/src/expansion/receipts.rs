@@ -584,9 +584,9 @@ impl Tool for ReceiptsVerifyTool {
     fn input_schema(&self) -> Value {
         schema(
             &json!({
-                "id": str_prop("Stored receipt task id (UUID or urn:uuid:)"),
+                "id": str_prop("Receipt task id (UUID or urn:uuid:)"),
                 "bundle": json!({"type": "object", "description": "Inline bundle to verify (alternative to id)"}),
-                "variant": str_prop("Stored variant (default original)"),
+                "variant": str_prop("Receipt variant (default original)"),
                 "require_anchor": bool_prop("Fail-closed: without an anchor the verdict is PROVISIONAL"),
             }),
             &[],
