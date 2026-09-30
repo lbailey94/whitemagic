@@ -109,8 +109,8 @@ every configuration.
 | Signals unsigned (`source` is a claim) | Accepted residual; first production emitter must land signing with its consumer | Q26 |
 | Locks/signals are claimed-identity checks in permissive mode | Documented residual (chat is bound-key verified) | Q26 / E10 §11 |
 | Records plaintext at rest; backups plaintext; backup erasure latency is the disclosed D1 design limit ("content leaves all rotating backups within ≤7 days", Q39 §5) | Slice A keyring landed; no crypto-erasure claim permitted before B+C+D+E | Q10 (B–E) |
-| SSE has no token/PSK; must not be exposed off-host | **Open — S7 gate** | This artifact; enforce before any off-host deployment |
-| Landlock confines writes only; reads are free; no egress policy; v1 skips dispatch timeout and excludes subprocess tools | Documented limitation | `L-S5`/`L-S6`, C66-40 |
+| SSE has no token/PSK; must not be exposed off-host | **Partially closed:** non-loopback SSE binds are refused fail-closed (`d7a2787`, 2026-09-22), so the transport cannot be exposed off-host by configuration. Token/PSK auth is still absent — put an authenticating proxy in front | This artifact; token/PSK remains the open half |
+| Landlock confines writes only; reads are free; no egress policy; v1 excludes subprocess tools | Documented limitation. The dispatch timeout **is** enforced inside the confined thread (`942981b`, 2026-09-14) — an earlier revision of this row wrongly said it was skipped | `L-S5`/`L-S6`, C66-40 |
 | Effect-based B4 sandbox block (Process/Network/FS/Execute) not implemented | Open | `L-S5` / C66-40 |
 | Requested-containment failure is loud-degrade, not refuse-to-start | **Design decision** (availability bias): unsupported kernel/ABI logs WARN + doctor issue and runs unconfined | Revisit if strict mode is requested for fleet deployments |
 | Beacons are discovery hints, not identity (signed, verified, but hints) | Accepted by design; hints expire, capped, never auto-dialed | HG-S1-7 closed |

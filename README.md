@@ -140,7 +140,7 @@ wm serve --profile curated
 ```
 
 The server communicates over stdio and exposes the `wm` meta-tool plus a
-discrete lifecycle catalog — 30 MCP tools in the curated profile: the 15
+discrete lifecycle catalog — 30 MCP tools in the curated profile: the 14
 CRUD/lifecycle aliases (`memory.create/search/read/list/hybrid_recall/update/
 revisions/ingest`, `session.start/record/checkpoint/continuity`,
 `receipts.emit/verify`) and 15 read-only handles
@@ -148,7 +148,7 @@ revisions/ingest`, `session.start/record/checkpoint/continuity`,
 nearby/vector.search`, `session.list/recall/replay`,
 `gnosis.status/explain`). Read-only servers (`--readonly`) advertise the 23
 read-only entries only — write routes are refused there anyway. The `wm`
-meta-tool provides explicit access to the full curated route catalog (69
+meta-tool provides explicit access to the full curated route catalog (70
 routes) without expanding the client's schema.
 Direct handles for the common lifecycle calls, with NLU routing still available.
 Explicit routing is the dependable contract:
