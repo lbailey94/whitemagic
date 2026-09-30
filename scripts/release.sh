@@ -128,8 +128,16 @@ else
   python3 scripts/version_truth.py --open-changelog "$VERSION"
   python3 scripts/version_truth.py --set "$VERSION"
   cargo check --workspace --quiet 2>/dev/null || cargo check -p wm-core --quiet   # refresh Cargo.lock
-  git add -A
-  git -c user.name="WhiteMagic AI" -c user.email="lbailey94@protonmail.com" commit -m "release: v$VERSION"
+  # Resume-safe: if a prior run aborted before the tag (red CI), the bump commit
+  # already exists and this produces no diff — commit only when there is
+  # something to commit, but always push, because the CI gate below watches
+  # HEAD and HEAD must be on origin for a run to exist.
+  if [ -n "$(git status --porcelain)" ]; then
+    git add -A
+    git -c user.name="WhiteMagic AI" -c user.email="lbailey94@protonmail.com" commit -m "release: v$VERSION"
+  else
+    echo "bump produced no changes (already at $VERSION) — resuming the ceremony"
+  fi
   git push origin main
 fi
 

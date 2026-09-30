@@ -62,8 +62,14 @@ jobs:
           WM_HOMEOSTASIS_FROZEN=1 cargo test \
             -p whitemagic --test gen2_invariants deletion_leaves_a_karma_audit_trail \
             2>&1 | tee /tmp/cargo-test.log
-          env -u WM_HOMEOSTASIS_FROZEN -u WM_SELFMODEL_FROZEN cargo test --all-targets \
+          # --skip is a libtest flag; criterion benches (harness=false) use their
+          # own CLI and reject it (exit 2). Keep --skip off the bench targets and
+          # run those separately in cargo test's fast test-mode.
+          env -u WM_HOMEOSTASIS_FROZEN -u WM_SELFMODEL_FROZEN cargo test \
+            --lib --bins --tests --examples \
             -- --skip deletion_leaves_a_karma_audit_trail 2>&1 | tee -a /tmp/cargo-test.log
+          env -u WM_HOMEOSTASIS_FROZEN -u WM_SELFMODEL_FROZEN cargo test --benches \
+            2>&1 | tee -a /tmp/cargo-test.log
       - name: Write test counts (release facts)
         if: always()
         run: |
