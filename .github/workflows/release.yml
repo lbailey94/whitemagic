@@ -421,9 +421,13 @@ jobs:
               echo "already published - skipping"
               exit 0
             fi
+            if echo "$out" | grep -qiE "422|unprocessable"; then
+              echo "schema validation failure (422) - failing immediately without retry"
+              exit 1
+            fi
             if [ "$attempt" -lt "$max_attempts" ] \
-               && echo "$out" | grep -qiE "not found|404|npm|propagat|unavailable|fetch|validation"; then
-              echo "transient validation failure (npm propagation?) - retry in 30s"
+               && echo "$out" | grep -qiE "not found|404|propagat|unavailable|fetch|timeout|50[0-4]"; then
+              echo "transient upstream failure (npm propagation/timeout?) - retry in 30s"
               attempt=$((attempt + 1))
               sleep 30
               continue
