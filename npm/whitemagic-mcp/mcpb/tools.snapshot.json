@@ -1,7 +1,7 @@
 [
   {
     "name": "wm",
-    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (69 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.",
+    "description": "WhiteMagic meta-tool \u2014 memory and continuity kernel over the curated tool surface (70 tools): persistent memory, session continuity and recall, governance/audit, and local tool execution.",
     "inputSchema": {
       "properties": {
         "args": {
@@ -60,6 +60,10 @@
       "properties": {
         "content": {
           "description": "Memory content (text)",
+          "type": "string"
+        },
+        "event_time": {
+          "description": "Optional event time: when the recorded event actually happened, as RFC 3339 (epoch seconds are also accepted at runtime). Absent = not tracked; never inferred from write time.",
           "type": "string"
         },
         "galaxy": {
@@ -150,7 +154,7 @@
   },
   {
     "name": "memory.search",
-    "description": "Search and recall memories across galaxies using hybrid semantic, BM25, and associative retrieval.",
+    "description": "Search memories: hybrid BM25 + vector fusion with deterministic episodic and full-text fallbacks; each result discloses its recall_mode. The preferred recall tool.",
     "inputSchema": {
       "properties": {
         "cold_scan_limit": {
@@ -214,8 +218,11 @@
           "type": "string"
         },
         "hint": {
-          "description": "Optional recovery hint when results are thin",
-          "type": "string"
+          "description": "Optional recovery hint when results are thin (null when there is none)",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "recall_mode": {
           "description": "Retrieval path used (hybrid, episodic, fts, importance, none)",
@@ -382,7 +389,7 @@
   },
   {
     "name": "memory.hybrid_recall",
-    "description": "Fused recall across full-text, vector, graph, and coordinate lookup with recall_mode disclosure.",
+    "description": "Compatibility alias of memory.search \u2014 same implementation, same arguments, same results. Kept for clients pinned to this name; prefer memory.search.",
     "inputSchema": {
       "properties": {
         "cold_scan_limit": {
@@ -428,10 +435,10 @@
       ],
       "type": "object"
     },
-    "title": "Hybrid recall",
+    "title": "Hybrid recall (compatibility alias)",
     "outputSchema": {
       "additionalProperties": true,
-      "description": "Fused recall results with an evidence bundle and recall-mode disclosure.",
+      "description": "Recall results (memory.search implementation) with an evidence bundle and recall-mode disclosure.",
       "properties": {
         "count": {
           "description": "Number of results returned",
@@ -446,8 +453,11 @@
           "type": "string"
         },
         "hint": {
-          "description": "Optional recovery hint when results are thin",
-          "type": "string"
+          "description": "Optional recovery hint when results are thin (null when there is none)",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "recall_mode": {
           "description": "Retrieval path used (hybrid, episodic, fts, importance, none)",
@@ -472,7 +482,7 @@
       "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true,
-      "title": "Hybrid recall"
+      "title": "Hybrid recall (compatibility alias)"
     }
   },
   {
@@ -567,6 +577,10 @@
         "current_session_id": {
           "description": "Session to exclude (optional)",
           "type": "string"
+        },
+        "include_briefing_text": {
+          "description": "Include the ready-to-inject briefing.text block (default false; adds bytes outside the turns budget)",
+          "type": "boolean"
         },
         "max_content_bytes": {
           "description": "Per-turn content cap in bytes (256-262144, default 8192)",
