@@ -132,7 +132,7 @@ grew without any website CTA — the memory layer chooses its own doors.
 Verify the installation, activate it, and see the product work end to end:
 
 ```bash
-wm --version    # wm 9.3.2
+wm --version    # wm 9.3.3
 wm grimoire     # guided first-run: host, memory layer, agent wiring, vocabulary, continuity
 wm connect      # dry run: list detected MCP clients and the exact change
 wm connect --write  # apply, with timestamped backups

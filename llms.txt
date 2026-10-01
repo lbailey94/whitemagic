@@ -42,7 +42,7 @@ receipt-verification API runs at <https://api.whitemagic.dev> (`/health` and
 ## Verify
 
 ```bash
-wm --version   # wm 9.3.2
+wm --version   # wm 9.3.3
 wm doctor      # environment health check
 ```
 

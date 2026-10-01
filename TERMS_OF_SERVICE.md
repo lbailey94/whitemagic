@@ -1,7 +1,7 @@
 # WhiteMagic Terms of Service
 
 **Effective Date**: 2026-08-13
-**Version**: 9.3.2
+**Version**: 9.3.3
 
 ## 1. What WhiteMagic Is
 
