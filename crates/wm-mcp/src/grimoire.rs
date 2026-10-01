@@ -147,9 +147,9 @@ enum HostSupport {
 
 fn host_support(os: &str, arch: &str) -> HostSupport {
     match (os, arch) {
-        ("linux", "x86_64" | "aarch64")
-        | ("macos", "aarch64" | "x86_64")
-        | ("windows", "x86_64") => HostSupport::Gated,
+        ("linux" | "macos" | "windows", "x86_64") | ("linux" | "macos", "aarch64") => {
+            HostSupport::Gated
+        }
         _ => HostSupport::Unsupported,
     }
 }

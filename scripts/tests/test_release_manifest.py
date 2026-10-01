@@ -27,11 +27,18 @@ class ReleaseManifestFactsTest(unittest.TestCase):
             self.assertEqual(rm.workspace_crate_count(root), 2)
 
     def test_install_gated_defaults_to_the_gated_lines(self) -> None:
-        # 2026-09-27: macOS arm64 joins the gate (hardware field smoke
-        # evidence, issue #2) — the manifest must declare what the docs and
-        # the installer say.
+        # 2026-10-01: macOS x86_64 and Windows x86_64 join the gate via
+        # tagged-release installer certification — the manifest must declare
+        # what the docs and the installers say.
         self.assertEqual(
-            rm.DEFAULT_INSTALL_GATED, ["linux-x86_64", "linux-aarch64", "macos-aarch64"]
+            rm.DEFAULT_INSTALL_GATED,
+            [
+                "linux-x86_64",
+                "linux-aarch64",
+                "macos-aarch64",
+                "macos-x86_64",
+                "windows-x86_64",
+            ],
         )
 
     def test_arm64_artifacts_map_to_manifest_targets(self) -> None:
