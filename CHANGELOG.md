@@ -5,6 +5,30 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 9.3.4 in progress (2026-10-01)
+
+### Changed
+- **Continuity receipts: CR 0.5 vocabulary adopted** — emitted bundles are now
+  `continuity-receipt/0.5`. Local profiles record the honest
+  `mandala_class: "local"` (instead of borrowing `gate-lite`); the
+  governed-dispatch profile emits `task.execution` with
+  `sandbox_class: "none"` (unconfined dispatch) plus the dispatch's tool call
+  and result digests; the karma-chain head is a first-class
+  `state.commitment` (`state_kind: karma-chain`, prefixed `sha256:` /
+  `merkle-sha256:` digests) instead of a `delivery.attestation` re-use. This
+  closes the three CR spec-feedback items filed after S1
+  (continuity-receipt issues #3, #4, #6).
+- **Verifier dependency** — `continuity-receipt` Rust crate `0.4.0 → 0.5.1`
+  (0.1–0.6 bundle support). Receipt CLI help, crate docs, AGENTS notes, and
+  the hosted corpus guide now say spec 0.5; 0.1–0.4 bundles still verify.
+
+### Added
+- **0.5 acceptance evidence** — session, karma (`state.commitment`), and
+  governed (`task.execution`) bundles verify `TRUSTED` in both the Rust and
+  Python implementations; recorded under
+  `receipts/s3_wm_receipts_05_20261001/` and reproducible via the
+  `WM_RECEIPTS_ACCEPTANCE_DIR` parity run.
+
 ## [9.3.3] — 2026-10-01
 
 ### Added

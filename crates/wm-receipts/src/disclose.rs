@@ -1,4 +1,4 @@
-//! Selective disclosure over WM-emitted bundles (CR 0.2 semantics).
+//! Selective disclosure over WM-emitted bundles (CR 0.5 semantics).
 //!
 //! Redaction is an **issuance-time act**: the modified receipts (and everything
 //! after them) are re-signed, so it requires the issuer's signing key. WM keeps
