@@ -1773,6 +1773,18 @@
         "query": {
           "description": "Full-text query",
           "type": "string"
+        },
+        "since": {
+          "description": "Inclusive lower time bound: RFC3339 ('2026-02-01T00:00:00Z') or epoch seconds",
+          "type": "string"
+        },
+        "time_basis": {
+          "description": "Time basis for since/until: 'recorded' (created_at, default) or 'event' (event_time, falling back to created_at when unset)",
+          "type": "string"
+        },
+        "until": {
+          "description": "Inclusive upper time bound: RFC3339 or epoch seconds",
+          "type": "string"
         }
       },
       "required": [
@@ -2088,6 +2100,18 @@
         },
         "query": {
           "description": "Full-text query",
+          "type": "string"
+        },
+        "since": {
+          "description": "Inclusive lower time bound: RFC3339 ('2026-02-01T00:00:00Z') or epoch seconds",
+          "type": "string"
+        },
+        "time_basis": {
+          "description": "Time basis for since/until: 'recorded' (created_at, default) or 'event' (event_time, falling back to created_at when unset)",
+          "type": "string"
+        },
+        "until": {
+          "description": "Inclusive upper time bound: RFC3339 or epoch seconds",
           "type": "string"
         }
       },
@@ -3708,5 +3732,5 @@
       "route": "workspace.stats"
     }
   ],
-  "version": "9.3.1"
+  "version": "9.3.2"
 }
