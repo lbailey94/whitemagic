@@ -11,11 +11,21 @@ and JSON stay identical in every language.
 | Español | [`QUICKSTART.es.md`](QUICKSTART.es.md) | 2026-09-21 |
 | Português (BR) | [`QUICKSTART.pt-BR.md`](QUICKSTART.pt-BR.md) | 2026-09-21 |
 | Français | [`QUICKSTART.fr.md`](QUICKSTART.fr.md) | 2026-09-21 |
+| Deutsch | [`QUICKSTART.de.md`](QUICKSTART.de.md) | 2026-10-01 |
+| हिन्दी | [`QUICKSTART.hi.md`](QUICKSTART.hi.md) | 2026-10-01 |
+| Indonesia | [`QUICKSTART.id.md`](QUICKSTART.id.md) | 2026-10-01 |
+| العربية | [`QUICKSTART.ar.md`](QUICKSTART.ar.md) | 2026-10-01 |
+| Kiswahili | [`QUICKSTART.sw.md`](QUICKSTART.sw.md) | 2026-10-01 |
+| नेपाली | [`QUICKSTART.ne.md`](QUICKSTART.ne.md) | 2026-10-01 |
+
+The 2026-10-01 set (Deutsch, हिन्दी, Indonesia, العربية, Kiswahili, नेपाली)
+is community-translated and machine-assisted; native-speaker review is
+invited — open a PR or say so in an issue.
 
 ## Help wanted
 
-Arabic · Swahili · Hindi · Nepali · German · Indonesian — and any language a
-partner community needs. See the translation bullet in
+More languages welcome — and native speakers reviewing the translations that
+landed on 2026-10-01 are especially welcome. See the translation bullet in
 [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 To add one:

@@ -296,28 +296,29 @@ fn platform_story_is_consistent_across_surfaces() {
     let installer = std::fs::read_to_string(root.join("scripts/install.sh")).expect("install.sh");
     let security = std::fs::read_to_string(root.join("SECURITY.md")).expect("SECURITY.md");
 
-    // One gate matrix everywhere (2026-09-27): Linux x86-64 + aarch64 and
-    // macOS arm64 are install-gated; macOS x86_64 and Windows x86_64 are
-    // published but not gated. grimoire's host_support carries the same
-    // matrix in code (crates/wm-mcp/src/grimoire.rs).
+    // One gate matrix everywhere (2026-10-01): Linux x86-64 + aarch64,
+    // macOS arm64 + x86_64, and Windows x86_64 are install-gated.
+    // grimoire's host_support carries the same matrix in code
+    // (crates/wm-mcp/src/grimoire.rs).
     assert!(
-        readme.contains("Install path: Linux x86-64, Linux arm64, and macOS arm64"),
-        "README must carry the Linux + macOS arm64 install gate"
+        readme.contains(
+            "Install path: Linux x86-64, Linux arm64, macOS arm64 + x86_64, and Windows x86_64"
+        ),
+        "README must carry the full install-gate matrix"
     );
     assert!(
-        quickstart.contains("**Install path**: Linux x86-64, Linux arm64, and macOS arm64")
-            && quickstart.contains("install-gated")
-            && quickstart.contains("not gated"),
-        "QUICKSTART must carry the gate matrix and the not-gated caveat"
+        quickstart.contains("**Install path**: Linux x86-64, Linux arm64, macOS arm64 + x86_64")
+            && quickstart.contains("install-gated"),
+        "QUICKSTART must carry the gate matrix"
     );
     assert!(
-        security.contains("Linux x86-64, Linux arm64, macOS arm64"),
+        security.contains("Linux x86-64, Linux arm64, macOS arm64 + x86_64, Windows x86_64"),
         "SECURITY must carry the same install-gated lines"
     );
     assert!(
-        installer.contains("Linux x86-64, Linux aarch64, and macOS arm64 (install-gated)")
-            && installer.contains("macOS x86_64 (published; not gated yet)"),
-        "install.sh refusal message must name the gate matrix"
+        installer.contains("Linux x86-64, Linux aarch64, and macOS (arm64, x86_64)")
+            && installer.contains("install.ps1 (install-gated)"),
+        "install.sh refusal message must name the gate matrix and the Windows path"
     );
     // 2026-09-21: Linux aarch64 target mapping with clear refusals on old
     // releases (native arm64 CI smoke coverage).
@@ -326,8 +327,8 @@ fn platform_story_is_consistent_across_surfaces() {
         "install.sh must map the Linux aarch64 target (arm64 releases)"
     );
     assert!(
-        installer.contains("Windows binaries are published, but Windows is not install-gated yet"),
-        "install.sh must refuse Windows explicitly (preview install.ps1, not gated yet)"
+        installer.contains("Windows use scripts/install.ps1"),
+        "install.sh must point Windows users at the gated install.ps1"
     );
 }
 

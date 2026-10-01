@@ -1,16 +1,16 @@
 # Guide de démarrage rapide WhiteMagic
 
-**Langues :** [English](QUICKSTART.md) · [Español](QUICKSTART.es.md) ·
-[Português (BR)](QUICKSTART.pt-BR.md) · **Français**
+**Langues :** [English](QUICKSTART.md) · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · **Français** · [Deutsch](QUICKSTART.de.md) · [हिन्दी](QUICKSTART.hi.md) · [Indonesia](QUICKSTART.id.md) · [العربية](QUICKSTART.ar.md) · [Kiswahili](QUICKSTART.sw.md) · [नेपाली](QUICKSTART.ne.md)
 
 **Version** : consultez la version actuelle dans le [README](../README.md).
-**Plateforme** : Linux x86-64, Linux arm64 et macOS arm64 — chemins
-d'installation validés. Linux fournit des builds statiques musl sélectionnés
-automatiquement par l'installateur (des builds dynamiques restent disponibles
-pour les hôtes glibc 2.39+) ; les versions publient aussi des distributions
-compressées en gzip pour les liens lents. Les binaires macOS x86_64 et
-Windows x86_64 sont publiés à chaque version, mais leurs chemins
-d'installation ne sont pas encore validés.
+**Plateforme** : Linux x86-64, Linux arm64, macOS arm64 + x86_64 et
+Windows x86_64 — chemins d'installation validés (install-gated). Linux
+fournit des builds statiques musl sélectionnés automatiquement par
+l'installateur (des builds dynamiques restent disponibles pour les hôtes
+glibc 2.39+) ; les versions publient aussi des distributions compressées en
+gzip pour les liens lents. macOS s'installe via `install.sh` ; Windows via
+`install.ps1` — chaque chemin validé est certifié en CI contre la version
+publiée.
 
 De zéro à une mémoire d'agent fonctionnelle en moins de cinq minutes.
 
@@ -34,17 +34,26 @@ suivante. C'est le produit.
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-quickstart | sh
 ```
 
+Sur Windows (PowerShell) :
+
+```powershell
+irm https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.ps1 | iex
+```
+
 Le script télécharge la dernière version, vérifie son checksum SHA256 et
-installe `wm` dans `~/.local/bin`. Si ce dossier n'est pas dans votre `PATH` :
+installe `wm` dans `~/.local/bin` (Windows :
+`%LOCALAPPDATA%\WhiteMagic\bin`, ajouté au PATH utilisateur). Si ce dossier
+n'est pas dans votre `PATH` :
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Équivalent manuel : téléchargez le binaire de votre plateforme (les builds
-statiques `wm-linux-x86_64-musl` / `wm-linux-aarch64-musl` / `wm-macos-aarch64`, ou les builds
-glibc 2.39+ `wm-linux-x86_64` / `wm-linux-aarch64`, avec leur variante
-`.gz`) et son fichier `.sha256` depuis la
+statiques `wm-linux-x86_64-musl` / `wm-linux-aarch64-musl`, les builds
+glibc 2.39+ `wm-linux-x86_64` / `wm-linux-aarch64`, `wm-macos-aarch64` /
+`wm-macos-x86_64`, ou `wm-windows-x86_64.exe` ; avec leur variante `.gz`
+quand elle existe et leur fichier `.sha256`) depuis la
 [page des versions](https://github.com/lbailey94/whitemagic/releases), puis :
 
 ```bash

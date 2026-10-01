@@ -1,14 +1,15 @@
 # WhiteMagic Quickstart
 
-**Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md)
+**Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md) · [Deutsch](QUICKSTART.de.md) · [हिन्दी](QUICKSTART.hi.md) · [Indonesia](QUICKSTART.id.md) · [العربية](QUICKSTART.ar.md) · [Kiswahili](QUICKSTART.sw.md) · [नेपाली](QUICKSTART.ne.md)
 
 **Version**: 9.3.2
-**Install path**: Linux x86-64, Linux arm64, and macOS arm64 — install-gated.
-Linux ships fully static (musl) builds selected automatically by the installer
-(a dynamically linked build remains for glibc 2.39+ hosts); releases also
-publish gzipped distributables for slow links. macOS x86_64 and Windows
-x86_64 binaries ship in every release but their install paths are not gated
-yet.
+**Install path**: Linux x86-64, Linux arm64, macOS arm64 + x86_64, and
+Windows x86_64 — install-gated. Linux ships fully static (musl) builds
+selected automatically by the installer (a dynamically linked build remains
+for glibc 2.39+ hosts); releases also publish gzipped distributables for slow
+links. macOS installs through `install.sh`; Windows installs through
+`install.ps1` — every gated path is certified against the published release
+in CI.
 
 Get from zero to working agent memory in under five minutes.
 
@@ -31,17 +32,25 @@ process stop/start and be recovered by the next session. That is the product.
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-quickstart | sh
 ```
 
+On Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.ps1 | iex
+```
+
 This downloads the latest release, verifies its SHA256 checksum, and installs
-`wm` to `~/.local/bin`. If that directory is not on your `PATH`:
+`wm` to `~/.local/bin` (Windows: `%LOCALAPPDATA%\WhiteMagic\bin`, added to
+your user PATH). If that directory is not on your `PATH`:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Manual equivalent: download your platform's binary (the static
-`wm-linux-x86_64-musl` / `wm-linux-aarch64-musl` builds, or the glibc 2.39+
-`wm-linux-x86_64` / `wm-linux-aarch64` builds, each with its `.gz` variant)
-and its `.sha256` file from the
+`wm-linux-x86_64-musl` / `wm-linux-aarch64-musl` builds, the glibc 2.39+
+`wm-linux-x86_64` / `wm-linux-aarch64` builds, `wm-macos-aarch64` /
+`wm-macos-x86_64`, or `wm-windows-x86_64.exe`; each with its `.gz` variant
+where shipped and its `.sha256` sidecar) from the
 [releases page](https://github.com/lbailey94/whitemagic/releases), then:
 
 ```bash

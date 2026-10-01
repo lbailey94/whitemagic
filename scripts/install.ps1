@@ -1,10 +1,11 @@
-# WhiteMagic installer for Windows — PREVIEW (not install-gated yet).
+# WhiteMagic installer for Windows — install-gated.
 #
 # Parity with scripts/install.sh: download a release binary, verify its
 # SHA256 checksum, install it per-user (no admin rights), and record the
-# arrival channel locally. Windows assets are published in every release;
-# this installer is new and stays documented as "published, not
-# install-gated" until a tagged-release certification passes in CI.
+# arrival channel locally. Windows x86_64 is install-gated: every tagged
+# release certifies this installer against the PUBLISHED artifact in CI
+# (download mode, checksum-verified, selftest), and the tamper-refusal
+# path is covered by ci.yml.
 #
 # Usage (PowerShell):
 #   irm https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.ps1 | iex

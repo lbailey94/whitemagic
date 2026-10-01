@@ -5,6 +5,39 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 9.3.3 in progress (2026-10-01)
+
+### Added
+- **Install-gate parity: macOS x86_64 and Windows x86_64** — both published
+  targets are now install-gated and certified on every tagged release:
+  `release.yml` certifies `install.sh` on a macOS x86_64 runner and
+  `install.ps1` against the published Windows asset (download mode,
+  checksum-verified, then `wm selftest --json`); the signed manifest declares
+  five gated targets, and README / QUICKSTART / SECURITY / `wm grimoire` /
+  npm README carry the same matrix. `install.sh` now points Windows users at
+  the gated `install.ps1` instead of refusing the platform.
+- **Quickstart translations** — Deutsch, हिन्दी, Indonesia, العربية, Kiswahili,
+  and नेपाली join Español, Português (BR), and Français. Community
+  translations (machine-assisted; native review invited), version-free by
+  design, with the language switcher, `docs/TRANSLATIONS.md`, and the README
+  documentation index updated.
+
+### Changed
+- **npm README leads with `npx -y whitemagic-mcp serve`** and the hosted
+  free paths (anonymous tier, instant keys with optional email, OAuth,
+  x402) — the zero-install path is the first thing on the package page.
+- **Hosted-lane funnel (service-side, no binary change):** instant
+  evaluation keys no longer require an email; an anonymous free tier grants
+  3 calls/day per client IP with no key and no header (known
+  directory/validator user agents are excluded so x402 probes still receive
+  the clean 402 challenge); the server card advertises both. The corpus
+  guides were re-ingested.
+
+### Fixed
+- **Release-notes platform matrix** — `release_notes.py` now describes the
+  five gated targets instead of the old "published, not gated yet" caveat,
+  and the contract test pins the full matrix across surfaces.
+
 ## [9.3.2] — 2026-10-01
 
 ### Added

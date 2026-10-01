@@ -133,23 +133,23 @@ fn has_avx2() -> bool {
     std::fs::read_to_string("/proc/cpuinfo").is_ok_and(|t| t.contains(" avx2 "))
 }
 
-/// Install-gate classification for the host platform (9.2.9, 2026-09-27).
+/// Install-gate classification for the host platform (9.3.3, 2026-10-01).
 ///
-/// One matrix across README/QUICKSTART/install.sh/SECURITY: Linux x86-64 +
-/// aarch64 and macOS arm64 are install-gated; macOS x86_64 and Windows x86_64
-/// binaries are published but their install paths are not gated yet; any other
-/// platform has no published build.
+/// One matrix across README/QUICKSTART/install.sh/install.ps1/SECURITY:
+/// Linux x86-64 + aarch64, macOS arm64 + x86_64, and Windows x86_64 are
+/// install-gated (CI certifies each installer against the published release);
+/// any other platform has no published build.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum HostSupport {
     Gated,
-    Published,
     Unsupported,
 }
 
 fn host_support(os: &str, arch: &str) -> HostSupport {
     match (os, arch) {
-        ("linux", "x86_64" | "aarch64") | ("macos", "aarch64") => HostSupport::Gated,
-        ("macos" | "windows", "x86_64") => HostSupport::Published,
+        ("linux", "x86_64" | "aarch64")
+        | ("macos", "aarch64" | "x86_64")
+        | ("windows", "x86_64") => HostSupport::Gated,
         _ => HostSupport::Unsupported,
     }
 }
@@ -180,9 +180,6 @@ fn host_step() -> Step {
     }
     match support {
         HostSupport::Gated => {}
-        HostSupport::Published => {
-            detail.push_str(" (published binary; install path not gated yet)");
-        }
         HostSupport::Unsupported => {
             detail.push_str(" (no published binary for this platform)");
         }
@@ -666,16 +663,18 @@ mod tests {
     }
 
     /// The gate matrix is one story across README/QUICKSTART/install.sh/
-    /// SECURITY. Linux aarch64 was accidentally omitted here while the
-    /// installer and release matrix supported it (2026-09-27 external review).
+    /// install.ps1/SECURITY. Linux aarch64 was accidentally omitted here
+    /// while the installer and release matrix supported it (2026-09-27
+    /// external review); macOS x86_64 + Windows x86_64 joined the gated set
+    /// with the 9.3.3 tagged-release installer certification.
     #[test]
     fn host_support_matches_the_documented_install_gate() {
-        use HostSupport::{Gated, Published, Unsupported};
+        use HostSupport::{Gated, Unsupported};
         assert_eq!(host_support("linux", "x86_64"), Gated);
         assert_eq!(host_support("linux", "aarch64"), Gated);
         assert_eq!(host_support("macos", "aarch64"), Gated);
-        assert_eq!(host_support("macos", "x86_64"), Published);
-        assert_eq!(host_support("windows", "x86_64"), Published);
+        assert_eq!(host_support("macos", "x86_64"), Gated);
+        assert_eq!(host_support("windows", "x86_64"), Gated);
         assert_eq!(host_support("linux", "riscv64"), Unsupported);
         assert_eq!(host_support("freebsd", "x86_64"), Unsupported);
     }

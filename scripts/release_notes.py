@@ -27,9 +27,9 @@ CHANNELS = (
 )
 
 PLATFORMS = (
-    "Linux x86-64, Linux arm64, and macOS arm64 are install-gated "
-    "(checksum-verified installers). macOS x86_64 and Windows x86_64 binaries "
-    "are published in every release but their install paths are not gated yet."
+    "Linux x86-64, Linux arm64, macOS arm64 + x86_64, and Windows x86_64 are "
+    "install-gated (checksum-verified installers, each certified against the "
+    "published release in CI)."
 )
 
 CHANGELOG_URL = "https://github.com/lbailey94/whitemagic/blob/main/CHANGELOG.md"

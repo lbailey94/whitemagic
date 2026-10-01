@@ -74,8 +74,8 @@ agents. The version number is a compatibility signal; the channel is
 an evidence claim (beta and stable each require their own exit conditions,
 not a version milestone).
 
-- **Install path: Linux x86-64, Linux arm64, and macOS arm64** — install-gated. Linux ships fully static (musl) builds with no glibc or distribution requirements, selected automatically by the installer; dynamically linked builds remain available for glibc 2.39+ hosts, and releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS arm64 installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)). macOS x86_64 and Windows x86_64 binaries are published in every release but their install paths are not gated yet.
-- **Support window:** the current minor and the previous minor on the install-gated lines (Linux x86-64, Linux arm64, macOS arm64) receive fixes; older minors are archival. macOS x86_64 and Windows remain published but unsupported — see [`SECURITY.md`](SECURITY.md).
+- **Install path: Linux x86-64, Linux arm64, macOS arm64 + x86_64, and Windows x86_64** — install-gated. Linux ships fully static (musl) builds with no glibc or distribution requirements, selected automatically by the installer; dynamically linked builds remain available for glibc 2.39+ hosts, and releases also publish gzipped distributables (~58% smaller) that the installer prefers on slow links. macOS installs through the same checksum-verified installer (hardware smoke evidence in [issue #2](https://github.com/lbailey94/whitemagic/issues/2)); Windows installs through `scripts/install.ps1`. Every gated installer path is certified against the published release in CI.
+- **Support window:** the current minor and the previous minor on the install-gated lines (Linux x86-64, Linux arm64, macOS arm64 + x86_64, Windows x86_64) receive fixes; older minors are archival — see [`SECURITY.md`](SECURITY.md).
 - Trusted, local-first, single-user operation with Landlock containment and firebreak guards.
 
 ## What it does
@@ -251,6 +251,12 @@ cargo clippy --all-targets
 - [`docs/QUICKSTART.es.md`](docs/QUICKSTART.es.md) — guía rápida (Español)
 - [`docs/QUICKSTART.pt-BR.md`](docs/QUICKSTART.pt-BR.md) — guia rápido (Português BR)
 - [`docs/QUICKSTART.fr.md`](docs/QUICKSTART.fr.md) — guide de démarrage (Français)
+- [`docs/QUICKSTART.de.md`](docs/QUICKSTART.de.md) — Schnellstart (Deutsch)
+- [`docs/QUICKSTART.hi.md`](docs/QUICKSTART.hi.md) — क्विकस्टार्ट (हिन्दी)
+- [`docs/QUICKSTART.id.md`](docs/QUICKSTART.id.md) — mulai cepat (Indonesia)
+- [`docs/QUICKSTART.ar.md`](docs/QUICKSTART.ar.md) — البداية السريعة (العربية)
+- [`docs/QUICKSTART.sw.md`](docs/QUICKSTART.sw.md) — mwongozo wa haraka (Kiswahili)
+- [`docs/QUICKSTART.ne.md`](docs/QUICKSTART.ne.md) — द्रुत सुरुवात (नेपाली)
 - [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md) — translation index and help-wanted languages
 - [`docs/MCP_CONFIG_GUIDE.md`](docs/MCP_CONFIG_GUIDE.md) — client configuration
 - [`docs/MULTI_LAPTOP.md`](docs/MULTI_LAPTOP.md) — moving between machines (backup/restore, session carry)

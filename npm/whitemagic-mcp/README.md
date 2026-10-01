@@ -69,9 +69,9 @@ local, full-write path.
 
 ## Platforms
 
-Linux x86-64 (static musl), Linux arm64 (static musl), and macOS arm64 are
-install-gated. macOS x64 and Windows x64 binaries are published, but their
-install paths are not gated yet. Downloads prefer the compressed `.gz`
+Linux x86-64 (static musl), Linux arm64 (static musl), macOS arm64 + x64,
+and Windows x64 are install-gated (CI certifies each installer against the
+published release). Downloads prefer the compressed `.gz`
 distributable when the release ships one (~58% smaller) and fall back to the
 raw binary otherwise. No asset for your platform? Build from source:
 https://github.com/lbailey94/whitemagic#install

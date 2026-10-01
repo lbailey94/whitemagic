@@ -1,14 +1,15 @@
 # Guia rápido do WhiteMagic
 
-**Idiomas:** [English](QUICKSTART.md) · [Español](QUICKSTART.es.md) · **Português (BR)** · [Français](QUICKSTART.fr.md)
+**Idiomas:** [English](QUICKSTART.md) · [Español](QUICKSTART.es.md) · **Português (BR)** · [Français](QUICKSTART.fr.md) · [Deutsch](QUICKSTART.de.md) · [हिन्दी](QUICKSTART.hi.md) · [Indonesia](QUICKSTART.id.md) · [العربية](QUICKSTART.ar.md) · [Kiswahili](QUICKSTART.sw.md) · [नेपाली](QUICKSTART.ne.md)
 
 **Versão**: consulte a versão atual no [README](../README.md).
-**Plataforma**: Linux x86-64, Linux arm64 e macOS arm64 — rotas de instalação
-verificadas. O Linux traz builds estáticos musl selecionados automaticamente
-pelo instalador (também há builds dinâmicos para hosts com glibc 2.39+); as
-versões também publicam distribuições comprimidas em gzip para links lentos.
-Os binários de macOS x86_64 e Windows x86_64 são publicados em toda versão,
-mas suas rotas de instalação ainda não são verificadas.
+**Plataforma**: Linux x86-64, Linux arm64, macOS arm64 + x86_64 e
+Windows x86_64 — rotas de instalação verificadas (install-gated). O Linux
+traz builds estáticos musl selecionados automaticamente pelo instalador
+(também há builds dinâmicos para hosts com glibc 2.39+); as versões também
+publicam distribuições comprimidas em gzip para links lentos. O macOS instala
+via `install.sh`; o Windows via `install.ps1` — cada rota verificada é
+certificada em CI contra a versão publicada.
 
 De zero a memória de agente funcionando em menos de cinco minutos.
 
@@ -32,17 +33,25 @@ o produto.
 curl -fsSL https://www.whitemagic.dev/install.sh?ref=wmv9-quickstart | sh
 ```
 
+No Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/lbailey94/whitemagic/main/scripts/install.ps1 | iex
+```
+
 Baixa a versão mais recente, verifica o checksum SHA256 e instala o `wm` em
-`~/.local/bin`. Se esse diretório não estiver no seu `PATH`:
+`~/.local/bin` (Windows: `%LOCALAPPDATA%\WhiteMagic\bin`, adicionado ao PATH
+do usuário). Se esse diretório não estiver no seu `PATH`:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Equivalente manual: baixe o binário da sua plataforma (os builds estáticos
-`wm-linux-x86_64-musl` / `wm-linux-aarch64-musl` / `wm-macos-aarch64`, ou os builds glibc 2.39+
-`wm-linux-x86_64` / `wm-linux-aarch64`, com sua variante `.gz`) e o arquivo
-`.sha256` na
+`wm-linux-x86_64-musl` / `wm-linux-aarch64-musl`, os builds glibc 2.39+
+`wm-linux-x86_64` / `wm-linux-aarch64`, `wm-macos-aarch64` /
+`wm-macos-x86_64`, ou `wm-windows-x86_64.exe`; com sua variante `.gz` quando
+houver e o arquivo `.sha256`) na
 [página de releases](https://github.com/lbailey94/whitemagic/releases) e
 depois:
 

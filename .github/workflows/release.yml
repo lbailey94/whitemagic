@@ -276,6 +276,9 @@ jobs:
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             arch: aarch64
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            arch: x86_64-macos
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -295,6 +298,28 @@ jobs:
           "${RUNNER_TEMP}/wm-bin/wm" --version
           "${RUNNER_TEMP}/wm-bin/wm" selftest --json > /dev/null
           echo "install.sh certification PASSED: ${{ matrix.arch }} ${GITHUB_REF_NAME}"
+
+  certify-install-windows:
+    name: Certify install.ps1 (x86_64)
+    needs: [publish]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Same claim as certify-install: install.ps1 must install the PUBLISHED
+      # release (download mode, checksum-verified) and the installed binary
+      # must pass its own invariants. Tamper refusal is covered by ci.yml.
+      - name: Install the published release through install.ps1
+        shell: pwsh
+        run: |
+          ./scripts/install.ps1 -Version "$env:GITHUB_REF_NAME" `
+            -Dir "$env:RUNNER_TEMP\wm-bin" -Ref ci-certify
+      - name: Smoke the installed binary
+        shell: pwsh
+        run: |
+          & "$env:RUNNER_TEMP\wm-bin\wm.exe" --version
+          & "$env:RUNNER_TEMP\wm-bin\wm.exe" selftest --json | Out-Null
+          Write-Host "install.ps1 certification PASSED: x86_64 $env:GITHUB_REF_NAME"
 
   registries:
     name: Publish registries

@@ -1,11 +1,10 @@
 # Security Policy
 
-> NOTE (2026-09-14; platform note updated 2026-09-27 for the macOS arm64
-> gate): the support-window policy is decided. Supported releases are the
-> current minor and the previous minor on the install-gated lines
-> (Linux x86-64, Linux arm64, macOS arm64). macOS x86_64 and Windows binaries
-> are published in every release but are not install-gated and are not
-> supported. Older minors are archival.
+> NOTE (2026-09-14; platform note updated 2026-10-01 for the macOS x86_64 +
+> Windows x86_64 gates): the support-window policy is decided. Supported
+> releases are the current minor and the previous minor on the install-gated
+> lines (Linux x86-64, Linux arm64, macOS arm64 + x86_64, Windows x86_64).
+> Older minors are archival.
 
 ## Supported Versions
 

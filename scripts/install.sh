@@ -14,13 +14,12 @@
 # After install, the `wm` binary is at ~/.local/bin/wm.
 # Add ~/.local/bin to your PATH if it isn't already.
 #
-# Install gate (alpha): Linux (x86-64, aarch64) and macOS arm64 are
-# install-gated — checksum-verified installs plus a passing hardware smoke
-# test (macOS arm64 field evidence: github.com/lbailey94/whitemagic/issues/2).
-# macOS x86_64 installs are checksum-verified like the gated targets; the
-# public label says "published binary; install path not gated yet".
-# Windows binaries are published in every release; this script refuses them
-# rather than guessing (a preview scripts/install.ps1 exists, not gated yet).
+# Install gate: Linux (x86-64, aarch64), macOS (arm64, x86_64), and Windows
+# x86_64 are install-gated — every gated path is certified on the tagged
+# release by CI (install.sh on Linux/macOS, install.ps1 on Windows), each
+# checksum-verified before install. This POSIX script refuses Windows rather
+# than guessing: use scripts/install.ps1 there (the wm-windows-x86_64.exe
+# asset ships with a .sha256 sidecar for manual installs).
 # On Linux the fully static (musl) build is preferred when the target
 # release provides it; the dynamically linked glibc build requires glibc 2.39+.
 # Linux aarch64 is selected automatically when the release ships it; older
@@ -113,10 +112,10 @@ fi
 echo "Installing WhiteMagic ${VERSION} for ${TARGET}..."
 
 # Map target to artifact name. The gate matrix (one story across README,
-# QUICKSTART, SECURITY, grimoire): Linux x86-64 / aarch64 and macOS arm64
-# are install-gated; macOS x86_64 is published with the same checksum
-# verification; Windows is refused rather than pointed at artifacts that
-# do not exist. On Linux the static musl build wins when present; otherwise
+# QUICKSTART, SECURITY, grimoire): Linux x86-64 / aarch64 and macOS
+# arm64 / x86_64 are install-gated; Windows is install-gated through
+# scripts/install.ps1 and refused here rather than pointed at a POSIX path.
+# On Linux the static musl build wins when present; otherwise
 # fall back to the glibc build after verifying the local glibc meets its
 # minimum.
 glibc_at_least() {
@@ -187,8 +186,8 @@ case "$TARGET" in
         ;;
     *)
         echo "Unsupported target for this release: ${TARGET}" >&2
-        echo "This installer supports Linux x86-64, Linux aarch64, and macOS arm64 (install-gated), plus macOS x86_64 (published; not gated yet)." >&2
-        echo "Windows binaries are published, but Windows is not install-gated yet: https://github.com/${REPO}/releases" >&2
+        echo "This installer supports Linux x86-64, Linux aarch64, and macOS (arm64, x86_64) — all install-gated." >&2
+        echo "On Windows use scripts/install.ps1 (install-gated) or download wm-windows-x86_64.exe from https://github.com/${REPO}/releases" >&2
         exit 1
         ;;
 esac
