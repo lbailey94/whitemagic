@@ -151,13 +151,19 @@ pub struct QuarantineEntry {
 
 // ── Recovery Functions ────────────────────────────────────────────────
 
-/// Maximum map size for auto-growth (4 GB).
+/// Maximum map size for auto-growth (256 GiB on Unix, 256 MiB on Windows).
+///
+/// Unix LMDB maps are sparse ftruncate reservations — the ceiling costs no
+/// disk until pages are written — so the cap sits well above any backed
+/// store and `open_with_recovery` can keep doubling at open time. (A live
+/// environment cannot be resized: lmdb 0.8 exposes no `set_map_size`;
+/// growth happens on the next open/restart.)
 // Windows NTFS materializes the LMDB map file at full size on open, so the
-// auto-grow ceiling is smaller there (see MemoryStore::open_default).
+// auto-grow ceiling stays small there (see MemoryStore::open_default).
 #[cfg(windows)]
 const MAX_MAP_SIZE: usize = 256 * 1024 * 1024;
 #[cfg(not(windows))]
-const MAX_MAP_SIZE: usize = 4 * 1024 * 1024 * 1024;
+const MAX_MAP_SIZE: usize = 256 * 1024 * 1024 * 1024;
 
 /// Initial map size if none specified.
 #[allow(dead_code)]
@@ -778,6 +784,43 @@ mod tests {
         // Reopen with WarnOnly — should succeed
         let store = open_with_recovery(tmp.path(), DEFAULT_MAP_SIZE, RecoveryStrategy::WarnOnly);
         assert!(store.is_ok());
+    }
+
+    #[test]
+    fn open_with_recovery_grows_past_small_map() {
+        // A store that hit MapFull under a tiny map must reopen through the
+        // recovery path (which doubles up to the ceiling) and accept writes.
+        let tmp = tempfile::tempdir().unwrap();
+        {
+            let store = MemoryStore::open(tmp.path(), 512 * 1024).unwrap();
+            let mut hit_full = false;
+            for i in 0..5000 {
+                let mem = Memory::new(
+                    Galaxy::Codex,
+                    format!("map growth probe {i} {}", "pad ".repeat(1024)),
+                );
+                match store.put(Galaxy::Codex, &mem) {
+                    Ok(()) => {}
+                    Err(e) if e.to_string().contains("map full") => {
+                        assert!(
+                            e.to_string().contains("Restart the store to auto-grow"),
+                            "MapFull must carry the actionable hint: {e}"
+                        );
+                        hit_full = true;
+                        break;
+                    }
+                    Err(e) => panic!("unexpected put error: {e}"),
+                }
+            }
+            assert!(hit_full, "512 KiB map must fill under padded writes");
+        }
+
+        let store =
+            open_with_recovery(tmp.path(), 512 * 1024, RecoveryStrategy::AutoRepair).unwrap();
+        // The data file was at the old ceiling when MapFull fired; a
+        // successful write here proves the recovery path grew the map.
+        let mem = Memory::new(Galaxy::Codex, "after growth".to_string());
+        store.put(Galaxy::Codex, &mem).unwrap();
     }
 
     #[test]

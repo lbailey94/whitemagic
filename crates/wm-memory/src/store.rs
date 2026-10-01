@@ -156,6 +156,21 @@ impl MemoryQuery {
 }
 
 /// The LMDB environment containing all 14 galaxy sub-databases plus 4 index DBs.
+/// Map an LMDB commit failure, giving `MapFull` the actionable hint.
+///
+/// MapFull frequently surfaces at commit (large blobs/txns), not at `put`,
+/// so every commit site must carry the same guidance as the `put` path.
+fn ldb_commit_err(e: lmdb::Error) -> CoreError {
+    if matches!(e, lmdb::Error::MapFull) {
+        CoreError::Memory(
+            "LMDB map full at commit. Restart the store to auto-grow (open-time recovery doubles the map up to the 256 GiB ceiling) or raise WM_DEFAULT_MAP_SIZE; a live environment cannot be resized (lmdb 0.8 exposes no set_map_size)."
+                .to_string(),
+        )
+    } else {
+        CoreError::Memory(format!("LMDB commit failed: {e}"))
+    }
+}
+
 pub struct MemoryStore {
     /// Path to the LMDB file
     path: std::path::PathBuf,
@@ -541,7 +556,11 @@ impl MemoryStore {
         let platform_default = if cfg!(windows) {
             256 * 1024 * 1024
         } else {
-            4 * 1024 * 1024 * 1024
+            // 16 GiB sparse reservation: Unix LMDB ftruncate maps cost no
+            // disk until written, and the largest store (vault, 2.4 GiB
+            // data.mdb) needs headroom without a restart. `open_with_recovery`
+            // doubles further at open time up to the 256 GiB ceiling.
+            16 * 1024 * 1024 * 1024
         };
         std::env::var("WM_DEFAULT_MAP_SIZE")
             .ok()
@@ -552,12 +571,14 @@ impl MemoryStore {
 
     /// Open with the default map size.
     ///
-    /// 4 GB on Unix: LMDB truncates the data file sparsely (ftruncate), so
+    /// 16 GiB on Unix: LMDB truncates the data file sparsely (ftruncate), so
     /// reservation costs nothing until pages are written. On Windows NTFS
-    /// materializes the file at full map size immediately — a 4 GB default
-    /// would allocate 4 GB on disk per store the moment it opens — so the
-    /// Windows default is smaller; pass an explicit size to `open()` for
-    /// large stores. (Auto-grow on MapFull is a planned follow-up.)
+    /// materializes the file at full map size immediately — a large default
+    /// would allocate disk per store the moment it opens — so the Windows
+    /// default stays small; pass an explicit size to `open()` for large
+    /// stores. Live MapFull cannot be resized (lmdb 0.8 has no
+    /// `set_map_size`); `open_with_recovery` doubles the map at open time up
+    /// to the 256 GiB ceiling, so a restart heals a full map.
     pub fn open_default(path: impl AsRef<Path>) -> Result<Self> {
         // Deployment knob: override the platform default explicitly (bytes).
         // CI uses this on Windows, where NTFS materializes the map file at
@@ -985,8 +1006,7 @@ impl MemoryStore {
             .begin_rw_txn()
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
         self.put_in_txn(&mut tx, galaxy, memory)?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
@@ -1014,7 +1034,7 @@ impl MemoryStore {
             Ok(()) => {}
             Err(lmdb::Error::MapFull) => {
                 return Err(CoreError::Memory(format!(
-                    "LMDB map full: galaxy {}, consider growing map size or pruning old memories",
+                    "LMDB map full: galaxy {}. Restart the store to auto-grow (open-time recovery doubles the map up to the 256 GiB ceiling) or raise WM_DEFAULT_MAP_SIZE; a live environment cannot be resized (lmdb 0.8 exposes no set_map_size).",
                     galaxy.db_name()
                 )));
             }
@@ -1105,8 +1125,7 @@ impl MemoryStore {
 
         let memory = build(next);
         self.put_in_txn(&mut tx, Galaxy::Sessions, &memory)?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok((next, memory))
     }
@@ -1162,8 +1181,7 @@ impl MemoryStore {
         let key = memory_id.as_bytes();
         tx.put(db, &key, &value, lmdb::WriteFlags::default())
             .map_err(|e| CoreError::Memory(format!("LMDB put failed (index_pending): {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(())
     }
 
@@ -1197,8 +1215,7 @@ impl MemoryStore {
             out.push((id, galaxy, at_ms));
         }
         drop(cursor);
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         out.sort_by_key(|(_, _, at)| *at);
         Ok(out)
     }
@@ -1234,8 +1251,7 @@ impl MemoryStore {
                 }
             }
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(cleared)
     }
 
@@ -1256,8 +1272,7 @@ impl MemoryStore {
             .count();
         tx.clear_db(db)
             .map_err(|e| CoreError::Memory(format!("LMDB clear failed (index_pending): {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(count)
     }
 
@@ -1274,14 +1289,12 @@ impl MemoryStore {
         match result {
             Ok(bytes) => {
                 let memory = self.decode_record_value(galaxy, key, bytes)?;
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(Some(memory))
             }
             Err(lmdb::Error::NotFound) => {
                 // ReadOnly transactions don't strictly need commit, but it's good practice
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(None)
             }
             Err(e) => Err(CoreError::Memory(format!("LMDB get failed: {e}"))),
@@ -1325,8 +1338,7 @@ impl MemoryStore {
             tx.del(db, key, None)
                 .map_err(|e| CoreError::Memory(format!("LMDB del failed: {e}")))?;
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         if exists {
             self.mutation_count.fetch_add(1, Ordering::Relaxed);
         }
@@ -1362,8 +1374,7 @@ impl MemoryStore {
         }
 
         drop(cursor);
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(memories)
     }
 
@@ -1413,8 +1424,7 @@ impl MemoryStore {
         }
 
         drop(cursor);
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(memories)
     }
 
@@ -1430,8 +1440,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB cursor failed: {e}")))?;
         let count = cursor.iter().count();
         drop(cursor);
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(count)
     }
 
@@ -1445,8 +1454,7 @@ impl MemoryStore {
             .begin_ro_txn()
             .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
         let ids = self.index_dbs.find_by_tag(&tx, galaxy, tag)?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(ids.len())
     }
 
@@ -1486,8 +1494,7 @@ impl MemoryStore {
             count += 1;
         }
 
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count
             .fetch_add(count as u64, Ordering::Relaxed);
         Ok(count)
@@ -1516,7 +1523,7 @@ impl MemoryStore {
                 Err(lmdb::Error::MapFull) => {
                     tx.abort();
                     return Err(CoreError::Memory(format!(
-                        "LMDB map full: galaxy {}, consider growing map size",
+                        "LMDB map full: galaxy {}. Restart the store to auto-grow (open-time recovery doubles the map up to the 256 GiB ceiling) or raise WM_DEFAULT_MAP_SIZE; a live environment cannot be resized (lmdb 0.8 exposes no set_map_size).",
                         galaxy.db_name()
                     )));
                 }
@@ -1529,8 +1536,7 @@ impl MemoryStore {
             count += 1;
         }
 
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count
             .fetch_add(count as u64, Ordering::Relaxed);
         Ok(count)
@@ -1546,13 +1552,11 @@ impl MemoryStore {
         match tx.get(db, &key) {
             Ok(bytes) => {
                 let data = bytes.to_vec();
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(Some(data))
             }
             Err(lmdb::Error::NotFound) => {
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(None)
             }
             Err(e) => Err(CoreError::Memory(format!("LMDB get_raw failed: {e}"))),
@@ -1568,8 +1572,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
         tx.put(db, &key, &val, lmdb::WriteFlags::default())
             .map_err(|e| CoreError::Memory(format!("LMDB put_raw failed: {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
@@ -1583,8 +1586,7 @@ impl MemoryStore {
             .begin_rw_txn()
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
         let deleted = tx.del(db, &key, None).is_ok();
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         if deleted {
             self.mutation_count.fetch_add(1, Ordering::Relaxed);
         }
@@ -1627,8 +1629,7 @@ impl MemoryStore {
             tx.put(db, key, val, WriteFlags::default())
                 .map_err(|e| CoreError::Memory(format!("LMDB put_raw_batch failed: {e}")))?;
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(())
     }
 
@@ -1643,8 +1644,7 @@ impl MemoryStore {
             .begin_ro_txn()
             .map_err(|e| CoreError::Memory(format!("LMDB ro_txn failed: {e}")))?;
         let result = self.index_dbs.find_by_content_hash(&tx, galaxy, hash)?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(result)
     }
 
@@ -1696,8 +1696,7 @@ impl MemoryStore {
             self.index_dbs.add(&mut tx, galaxy, memory)?;
         }
 
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count
             .fetch_add(memories.len() as u64, Ordering::Relaxed);
         Ok(())
@@ -1775,8 +1774,7 @@ impl MemoryStore {
                 }
             }
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(results)
     }
 
@@ -1807,8 +1805,7 @@ impl MemoryStore {
                 }
             }
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(results)
     }
 
@@ -1839,8 +1836,7 @@ impl MemoryStore {
                 }
             }
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(results)
     }
 
@@ -1901,8 +1897,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
         tx.put(db, key, &val, WriteFlags::default())
             .map_err(|e| CoreError::Memory(format!("LMDB put_embedding failed: {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
@@ -1919,13 +1914,11 @@ impl MemoryStore {
         match tx.get(db, key) {
             Ok(bytes) => {
                 let embedding = decode_embedding(bytes);
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(Some(embedding))
             }
             Err(lmdb::Error::NotFound) => {
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(None)
             }
             Err(e) => Err(CoreError::Memory(format!("LMDB get_embedding failed: {e}"))),
@@ -1946,8 +1939,7 @@ impl MemoryStore {
             tx.del(db, key, None)
                 .map_err(|e| CoreError::Memory(format!("LMDB del_embedding failed: {e}")))?;
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         if exists {
             self.mutation_count.fetch_add(1, Ordering::Relaxed);
         }
@@ -1971,8 +1963,7 @@ impl MemoryStore {
             WriteFlags::default(),
         )
         .map_err(|e| CoreError::Memory(format!("LMDB put_embedding_cache failed: {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
@@ -1995,8 +1986,7 @@ impl MemoryStore {
             )
             .map_err(|e| CoreError::Memory(format!("LMDB put_embedding_cache failed: {e}")))?;
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count
             .fetch_add(entries.len() as u64, Ordering::Relaxed);
         Ok(())
@@ -2011,13 +2001,11 @@ impl MemoryStore {
         match tx.get(self.embedding_cache_db, &cache_key.as_bytes().to_vec()) {
             Ok(bytes) => {
                 let embedding = decode_embedding(bytes);
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(Some(embedding))
             }
             Err(lmdb::Error::NotFound) => {
-                tx.commit()
-                    .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+                tx.commit().map_err(ldb_commit_err)?;
                 Ok(None)
             }
             Err(e) => Err(CoreError::Memory(format!(
@@ -2041,8 +2029,7 @@ impl MemoryStore {
                     .map(decode_embedding),
             );
         }
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(out)
     }
 
@@ -2094,8 +2081,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
         tx.put(self.revisions_db, &key, &val, WriteFlags::default())
             .map_err(|e| CoreError::Memory(format!("LMDB put revision failed: {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(entry)
     }
@@ -2140,8 +2126,7 @@ impl MemoryStore {
             }
         }
         drop(cursor);
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(out)
     }
 
@@ -2179,8 +2164,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
         tx.put(self.attestations_db, &key, &val, WriteFlags::default())
             .map_err(|e| CoreError::Memory(format!("LMDB put attestation failed: {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
@@ -2241,8 +2225,7 @@ impl MemoryStore {
             }
         }
         drop(cursor);
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         Ok(out)
     }
 
@@ -2346,8 +2329,7 @@ impl MemoryStore {
             .map_err(|e| CoreError::Memory(format!("LMDB rw_txn failed: {e}")))?;
         tx.put(self.cold_storage_db, key, &val, WriteFlags::default())
             .map_err(|e| CoreError::Memory(format!("LMDB put cold_storage failed: {e}")))?;
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         self.mutation_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
@@ -2390,8 +2372,7 @@ impl MemoryStore {
                 )));
             }
         };
-        tx.commit()
-            .map_err(|e| CoreError::Memory(format!("LMDB commit failed: {e}")))?;
+        tx.commit().map_err(ldb_commit_err)?;
         if deleted {
             self.mutation_count.fetch_add(1, Ordering::Relaxed);
         }
