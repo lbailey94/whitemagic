@@ -36,12 +36,19 @@ jobs:
 
   host-scripts:
     timeout-minutes: 10
-    name: Host Scripts (installer, version truth, npm launcher)
+    name: Host Scripts (installer, Crystal client, version truth, npm launcher)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install optional Crystal client dependency
+        run: python3 -m pip install cryptography
       - name: Python tests (installer sentinel, version truth, release manifest)
         run: python3 -m unittest scripts.tests.test_install_sh scripts.tests.test_version_truth scripts.tests.test_release_manifest
+      - name: Crystal client tests
+        run: python3 -m unittest scripts.tests.test_crystal_client
       - name: npm launcher tests
         working-directory: npm/whitemagic-mcp
         run: node --test

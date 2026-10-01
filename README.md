@@ -46,6 +46,27 @@ next session — without sending your memory store to any hosted service.
   lists crystal store, fetch, and lineage endpoints; successful hosted
   persistence and retrieval are not implied by local encryption support.
 
+  The helper is distributed as source in this repository; it is not bundled
+  into the `wm` binary or platform installers. Use the helper from the source
+  revision matching the server/API you intend to use. Generate a client key
+  into a protected file with
+  `python3 scripts/crystal_client.py genkey --out crystal.key`, then pass that
+  file to `seal` and `unseal` with `--key`.
+  `seal` obtains the owner locator from the authenticated
+  `/crystals/owner-locator` endpoint. This requires an owner credential and an
+  existing registry mapping; a payment or session pass does not establish
+  ownership. If an existing crystal is unmapped, use the [contact page](https://www.whitemagic.dev/contact)
+  to request a manual ownership review.
+
+  Supply the bearer credential through the `WM_CRYSTAL_TOKEN` environment
+  variable or `--token-file /path/to/credential`. Token files must be regular,
+  non-symlink files with mode `0600` or stricter. Do not put credentials in
+  command-line arguments or send plaintext or encryption keys to support.
+  `seal`, `push`, `pull`, and `lineage` require authenticated owner access;
+  `seal`, `pull`, and `lineage` no longer accept `--tenant`; keyless pulls and
+  lineage queries are no longer supported. The former tenant-hash CLI flow is
+  a breaking change.
+
 ## Status
 
 **WhiteMagic v9.** Release channel: **open alpha** — public alpha for MCP
