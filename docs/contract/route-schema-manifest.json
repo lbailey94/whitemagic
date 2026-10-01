@@ -2467,7 +2467,7 @@
           "type": "object"
         },
         "id": {
-          "description": "Stored receipt task id (UUID or urn:uuid:)",
+          "description": "Receipt task id (UUID or urn:uuid:)",
           "type": "string"
         },
         "require_anchor": {
@@ -2475,7 +2475,7 @@
           "type": "boolean"
         },
         "variant": {
-          "description": "Stored variant (default original)",
+          "description": "Receipt variant (default original)",
           "type": "string"
         }
       },
@@ -3708,5 +3708,5 @@
       "route": "workspace.stats"
     }
   ],
-  "version": "9.3.0"
+  "version": "9.3.1"
 }
