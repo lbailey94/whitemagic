@@ -268,6 +268,10 @@ security architecture** → `mandalaos-gate-lite`.
 
 - Support: open an issue at
   <https://github.com/lbailey94/whitemagic/issues>
+- Support the lab (voluntary, not a service payment): XRPL tip jar
+  `raakfKn96zVmXqKwRTDTH5K3j5eTBp1hPyXRP` — see
+  <https://www.whitemagic.dev/support>. Services are paid via x402 or
+  evaluation keys; the tip jar unlocks nothing.
 - Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - Security: email <lbailey94@protonmail.com> (please do not open public
   issues for security reports)
