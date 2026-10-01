@@ -2,7 +2,10 @@
 
 import copy
 import hashlib
+import json
+import os
 import sys
+import tempfile
 import unittest
 from io import BytesIO
 from pathlib import Path
@@ -69,7 +72,7 @@ class CrystalClientTest(unittest.TestCase):
 
     def test_pull_rejects_malformed_ids_before_network_access(self) -> None:
         with self.assertRaises(ValueError):
-            cc.pull_crystal("../../other-path", "test-tenant")
+            cc.pull_crystal("../../other-path", auth_token="dummy-token")
 
     def test_push_fails_closed_on_redirect(self) -> None:
         fake_opener = Mock()
@@ -99,6 +102,154 @@ class CrystalClientTest(unittest.TestCase):
                 "http://attacker.invalid/collect",
             )
         self.assertEqual(raised.exception.code, 307)
+
+    def test_all_owner_requests_are_authenticated_and_use_fixed_paths(self) -> None:
+        locator = "sha256:" + "a" * 64
+
+        class Response:
+            def __init__(self, value):
+                self.payload = json.dumps(value).encode("utf-8")
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return False
+
+            def read(self):
+                return self.payload
+
+        opener = Mock()
+        opener.open.side_effect = [
+            Response({"stored": True}),
+            Response({"crystal_id": "sha256:" + "b" * 64}),
+            Response({"crystals": []}),
+            Response({"owner_locator": locator}),
+        ]
+        token = "dummy-owner-token"
+        with patch.object(cc.urllib.request, "build_opener", return_value=opener) as build:
+            cc.push_crystal({"ciphertext": "fixture"}, auth_token=token)
+            cc.pull_crystal("sha256:" + "b" * 64, auth_token=token)
+            self.assertEqual(cc.pull_lineage(auth_token=token), [])
+            self.assertEqual(cc.fetch_owner_locator(auth_token=token), locator)
+
+        requests = [call.args[0] for call in opener.open.call_args_list]
+        self.assertEqual([request.get_method() for request in requests], ["POST", "GET", "GET", "GET"])
+        self.assertTrue(all(request.get_header("Authorization") == f"Bearer {token}" for request in requests))
+        self.assertEqual(requests[0].full_url, "https://api.whitemagic.dev/crystals")
+        self.assertEqual(requests[1].full_url, f"https://api.whitemagic.dev/crystals/{'b' * 64}")
+        self.assertEqual(requests[2].full_url, "https://api.whitemagic.dev/crystals/lineage")
+        self.assertEqual(requests[3].full_url, "https://api.whitemagic.dev/crystals/owner-locator")
+        self.assertTrue(all("tenant=" not in request.full_url for request in requests))
+        self.assertEqual(build.call_count, 4)
+        self.assertTrue(all(call.args == (cc._NoRedirectHandler,) for call in build.call_args_list))
+
+    def test_invalid_id_and_origins_fail_before_network_for_all_owner_requests(self) -> None:
+        invalid_origins = (
+            "http://example.test",
+            "https://user:pass@example.test",
+            "https://example.test/path",
+            "https://example.test?x=1",
+            "https://example.test:bad",
+        )
+        with patch.object(cc.urllib.request, "build_opener") as build:
+            for origin in invalid_origins:
+                calls = (
+                    lambda: cc.push_crystal({}, api_url=origin, auth_token="dummy"),
+                    lambda: cc.pull_crystal("b" * 64, api_url=origin, auth_token="dummy"),
+                    lambda: cc.pull_lineage(api_url=origin, auth_token="dummy"),
+                    lambda: cc.fetch_owner_locator(api_url=origin, auth_token="dummy"),
+                )
+                for call in calls:
+                    with self.subTest(origin=origin), self.assertRaises(ValueError):
+                        call()
+            for malformed in ("../escape", "g" * 64, "a" * 63, "a" * 64 + "/x"):
+                with self.assertRaises(ValueError):
+                    cc.pull_crystal(malformed, auth_token="dummy")
+            build.assert_not_called()
+
+    def test_redirects_are_refused_for_all_owner_requests_without_echoing_token(self) -> None:
+        token = "dummy-owner-token"
+        calls = (
+            lambda: cc.push_crystal({}, auth_token=token),
+            lambda: cc.pull_crystal("a" * 64, auth_token=token),
+            lambda: cc.pull_lineage(auth_token=token),
+            lambda: cc.fetch_owner_locator(auth_token=token),
+        )
+        for call in calls:
+            fake_opener = Mock()
+            fake_opener.open.side_effect = HTTPError(
+                "https://api.whitemagic.dev/crystals", 302, "Found", {},
+                BytesIO(token.encode()),
+            )
+            with patch.object(cc.urllib.request, "build_opener", return_value=fake_opener) as build:
+                with self.assertRaisesRegex(RuntimeError, "redirect refused") as raised:
+                    call()
+            self.assertNotIn(token, str(raised.exception))
+            build.assert_called_once_with(cc._NoRedirectHandler)
+
+    def test_owner_calls_require_keyword_auth_and_token_file_is_protected(self) -> None:
+        with self.assertRaises(TypeError):
+            cc.pull_crystal("a" * 64, "legacy-tenant")
+        with self.assertRaises(TypeError):
+            cc.pull_lineage("legacy-tenant")
+
+        with tempfile.TemporaryDirectory() as td:
+            token_path = Path(td) / "token"
+            token_path.write_text("dummy-token\n", encoding="utf-8")
+            os.chmod(token_path, 0o600)
+            self.assertEqual(cc._token_from_inputs("UNSET_WM_CRYSTAL_TOKEN", str(token_path)), "dummy-token")
+            if os.name == "posix":
+                os.chmod(token_path, 0o644)
+                with self.assertRaises(ValueError):
+                    cc._token_from_inputs("UNSET_WM_CRYSTAL_TOKEN", str(token_path))
+            link_path = Path(td) / "token-link"
+            link_path.symlink_to(token_path)
+            with self.assertRaises((OSError, ValueError)):
+                cc._token_from_inputs("UNSET_WM_CRYSTAL_TOKEN", str(link_path))
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO support required")
+    def test_fifo_token_path_is_rejected_without_blocking(self) -> None:
+        import subprocess
+
+        with tempfile.TemporaryDirectory() as td:
+            fifo = Path(td) / "token-fifo"
+            os.mkfifo(fifo)
+            code = (
+                "import importlib.util,sys; "
+                "s=importlib.util.spec_from_file_location('cc',sys.argv[1]); "
+                "m=importlib.util.module_from_spec(s); s.loader.exec_module(m); "
+                "\ntry: m._token_from_inputs('UNSET',sys.argv[2])\n"
+                "except (ValueError,OSError): raise SystemExit(0)\n"
+                "raise SystemExit(4)"
+            )
+            result = subprocess.run(
+                [sys.executable, "-c", code, str(SCRIPTS / "crystal_client.py"), str(fifo)],
+                capture_output=True, timeout=3, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+
+    def test_cli_uses_env_or_file_credentials_and_no_tenant_or_token_arguments(self) -> None:
+        import contextlib
+        import io
+
+        original_argv = sys.argv
+        output = io.StringIO()
+        try:
+            for command in ("seal", "push", "pull", "lineage"):
+                sys.argv = [str(SCRIPTS / "crystal_client.py"), command, "--help"]
+                with contextlib.redirect_stdout(output), self.assertRaises(SystemExit):
+                    cc.main()
+                help_text = output.getvalue()
+                self.assertIn("--token-env", help_text)
+                self.assertIn("--token-file", help_text)
+                self.assertNotIn("--token ", help_text)
+                if command in ("seal", "pull", "lineage"):
+                    self.assertNotIn("--tenant", help_text)
+                output.seek(0)
+                output.truncate(0)
+        finally:
+            sys.argv = original_argv
 
 
 if __name__ == "__main__":
