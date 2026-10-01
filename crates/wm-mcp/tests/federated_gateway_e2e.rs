@@ -292,10 +292,10 @@ fn federated_gateway_e2e_pins_scopes_and_preserves_inner_payload() {
         Some("dev"),
     );
     assert_eq!(claim["status"], "success", "claim: {claim}");
-    let claim_text = claim.to_string();
-    assert!(
-        claim_text.contains(&lease),
-        "claim must echo the lease: {claim}"
+    assert_eq!(claim["scope"], lease, "backing lease scope: {claim}");
+    assert_eq!(
+        claim["gateway_scope"], "dev",
+        "gateway store label: {claim}"
     );
 
     let direct = call_wm(
@@ -305,10 +305,9 @@ fn federated_gateway_e2e_pins_scopes_and_preserves_inner_payload() {
         None,
     );
     assert_eq!(direct["status"], "success", "direct check: {direct}");
-    assert_ne!(
-        direct["state"], "free",
-        "the lease must be held on the `dev` backing: {direct}"
-    );
+    assert_eq!(direct["scope"], lease, "direct scope: {direct}");
+    assert_eq!(direct["state"], "claimed", "dev backing lease: {direct}");
+    assert_eq!(direct["holder"], owner, "dev backing owner: {direct}");
     let other = call_wm(
         port_b,
         "code.check",
@@ -331,6 +330,7 @@ fn federated_gateway_e2e_pins_scopes_and_preserves_inner_payload() {
         None,
     );
     assert_eq!(released["status"], "success", "release: {released}");
+    assert_eq!(released["state"], "released", "release state: {released}");
 
     // 4. Unknown pinned scope fails closed, naming the reachable scopes.
     let refused = call_wm(

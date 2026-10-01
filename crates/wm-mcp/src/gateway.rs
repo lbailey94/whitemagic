@@ -15,7 +15,9 @@
 //!   scope (`WM_PROJECT`), else fail-closed
 //!
 //! v26 lessons enforced here: backing envelopes pass through untouched
-//! (scope labels only — the stable-envelope rule); scope discovery comes
+//! except for the gateway's additive `gateway_scope` routing label when a
+//! backing already owns `scope` (or a compatibility `scope` fallback when
+//! it does not); scope discovery comes
 //! from the backings' own disclosures, never a hand-maintained list (the
 //! grimoire-drift lesson); the gateway contract is probed live at startup
 //! and persisted (the profile-contract pattern, one altitude up; the
@@ -304,8 +306,10 @@ impl Gateway {
     /// `resolve_pinned`. Inner `args` pass through untouched — a tool's
     /// own `args.scope` (e.g. the code.claim lease scope) is tool
     /// payload, not routing, and must reach the backing intact. The
-    /// backing envelope passes through except for the `scope` label
-    /// (the stable-envelope rule); a read-only refusal keeps its hint.
+    /// backing envelope passes through except for an additive `gateway_scope`
+    /// label when the backing already owns `scope`. If it has no `scope`, the
+    /// gateway uses that field for the store label to preserve older clients.
+    /// A read-only refusal keeps its hint.
     fn proxy(&self, scope_name: &str, route: &str, arguments: &Value) -> Result<Value, String> {
         let inner = arguments.get("args").cloned().unwrap_or_else(|| json!({}));
         let backing_args = json!({"route": route, "args": inner});
@@ -344,7 +348,11 @@ impl Gateway {
         let mut envelope: Value = serde_json::from_str(text)
             .map_err(|e| format!("backing envelope parse failed: {e}"))?;
         if let Some(obj) = envelope.as_object_mut() {
-            obj.insert("scope".into(), json!(scope_name));
+            if obj.contains_key("scope") {
+                obj.insert("gateway_scope".into(), json!(scope_name));
+            } else {
+                obj.insert("scope".into(), json!(scope_name));
+            }
         }
         Ok(envelope)
     }
@@ -1036,6 +1044,10 @@ mod tests {
             envelope["status"], "success",
             "forward must succeed: {envelope}"
         );
+        assert_eq!(
+            envelope["scope"], "dev",
+            "backings that omit their own scope retain the legacy store label"
+        );
         let (scope, forwarded) = calls
             .lock()
             .unwrap()
@@ -1050,6 +1062,25 @@ mod tests {
         );
         assert_eq!(inner["owner_session"], "test-session");
         assert_eq!(inner["intent"], "test intent");
+    }
+
+    #[test]
+    fn pinned_proxy_preserves_backing_scope_and_adds_gateway_scope() {
+        let mock = MockBacking::new().with_envelope(
+            "dev",
+            json!({"status": "success", "scope": "WMv9/release-freeze", "state": "free"}),
+        );
+        let gw = gateway_with(mock, &[spec("dev"), spec("vault")], Some("dev"));
+        let response = gw.handle_request(
+            r#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wm","arguments":{"route":"code.check","args":{"scope":"WMv9/release-freeze"}}}}"#,
+        );
+        let parsed: Value = serde_json::from_str(&response).unwrap();
+        let text = parsed["result"]["content"][0]["text"].as_str().unwrap();
+        let envelope: Value = serde_json::from_str(text).unwrap();
+
+        assert_eq!(envelope["scope"], "WMv9/release-freeze");
+        assert_eq!(envelope["gateway_scope"], "dev");
+        assert_eq!(envelope["state"], "free");
     }
 
     #[test]
