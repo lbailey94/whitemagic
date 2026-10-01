@@ -18,7 +18,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${WM_BINARY:-$ROOT/target/debug/wm}"
-DS="${WM_DATASET:-$ROOT/benchmarks/data/longmemeval_s/longmemeval_s_50q_canonical.json}"
+DS="${WM_DATASET:-$ROOT/../benchmarks/data/longmemeval_s/longmemeval_s_50q_canonical.json}"
 EMBED_ENDPOINT="${WM_EMBEDDER_ENDPOINT:-http://127.0.0.1:18899/v1/embeddings}"
 EMBED_MODEL="${WM_EMBEDDER_MODEL:-bge-small}"
 EMBED_DIM="${WM_EMBEDDER_DIM:-384}"
