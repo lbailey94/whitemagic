@@ -1417,6 +1417,37 @@ fn empty_result_hint_all(store: &MemoryStore) -> String {
     }
 }
 
+/// Parse an optional time bound (`since`/`until`) from tool args:
+/// RFC 3339 string or epoch seconds. `None`/absent means unbounded.
+fn parse_time_bound(
+    args: &Value,
+    key: &str,
+) -> wm_core::Result<Option<chrono::DateTime<chrono::Utc>>> {
+    use chrono::{TimeZone, Utc};
+    match args.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Number(n)) => {
+            let secs = n.as_i64().ok_or_else(|| {
+                wm_core::CoreError::InvalidArgs(format!("{key} must be epoch seconds or RFC3339"))
+            })?;
+            Utc.timestamp_opt(secs, 0)
+                .single()
+                .map(Some)
+                .ok_or_else(|| {
+                    wm_core::CoreError::InvalidArgs(format!("{key} epoch seconds out of range"))
+                })
+        }
+        Some(Value::String(s)) => chrono::DateTime::parse_from_rfc3339(s)
+            .map(|dt| Some(dt.with_timezone(&Utc)))
+            .map_err(|e| {
+                wm_core::CoreError::InvalidArgs(format!("{key} must be RFC3339 (got '{s}'): {e}"))
+            }),
+        Some(_) => Err(wm_core::CoreError::InvalidArgs(format!(
+            "{key} must be an RFC3339 string or epoch seconds"
+        ))),
+    }
+}
+
 #[async_trait]
 impl Tool for MemoryHybridRecallTool {
     fn name(&self) -> &str {
@@ -1441,6 +1472,9 @@ impl Tool for MemoryHybridRecallTool {
                 "min_score": num_prop("Absolute BM25 score floor"),
                 "min_score_ratio": num_prop("Relative floor: reject hits below this fraction of the top score"),
                 "min_trust": num_prop("Minimum source_trust (0-1): drop results below this trust floor"),
+                "since": str_prop("Inclusive lower time bound: RFC3339 ('2026-02-01T00:00:00Z') or epoch seconds"),
+                "until": str_prop("Inclusive upper time bound: RFC3339 or epoch seconds"),
+                "time_basis": str_prop("Time basis for since/until: 'recorded' (created_at, default) or 'event' (event_time, falling back to created_at when unset)"),
                 "include_cold": bool_prop("Opt-in unranked cold recovery (no thaw). Trust/importance floors apply; BM25 floors do not apply to unscored recovery. Search content is scrubbed navigation capped at 8192 characters; read by id/galaxy for the exact original."),
                 "cold_scan_limit": int_prop("Maximum cold records to scan when include_cold is set (default 2048)"),
             }),
@@ -1482,6 +1516,34 @@ impl Tool for MemoryHybridRecallTool {
             super::common::bounded_f64_arg(&args, "min_score_ratio", 0.0, Some(1.0))
                 .map_err(wm_core::CoreError::InvalidArgs)?
                 .map_or(Some(0.05), |v| Some(v as f32));
+        // 9.3.2 S1: inclusive time window (optional). `event` basis reads
+        // event_time and falls back to created_at when unset — the fallback
+        // is disclosed in `time_filter.basis`; it is never fabricated.
+        let time_basis = match args.get("time_basis").and_then(|v| v.as_str()) {
+            None | Some("recorded") => wm_memory::recall::TimeBasis::Recorded,
+            Some("event") => wm_memory::recall::TimeBasis::Event,
+            Some(other) => {
+                return Err(wm_core::CoreError::InvalidArgs(format!(
+                    "time_basis must be 'recorded' or 'event' (got '{other}')"
+                )));
+            }
+        };
+        let since = parse_time_bound(&args, "since")?;
+        let until = parse_time_bound(&args, "until")?;
+        if let (Some(s), Some(u)) = (since, until) {
+            if s > u {
+                return Err(wm_core::CoreError::InvalidArgs(
+                    "since must be <= until".into(),
+                ));
+            }
+        }
+        let time_filter = wm_memory::recall::RecallTimeFilter {
+            since,
+            until,
+            basis: time_basis,
+        };
+        let time_filter_active = time_filter.is_active();
+        let mut time_filtered_out: usize = 0;
         let mut results = Vec::new();
 
         // V8.1 trust weighting (evidence-gated): 0.0 = off by default.
@@ -1528,11 +1590,22 @@ impl Tool for MemoryHybridRecallTool {
         if hybrid_available {
             let recall = self.recall.as_ref().expect("hybrid_available checked");
             if !query.is_empty() {
-                let (hybrid_results, conformal) = recall.hybrid_search_with_disclosure(
-                    query,
-                    limit * 2,
-                    galaxy_explicit.then_some(galaxy),
-                );
+                let (hybrid_results, conformal, filtered_out) = if time_filter_active {
+                    recall.hybrid_search_filtered(
+                        query,
+                        limit * 2,
+                        galaxy_explicit.then_some(galaxy),
+                        Some(&time_filter),
+                    )
+                } else {
+                    let (r, c) = recall.hybrid_search_with_disclosure(
+                        query,
+                        limit * 2,
+                        galaxy_explicit.then_some(galaxy),
+                    );
+                    (r, c, 0)
+                };
+                time_filtered_out += filtered_out;
                 for hr in hybrid_results {
                     if !recall_visible(hr.galaxy, galaxy_explicit) {
                         continue;
@@ -1644,6 +1717,10 @@ impl Tool for MemoryHybridRecallTool {
                 {
                     continue;
                 }
+                if !time_filter.accepts_memory(&mem) {
+                    time_filtered_out += 1;
+                    continue;
+                }
                 let navigation = wm_memory::scrub_text(&mem.content);
                 results.push(with_navigation_disclosure(
                     json!({
@@ -1707,6 +1784,10 @@ impl Tool for MemoryHybridRecallTool {
                                     && crate::expansion::common::mcp_visible(&mem)
                                     && crate::expansion::common::validity_visible(&mem)
                                 {
+                                    if !time_filter.accepts_memory(&mem) {
+                                        time_filtered_out += 1;
+                                        continue;
+                                    }
                                     let navigation = wm_memory::scrub_text(&mem.content);
                                     results.push(with_navigation_disclosure(
                                         json!({
@@ -2057,6 +2138,20 @@ impl Tool for MemoryHybridRecallTool {
         }
         if let Some(td) = trust_disclosure {
             out["trust_weighting"] = td;
+        }
+        if time_filter_active {
+            out["time_filter"] = json!({
+                "since": since.map(|t| t.to_rfc3339()),
+                "until": until.map(|t| t.to_rfc3339()),
+                "basis": match time_basis {
+                    wm_memory::recall::TimeBasis::Recorded => "recorded",
+                    wm_memory::recall::TimeBasis::Event => "event",
+                },
+                "applied": true,
+                "filtered_out": time_filtered_out,
+                "phases": ["hybrid", "episodic", "fts"],
+                "note": "post-fusion filter; cold recovery and association expansion are not filtered in v1",
+            });
         }
         // Degradation disclosure: the configured embedder failed its probe,
         // so the route fell through to the episodic lane. Named so callers
@@ -3396,6 +3491,62 @@ mod tests {
         assert_eq!(v["results"][0]["source"], "episodic");
         assert_eq!(v["results"][0]["id"], json!(needle_id.to_string()));
         assert!(v["results"][0]["score"].as_f64().unwrap() > 0.0);
+    }
+
+    #[tokio::test]
+    async fn search_time_window_filters_and_discloses() {
+        // 9.3.2 S1: since/until is inclusive, basis-disclosed, and an
+        // invalid bound is a caller error (never a silent relax).
+        use chrono::TimeZone;
+        let (_dir, store, search) = hybrid_fixture();
+        let mut jan = Memory::new(Galaxy::Codex, "chronology anchor january tenth".into());
+        jan.metadata.created_at = chrono::Utc.with_ymd_and_hms(2026, 1, 10, 12, 0, 0).unwrap();
+        let mut feb = Memory::new(Galaxy::Codex, "chronology anchor february tenth".into());
+        feb.metadata.created_at = chrono::Utc.with_ymd_and_hms(2026, 2, 10, 12, 0, 0).unwrap();
+        store.put(Galaxy::Codex, &jan).unwrap();
+        store.put(Galaxy::Codex, &feb).unwrap();
+        wm_memory::reindex::rebuild_index(&store, &search, &[]).unwrap();
+        let tool = default_search_tool(store.clone(), Some(search));
+        let mut ctx = Context::default();
+
+        let v = tool
+            .call(
+                &mut ctx,
+                json!({
+                    "query": "chronology anchor",
+                    "limit": 10,
+                    "since": "2026-02-01T00:00:00Z"
+                }),
+            )
+            .await
+            .unwrap();
+        assert_eq!(v["time_filter"]["applied"], true, "{v}");
+        assert_eq!(v["time_filter"]["basis"], "recorded");
+        assert!(
+            v["time_filter"]["since"]
+                .as_str()
+                .unwrap()
+                .starts_with("2026-02-01T00:00:00"),
+            "{v}"
+        );
+        let ids: Vec<String> = v["results"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|r| r["id"].as_str().map(str::to_string))
+            .collect();
+        assert!(ids.contains(&feb.metadata.id.to_string()), "{v}");
+        assert!(!ids.contains(&jan.metadata.id.to_string()), "{v}");
+        assert!(v["time_filter"]["filtered_out"].as_u64().unwrap() >= 1);
+
+        // Invalid bound: caller error, never a silent no-op.
+        let err = tool
+            .call(
+                &mut ctx,
+                json!({"query": "chronology anchor", "since": "not-a-date"}),
+            )
+            .await;
+        assert!(err.is_err());
     }
 
     #[test]

@@ -34,6 +34,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use wm_core::{CoreError, Galaxy, Result};
 
@@ -261,6 +262,63 @@ impl RecallConfig {
 }
 
 // ── Recall Engine ─────────────────────────────────────────────────────
+
+/// Which timestamp a [`RecallTimeFilter`] compares against.
+///
+/// `Recorded` uses `created_at` (the write clock). `Event` uses
+/// `event_time` when the caller declared one, falling back to
+/// `created_at` when unset — the fallback is never silent: callers
+/// disclose `event_time_basis: "not_tracked"` from memory metadata.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TimeBasis {
+    /// Compare against `created_at` (default).
+    #[default]
+    Recorded,
+    /// Compare against `event_time`, falling back to `created_at`.
+    Event,
+}
+
+/// Inclusive time window applied to recall results (9.3.2 S1).
+///
+/// Bounds are inclusive on both ends. An inactive filter (both bounds
+/// `None`) is a no-op and keeps the surface byte-identical.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RecallTimeFilter {
+    /// Inclusive lower bound.
+    pub since: Option<DateTime<Utc>>,
+    /// Inclusive upper bound.
+    pub until: Option<DateTime<Utc>>,
+    /// Timestamp basis.
+    pub basis: TimeBasis,
+}
+
+impl RecallTimeFilter {
+    /// True when at least one bound is set.
+    #[must_use]
+    pub fn is_active(&self) -> bool {
+        self.since.is_some() || self.until.is_some()
+    }
+
+    /// The timestamp this filter compares for `mem`.
+    #[must_use]
+    pub fn timestamp_for(&self, mem: &crate::memory::Memory) -> DateTime<Utc> {
+        match self.basis {
+            TimeBasis::Event => mem.metadata.event_time.unwrap_or(mem.metadata.created_at),
+            TimeBasis::Recorded => mem.metadata.created_at,
+        }
+    }
+
+    /// True when the memory's selected timestamp is within the window.
+    /// Inactive filters accept everything.
+    #[must_use]
+    pub fn accepts_memory(&self, mem: &crate::memory::Memory) -> bool {
+        if !self.is_active() {
+            return true;
+        }
+        let ts = self.timestamp_for(mem);
+        self.since.is_none_or(|s| ts >= s) && self.until.is_none_or(|u| ts <= u)
+    }
+}
 
 /// Hybrid recall engine combining BM25 + vector search.
 ///
@@ -970,6 +1028,40 @@ impl RecallEngine {
     ) -> Vec<RecallResult> {
         self.hybrid_search_with_disclosure(query, limit, galaxy_filter)
             .0
+    }
+
+    /// Hybrid search with an inclusive time window (9.3.2 S1).
+    ///
+    /// v1 semantics: post-fusion filter over the returned candidate set.
+    /// Callers wanting headroom should pass a larger `limit` (the tool
+    /// layer passes `limit * 2`). Rows whose memory cannot be resolved
+    /// are dropped and counted in `filtered_out` — an undated row cannot
+    /// be proven in-range, so the filter fails closed. Returns
+    /// `(results, conformal, filtered_out)`. An inactive filter leaves
+    /// the surface byte-identical to [`Self::hybrid_search_with_disclosure`].
+    pub fn hybrid_search_filtered(
+        &self,
+        query: &str,
+        limit: usize,
+        galaxy_filter: Option<Galaxy>,
+        filter: Option<&RecallTimeFilter>,
+    ) -> (
+        Vec<RecallResult>,
+        Option<crate::recall_conformal::ConformalSetInfo>,
+        usize,
+    ) {
+        let (mut results, conformal) =
+            self.hybrid_search_with_disclosure(query, limit, galaxy_filter);
+        let Some(filter) = filter.filter(|f| f.is_active()) else {
+            return (results, conformal, 0);
+        };
+        let before = results.len();
+        results.retain(|r| {
+            self.find_memory_anywhere(r.memory_id)
+                .is_some_and(|mem| filter.accepts_memory(&mem))
+        });
+        let dropped = before - results.len();
+        (results, conformal, dropped)
     }
 
     /// Hybrid search plus the V8 S8 disclosure: `(results, conformal)`.
@@ -2357,6 +2449,100 @@ mod tests {
         )
         .unwrap();
         (tmp, engine)
+    }
+
+    #[test]
+    fn time_filter_recorded_basis_inclusive_bounds() {
+        use chrono::TimeZone;
+        let (_tmp, engine) = setup_engine();
+        let mk = |day: u32, txt: &str| {
+            let mut m = Memory::new(Galaxy::Codex, txt.to_string()).with_importance(0.5);
+            m.metadata.created_at = Utc.with_ymd_and_hms(2026, 1, day, 12, 0, 0).unwrap();
+            m
+        };
+        let jan10 = mk(10, "chronology anchor january tenth");
+        let jan20 = mk(20, "chronology anchor january twentieth");
+        engine.store_with_embedding(Galaxy::Codex, &jan10).unwrap();
+        engine.store_with_embedding(Galaxy::Codex, &jan20).unwrap();
+
+        let window = RecallTimeFilter {
+            since: Some(Utc.with_ymd_and_hms(2026, 1, 10, 0, 0, 0).unwrap()),
+            until: Some(Utc.with_ymd_and_hms(2026, 1, 20, 23, 59, 59).unwrap()),
+            basis: TimeBasis::Recorded,
+        };
+        let (res, _c, dropped) =
+            engine.hybrid_search_filtered("chronology anchor", 10, None, Some(&window));
+        assert!(
+            res.iter().any(|r| r.memory_id == jan10.metadata.id),
+            "{res:?}"
+        );
+        assert!(
+            res.iter().any(|r| r.memory_id == jan20.metadata.id),
+            "{res:?}"
+        );
+        assert_eq!(dropped, 0);
+
+        let feb = RecallTimeFilter {
+            since: Some(Utc.with_ymd_and_hms(2026, 2, 1, 0, 0, 0).unwrap()),
+            until: None,
+            basis: TimeBasis::Recorded,
+        };
+        let (res2, _c2, dropped2) =
+            engine.hybrid_search_filtered("chronology anchor", 10, None, Some(&feb));
+        assert!(
+            res2.is_empty(),
+            "feb window must exclude january rows: {res2:?}"
+        );
+        assert!(dropped2 >= 2, "dropped={dropped2}");
+
+        // Inactive filter is byte-identical (no drops).
+        let inactive = RecallTimeFilter::default();
+        let (res3, _c3, dropped3) =
+            engine.hybrid_search_filtered("chronology anchor", 10, None, Some(&inactive));
+        assert!(!res3.is_empty());
+        assert_eq!(dropped3, 0);
+    }
+
+    #[test]
+    fn time_filter_event_basis_falls_back_to_recorded() {
+        use chrono::TimeZone;
+        let (_tmp, engine) = setup_engine();
+        let mut mem =
+            Memory::new(Galaxy::Codex, "event basis probe anchor".into()).with_importance(0.5);
+        mem.metadata.created_at = Utc.with_ymd_and_hms(2026, 1, 10, 12, 0, 0).unwrap();
+        mem.metadata.event_time = Some(Utc.with_ymd_and_hms(2026, 2, 10, 12, 0, 0).unwrap());
+        engine.store_with_embedding(Galaxy::Codex, &mem).unwrap();
+
+        let feb_window = |basis: TimeBasis| RecallTimeFilter {
+            since: Some(Utc.with_ymd_and_hms(2026, 2, 1, 0, 0, 0).unwrap()),
+            until: Some(Utc.with_ymd_and_hms(2026, 2, 28, 23, 59, 59).unwrap()),
+            basis,
+        };
+
+        // Event basis: event_time (Feb 10) is inside the Feb window.
+        let (event_res, _c, _d) = engine.hybrid_search_filtered(
+            "event basis probe",
+            10,
+            None,
+            Some(&feb_window(TimeBasis::Event)),
+        );
+        assert!(
+            event_res.iter().any(|r| r.memory_id == mem.metadata.id),
+            "event basis must match the declared event_time: {event_res:?}"
+        );
+
+        // Recorded basis: created_at (Jan 10) is outside the Feb window.
+        let (recorded_res, _c2, dropped) = engine.hybrid_search_filtered(
+            "event basis probe",
+            10,
+            None,
+            Some(&feb_window(TimeBasis::Recorded)),
+        );
+        assert!(
+            recorded_res.is_empty(),
+            "recorded basis must exclude the january row: {recorded_res:?}"
+        );
+        assert!(dropped >= 1);
     }
 
     #[test]
