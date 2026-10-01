@@ -14,33 +14,29 @@ This package installs and runs the official `wm` binary from the
 (checksum-verified at install time) so an MCP client can launch it
 without a manual download step.
 
-## Try it without installing (hosted read-only lane)
+## Quick start (no install step)
 
-The evaluation lane runs at `https://mcp.whitemagic.dev/mcp`
-(streamable-http; keyless discovery, free evaluation keys, no SLA):
+The local, full-write path straight from npm — the package downloads and
+checksum-verifies the official `wm` binary on first run:
 
 ```bash
-claude mcp add whitemagic-mcp --transport http https://mcp.whitemagic.dev/mcp
+npx -y whitemagic-mcp serve --profile curated
 ```
 
-The npm package remains the local, full-write path.
+MCP client config:
 
-## Use
-
-Point any MCP client (Claude Desktop, Cursor, Codex, Gemini CLI,
-opencode) at:
 ```json
 {
   "mcpServers": {
     "whitemagic": {
-      "command": "whitemagic-mcp",
-      "args": ["serve", "--profile", "curated"]
+      "command": "npx",
+      "args": ["-y", "whitemagic-mcp", "serve", "--profile", "curated"]
     }
   }
 }
 ```
 
-Or try it directly:
+Or try the binary directly:
 
 ```bash
 npx whitemagic-mcp --version   # wm 9.3.2
@@ -51,6 +47,25 @@ The binary is cached under `~/.cache/whitemagic/bin/<release-tag>/`
 (respects `XDG_CACHE_HOME`); the package version's major tracks the
 release tag (the `v9` tag line). Pin a different release with
 `WHITEMAGIC_RELEASE`.
+
+## Try it without installing (hosted read-only lane)
+
+The evaluation lane runs at `https://mcp.whitemagic.dev/mcp`
+(streamable-http; no SLA). Free paths, no account needed:
+
+- keyless discovery (`initialize` / `tools/list`) for directory probes;
+- an anonymous free tier — 3 calls/day per client IP, no key and no header;
+- instant evaluation keys at https://mcp.whitemagic.dev/keys
+  (50 recalls/day, email optional);
+- OAuth 2.1 for MCP clients that speak it.
+
+```bash
+claude mcp add whitemagic-mcp --transport http https://mcp.whitemagic.dev/mcp
+```
+
+Beyond the free paths, metered calls settle per call via x402 (USDC on
+Base), keyless — no account, no invoice. The npm package remains the
+local, full-write path.
 
 ## Platforms
 
