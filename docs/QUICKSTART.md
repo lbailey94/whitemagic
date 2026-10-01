@@ -2,7 +2,7 @@
 
 **Languages:** **English** · [Español](QUICKSTART.es.md) · [Português (BR)](QUICKSTART.pt-BR.md) · [Français](QUICKSTART.fr.md) · [Deutsch](QUICKSTART.de.md) · [हिन्दी](QUICKSTART.hi.md) · [Indonesia](QUICKSTART.id.md) · [العربية](QUICKSTART.ar.md) · [Kiswahili](QUICKSTART.sw.md) · [नेपाली](QUICKSTART.ne.md)
 
-**Version**: 9.3.3
+**Version**: 9.3.4
 **Install path**: Linux x86-64, Linux arm64, macOS arm64 + x86_64, and
 Windows x86_64 — install-gated. Linux ships fully static (musl) builds
 selected automatically by the installer (a dynamically linked build remains
@@ -74,7 +74,7 @@ mkdir -p ~/.local/bin && cp target/release/wm ~/.local/bin/
 ## 2. Verify and activate
 
 ```bash
-wm --version   # wm 9.3.3
+wm --version   # wm 9.3.4
 wm grimoire    # guided first-run check; ends by naming the activation step
 ```
 

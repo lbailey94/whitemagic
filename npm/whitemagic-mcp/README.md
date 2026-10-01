@@ -39,7 +39,7 @@ MCP client config:
 Or try the binary directly:
 
 ```bash
-npx whitemagic-mcp --version   # wm 9.3.3
+npx whitemagic-mcp --version   # wm 9.3.4
 npx whitemagic-mcp doctor      # environment health check
 ```
 
