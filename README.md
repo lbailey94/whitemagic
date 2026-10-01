@@ -1,5 +1,7 @@
 # WhiteMagic
 
+[![whitemagic.agent](https://dmv.agentcommunity.org/badge?id=UNIT-FA2-46DL)](https://dmv.agentcommunity.org/c/UNIT-FA2-46DL/whitemagic)
+
 A local-first memory layer for MCP agents.
 
 WhiteMagic gives an AI agent durable project memory over MCP: record

@@ -189,7 +189,7 @@ enum Commands {
     /// Configure an MCP client to use WhiteMagic (JSON, JSONC, and TOML
     /// configs can be patched; the change is always shown first)
     Setup {
-        /// Client id: opencode | claude | cursor | windsurf | codex (omit to list)
+        /// Client id: opencode | claude | cursor | windsurf | codex | muse | openclaw (omit to list)
         client: Option<String>,
         /// Apply the change (JSON/JSONC/TOML; timestamped backup first)
         #[arg(long)]
@@ -1758,7 +1758,7 @@ fn run() -> anyhow::Result<()> {
                 }
                 Some(id) => match wm_mcp::setup::find(&id) {
                     None => anyhow::bail!(
-                        "unknown client '{id}' (expected: opencode, claude, cursor, windsurf, codex, muse)"
+                        "unknown client '{id}' (expected: opencode, claude, cursor, windsurf, codex, muse, openclaw)"
                     ),
                     Some(spec) => {
                         if remove {

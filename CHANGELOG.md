@@ -5,6 +5,17 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **OpenClaw client support** — `wm setup openclaw` and `wm connect` wire
+  `~/.openclaw/openclaw.json` (`mcp.servers.whitemagic`, stdio). The writer
+  merges into existing JSON5, preserves comments, creates missing intermediate
+  objects, and `--remove` reverses it with a timestamped backup. Only the known
+  stdio fields are written because OpenClaw's config schema rejects unknown
+  keys; `wm connect` reconciles stale entries at entry level like every other
+  client.
+
 ## [9.3.0] — 2026-09-29
 
 ### Added

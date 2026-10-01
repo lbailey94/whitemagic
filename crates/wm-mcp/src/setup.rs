@@ -28,6 +28,10 @@ pub enum Kind {
     /// Muse Code `settings.json` (`mcpServers` plus a mandatory
     /// `schema_version: 1` root member and a per-server `type: "stdio"`).
     MuseJson,
+    /// OpenClaw `~/.openclaw/openclaw.json` (JSON5; `mcp.servers.<name>`).
+    /// The stdio transport is inferred from `command`; the config schema
+    /// rejects unknown keys, so the entry carries nothing else.
+    OpenclawJson,
 }
 
 /// A supported client.
@@ -86,6 +90,12 @@ pub fn specs() -> Vec<ClientSpec> {
             label: "Muse Code",
             config_path: xdg_config().join("muse/settings.json"),
             kind: Kind::MuseJson,
+        },
+        ClientSpec {
+            id: "openclaw",
+            label: "OpenClaw",
+            config_path: home().join(".openclaw/openclaw.json"),
+            kind: Kind::OpenclawJson,
         },
     ]
 }
@@ -224,6 +234,16 @@ fn muse_entry(exe: &Path) -> Value {
     })
 }
 
+/// The OpenClaw `mcp.servers.<name>` entry. OpenClaw infers the stdio
+/// transport from the presence of `command` and its config schema rejects
+/// unknown keys, so the entry carries nothing else.
+fn openclaw_entry(exe: &Path) -> Value {
+    json!({
+        "command": exe.display().to_string(),
+        "args": serve_args(),
+    })
+}
+
 /// The OpenCode JSONC `mcp.<name>` entry (command is an array).
 fn opencode_entry(exe: &Path) -> Value {
     let mut command = vec![exe.display().to_string()];
@@ -251,6 +271,10 @@ pub fn proposal(spec: &ClientSpec, exe: &Path) -> String {
         .to_string(),
         Kind::OpencodeJsonc => json!({
             "mcp": { "whitemagic": opencode_entry(exe) }
+        })
+        .to_string(),
+        Kind::OpenclawJson => json!({
+            "mcp": { "servers": { "whitemagic": openclaw_entry(exe) } }
         })
         .to_string(),
         Kind::CodexToml => {
@@ -905,6 +929,212 @@ pub fn write_opencode_jsonc(
     ))
 }
 
+// ── OpenClaw JSON5 ─────────────────────────────────────────────────────────
+//
+// OpenClaw reads `~/.openclaw/openclaw.json` as JSON5 and validates it
+// strictly: an unknown key makes the Gateway refuse to start. The writer
+// therefore touches only `mcp.servers.whitemagic` with the known stdio
+// fields, merges into whatever else the file carries, and preserves
+// comments (the same structural editor the OpenCode JSONC path uses,
+// generalized to a member path).
+
+/// Structural upsert of a member path (`["mcp","servers","whitemagic"]`) in a
+/// JSONC/JSON5 document, creating intermediate objects as needed. Comments
+/// elsewhere survive; the caller verifies the round-trip.
+fn jsonc_upsert_path(text: &str, path: &[&str], value: &Value) -> anyhow::Result<String> {
+    let root_open = skip_trivia(text, 0);
+    if text.as_bytes().get(root_open) != Some(&b'{') {
+        anyhow::bail!("config root is not an object");
+    }
+    let root_close = matching_delim(text, root_open, b'{', b'}')
+        .ok_or_else(|| anyhow::anyhow!("unbalanced braces in config"))?;
+    upsert_path_in(text, root_open, root_close, path, value)
+}
+
+fn upsert_path_in(
+    text: &str,
+    open: usize,
+    close: usize,
+    path: &[&str],
+    value: &Value,
+) -> anyhow::Result<String> {
+    let (key, rest) = path
+        .split_first()
+        .ok_or_else(|| anyhow::anyhow!("empty member path"))?;
+    if rest.is_empty() {
+        return Ok(upsert_member(text, open, close, key, value));
+    }
+    if let Some((vs, ve)) = find_member(text, open, close, key) {
+        if text.as_bytes().get(vs) != Some(&b'{') {
+            anyhow::bail!("existing \"{key}\" is not an object — refusing to overwrite it");
+        }
+        upsert_path_in(text, vs, ve, rest, value)
+    } else {
+        let nested = nested_value(rest, value);
+        Ok(upsert_member(text, open, close, key, &nested))
+    }
+}
+
+/// `{rest[0]: {rest[1]: … value}}` for path creation.
+fn nested_value(path: &[&str], value: &Value) -> Value {
+    match path.split_first() {
+        None => value.clone(),
+        Some((key, rest)) => {
+            let mut obj = serde_json::Map::new();
+            obj.insert((*key).to_string(), nested_value(rest, value));
+            Value::Object(obj)
+        }
+    }
+}
+
+/// Structural removal of a member path; `None` when the path is absent.
+fn jsonc_remove_path(text: &str, path: &[&str]) -> anyhow::Result<Option<String>> {
+    let root_open = skip_trivia(text, 0);
+    if text.as_bytes().get(root_open) != Some(&b'{') {
+        anyhow::bail!("config root is not an object");
+    }
+    let root_close = matching_delim(text, root_open, b'{', b'}')
+        .ok_or_else(|| anyhow::anyhow!("unbalanced braces in config"))?;
+    remove_path_in(text, root_open, root_close, path)
+}
+
+fn remove_path_in(
+    text: &str,
+    open: usize,
+    close: usize,
+    path: &[&str],
+) -> anyhow::Result<Option<String>> {
+    let (key, rest) = path
+        .split_first()
+        .ok_or_else(|| anyhow::anyhow!("empty member path"))?;
+    let Some((vs, ve)) = find_member(text, open, close, key) else {
+        return Ok(None);
+    };
+    if rest.is_empty() {
+        return Ok(remove_member(text, open, close, key));
+    }
+    if text.as_bytes().get(vs) != Some(&b'{') {
+        anyhow::bail!("existing \"{key}\" is not an object");
+    }
+    remove_path_in(text, vs, ve, rest)
+}
+
+/// Patch OpenClaw's `~/.openclaw/openclaw.json` (`mcp.servers.whitemagic`),
+/// preserving comments and unrelated settings.
+///
+/// # Errors
+/// Any IO or parse failure; the original file is never modified on error.
+pub fn write_openclaw_json(
+    spec: &ClientSpec,
+    exe: &Path,
+) -> anyhow::Result<(String, Option<PathBuf>)> {
+    if spec.kind != Kind::OpenclawJson {
+        anyhow::bail!("write_openclaw_json called with the wrong config kind");
+    }
+    let desired = openclaw_entry(exe);
+    let existing = spec.config_path.exists();
+
+    if !existing {
+        ensure_parent(&spec.config_path)?;
+        let doc = json!({ "mcp": { "servers": { "whitemagic": desired } } });
+        let rendered = serde_json::to_string_pretty(&doc)?;
+        std::fs::write(&spec.config_path, format!("{rendered}\n"))?;
+        let verify = std::fs::read_to_string(&spec.config_path)?;
+        parse_jsonc(&verify)
+            .map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
+        return Ok((format!("created {}", spec.config_path.display()), None));
+    }
+
+    let text = std::fs::read_to_string(&spec.config_path)?;
+    let parsed = parse_jsonc(&text).map_err(|e| {
+        anyhow::anyhow!(
+            "existing config is not parseable as JSON/JSONC ({}): {e}",
+            spec.config_path.display()
+        )
+    })?;
+
+    let mut merged = parsed;
+    let root = merged
+        .as_object_mut()
+        .ok_or_else(|| anyhow::anyhow!("config root is not an object"))?;
+    let mcp = root
+        .entry("mcp")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .ok_or_else(|| anyhow::anyhow!("existing \"mcp\" is not an object"))?;
+    let servers = mcp
+        .entry("servers")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .ok_or_else(|| anyhow::anyhow!("existing \"mcp.servers\" is not an object"))?;
+    if servers.get("whitemagic") == Some(&desired) {
+        return Ok(("already configured".to_string(), None));
+    }
+    servers.insert("whitemagic".to_string(), desired.clone());
+
+    let edited = if has_comments(&text) {
+        jsonc_upsert_path(&text, &["mcp", "servers", "whitemagic"], &desired)?
+    } else {
+        format!("{}\n", serde_json::to_string_pretty(&merged)?)
+    };
+
+    let check = parse_jsonc(&edited)
+        .map_err(|e| anyhow::anyhow!("internal error: edited config does not parse: {e}"))?;
+    if check != merged {
+        anyhow::bail!("internal error: edited config does not round-trip to the intended value");
+    }
+
+    let backup = create_backup(&spec.config_path)?;
+    std::fs::write(&spec.config_path, &edited)?;
+    let verify = std::fs::read_to_string(&spec.config_path)?;
+    parse_jsonc(&verify).map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
+
+    Ok((
+        format!("updated {}", spec.config_path.display()),
+        Some(backup),
+    ))
+}
+
+fn remove_openclaw_json(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
+    let text = std::fs::read_to_string(&spec.config_path)?;
+    let parsed = parse_jsonc(&text).map_err(|e| {
+        anyhow::anyhow!(
+            "existing config is not parseable as JSON/JSONC ({}): {e}",
+            spec.config_path.display()
+        )
+    })?;
+    let mut merged = parsed;
+    let present = merged
+        .get_mut("mcp")
+        .and_then(Value::as_object_mut)
+        .and_then(|mcp| mcp.get_mut("servers"))
+        .and_then(Value::as_object_mut)
+        .and_then(|servers| servers.remove("whitemagic"))
+        .is_some();
+    if !present {
+        return Ok(("not configured".to_string(), None));
+    }
+    let edited = if has_comments(&text) {
+        jsonc_remove_path(&text, &["mcp", "servers", "whitemagic"])?.ok_or_else(|| {
+            anyhow::anyhow!("internal error: entry present but not found structurally")
+        })?
+    } else {
+        format!("{}\n", serde_json::to_string_pretty(&merged)?)
+    };
+    let check = parse_jsonc(&edited)
+        .map_err(|e| anyhow::anyhow!("internal error: edited config does not parse: {e}"))?;
+    if check != merged {
+        anyhow::bail!("internal error: edited config does not round-trip to the intended value");
+    }
+    let backup = backup_and_write(spec, &edited)?;
+    let verify = std::fs::read_to_string(&spec.config_path)?;
+    parse_jsonc(&verify).map_err(|e| anyhow::anyhow!("written config failed validation: {e}"))?;
+    Ok((
+        format!("removed from {}", spec.config_path.display()),
+        Some(backup),
+    ))
+}
+
 // ── Codex TOML ─────────────────────────────────────────────────────────────
 
 fn codex_entry(exe: &Path) -> toml_edit::Table {
@@ -1006,6 +1236,7 @@ pub fn write(spec: &ClientSpec, exe: &Path) -> anyhow::Result<(String, Option<Pa
         Kind::OpencodeJsonc => write_opencode_jsonc(spec, exe),
         Kind::CodexToml => write_codex_toml(spec, exe),
         Kind::MuseJson => write_muse_json(spec, exe),
+        Kind::OpenclawJson => write_openclaw_json(spec, exe),
     }
 }
 
@@ -1024,6 +1255,7 @@ pub fn remove(spec: &ClientSpec) -> anyhow::Result<(String, Option<PathBuf>)> {
         Kind::McpServersJson | Kind::MuseJson => remove_mcp_servers_json(spec),
         Kind::OpencodeJsonc => remove_opencode_jsonc(spec),
         Kind::CodexToml => remove_codex_toml(spec),
+        Kind::OpenclawJson => remove_openclaw_json(spec),
     }
 }
 
@@ -1187,6 +1419,10 @@ pub fn entry_matches(spec: &ClientSpec, exe: &Path) -> bool {
             .ok()
             .and_then(|t| parse_jsonc(&t).ok())
             .is_some_and(|v| v["mcp"]["whitemagic"] == opencode_entry(exe)),
+        Kind::OpenclawJson => std::fs::read_to_string(&spec.config_path)
+            .ok()
+            .and_then(|t| parse_jsonc(&t).ok())
+            .is_some_and(|v| v["mcp"]["servers"]["whitemagic"] == openclaw_entry(exe)),
         Kind::CodexToml => std::fs::read_to_string(&spec.config_path)
             .ok()
             .and_then(|t| t.parse::<toml_edit::DocumentMut>().ok())
@@ -1463,6 +1699,109 @@ mod tests {
         let v2: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert!(v2["mcpServers"].get("whitemagic").is_none());
         assert_eq!(v2["schema_version"], 1, "remove keeps the root schema");
+    }
+
+    #[test]
+    fn openclaw_entry_uses_stdio_shape() {
+        let exe = Path::new("/opt/wm");
+        let p: Value = serde_json::from_str(&proposal(
+            &spec(Kind::OpenclawJson, PathBuf::from("/tmp/x")),
+            exe,
+        ))
+        .unwrap();
+        let entry = &p["mcp"]["servers"]["whitemagic"];
+        assert_eq!(entry["command"], "/opt/wm");
+        assert_eq!(entry["args"][1], "--profile");
+        assert!(
+            entry.get("type").is_none(),
+            "OpenClaw rejects unknown keys; stdio is inferred from command"
+        );
+    }
+
+    #[test]
+    fn openclaw_json_merges_and_preserves_comments() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("openclaw/openclaw.json");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(
+            &path,
+            "{\n  // gateway config\n  \"agents\": { \"defaults\": { \"workspace\": \"~/.openclaw/workspace\" } },\n  \"mcp\": { \"servers\": { \"other\": { \"url\": \"https://example.invalid/mcp\" } } }\n}\n",
+        )
+        .unwrap();
+        let spec = spec(Kind::OpenclawJson, path.clone());
+        let exe = Path::new("/opt/wm");
+
+        let (msg, backup) = write(&spec, exe).unwrap();
+        assert!(msg.contains("updated"), "{msg}");
+        assert!(backup.unwrap().exists());
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("// gateway config"), "comment lost: {text}");
+        let v = parse_jsonc(&text).unwrap();
+        assert_eq!(
+            v["agents"]["defaults"]["workspace"],
+            "~/.openclaw/workspace"
+        );
+        assert_eq!(
+            v["mcp"]["servers"]["other"]["url"],
+            "https://example.invalid/mcp"
+        );
+        assert_eq!(v["mcp"]["servers"]["whitemagic"]["command"], "/opt/wm");
+        assert!(entry_matches(&spec, exe));
+
+        let (msg2, backup2) = write(&spec, exe).unwrap();
+        assert_eq!(msg2, "already configured");
+        assert!(backup2.is_none());
+
+        let (msg3, _) = remove(&spec).unwrap();
+        assert!(msg3.contains("removed"), "{msg3}");
+        let v2 = parse_jsonc(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert!(v2["mcp"]["servers"].get("whitemagic").is_none());
+        assert_eq!(
+            v2["mcp"]["servers"]["other"]["url"],
+            "https://example.invalid/mcp"
+        );
+        assert_eq!(remove(&spec).unwrap().0, "not configured");
+    }
+
+    #[test]
+    fn openclaw_json_creates_nested_path_in_missing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("openclaw/openclaw.json");
+        let spec = spec(Kind::OpenclawJson, path.clone());
+        let (msg, backup) = write(&spec, Path::new("/opt/wm")).unwrap();
+        assert!(msg.contains("created"), "{msg}");
+        assert!(backup.is_none());
+        let v = parse_jsonc(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(v["mcp"]["servers"]["whitemagic"]["command"], "/opt/wm");
+    }
+
+    #[test]
+    fn openclaw_json_creates_missing_intermediate_objects_with_comments() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("openclaw/openclaw.json");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "{\n  // keep\n  \"agents\": {}\n}\n").unwrap();
+        let spec = spec(Kind::OpenclawJson, path.clone());
+        write(&spec, Path::new("/opt/wm")).unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("// keep"), "{text}");
+        let v = parse_jsonc(&text).unwrap();
+        assert_eq!(v["mcp"]["servers"]["whitemagic"]["args"][0], "serve");
+    }
+
+    #[test]
+    fn openclaw_json_refuses_non_object_servers() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("openclaw/openclaw.json");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, r#"{"mcp": {"servers": 3}}"#).unwrap();
+        let spec = spec(Kind::OpenclawJson, path.clone());
+        let err = write(&spec, Path::new("/opt/wm")).unwrap_err();
+        assert!(err.to_string().contains("not an object"), "{err}");
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            r#"{"mcp": {"servers": 3}}"#
+        );
     }
 
     #[test]
