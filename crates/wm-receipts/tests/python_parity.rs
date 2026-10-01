@@ -42,6 +42,40 @@ fn python_available() -> bool {
         .is_ok_and(|output| output.status.success())
 }
 
+/// Optional evidence writer: when `WM_RECEIPTS_ACCEPTANCE_DIR` is set, each
+/// parity test records the bundle plus both verifier verdicts there (the
+/// acceptance-run artifact; no-op otherwise).
+fn acceptance_dir() -> Option<std::path::PathBuf> {
+    let dir = std::env::var("WM_RECEIPTS_ACCEPTANCE_DIR").ok()?;
+    if dir.is_empty() {
+        return None;
+    }
+    let path = std::path::PathBuf::from(dir);
+    std::fs::create_dir_all(&path).ok()?;
+    Some(path)
+}
+
+fn write_acceptance(
+    dir: Option<&std::path::Path>,
+    name: &str,
+    bundle: &Value,
+    rust: &wm_receipts::verify::VerifyOutcome,
+    python: &Value,
+) {
+    let Some(dir) = dir else {
+        return;
+    };
+    let write = |file: String, value: &Value| {
+        let _ = std::fs::write(
+            dir.join(file),
+            serde_json::to_vec_pretty(value).unwrap_or_default(),
+        );
+    };
+    write(format!("{name}-bundle.json"), bundle);
+    write(format!("rust-verify-{name}.json"), &rust.to_value());
+    write(format!("python-verify-{name}.json"), python);
+}
+
 fn key() -> ReceiptKey {
     ReceiptKey::from_seed([7u8; 32])
 }
@@ -112,6 +146,13 @@ fn python_reference_verifies_wm_session_bundle_trusted() {
         rust.verdict,
         verdict["verdict"].as_str().expect("verdict str")
     );
+    write_acceptance(
+        acceptance_dir().as_deref(),
+        "session",
+        &bundle,
+        &rust,
+        &verdict,
+    );
 }
 
 #[test]
@@ -136,7 +177,8 @@ fn python_reference_verifies_wm_karma_head_bundle_trusted() {
         },
     )
     .expect("karma bundle");
-    assert!(verify_bundle(&bundle, false).is_trusted());
+    let rust = verify_bundle(&bundle, false);
+    assert!(rust.is_trusted(), "rust verdict: {rust:?}");
 
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("karma-bundle.json");
@@ -158,6 +200,13 @@ fn python_reference_verifies_wm_karma_head_bundle_trusted() {
     );
     let verdict: Value = serde_json::from_slice(&output.stdout).expect("verdict json");
     assert_eq!(verdict["verdict"], "TRUSTED", "python verdict: {verdict}");
+    write_acceptance(
+        acceptance_dir().as_deref(),
+        "karma",
+        &bundle,
+        &rust,
+        &verdict,
+    );
 }
 
 #[test]
@@ -202,7 +251,8 @@ fn python_reference_verifies_wm_governed_dispatch_bundle_trusted() {
         },
     )
     .expect("governed bundle");
-    assert!(verify_bundle(&bundle, false).is_trusted());
+    let rust = verify_bundle(&bundle, false);
+    assert!(rust.is_trusted(), "rust verdict: {rust:?}");
 
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("governed-bundle.json");
@@ -224,6 +274,13 @@ fn python_reference_verifies_wm_governed_dispatch_bundle_trusted() {
     );
     let verdict: Value = serde_json::from_slice(&output.stdout).expect("verdict json");
     assert_eq!(verdict["verdict"], "TRUSTED", "python verdict: {verdict}");
+    write_acceptance(
+        acceptance_dir().as_deref(),
+        "governed",
+        &bundle,
+        &rust,
+        &verdict,
+    );
 }
 
 #[test]

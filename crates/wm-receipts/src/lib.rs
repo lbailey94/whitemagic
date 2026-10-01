@@ -1,7 +1,7 @@
 //! WM receipts core — continuity-receipt emission, verification, and the WM
 //! bundle profiles (session receipts, karma-chain-head attestations).
 //!
-//! Wire format: `continuity-receipt/0.2`. Canonicalization and verification
+//! Wire format: `continuity-receipt/0.5`. Canonicalization and verification
 //! are delegated to the independent `continuity-receipt` Rust crate so WM
 //! emission and the Python reference share one byte-exact rule. This crate is
 //! local-only: no network, local keys, standard bundles any CR verifier reads.

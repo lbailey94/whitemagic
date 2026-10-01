@@ -1,4 +1,4 @@
-//! WM bundle profiles: the honest mapping from WM evidence onto CR 0.2
+//! WM bundle profiles: the honest mapping from WM evidence onto CR 0.5
 //! record types.
 //!
 //! Two profiles ship in S1 (see `planning/private/RECEIPTS_S1_SCOPE_2026-09-22.md`):
@@ -7,13 +7,14 @@
 //!   `delivery.attestation` → `task.termination`. Binds the session mandate,
 //!   the emission decision, the delivered turn evidence, and the stop.
 //! - **karma_head** — the flagship: attests the karma-chain **head** (entry
-//!   count + merkle root + head digest), never individual events. The emitter
+//!   count + merkle root + head digest), never individual events, as a
+//!   `state.commitment` record (`state_kind: karma-chain`). The emitter
 //!   refuses to attest a chain that fails its integrity check.
 //!
-//! `task.execution` is deliberately unused: its required `sandbox_class` enum
-//! has no honest value for an unconfined local emission (filed as CR spec
-//! feedback, scope doc §5). Until a `local`/`process` value exists, evidence
-//! rides `delivery.attestation`.
+//! The governed-dispatch profile (S2) records `task.execution` with the
+//! honest `sandbox_class: "none"` — WM dispatches run without kernel
+//! confinement by default — and binds the pass token commitment to the
+//! dispatch and its result.
 
 use chrono::{Duration, SecondsFormat, Utc};
 use serde_json::{Value, json};
@@ -27,10 +28,11 @@ pub const POLICY_VERSION: &str = concat!("wm-", env!("CARGO_PKG_VERSION"), "/rec
 
 /// Governance class recorded in `session.pass.created.mandala_class`.
 ///
-/// This is a *class label*: WM's local dispatch seam is the lite governance
-/// class; `gate_id` names the real issuer (`wm-local:<store>`). CR 0.2 has no
-/// `local` class — filed as spec feedback.
-pub const WM_MANDALA_CLASS: &str = "gate-lite";
+/// WM's S1 profiles are local emissions, not Mandala-gated dispatches: CR 0.5
+/// added the honest `local` class, and `gate_id` names the real issuer
+/// (`wm-local:<store>`). The S2 governed-dispatch profile records the class of
+/// the actual gate-lite pass it verified.
+pub const WM_MANDALA_CLASS: &str = "local";
 
 /// The model/actor that made the emission decision (spec `model` object).
 #[derive(Debug, Clone)]
@@ -165,6 +167,23 @@ pub fn gate_id_for_store(store_identity: &str) -> Result<String> {
     Ok(format!("wm-local:{}", hex.get(..16).unwrap_or(hex)))
 }
 
+/// Spec-form SHA-256 digest (`sha256:` + lowercase hex). The karma ledger
+/// stores bare hex; the 0.5 `state.commitment` verifier requires the prefix.
+fn sha256_value(value: &str) -> String {
+    match value.strip_prefix("sha256:") {
+        Some(hex) => format!("sha256:{hex}"),
+        None => format!("sha256:{value}"),
+    }
+}
+
+/// Spec-form Merkle digest (`merkle-sha256:` + lowercase hex).
+fn merkle_value(value: &str) -> String {
+    match value.strip_prefix("merkle-sha256:") {
+        Some(hex) => format!("merkle-sha256:{hex}"),
+        None => format!("merkle-sha256:{value}"),
+    }
+}
+
 /// Canonical digest of the turn evidence list.
 pub fn turn_digest(turns: &[TurnEvidence]) -> Result<String> {
     let values: Vec<Value> = turns.iter().map(TurnEvidence::to_value).collect();
@@ -288,15 +307,14 @@ pub fn karma_head_bundle(key: &ReceiptKey, input: &KarmaHeadInput) -> Result<Val
         &input.issued_at,
     )?;
     chain.add(
-        "delivery.attestation",
+        "state.commitment",
         json!({
-            "request_hash": digest_of(&json!({
-                "entry_count": input.entry_count,
-                "merkle_root": input.merkle_root,
-                "issued_at": input.issued_at,
-            }))?,
-            "response_hash": input.chain_head,
-            "counterparty": { "id": key.did() },
+            "state_kind": "karma-chain",
+            "scope": input.store_gate_id,
+            "count": input.entry_count,
+            "head_digest": sha256_value(&input.chain_head),
+            "merkle_root": input.merkle_root.as_deref().map(merkle_value),
+            "issued_at": input.issued_at,
         }),
         &input.issued_at,
     )?;
@@ -336,9 +354,10 @@ pub struct GovernedDispatchInput {
 
 /// Build a pass-governed dispatch bundle (S2).
 ///
-/// Chain: `session.pass.created` → `task.decision` →
+/// Chain: `session.pass.created` → `task.decision` → `task.execution` →
 /// `delivery.attestation` → `task.termination`, binding the pass token
-/// commitment (`pass_token_id`) to the dispatch and its result.
+/// commitment (`pass_token_id`) to the dispatch and its result. The execution
+/// record carries the honest `sandbox_class: "none"` (unconfined dispatch).
 pub fn governed_dispatch_bundle(key: &ReceiptKey, input: &GovernedDispatchInput) -> Result<Value> {
     let pass = &input.pass;
     let mandate_ref = digest_of(&json!({
@@ -367,7 +386,7 @@ pub fn governed_dispatch_bundle(key: &ReceiptKey, input: &GovernedDispatchInput)
             "policy_version": pass.policy_version,
             "mandate_ref": mandate_ref,
             "agent_id": pass.subject,
-            // Spec field (continuity-receipt/0.2 §4.1); until Mandala emits its
+            // Spec field (continuity-receipt/0.5 §4.1); until Mandala emits its
             // own pass id, the token commitment is the join key.
             "pass_token_id": pass.token_digest,
         }),
@@ -386,6 +405,21 @@ pub fn governed_dispatch_bundle(key: &ReceiptKey, input: &GovernedDispatchInput)
             },
             "decision": "allow",
             "policy_version": pass.policy_version,
+        }),
+        &input.issued_at,
+    )?;
+    chain.add(
+        "task.execution",
+        json!({
+            "tool_calls": [{
+                "name": input.route,
+                "args_hash": input.args_digest,
+                "result_hash": input.result_digest,
+                "denied": false,
+            }],
+            "egress": [],
+            "resources": { "cpu_ms": 0, "mem_peak_mb": 0, "disk_peak_mb": 0 },
+            "sandbox_class": "none",
         }),
         &input.issued_at,
     )?;
@@ -490,9 +524,10 @@ mod tests {
         let bundle = karma_head_bundle(&key(), &input).expect("bundle");
         let outcome = verify_bundle(&bundle, false);
         assert!(outcome.is_trusted(), "{:?}", outcome.to_value());
+        assert_eq!(bundle["receipts"][2]["type"], "state.commitment");
         assert_eq!(
-            bundle["receipts"][2]["body"]["response_hash"],
-            input.chain_head
+            bundle["receipts"][2]["body"]["head_digest"],
+            format!("sha256:{}", input.chain_head)
         );
     }
 
@@ -553,19 +588,21 @@ mod tests {
             bundle["receipts"][0]["body"]["pass_token_id"],
             input.pass.token_digest
         );
+        assert_eq!(bundle["receipts"][2]["type"], "task.execution");
+        assert_eq!(bundle["receipts"][2]["body"]["sandbox_class"], "none");
         assert_eq!(
-            bundle["receipts"][2]["body"]["counterparty"]["id"],
+            bundle["receipts"][3]["body"]["counterparty"]["id"],
             input.pass.gate_did
         );
         assert_eq!(
-            bundle["receipts"][2]["body"]["response_hash"],
+            bundle["receipts"][3]["body"]["response_hash"],
             input.result_digest
         );
-        assert_eq!(bundle["receipts"][3]["body"]["reason"], "completed");
+        assert_eq!(bundle["receipts"][4]["body"]["reason"], "completed");
 
         // Tampering with the bound result is caught.
         let mut tampered = bundle;
-        tampered["receipts"][2]["body"]["response_hash"] =
+        tampered["receipts"][3]["body"]["response_hash"] =
             json!(format!("sha256:{}", "00".repeat(32)));
         assert!(!verify_bundle(&tampered, false).is_trusted());
     }

@@ -297,7 +297,7 @@ enum Commands {
     },
     /// Continuity receipts: emit/verify/list/show local evidence bundles
     ///
-    /// Emission is local-only (no network): standard `continuity-receipt/0.2`
+    /// Emission is local-only (no network): standard `continuity-receipt/0.5`
     /// bundles signed with the store's receipt key. Karma-chain-head
     /// attestations make the local karma audit externally verifiable.
     Receipt {
@@ -888,7 +888,7 @@ fn parse_importance_arg(value: &str) -> Result<f64, String> {
 /// Subcommands for `wm receipt` — local continuity-receipt evidence.
 ///
 /// Emission is local-only (no network). `emit` signs a standard
-/// `continuity-receipt/0.2` bundle with the store's receipt key (see
+/// `continuity-receipt/0.5` bundle with the store's receipt key (see
 /// `WM_RECEIPT_KEY` / `WM_MESH_KEY` / `<store>/lmdb/.receipt_key`).
 #[derive(Subcommand)]
 enum ReceiptCommands {

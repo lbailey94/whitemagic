@@ -1,4 +1,4 @@
-//! Envelope emission, hash chaining, and signing for `continuity-receipt/0.2`.
+//! Envelope emission, hash chaining, and signing for `continuity-receipt/0.5`.
 //!
 //! Byte-exact rules (frozen by the reference implementation): the canonical
 //! view of a receipt is the object **excluding `sig`**; both `prev` links and
@@ -12,10 +12,10 @@ use crate::error::{ReceiptError, Result};
 use crate::keys::ReceiptKey;
 
 /// Spec id emitted by this implementation.
-pub const SPEC_ID: &str = "continuity-receipt/0.2";
+pub const SPEC_ID: &str = "continuity-receipt/0.5";
 
-/// Record types of spec 0.2.
-pub const RECORD_TYPES: [&str; 7] = [
+/// Record types of spec 0.5.
+pub const RECORD_TYPES: [&str; 11] = [
     "session.pass.created",
     "task.decision",
     "task.execution",
@@ -23,6 +23,10 @@ pub const RECORD_TYPES: [&str; 7] = [
     "task.termination",
     "settlement",
     "authority.succession",
+    "agreement.offer",
+    "agreement.accept",
+    "state.commitment",
+    "authority.grant",
 ];
 
 /// Required body fields per record type (spec §4).
@@ -59,6 +63,12 @@ pub fn required_fields(record_type: &str) -> Option<&'static [&'static str]> {
         "authority.succession" => {
             Some(&["from_authority", "to_authority", "effective_at", "reason"])
         }
+        "agreement.offer" => Some(&["offer_id", "offeree", "terms_hash", "valid_until", "nonce"]),
+        // 0.4+ carries the offer -> accept binding through the accept record
+        // itself (the accept must name the offeree).
+        "agreement.accept" => Some(&["offer_ref", "offer_id", "terms_hash", "offeree"]),
+        "state.commitment" => Some(&["state_kind", "scope", "count", "head_digest"]),
+        "authority.grant" => Some(&["grant_id", "principal", "agent", "scope", "granted_at"]),
         _ => None,
     }
 }

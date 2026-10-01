@@ -3,7 +3,7 @@
 //! Six routes over the `Galaxy::Receipts` evidence store:
 //! `receipts.emit` / `.verify` / `.list` / `.read` / `.disclose` / `.anchor`.
 //!
-//! Emission is local-only: spec `continuity-receipt/0.2`, Ed25519 under the
+//! Emission is local-only: spec `continuity-receipt/0.5`, Ed25519 under the
 //! resolved WM key (see `wm_receipts::keys`), stored as a Memory whose content
 //! is the standard bundle. Original bundles are never rewritten — disclosure
 //! produces a *variant* plus a separate disclosure map, and anchoring only
@@ -1608,13 +1608,17 @@ mod tests {
         assert_eq!(emitted["entry_count"], expected_count);
         assert_eq!(emitted["fully_deep"], true);
 
-        // The stored bundle's delivery record binds the attested head.
+        // The stored bundle's state commitment binds the attested head.
         let id = emitted["id"].as_str().expect("id").to_string();
         let read = ReceiptsReadTool::new(store.clone());
         let read_value = call(&read, json!({"id": id})).await;
         assert_eq!(
-            read_value["bundle"]["receipts"][2]["body"]["response_hash"],
-            expected_head
+            read_value["bundle"]["receipts"][2]["type"],
+            "state.commitment"
+        );
+        assert_eq!(
+            read_value["bundle"]["receipts"][2]["body"]["head_digest"],
+            format!("sha256:{expected_head}")
         );
     }
 
@@ -1747,7 +1751,12 @@ mod tests {
         assert_eq!(tag_value(&bundles[0].0, "kind:"), Some("governed"));
         assert!(verify_bundle(&bundles[0].1, false).is_trusted());
         assert_eq!(
-            bundles[0].1["receipts"][2]["body"]["response_hash"],
+            bundles[0].1["receipts"][2]["type"], "task.execution",
+            "the dispatch is recorded as an execution with honest confinement"
+        );
+        assert_eq!(bundles[0].1["receipts"][2]["body"]["sandbox_class"], "none");
+        assert_eq!(
+            bundles[0].1["receipts"][3]["body"]["response_hash"],
             digest_of(&output).expect("digest")
         );
         assert!(
