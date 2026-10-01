@@ -18,8 +18,8 @@ Usage:
     python3 scripts/longmemeval_bench.py [--max-questions N] [--binary PATH]
     python3 scripts/longmemeval_bench.py --max-questions 50  # quick subset
 
-Dataset path defaults to /home/lucas/Desktop/WHITEMAGIC/benchmarks/data/longmemeval_s
-Override with --dataset PATH.
+Dataset path defaults to the sibling benchmarks/data/longmemeval_s checkout.
+Override with --dataset PATH or LONGMEMEVAL_DATA.
 """
 
 from __future__ import annotations
@@ -53,7 +53,10 @@ from eval_protocol import (
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 
-DEFAULT_DATASET = "/home/lucas/Desktop/WHITEMAGIC/benchmarks/data/longmemeval_s"
+DEFAULT_DATASET = os.environ.get(
+    "LONGMEMEVAL_DATA",
+    os.path.join(os.path.dirname(REPO_ROOT), "benchmarks", "data", "longmemeval_s"),
+)
 DEFAULT_OUTPUT = os.path.join(REPO_ROOT, "benchmarks", "results")
 
 

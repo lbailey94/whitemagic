@@ -16,10 +16,15 @@ use wm_receipts::profiles::{
 };
 use wm_receipts::verify::verify_bundle;
 
-const CR_REPO_DEFAULT: &str = "/home/lucas/Desktop/continuity-receipt";
+/// No personal default path: the sibling checkout is opt-in via `WM_CR_REPO`
+/// so the acceptance run skips cleanly on machines without it.
+const CR_REPO_DEFAULT: &str = "";
 
 fn cr_repo() -> Option<String> {
     let repo = std::env::var("WM_CR_REPO").unwrap_or_else(|_| CR_REPO_DEFAULT.to_string());
+    if repo.is_empty() {
+        return None;
+    }
     if std::path::Path::new(&repo)
         .join("continuity_receipt")
         .is_dir()
