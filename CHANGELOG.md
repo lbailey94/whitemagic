@@ -5,6 +5,31 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Recall time-window filters** — `memory.search` / `memory.hybrid_recall`
+  accept `since` / `until` (RFC 3339 or epoch seconds) and `time_basis`
+  (`recorded` | `event`, falling back to `created_at` when no event time was
+  declared — never fabricated). The hybrid, episodic, and fts phases filter,
+  and the response discloses
+  `time_filter {since, until, basis, applied, filtered_out, phases}`.
+
+### Fixed
+- **LMDB map headroom** — the Unix default map size is now 16 GiB (sparse
+  ftruncate reservation) and the auto-grow ceiling 256 GiB; previously the
+  4 GiB ceiling meant a store like `vault` (2.4 GiB `data.mdb`) could never
+  grow past 4 GiB. `MapFull` at every commit site now carries the same
+  restart/auto-grow guidance as the `put` path (all sites route through
+  `ldb_commit_err`); `open_with_recovery` doubles the map at open time.
+- **Crystal authenticated owner access** — source helper requires an
+  authenticated owner; docs explain the helper.
+
+### Changed
+- **Bench privacy** — the LongMemEval-S dataset is no longer vendored
+  (sibling path + env override); personal paths dropped from test and bench
+  defaults.
+
 ## [9.3.1] — 2026-09-30
 
 ### Added
