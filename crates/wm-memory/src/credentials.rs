@@ -21,6 +21,18 @@ pub const ADVICE: &str = "keep the secret in a keyring (OS keychain, pass, syste
 /// (e.g. `["private_key_pem", "github_token"]`); empty means clean.
 #[must_use]
 pub fn credential_shaped_content(content: &str) -> Vec<&'static str> {
+    // Fast reject (9.3.3): every detector literal starts with one of these
+    // bytes ('-' PEM/BEGIN, 'A' AKIA, 'g' ghp_/gho_/github_pat_, 's' sk-,
+    // 'x' xox*, 'e' eyJ) or needs a ':' / '=' delimiter for the assignment
+    // shape. One linear byte scan replaces ~a dozen full-text passes when
+    // none can possibly match — the dominant cost on large transcripts.
+    if !content
+        .as_bytes()
+        .iter()
+        .any(|b| matches!(b, b'-' | b'A' | b'g' | b's' | b'x' | b'e' | b':' | b'='))
+    {
+        return Vec::new();
+    }
     let mut kinds: Vec<&'static str> = Vec::new();
     let push = |k: &'static str, kinds: &mut Vec<&'static str>| {
         if !kinds.contains(&k) {
@@ -137,13 +149,20 @@ const ASSIGNMENT_KEYS: &[&str] = &[
 
 /// Case-insensitive `password = "..."` / `api_key: ...` detection with a
 /// 16+ character non-space value.
+///
+/// 9.3.3: allocation-free — scans case-insensitively with
+/// [`find_ascii_ci`] instead of `content.to_lowercase()` (a full Unicode
+/// copy of the whole document, the single hottest line in ingest).
 fn assignment_shaped(content: &str) -> bool {
-    let lower = content.to_lowercase();
+    // Prefilter: no delimiter byte anywhere ⇒ no assignment can match.
+    if !content.as_bytes().iter().any(|b| *b == b':' || *b == b'=') {
+        return false;
+    }
     for key in ASSIGNMENT_KEYS {
         let mut from = 0usize;
-        while let Some(pos) = lower[from..].find(key) {
+        while let Some(pos) = find_ascii_ci(&content[from..], key) {
             let abs = from + pos + key.len();
-            let rest = lower[abs..].trim_start();
+            let rest = content[abs..].trim_start();
             // JSON-style keys close the quote first: `"api_key": "..."`.
             let rest = rest.strip_prefix('"').unwrap_or(rest).trim_start();
             let Some(delim) = rest.chars().next() else {
@@ -153,8 +172,7 @@ fn assignment_shaped(content: &str) -> bool {
                 let value = rest[1..].trim_start();
                 let value = value.strip_prefix(['"', '\'']).unwrap_or(value);
                 // Redaction markers must never re-trigger detection, or the
-                // scrubber loops on its own output. `value` comes from the
-                // lowercased text, so the marker check is case-insensitive.
+                // scrubber loops on its own output.
                 let is_marker = value
                     .get(..10)
                     .is_some_and(|p| p.eq_ignore_ascii_case("[REDACTED:"));
@@ -173,6 +191,22 @@ fn assignment_shaped(content: &str) -> bool {
         }
     }
     false
+}
+
+/// ASCII-case-insensitive substring search with no allocation.
+fn find_ascii_ci(haystack: &str, needle: &str) -> Option<usize> {
+    let h = haystack.as_bytes();
+    let n = needle.as_bytes();
+    if n.is_empty() || h.len() < n.len() {
+        return None;
+    }
+    let first = n[0].to_ascii_lowercase();
+    for i in 0..=h.len() - n.len() {
+        if h[i].to_ascii_lowercase() == first && h[i..i + n.len()].eq_ignore_ascii_case(n) {
+            return Some(i);
+        }
+    }
+    None
 }
 
 /// Redact credential-shaped spans, replacing them with `[REDACTED:<kind>]`.

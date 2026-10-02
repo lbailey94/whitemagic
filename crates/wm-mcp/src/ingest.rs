@@ -458,6 +458,13 @@ pub struct LedgerEntry {
     pub kind: String,
     pub chunks: usize,
     pub bytes: u64,
+    /// S1 (9.3.3): stat fingerprint for the zero-read fast path. Ledger lines
+    /// written before 9.3.3 lack these (`None`) and take one full pass to
+    /// upgrade.
+    #[serde(default)]
+    pub size: Option<u64>,
+    #[serde(default)]
+    pub mtime_ns: Option<i64>,
     pub ingested_at: String,
 }
 
@@ -514,6 +521,9 @@ pub struct IngestReport {
     pub files_unchanged: usize,
     pub files_ingested: usize,
     pub chunks_written: usize,
+    /// Bytes actually read from source files this run (S1/S2 benchmark
+    /// evidence: an idle cycle reads nothing).
+    pub bytes_read: u64,
     /// Files whose content had credential-shaped spans redacted (--redact).
     pub redactions: usize,
     pub skipped: Vec<(String, String)>,
@@ -524,14 +534,15 @@ impl IngestReport {
     #[must_use]
     pub fn summary_line(&self) -> String {
         format!(
-            "found={} unchanged={} ingested={} chunks={} redactions={} skipped={} errors={}",
+            "found={} unchanged={} ingested={} chunks={} redactions={} skipped={} errors={} bytes_read={}",
             self.files_found,
             self.files_unchanged,
             self.files_ingested,
             self.chunks_written,
             self.redactions,
             self.skipped.len(),
-            self.errors.len()
+            self.errors.len(),
+            self.bytes_read
         )
     }
 }
@@ -938,6 +949,39 @@ pub fn run_ingest(
         files_found: files.len(),
         ..Default::default()
     };
+    let mut ledger_dirty = false;
+
+    // S4 (9.3.3): two-phase open. Count stat-changed candidates first; when
+    // nothing changed there is no store to open — no LMDB/Tantivy writer
+    // lock, no disk I/O, the walk itself is the only cost.
+    if !dry_run
+        && !files.iter().any(|path| {
+            let rel = path
+                .strip_prefix(source)
+                .map_or_else(|_| path.display().to_string(), |p| p.display().to_string());
+            let Ok(metadata) = fs::metadata(path) else {
+                return true;
+            };
+            match ledger.entries.get(&rel) {
+                Some(prev) => {
+                    let mtime_ns = metadata
+                        .modified()
+                        .ok()
+                        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                        .and_then(|d| i64::try_from(d.as_nanos()).ok());
+                    !(mtime_ns.is_some()
+                        && prev.size == Some(metadata.len())
+                        && prev.mtime_ns == mtime_ns)
+                }
+                None => true,
+            }
+        })
+    {
+        report.files_unchanged = files.len();
+        report.skipped.extend(skipped);
+        report.skipped.sort();
+        return Ok(report);
+    }
 
     let (store, search) = if dry_run {
         (None, None)
@@ -1000,6 +1044,24 @@ pub fn run_ingest(
             continue;
         }
 
+        let mtime_ns = metadata
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .and_then(|d| i64::try_from(d.as_nanos()).ok());
+
+        // S1 (9.3.3): stat-first skip. An unchanged (size, mtime) pair means
+        // the file is never read, hashed, or redacted — idle cycles are pure
+        // `stat` walks. Pre-9.3.3 ledger lines carry `None` and take one full
+        // pass to upgrade.
+        if let Some(prev) = ledger.entries.get(&rel) {
+            if mtime_ns.is_some() && prev.size == Some(metadata.len()) && prev.mtime_ns == mtime_ns
+            {
+                report.files_unchanged += 1;
+                continue;
+            }
+        }
+
         let bytes = match fs::read(path) {
             Ok(b) => b,
             Err(e) => {
@@ -1009,6 +1071,7 @@ pub fn run_ingest(
                 continue;
             }
         };
+        report.bytes_read += bytes.len() as u64;
         // Admission gate (9.1.9, review round 2): a binary payload renamed
         // to .md used to be stored in LMDB and only excluded later at the
         // index gate. Report it as skipped before any write instead.
@@ -1019,6 +1082,27 @@ pub fn run_ingest(
             continue;
         }
         let sha = sha256_hex(&bytes);
+
+        // S2a (9.3.3): the ledger check runs before redaction — a touched but
+        // content-identical file pays read+hash only, never the redaction
+        // scans; its stat fingerprint is refreshed so the next cycle is a
+        // pure stat skip.
+        if let Some(prev) = ledger.entries.get(&rel) {
+            if prev.sha256 == sha {
+                report.files_unchanged += 1;
+                ledger.entries.insert(
+                    rel.clone(),
+                    LedgerEntry {
+                        size: Some(metadata.len()),
+                        mtime_ns,
+                        ..prev.clone()
+                    },
+                );
+                ledger_dirty = true;
+                continue;
+            }
+        }
+
         let raw_text = String::from_utf8_lossy(&bytes);
 
         // Default posture: credential-bearing files are skipped (the store
@@ -1039,13 +1123,6 @@ pub fn run_ingest(
             }
             raw_text.into_owned()
         };
-
-        if let Some(prev) = ledger.entries.get(&rel) {
-            if prev.sha256 == sha {
-                report.files_unchanged += 1;
-                continue;
-            }
-        }
 
         let Some(kind) = detect_kind(path, head_for_detection(&text)) else {
             report
@@ -1157,9 +1234,12 @@ pub fn run_ingest(
                     kind: kind.as_str().to_string(),
                     chunks: chunks.len(),
                     bytes: metadata.len(),
+                    size: Some(metadata.len()),
+                    mtime_ns,
                     ingested_at: now.clone(),
                 },
             );
+            ledger_dirty = true;
             continue;
         }
 
@@ -1242,9 +1322,12 @@ pub fn run_ingest(
                 kind: kind.as_str().to_string(),
                 chunks: chunks.len(),
                 bytes: metadata.len(),
+                size: Some(metadata.len()),
+                mtime_ns,
                 ingested_at: now.clone(),
             },
         );
+        ledger_dirty = true;
     }
 
     // Commit the index, then release the exclusive Tantivy writer lock
@@ -1255,7 +1338,7 @@ pub fn run_ingest(
         }
     }
 
-    if !dry_run {
+    if !dry_run && ledger_dirty {
         ledger.save(&ledger_path)?;
     }
 
@@ -1601,6 +1684,51 @@ mod tests {
         assert_eq!(a, b);
         assert_ne!(a, chunk_id("abc123", 5));
         assert_ne!(a, chunk_id("other", 4));
+    }
+
+    #[test]
+    fn unchanged_cycle_reads_zero_bytes() {
+        // 9.3.3 S1/S2/S4 benchmark contract: an idle ingest cycle stats the
+        // tree, reads nothing, opens nothing. Before this slice a 466MB
+        // corpus cost ~5 minutes of CPU per idle pass (read + full SHA-256 +
+        // redaction) because the ledger check ran last.
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        write_tree(root);
+        let store_path = tmp.path().join("store");
+
+        let first = ingest_ok(root, &store_path);
+        assert!(first.bytes_read > 0, "first run must read the tree");
+
+        let second = ingest_ok(root, &store_path);
+        assert_eq!(second.files_unchanged, 3);
+        assert_eq!(second.files_ingested, 0);
+        assert_eq!(
+            second.bytes_read, 0,
+            "idle cycle must not read any file bytes"
+        );
+
+        // S2a: touching a file (mtime change, identical content) costs one
+        // read+hash and no redaction/re-ingest; the refreshed fingerprint
+        // makes the next cycle a pure stat skip again.
+        let touched = root.join("docs/c.txt");
+        let content = fs::read_to_string(&touched).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(25));
+        fs::write(&touched, content).unwrap();
+        let third = ingest_ok(root, &store_path);
+        assert_eq!(
+            third.files_ingested, 0,
+            "content-identical touch must not re-ingest"
+        );
+        assert!(
+            third.bytes_read > 0,
+            "the touched file must be re-read once"
+        );
+        let fourth = ingest_ok(root, &store_path);
+        assert_eq!(
+            fourth.bytes_read, 0,
+            "refreshed fingerprint returns to zero-read"
+        );
     }
 
     #[test]
