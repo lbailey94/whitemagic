@@ -388,14 +388,12 @@ impl PeerDirectory {
         // 1. Verify cryptographic integrity and TTL
         cert.verify(now_secs)?;
 
-        // 2. Verify issuer authority in this directory
+        // 2. Verify issuer authority in this directory strictly by cryptographic public key
         let mut issuer_key = [0u8; 32];
         decode_hex_into_32(&cert.issuer_public_key_hex, &mut issuer_key)?;
 
         let issuer_peer = self.peers.values().find(|p| {
-            p.public_key == issuer_key
-                || p.public_key_hex == cert.issuer_public_key_hex
-                || p.node_id == cert.issuer_node_id
+            p.public_key == issuer_key || p.public_key_hex == cert.issuer_public_key_hex
         });
 
         match issuer_peer {
@@ -404,8 +402,8 @@ impl PeerDirectory {
             }
             Some(p) => {
                 return Err(format!(
-                    "issuer `{}` has tier `{}`, which lacks authority to issue bans (must be `trusted` or `local`)",
-                    cert.issuer_node_id, p.trust_tier
+                    "issuer `{}` (key {}) has tier `{}`, which lacks authority to issue bans (must be `trusted` or `local`)",
+                    cert.issuer_node_id, cert.issuer_public_key_hex, p.trust_tier
                 ));
             }
             None => {
@@ -416,7 +414,7 @@ impl PeerDirectory {
             }
         }
 
-        // 3. Apply the ban to target
+        // 3. Apply the ban to target (Local node cannot be banned by external certs)
         let mut target_found = false;
         let mut target_pubkey = [0u8; 32];
         let has_target_key = if let Some(ref tk) = cert.target_public_key_hex {
@@ -430,6 +428,12 @@ impl PeerDirectory {
                 || (has_target_key && peer.public_key == target_pubkey)
                 || peer.public_key_hex == cert.target_identity
             {
+                if peer.trust_tier == PeerTrustTier::Local {
+                    return Err(format!(
+                        "refusing to apply ban against local node `{}`",
+                        peer.node_id
+                    ));
+                }
                 peer.trust_tier = PeerTrustTier::Blocked;
                 peer.reputation = 0.0;
                 peer.capabilities.clear();

@@ -2307,7 +2307,7 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
                     let issuer_known = dir
                         .peers
                         .values()
-                        .find(|p| p.public_key_hex == cert.issuer_public_key_hex || p.node_id == cert.issuer_node_id);
+                        .find(|p| p.public_key_hex == cert.issuer_public_key_hex);
                     let (trusted, tier_str) = match issuer_known {
                         Some(p) => (
                             p.trust_tier >= PeerTrustTier::Trusted,
