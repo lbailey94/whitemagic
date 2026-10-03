@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/wm-gen3-core", "crates/wm-gen3-harness"]
+members = ["crates/wm-gen3-core", "crates/wm-gen3-harness", "crates/wm-gen3-systemone"]
 
 [workspace.package]
 version = "10.0.0-alpha"

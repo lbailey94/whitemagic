@@ -238,7 +238,8 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
     } else {
         ""
     };
-    json!([
+    #[cfg_attr(not(feature = "systemone"), allow(unused_mut))]
+    let mut tools = json!([
         {
             "name": "memory_recall",
             "description": format!("Recall memories matching a query from the sovereign Gen3 Substrate using BM25, anchor coherence, and forgotten diamond recovery.{mode_hint}"),
@@ -354,7 +355,12 @@ pub fn get_cyberbrain_tools_list(readonly: bool) -> Value {
                 }
             }
         }
-    ])
+    ]);
+    #[cfg(feature = "systemone")]
+    if let Value::Array(ref mut list) = tools {
+        list.push(systemone_tool_schema(mode_hint));
+    }
+    tools
 }
 
 /// 36 Curated Full Suite MCP Tools (preserving 100% Gen2 tools.snapshot.json + Mandala + Gen3).
@@ -364,7 +370,8 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
     } else {
         ""
     };
-    json!([
+    #[cfg_attr(not(feature = "systemone"), allow(unused_mut))]
+    let mut tools = json!([
         {
             "name": "wm",
             "title": "WhiteMagic Meta-Tool",
@@ -914,11 +921,21 @@ pub fn get_full_curated_tools_list(readonly: bool) -> Value {
                 "required": ["title", "body"]
             }
         }
-    ])
+    ]);
+    #[cfg(feature = "systemone")]
+    if let Value::Array(ref mut list) = tools {
+        list.push(systemone_tool_schema(mode_hint));
+    }
+    tools
 }
 
 /// Hybrid Dispatch Router — dispatches any Gen2 or Gen3 tool invocation
 /// into the sovereign Substrate with bijective UUID <-> u64 identity handling.
+#[cfg(feature = "systemone")]
+const SYSTEMONE_TOOL_HINT: &str = ", systemone.decide";
+#[cfg(not(feature = "systemone"))]
+const SYSTEMONE_TOOL_HINT: &str = "";
+
 pub fn execute_hybrid_tool_call(
     name: &str,
     args: &Value,
@@ -979,6 +996,12 @@ pub fn execute_hybrid_tool_call(
         "mandala.triage" => handle_mandala_triage(args),
         "mandala.evaluate" => handle_mandala_evaluate(args, store_path, readonly),
 
+        // ── System One Organ (feature: systemone) ──────────────────────────
+        #[cfg(feature = "systemone")]
+        "systemone.decide" | "systemone_decide" => {
+            handle_systemone_decide(args, store_path, readonly)
+        }
+
         // ── Mesh & Infrastructure ──────────────────────────────────────────
         "mesh_sync" | "sync" => handle_mesh_sync(args, substrate, store_path, readonly),
         "sweep" => handle_sweep(substrate, readonly),
@@ -991,7 +1014,7 @@ pub fn execute_hybrid_tool_call(
         "sangha.post" | "sangha_post" | "sangha.chat" => handle_sangha_post(args, readonly),
 
         unknown => Err(format!(
-            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, wm"
+            "Unknown tool: '{unknown}'. Supported: memory.create, memory.search, memory.read, memory.list, session.record, session.continuity, session.checkpoint, mandala.status, mandala.triage, mandala.evaluate, mesh_sync, sangha.status, sangha.inbox, sangha.post, wm{SYSTEMONE_TOOL_HINT}"
         )),
     }
 }
@@ -1056,7 +1079,7 @@ fn handle_wm_router(
     Ok(json!({
         "status": "success",
         "message": "WhiteMagic Gen3 Sovereign Hybrid Kernel online",
-        "version": "10.0.0-alpha",
+        "version": env!("CARGO_PKG_VERSION"),
         "kernel_contract": "Articles 1-9 Inviolate",
         "sandboxing": "Mandala Kekkaishi Landlock ABI V1-V5",
         "recall_latency": "< 0.40 ms P95"
@@ -2017,6 +2040,100 @@ fn handle_mandala_status(store_path: &Path) -> Result<Value, String> {
             "write_throttle_factor": actuators.write_throttle_factor
         }
     }))
+}
+
+#[cfg(feature = "systemone")]
+fn systemone_tool_schema(mode_hint: &str) -> Value {
+    json!({
+        "name": "systemone.decide",
+        "title": "System One Typed Decision (Local Laya)",
+        "description": format!("Run the local System One decision organ (Laya): typed choice/score/noul questions over a state, calibrated probabilities, and a signed decision receipt.{mode_hint}"),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "state": { "type": ["string", "object"], "description": "State to decide over (text or JSON)" },
+                "questions": { "type": ["object", "array"], "description": "Questions keyed by id (object) or array of {id, type, instructions, criteria}" },
+                "session_id": { "type": "string", "description": "Session id for the decision receipt" },
+                "tenant_id": { "type": "string", "description": "Tenant id for the decision receipt (default: local)" },
+                "task_class": { "type": "string", "description": "Task class for selective evaluation (e.g. route_dispatch)" },
+                "candidate_set_version": { "type": "string", "description": "Version tag of the candidate set" },
+                "policy_version": { "type": "string", "description": "Decision policy version (default: systemone/0.1)" },
+                "emit_receipt": { "type": "boolean", "description": "Write a signed decision receipt to <store>/receipts (default true)" }
+            },
+            "required": ["state", "questions"]
+        }
+    })
+}
+
+#[cfg(feature = "systemone")]
+fn handle_systemone_decide(
+    args: &Value,
+    store_path: &Path,
+    readonly: bool,
+) -> Result<Value, String> {
+    let state = args.get("state").ok_or("missing required field 'state'")?;
+    let questions = args
+        .get("questions")
+        .ok_or("missing required field 'questions'")?;
+
+    static ORGAN: std::sync::OnceLock<Result<wm_gen3_systemone::SystemOne, String>> =
+        std::sync::OnceLock::new();
+    let organ = ORGAN.get_or_init(|| {
+        wm_gen3_systemone::SystemOne::resolve_model_dir(None)
+            .map(wm_gen3_systemone::SystemOne::new)
+            .map_err(|e| e.to_string())
+    });
+    let organ = organ.as_ref().map_err(|e| e.clone())?;
+
+    let outcome = organ.decide(state, questions).map_err(|e| e.to_string())?;
+    let mut response = json!({
+        "status": "success",
+        "route": "systemone.decide",
+        "decision": outcome,
+    });
+
+    let emit_receipt = args
+        .get("emit_receipt")
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
+    if readonly || !emit_receipt {
+        response["receipt"] = Value::Null;
+        response["receipt_emitted"] = json!(false);
+        return Ok(response);
+    }
+
+    let (signing_key, _) = resolve_or_create_mandala_gate_key(store_path)
+        .map_err(|e| format!("gate key error: {e}"))?;
+    let gate_did = format!(
+        "did:key:{}",
+        signing_key
+            .verifying_key()
+            .to_bytes()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>()
+    );
+
+    let decision = response.get("decision").cloned().unwrap_or(Value::Null);
+    let mut receipt = crate::decision_receipt::DecisionReceipt::from_outcome(
+        &decision, state, questions, args, gate_did,
+    );
+    receipt.sign(&signing_key);
+    receipt
+        .verify(&signing_key.verifying_key())
+        .map_err(|e| format!("decision receipt self-verification failed: {e}"))?;
+
+    let receipts_dir = store_path.join("receipts");
+    std::fs::create_dir_all(&receipts_dir).map_err(|e| format!("receipt dir: {e}"))?;
+    let receipt_path = receipts_dir.join(format!("decision-{}.json", receipt.receipt_id));
+    let serialized =
+        serde_json::to_string_pretty(&receipt).map_err(|e| format!("receipt serialize: {e}"))?;
+    std::fs::write(&receipt_path, serialized).map_err(|e| format!("receipt write: {e}"))?;
+
+    response["receipt"] = serde_json::to_value(&receipt).map_err(|e| e.to_string())?;
+    response["receipt_path"] = json!(receipt_path.display().to_string());
+    response["receipt_emitted"] = json!(true);
+    Ok(response)
 }
 
 fn handle_mandala_triage(args: &Value) -> Result<Value, String> {

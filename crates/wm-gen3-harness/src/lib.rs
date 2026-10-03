@@ -4,3 +4,6 @@
 #![recursion_limit = "512"]
 
 pub mod bridge;
+
+#[cfg(feature = "systemone")]
+pub mod decision_receipt;
