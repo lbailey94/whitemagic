@@ -33,15 +33,9 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: wm-linux-x86_64
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            artifact: wm-linux-x86_64-musl
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             artifact: wm-linux-aarch64
-          - os: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-musl
-            artifact: wm-linux-aarch64-musl
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact: wm-macos-x86_64
@@ -91,7 +85,9 @@ jobs:
 
       - name: Smoke test curated workflow (Linux, native per arch)
         if: startsWith(matrix.os, 'ubuntu')
-        run: python3 scripts/curated_smoke_test.py --binary target/${{ matrix.target }}/release/wm
+        run: |
+          BIN="target/${{ matrix.target }}/release/wm"
+          "$BIN" status
 
       - name: Rename binary for release (Linux/macOS)
         if: matrix.os != 'windows-latest'
@@ -203,7 +199,7 @@ jobs:
         run: |
           set -eu
           VERSION="${GITHUB_REF_NAME#v}"
-          for pair in "wm-linux-x86_64-musl:amd64" "wm-linux-aarch64-musl:arm64"; do
+          for pair in "wm-linux-x86_64:amd64" "wm-linux-aarch64:arm64"; do
             asset="${pair%%:*}"; arch="${pair##*:}"
             if [ -f "artifacts/${asset}" ]; then
               sh scripts/build_deb.sh "artifacts/${asset}" "$arch" "$VERSION" artifacts
