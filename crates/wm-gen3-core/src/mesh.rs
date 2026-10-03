@@ -656,6 +656,7 @@ impl SyncBundle {
 
 /// Resolve or generate a persistent Ed25519 node identity key for the given store directory.
 pub fn resolve_or_create_mesh_key(store_dir: &Path) -> io::Result<(SigningKey, [u8; 32])> {
+    std::fs::create_dir_all(store_dir)?;
     let key_file = store_dir.join("mesh_node_key.bin");
     if key_file.exists() {
         let mut f = File::open(&key_file)?;
