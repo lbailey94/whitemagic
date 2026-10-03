@@ -41,6 +41,7 @@ paths = [
     '''(^|/)scripts/mine_opencode_corpus\.py$''',
     '''(^|/)crates/wm-governance/src/decoy_shell\.rs$''',
     '''(^|/)crates/wm-governance/src/canary_tokens\.rs$''',
+    '''(^|/)crates/wm-gen3-core/src/quarantine\.rs$''',
 ]
 regexes = [
     '''00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff''',
@@ -53,6 +54,7 @@ regexes = [
 description = "continuity-receipt fixtures: did:key public identifiers + deliberate FIXTURE_TOKEN/SIGNATURE_TOKEN test vectors (2026-09-22)"
 regexTarget = "line"
 regexes = [
+    '''did:key:[0-9a-zA-Z_-]+''',
     '''did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+''',
     '''FIXTURE_TOKEN''',
     '''SIGNATURE_TOKEN''',
