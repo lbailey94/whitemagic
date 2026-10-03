@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-10-03T22:10:05.145859+00:00",
+  "store": "/home/lucas/.local/share/whitemagic/gen3",
+  "receipts_with_outcomes": 2,
+  "outcomes": {
+    "corrected": 1,
+    "success": 1
+  },
+  "subject_verified": 2,
+  "subject_unverified": 0,
+  "per_route": {
+    "memory.create": {
+      "n": 1,
+      "success": 0,
+      "corrected": 1,
+      "failure": 0,
+      "unknown": 0,
+      "success_rate": 0.0
+    },
+    "memory.search": {
+      "n": 1,
+      "success": 1,
+      "corrected": 0,
+      "failure": 0,
+      "unknown": 0,
+      "success_rate": 1.0
+    }
+  },
+  "corrections": [
+    {
+      "top1": "memory.create",
+      "corrected_route": "memory.create",
+      "count": 1
+    }
+  ],
+  "margin_buckets": {
+    "0.05-0.10": {
+      "n": 2,
+      "success": 1,
+      "corrected": 1,
+      "failure": 0,
+      "unknown": 0,
+      "success_rate": 0.5
+    }
+  },
+  "gate": {
+    "dispatch": {
+      "n": 2,
+      "success": 1,
+      "corrected": 1,
+      "failure": 0,
+      "unknown": 0,
+      "success_rate": 0.5
+    }
+  },
+  "suggestions": []
+}

@@ -173,6 +173,8 @@ wm-leases.json
 !/scripts/system05/*
 !/scripts/system15/
 !/scripts/system15/*
+!/scripts/systemone/
+!/scripts/systemone/*
 
 # ── Private / companion + internal evidence (purged from public history
 #    2026-09-12 via git-filter-repo; kept locally for development only) ──

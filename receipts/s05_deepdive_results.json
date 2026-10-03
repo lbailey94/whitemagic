@@ -1,0 +1,324 @@
+{
+  "cascade": [
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.26262626262626265,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.2,
+      "coverage": 0.9141414141414141,
+      "acc_05": 0.27071823204419887,
+      "acc_laya_on_covered": 0.5138121546961326
+    },
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.4,
+      "coverage": 0.41414141414141414,
+      "acc_05": 0.3780487804878049,
+      "acc_laya_on_covered": 0.573170731707317
+    },
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.6,
+      "coverage": 0.08585858585858586,
+      "acc_05": 0.4117647058823529,
+      "acc_laya_on_covered": 0.7058823529411765
+    },
+    {
+      "method": "logreg",
+      "signal": "margin",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.26262626262626265,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "logreg",
+      "signal": "margin",
+      "tau": 0.2,
+      "coverage": 0.15151515151515152,
+      "acc_05": 0.4,
+      "acc_laya_on_covered": 0.5666666666666667
+    },
+    {
+      "method": "logreg",
+      "signal": "margin",
+      "tau": 0.4,
+      "coverage": 0.010101010101010102,
+      "acc_05": 0.5,
+      "acc_laya_on_covered": 0.5
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.29292929292929293,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.2,
+      "coverage": 0.9444444444444444,
+      "acc_05": 0.3048128342245989,
+      "acc_laya_on_covered": 0.5294117647058824
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.4,
+      "coverage": 0.4696969696969697,
+      "acc_05": 0.40860215053763443,
+      "acc_laya_on_covered": 0.6021505376344086
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.6,
+      "coverage": 0.13636363636363635,
+      "acc_05": 0.5185185185185185,
+      "acc_laya_on_covered": 0.4444444444444444
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.8,
+      "coverage": 0.010101010101010102,
+      "acc_05": 0.0,
+      "acc_laya_on_covered": 1.0
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.29292929292929293,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.2,
+      "coverage": 0.25757575757575757,
+      "acc_05": 0.43137254901960786,
+      "acc_laya_on_covered": 0.5686274509803921
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.4,
+      "coverage": 0.050505050505050504,
+      "acc_05": 0.5,
+      "acc_laya_on_covered": 0.6
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.6,
+      "coverage": 0.010101010101010102,
+      "acc_05": 0.0,
+      "acc_laya_on_covered": 1.0
+    },
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.25252525252525254,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.2,
+      "coverage": 0.9141414141414141,
+      "acc_05": 0.26519337016574585,
+      "acc_laya_on_covered": 0.5138121546961326
+    },
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.4,
+      "coverage": 0.41919191919191917,
+      "acc_05": 0.3614457831325301,
+      "acc_laya_on_covered": 0.5662650602409639
+    },
+    {
+      "method": "logreg",
+      "signal": "confidence",
+      "tau": 0.6,
+      "coverage": 0.08585858585858586,
+      "acc_05": 0.4117647058823529,
+      "acc_laya_on_covered": 0.7058823529411765
+    },
+    {
+      "method": "logreg",
+      "signal": "margin",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.25252525252525254,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "logreg",
+      "signal": "margin",
+      "tau": 0.2,
+      "coverage": 0.13636363636363635,
+      "acc_05": 0.4074074074074074,
+      "acc_laya_on_covered": 0.5555555555555556
+    },
+    {
+      "method": "logreg",
+      "signal": "margin",
+      "tau": 0.4,
+      "coverage": 0.015151515151515152,
+      "acc_05": 0.6666666666666666,
+      "acc_laya_on_covered": 0.6666666666666666
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.30808080808080807,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.2,
+      "coverage": 0.9343434343434344,
+      "acc_05": 0.31891891891891894,
+      "acc_laya_on_covered": 0.5405405405405406
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.4,
+      "coverage": 0.4696969696969697,
+      "acc_05": 0.43010752688172044,
+      "acc_laya_on_covered": 0.5913978494623656
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.6,
+      "coverage": 0.13131313131313133,
+      "acc_05": 0.5,
+      "acc_laya_on_covered": 0.6538461538461539
+    },
+    {
+      "method": "knn",
+      "signal": "confidence",
+      "tau": 0.8,
+      "coverage": 0.010101010101010102,
+      "acc_05": 0.5,
+      "acc_laya_on_covered": 1.0
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.0,
+      "coverage": 1.0,
+      "acc_05": 0.30808080808080807,
+      "acc_laya_on_covered": 0.5151515151515151
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.2,
+      "coverage": 0.21717171717171718,
+      "acc_05": 0.4883720930232558,
+      "acc_laya_on_covered": 0.627906976744186
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.4,
+      "coverage": 0.045454545454545456,
+      "acc_05": 0.6666666666666666,
+      "acc_laya_on_covered": 0.4444444444444444
+    },
+    {
+      "method": "knn",
+      "signal": "margin",
+      "tau": 0.6,
+      "coverage": 0.010101010101010102,
+      "acc_05": 0.5,
+      "acc_laya_on_covered": 1.0
+    }
+  ],
+  "cache": {
+    "potion8": {
+      "auc": 0.5176847777777778,
+      "balanced_acc_at": 0.565,
+      "balanced_acc": 0.5221666666666667,
+      "hard_negative_rate_sim_gt_0.95": 0.0,
+      "n_pos": 1500,
+      "n_neg": 3000
+    },
+    "potion32": {
+      "auc": 0.522492,
+      "balanced_acc_at": 0.519,
+      "balanced_acc": 0.5261666666666667,
+      "hard_negative_rate_sim_gt_0.95": 0.0,
+      "n_pos": 1500,
+      "n_neg": 3000
+    },
+    "tfidf": {
+      "auc": 0.5715834444444444,
+      "balanced_acc_at": 0.03,
+      "balanced_acc": 0.5593333333333333,
+      "hard_negative_rate_sim_gt_0.95": 0.0,
+      "n_pos": 1500,
+      "n_neg": 3000
+    },
+    "gzip": {
+      "auc": 0.5478888888888889,
+      "balanced_acc_at": -0.85,
+      "balanced_acc": 0.5363333333333333,
+      "hard_negative_rate_sim_gt_0.95": 0.0,
+      "n_pos": 1500,
+      "n_neg": 3000
+    }
+  },
+  "recall": {
+    "potion-base-8M/logreg": {
+      "recall@1": 0.26262626262626265,
+      "recall@3": 0.6666666666666666,
+      "recall@5": 0.7777777777777778,
+      "recall@10": 0.9595959595959596,
+      "recall@16": 0.9848484848484849
+    },
+    "potion-base-8M/knn": {
+      "recall@1": 0.29292929292929293,
+      "recall@3": 0.7070707070707071,
+      "recall@5": 0.8131313131313131,
+      "recall@10": 0.9595959595959596,
+      "recall@16": 0.9949494949494949
+    },
+    "potion-base-32M/logreg": {
+      "recall@1": 0.25252525252525254,
+      "recall@3": 0.6616161616161617,
+      "recall@5": 0.7878787878787878,
+      "recall@10": 0.9545454545454546,
+      "recall@16": 0.9848484848484849
+    },
+    "potion-base-32M/knn": {
+      "recall@1": 0.30808080808080807,
+      "recall@3": 0.702020202020202,
+      "recall@5": 0.8282828282828283,
+      "recall@10": 0.9494949494949495,
+      "recall@16": 0.9949494949494949
+    }
+  }
+}

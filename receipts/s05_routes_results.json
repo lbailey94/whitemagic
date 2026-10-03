@@ -1,0 +1,115 @@
+{
+  "retrievers": {
+    "potion-base-8M": {
+      "top1": 0.4,
+      "recall": {
+        "1": 0.4,
+        "3": 0.5625,
+        "5": 0.675,
+        "8": 0.725,
+        "10": 0.775,
+        "16": 0.8125
+      },
+      "margin_mean": 0.08189262878149747,
+      "conf_mean": 0.45820479840040207
+    },
+    "potion-base-32M": {
+      "top1": 0.4375,
+      "recall": {
+        "1": 0.4375,
+        "3": 0.55,
+        "5": 0.6125,
+        "8": 0.7375,
+        "10": 0.7625,
+        "16": 0.8375
+      },
+      "margin_mean": 0.07742440020665527,
+      "conf_mean": 0.42587380539625885
+    },
+    "bge-small-en-v1.5": {
+      "top1": 0.3375,
+      "recall": {
+        "1": 0.3375,
+        "3": 0.4375,
+        "5": 0.5125,
+        "8": 0.6375,
+        "10": 0.6375,
+        "16": 0.725
+      },
+      "margin_mean": 0.02478739470243454,
+      "conf_mean": 0.6962376601994038
+    }
+  },
+  "laya": {
+    "accuracy": 0.125,
+    "mean_wall_s": 4.278445152925269
+  },
+  "shortlist": {
+    "potion-base-8M": {
+      "k=3": {
+        "recall": 0.5625,
+        "laya_full_acc_subset": 0.17777777777777778,
+        "laya_shortlist_acc": 0.275
+      },
+      "k=5": {
+        "recall": 0.675,
+        "laya_full_acc_subset": 0.14814814814814814,
+        "laya_shortlist_acc": 0.1875
+      },
+      "k=10": {
+        "recall": 0.775,
+        "laya_full_acc_subset": 0.12903225806451613,
+        "laya_shortlist_acc": 0.15
+      },
+      "k=16": {
+        "recall": 0.8125,
+        "laya_full_acc_subset": 0.13846153846153847,
+        "laya_shortlist_acc": 0.15
+      }
+    },
+    "potion-base-32M": {
+      "k=3": {
+        "recall": 0.55,
+        "laya_full_acc_subset": 0.1590909090909091,
+        "laya_shortlist_acc": 0.25
+      },
+      "k=5": {
+        "recall": 0.6125,
+        "laya_full_acc_subset": 0.14285714285714285,
+        "laya_shortlist_acc": 0.2
+      },
+      "k=10": {
+        "recall": 0.7625,
+        "laya_full_acc_subset": 0.14754098360655737,
+        "laya_shortlist_acc": 0.1875
+      },
+      "k=16": {
+        "recall": 0.8375,
+        "laya_full_acc_subset": 0.13432835820895522,
+        "laya_shortlist_acc": 0.1625
+      }
+    },
+    "bge-small-en-v1.5": {
+      "k=3": {
+        "recall": 0.4375,
+        "laya_full_acc_subset": 0.2,
+        "laya_shortlist_acc": 0.275
+      },
+      "k=5": {
+        "recall": 0.5125,
+        "laya_full_acc_subset": 0.1951219512195122,
+        "laya_shortlist_acc": 0.2625
+      },
+      "k=10": {
+        "recall": 0.6375,
+        "laya_full_acc_subset": 0.19607843137254902,
+        "laya_shortlist_acc": 0.25
+      },
+      "k=16": {
+        "recall": 0.725,
+        "laya_full_acc_subset": 0.1724137931034483,
+        "laya_shortlist_acc": 0.1875
+      }
+    }
+  }
+}
