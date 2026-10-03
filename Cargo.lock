@@ -3597,7 +3597,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "wm-gen3-core"
-version = "10.0.0-alpha.1"
+version = "10.0.0-alpha"
 dependencies = [
  "chrono",
  "ed25519-dalek",
@@ -3617,7 +3617,7 @@ dependencies = [
 
 [[package]]
 name = "wm-gen3-harness"
-version = "10.0.0-alpha.1"
+version = "10.0.0-alpha"
 dependencies = [
  "chrono",
  "clap",

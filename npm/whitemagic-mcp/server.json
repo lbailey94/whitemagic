@@ -9,12 +9,12 @@
     "source": "github",
     "subfolder": "npm/whitemagic-mcp"
   },
-  "version": "10.0.0-alpha.1",
+  "version": "10.0.0-alpha",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "whitemagic-mcp",
-      "version": "10.0.0-alpha.1",
+      "version": "10.0.0-alpha",
       "transport": {
         "type": "stdio"
       }

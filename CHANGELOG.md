@@ -5,7 +5,7 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [10.0.0-alpha.1] — 2026-10-03
+## [10.0.0-alpha] — 2026-10-03
 
 ### Added
 - **WhiteMagic Gen3 Sovereign Cognitive Kernel** — Complete architectural transition from Gen2 (18-crate federation) to Gen3 (2-crate minimal sovereign substrate: `wm-gen3-core` and `wm-gen3-harness`).
