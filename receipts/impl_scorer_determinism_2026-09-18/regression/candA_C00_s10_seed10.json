@@ -1,0 +1,4639 @@
+{
+  "benchmark": "memorastrict",
+  "scenario": "bench_seed10.json",
+  "execution_path": "local-wm-serve-stdio",
+  "retrieval_configuration": {
+    "route": "memory.episodic_search",
+    "bm25_only_requested": false
+  },
+  "answer_generation_model": null,
+  "protocol_versions": {
+    "legacy": "wm-retrieval-legacy-v1",
+    "strict": "wm-evidence-strict-v1",
+    "grouped_source": null
+  },
+  "grouped_source_configuration": {
+    "enabled": false,
+    "declared_retrieval_cutoff": 10,
+    "annotation_dataset": null
+  },
+  "total_questions": 16,
+  "total_turns": 519,
+  "timestamp": "2026-09-18T18:07:41Z",
+  "total_elapsed_s": 1.1,
+  "overall": {
+    "verification_rate": 0.375,
+    "recall_at_1": 0.375,
+    "recall_at_5": 0.5625,
+    "mrr": 0.421875
+  },
+  "strict_evidence": {
+    "supported_cases": 1,
+    "unsupported_cases": 15,
+    "relevant_source_hit_rate_at_1": 0.0,
+    "relevant_source_hit_rate_at_5": 0.0,
+    "mean_required_evidence_coverage_at_retrieval_limit": 0.0,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "grouped_source_evidence": {
+    "enabled": false,
+    "supported_cases": 0,
+    "unsupported_cases": 0,
+    "declared_retrieval_cutoff": 10,
+    "mean_required_group_coverage": null,
+    "complete_bundle_cases": null,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "latency": {
+    "p50_ms": 9.072130000276957,
+    "p95_ms": 11.529854004038498,
+    "p99_ms": 11.529854004038498
+  },
+  "ingest": {
+    "total_time_s": 0.7778537150006741,
+    "turns": 519,
+    "throughput_turns_s": 667.2205711578432
+  },
+  "category_results": {
+    "T1": {
+      "total": 4,
+      "verified": 3,
+      "verification_rate": 0.75,
+      "recall_at_1": 0.75,
+      "recall_at_5": 1.0,
+      "mrr": 0.8125,
+      "p50_latency_ms": 9.926735001499765,
+      "p95_latency_ms": 10.495235001144465,
+      "avg_candidate_count": 26.75
+    },
+    "T2": {
+      "total": 5,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.2,
+      "mrr": 0.05,
+      "p50_latency_ms": 8.11198500014143,
+      "p95_latency_ms": 10.331183999369387,
+      "avg_candidate_count": 16.0
+    },
+    "T6": {
+      "total": 4,
+      "verified": 3,
+      "verification_rate": 0.75,
+      "recall_at_1": 0.75,
+      "recall_at_5": 1.0,
+      "mrr": 0.8125,
+      "p50_latency_ms": 10.338189000322018,
+      "p95_latency_ms": 11.529854004038498,
+      "avg_candidate_count": 26.75
+    },
+    "T8": {
+      "total": 3,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "mrr": 0.0,
+      "p50_latency_ms": 6.6928730011568405,
+      "p95_latency_ms": 7.484916000976227,
+      "avg_candidate_count": 0.0
+    }
+  },
+  "per_query": [
+    {
+      "question_id": "T1_coffee",
+      "test_category": "T1",
+      "question": "What's my current favorite coffee?",
+      "answer": "light roast",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.25,
+      "first_match_rank": 4,
+      "latency_ms": 10.5,
+      "candidate_count": 29,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.25,
+        "first_match_rank": 4,
+        "candidate_count": 29
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from dark roast to light roast for coffee.",
+          "galaxy": "codex",
+          "id": 516,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I replied to emails and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 510,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dark roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 485,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 474,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into dark roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 453,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 446,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dark roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 398,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I went to the gym and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 397,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into dark roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 370,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from cold brew to dark roast for coffee.",
+          "galaxy": "codex",
+          "id": 246,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 226,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer cold brew for my coffee.",
+          "galaxy": "codex",
+          "id": 212,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 129,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 85,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 75,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 67,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_music",
+      "test_category": "T1",
+      "question": "What's my current favorite music?",
+      "answer": "classical",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 9.07,
+      "candidate_count": 20,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 20
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 515,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer classical for my music.",
+          "galaxy": "codex",
+          "id": 441,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 433,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 323,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from indie rock to classical for music.",
+          "galaxy": "codex",
+          "id": 282,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about music \u2014 I now prefer indie rock over jazz.",
+          "galaxy": "codex",
+          "id": 117,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into jazz lately for music.",
+          "galaxy": "codex",
+          "id": 49,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 515,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer classical for my music.",
+          "galaxy": "codex",
+          "id": 441,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 433,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 323,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from indie rock to classical for music.",
+          "galaxy": "codex",
+          "id": 282,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about music \u2014 I now prefer indie rock over jazz.",
+          "galaxy": "codex",
+          "id": 117,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into jazz lately for music.",
+          "galaxy": "codex",
+          "id": 49,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into jazz lately for music.",
+          "galaxy": "codex",
+          "id": 19,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_book_genre",
+      "test_category": "T1",
+      "question": "What's my current favorite book genre?",
+      "answer": "biography",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 9.93,
+      "candidate_count": 31,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 31
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer biography for my book_genre.",
+          "galaxy": "codex",
+          "id": 511,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer history but now I'm all about biography for book_genre.",
+          "galaxy": "codex",
+          "id": 424,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 406,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "For book_genre, I always go with history.",
+          "galaxy": "codex",
+          "id": 400,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer history for my book_genre.",
+          "galaxy": "codex",
+          "id": 391,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 373,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love history when it comes to book_genre.",
+          "galaxy": "codex",
+          "id": 320,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer biography for my book_genre.",
+          "galaxy": "codex",
+          "id": 511,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer history but now I'm all about biography for book_genre.",
+          "galaxy": "codex",
+          "id": 424,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 406,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "For book_genre, I always go with history.",
+          "galaxy": "codex",
+          "id": 400,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer history for my book_genre.",
+          "galaxy": "codex",
+          "id": 391,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 373,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love history when it comes to book_genre.",
+          "galaxy": "codex",
+          "id": 320,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer sci-fi but now I'm all about history for book_genre.",
+          "galaxy": "codex",
+          "id": 272,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love sci-fi when it comes to book_genre.",
+          "galaxy": "codex",
+          "id": 252,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into sci-fi lately for book_genre.",
+          "galaxy": "codex",
+          "id": 209,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "For book_genre, I always go with sci-fi.",
+          "galaxy": "codex",
+          "id": 100,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about news.",
+          "galaxy": "codex",
+          "id": 499,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about haircuts.",
+          "galaxy": "codex",
+          "id": 428,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 407,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about package delivery.",
+          "galaxy": "codex",
+          "id": 256,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 221,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 140,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about commute.",
+          "galaxy": "codex",
+          "id": 93,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about gardening.",
+          "galaxy": "codex",
+          "id": 60,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_pet",
+      "test_category": "T1",
+      "question": "What's my current favorite pet?",
+      "answer": "parrot",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 9.7,
+      "candidate_count": 27,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 27
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into parrot lately for pet.",
+          "galaxy": "codex",
+          "id": 514,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from hamster to parrot for pet.",
+          "galaxy": "codex",
+          "id": 382,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love hamster when it comes to pet.",
+          "galaxy": "codex",
+          "id": 335,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into hamster lately for pet.",
+          "galaxy": "codex",
+          "id": 304,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into hamster lately for pet.",
+          "galaxy": "codex",
+          "id": 300,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with hamster.",
+          "galaxy": "codex",
+          "id": 287,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love hamster when it comes to pet.",
+          "galaxy": "codex",
+          "id": 267,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer rabbit but now I'm all about hamster for pet.",
+          "galaxy": "codex",
+          "id": 258,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rabbit when it comes to pet.",
+          "galaxy": "codex",
+          "id": 234,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dog when it comes to pet.",
+          "galaxy": "codex",
+          "id": 164,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rabbit for my pet.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rabbit for my pet.",
+          "galaxy": "codex",
+          "id": 65,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rabbit when it comes to pet.",
+          "galaxy": "codex",
+          "id": 58,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with rabbit.",
+          "galaxy": "codex",
+          "id": 36,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with rabbit.",
+          "galaxy": "codex",
+          "id": 6,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_food",
+      "test_category": "T2",
+      "question": "What's my favorite food?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 8.11,
+      "candidate_count": 15,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 15
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 340,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5676525831222534,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 181,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5676525831222534,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 145,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5676525831222534,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 340,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5676525831222534,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 181,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5676525831222534,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 145,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5676525831222534,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.4323473572731018,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_hobby",
+      "test_category": "T2",
+      "question": "What's my favorite hobby?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 8.47,
+      "candidate_count": 12,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 12
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_car_model",
+      "test_category": "T2",
+      "question": "What's my favorite car model?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 7.79,
+      "candidate_count": 12,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 12
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.228843554854393,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_tea",
+      "test_category": "T2",
+      "question": "What's my favorite tea?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 7.75,
+      "candidate_count": 12,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 12
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.3724535405635834,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_positive_coffee",
+      "test_category": "T2",
+      "question": "What's my favorite coffee?",
+      "answer": "light roast",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.25,
+      "first_match_rank": 4,
+      "latency_ms": 10.33,
+      "candidate_count": 29,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.25,
+        "first_match_rank": 4,
+        "candidate_count": 29
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "relevant_source_hit_at_1": 0,
+        "relevant_source_hit_at_5": 0,
+        "relevant_source_mrr": 0.0,
+        "required_evidence_found": 0,
+        "required_evidence_total": 1,
+        "required_evidence_coverage_at_retrieval_limit": 0.0,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model",
+        "supported": true
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.5333858728408813,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from dark roast to light roast for coffee.",
+          "galaxy": "codex",
+          "id": 516,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I replied to emails and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 510,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dark roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 485,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 474,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into dark roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 453,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 446,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dark roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 398,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I went to the gym and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 397,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into dark roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 370,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from cold brew to dark roast for coffee.",
+          "galaxy": "codex",
+          "id": 246,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 226,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer cold brew for my coffee.",
+          "galaxy": "codex",
+          "id": 212,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 129,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 85,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 75,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 67,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.46661409735679626,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_coffee",
+      "test_category": "T6",
+      "question": "What's my current favorite coffee?",
+      "answer": "light roast",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.25,
+      "first_match_rank": 4,
+      "latency_ms": 9.83,
+      "candidate_count": 29,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.25,
+        "first_match_rank": 4,
+        "candidate_count": 29
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5266758799552917,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.28092145919799805,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from dark roast to light roast for coffee.",
+          "galaxy": "codex",
+          "id": 516,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I replied to emails and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 510,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dark roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 485,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 474,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into dark roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 453,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 446,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dark roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 398,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I went to the gym and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 397,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into dark roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 370,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from cold brew to dark roast for coffee.",
+          "galaxy": "codex",
+          "id": 246,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 226,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer cold brew for my coffee.",
+          "galaxy": "codex",
+          "id": 212,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 129,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 85,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 75,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 67,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.24575437605381012,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_music",
+      "test_category": "T6",
+      "question": "What's my current favorite music?",
+      "answer": "classical",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 8.93,
+      "candidate_count": 20,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 20
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 515,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer classical for my music.",
+          "galaxy": "codex",
+          "id": 441,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 433,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 323,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from indie rock to classical for music.",
+          "galaxy": "codex",
+          "id": 282,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about music \u2014 I now prefer indie rock over jazz.",
+          "galaxy": "codex",
+          "id": 117,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into jazz lately for music.",
+          "galaxy": "codex",
+          "id": 49,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5481502413749695,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 515,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer classical for my music.",
+          "galaxy": "codex",
+          "id": 441,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 433,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "For music, I always go with classical.",
+          "galaxy": "codex",
+          "id": 323,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from indie rock to classical for music.",
+          "galaxy": "codex",
+          "id": 282,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about music \u2014 I now prefer indie rock over jazz.",
+          "galaxy": "codex",
+          "id": 117,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into jazz lately for music.",
+          "galaxy": "codex",
+          "id": 49,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into jazz lately for music.",
+          "galaxy": "codex",
+          "id": 19,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2799740433692932,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.26817622780799866,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_book_genre",
+      "test_category": "T6",
+      "question": "What's my current favorite book genre?",
+      "answer": "biography",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 11.53,
+      "candidate_count": 31,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 31
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer biography for my book_genre.",
+          "galaxy": "codex",
+          "id": 511,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer history but now I'm all about biography for book_genre.",
+          "galaxy": "codex",
+          "id": 424,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 406,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "For book_genre, I always go with history.",
+          "galaxy": "codex",
+          "id": 400,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer history for my book_genre.",
+          "galaxy": "codex",
+          "id": 391,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 373,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love history when it comes to book_genre.",
+          "galaxy": "codex",
+          "id": 320,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.6254663467407227,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer biography for my book_genre.",
+          "galaxy": "codex",
+          "id": 511,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer history but now I'm all about biography for book_genre.",
+          "galaxy": "codex",
+          "id": 424,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 406,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "For book_genre, I always go with history.",
+          "galaxy": "codex",
+          "id": 400,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer history for my book_genre.",
+          "galaxy": "codex",
+          "id": 391,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into history lately for book_genre.",
+          "galaxy": "codex",
+          "id": 373,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love history when it comes to book_genre.",
+          "galaxy": "codex",
+          "id": 320,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer sci-fi but now I'm all about history for book_genre.",
+          "galaxy": "codex",
+          "id": 272,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love sci-fi when it comes to book_genre.",
+          "galaxy": "codex",
+          "id": 252,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into sci-fi lately for book_genre.",
+          "galaxy": "codex",
+          "id": 209,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "For book_genre, I always go with sci-fi.",
+          "galaxy": "codex",
+          "id": 100,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.40317779779434204,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2222885638475418,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about news.",
+          "galaxy": "codex",
+          "id": 499,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about haircuts.",
+          "galaxy": "codex",
+          "id": 428,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 407,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about package delivery.",
+          "galaxy": "codex",
+          "id": 256,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 221,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 140,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about commute.",
+          "galaxy": "codex",
+          "id": 93,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about gardening.",
+          "galaxy": "codex",
+          "id": 60,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.1892346441745758,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_pet",
+      "test_category": "T6",
+      "question": "What's my current favorite pet?",
+      "answer": "parrot",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 10.34,
+      "candidate_count": 27,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 27
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 457,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is rabbit.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5319393277168274,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite music is classical.",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is biography.",
+          "galaxy": "codex",
+          "id": 460,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is dark roast.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 174,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite book_genre is sci-fi.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is JavaScript.",
+          "galaxy": "codex",
+          "id": 38,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 16,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.27779754996299744,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into parrot lately for pet.",
+          "galaxy": "codex",
+          "id": 514,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from hamster to parrot for pet.",
+          "galaxy": "codex",
+          "id": 382,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love hamster when it comes to pet.",
+          "galaxy": "codex",
+          "id": 335,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into hamster lately for pet.",
+          "galaxy": "codex",
+          "id": 304,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into hamster lately for pet.",
+          "galaxy": "codex",
+          "id": 300,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with hamster.",
+          "galaxy": "codex",
+          "id": 287,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love hamster when it comes to pet.",
+          "galaxy": "codex",
+          "id": 267,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer rabbit but now I'm all about hamster for pet.",
+          "galaxy": "codex",
+          "id": 258,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rabbit when it comes to pet.",
+          "galaxy": "codex",
+          "id": 234,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love dog when it comes to pet.",
+          "galaxy": "codex",
+          "id": 164,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rabbit for my pet.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rabbit for my pet.",
+          "galaxy": "codex",
+          "id": 65,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rabbit when it comes to pet.",
+          "galaxy": "codex",
+          "id": 58,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with rabbit.",
+          "galaxy": "codex",
+          "id": 36,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with rabbit.",
+          "galaxy": "codex",
+          "id": 6,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.25414177775382996,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T8_vegetarian_steak",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegetarian, now steak",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 6.68,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_vegan_cheese",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegan, now cheese",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 7.48,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_teetotaler_wine",
+      "test_category": "T8",
+      "question": "Do I drink alcohol?",
+      "answer": "CONFLICT: was teetotaler, now wine",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 6.69,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    }
+  ],
+  "valid_execution": true,
+  "execution_failures": [],
+  "errors": []
+}

@@ -1,15 +1,10 @@
-# Toolchain pin — Q38 supply-chain acceptance (pinned toolchain in release provenance).
-# 1.98.0 = the toolchain the v9.3.4 release tree was verified against locally
-# (fmt clean, clippy -D warnings clean across the workspace, full tests green).
-# CI jobs use dtolnay/rust-toolchain, which reads this file automatically.
+# Toolchain pin — mirrors the WMv9 Q38 supply-chain pin (see WMv9 `rust-toolchain.toml`).
+# 1.98.0 is the toolchain the nucleus freeze and the Phase-4 canaries were built with;
+# pinning removes machine-default drift (rustfmt/clippy behavior included). Rebuilds at a
+# later compiler version are recorded events with fresh canaries (NUCLEUS S7: pins are
+# anchors, regenerated when a constituent changes).
 [toolchain]
 channel = "1.98.0"
 profile = "minimal"
 components = ["clippy", "rustfmt"]
-targets = [
-    "x86_64-unknown-linux-gnu",
-    "x86_64-unknown-linux-musl",
-    "x86_64-apple-darwin",
-    "aarch64-apple-darwin",
-    "x86_64-pc-windows-msvc",
-]
+targets = ["x86_64-unknown-linux-gnu"]

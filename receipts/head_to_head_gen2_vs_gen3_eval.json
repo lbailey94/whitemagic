@@ -1,0 +1,101 @@
+{
+  "timestamp": "2026-10-03T14:33:29Z",
+  "eval_summary": {
+    "gen2": {
+      "name": "WhiteMagic Gen2 (v9.3.4)",
+      "profile": "curated",
+      "cold_startup_ms": 0.5576990006375127,
+      "init_latency_ms": 57.272713995189406,
+      "protocol_version": "2024-11-05",
+      "tools_list_latency_ms": 3.147897994494997,
+      "tools_count": 23,
+      "tools_payload_bytes": 28469,
+      "search_latencies_ms": [
+        805.5515109954285,
+        1018.7760039989371,
+        1451.5673179994337,
+        3580.2531389999785,
+        2360.9814689989435
+      ],
+      "search_median_ms": 1451.5673179994337,
+      "search_p95_ms": 3580.2531389999785,
+      "search_hits_total": 104,
+      "read_latency_ms": 2.584290996310301,
+      "stats_latency_ms": 61.8667140006437,
+      "continuity_latency_ms": 7.132983002520632,
+      "continuity_response_bytes": 24016,
+      "session_list_latency_ms": 3.242593003960792,
+      "rss_memory_mb": 49.8828125,
+      "db_size_mb": 31.67160415649414
+    },
+    "gen3_full": {
+      "name": "Hybrid Gen3 (v10.0.0-alpha)",
+      "profile": "full",
+      "cold_startup_ms": 2.907745998527389,
+      "init_latency_ms": 15.454500004125293,
+      "protocol_version": "2024-11-05",
+      "tools_list_latency_ms": 7.441818997904193,
+      "tools_count": 37,
+      "tools_payload_bytes": 24426,
+      "search_latencies_ms": [
+        103.20075799972983,
+        62.82264000037685,
+        335.18132599419914,
+        951.4045830001123,
+        162.74863299622666
+      ],
+      "search_median_ms": 162.74863299622666,
+      "search_p95_ms": 951.4045830001123,
+      "search_hits_total": 100,
+      "read_latency_ms": 0.209375997656025,
+      "stats_latency_ms": 0.15438199625350535,
+      "continuity_latency_ms": 0.1404430004185997,
+      "continuity_response_bytes": 208,
+      "session_list_latency_ms": 2.9325409996090457,
+      "mandala_status_latency_ms": 6.732900001225062,
+      "mandala_triage_latency_ms": 4.0589069976704195,
+      "triage_classifier_ns": 3875715.0,
+      "sangha_status_latency_ms": 105.32855599740287,
+      "rss_memory_mb": 580.8046875,
+      "db_size_mb": 2336.48828125
+    },
+    "gen3_cyberbrain": {
+      "name": "Hybrid Gen3 (v10.0.0-alpha)",
+      "profile": "cyberbrain",
+      "cold_startup_ms": 0.6093880001571961,
+      "init_latency_ms": 6.172014996991493,
+      "protocol_version": "2024-11-05",
+      "tools_list_latency_ms": 0.48425400018459186,
+      "tools_count": 10,
+      "tools_payload_bytes": 5140,
+      "search_latencies_ms": [
+        95.48262099997373,
+        68.47276999906171,
+        322.580089996336,
+        857.1643409959506,
+        104.59807999723125
+      ],
+      "search_median_ms": 104.59807999723125,
+      "search_p95_ms": 857.1643409959506,
+      "search_hits_total": 100,
+      "read_latency_ms": 0.31203900289256126,
+      "stats_latency_ms": 0.12383800640236586,
+      "continuity_latency_ms": 0.11310599802527577,
+      "continuity_response_bytes": 208,
+      "session_list_latency_ms": 2.684002996829804,
+      "mandala_status_latency_ms": 3.8054609976825304,
+      "mandala_triage_latency_ms": 4.432430003362242,
+      "triage_classifier_ns": 4307551.0,
+      "rss_memory_mb": 581.25,
+      "db_size_mb": 2336.48828125
+    },
+    "sangha_comms": {
+      "bridge_http_status_ms": 155.6712840028922,
+      "bridge_http_bytes": 186,
+      "sangha_cli_status_ms": 533.3284020016436,
+      "sangha_total_posts": 629,
+      "sangha_latest_seq": 559,
+      "sangha_inbox_ms": 149.95265099423705
+    }
+  }
+}

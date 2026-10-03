@@ -1,0 +1,13 @@
+B5 RECALL-VIEW CAMPAIGN PASS
+view correctness : 24 labels (> Gen2 cap 20); scoped recall exact; shared-token pair no bleed; label-less record visible unscoped only
+crowd-out        : candidate_limit=1 with 3 higher-support out-of-scope records -> in-view record still returned (filter-before-selection)
+filter-not-scorer: unscoped order restricted to label == scoped order
+empty view       : results [] + abstained/insufficient_evidence/no_candidates_in_scope, scope_considered 0
+malformed select : scope="" and scope="a:b" -> typed caller error, no journal entry
+explicit-only    : source scan clean (no env/config scope path)
+bare bytes       : data.mdb sha256 unchanged across scoped reads; store = {data.mdb, lock.mdb}
+inspect          : record count invariant; no registry surface
+
+Driver: driver_b5_campaign.py (candidate binary sha256 0c4b1d87a1f0b414b991537d61e8928a9c820285c1143ed3146bbacfd1946f22).
+Phases: phase 1 ingest only (fresh store, journal campaign_ingest.journal.jsonl); phase 2 read-only
+(no ingest, journal campaign.journal.jsonl); data.mdb sha256 compared across the phases.

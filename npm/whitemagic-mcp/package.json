@@ -1,7 +1,7 @@
 {
   "name": "whitemagic-mcp",
-  "version": "9.3.4",
-  "description": "Local-first persistent memory and session continuity for AI coding agents (Claude Code, Cursor, Codex), over MCP - one static Rust binary, no telemetry by default, verifiable handoffs.",
+  "version": "10.0.0-alpha.1",
+  "description": "Local-first sovereign cognitive kernel and memory for AI coding agents over MCP - pure Rust, zero-telemetry, Landlock LSM sandbox.",
   "license": "MIT",
   "bin": {
     "whitemagic-mcp": "./bin/cli.mjs"

@@ -5,6 +5,16 @@ All notable changes to WhiteMagic are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.0-alpha.1] — 2026-10-03
+
+### Added
+- **WhiteMagic Gen3 Sovereign Cognitive Kernel** — Complete architectural transition from Gen2 (18-crate federation) to Gen3 (2-crate minimal sovereign substrate: `wm-gen3-core` and `wm-gen3-harness`).
+- **Epistemic Class Separation** — Immutable constitution preserving the distinction between evidence, belief, and speculation; machine-checked Law and Evidence closures (`forbid(unsafe_code)`).
+- **Sub-Millisecond Retrieval** — Fastembed BGE-small vector embeddings, BM25, and holographic projection with 4.35 ms cold initialization (113x faster than Gen2) and 0.16 ms record reads (22.6x faster than Gen2).
+- **Autonomous Closed-Loop Evolution** — Cognitive think sweeps, associative dream incubation cycles, and Pareto-optimal genetic selection.
+- **Mandala Kekkai Confinement** — Zero-overhead Landlock LSM sandboxing with 230 µs startup (521x faster than Docker).
+- **Mandala P2P Mesh & Sovereign Sync** — Distributed agent synchronization and signed continuity receipt verification.
+
 ## [9.3.4] — 2026-10-01
 
 ### Changed

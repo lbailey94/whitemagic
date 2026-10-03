@@ -1,0 +1,32 @@
+# WhiteMagic Gen3 — Architectural & Constitutional Contracts
+# Format: @cc [owner:<id>,label:<category>] <contract-name>
+
+@cc [owner:lucas,label:constitution] article1-commit-capability
+All mutations to the primary substrate or store MUST require an explicit, unforgeable CommitCapability minted through an authorized channel (RatifiedChannel). Unmetered, anonymous, or ambient write paths are constitutionally forbidden.
+
+@cc [owner:lucas,label:constitution] article2-pulse-compilation
+All memory records entering the system MUST pass through the sovereign pulse compiler. Raw uncompiled text MUST NOT bypass the 28-Gana coordinate system, epistemic classification, or dimensional embedding.
+
+@cc [owner:lucas,label:constitution] article3-epistemic-provenance
+Evidence, belief, and speculation MUST remain epistemically distinct at all times. Inferred hypotheses or synthetic dream reflections MUST NEVER overwrite or masquerade as ground-truth world evidence. Every record MUST carry an immutable source provenance string.
+
+@cc [owner:lucas,label:constitution] article4-zero-unmetered-loops
+Autonomous loops and background daemons MUST be strictly metered and bounded. Zero unmetered background loops or unbounded spinning threads are permitted. Time enters through explicit pulses or injected logical clock parameters; system MUST respect quiescence.
+
+@cc [owner:lucas,label:evolution] article6-maker-checker-separation
+Proposing agents (Makers) MUST NOT evaluate their own candidate mutations or alter evaluation gates. All candidate mutations MUST be adjudicated by an independent witness or Checker running under isolated sandbox constraints.
+
+@cc [owner:lucas,label:evolution] pareto-gated-promotions
+No candidate mutation MAY be promoted to the germline if it regresses any metric in the protected constitutional vector M_protected = <L_p99, E_rate, Phi_closures, B_brier>, regardless of whether scalar functional fitness improved.
+
+@cc [owner:lucas,label:evolution] negative-knowledge-retention
+Candidates assigned to Retire or Quarantine MUST have their failure signatures inscribed into the lineage archive as negative knowledge to suppress cyclic re-exploration of known dead ends: P(proposal | known_failure) -> 0.
+
+@cc [owner:lucas,label:security] preflight-secret-inspection
+All outgoing mesh packets (.wmpack), exported bundles, and external model inference payloads MUST undergo complete preflight secret inspection. Any unredacted secret, private key, token, or credential MUST cause immediate rejection or quarantine.
+
+@cc [owner:lucas,label:mesh] p2p-merkle-idempotency
+Mesh delta synchronization MUST be deterministic, Merkle-anchored, and idempotent. Packet reordering, duplicate deliveries, or network drops MUST NOT corrupt substrate state or produce divergent Merkle roots across peer nodes.
+
+@cc [owner:lucas,label:architecture] pure-sync-core
+Core algorithmic evaluators in cladistics, conformal calibration, catuskoti logic, and quarantine validation MUST remain pure and synchronous: no ambient I/O, no unmetered tokio blocking, and no ungrounded wall-clock access.

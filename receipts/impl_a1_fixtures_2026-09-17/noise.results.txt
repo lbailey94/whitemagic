@@ -1,0 +1,8 @@
+A1 NOISE FIXTURE PASS
+run1 refused   : {"failed": 5, "errors": ["noise_class"], "admitted_ids": [3, 4]}
+run1 classes   : ["error_line", "function_repr", "json_blob", "too_short", "traceback"]
+run1 records   : 5 (3 baseline + 2 controls; 5 noise items refused, none stored)
+run1 ordering  : before == after -> [(2, 1, None, None), (1, 2, None, None), (0, 3, None, None)]
+run1 no-store  : recall 'traceback' -> 0 hits; control -> 1 hit
+run1 batches   : [3, 2]
+run2 ablation  : admitted 5 records; recall 'traceback' -> 1 hit

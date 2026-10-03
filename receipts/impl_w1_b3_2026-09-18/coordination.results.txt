@@ -1,0 +1,56 @@
+=== WHITE MAGIC GEN3 WAVE-1 ROW B3 (COORDINATION) ACCEPTANCE ===
+Spec: docs/specs/W1_B3_coordination.md
+Bundle: /home/lucas/Desktop/WMgen3/receipts/impl_w1_b3_2026-09-18
+
+[TEST 1/6] Running Rust-native coordination contract suite (wm-tools)...
+  ✓ Native test passed: claim_then_conflict_names_holder_and_intent
+  ✓ Native test passed: check_reports_claimed_then_free_zero_false_free
+  ✓ Native test passed: release_requires_owner_then_scope_frees
+  ✓ Native test passed: expired_lease_frees_scope
+  ✓ Native test passed: ledger_visible_across_independent_tool_instances
+  ✓ Native test passed: renew_own_claim_keeps_single_entry
+  ✓ Native test passed: claim_rejects_missing_intent_and_bad_ttl
+  ✓ Native test passed: non_git_root_is_a_clear_error
+  ✓ Native test passed: list_hides_expired_by_default_but_can_include_them
+  ✓ Native test passed: coordination_effect_shapes_are_dedicated
+  ✓ Native test passed: strict_snapshot_is_read_only_and_leaves_no_lock_or_tmp_files
+  ✓ Native test passed: release_refuses_alternate_root_when_configured
+  ✓ Native test passed: discover_walks_up_without_spawning_git
+  ✓ Native test passed: discover_follows_worktree_commondir
+  ✓ Native test passed: discover_rejects_paths_outside_a_repository
+  --> Rust contract suite PASS (15 passed, 0 failed)
+
+[TEST 2/6] Verifying two-writer conflict naming and exact-owner release contract...
+  ✓ Confirmed conflict response names holder + intent
+  ✓ Confirmed mandatory intent enforcement
+  ✓ Confirmed exact-owner release verification (non-owners refused)
+
+[TEST 3/6] Verifying read-only discipline (hash invariant, zero lock/temp files, logical expiry)...
+  ✓ Confirmed snapshot_readonly leaves file bytes and mtime unchanged
+  ✓ Confirmed read creates 0 lockfiles and 0 temp files
+  ✓ Confirmed expired leases are logically free on check and reportable on list(include_expired=true)
+
+[TEST 4/6] Verifying typed-effect asymmetry (work refusable, release always admitted)...
+  ✓ Confirmed CodeClaimTool acquires CoordinationLease
+  ✓ Confirmed CodeReleaseTool carries CoordinationRelease
+  ✓ Confirmed always-releasable asymmetry: work may be refused; release never is
+
+[TEST 5/6] Verifying root binding and pure filesystem git-common-dir discovery...
+  ✓ Confirmed alternate/escaping root is refused when root is configured
+  ✓ Confirmed pure filesystem walk resolves git-common-dir with 0 subprocess spawns
+
+[TEST 6/6] Verifying Gen3 Core Anti-Bloat Canon (no lock machinery re-derived in Gen3 core)...
+  ✓ Gen3 core module clean: lib.rs
+  ✓ Gen3 core module clean: journal.rs
+  ✓ Gen3 core module clean: field.rs
+  ✓ Gen3 core module clean: evidence.rs
+  ✓ Gen3 core module clean: ops.rs
+  ✓ Gen3 core module clean: projection.rs
+  ✓ Gen3 core module clean: admin.rs
+  ✓ Gen3 core module clean: constitution.rs
+  ✓ Gen3 core module clean: adaptive.rs
+  ✓ Gen3 core module clean: store.rs
+  ✓ All Gen3 closure static scans PASS
+
+=== ALL ACCEPTANCE CRITERIA AND ADVERSARIAL CASES PASS (6/6 SUITES GREEN) ===
+Total native Rust contract assertions passed: 15

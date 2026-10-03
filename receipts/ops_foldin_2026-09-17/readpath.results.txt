@@ -1,0 +1,4 @@
+OPS READ-PATH AUDIT PASS
+source         : recall/inspect bodies contain no durable mutation; inspect is &self (cannot mutate/journal); recall's only mutable touches are declared (journal disclosure + in-process usage counter)
+runtime        : data.mdb sha256 unchanged after recall-only and inspect-only processes (e74d2a1854d0d760)
+journals       : recall-only -> ['provenance.chain', 'run.end', 'selection.decision'] | inspect-only -> ['run.end']

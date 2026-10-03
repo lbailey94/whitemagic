@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-10-03 01:35:28Z",
+  "kernel_sandboxing": "Landlock LSM + rlimit",
+  "benchmark_profile": "release (optimized)",
+  "total_elapsed_s": 3.936,
+  "jev_latency_ns": 26.7,
+  "jev_throughput_ops_sec": 37495313,
+  "claim_latency_us": 87.67,
+  "claim_throughput_ops_sec": 11406,
+  "landlock_latency_us": 142.55,
+  "landlock_throughput_ops_sec": 7015,
+  "receipt_latency_us": 341.93,
+  "receipt_throughput_ops_sec": 2924,
+  "thermal_refusal_latency_ns": 104.3,
+  "thermal_refusal_throughput_ops_sec": 9586509,
+  "factory_trial_latency_us": 604.44,
+  "factory_trial_throughput_ops_sec": 1654,
+  "mandala_total_barrier_us": 230.22,
+  "comparative_speedups": {
+    "firecracker_speedup": 152.0,
+    "docker_speedup": 521.2,
+    "qubes_xen_speedup": 13031.0
+  }
+}

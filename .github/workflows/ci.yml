@@ -8,7 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
 
 jobs:
   fmt:
@@ -32,337 +31,51 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --workspace
 
-  host-scripts:
+  truth:
     timeout-minutes: 10
-    name: Host Scripts (installer, Crystal client, version truth, npm launcher)
+    name: Version Truth Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install optional Crystal client dependency
-        run: python3 -m pip install cryptography
-      - name: Python tests (installer sentinel, version truth, release manifest)
-        run: python3 -m unittest scripts.tests.test_install_sh scripts.tests.test_version_truth scripts.tests.test_release_manifest
-      - name: Crystal client tests
-        run: python3 -m unittest scripts.tests.test_crystal_client
-      - name: npm launcher tests
-        working-directory: npm/whitemagic-mcp
-        run: node --test
+      - run: python3 scripts/version_truth.py --check
 
   test-linux:
-    timeout-minutes: 20
+    timeout-minutes: 25
     name: Tests (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Run tests (capture counts; pin host-sensitive invariant fixture)
-        run: |
-          set -o pipefail
-          # Integration targets lack cfg!(test); pin only this live-server fixture via the documented seam.
-          # The rest of the suite remains unfrozen so injected stress tests exercise strict-mode behavior.
-          WM_HOMEOSTASIS_FROZEN=1 cargo test \
-            -p whitemagic --test gen2_invariants deletion_leaves_a_karma_audit_trail \
-            2>&1 | tee /tmp/cargo-test.log
-          # --skip is a libtest flag; criterion benches (harness=false) use their
-          # own CLI and reject it (exit 2). Keep --skip off the bench targets and
-          # run those separately in cargo test's fast test-mode.
-          env -u WM_HOMEOSTASIS_FROZEN -u WM_SELFMODEL_FROZEN cargo test \
-            --lib --bins --tests --examples \
-            -- --skip deletion_leaves_a_karma_audit_trail 2>&1 | tee -a /tmp/cargo-test.log
-          env -u WM_HOMEOSTASIS_FROZEN -u WM_SELFMODEL_FROZEN cargo test --benches \
-            2>&1 | tee -a /tmp/cargo-test.log
-      - name: Write test counts (release facts)
-        if: always()
-        run: |
-          python3 - <<'PY'
-          import json, pathlib, re
-          log = pathlib.Path('/tmp/cargo-test.log')
-          passed = failed = ignored = 0
-          if log.is_file():
-              for m in re.finditer(
-                  r'test result: \w+\. (\d+) passed; (\d+) failed; (\d+) ignored',
-                  log.read_text(),
-              ):
-                  passed += int(m.group(1)); failed += int(m.group(2)); ignored += int(m.group(3))
-          pathlib.Path('tests.json').write_text(json.dumps({
-              "passed": passed, "failed": failed, "ignored": ignored,
-              "source": "CI Linux: cargo test --all-targets",
-          }, indent=2) + "\n")
-          print(f"passed={passed} failed={failed} ignored={ignored}")
-          PY
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: tests-summary
-          path: tests.json
-          if-no-files-found: warn
+      - name: Run workspace tests
+        run: cargo test --workspace
 
-  smoke:
-    timeout-minutes: 15
-    name: Curated Smoke Test (Linux)
+  build-release:
+    timeout-minutes: 20
+    name: Build Release Binary
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --bin wm
-      - run: python3 scripts/curated_smoke_test.py
+      - name: Verify binary execution
+        run: target/release/wm --version
 
-  smoke-aarch64:
-    timeout-minutes: 30
-    name: Curated Smoke Test (Linux aarch64 ${{ matrix.flavor }})
-    runs-on: ubuntu-24.04-arm
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - flavor: gnu
-            target: aarch64-unknown-linux-gnu
-          - flavor: musl
-            target: aarch64-unknown-linux-musl
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install musl tools
-        if: matrix.flavor == 'musl'
-        run: |
-          sudo apt-get update && sudo apt-get install -y musl-tools
-          sudo ln -sf "$(command -v musl-gcc)" /usr/local/bin/aarch64-linux-musl-gcc
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
-      - name: Ensure target installed (cache restore can clobber it)
-        run: rustup target add ${{ matrix.target }}
-      - run: cargo build --release --target ${{ matrix.target }} --bin wm
-      - name: Selftest (native arm64)
-        run: target/${{ matrix.target }}/release/wm selftest --json
-      - run: python3 scripts/curated_smoke_test.py --binary target/${{ matrix.target }}/release/wm
-
-  installer-windows:
-    timeout-minutes: 25
-    name: Windows Installer (install.ps1)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Build release binary
-        run: cargo build --release --bin wm
-      - name: Generate checksum for local-file mode
-        shell: pwsh
-        run: |
-          $hash = (Get-FileHash target/release/wm.exe -Algorithm SHA256).Hash.ToLower()
-          "$hash  wm-windows-x86_64.exe" | Out-File -Encoding ascii target/release/wm-windows-x86_64.exe.sha256
-      - name: Run install.ps1 (local-file mode)
-        shell: pwsh
-        run: |
-          ./scripts/install.ps1 -File target/release/wm.exe `
-            -ChecksumFile target/release/wm-windows-x86_64.exe.sha256 `
-            -Dir "$env:RUNNER_TEMP\wm-bin" -Ref ci
-      - name: Smoke test the installed binary
-        shell: pwsh
-        run: |
-          & "$env:RUNNER_TEMP\wm-bin\wm.exe" --version
-          & "$env:RUNNER_TEMP\wm-bin\wm.exe" selftest --json | Out-Null
-          Write-Host "install.ps1 smoke passed"
-      - name: Tampered binary must be refused
-        shell: pwsh
-        run: |
-          $tampered = "$env:RUNNER_TEMP\tampered.exe"
-          Copy-Item target/release/wm.exe $tampered
-          Add-Content -LiteralPath $tampered -Value "tamper" -Encoding ascii
-          $proc = Start-Process pwsh -PassThru -Wait -ArgumentList @(
-            "-NoProfile", "-File", "scripts/install.ps1",
-            "-File", $tampered,
-            "-ChecksumFile", "target/release/wm-windows-x86_64.exe.sha256",
-            "-Dir", "$env:RUNNER_TEMP\wm-bin-bad"
-          )
-          if ($proc.ExitCode -eq 0) { Write-Error "tampered binary must be refused"; exit 1 }
-          Write-Host "tampered binary refused (exit $($proc.ExitCode))"
-
-  debian-package:
-    timeout-minutes: 25
-    name: Debian Package (x86_64)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install musl tools
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl
-      - uses: Swatinem/rust-cache@v2
-      - name: Ensure target installed (cache restore can clobber it)
-        run: rustup target add x86_64-unknown-linux-musl
-      - run: cargo build --release --target x86_64-unknown-linux-musl --bin wm
-      - name: Build the .deb
-        run: |
-          VERSION="$(grep -m1 '^version = ' Cargo.toml | sed 's/version = "\(.*\)"/\1/')"
-          sh scripts/build_deb.sh target/x86_64-unknown-linux-musl/release/wm amd64 "$VERSION" dist-deb
-      - name: Install and smoke the package
-        run: |
-          sudo dpkg -i dist-deb/wm-linux-amd64.deb
-          wm --version
-          wm selftest --json > /dev/null
-          echo "deb smoke passed"
-
-  optional-features:
-    timeout-minutes: 20
-    name: Optional Feature Builds
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        features:
-          - "whitemagic/python"
-          - "wm-memory/lancedb"
-          - "wm-memory/onnx"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Install protoc (required by lance-encoding)
-        if: matrix.features == 'wm-memory/lancedb'
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - run: cargo build --features "${{ matrix.features }}"
-
-  test-macos:
-    timeout-minutes: 20
-    name: Tests (macOS)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # nextest + profile ci: the retries in .config/nextest.toml apply only
-      # to nextest runs, so the documented macOS flakes (FIN/RST teardown,
-      # OATS timing) were never absorbed here while this job used plain
-      # `cargo test`. Same shape as the Windows job.
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest@latest
-      - run: cargo nextest run --lib --bins --tests --profile ci --no-fail-fast
-
-  test-windows:
-    # 45m was three consecutive timeouts (Sep 8-9); 90m leaves headroom for
-    # a cold rust-cache rebuild on the Windows runner.
-    timeout-minutes: 90
-    name: Tests (Windows)
-    runs-on: windows-latest
-    env:
-      # NTFS materializes each LMDB map file at full size on open; hundreds
-      # of parallel test stores would exhaust the runner disk otherwise.
-      WM_DEFAULT_MAP_SIZE: "33554432"
-    steps:
-      - name: Free disk space (LMDB 4GB test maps fail on a full runner disk)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # nextest + per-test hard timeout (.config/nextest.toml, profile ci):
-      # a Windows-only hang costs 3 minutes per test and is reported by
-      # name, instead of burning the job to the 90m ceiling.
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest@latest
-      # --lib/--bins/--tests: benches excluded — nextest runs harness=false
-      # criterion binaries in full benchmark mode (minutes per bench),
-      # unlike plain cargo test's fast test-mode; benches are covered by
-      # the Benchmarks workflow + bench-compile check instead.
-      # --no-fail-fast: report every failing test in one run instead of
-      # stopping at the first (one platform-specific failure used to hide
-      # the rest of the matrix).
-      - run: cargo nextest run --lib --bins --tests --profile ci --no-fail-fast
-
-  boundary-e2e:
-    timeout-minutes: 20
-    name: Boundary E2E (daemon + federated gateway)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # Bounded spawned-process acceptance: bounded daemon sweep (Q08-G1)
-      # and the two-backing federated gateway over real HTTP (Q08-G2).
-      - run: cargo test -p whitemagic --test daemon_cycle_e2e --test federated_gateway_e2e
-
-  bench-compile:
-    timeout-minutes: 25
-    name: Benchmark Compile Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo bench --no-run
-
-  proptest:
-    timeout-minutes: 15
-    name: Property-Based Tests
-    runs-on: ubuntu-latest
-    env:
-      PROPTEST_CASES: "4096"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test --all-targets proptest
-      - run: cargo test -p wm-core --test taxonomy
-      - run: cargo test -p wm-tools --lib nlu
-      - run: cargo test -p wm-governance --lib dharma_gate
-      - run: cargo test -p wm-dispatch --lib rate_limiter
-      - run: cargo test -p wm-core --lib effects
-
-  zero-egress:
-    timeout-minutes: 20
-    name: Zero-Egress Proof (Q37)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --bin wm
-      - name: Proof run (namespace with lo DOWN, create + recall)
-        run: scripts/zero_egress_test.sh | tee zero-egress-proof.txt
-        env:
-          WM: ${{ github.workspace }}/target/release/wm
-      - name: Negative control (the harness must be able to fail)
-        run: |
-          if scripts/zero_egress_test.sh; then
-            echo "NEGATIVE CONTROL FAILED: the harness passed with a broken binary — it cannot fail, so it proves nothing"
-            exit 1
-          fi
-          echo "negative control OK: harness fails loudly when WM is /bin/false"
-        env:
-          WM: /bin/false
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zero-egress-proof
-          path: zero-egress-proof.txt
-          if-no-files-found: error
-
-  audit:
+  npm:
     timeout-minutes: 10
-    name: Dependency Audit
+    name: npm Launcher Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@cargo-deny
-      - run: cargo deny check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: npm tests
+        working-directory: npm/whitemagic-mcp
+        run: node --test

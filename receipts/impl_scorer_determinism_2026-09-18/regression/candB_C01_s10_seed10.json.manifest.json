@@ -1,0 +1,90 @@
+{
+  "schema": "wm-evaluation-run-manifest-v1",
+  "protocols": {
+    "legacy": "wm-retrieval-legacy-v1",
+    "strict": "wm-evidence-strict-v1",
+    "grouped_source": "wm-source-groups-v1"
+  },
+  "command": [
+    "/usr/bin/python3",
+    "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/memorastrict_bench.py",
+    "--binary",
+    "/home/lucas/Desktop/WMgen3/target/release/wm-gen3",
+    "--data",
+    "/home/lucas/Desktop/WMgen3/receipts/impl_scorer_determinism_2026-09-18/regression/corpus_dedup",
+    "--seeds",
+    "10",
+    "--categories",
+    "T8",
+    "T1",
+    "T6",
+    "T2",
+    "--limit",
+    "10",
+    "--candidate-limit",
+    "100",
+    "--min-score",
+    "0",
+    "--min-coverage",
+    "0",
+    "--per-case",
+    "--output",
+    "/home/lucas/Desktop/WMgen3/receipts/impl_scorer_determinism_2026-09-18/regression/candB_C01_s10.json"
+  ],
+  "runner": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/memorastrict_bench.py",
+    "sha256": "df9d42c24a1005c102e8d99436e7cde37bccc3d8f2958ad4f6659d639c3dc597"
+  },
+  "protocol_helper": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/eval_protocol.py",
+    "sha256": "bb3e70b55c38b24ad22e26b87e54d52a51c514c65d336e9194e96b05b9d3b6ff"
+  },
+  "binary": {
+    "path": "/home/lucas/Desktop/WMgen3/target/release/wm-gen3",
+    "sha256": "a5ec583b318bfe269a77e3491205548ec431a8e1a18c77e3af74d9aaa882db44"
+  },
+  "dataset": {
+    "path": "/home/lucas/Desktop/WMgen3/receipts/impl_scorer_determinism_2026-09-18/regression/corpus_dedup/bench_seed10.json",
+    "sha256": "f4eccb314c450a07c75e49b7c701b6e2c57dc057f7975cccf840667d6cb4eda3"
+  },
+  "output": {
+    "path": "/home/lucas/Desktop/WMgen3/receipts/impl_scorer_determinism_2026-09-18/regression/candB_C01_s10_seed10.json",
+    "sha256": "3ca4c5f24c5af5738002c85890c1fd3213e83a54e65d35ae17b0cd8cd95b59f9"
+  },
+  "repository": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9",
+    "branch": "main",
+    "head": "38da9fe13b58b98f2d5743149bba140890c5f0a1",
+    "diff_sha256": "b90ab9d6623f36dd3a01e7a47371b2e126259f7ebd5547bc6bcee642d2d03880"
+  },
+  "configuration": {
+    "execution_path": "local-wm-serve-stdio",
+    "retrieval": {
+      "route": "memory.episodic_search",
+      "bm25_only_requested": false
+    },
+    "seed": 10,
+    "categories": [
+      "T8",
+      "T1",
+      "T6",
+      "T2"
+    ],
+    "limit": 10,
+    "candidate_limit": 100,
+    "min_score": 0.0,
+    "min_coverage": 0.0,
+    "grouped_source": {
+      "enabled": false,
+      "protocol": null,
+      "declared_retrieval_cutoff": 10
+    }
+  },
+  "environment": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "answer_generation_model": null
+  },
+  "valid_execution": true,
+  "failures": []
+}

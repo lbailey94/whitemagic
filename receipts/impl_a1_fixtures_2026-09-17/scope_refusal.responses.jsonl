@@ -1,0 +1,3 @@
+{"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"capabilities\":{},\"protocolVersion\":\"gen3-0.1\"}","type":"text"}]}}
+{"id":2,"jsonrpc":"2.0","result":{"content":[{"text":"{\"errors\":[\"duplicate_exact\"],\"failed\":1,\"ids\":[],\"status\":\"error\"}","type":"text"}]}}
+{"id":3,"jsonrpc":"2.0","result":{"content":[{"text":"{\"errors\":[\"duplicate_exact\"],\"failed\":1,\"ids\":[],\"status\":\"error\"}","type":"text"}]}}

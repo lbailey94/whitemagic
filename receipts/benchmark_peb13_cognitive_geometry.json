@@ -1,0 +1,32 @@
+{
+  "benchmark": "PEB-13",
+  "milestone": "Milestone 7",
+  "elapsed_seconds": 0.47,
+  "calibration_gate_passed": true,
+  "results": {
+    "world_e_recovered_l2": true,
+    "world_g_recovered_graph": true,
+    "world_r_recovered_riemannian": true,
+    "world_f_recovered_finsler": true,
+    "pareto_complexity_gate_passed": true,
+    "directional_stochastic_entropy_production": 4.1016,
+    "shuffled_time_null_entropy_production": 0.0085,
+    "directional_null_empirical_p_value": 0.0099,
+    "directional_null_parametric_z_score": 6.19,
+    "hysteresis_vanishes_at_tier5_ablation": true,
+    "geometric_holonomy_persists_under_curvature": true,
+    "holonomy_linear_scaling_verified": true,
+    "holonomy_sign_inversion_verified": true,
+    "native_runtime_best_rung": "EuclideanL2",
+    "native_rmse": {
+      "euclidean_l2": 0.1344,
+      "graph_geodesic": 0.2116,
+      "riemannian": 0.1455,
+      "finsler": 0.1103
+    },
+    "native_entropy_production": 4.7642,
+    "native_null_empirical_p_value": 0.0099,
+    "native_null_parametric_z_score": 132.54
+  },
+  "all_dimensions_passed": true
+}

@@ -1,0 +1,19 @@
+{
+  "benchmark": "PEB-14C",
+  "milestone": "Milestone 8C",
+  "elapsed_seconds": 0.4,
+  "results": {
+    "heterogeneous_throughput_standing_preserved": true,
+    "capability_negotiation_clean_degrade": true,
+    "downgrade_attack_prevented": true,
+    "sleep_wake_dhcp_rebind_continuous": true,
+    "projection_sovereignty_zero_unearned_commits": true,
+    "coordinate_collision_provenance_preserved": true,
+    "partial_convergence_heals_without_lww": true,
+    "poisoned_salience_ignored_by_local_ranking": true,
+    "unequal_reciprocity_proportional_standing": true,
+    "cross_hardware_reproducibility": true,
+    "sustained_soak_resource_bounded": true
+  },
+  "all_dimensions_passed": true
+}

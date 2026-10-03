@@ -132,10 +132,8 @@ grew without any website CTA — the memory layer chooses its own doors.
 Verify the installation, activate it, and see the product work end to end:
 
 ```bash
-wm --version    # wm 9.3.4
-wm grimoire     # guided first-run: host, memory layer, agent wiring, vocabulary, continuity
-wm connect      # dry run: list detected MCP clients and the exact change
-wm connect --write  # apply, with timestamped backups
+wm --version    # wm 10.0.0-alpha.1
+wm status       # display substrate status, epoch, record counts, and store health
 ```
 
 `wm grimoire` proves the environment and previews client wiring; it ends by

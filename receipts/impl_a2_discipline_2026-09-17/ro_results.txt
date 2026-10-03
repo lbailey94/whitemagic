@@ -1,0 +1,6 @@
+A2-READONLY DEMO PASS
+alive-writer read : {"status": "success", "count": 1}
+write refused     : {"status": "error", "error": "read-only mode: write route refused"}
+canary refused    : {"status": "error", "error": "read-only mode: write route refused"}
+store unchanged   : True
+wedged-writer read: {"status": "success", "count": 1}

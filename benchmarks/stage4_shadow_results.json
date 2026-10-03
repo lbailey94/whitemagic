@@ -1,0 +1,471 @@
+{
+  "canonical_store": "/home/lucas/.local/share/whitemagic/gen3",
+  "total_records": 10476,
+  "rounds": 3,
+  "total_queries": 19,
+  "total_runs": 57,
+  "latencies_ms": {
+    "min": 145.67559299939603,
+    "p50": 181.18781700104591,
+    "p95": 712.3443130003579,
+    "p99": 754.3591289995675,
+    "max": 754.3591289995675,
+    "mean": 214.6679891051973
+  },
+  "determinism_ratio": 1.0,
+  "closure_violations": 0,
+  "queries": {
+    "Mandala": {
+      "elapsed_ms": 244.3811930006632,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10348,
+          "score": 1.0
+        },
+        {
+          "id": 10295,
+          "score": 1.0
+        },
+        {
+          "id": 10277,
+          "score": 1.0
+        },
+        {
+          "id": 10266,
+          "score": 1.0
+        },
+        {
+          "id": 10265,
+          "score": 1.0
+        }
+      ]
+    },
+    "sovereign synchronization": {
+      "elapsed_ms": 184.54270999973232,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 4302,
+          "score": 0.564
+        },
+        {
+          "id": 10351,
+          "score": 0.436
+        },
+        {
+          "id": 10348,
+          "score": 0.436
+        },
+        {
+          "id": 10277,
+          "score": 0.436
+        },
+        {
+          "id": 10263,
+          "score": 0.436
+        }
+      ]
+    },
+    "release freeze": {
+      "elapsed_ms": 216.3858789990627,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10354,
+          "score": 1.0
+        },
+        {
+          "id": 10351,
+          "score": 1.0
+        },
+        {
+          "id": 10348,
+          "score": 1.0
+        },
+        {
+          "id": 10263,
+          "score": 1.0
+        },
+        {
+          "id": 10149,
+          "score": 1.0
+        }
+      ]
+    },
+    "quarantine isolation": {
+      "elapsed_ms": 221.2609340003837,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10266,
+          "score": 1.0
+        },
+        {
+          "id": 10332,
+          "score": 0.5164
+        },
+        {
+          "id": 10291,
+          "score": 0.5164
+        },
+        {
+          "id": 10134,
+          "score": 0.5164
+        },
+        {
+          "id": 10089,
+          "score": 0.5164
+        }
+      ]
+    },
+    "cut-point crash consistency": {
+      "elapsed_ms": 211.83378200112202,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 4302,
+          "score": 0.4834
+        },
+        {
+          "id": 4737,
+          "score": 0.4739
+        },
+        {
+          "id": 10152,
+          "score": 0.289
+        },
+        {
+          "id": 9685,
+          "score": 0.289
+        },
+        {
+          "id": 9851,
+          "score": 0.2464
+        }
+      ]
+    },
+    "CommitCapability MVCC": {
+      "elapsed_ms": 149.36163799939095,
+      "hit_count": 0,
+      "hits": []
+    },
+    "Roaring Bitmaps": {
+      "elapsed_ms": 211.68406299875642,
+      "hit_count": 0,
+      "hits": []
+    },
+    "Anchor Coherence": {
+      "elapsed_ms": 218.9525150006375,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 4737,
+          "score": 1.0
+        },
+        {
+          "id": 10265,
+          "score": 0.4152
+        },
+        {
+          "id": 10258,
+          "score": 0.4152
+        },
+        {
+          "id": 10252,
+          "score": 0.4152
+        },
+        {
+          "id": 10240,
+          "score": 0.4152
+        }
+      ]
+    },
+    "conformal forgotten diamonds": {
+      "elapsed_ms": 211.76936899973953,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 4302,
+          "score": 0.6173
+        },
+        {
+          "id": 10346,
+          "score": 0.2633
+        },
+        {
+          "id": 10243,
+          "score": 0.2633
+        },
+        {
+          "id": 10224,
+          "score": 0.2633
+        },
+        {
+          "id": 9440,
+          "score": 0.2633
+        }
+      ]
+    },
+    "continuity receipt runner": {
+      "elapsed_ms": 219.2653629990673,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10230,
+          "score": 1.0
+        },
+        {
+          "id": 10204,
+          "score": 1.0
+        },
+        {
+          "id": 10193,
+          "score": 1.0
+        },
+        {
+          "id": 10151,
+          "score": 1.0
+        },
+        {
+          "id": 4049,
+          "score": 1.0
+        }
+      ]
+    },
+    "when v9.1.7 tag lands": {
+      "elapsed_ms": 179.55664500004787,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10348,
+          "score": 1.0
+        },
+        {
+          "id": 10354,
+          "score": 0.6934
+        },
+        {
+          "id": 10351,
+          "score": 0.6934
+        },
+        {
+          "id": 10347,
+          "score": 0.6934
+        },
+        {
+          "id": 10343,
+          "score": 0.6934
+        }
+      ]
+    },
+    "security slice 9.1.8": {
+      "elapsed_ms": 176.1148890000186,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10354,
+          "score": 1.0
+        },
+        {
+          "id": 10351,
+          "score": 1.0
+        },
+        {
+          "id": 10349,
+          "score": 1.0
+        },
+        {
+          "id": 10348,
+          "score": 1.0
+        },
+        {
+          "id": 10166,
+          "score": 0.6898
+        }
+      ]
+    },
+    "sangha mesh upgrade live": {
+      "elapsed_ms": 162.77097599959234,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10295,
+          "score": 0.7644
+        },
+        {
+          "id": 10183,
+          "score": 0.7644
+        },
+        {
+          "id": 10182,
+          "score": 0.7644
+        },
+        {
+          "id": 10133,
+          "score": 0.7644
+        },
+        {
+          "id": 8054,
+          "score": 0.7113
+        }
+      ]
+    },
+    "Caddyfile peer routes": {
+      "elapsed_ms": 173.89252099928854,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10295,
+          "score": 1.0
+        },
+        {
+          "id": 10183,
+          "score": 1.0
+        },
+        {
+          "id": 10182,
+          "score": 1.0
+        },
+        {
+          "id": 10133,
+          "score": 1.0
+        },
+        {
+          "id": 10260,
+          "score": 0.7028
+        }
+      ]
+    },
+    "Introspective optimization of guna_balance": {
+      "elapsed_ms": 712.3443130003579,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 10473,
+          "score": 1.0
+        },
+        {
+          "id": 10472,
+          "score": 1.0
+        },
+        {
+          "id": 10471,
+          "score": 1.0
+        },
+        {
+          "id": 10470,
+          "score": 1.0
+        },
+        {
+          "id": 10469,
+          "score": 1.0
+        }
+      ]
+    },
+    "Code Graph Dream god_node": {
+      "elapsed_ms": 217.0555049997347,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 6009,
+          "score": 0.5587
+        },
+        {
+          "id": 710,
+          "score": 0.5587
+        },
+        {
+          "id": 8568,
+          "score": 0.5127
+        },
+        {
+          "id": 3819,
+          "score": 0.4051
+        },
+        {
+          "id": 569,
+          "score": 0.4051
+        }
+      ]
+    },
+    "Narrative Summary auto_generated": {
+      "elapsed_ms": 160.0128059999406,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 4302,
+          "score": 0.5285
+        },
+        {
+          "id": 10055,
+          "score": 0.5001
+        },
+        {
+          "id": 9969,
+          "score": 0.5001
+        },
+        {
+          "id": 7563,
+          "score": 0.5033
+        },
+        {
+          "id": 10402,
+          "score": 0.4967
+        }
+      ]
+    },
+    "Knowledge Wiki Tool Registry": {
+      "elapsed_ms": 157.16865299873461,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 4302,
+          "score": 0.4331
+        },
+        {
+          "id": 10181,
+          "score": 0.3971
+        },
+        {
+          "id": 10180,
+          "score": 0.3971
+        },
+        {
+          "id": 10164,
+          "score": 0.3971
+        },
+        {
+          "id": 10108,
+          "score": 0.3971
+        }
+      ]
+    },
+    "Cognitive Research Experiment hypothesis": {
+      "elapsed_ms": 155.73476800091157,
+      "hit_count": 5,
+      "hits": [
+        {
+          "id": 2456,
+          "score": 1.0
+        },
+        {
+          "id": 6180,
+          "score": 0.6575
+        },
+        {
+          "id": 4302,
+          "score": 0.6575
+        },
+        {
+          "id": 10364,
+          "score": 0.445
+        },
+        {
+          "id": 10346,
+          "score": 0.4367
+        }
+      ]
+    }
+  }
+}

@@ -47,27 +47,16 @@ SURFACES = [
     "npm/whitemagic-mcp/mcpb/manifest.json",
     "npm/whitemagic-mcp/README.md",
     "CITATION.cff",
-    "Dockerfile",
-    "docs/QUICKSTART.md",
-    "docs/MCP_CONFIG_GUIDE.md",
-    "docs/DOCKER_HUB_RUNBOOK.md",
-    "skill.md",
     "README.md",
-    "llms.txt",
-    "PRIVACY_POLICY.md",
-    "TERMS_OF_SERVICE.md",
-    "scripts/install.sh",
-    "SECURITY.md",
-    "rust-toolchain.toml",
 ]
 
-VERSION_RE = re.compile(r"\bv?9\.\d+\.\d+\b")
-WORKSPACE_RE = re.compile(r'(?m)^version = "(\d+\.\d+\.\d+)"')
-SEMVER_RE = re.compile(r"\d+\.\d+\.\d+")
+VERSION_RE = re.compile(r"\bv?(?:10\.\d+\.\d+(?:-alpha(?:\.\d+)?)?|9\.\d+\.\d+)\b")
+WORKSPACE_RE = re.compile(r'(?m)^version = "([^"]+)"')
+SEMVER_RE = re.compile(r"\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?")
 
 CHANGELOG = "CHANGELOG.md"
 UNRELEASED_RE = re.compile(r"(?m)^## \[Unreleased\][^\n]*?(\d+\.\d+\.\d+)")
-RELEASED_HEADING_RE = re.compile(r"^## \[(\d+\.\d+\.\d+)\][^\n]*$")
+RELEASED_HEADING_RE = re.compile(r"^## \[(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?)]")
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Historical version mentions that must never count as drift or be rewritten

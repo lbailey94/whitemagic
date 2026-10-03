@@ -1,0 +1,4 @@
+A1 PARTIAL FIXTURE PASS
+large item     : {"bytes": 468019, "recalled_exact": true, "records": 3}
+budget partial : {"items": 121, "budget": 120, "admitted": 120, "failed": 1, "errors": ["write budget exceeded"], "refusals_journaled": 1}
+recall admitted: 120 / 120 | refused absent: 1 / 1

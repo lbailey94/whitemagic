@@ -1,0 +1,4 @@
+B1 NO-PLANNER CHECK PASS
+source scan    : forbidden organs absent ( rrf, reciprocal_rank, cross_encoder, cross-encoder, jaccard, qfhrr ... )
+rank key       : exactly one assignment, one multiplicative step (recency 0.05, supersede 0.60) — any addition fails this check
+dependencies   : cargo tree has no wm-* crate; closure static scans PASS

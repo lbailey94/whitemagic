@@ -1,0 +1,62 @@
+=== WHITE MAGIC GEN3 WAVE-1 ROW B2 (SESSIONS & CONTINUITY) ACCEPTANCE ===
+Spec: docs/specs/W1_B2_sessions_continuity.md
+Bundle: /home/lucas/Desktop/WMgen3/receipts/impl_w1_b2_2026-09-18
+
+[TEST 1/8] Running Rust-native session & continuity unit contract suite...
+  ✓ Native test passed: nodiscovery_checkpoint_stores_exactly_the_supplied_fields
+  ✓ Native test passed: export_import_roundtrip_preserves_history
+  ✓ Native test passed: import_rejects_missing_payload
+  ✓ Native test passed: continuity_picks_newest_prior_by_time_not_key_order
+  ✓ Native test passed: continuity_skips_empty_newest_session
+  ✓ Native test passed: continuity_empty_store_discloses_project_scoping
+  ✓ Native test passed: session_record_indexes_at_write_time
+  ✓ Native test passed: supersedes_hides_old_turn_until_requested
+  ✓ Native test passed: classify_session_continuity_routes_correctly
+  --> Rust contract suite PASS (54 passed, 0 failed)
+
+[TEST 2/8] Verifying phrase table routing for continuity (Spec §5.5, §3.6, Errata 9.1.7 #2)...
+  ✓ Confirmed phrase in PHRASE_ROUTES: 'where were we' -> session.continuity
+  ✓ Confirmed phrase in PHRASE_ROUTES: 'where did we leave off' -> session.continuity
+  ✓ Confirmed phrase in PHRASE_ROUTES: 'what did we decide last' -> session.continuity
+  ✓ Confirmed phrase in PHRASE_ROUTES: 'continue from' -> session.continuity
+  ✓ Confirmed phrase in PHRASE_ROUTES: 'pick up where' -> session.continuity
+  ✓ Confirmed pre-tokenization invariant prevents stopword-only drop
+
+[TEST 3/8] Verifying Gen3 Core Anti-Bloat Canon (zero session module in Gen3 core)...
+  ✓ Gen3 core module clean: lib.rs
+  ✓ Gen3 core module clean: journal.rs
+  ✓ Gen3 core module clean: field.rs
+  ✓ Gen3 core module clean: evidence.rs
+  ✓ Gen3 core module clean: ops.rs
+  ✓ Gen3 core module clean: projection.rs
+  ✓ Gen3 core module clean: admin.rs
+  ✓ Gen3 core module clean: constitution.rs
+  ✓ Gen3 core module clean: adaptive.rs
+  ✓ Gen3 core module clean: store.rs
+  ✓ Verified cargo tree in WMgen3 has no wm-tools or wm-memory dependencies
+  ✓ All Gen3 closure static scans PASS
+
+[TEST 4/8] Verifying nodiscovery checkpoint contract and effect row (Spec §5.4, §1.3)...
+  ✓ Confirmed SessionCheckpointNodiscoveryTool has 0 reads, 0 spawns, 0 git discovery
+  ✓ Confirmed SessionCheckpointTool truthfully declares git reads/spawns (refused under strict mode)
+
+[TEST 5/8] Verifying lossless replay shape & export/import contract (Spec §5.1, §1.2)...
+  ✓ Confirmed SessionExportTool and SessionImportTool preserve ids, timestamps, tags
+  ✓ Confirmed import rejects missing payload and newer envelope format
+
+[TEST 6/8] Verifying resolution semantics & starvation behavior (Spec §5.3, §3.3, §3.10)...
+  ✓ Confirmed newest prior session with turns resolution (created_at time-based)
+  ✓ Confirmed empty candidate session bypassed
+  ✓ Confirmed empty store returns truthful project-scoping disclosure
+
+[TEST 7/8] Verifying write-time indexing & superseded visibility toggle (Spec §5.6, §5.7)...
+  ✓ Confirmed write-time Tantivy indexing on session.record and session.import
+  ✓ Confirmed superseded turns hidden by default, restored on include_superseded: true
+
+[TEST 8/8] Probing live MCP server session endpoints...
+  ✓ Live MCP session.continuity response verified (returned 2026-09-17 summary turn)
+  ✓ Live MCP NLU phrase routing verified ('where were we' -> session.continuity, confidence 1.0)
+  ✓ Live MCP trailing phrase routing verified ('where were we before lunch' -> session.continuity, confidence 1.0)
+
+=== ALL ACCEPTANCE CRITERIA AND ADVERSARIAL CASES PASS (8/8 SUITES GREEN) ===
+Total native Rust contract assertions passed: 54

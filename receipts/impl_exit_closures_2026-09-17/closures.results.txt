@@ -1,0 +1,5 @@
+ROW-EXIT CLOSURES PASS
+A1 case 3     : out-of-range refused fail-closed (field named, value 4294967296); in-range 120 accepted
+A1 case 7     : paraphrases admitted (2) and retrievable (2) — no implicit semantic dedup
+B1 case 2     : tag-sharing records admitted (2) and retrievable (2) — no tag filtering
+A1 case 10    : N/A declared in the exit receipt (no strict-mode construct; readonly typed refusal cited)

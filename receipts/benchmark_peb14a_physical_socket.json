@@ -1,0 +1,17 @@
+{
+  "benchmark": "PEB-14A",
+  "milestone": "Milestone 8A",
+  "elapsed_seconds": 0.63,
+  "results": {
+    "choppy_stream_reassembled": true,
+    "guillotine_clean_teardown": true,
+    "cold_reboot_replay_rejected": true,
+    "physical_noise_zero_false_quarantine": true,
+    "compute_freeloader_throttled": true,
+    "oversized_framing_bounded_memory": true,
+    "slowloris_assembly_timed_out": true,
+    "crash_consistency_zero_double_commits": true,
+    "priority_lane_safety_unstarved": true
+  },
+  "all_dimensions_passed": true
+}

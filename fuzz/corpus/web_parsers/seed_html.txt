@@ -1,1 +1,0 @@
-<html><head><title>T</title><script>var x=1;</script></head><body><p>Hello&nbsp;world</p></body></html>

@@ -1,0 +1,16 @@
+{
+  "benchmark": "PEB-14B",
+  "milestone": "Milestone 8B",
+  "elapsed_seconds": 0.38,
+  "results": {
+    "extreme_clock_skew_invariance": true,
+    "ancestry_recovers_inverted_timestamps": true,
+    "true_concurrency_preserved": true,
+    "asymmetric_wail_exactly_once": true,
+    "epistemic_isolation_zero_contamination": true,
+    "identity_fork_preserved_against_performance": true,
+    "pareto_cladistics_promotes_parsimony": true,
+    "stale_pre_partition_replay_rejected": true
+  },
+  "all_dimensions_passed": true
+}

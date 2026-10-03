@@ -1,0 +1,48 @@
+{
+  "trials": 500,
+  "zero_state_leakage": {
+    "violations": 0,
+    "futures_tested": 100000,
+    "fidelity": 1.0
+  },
+  "toctou_rejection": {
+    "successes": 500,
+    "attempts": 500,
+    "rate": 1.0
+  },
+  "scheduler_order_independence": {
+    "identity_percentage": 100.0
+  },
+  "branch_isolation": {
+    "violations": 0,
+    "trials_tested": 500,
+    "fidelity": 1.0
+  },
+  "writeset_conflict_prevention": {
+    "prevented": 500,
+    "attempts": 500,
+    "rate": 1.0
+  },
+  "atomic_composite_commit": {
+    "success_rate_percentage": 100.0
+  },
+  "budget_enforcement": {
+    "blocked": 500,
+    "attempts": 500,
+    "rate": 1.0
+  },
+  "provenance_separation": {
+    "blocked": 500,
+    "attempts": 500,
+    "rate": 1.0
+  },
+  "performance": {
+    "pulse_avg_latency_us": 222.74,
+    "dag_emulated_latency_us": 384.7,
+    "latency_speedup_factor": 1.73,
+    "pulse_memory_bytes_per_future": 344,
+    "dag_memory_bytes_per_task": 4600,
+    "memory_reduction_factor": 13.37
+  },
+  "raw_summary": "PEB-10 Report => trials=500, leakage=0/100000 violations, toctou_rejection=500/500, order_identity=100.00%, branch_isolation=0/500 violations, conflict_prevention=500/500, composite_success=100.00%, budget_enforcement=500/500, provenance_blocked=500/500, pulse_lat=222.74us, dag_lat=384.70us (speedup=1.73x), pulse_mem=344B, dag_mem=4600B (reduction=13.37x)"
+}

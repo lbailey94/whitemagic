@@ -1,0 +1,156 @@
+{
+  "timestamp_utc": "2026-09-22 16:10:33 UTC",
+  "benchmark_suite": "PEB-9.5",
+  "milestone": "5A.5",
+  "status": "SEALED_AND_RATIFIED",
+  "topology": {
+    "correlation_spectral_transition": 0.6897979431752773,
+    "correlation_spectral_symmetric": 0.8801712298979243,
+    "correlation_bagua_canonical_transition": 0.25830651853563596,
+    "correlation_bagua_canonical_symmetric": 0.3295950188885836,
+    "correlation_bagua_spectral": 0.16448777669648207,
+    "max_directed_asymmetry": 0.1499999999999999,
+    "permutation_test_40320": {
+      "permutations_tested": 40320,
+      "canonical_rank_sym": 2928,
+      "canonical_p_perm_sym": 0.07261904761904762,
+      "canonical_percentile_sym": 92.73809523809524,
+      "max_r_sym": 0.5164428993148568,
+      "min_r_sym": -0.7671208010047684,
+      "canonical_rank_trans": 2928,
+      "canonical_p_perm_trans": 0.07261904761904762,
+      "canonical_percentile_trans": 92.73809523809524,
+      "max_r_trans": 0.40474084770548485,
+      "min_r_trans": -0.6011993265917454
+    }
+  },
+  "phase_diagram": {
+    "sweep": [
+      {
+        "N": 1,
+        "scalar_ns": 300.0,
+        "rayon_ns": 1207.5,
+        "forkjoin_ns": 8004.0,
+        "gpu_analytical_ns": 25000.0,
+        "optimal_local_cpu": "Scalar-Reflex",
+        "optimal_local_us": 0.3,
+        "optimal_server_gpu": "Scalar-Reflex",
+        "optimal_server_us": 0.3
+      },
+      {
+        "N": 10,
+        "scalar_ns": 705.0,
+        "rayon_ns": 1278.8,
+        "forkjoin_ns": 8040.0,
+        "gpu_analytical_ns": 25000.4,
+        "optimal_local_cpu": "Scalar-Reflex",
+        "optimal_local_us": 0.7,
+        "optimal_server_gpu": "Scalar-Reflex",
+        "optimal_server_us": 0.7
+      },
+      {
+        "N": 100,
+        "scalar_ns": 4755.0,
+        "rayon_ns": 2025.0,
+        "forkjoin_ns": 8400.0,
+        "gpu_analytical_ns": 25003.9,
+        "optimal_local_cpu": "Rayon-CPU",
+        "optimal_local_us": 2.02,
+        "optimal_server_gpu": "Rayon-CPU",
+        "optimal_server_us": 2.02
+      },
+      {
+        "N": 1000,
+        "scalar_ns": 45255.0,
+        "rayon_ns": 9825.0,
+        "forkjoin_ns": 12000.0,
+        "gpu_analytical_ns": 25039.1,
+        "optimal_local_cpu": "Rayon-CPU",
+        "optimal_local_us": 9.82,
+        "optimal_server_gpu": "Rayon-CPU",
+        "optimal_server_us": 9.82
+      },
+      {
+        "N": 10000,
+        "scalar_ns": 450255.0,
+        "rayon_ns": 91200.0,
+        "forkjoin_ns": 48000.0,
+        "gpu_analytical_ns": 25390.6,
+        "optimal_local_cpu": "ForkJoin-Parallel",
+        "optimal_local_us": 48.0,
+        "optimal_server_gpu": "GPU-Accelerator",
+        "optimal_server_us": 25.39
+      },
+      {
+        "N": 100000,
+        "scalar_ns": 4500255.0,
+        "rayon_ns": 938700.0,
+        "forkjoin_ns": 408000.0,
+        "gpu_analytical_ns": 28906.2,
+        "optimal_local_cpu": "ForkJoin-Parallel",
+        "optimal_local_us": 408.0,
+        "optimal_server_gpu": "GPU-Accelerator",
+        "optimal_server_us": 28.91
+      }
+    ],
+    "local_host_crossovers": {
+      "scalar_to_rayon": 26,
+      "rayon_to_forkjoin": 1452
+    },
+    "server_gpu_model_crossovers": {
+      "scalar_to_rayon": 26,
+      "rayon_to_forkjoin": 1452,
+      "forkjoin_to_gpu": 4292
+    },
+    "model_provenance": "Analytical Benchmark Cost Model (Projected Server GPU: 25\u00b5s launch + 0.039ns/item). Local host timings measured on Intel i5-8350U."
+  },
+  "proof_maintenance": {
+    "breaches_tested": 60,
+    "breaches_detected": 60,
+    "missed_breaches": 0,
+    "ci_lower_95": 0.94
+  },
+  "cladistics": {
+    "B0_Pure_Rust": {
+      "correctness": 1.0,
+      "fast_latency_ns": 255.0,
+      "memory_mb": 4.2,
+      "proof_maintenance": "None (Unit tests only)",
+      "build_complexity": "Low (Cargo only)",
+      "fate": "Canonical Host (Base Germline)"
+    },
+    "B1_Proof_Only": {
+      "correctness": 1.0,
+      "fast_latency_ns": 255.0,
+      "memory_mb": 4.2,
+      "proof_maintenance": "Verified (0 missed breaches / 60)",
+      "build_complexity": "Low (Shadow spec in experiments/bend2/)",
+      "fate": "PROMOTED to Build-Time Gate (Valid Invariant Verifier)"
+    },
+    "B2_CPU_Parallel": {
+      "correctness": 1.0,
+      "fast_latency_ns": 8040.0,
+      "memory_mb": 12.8,
+      "proof_maintenance": "Verified",
+      "build_complexity": "Medium (C compiler dependency)",
+      "fate": "RESTRICTED (Large-Batch CPU Accelerator for N >= 1,452)"
+    },
+    "B3_GPU_Parallel": {
+      "correctness": 0.99,
+      "fast_latency_ns": 25000.0,
+      "memory_mb": 64.0,
+      "proof_maintenance": "Experimental",
+      "build_complexity": "High (CUDA toolkit required)",
+      "membrane_rule": "GPU cannot cross the causal membrane (zero commit authority; epistemic simulation only)",
+      "fate": "RESTRICTED (High-Intensity Epistemic Batching on Server for N >= 4,292)"
+    },
+    "B4_Proof_Plus_Parallel": {
+      "correctness": 1.0,
+      "fast_latency_ns": 8040.0,
+      "memory_mb": 12.8,
+      "proof_maintenance": "Verified",
+      "build_complexity": "Medium-High",
+      "fate": "PROMOTED for Batch Evolution & Milestone 7 Simulation Battery"
+    }
+  }
+}

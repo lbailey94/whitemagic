@@ -1,0 +1,8 @@
+A3 ACCEPTANCE — asserted items PASS; FINDINGS present
+direction      : A src=new dst=old; B flip -> src=later-ingested (temporal precedence)
+F4 metric      : raw proposals = 5 ; deduped endpoint pairs = 1 (headline uses deduped; raw disclosed)
+history        : superseded record restored under include_historical (all stratum 1)
+round-trip     : relations byte-identical across processes (kind/src/dst/rule_id/state/w/s/c/t)
+window         : relation.proposed ts support a changes_since window ( 5 in window )
+case 1 (sense) : LINKED -> FINDING
+FINDING: {"case": 1, "expected": "no link (spec)", "observed": "1 proposal(s)", "evidence": "a3_c.journal.jsonl"}

@@ -1,0 +1,90 @@
+{
+  "schema": "wm-evaluation-run-manifest-v1",
+  "protocols": {
+    "legacy": "wm-retrieval-legacy-v1",
+    "strict": "wm-evidence-strict-v1",
+    "grouped_source": "wm-source-groups-v1"
+  },
+  "command": [
+    "/usr/bin/python3",
+    "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/memorastrict_bench.py",
+    "--binary",
+    "/tmp/opencode/wmg3-ref/target/release/wm-gen3",
+    "--data",
+    "corpus_dedup",
+    "--seeds",
+    "6",
+    "--categories",
+    "T8",
+    "T1",
+    "T6",
+    "T2",
+    "--limit",
+    "10",
+    "--candidate-limit",
+    "100",
+    "--min-score",
+    "0",
+    "--min-coverage",
+    "0",
+    "--per-case",
+    "--output",
+    "refA.json"
+  ],
+  "runner": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/memorastrict_bench.py",
+    "sha256": "df9d42c24a1005c102e8d99436e7cde37bccc3d8f2958ad4f6659d639c3dc597"
+  },
+  "protocol_helper": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/eval_protocol.py",
+    "sha256": "bb3e70b55c38b24ad22e26b87e54d52a51c514c65d336e9194e96b05b9d3b6ff"
+  },
+  "binary": {
+    "path": "/tmp/opencode/wmg3-ref/target/release/wm-gen3",
+    "sha256": "ee39c37fa01ef77587fdc6a3e3a21e5bc938dbe983e29af27c5b9b2aede0ebeb"
+  },
+  "dataset": {
+    "path": "/home/lucas/Desktop/WMgen3/receipts/impl_b5_recall_view_2026-09-17/regression/corpus_dedup/bench_seed6.json",
+    "sha256": "99c9cf1a42da3cd2dc11e37e0a0437ef79f840aa07da48a363155626ac5b2f8c"
+  },
+  "output": {
+    "path": "/home/lucas/Desktop/WMgen3/receipts/impl_b5_recall_view_2026-09-17/regression/refA_seed6.json",
+    "sha256": "584afa43e482525cec6ef22c45eaaa1949c826008b92abbe316c78c6ffe42fb1"
+  },
+  "repository": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9",
+    "branch": "main",
+    "head": "e520487f7152392db958a5c42481e3c041257447",
+    "diff_sha256": "35641dc5bed3d262c67a0a2e7b5f6edd2a9d6c5aad34fd7d006fb772b9888e75"
+  },
+  "configuration": {
+    "execution_path": "local-wm-serve-stdio",
+    "retrieval": {
+      "route": "memory.episodic_search",
+      "bm25_only_requested": false
+    },
+    "seed": 6,
+    "categories": [
+      "T8",
+      "T1",
+      "T6",
+      "T2"
+    ],
+    "limit": 10,
+    "candidate_limit": 100,
+    "min_score": 0.0,
+    "min_coverage": 0.0,
+    "grouped_source": {
+      "enabled": false,
+      "protocol": null,
+      "declared_retrieval_cutoff": 10
+    }
+  },
+  "environment": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "answer_generation_model": null
+  },
+  "valid_execution": true,
+  "failures": []
+}

@@ -1,0 +1,5 @@
+B5 SCOPES ACCEPTANCE PASS (Gen3 compile/link side)
+labels as views: 30 labels (over Gen2's cap of 20) -> store files ['data.mdb', 'lock.mdb'] ; records 30
+view filter    : provenance-chain prefix yields exactly one label00 record; 30 distinct labels observed in one recall
+no registry    : inspect exposes no galaxy/label/registry/compartment/capability surface
+declared (link): isolation classes + transfer; compartments/membership!=authz/grants; capability typos; fail-open-governance; cap bypass closed by absence; 47-galaxy narrative guard

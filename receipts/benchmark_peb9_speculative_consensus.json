@@ -1,0 +1,36 @@
+{
+  "timestamp_utc": "2026-09-22 16:10:33 UTC",
+  "benchmark_suite": "PEB-9",
+  "milestone": "5A",
+  "status": "SEALED_AND_RATIFIED",
+  "telemetry": {
+    "trials": 500,
+    "arm_a": {
+      "fast": 200,
+      "delib": 100,
+      "esc": 200,
+      "unsafe": 100,
+      "fast_ns": 250.0,
+      "delib_ns": 630.0
+    },
+    "arm_b": {
+      "fast": 100,
+      "delib": 200,
+      "esc": 200,
+      "unsafe": 0,
+      "fast_ns": 295.0,
+      "delib_ns": 675.0,
+      "brier": 0.1715
+    },
+    "arm_c": {
+      "fast": 100,
+      "delib": 200,
+      "esc": 200,
+      "unsafe": 0,
+      "fast_ns": 255.0,
+      "delib_ns": 635.0
+    },
+    "preemption_triggered": 50,
+    "preemption_tested": 50
+  }
+}

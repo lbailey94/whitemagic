@@ -1,0 +1,4 @@
+B1 RANK-FIELD AUDIT PASS
+selected       : [{"id": 2, "rank": 1, "rank_key": 0.711526095867157, "score": 0.6885736584663391, "semantic_support": 0.0, "stratum": 0, "superseded_by": null}, {"id": 1, "rank": 2, "rank_key": 0.40666663646698, "score": 1.0, "semantic_support": 0.0, "stratum": 2, "superseded_by": 11}, {"id": 0, "rank": 3, "rank_key": 0.27542945742607117, "score": 0.6885736584663391, "semantic_support": 0.0, "stratum": 2, "superseded_by": 9}]
+reconstruction : rank_key desc, id desc -> matches reported order; ranks 1..n
+provenance     : complete chains for all selected ids: [0, 1, 2]

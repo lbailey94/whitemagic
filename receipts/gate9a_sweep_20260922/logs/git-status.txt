@@ -1,0 +1,44 @@
+ M Cargo.lock
+ M crates/wm-gen3-core/Cargo.toml
+ M crates/wm-gen3-core/src/capability.rs
+ M crates/wm-gen3-core/src/contract.rs
+ M crates/wm-gen3-core/src/lib.rs
+ M crates/wm-gen3-core/src/ops.rs
+ M crates/wm-gen3-core/src/pulse_compiler.rs
+ M crates/wm-gen3-core/src/store.rs
+ M crates/wm-gen3-harness/Cargo.toml
+ M crates/wm-gen3-harness/src/main.rs
+ M scripts/check_closures.sh
+?? crates/wm-gen3-core/src/intake.rs
+?? crates/wm-gen3-core/src/sweep.rs
+?? crates/wm-gen3-core/src/sweep_planner.rs
+?? crates/wm-gen3-core/tests/gate9a_sweep_acceptance.rs
+?? crates/wm-gen3-core/tests/gate9a_sweep_sizing.rs
+?? crates/wm-gen3-core/tests/intake_public.rs
+?? docs/GATE_9A_AUTHORITY_CONVERGENCE_PLAN.md
+?? docs/GATE_9A_CLOSURE_CHECKLIST.md
+?? docs/GATE_9A_CLOSURE_EXECUTION_PLAN.md
+?? docs/GATE_9A_COVERAGE_MAP_REVIEW_2026-09-21.md
+?? docs/GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md
+?? docs/GATE_9A_EXTERNAL_REVIEW_BRIEF.md
+?? docs/GATE_9A_FINISHING_GUIDE.md
+?? docs/GATE_9A_HARDENING_CROSSCHECK_2026-09-21.md
+?? docs/GATE_9A_SLICE1_CONTRACT.md
+?? docs/GATE_9A_SWEEP_TRANSACTION_PLAN.md
+?? docs/archaeology/
+?? receipts/GATE_9A_AUTHORITY_SWEEP_HANDOFF_2026-09-21.md
+?? receipts/GATE_9A_CONVERGENCE_VERIFICATION_2026-09-21.md
+?? receipts/GATE_9A_MORNING_DISPATCH_2026-09-22.md
+?? receipts/GATE_9A_RATIFICATION_AMENDMENT_2026-09-22.md
+?? receipts/GATE_9A_RATIFICATION_RECONCILIATION_2026-09-22.md
+?? receipts/GATE_9A_SLICE1_ACCEPTANCE_2026-09-21.md
+?? receipts/GATE_9A_SLICE1_STORAGE_PLAN_2026-09-20.md
+?? receipts/GATE_9A_SOL_MORNING_PREP.md
+?? receipts/GATE_9A_SWEEP_DECISIONS_OPTIONS_2026-09-21.md
+?? receipts/GATE_9A_SWEEP_SIZING_2026-09-22.md
+?? receipts/GATE_9A_TERRA_MORNING_PREP.md
+?? receipts/gate9a_convergence_20260921/
+?? receipts/gate9a_handoff_20260922/
+?? receipts/gate9a_slice1_20260921/
+?? receipts/gate9a_sweep_20260922/
+?? scripts/check_slice1_harness.py

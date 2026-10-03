@@ -1,0 +1,81 @@
+ M Cargo.lock
+ M benchmarks/driver_peb9_5_proof_and_parallel_crossover.py
+ M crates/wm-gen3-core/Cargo.toml
+ M crates/wm-gen3-core/src/capability.rs
+ M crates/wm-gen3-core/src/contract.rs
+ M crates/wm-gen3-core/src/ganying.rs
+ M crates/wm-gen3-core/src/hologram.rs
+ M crates/wm-gen3-core/src/lib.rs
+ M crates/wm-gen3-core/src/ops.rs
+ M crates/wm-gen3-core/src/pulse_compiler.rs
+ M crates/wm-gen3-core/src/store.rs
+ M crates/wm-gen3-harness/Cargo.toml
+ M crates/wm-gen3-harness/src/main.rs
+ M docs/PHASE4_ERRATA.md
+ M receipts/BENCHMARK_M01_HOLDOUT_STRESS.md
+ M receipts/BENCHMARK_M02_HOMEOSTASIS_QUARANTINE.md
+ M receipts/BENCHMARK_M03_CAUSAL_CLADISTICS.md
+ M receipts/BENCHMARK_M04A_SPECTROSCOPY_FIDELITY.md
+ M receipts/BENCHMARK_M05A_5_PROOF_AND_PARALLEL_CROSSOVER.md
+ M receipts/BENCHMARK_M05A_SPECULATIVE_CONSENSUS.md
+ M receipts/BENCHMARK_M05B_PULSE_COMPILER.md
+ M receipts/BENCHMARK_M06A_SOVEREIGN_MESH.md
+ M receipts/BENCHMARK_M06B_CONFORMAL_SOVEREIGNTY.md
+ M receipts/BENCHMARK_M07_COGNITIVE_GEOMETRY.md
+ M receipts/BENCHMARK_M08A_PHYSICAL_SOCKET.md
+ M receipts/BENCHMARK_M08B_RELATIVITY_PARTITION.md
+ M receipts/BENCHMARK_M08C_HOLOGRAPHIC_SANGHA.md
+ M receipts/BENCHMARK_PEB0_PRIMITIVE_MINIMALITY.md
+ M receipts/BENCHMARK_PEB1_FOUR_CORNERS.md
+ M receipts/BENCHMARK_PEB4_CONTINUOUS_DREAMING.md
+ M receipts/benchmark_peb10_declarative_pulse_compiler.json
+ M receipts/benchmark_peb11_sovereign_mesh.json
+ M receipts/benchmark_peb12_conformal_sovereignty.json
+ M receipts/benchmark_peb13_cognitive_geometry.json
+ M receipts/benchmark_peb14a_physical_socket.json
+ M receipts/benchmark_peb14b_relativity_partition.json
+ M receipts/benchmark_peb14c_holographic_sangha.json
+ M receipts/benchmark_peb2_peb3_attractor_emergence.json
+ M receipts/benchmark_peb9_5_proof_and_parallel_crossover.json
+ M receipts/benchmark_peb9_speculative_consensus.json
+ M scripts/check_closures.sh
+?? crates/wm-gen3-core/src/intake.rs
+?? crates/wm-gen3-core/src/sweep.rs
+?? crates/wm-gen3-core/src/sweep_planner.rs
+?? crates/wm-gen3-core/tests/gate9a_article9_acceptance.rs
+?? crates/wm-gen3-core/tests/gate9a_sweep_acceptance.rs
+?? crates/wm-gen3-core/tests/gate9a_sweep_sizing.rs
+?? crates/wm-gen3-core/tests/intake_public.rs
+?? docs/DERIVED_CACHE_POLICY.md
+?? docs/GATE_9A_AUTHORITY_CONVERGENCE_PLAN.md
+?? docs/GATE_9A_CLOSURE_CHECKLIST.md
+?? docs/GATE_9A_CLOSURE_EXECUTION_PLAN.md
+?? docs/GATE_9A_COVERAGE_MAP_REVIEW_2026-09-21.md
+?? docs/GATE_9A_COVERAGE_MAP_UPDATE_2026-09-22.md
+?? docs/GATE_9A_EXTERNAL_EFFECT_BOUNDARIES.md
+?? docs/GATE_9A_EXTERNAL_REVIEW_BRIEF.md
+?? docs/GATE_9A_FINISHING_GUIDE.md
+?? docs/GATE_9A_HARDENING_CROSSCHECK_2026-09-21.md
+?? docs/GATE_9A_M0_M8_DISPOSITIONS.md
+?? docs/GATE_9A_SLICE1_CONTRACT.md
+?? docs/GATE_9A_SWEEP_TRANSACTION_PLAN.md
+?? docs/STORE_AND_DATA_HYGIENE.md
+?? docs/archaeology/
+?? receipts/GATE_9A_AUTHORITY_SWEEP_HANDOFF_2026-09-21.md
+?? receipts/GATE_9A_CONVERGENCE_VERIFICATION_2026-09-21.md
+?? receipts/GATE_9A_MORNING_DISPATCH_2026-09-22.md
+?? receipts/GATE_9A_RATIFICATION_AMENDMENT_2026-09-22.md
+?? receipts/GATE_9A_RATIFICATION_RECONCILIATION_2026-09-22.md
+?? receipts/GATE_9A_SLICE1_ACCEPTANCE_2026-09-21.md
+?? receipts/GATE_9A_SLICE1_STORAGE_PLAN_2026-09-20.md
+?? receipts/GATE_9A_SOL_MORNING_PREP.md
+?? receipts/GATE_9A_SWEEP_ACCEPTANCE_2026-09-22.md
+?? receipts/GATE_9A_SWEEP_DECISIONS_OPTIONS_2026-09-21.md
+?? receipts/GATE_9A_SWEEP_SIZING_2026-09-22.md
+?? receipts/GATE_9A_TERRA_MORNING_PREP.md
+?? receipts/gate9a_article_evidence_20260922/
+?? receipts/gate9a_convergence_20260921/
+?? receipts/gate9a_handoff_20260922/
+?? receipts/gate9a_slice1_20260921/
+?? receipts/gate9a_sweep_20260922/
+?? scripts/check_slice1_harness.py

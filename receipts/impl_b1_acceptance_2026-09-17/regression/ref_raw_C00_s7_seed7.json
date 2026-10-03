@@ -1,0 +1,5053 @@
+{
+  "benchmark": "memorastrict",
+  "scenario": "bench_seed7.json",
+  "execution_path": "local-wm-serve-stdio",
+  "retrieval_configuration": {
+    "route": "memory.episodic_search",
+    "bm25_only_requested": false
+  },
+  "answer_generation_model": null,
+  "protocol_versions": {
+    "legacy": "wm-retrieval-legacy-v1",
+    "strict": "wm-evidence-strict-v1",
+    "grouped_source": null
+  },
+  "grouped_source_configuration": {
+    "enabled": false,
+    "declared_retrieval_cutoff": 10,
+    "annotation_dataset": null
+  },
+  "total_questions": 16,
+  "total_turns": 821,
+  "timestamp": "2026-09-18T00:23:32Z",
+  "total_elapsed_s": 1.3,
+  "overall": {
+    "verification_rate": 0.375,
+    "recall_at_1": 0.375,
+    "recall_at_5": 0.375,
+    "mrr": 0.375
+  },
+  "strict_evidence": {
+    "supported_cases": 1,
+    "unsupported_cases": 15,
+    "relevant_source_hit_rate_at_1": 0.0,
+    "relevant_source_hit_rate_at_5": 0.0,
+    "mean_required_evidence_coverage_at_retrieval_limit": 0.0,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "grouped_source_evidence": {
+    "enabled": false,
+    "supported_cases": 0,
+    "unsupported_cases": 0,
+    "declared_retrieval_cutoff": 10,
+    "mean_required_group_coverage": null,
+    "complete_bundle_cases": null,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "latency": {
+    "p50_ms": 10.002395996707492,
+    "p95_ms": 14.732092997292057,
+    "p99_ms": 14.732092997292057
+  },
+  "ingest": {
+    "total_time_s": 0.9408717460028129,
+    "turns": 821,
+    "throughput_turns_s": 872.595019977936
+  },
+  "category_results": {
+    "T1": {
+      "total": 4,
+      "verified": 3,
+      "verification_rate": 0.75,
+      "recall_at_1": 0.75,
+      "recall_at_5": 0.75,
+      "mrr": 0.75,
+      "p50_latency_ms": 12.097331004042644,
+      "p95_latency_ms": 13.252612996438984,
+      "avg_candidate_count": 30.5
+    },
+    "T2": {
+      "total": 5,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "mrr": 0.0,
+      "p50_latency_ms": 9.470511999097653,
+      "p95_latency_ms": 14.524133999657352,
+      "avg_candidate_count": 19.2
+    },
+    "T6": {
+      "total": 4,
+      "verified": 3,
+      "verification_rate": 0.75,
+      "recall_at_1": 0.75,
+      "recall_at_5": 0.75,
+      "mrr": 0.75,
+      "p50_latency_ms": 13.066605999483727,
+      "p95_latency_ms": 14.732092997292057,
+      "avg_candidate_count": 30.5
+    },
+    "T8": {
+      "total": 3,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "mrr": 0.0,
+      "p50_latency_ms": 7.717722000961658,
+      "p95_latency_ms": 9.998750996601302,
+      "avg_candidate_count": 0.0
+    }
+  },
+  "per_query": [
+    {
+      "question_id": "T1_coffee",
+      "test_category": "T1",
+      "question": "What's my current favorite coffee?",
+      "answer": "oat milk latte",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 12.1,
+      "candidate_count": 45,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 45
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 807,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer oat milk latte for my coffee.",
+          "galaxy": "codex",
+          "id": 798,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 759,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer oat milk latte for my coffee.",
+          "galaxy": "codex",
+          "id": 754,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 734,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 732,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 731,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 723,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I repotted my plants and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 711,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with oat milk latte.",
+          "galaxy": "codex",
+          "id": 710,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 705,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 702,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 700,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 662,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 488,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to oat milk latte for coffee. I used to be into cold brew.",
+          "galaxy": "codex",
+          "id": 384,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to oat milk latte for coffee. I used to be into cold brew.",
+          "galaxy": "codex",
+          "id": 373,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 370,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 368,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 364,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 358,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 326,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 295,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 209,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 205,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into cold brew lately for coffee.",
+          "galaxy": "codex",
+          "id": 193,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 184,
+          "rank": 39,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 181,
+          "rank": 40,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to cold brew for coffee. I used to be into light roast.",
+          "galaxy": "codex",
+          "id": 132,
+          "rank": 41,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into light roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 81,
+          "rank": 42,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love light roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 71,
+          "rank": 43,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with light roast.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 44,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer light roast for my coffee.",
+          "galaxy": "codex",
+          "id": 2,
+          "rank": 45,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_programming_language",
+      "test_category": "T1",
+      "question": "What's my current favorite programming language?",
+      "answer": "Ruby",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 9.16,
+      "candidate_count": 23,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 23
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 728,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 716,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 495,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 480,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Ruby for my programming_language.",
+          "galaxy": "codex",
+          "id": 329,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Ruby for programming_language. I used to be into Go.",
+          "galaxy": "codex",
+          "id": 312,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Python to Go for programming_language.",
+          "galaxy": "codex",
+          "id": 197,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 728,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 716,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 495,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 480,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Ruby for my programming_language.",
+          "galaxy": "codex",
+          "id": 329,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Ruby for programming_language. I used to be into Go.",
+          "galaxy": "codex",
+          "id": 312,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Python to Go for programming_language.",
+          "galaxy": "codex",
+          "id": 197,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Python when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 135,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Python for my programming_language.",
+          "galaxy": "codex",
+          "id": 98,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Python.",
+          "galaxy": "codex",
+          "id": 65,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Python when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 47,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Python lately for programming_language.",
+          "galaxy": "codex",
+          "id": 6,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_pet",
+      "test_category": "T1",
+      "question": "What's my current favorite pet?",
+      "answer": "parrot",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 10.0,
+      "candidate_count": 23,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 23
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with parrot.",
+          "galaxy": "codex",
+          "id": 814,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from fish to parrot for pet.",
+          "galaxy": "codex",
+          "id": 740,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into fish lately for pet.",
+          "galaxy": "codex",
+          "id": 692,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love fish when it comes to pet.",
+          "galaxy": "codex",
+          "id": 674,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 641,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love fish when it comes to pet.",
+          "galaxy": "codex",
+          "id": 525,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 498,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 309,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 187,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about pet \u2014 I now prefer fish over cat.",
+          "galaxy": "codex",
+          "id": 179,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to fish for pet. I used to be into cat.",
+          "galaxy": "codex",
+          "id": 176,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into cat lately for pet.",
+          "galaxy": "codex",
+          "id": 26,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_food",
+      "test_category": "T1",
+      "question": "What's my current favorite food?",
+      "answer": "Mexican",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 13.25,
+      "candidate_count": 31,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 31
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Mexican for my food.",
+          "galaxy": "codex",
+          "id": 783,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Mexican lately for food.",
+          "galaxy": "codex",
+          "id": 686,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Mexican lately for food.",
+          "galaxy": "codex",
+          "id": 671,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Mexican when it comes to food.",
+          "galaxy": "codex",
+          "id": 659,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 610,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 584,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 556,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Thai to Mexican for food.",
+          "galaxy": "codex",
+          "id": 549,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Mexican for food. I used to be into Thai.",
+          "galaxy": "codex",
+          "id": 529,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 451,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 424,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 397,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 271,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 245,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 217,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Ethiopian to Thai for food.",
+          "galaxy": "codex",
+          "id": 182,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Ethiopian when it comes to food.",
+          "galaxy": "codex",
+          "id": 122,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ethiopian lately for food.",
+          "galaxy": "codex",
+          "id": 117,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Ethiopian for my food.",
+          "galaxy": "codex",
+          "id": 11,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_book_genre",
+      "test_category": "T2",
+      "question": "What's my favorite book genre?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 9.43,
+      "candidate_count": 17,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 17
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 658,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about weather.",
+          "galaxy": "codex",
+          "id": 656,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 516,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 486,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 375,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 84,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 658,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about weather.",
+          "galaxy": "codex",
+          "id": 656,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 516,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 486,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 375,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 84,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3035365343093872,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2696429491043091,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_hobby",
+      "test_category": "T2",
+      "question": "What's my favorite hobby?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 9.89,
+      "candidate_count": 11,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 11
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_wine",
+      "test_category": "T2",
+      "question": "What's my favorite wine?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 9.47,
+      "candidate_count": 12,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 12
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "I had an amazing wine dinner last night. I'm not really teetotaler anymore.",
+          "galaxy": "codex",
+          "id": 492,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5867297053337097,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I had an amazing wine dinner last night. I'm not really teetotaler anymore.",
+          "galaxy": "codex",
+          "id": 492,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5867297053337097,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.41327032446861267,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_tea",
+      "test_category": "T2",
+      "question": "What's my favorite tea?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 8.52,
+      "candidate_count": 11,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 11
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.38716018199920654,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_positive_coffee",
+      "test_category": "T2",
+      "question": "What's my favorite coffee?",
+      "answer": "oat milk latte",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 14.52,
+      "candidate_count": 45,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 45
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "relevant_source_hit_at_1": 0,
+        "relevant_source_hit_at_5": 0,
+        "relevant_source_mrr": 0.0,
+        "required_evidence_found": 0,
+        "required_evidence_total": 2,
+        "required_evidence_coverage_at_retrieval_limit": 0.0,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model",
+        "supported": true
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.5742462277412415,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 807,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer oat milk latte for my coffee.",
+          "galaxy": "codex",
+          "id": 798,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 759,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer oat milk latte for my coffee.",
+          "galaxy": "codex",
+          "id": 754,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 734,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 732,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 731,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 723,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I repotted my plants and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 711,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with oat milk latte.",
+          "galaxy": "codex",
+          "id": 710,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 705,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 702,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 700,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 662,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 488,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to oat milk latte for coffee. I used to be into cold brew.",
+          "galaxy": "codex",
+          "id": 384,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to oat milk latte for coffee. I used to be into cold brew.",
+          "galaxy": "codex",
+          "id": 373,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 370,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 368,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 364,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 358,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 326,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 295,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 209,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 205,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into cold brew lately for coffee.",
+          "galaxy": "codex",
+          "id": 193,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 184,
+          "rank": 39,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 181,
+          "rank": 40,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to cold brew for coffee. I used to be into light roast.",
+          "galaxy": "codex",
+          "id": 132,
+          "rank": 41,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into light roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 81,
+          "rank": 42,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love light roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 71,
+          "rank": 43,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with light roast.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 44,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer light roast for my coffee.",
+          "galaxy": "codex",
+          "id": 2,
+          "rank": 45,
+          "recall_mode": "substrate",
+          "score": 0.42575377225875854,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_coffee",
+      "test_category": "T6",
+      "question": "What's my current favorite coffee?",
+      "answer": "oat milk latte",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 14.73,
+      "candidate_count": 45,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 45
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238398909568787,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.30081307888031006,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 807,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer oat milk latte for my coffee.",
+          "galaxy": "codex",
+          "id": 798,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 759,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer oat milk latte for my coffee.",
+          "galaxy": "codex",
+          "id": 754,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 734,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 732,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 731,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into oat milk latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 723,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I repotted my plants and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 711,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with oat milk latte.",
+          "galaxy": "codex",
+          "id": 710,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 705,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 702,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 700,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 662,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 488,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to oat milk latte for coffee. I used to be into cold brew.",
+          "galaxy": "codex",
+          "id": 384,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to oat milk latte for coffee. I used to be into cold brew.",
+          "galaxy": "codex",
+          "id": 373,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 370,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 368,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 364,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 358,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 326,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 295,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "My friend was telling me about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 209,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 205,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into cold brew lately for coffee.",
+          "galaxy": "codex",
+          "id": 193,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 184,
+          "rank": 39,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love cold brew when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 181,
+          "rank": 40,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to cold brew for coffee. I used to be into light roast.",
+          "galaxy": "codex",
+          "id": 132,
+          "rank": 41,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into light roast lately for coffee.",
+          "galaxy": "codex",
+          "id": 81,
+          "rank": 42,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love light roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 71,
+          "rank": 43,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with light roast.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 44,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer light roast for my coffee.",
+          "galaxy": "codex",
+          "id": 2,
+          "rank": 45,
+          "recall_mode": "substrate",
+          "score": 0.2230267971754074,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_programming_language",
+      "test_category": "T6",
+      "question": "What's my current favorite programming language?",
+      "answer": "Ruby",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 12.04,
+      "candidate_count": 23,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 23
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 728,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 716,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 495,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 480,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Ruby for my programming_language.",
+          "galaxy": "codex",
+          "id": 329,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Ruby for programming_language. I used to be into Go.",
+          "galaxy": "codex",
+          "id": 312,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Python to Go for programming_language.",
+          "galaxy": "codex",
+          "id": 197,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.644247829914093,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 728,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 716,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ruby lately for programming_language.",
+          "galaxy": "codex",
+          "id": 495,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Ruby.",
+          "galaxy": "codex",
+          "id": 480,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Ruby for my programming_language.",
+          "galaxy": "codex",
+          "id": 329,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Ruby for programming_language. I used to be into Go.",
+          "galaxy": "codex",
+          "id": 312,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Python to Go for programming_language.",
+          "galaxy": "codex",
+          "id": 197,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Python when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 135,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Python for my programming_language.",
+          "galaxy": "codex",
+          "id": 98,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "For programming_language, I always go with Python.",
+          "galaxy": "codex",
+          "id": 65,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Python when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 47,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Python lately for programming_language.",
+          "galaxy": "codex",
+          "id": 6,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.4195021986961365,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.22474563121795654,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_pet",
+      "test_category": "T6",
+      "question": "What's my current favorite pet?",
+      "answer": "parrot",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 10.52,
+      "candidate_count": 23,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 23
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5517271757125854,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2831953465938568,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with parrot.",
+          "galaxy": "codex",
+          "id": 814,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from fish to parrot for pet.",
+          "galaxy": "codex",
+          "id": 740,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into fish lately for pet.",
+          "galaxy": "codex",
+          "id": 692,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love fish when it comes to pet.",
+          "galaxy": "codex",
+          "id": 674,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 641,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love fish when it comes to pet.",
+          "galaxy": "codex",
+          "id": 525,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 498,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 309,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "For pet, I always go with fish.",
+          "galaxy": "codex",
+          "id": 187,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about pet \u2014 I now prefer fish over cat.",
+          "galaxy": "codex",
+          "id": 179,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to fish for pet. I used to be into cat.",
+          "galaxy": "codex",
+          "id": 176,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into cat lately for pet.",
+          "galaxy": "codex",
+          "id": 26,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.26853182911872864,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_food",
+      "test_category": "T6",
+      "question": "What's my current favorite food?",
+      "answer": "Mexican",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 13.07,
+      "candidate_count": 31,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 31
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite food is Mexican.",
+          "galaxy": "codex",
+          "id": 766,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 505,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 317,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5375407338142395,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is parrot.",
+          "galaxy": "codex",
+          "id": 796,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 786,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite pet is fish.",
+          "galaxy": "codex",
+          "id": 647,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Ruby.",
+          "galaxy": "codex",
+          "id": 546,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is watercolor painting.",
+          "galaxy": "codex",
+          "id": 183,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 148,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is light roast.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2921575903892517,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Mexican for my food.",
+          "galaxy": "codex",
+          "id": 783,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Mexican lately for food.",
+          "galaxy": "codex",
+          "id": 686,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Mexican lately for food.",
+          "galaxy": "codex",
+          "id": 671,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Mexican when it comes to food.",
+          "galaxy": "codex",
+          "id": 659,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 610,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 584,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 556,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Thai to Mexican for food.",
+          "galaxy": "codex",
+          "id": 549,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Mexican for food. I used to be into Thai.",
+          "galaxy": "codex",
+          "id": 529,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 451,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 424,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 397,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 271,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 245,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 217,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from Ethiopian to Thai for food.",
+          "galaxy": "codex",
+          "id": 182,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Ethiopian when it comes to food.",
+          "galaxy": "codex",
+          "id": 122,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Ethiopian lately for food.",
+          "galaxy": "codex",
+          "id": 117,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Ethiopian for my food.",
+          "galaxy": "codex",
+          "id": 11,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.245383158326149,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T8_vegetarian_steak",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegetarian, now steak",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 10.0,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_vegan_cheese",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegan, now cheese",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 7.72,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_teetotaler_wine",
+      "test_category": "T8",
+      "question": "Do I drink alcohol?",
+      "answer": "CONFLICT: was teetotaler, now wine",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 7.13,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    }
+  ],
+  "valid_execution": true,
+  "execution_failures": [],
+  "errors": []
+}

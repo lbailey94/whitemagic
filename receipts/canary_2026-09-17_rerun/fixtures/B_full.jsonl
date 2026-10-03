@@ -1,0 +1,5 @@
+{"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "memory.batch_create", "args": {"items": [{"content": "zephyr quartz telemetry diagnostics", "galaxy": "codex", "tags": ["fixture"]}, {"content": "zephyr lantern calibration baseline", "galaxy": "codex", "tags": ["fixture"]}]}}}}
+{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "memory.episodic_search", "args": {"query": "zephyr", "limit": 10, "candidate_limit": 100, "include_historical": false, "min_score": 0.0, "min_coverage": 0.0}}}}
+{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "memory.episodic_search", "args": {"query": "lantern", "limit": 10, "candidate_limit": 100, "include_historical": false, "min_score": 0.0, "min_coverage": 0.0}}}}
+{"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "memory.episodic_search", "args": {"query": "quokka", "limit": 10, "candidate_limit": 100, "include_historical": false, "min_score": 0.0, "min_coverage": 0.0}}}}

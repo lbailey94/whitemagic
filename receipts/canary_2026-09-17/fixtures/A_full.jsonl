@@ -1,0 +1,5 @@
+{"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "memory.batch_create", "args": {"items": [{"content": "the deploy region for the service is us-east and the failover target is eu-west", "galaxy": "codex", "tags": ["fixture"]}, {"content": "the deploy region for the service is eu-west", "galaxy": "codex", "tags": ["fixture"]}]}}}}
+{"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "memory.episodic_search", "args": {"query": "deploy region failover", "limit": 10, "candidate_limit": 100, "include_historical": false, "min_score": 0.0, "min_coverage": 0.0}}}}
+{"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "gen3.canary", "args": {}}}}
+{"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "wm", "arguments": {"route": "inspect", "args": {"scope": "all"}}}}

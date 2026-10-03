@@ -45,7 +45,6 @@ tx_firewall_policy.json
 escalation_queue.json
 ingest-manifest.json
 wm-leases.json
-/receipts/
 /reports/
 /staging/
 /archives/

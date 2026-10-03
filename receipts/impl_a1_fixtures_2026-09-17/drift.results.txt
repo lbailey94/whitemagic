@@ -1,0 +1,6 @@
+A1 DRIFT FIXTURE PASS
+attempt        : {"attempt": 0, "sleep": 0.5, "killed": true, "killed_records": 494, "killed_journal_events": 0, "refused": 494, "admitted": 2506}
+kill window    : 0.5s -> 494 committed / 3000
+coherence      : killed record count == replay duplicate refusals; samples 0/1 exact; first item present
+convergence    : replay admitted 2506 + refused 494 = 3000 ; third pass refused all 3000 (exactly N identities)
+hash-outs      : replay + third journal sha256 verified

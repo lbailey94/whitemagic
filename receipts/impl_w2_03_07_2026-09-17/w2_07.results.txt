@@ -1,0 +1,4 @@
+W2_07 INSPECT CONTRACT PASS
+tiers          : tier1 authority (writers/readers/invariants), tier2 statutes (budget+policy), tier3 adaptive (records/relations); arbitration + journal disclosed
+one universe   : no calibration/conformal/self_model/forecast/claims keys; projection stats null when off (unfed surface absent, not claimed)
+read-only      : data.mdb and journal sha256 unchanged across a separate inspect process

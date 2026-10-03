@@ -1,0 +1,7 @@
+A1 SCOPE FIXTURE PASS
+store A ingest : {"alpha": "success", "beta": "success", "alpha_again": ["duplicate_exact"], "beta_again": ["duplicate_exact"]}
+store A records: 2 ; recall hits: 2 -> 2 ; scope sources: ['corpus:alpha:scope-demo', 'corpus:beta:scope-demo']
+store A order  : unchanged by refusals -> [(1, 1, None), (0, 2, None)]
+store A batches: [1, 1, 0, 0]
+bare bytes     : data.mdb sha256 identical after separate refused re-ingest -> 1dc29615a312afe7 == 1dc29615a312afe7
+store B fresh  : {"status": "success", "records": 1}

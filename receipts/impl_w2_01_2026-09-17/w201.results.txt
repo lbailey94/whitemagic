@@ -1,0 +1,7 @@
+W2_01 EDGES ACCEPTANCE PASS
+direction      : later->earlier ( 1 -> 0 ); kind Supersedes; provenance rule_id present
+counts         : admitted rows = 5 = raw proposals 5 ; deduped endpoint metric = 1 (attempts stay in sweep stats)
+gates          : pair_budget 200000, rare_df_divisor 20, rare_df_floor 2 (declared, tier-2)
+round-trip     : relations byte-identical across processes (incl. rule_id/state/w/s/c/t)
+dynamics       : no Hebbian/decay/strengthen/edge-prune symbol in the serving path (parked)
+declared N/A   : transfer (no mechanism); causal ties (strict later>earlier, no inversion path)

@@ -1,0 +1,4990 @@
+{
+  "benchmark": "memorastrict",
+  "scenario": "bench_seed6.json",
+  "execution_path": "local-wm-serve-stdio",
+  "retrieval_configuration": {
+    "route": "memory.episodic_search",
+    "bm25_only_requested": false
+  },
+  "answer_generation_model": null,
+  "protocol_versions": {
+    "legacy": "wm-retrieval-legacy-v1",
+    "strict": "wm-evidence-strict-v1",
+    "grouped_source": null
+  },
+  "grouped_source_configuration": {
+    "enabled": false,
+    "declared_retrieval_cutoff": 10,
+    "annotation_dataset": null
+  },
+  "total_questions": 16,
+  "total_turns": 551,
+  "timestamp": "2026-09-18T02:48:43Z",
+  "total_elapsed_s": 16.8,
+  "overall": {
+    "verification_rate": 0.125,
+    "recall_at_1": 0.125,
+    "recall_at_5": 0.4375,
+    "mrr": 0.26561875
+  },
+  "strict_evidence": {
+    "supported_cases": 1,
+    "unsupported_cases": 15,
+    "relevant_source_hit_rate_at_1": 0.0,
+    "relevant_source_hit_rate_at_5": 0.0,
+    "mean_required_evidence_coverage_at_retrieval_limit": 0.0,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "grouped_source_evidence": {
+    "enabled": false,
+    "supported_cases": 0,
+    "unsupported_cases": 0,
+    "declared_retrieval_cutoff": 10,
+    "mean_required_group_coverage": null,
+    "complete_bundle_cases": null,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "latency": {
+    "p50_ms": 27.78733699960867,
+    "p95_ms": 41.21249800664373,
+    "p99_ms": 41.21249800664373
+  },
+  "ingest": {
+    "total_time_s": 16.164887115002784,
+    "turns": 551,
+    "throughput_turns_s": 34.08622628045523
+  },
+  "category_results": {
+    "T1": {
+      "total": 4,
+      "verified": 1,
+      "verification_rate": 0.25,
+      "recall_at_1": 0.25,
+      "recall_at_5": 0.75,
+      "mrr": 0.489575,
+      "p50_latency_ms": 26.60347400524188,
+      "p95_latency_ms": 30.313372997625265,
+      "avg_candidate_count": 28.25
+    },
+    "T2": {
+      "total": 5,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.2,
+      "mrr": 0.06666,
+      "p50_latency_ms": 27.133083996886853,
+      "p95_latency_ms": 33.043599003576674,
+      "avg_candidate_count": 21.4
+    },
+    "T6": {
+      "total": 4,
+      "verified": 1,
+      "verification_rate": 0.25,
+      "recall_at_1": 0.25,
+      "recall_at_5": 0.75,
+      "mrr": 0.489575,
+      "p50_latency_ms": 32.16783799871337,
+      "p95_latency_ms": 32.23935999994865,
+      "avg_candidate_count": 28.25
+    },
+    "T8": {
+      "total": 3,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "mrr": 0.0,
+      "p50_latency_ms": 27.83798900054535,
+      "p95_latency_ms": 41.21249800664373,
+      "avg_candidate_count": 0.0
+    }
+  },
+  "per_query": [
+    {
+      "question_id": "T1_coffee",
+      "test_category": "T1",
+      "question": "What's my current favorite coffee?",
+      "answer": "cold brew",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.3333,
+      "first_match_rank": 3,
+      "latency_ms": 25.97,
+      "candidate_count": 38,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.3333,
+        "first_match_rank": 3,
+        "candidate_count": 38
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 523,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5992
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5988
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 523,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5992
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 6112
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 502,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6152
+        },
+        {
+          "content": "Recently I switched to cold brew for coffee. I used to be into espresso.",
+          "galaxy": "codex",
+          "id": 488,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6151
+        },
+        {
+          "content": "I used to prefer latte but now I'm all about espresso for coffee.",
+          "galaxy": "codex",
+          "id": 446,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6143
+        },
+        {
+          "content": "I repotted my plants and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 435,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5462
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 428,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4150
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4948
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 321,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5965
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 258,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4924
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 226,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5606
+        },
+        {
+          "content": "I went grocery shopping and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 218,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6124
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 211,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5959
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 144,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5593
+        },
+        {
+          "content": "I called my mom and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 139,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4145
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 130,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5957
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 126,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5579
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 119,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4140
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 77,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4137
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 64,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5528
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 62,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6076
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4134
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 47,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6075
+        },
+        {
+          "content": "I can't stop thinking about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 31,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5300
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 29,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4851
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 15,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5517
+        }
+      ]
+    },
+    {
+      "question_id": "T1_transport",
+      "test_category": "T1",
+      "question": "What's my current favorite transport?",
+      "answer": "walking",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.5,
+      "first_match_rank": 2,
+      "latency_ms": 30.31,
+      "candidate_count": 31,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.5,
+        "first_match_rank": 2,
+        "candidate_count": 31
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5977
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5992
+        },
+        {
+          "content": "I've been really into walking lately for transport.",
+          "galaxy": "codex",
+          "id": 515,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5948
+        },
+        {
+          "content": "I've been really into walking lately for transport.",
+          "galaxy": "codex",
+          "id": 501,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5947
+        },
+        {
+          "content": "I used to prefer biking but now I'm all about walking for transport.",
+          "galaxy": "codex",
+          "id": 459,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6144
+        },
+        {
+          "content": "I prefer biking for my transport.",
+          "galaxy": "codex",
+          "id": 431,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6083
+        },
+        {
+          "content": "I've been really into biking lately for transport.",
+          "galaxy": "codex",
+          "id": 414,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6070
+        },
+        {
+          "content": "I prefer biking for my transport.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6081
+        },
+        {
+          "content": "For transport, I always go with biking.",
+          "galaxy": "codex",
+          "id": 388,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6068
+        },
+        {
+          "content": "I prefer biking for my transport.",
+          "galaxy": "codex",
+          "id": 376,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6080
+        },
+        {
+          "content": "I've changed my mind about transport \u2014 I now prefer biking over bus.",
+          "galaxy": "codex",
+          "id": 293,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6079
+        },
+        {
+          "content": "I've actually switched from bus to biking for transport.",
+          "galaxy": "codex",
+          "id": 284,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6065
+        },
+        {
+          "content": "For transport, I always go with bus.",
+          "galaxy": "codex",
+          "id": 235,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5963
+        },
+        {
+          "content": "I've been really into bus lately for transport.",
+          "galaxy": "codex",
+          "id": 209,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5936
+        },
+        {
+          "content": "I really love bus when it comes to transport.",
+          "galaxy": "codex",
+          "id": 169,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5935
+        },
+        {
+          "content": "For transport, I always go with bus.",
+          "galaxy": "codex",
+          "id": 147,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5958
+        },
+        {
+          "content": "I really love biking when it comes to transport.",
+          "galaxy": "codex",
+          "id": 127,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6064
+        },
+        {
+          "content": "I've been really into bus lately for transport.",
+          "galaxy": "codex",
+          "id": 122,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5932
+        },
+        {
+          "content": "For transport, I always go with bus.",
+          "galaxy": "codex",
+          "id": 68,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5956
+        },
+        {
+          "content": "I really love biking when it comes to transport.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6063
+        },
+        {
+          "content": "I really love bus when it comes to transport.",
+          "galaxy": "codex",
+          "id": 14,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5929
+        }
+      ]
+    },
+    {
+      "question_id": "T1_programming_language",
+      "test_category": "T1",
+      "question": "What's my current favorite programming language?",
+      "answer": "JavaScript",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 26.6,
+      "candidate_count": 21,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 21
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "I used to prefer Go but now I'm all about JavaScript for programming_language.",
+          "galaxy": "codex",
+          "id": 549,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6482872366905212,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Go for my programming_language.",
+          "galaxy": "codex",
+          "id": 412,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6119
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 332,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6118
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 274,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6117
+        },
+        {
+          "content": "I've been really into Go lately for programming_language.",
+          "galaxy": "codex",
+          "id": 219,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6116
+        },
+        {
+          "content": "I used to prefer Kotlin but now I'm all about Go for programming_language.",
+          "galaxy": "codex",
+          "id": 213,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6142
+        },
+        {
+          "content": "I really love Kotlin when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 96,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6114
+        },
+        {
+          "content": "I've been really into Kotlin lately for programming_language.",
+          "galaxy": "codex",
+          "id": 74,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6113
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I used to prefer Go but now I'm all about JavaScript for programming_language.",
+          "galaxy": "codex",
+          "id": 549,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6482872366905212,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Go for my programming_language.",
+          "galaxy": "codex",
+          "id": 412,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6119
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 332,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6118
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 274,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6117
+        },
+        {
+          "content": "I've been really into Go lately for programming_language.",
+          "galaxy": "codex",
+          "id": 219,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6116
+        },
+        {
+          "content": "I used to prefer Kotlin but now I'm all about Go for programming_language.",
+          "galaxy": "codex",
+          "id": 213,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6142
+        },
+        {
+          "content": "I really love Kotlin when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 96,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6114
+        },
+        {
+          "content": "I've been really into Kotlin lately for programming_language.",
+          "galaxy": "codex",
+          "id": 74,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6113
+        },
+        {
+          "content": "For programming_language, I always go with Kotlin.",
+          "galaxy": "codex",
+          "id": 17,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6111
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5992
+        }
+      ]
+    },
+    {
+      "question_id": "T1_sport",
+      "test_category": "T1",
+      "question": "What's my current favorite sport?",
+      "answer": "swimming",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.125,
+      "first_match_rank": 8,
+      "latency_ms": 25.83,
+      "candidate_count": 23,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.125,
+        "first_match_rank": 8,
+        "candidate_count": 23
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5418797731399536,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5418797731399536,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5995
+        },
+        {
+          "content": "For sport, I always go with swimming.",
+          "galaxy": "codex",
+          "id": 521,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5971
+        },
+        {
+          "content": "I've been really into swimming lately for sport.",
+          "galaxy": "codex",
+          "id": 504,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 4968
+        },
+        {
+          "content": "Recently I switched to swimming for sport. I used to be into soccer.",
+          "galaxy": "codex",
+          "id": 503,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6146
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5418797731399536,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5418797731399536,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5995
+        },
+        {
+          "content": "For sport, I always go with swimming.",
+          "galaxy": "codex",
+          "id": 521,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5971
+        },
+        {
+          "content": "I've been really into swimming lately for sport.",
+          "galaxy": "codex",
+          "id": 504,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 4968
+        },
+        {
+          "content": "Recently I switched to swimming for sport. I used to be into soccer.",
+          "galaxy": "codex",
+          "id": 503,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6146
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5982
+        },
+        {
+          "content": "I really love soccer when it comes to sport.",
+          "galaxy": "codex",
+          "id": 487,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5819
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5994
+        },
+        {
+          "content": "I've been really into soccer lately for sport.",
+          "galaxy": "codex",
+          "id": 469,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5818
+        },
+        {
+          "content": "I prefer soccer for my sport.",
+          "galaxy": "codex",
+          "id": 439,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6084
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5993
+        },
+        {
+          "content": "I really love soccer when it comes to sport.",
+          "galaxy": "codex",
+          "id": 344,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5809
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 6112
+        },
+        {
+          "content": "I prefer soccer for my sport.",
+          "galaxy": "codex",
+          "id": 221,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6078
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.27356427907943726,
+          "superseded_by": 5992
+        },
+        {
+          "content": "Recently I switched to soccer for sport. I used to be into hiking.",
+          "galaxy": "codex",
+          "id": 171,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6141
+        },
+        {
+          "content": "I really love hiking when it comes to sport.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5572
+        },
+        {
+          "content": "I really love hiking when it comes to sport.",
+          "galaxy": "codex",
+          "id": 93,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5551
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_book_genre",
+      "test_category": "T2",
+      "question": "What's my favorite book genre?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 27.13,
+      "candidate_count": 24,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 24
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 494,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 464,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5986
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about sleep.",
+          "galaxy": "codex",
+          "id": 341,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 6147
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5982
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 494,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 464,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5986
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about sleep.",
+          "galaxy": "codex",
+          "id": 341,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 6147
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5982
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about news.",
+          "galaxy": "codex",
+          "id": 277,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4776
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 273,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4773
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5994
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about neighbors.",
+          "galaxy": "codex",
+          "id": 216,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4771
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 166,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4766
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 153,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4763
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5977
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about home repairs.",
+          "galaxy": "codex",
+          "id": 97,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 6094
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 84,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4752
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 50,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4748
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 6112
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 27,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 4744
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.2721359133720398,
+          "superseded_by": 5992
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_food",
+      "test_category": "T2",
+      "question": "What's my favorite food?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 26.08,
+      "candidate_count": 15,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 15
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 349,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5667929649353027,
+          "superseded_by": 5610
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 299,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5667929649353027,
+          "superseded_by": 5608
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 176,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5667929649353027,
+          "superseded_by": 5602
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5982
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 349,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5667929649353027,
+          "superseded_by": 5610
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 299,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5667929649353027,
+          "superseded_by": 5608
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 176,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5667929649353027,
+          "superseded_by": 5602
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.43320703506469727,
+          "superseded_by": 5992
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_car_model",
+      "test_category": "T2",
+      "question": "What's my favorite car model?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 25.46,
+      "candidate_count": 12,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 12
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5977
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.22992368042469025,
+          "superseded_by": 5992
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_video_game",
+      "test_category": "T2",
+      "question": "What's my favorite video game?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 27.58,
+      "candidate_count": 18,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 18
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 377,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 324,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 222,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games and then thought about haircuts.",
+          "galaxy": "codex",
+          "id": 98,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": 5925
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 76,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": 5922
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 10,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": 5921
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5988
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 377,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 324,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 222,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games and then thought about haircuts.",
+          "galaxy": "codex",
+          "id": 98,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": 5925
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 76,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": 5922
+        },
+        {
+          "content": "I played video games yesterday.",
+          "galaxy": "codex",
+          "id": 10,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.3027532696723938,
+          "superseded_by": 5921
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.26068857312202454,
+          "superseded_by": 5992
+        }
+      ]
+    },
+    {
+      "question_id": "T2_positive_coffee",
+      "test_category": "T2",
+      "question": "What's my favorite coffee?",
+      "answer": "cold brew",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.3333,
+      "first_match_rank": 3,
+      "latency_ms": 33.04,
+      "candidate_count": 38,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.3333,
+        "first_match_rank": 3,
+        "candidate_count": 38
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "relevant_source_hit_at_1": 0,
+        "relevant_source_hit_at_5": 0,
+        "relevant_source_mrr": 0.0,
+        "required_evidence_found": 0,
+        "required_evidence_total": 1,
+        "required_evidence_coverage_at_retrieval_limit": 0.0,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model",
+        "supported": true
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 523,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5992
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 5988
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 523,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": 5992
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.5650166273117065,
+          "superseded_by": 6112
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 502,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 6152
+        },
+        {
+          "content": "Recently I switched to cold brew for coffee. I used to be into espresso.",
+          "galaxy": "codex",
+          "id": 488,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 6151
+        },
+        {
+          "content": "I used to prefer latte but now I'm all about espresso for coffee.",
+          "galaxy": "codex",
+          "id": 446,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 6143
+        },
+        {
+          "content": "I repotted my plants and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 435,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5462
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 428,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4150
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4948
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 321,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5965
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 258,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4924
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 226,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5606
+        },
+        {
+          "content": "I went grocery shopping and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 218,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 6124
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 211,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5959
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 144,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5593
+        },
+        {
+          "content": "I called my mom and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 139,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4145
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 130,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5957
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 126,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5579
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 119,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4140
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 77,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4137
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 64,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5528
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 62,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 6076
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4134
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 47,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 6075
+        },
+        {
+          "content": "I can't stop thinking about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 31,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5300
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 29,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 4851
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 15,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.43498343229293823,
+          "superseded_by": 5517
+        }
+      ]
+    },
+    {
+      "question_id": "T6_coffee",
+      "test_category": "T6",
+      "question": "What's my current favorite coffee?",
+      "answer": "cold brew",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.3333,
+      "first_match_rank": 3,
+      "latency_ms": 32.24,
+      "candidate_count": 38,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.3333,
+        "first_match_rank": 3,
+        "candidate_count": 38
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 523,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5992
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5988
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 523,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 467,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5138227343559265,
+          "superseded_by": 5992
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2903183698654175,
+          "superseded_by": 6112
+        },
+        {
+          "content": "For coffee, I always go with cold brew.",
+          "galaxy": "codex",
+          "id": 502,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6152
+        },
+        {
+          "content": "Recently I switched to cold brew for coffee. I used to be into espresso.",
+          "galaxy": "codex",
+          "id": 488,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6151
+        },
+        {
+          "content": "I used to prefer latte but now I'm all about espresso for coffee.",
+          "galaxy": "codex",
+          "id": 446,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6143
+        },
+        {
+          "content": "I repotted my plants and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 435,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5462
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 428,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4150
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4948
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 321,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5965
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 258,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4924
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 226,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5606
+        },
+        {
+          "content": "I went grocery shopping and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 218,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6124
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 211,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5959
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 144,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5593
+        },
+        {
+          "content": "I called my mom and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 139,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4145
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 130,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5957
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 126,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5579
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 119,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4140
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 77,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4137
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 64,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5528
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 62,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6076
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4134
+        },
+        {
+          "content": "I prefer latte for my coffee.",
+          "galaxy": "codex",
+          "id": 47,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 6075
+        },
+        {
+          "content": "I can't stop thinking about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 31,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5300
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 29,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 4851
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 15,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.22350437939167023,
+          "superseded_by": 5517
+        }
+      ]
+    },
+    {
+      "question_id": "T6_transport",
+      "test_category": "T6",
+      "question": "What's my current favorite transport?",
+      "answer": "walking",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.5,
+      "first_match_rank": 2,
+      "latency_ms": 32.17,
+      "candidate_count": 31,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.5,
+        "first_match_rank": 2,
+        "candidate_count": 31
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5977
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5238640904426575,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2843222916126251,
+          "superseded_by": 5992
+        },
+        {
+          "content": "I've been really into walking lately for transport.",
+          "galaxy": "codex",
+          "id": 515,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5948
+        },
+        {
+          "content": "I've been really into walking lately for transport.",
+          "galaxy": "codex",
+          "id": 501,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5947
+        },
+        {
+          "content": "I used to prefer biking but now I'm all about walking for transport.",
+          "galaxy": "codex",
+          "id": 459,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6144
+        },
+        {
+          "content": "I prefer biking for my transport.",
+          "galaxy": "codex",
+          "id": 431,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6083
+        },
+        {
+          "content": "I've been really into biking lately for transport.",
+          "galaxy": "codex",
+          "id": 414,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6070
+        },
+        {
+          "content": "I prefer biking for my transport.",
+          "galaxy": "codex",
+          "id": 408,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6081
+        },
+        {
+          "content": "For transport, I always go with biking.",
+          "galaxy": "codex",
+          "id": 388,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6068
+        },
+        {
+          "content": "I prefer biking for my transport.",
+          "galaxy": "codex",
+          "id": 376,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6080
+        },
+        {
+          "content": "I've changed my mind about transport \u2014 I now prefer biking over bus.",
+          "galaxy": "codex",
+          "id": 293,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6079
+        },
+        {
+          "content": "I've actually switched from bus to biking for transport.",
+          "galaxy": "codex",
+          "id": 284,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6065
+        },
+        {
+          "content": "For transport, I always go with bus.",
+          "galaxy": "codex",
+          "id": 235,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5963
+        },
+        {
+          "content": "I've been really into bus lately for transport.",
+          "galaxy": "codex",
+          "id": 209,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5936
+        },
+        {
+          "content": "I really love bus when it comes to transport.",
+          "galaxy": "codex",
+          "id": 169,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5935
+        },
+        {
+          "content": "For transport, I always go with bus.",
+          "galaxy": "codex",
+          "id": 147,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5958
+        },
+        {
+          "content": "I really love biking when it comes to transport.",
+          "galaxy": "codex",
+          "id": 127,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6064
+        },
+        {
+          "content": "I've been really into bus lately for transport.",
+          "galaxy": "codex",
+          "id": 122,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5932
+        },
+        {
+          "content": "For transport, I always go with bus.",
+          "galaxy": "codex",
+          "id": 68,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5956
+        },
+        {
+          "content": "I really love biking when it comes to transport.",
+          "galaxy": "codex",
+          "id": 66,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 6063
+        },
+        {
+          "content": "I really love bus when it comes to transport.",
+          "galaxy": "codex",
+          "id": 14,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.23954175412654877,
+          "superseded_by": 5929
+        }
+      ]
+    },
+    {
+      "question_id": "T6_programming_language",
+      "test_category": "T6",
+      "question": "What's my current favorite programming language?",
+      "answer": "JavaScript",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 30.94,
+      "candidate_count": 21,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 21
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "I used to prefer Go but now I'm all about JavaScript for programming_language.",
+          "galaxy": "codex",
+          "id": 549,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6482872366905212,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Go for my programming_language.",
+          "galaxy": "codex",
+          "id": 412,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6119
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 332,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6118
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 274,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6117
+        },
+        {
+          "content": "I've been really into Go lately for programming_language.",
+          "galaxy": "codex",
+          "id": 219,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6116
+        },
+        {
+          "content": "I used to prefer Kotlin but now I'm all about Go for programming_language.",
+          "galaxy": "codex",
+          "id": 213,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6142
+        },
+        {
+          "content": "I really love Kotlin when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 96,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6114
+        },
+        {
+          "content": "I've been really into Kotlin lately for programming_language.",
+          "galaxy": "codex",
+          "id": 74,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6113
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I used to prefer Go but now I'm all about JavaScript for programming_language.",
+          "galaxy": "codex",
+          "id": 549,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.6482872366905212,
+          "superseded_by": 6112
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Go for my programming_language.",
+          "galaxy": "codex",
+          "id": 412,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6119
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 332,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6118
+        },
+        {
+          "content": "For programming_language, I always go with Go.",
+          "galaxy": "codex",
+          "id": 274,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6117
+        },
+        {
+          "content": "I've been really into Go lately for programming_language.",
+          "galaxy": "codex",
+          "id": 219,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6116
+        },
+        {
+          "content": "I used to prefer Kotlin but now I'm all about Go for programming_language.",
+          "galaxy": "codex",
+          "id": 213,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6142
+        },
+        {
+          "content": "I really love Kotlin when it comes to programming_language.",
+          "galaxy": "codex",
+          "id": 96,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6114
+        },
+        {
+          "content": "I've been really into Kotlin lately for programming_language.",
+          "galaxy": "codex",
+          "id": 74,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6113
+        },
+        {
+          "content": "For programming_language, I always go with Kotlin.",
+          "galaxy": "codex",
+          "id": 17,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.4382637143135071,
+          "superseded_by": 6111
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5995
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5982
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5994
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5993
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.21002355217933655,
+          "superseded_by": 5992
+        }
+      ]
+    },
+    {
+      "question_id": "T6_sport",
+      "test_category": "T6",
+      "question": "What's my current favorite sport?",
+      "answer": "swimming",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.125,
+      "first_match_rank": 8,
+      "latency_ms": 27.79,
+      "candidate_count": 23,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.125,
+        "first_match_rank": 8,
+        "candidate_count": 23
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5418798327445984,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5418798327445984,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5995
+        },
+        {
+          "content": "For sport, I always go with swimming.",
+          "galaxy": "codex",
+          "id": 521,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5971
+        },
+        {
+          "content": "I've been really into swimming lately for sport.",
+          "galaxy": "codex",
+          "id": 504,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 4968
+        },
+        {
+          "content": "Recently I switched to swimming for sport. I used to be into soccer.",
+          "galaxy": "codex",
+          "id": 503,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6146
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite sport is soccer.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5418798327445984,
+          "superseded_by": 5986
+        },
+        {
+          "content": "My favorite sport is hiking.",
+          "galaxy": "codex",
+          "id": 107,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5418798327445984,
+          "superseded_by": 5977
+        },
+        {
+          "content": "My favorite coffee is cold brew.",
+          "galaxy": "codex",
+          "id": 542,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5991
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 540,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5990
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 476,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5988
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 336,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5995
+        },
+        {
+          "content": "For sport, I always go with swimming.",
+          "galaxy": "codex",
+          "id": 521,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5971
+        },
+        {
+          "content": "I've been really into swimming lately for sport.",
+          "galaxy": "codex",
+          "id": 504,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 4968
+        },
+        {
+          "content": "Recently I switched to swimming for sport. I used to be into soccer.",
+          "galaxy": "codex",
+          "id": 503,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6146
+        },
+        {
+          "content": "My favorite transport is biking.",
+          "galaxy": "codex",
+          "id": 278,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5982
+        },
+        {
+          "content": "I really love soccer when it comes to sport.",
+          "galaxy": "codex",
+          "id": 487,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5819
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 253,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5994
+        },
+        {
+          "content": "I've been really into soccer lately for sport.",
+          "galaxy": "codex",
+          "id": 469,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5818
+        },
+        {
+          "content": "I prefer soccer for my sport.",
+          "galaxy": "codex",
+          "id": 439,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6084
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 143,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5993
+        },
+        {
+          "content": "I really love soccer when it comes to sport.",
+          "galaxy": "codex",
+          "id": 344,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5809
+        },
+        {
+          "content": "My favorite programming_language is Python.",
+          "galaxy": "codex",
+          "id": 28,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 6112
+        },
+        {
+          "content": "I prefer soccer for my sport.",
+          "galaxy": "codex",
+          "id": 221,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6078
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 3,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.27356430888175964,
+          "superseded_by": 5992
+        },
+        {
+          "content": "Recently I switched to soccer for sport. I used to be into hiking.",
+          "galaxy": "codex",
+          "id": 171,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 6141
+        },
+        {
+          "content": "I really love hiking when it comes to sport.",
+          "galaxy": "codex",
+          "id": 120,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5572
+        },
+        {
+          "content": "I really love hiking when it comes to sport.",
+          "galaxy": "codex",
+          "id": 93,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.26831546425819397,
+          "superseded_by": 5551
+        }
+      ]
+    },
+    {
+      "question_id": "T8_vegetarian_steak",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegetarian, now steak",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 26.85,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_vegan_cheese",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegan, now cheese",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 27.84,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_teetotaler_wine",
+      "test_category": "T8",
+      "question": "Do I drink alcohol?",
+      "answer": "CONFLICT: was teetotaler, now wine",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 41.21,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    }
+  ],
+  "valid_execution": true,
+  "execution_failures": [],
+  "errors": []
+}

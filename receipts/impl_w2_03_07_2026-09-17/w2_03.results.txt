@@ -1,0 +1,4 @@
+W2_03 NO-KNOB STRATA PASS
+no-knob scan   : no WM_VALIDITY symbol in binary or source
+defaults       : order [1,0]; strata [0,2]; superseded_by = last relation 4 ; mode Structural
+sweep off      : order [0,1]; strata [1,1]; zero proposals (declared switch only)

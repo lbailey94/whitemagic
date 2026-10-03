@@ -1,0 +1,5341 @@
+{
+  "benchmark": "memorastrict",
+  "scenario": "bench_seed9.json",
+  "execution_path": "local-wm-serve-stdio",
+  "retrieval_configuration": {
+    "route": "memory.episodic_search",
+    "bm25_only_requested": false
+  },
+  "answer_generation_model": null,
+  "protocol_versions": {
+    "legacy": "wm-retrieval-legacy-v1",
+    "strict": "wm-evidence-strict-v1",
+    "grouped_source": null
+  },
+  "grouped_source_configuration": {
+    "enabled": false,
+    "declared_retrieval_cutoff": 10,
+    "annotation_dataset": null
+  },
+  "total_questions": 16,
+  "total_turns": 794,
+  "timestamp": "2026-09-18T00:23:36Z",
+  "total_elapsed_s": 2.0,
+  "overall": {
+    "verification_rate": 0.25,
+    "recall_at_1": 0.25,
+    "recall_at_5": 0.4375,
+    "mrr": 0.296875
+  },
+  "strict_evidence": {
+    "supported_cases": 1,
+    "unsupported_cases": 15,
+    "relevant_source_hit_rate_at_1": 0.0,
+    "relevant_source_hit_rate_at_5": 0.0,
+    "mean_required_evidence_coverage_at_retrieval_limit": 1.0,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "grouped_source_evidence": {
+    "enabled": false,
+    "supported_cases": 0,
+    "unsupported_cases": 0,
+    "declared_retrieval_cutoff": 10,
+    "mean_required_group_coverage": null,
+    "complete_bundle_cases": null,
+    "supported_answer_correctness": null,
+    "supported_answer_correctness_status": "not_applicable_no_answer_model"
+  },
+  "latency": {
+    "p50_ms": 22.23019399389159,
+    "p95_ms": 45.22784300206695,
+    "p99_ms": 45.22784300206695
+  },
+  "ingest": {
+    "total_time_s": 1.144348011999682,
+    "turns": 794,
+    "throughput_turns_s": 693.8448720791946
+  },
+  "category_results": {
+    "T1": {
+      "total": 4,
+      "verified": 2,
+      "verification_rate": 0.5,
+      "recall_at_1": 0.5,
+      "recall_at_5": 0.75,
+      "mrr": 0.5625,
+      "p50_latency_ms": 25.99166100117145,
+      "p95_latency_ms": 31.16371099895332,
+      "avg_candidate_count": 33.0
+    },
+    "T2": {
+      "total": 5,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.2,
+      "mrr": 0.05,
+      "p50_latency_ms": 22.23019399389159,
+      "p95_latency_ms": 45.22784300206695,
+      "avg_candidate_count": 21.6
+    },
+    "T6": {
+      "total": 4,
+      "verified": 2,
+      "verification_rate": 0.5,
+      "recall_at_1": 0.5,
+      "recall_at_5": 0.75,
+      "mrr": 0.5625,
+      "p50_latency_ms": 22.479914005089086,
+      "p95_latency_ms": 25.82603399787331,
+      "avg_candidate_count": 33.0
+    },
+    "T8": {
+      "total": 3,
+      "verified": 0,
+      "verification_rate": 0.0,
+      "recall_at_1": 0.0,
+      "recall_at_5": 0.0,
+      "mrr": 0.0,
+      "p50_latency_ms": 10.637140003382228,
+      "p95_latency_ms": 12.455938995117322,
+      "avg_candidate_count": 0.0
+    }
+  },
+  "per_query": [
+    {
+      "question_id": "T1_hobby",
+      "test_category": "T1",
+      "question": "What's my current favorite hobby?",
+      "answer": "rock climbing",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.25,
+      "first_match_rank": 4,
+      "latency_ms": 31.16,
+      "candidate_count": 28,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.25,
+        "first_match_rank": 4,
+        "candidate_count": 28
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rock climbing for my hobby.",
+          "galaxy": "codex",
+          "id": 785,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 772,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into rock climbing lately for hobby.",
+          "galaxy": "codex",
+          "id": 703,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 693,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from sourdough baking to rock climbing for hobby.",
+          "galaxy": "codex",
+          "id": 589,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer sourdough baking for my hobby.",
+          "galaxy": "codex",
+          "id": 565,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer geocaching but now I'm all about sourdough baking for hobby.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rock climbing for my hobby.",
+          "galaxy": "codex",
+          "id": 785,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 772,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into rock climbing lately for hobby.",
+          "galaxy": "codex",
+          "id": 703,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 693,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from sourdough baking to rock climbing for hobby.",
+          "galaxy": "codex",
+          "id": 589,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer sourdough baking for my hobby.",
+          "galaxy": "codex",
+          "id": 565,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer geocaching but now I'm all about sourdough baking for hobby.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into geocaching lately for hobby.",
+          "galaxy": "codex",
+          "id": 433,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into geocaching lately for hobby.",
+          "galaxy": "codex",
+          "id": 379,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love geocaching when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 364,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "For hobby, I always go with board games.",
+          "galaxy": "codex",
+          "id": 57,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love geocaching when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 14,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_coffee",
+      "test_category": "T1",
+      "question": "What's my current favorite coffee?",
+      "answer": "espresso",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 25.62,
+      "candidate_count": 38,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 38
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.521543025970459,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2769044041633606,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer espresso for my coffee.",
+          "galaxy": "codex",
+          "id": 770,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 748,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into espresso lately for coffee.",
+          "galaxy": "codex",
+          "id": 736,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer espresso for my coffee.",
+          "galaxy": "codex",
+          "id": 731,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer light roast but now I'm all about espresso for coffee.",
+          "galaxy": "codex",
+          "id": 608,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 538,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer light roast for my coffee.",
+          "galaxy": "codex",
+          "id": 532,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 524,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love light roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 503,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 502,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about coffee \u2014 I now prefer light roast over latte.",
+          "galaxy": "codex",
+          "id": 449,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to light roast for coffee. I used to be into latte.",
+          "galaxy": "codex",
+          "id": 425,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 419,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 400,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 395,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 388,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 380,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I watched a documentary about nature and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 178,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 172,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 171,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 152,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        },
+        {
+          "content": "I tried a new recipe for dinner and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.2446386218070984,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_transport",
+      "test_category": "T1",
+      "question": "What's my current favorite transport?",
+      "answer": "subway",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 20.0,
+      "candidate_count": 24,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 24
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 712,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 595,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 579,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 494,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 477,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 468,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to subway for transport. I used to be into scooter.",
+          "galaxy": "codex",
+          "id": 450,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 712,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 595,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 579,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 494,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 477,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 468,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to subway for transport. I used to be into scooter.",
+          "galaxy": "codex",
+          "id": 450,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to scooter for transport. I used to be into walking.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T1_food",
+      "test_category": "T1",
+      "question": "What's my current favorite food?",
+      "answer": "Mexican",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 25.99,
+      "candidate_count": 42,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 42
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Japanese lately for food.",
+          "galaxy": "codex",
+          "id": 727,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer Lebanese but now I'm all about Mexican for food.",
+          "galaxy": "codex",
+          "id": 702,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 667,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 641,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 613,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Japanese.",
+          "galaxy": "codex",
+          "id": 529,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Lebanese lately for food.",
+          "galaxy": "codex",
+          "id": 499,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Lebanese lately for food.",
+          "galaxy": "codex",
+          "id": 489,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Lebanese for my food.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Lebanese when it comes to food.",
+          "galaxy": "codex",
+          "id": 448,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 335,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 309,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 281,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 254,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 228,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 200,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer Thai but now I'm all about Lebanese for food.",
+          "galaxy": "codex",
+          "id": 169,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Lebanese for food. I used to be into Thai.",
+          "galaxy": "codex",
+          "id": 168,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Thai when it comes to food.",
+          "galaxy": "codex",
+          "id": 137,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Japanese when it comes to food.",
+          "galaxy": "codex",
+          "id": 136,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 110,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 96,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Thai for my food.",
+          "galaxy": "codex",
+          "id": 76,
+          "rank": 39,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Thai lately for food.",
+          "galaxy": "codex",
+          "id": 67,
+          "rank": 40,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 42,
+          "rank": 41,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Thai when it comes to food.",
+          "galaxy": "codex",
+          "id": 32,
+          "rank": 42,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_book_genre",
+      "test_category": "T2",
+      "question": "What's my favorite book genre?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 42.73,
+      "candidate_count": 24,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 24
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 776,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about package delivery.",
+          "galaxy": "codex",
+          "id": 724,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 560,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 391,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about package delivery.",
+          "galaxy": "codex",
+          "id": 192,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 98,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 35,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 776,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about package delivery.",
+          "galaxy": "codex",
+          "id": 724,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 560,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 442,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 391,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book and then thought about package delivery.",
+          "galaxy": "codex",
+          "id": 192,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 98,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "I read a few chapters of a book yesterday.",
+          "galaxy": "codex",
+          "id": 35,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2987211048603058,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.2570785582065582,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_unknown_music",
+      "test_category": "T2",
+      "question": "What's my favorite music?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 14.92,
+      "candidate_count": 16,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 16
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.36658531427383423,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_energy_drink",
+      "test_category": "T2",
+      "question": "What's my favorite energy drink?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 45.23,
+      "candidate_count": 16,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 16
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.22442881762981415,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_novel_podcast",
+      "test_category": "T2",
+      "question": "What's my favorite podcast?",
+      "answer": "I don't know",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 19.47,
+      "candidate_count": 24,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 24
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=abstention",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": {
+        "valid": true,
+        "passed": false,
+        "reason": "score_above_threshold"
+      },
+      "retrieved_results": [
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 755,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 728,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 604,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 562,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 189,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast and then thought about laundry.",
+          "galaxy": "codex",
+          "id": 146,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 119,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast and then thought about commute.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 755,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 728,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 604,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 562,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 189,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast and then thought about laundry.",
+          "galaxy": "codex",
+          "id": 146,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast yesterday.",
+          "galaxy": "codex",
+          "id": 119,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "I listened to a podcast and then thought about commute.",
+          "galaxy": "codex",
+          "id": 108,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5374618172645569,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.4625381827354431,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T2_positive_hobby",
+      "test_category": "T2",
+      "question": "What's my favorite hobby?",
+      "answer": "rock climbing",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.25,
+      "first_match_rank": 4,
+      "latency_ms": 22.23,
+      "candidate_count": 28,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.25,
+        "first_match_rank": 4,
+        "candidate_count": 28
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "relevant_source_hit_at_1": 0,
+        "relevant_source_hit_at_5": 0,
+        "relevant_source_mrr": 0.125,
+        "required_evidence_found": 1,
+        "required_evidence_total": 1,
+        "required_evidence_coverage_at_retrieval_limit": 1.0,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model",
+        "supported": true
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rock climbing for my hobby.",
+          "galaxy": "codex",
+          "id": 785,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 772,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into rock climbing lately for hobby.",
+          "galaxy": "codex",
+          "id": 703,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 693,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from sourdough baking to rock climbing for hobby.",
+          "galaxy": "codex",
+          "id": 589,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer sourdough baking for my hobby.",
+          "galaxy": "codex",
+          "id": 565,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer geocaching but now I'm all about sourdough baking for hobby.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 1.0,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rock climbing for my hobby.",
+          "galaxy": "codex",
+          "id": 785,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 772,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into rock climbing lately for hobby.",
+          "galaxy": "codex",
+          "id": 703,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 693,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from sourdough baking to rock climbing for hobby.",
+          "galaxy": "codex",
+          "id": 589,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer sourdough baking for my hobby.",
+          "galaxy": "codex",
+          "id": 565,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer geocaching but now I'm all about sourdough baking for hobby.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into geocaching lately for hobby.",
+          "galaxy": "codex",
+          "id": 433,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into geocaching lately for hobby.",
+          "galaxy": "codex",
+          "id": 379,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love geocaching when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 364,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "For hobby, I always go with board games.",
+          "galaxy": "codex",
+          "id": 57,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love geocaching when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 14,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.5038122534751892,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.4961877465248108,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_hobby",
+      "test_category": "T6",
+      "question": "What's my current favorite hobby?",
+      "answer": "rock climbing",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 1,
+      "mrr": 0.25,
+      "first_match_rank": 4,
+      "latency_ms": 22.48,
+      "candidate_count": 28,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 1,
+        "mrr": 0.25,
+        "first_match_rank": 4,
+        "candidate_count": 28
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rock climbing for my hobby.",
+          "galaxy": "codex",
+          "id": 785,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 772,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into rock climbing lately for hobby.",
+          "galaxy": "codex",
+          "id": 703,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 693,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from sourdough baking to rock climbing for hobby.",
+          "galaxy": "codex",
+          "id": 589,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer sourdough baking for my hobby.",
+          "galaxy": "codex",
+          "id": 565,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer geocaching but now I'm all about sourdough baking for hobby.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5384009480476379,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer rock climbing for my hobby.",
+          "galaxy": "codex",
+          "id": 785,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 772,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into rock climbing lately for hobby.",
+          "galaxy": "codex",
+          "id": 703,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love rock climbing when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 693,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've actually switched from sourdough baking to rock climbing for hobby.",
+          "galaxy": "codex",
+          "id": 589,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer sourdough baking for my hobby.",
+          "galaxy": "codex",
+          "id": 565,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer geocaching but now I'm all about sourdough baking for hobby.",
+          "galaxy": "codex",
+          "id": 550,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into geocaching lately for hobby.",
+          "galaxy": "codex",
+          "id": 433,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into geocaching lately for hobby.",
+          "galaxy": "codex",
+          "id": 379,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love geocaching when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 364,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "For hobby, I always go with board games.",
+          "galaxy": "codex",
+          "id": 57,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love geocaching when it comes to hobby.",
+          "galaxy": "codex",
+          "id": 14,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.27125298976898193,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.267147958278656,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_coffee",
+      "test_category": "T6",
+      "question": "What's my current favorite coffee?",
+      "answer": "espresso",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 25.83,
+      "candidate_count": 38,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 38
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5215429663658142,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.2769043743610382,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer espresso for my coffee.",
+          "galaxy": "codex",
+          "id": 770,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 748,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into espresso lately for coffee.",
+          "galaxy": "codex",
+          "id": 736,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer espresso for my coffee.",
+          "galaxy": "codex",
+          "id": 731,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer light roast but now I'm all about espresso for coffee.",
+          "galaxy": "codex",
+          "id": 608,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "The coffee shop reviews has been pretty crazy lately.",
+          "galaxy": "codex",
+          "id": 538,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer light roast for my coffee.",
+          "galaxy": "codex",
+          "id": 532,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I was thinking about coffee shop reviews the other day.",
+          "galaxy": "codex",
+          "id": 524,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love light roast when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 503,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 502,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I've changed my mind about coffee \u2014 I now prefer light roast over latte.",
+          "galaxy": "codex",
+          "id": 449,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to light roast for coffee. I used to be into latte.",
+          "galaxy": "codex",
+          "id": 425,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 419,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 400,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "For coffee, I always go with latte.",
+          "galaxy": "codex",
+          "id": 395,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I played video games and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 388,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 380,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I watched a documentary about nature and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 178,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into latte lately for coffee.",
+          "galaxy": "codex",
+          "id": 172,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "Can you help me with something about coffee shop reviews?",
+          "galaxy": "codex",
+          "id": 171,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love latte when it comes to coffee.",
+          "galaxy": "codex",
+          "id": 152,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        },
+        {
+          "content": "I tried a new recipe for dinner and then thought about coffee shop reviews.",
+          "galaxy": "codex",
+          "id": 128,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.2446386069059372,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_transport",
+      "test_category": "T6",
+      "question": "What's my current favorite transport?",
+      "answer": "subway",
+      "verified": true,
+      "recall_at_1": 1,
+      "recall_at_5": 1,
+      "mrr": 1.0,
+      "first_match_rank": 1,
+      "latency_ms": 15.57,
+      "candidate_count": 24,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": true,
+        "recall_at_1": 1,
+        "recall_at_5": 1,
+        "mrr": 1.0,
+        "first_match_rank": 1,
+        "candidate_count": 24
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 712,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 595,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 579,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 494,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 477,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 468,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to subway for transport. I used to be into scooter.",
+          "galaxy": "codex",
+          "id": 450,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5472486019134521,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 712,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "For transport, I always go with subway.",
+          "galaxy": "codex",
+          "id": 595,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 579,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 494,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into subway lately for transport.",
+          "galaxy": "codex",
+          "id": 477,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer subway for my transport.",
+          "galaxy": "codex",
+          "id": 468,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to subway for transport. I used to be into scooter.",
+          "galaxy": "codex",
+          "id": 450,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to scooter for transport. I used to be into walking.",
+          "galaxy": "codex",
+          "id": 393,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.28522124886512756,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.26202741265296936,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T6_food",
+      "test_category": "T6",
+      "question": "What's my current favorite food?",
+      "answer": "Mexican",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 20.49,
+      "candidate_count": 42,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 42
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=supersession",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 10,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        }
+      ],
+      "candidate_results": [
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 591,
+          "rank": 1,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 574,
+          "rank": 2,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Lebanese.",
+          "galaxy": "codex",
+          "id": 383,
+          "rank": 3,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Japanese.",
+          "galaxy": "codex",
+          "id": 359,
+          "rank": 4,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 87,
+          "rank": 5,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite food is Thai.",
+          "galaxy": "codex",
+          "id": 9,
+          "rank": 6,
+          "recall_mode": "substrate",
+          "score": 0.5148208141326904,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is espresso.",
+          "galaxy": "codex",
+          "id": 730,
+          "rank": 7,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is subway.",
+          "galaxy": "codex",
+          "id": 594,
+          "rank": 8,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 526,
+          "rank": 9,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 142,
+          "rank": 10,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 118,
+          "rank": 11,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 116,
+          "rank": 12,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 72,
+          "rank": 13,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite hobby is geocaching.",
+          "galaxy": "codex",
+          "id": 51,
+          "rank": 14,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite transport is walking.",
+          "galaxy": "codex",
+          "id": 33,
+          "rank": 15,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "My favorite coffee is latte.",
+          "galaxy": "codex",
+          "id": 5,
+          "rank": 16,
+          "recall_mode": "substrate",
+          "score": 0.28079479932785034,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Japanese lately for food.",
+          "galaxy": "codex",
+          "id": 727,
+          "rank": 17,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer Lebanese but now I'm all about Mexican for food.",
+          "galaxy": "codex",
+          "id": 702,
+          "rank": 18,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 667,
+          "rank": 19,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 641,
+          "rank": 20,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 613,
+          "rank": 21,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Japanese.",
+          "galaxy": "codex",
+          "id": 529,
+          "rank": 22,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Lebanese lately for food.",
+          "galaxy": "codex",
+          "id": 499,
+          "rank": 23,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Lebanese lately for food.",
+          "galaxy": "codex",
+          "id": 489,
+          "rank": 24,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Lebanese for my food.",
+          "galaxy": "codex",
+          "id": 483,
+          "rank": 25,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Lebanese when it comes to food.",
+          "galaxy": "codex",
+          "id": 448,
+          "rank": 26,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 335,
+          "rank": 27,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 309,
+          "rank": 28,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 281,
+          "rank": 29,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 254,
+          "rank": 30,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 228,
+          "rank": 31,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I love cooking Thai food with peanuts.",
+          "galaxy": "codex",
+          "id": 200,
+          "rank": 32,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I used to prefer Thai but now I'm all about Lebanese for food.",
+          "galaxy": "codex",
+          "id": 169,
+          "rank": 33,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "Recently I switched to Lebanese for food. I used to be into Thai.",
+          "galaxy": "codex",
+          "id": 168,
+          "rank": 34,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Thai when it comes to food.",
+          "galaxy": "codex",
+          "id": 137,
+          "rank": 35,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Japanese when it comes to food.",
+          "galaxy": "codex",
+          "id": 136,
+          "rank": 36,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 110,
+          "rank": 37,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 96,
+          "rank": 38,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I prefer Thai for my food.",
+          "galaxy": "codex",
+          "id": 76,
+          "rank": 39,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I've been really into Thai lately for food.",
+          "galaxy": "codex",
+          "id": 67,
+          "rank": 40,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "For food, I always go with Thai.",
+          "galaxy": "codex",
+          "id": 42,
+          "rank": 41,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        },
+        {
+          "content": "I really love Thai when it comes to food.",
+          "galaxy": "codex",
+          "id": 32,
+          "rank": 42,
+          "recall_mode": "substrate",
+          "score": 0.23402604460716248,
+          "superseded_by": null
+        }
+      ]
+    },
+    {
+      "question_id": "T8_vegetarian_steak",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegetarian, now steak",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 12.46,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_vegan_cheese",
+      "test_category": "T8",
+      "question": "Do I have any dietary restrictions?",
+      "answer": "CONFLICT: was vegan, now cheese",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 10.64,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    },
+    {
+      "question_id": "T8_teetotaler_wine",
+      "test_category": "T8",
+      "question": "Do I drink alcohol?",
+      "answer": "CONFLICT: was teetotaler, now wine",
+      "verified": false,
+      "recall_at_1": 0,
+      "recall_at_5": 0,
+      "mrr": 0.0,
+      "first_match_rank": null,
+      "latency_ms": 10.23,
+      "candidate_count": 0,
+      "valid_execution": true,
+      "execution_failures": [],
+      "legacy_scoring": {
+        "protocol": "wm-retrieval-legacy-v1",
+        "verified": false,
+        "recall_at_1": 0,
+        "recall_at_5": 0,
+        "mrr": 0.0,
+        "first_match_rank": null,
+        "candidate_count": 0
+      },
+      "strict_scoring": {
+        "protocol": "wm-evidence-strict-v1",
+        "supported": false,
+        "unsupported_reason": "strict source semantics not defined for verification_type=set",
+        "relevant_source_hit_at_1": null,
+        "relevant_source_hit_at_5": null,
+        "relevant_source_mrr": null,
+        "required_evidence_found": null,
+        "required_evidence_total": null,
+        "required_evidence_coverage_at_retrieval_limit": null,
+        "retrieval_limit": 0,
+        "supported_answer_correctness": null,
+        "supported_answer_correctness_status": "not_applicable_no_answer_model"
+      },
+      "grouped_source_scoring": null,
+      "strict_abstention": null,
+      "retrieved_results": [],
+      "candidate_results": []
+    }
+  ],
+  "valid_execution": true,
+  "execution_failures": [],
+  "errors": []
+}

@@ -1,0 +1,13 @@
+B5 regression — score-noise baseline (why the registered <=1 ULP bound was exceeded)
+
+Same corpus (gate-neutralized holdout seed 6), config C00, all runs with no scope:
+
+  run pair                          score entries differing   max ULP   ordering identical
+  refA vs refB (same reference bin)          18                  1         True
+  candA vs candB (same candidate bin)        34                  1         True
+  candidate vs reference (driver stage B)   119 (of 650)          2         True
+
+Reading: f32 summation-order nondeterminism exists within a single binary (per-run), and
+cross-build FP lowering differences add one more ULP in 16/650 entries. Ordering, candidate
+counts, recall@1/5, mrr, first_match_rank and journal event sets are exact in every comparison.
+Files: refA_seed6.json/refB_seed6.json, candA_seed6.json/candB_seed6.json (+ .journal.jsonl).

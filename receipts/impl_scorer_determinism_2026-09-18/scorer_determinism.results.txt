@@ -1,0 +1,43 @@
+==============================================================================
+SCORER DETERMINISM ACCEPTANCE RESULTS (W1_SCORER_DETERMINISM_REGISTRATION)
+==============================================================================
+Candidate: /home/lucas/Desktop/WMgen3/target/release/wm-gen3 (a5ec583b318bfe269a77e3491205548ec431a8e1a18c77e3af74d9aaa882db44)
+Reference: /home/lucas/Desktop/WMgen3/target/wm-gen3-ref-10b48d8 (0c4b1d87a1f0b414b991537d61e8928a9c820285c1143ed3146bbacfd1946f22)
+Corpus: 10 files verified; dedup sha256 recorded
+
+--- PART 1: SAME-BINARY DETERMINISM (Target: 0 ULP divergence) ---
+  C00: 80 queries, 0 ordering diffs, 0 metric diffs
+       scores exact: 650/650 (100.00%), max ULP: 0
+  C01: 80 queries, 0 ordering diffs, 0 metric diffs
+       scores exact: 650/650 (100.00%), max ULP: 0
+  => SAME-BINARY DETERMINISM: PASS (0 ULP divergence verified)
+
+--- PART 2: BEHAVIORAL NON-CHANGE VS REFERENCE (10b48d8) ---
+  C00: 80 queries, 0 ordering diffs, 0 metric diffs
+       scores exact: 546/650, max ULP: 2
+       ULP distribution: {1: 96, 2: 8}
+  C01: 80 queries, 0 ordering diffs, 0 metric diffs
+       scores exact: 542/650, max ULP: 2
+       ULP distribution: {1: 92, 2: 16}
+  => BEHAVIORAL EQUIVALENCE: PASS (0 metric diffs, scores <= 1 ULP)
+
+--- PART 3: SWEEP EVENT STREAM DETERMINISM ---
+  Sweep events verified across independent store runs: 1 events bit-identical
+  => SWEEP DETERMINISM: PASS
+
+--- PART 4: B5 CAMPAIGN RE-VERIFICATION ---
+  B5 Campaign output:
+B5 RECALL-VIEW CAMPAIGN PASS
+view correctness : 24 labels (> Gen2 cap 20); scoped recall exact; shared-token pair no bleed; label-less record visible unscoped only
+crowd-out        : candidate_limit=1 with 3 higher-support out-of-scope records -> in-view record still returned (filter-before-selection)
+filter-not-scorer: unscoped order restricted to label == scoped order
+empty view       : results [] + abstained/insufficient_evidence/no_candidates_in_scope, scope_considered 0
+malformed select : scope="" and scope="a:b" -> typed caller error, no journal entry
+explicit-only    : source scan clean (no env/config scope path)
+bare bytes       : data.mdb sha256 unchanged across scoped reads; store = {data.mdb, lock.mdb}
+inspect          : record count invariant; no registry surface
+  => B5 CAMPAIGN: PASS (8/8 cases)
+
+==============================================================================
+ALL SCORER DETERMINISM ACCEPTANCE GATES PASSED
+==============================================================================

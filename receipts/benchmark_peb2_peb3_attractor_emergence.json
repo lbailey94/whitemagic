@@ -1,0 +1,105 @@
+{
+  "milestone": "4B",
+  "benchmark": "PEB-2 / PEB-3 (Attractor Emergence & Basin Geometry)",
+  "timestamp": "2026-09-22 12:10:24",
+  "adjudicated_outcome": "Outcome 4: Partial Homology / Multi-Scale Hierarchical Speciation",
+  "metrics": {
+    "num_nodes": 48,
+    "de_novo_k_star": 8,
+    "primary_eigengap": 3.4634,
+    "secondary_k": 10,
+    "secondary_eigengap": 2.0225,
+    "candidate_basins": 8,
+    "certified_attractors": 6,
+    "attractor_certification_rate": 0.75,
+    "de_novo_recovery_prob": 0.9286,
+    "seeded_recovery_prob": 0.9564,
+    "null_shuffled_recovery_prob": 0.0,
+    "null_block_shuffled_recovery_prob": 0.0,
+    "mean_contraction_ratio": 0.5012,
+    "mean_post_return_dwell_steps": 24.1,
+    "unperturbed_escape_prob": 0.0,
+    "multi_shock_resilience": 0.977,
+    "persistence_score": 0.93,
+    "structurality_score": 0.94,
+    "universality_score": 0.92
+  },
+  "homology_mapping": {
+    "A_1": {
+      "quadrant": "East (Wood / Expansion)",
+      "associated_gardens": [
+        "courage",
+        "stillness",
+        "healing",
+        "clarity"
+      ],
+      "compression_ratio": 4
+    },
+    "A_2": {
+      "quadrant": "East (Wood / Expansion)",
+      "associated_gardens": [
+        "compassion",
+        "wisdom",
+        "gratitude"
+      ],
+      "compression_ratio": 3
+    },
+    "A_3": {
+      "quadrant": "North (Water / Introspection)",
+      "associated_gardens": [
+        "depth",
+        "patience",
+        "sanctuary",
+        "mystery"
+      ],
+      "compression_ratio": 4
+    },
+    "A_4": {
+      "quadrant": "North (Water / Introspection)",
+      "associated_gardens": [
+        "reflection",
+        "adaptation",
+        "resilience"
+      ],
+      "compression_ratio": 3
+    },
+    "A_5": {
+      "quadrant": "West (Metal / Discrimination)",
+      "associated_gardens": [
+        "precision",
+        "structure",
+        "discernment",
+        "purity"
+      ],
+      "compression_ratio": 4
+    },
+    "A_6": {
+      "quadrant": "West (Metal / Discrimination)",
+      "associated_gardens": [
+        "focus",
+        "integrity",
+        "sovereignty"
+      ],
+      "compression_ratio": 3
+    },
+    "A_7": {
+      "quadrant": "South (Fire / Energy)",
+      "associated_gardens": [
+        "creation",
+        "expression",
+        "passion",
+        "radiance"
+      ],
+      "compression_ratio": 4
+    },
+    "A_8": {
+      "quadrant": "South (Fire / Energy)",
+      "associated_gardens": [
+        "illumination",
+        "adventure",
+        "play"
+      ],
+      "compression_ratio": 3
+    }
+  }
+}

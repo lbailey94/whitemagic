@@ -1,0 +1,73 @@
+{
+  "benchmark": "PEB-11",
+  "milestone": "Milestone 6A",
+  "trials": 500,
+  "elapsed_seconds": 80.09,
+  "results": {
+    "replay_before_restart": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "replay_after_restart": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "sequence_rollback_rejection": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "mallory_spoof_zero_quarantine_violations": {
+      "violations": 0,
+      "rate": 1.0
+    },
+    "noise_dropped_without_mutation": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "key_substitution_rejection": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "legitimate_key_rotations": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "cross_recipient_relay_rejection": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "authority_smuggling_rejection": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "reciprocity_throttling_enforced": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "partition_rejoin_handled": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "fuzz_malformed_packets_dropped": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "epoch_downgrade_rejection": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "sequence_window_bitmap_handled": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "amplification_replay_suppressed": {
+      "successes": 500,
+      "rate": 1.0
+    },
+    "split_brain_fork_preserved": {
+      "successes": 500,
+      "rate": 1.0
+    }
+  },
+  "all_dimensions_passed": true
+}

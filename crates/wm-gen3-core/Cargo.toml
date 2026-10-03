@@ -1,0 +1,67 @@
+[package]
+name = "wm-gen3-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "WhiteMagic Gen3 — minimal substrate skeleton (Phase 1 first slice)"
+
+[features]
+# Operator-side construction paths (e.g. RatifiedChannel::mint). Never enabled by
+# the adaptive layer; see docs/DEPENDENCY_MANIFEST.md.
+operator = []
+reference-models = []
+
+[[test]]
+name = "adversary_contract"
+required-features = ["reference-models"]
+
+[[test]]
+name = "intake_public"
+required-features = ["operator"]
+
+[[test]]
+name = "gate9a_sweep_acceptance"
+required-features = ["operator"]
+
+[[test]]
+name = "gate9a_article9_acceptance"
+required-features = ["operator"]
+
+[[test]]
+name = "gate9c_precision_acceptance"
+required-features = ["operator"]
+
+[[test]]
+name = "gate9d_reality_battery"
+required-features = ["operator", "reference-models"]
+
+[[test]]
+name = "gate10_p2p_mesh_acceptance"
+required-features = ["operator"]
+
+[[test]]
+name = "gate10_cyberbrain_provenance_and_transfer_battery"
+required-features = ["operator"]
+
+[dependencies]
+fastembed = "5.17.4"
+lmdb = "0.8"
+rmp-serde = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+rayon = "1.10"
+ed25519-dalek = "3.0.0"
+getrandom = "0.3"
+uuid = { version = "1", features = ["serde", "v4", "v5"] }
+chrono = { version = "0.4", features = ["serde"] }
+landlock = "0.4"
+rlimit = "0.11.0"
+
+[dev-dependencies]
+proptest = "1.11"
+
+[lints]
+workspace = true

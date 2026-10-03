@@ -1,0 +1,8 @@
+B1 REGRESSION FIXTURE PASS
+raw corpus     : 10 files MANIFEST-verified (holdout seeds 6,7,8,9,10)
+stage A C00    : reference vs recorded C00 (all switches off) -> 80 queries, ordering/metrics 0 diffs; scores exact 609/650, max f32 ULP 1
+stage A C01    : reference vs recorded C01 (defaults (sweep on)) -> 80 queries, ordering/metrics 0 diffs; scores exact 600/650, max f32 ULP 1
+gate-neutral   : deduped corpus sha256 recorded (corpus_dedup.sha256, 5 files)
+stage B C00    : candidate vs reference (deduped) -> 80 queries, ordering/metrics 0 diffs; scores exact 567/650, max f32 ULP 1
+stage B C01    : candidate vs reference (deduped) -> 80 queries, ordering/metrics 0 diffs; scores exact 584/650, max f32 ULP 1
+candidate int. : no ingest refusals, no violations, written == items on deduped corpus

@@ -1,0 +1,5 @@
+A2-STARVE+ROUTE DEMO PASS
+budget refusal : {"status": "error", "errors": ["write budget exceeded"]}
+reads open     : {"alpha": 1, "zulu": 0}
+tokens distinct: {"refusal": "write budget exceeded (fail-closed)", "abstention": "insufficient_evidence"}
+route (on)     : {"projection_ran": true, "projection_error": false, "semantic_candidates": 1}

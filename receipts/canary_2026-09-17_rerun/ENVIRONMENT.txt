@@ -1,0 +1,6 @@
+binary: /home/lucas/Desktop/WMgen3/target/release/wm-gen3
+binary_sha256: e6e7ee06a935f2c0868abbba33aa6140b5a846a2104494ce9a774d4f3f52c828
+rustc: rustc 1.98.0 (88d9e12ae 2026-08-18)
+cargo: cargo 1.98.0 (797e8a9bc 2026-08-05)
+host: Linux 7.0.0-31-generic x86_64 GNU/Linux
+date: 2026-09-17T19:40:16-04:00

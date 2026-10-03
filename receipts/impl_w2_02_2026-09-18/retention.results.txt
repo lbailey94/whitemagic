@@ -1,0 +1,19 @@
+==============================================================================
+W2_02 RETENTION / LIFECYCLE ACCEPTANCE RESULTS
+==============================================================================
+Binary: /home/lucas/Desktop/WMgen3/target/release/wm-gen3 (a5ec583b318bfe269a77e3491205548ec431a8e1a18c77e3af74d9aaa882db44)
+Store: /home/lucas/Desktop/WMgen3/receipts/impl_w2_02_2026-09-18/retention_store
+
+1. Behavioral record retention across sweeps: PASS
+   Initial records: 5 | Final records: 5 (100% preserved)
+   Relation lifecycle transitions (candidate->persistent->cold) observed; records invariant
+2. Pure reads store integrity: PASS
+   data.mdb sha256 invariant across 10 recall passes: 9526908f3e6bb780…
+3. All-zero success impossible: PASS
+   Typed refusals demonstrated: 1 remember.refusal journaled events
+4. Source & binary symbol scan: PASS
+   6 destructive retention / forget patterns absent from source and binary
+
+==============================================================================
+ALL W2_02 ACCEPTANCE GATES PASSED
+==============================================================================

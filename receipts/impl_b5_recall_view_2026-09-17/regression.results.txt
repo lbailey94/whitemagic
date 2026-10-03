@@ -1,0 +1,24 @@
+B5 REGRESSION — fresh 0-diff (stage B: candidate vs source-frozen pre-change reference)
+
+Candidate : target/release/wm-gen3 @ 10b48d8 (implementation freeze), sha256 0c4b1d87a1f0b414b991537d61e8928a9c820285c1143ed3146bbacfd1946f22
+Reference : worktree build of 9b1a61c (pre-change tip), sha256 ee39c37fa01ef77587fdc6a3e3a21e5bc938dbe983e29af27c5b9b2aede0ebeb
+Corpus    : gate-neutralized holdout seeds 6-10 (dedup by A1 gate identity; corpus_dedup.sha256)
+Configs   : C00 all off / C01 defaults; NO scope argument anywhere
+
+Result (driver_b5_regression.py, stage B loop):
+  C00: ordering/metrics 0 diffs (160 queries total across C00+C01; ordered (id, rank),
+       candidate_count, recall@1/5, mrr, first_match_rank all exact)
+  C01: same
+  journals: no remember.refusal, no closure.violation, written == items, and no `scope` field on
+            any default-path selection.decision
+
+FINDING F-1 (disclosed; criterion miss against the registered bound):
+  Registered criterion (registration §3.1, protocol §9): scores <= 1 f32 ULP.
+  Observed: candidate vs reference = 531/650 score comparisons exact, 119 nonzero, max 2 ULP
+  (16 entries at 2 ULP, 103 at 1 ULP; the driver's strict assert fired at max 2 > 1).
+  Attribution (measured, see noise_baseline.results.txt): same-binary reruns of EITHER binary
+  already differ by 1 ULP (ref 18 entries, cand 34 entries, ordering identical), so the score
+  spread is f32 summation-order nondeterminism in the scorer plus cross-build FP lowering,
+  not a semantic change; ordering and all metrics are exact.
+  Disposition: OPERATOR PENDING (criterion wording vs acceptance; errata candidate). The row
+  exit is not claimed by this receipt.

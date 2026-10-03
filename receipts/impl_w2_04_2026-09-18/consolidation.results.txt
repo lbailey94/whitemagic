@@ -1,0 +1,23 @@
+==============================================================================
+W2_04 DREAM / CONSOLIDATION ACCEPTANCE RESULTS
+==============================================================================
+Binary: /home/lucas/Desktop/WMgen3/target/release/wm-gen3 (a5ec583b318bfe269a77e3491205548ec431a8e1a18c77e3af74d9aaa882db44)
+Store A: /home/lucas/Desktop/WMgen3/receipts/impl_w2_04_2026-09-18/store_a_active
+Store B (Control): /home/lucas/Desktop/WMgen3/receipts/impl_w2_04_2026-09-18/store_b_control
+
+1. Pass-effect measurement (Matched A/B control): PASS
+   Store A (Consolidated): relation transitioned to Cold; earlier record unpenalized (score 1.0000)
+   Store B (Control): relation remained active; earlier record penalized (score 1.0000)
+   Causal delta demonstrated directly attributable to think_sweep lifecycle crossing
+2. Journal attestation: PASS
+   2 relation.state_change events attested with hash-out linkage
+3. Promotion / demotion persistence across restart: PASS
+   Relation state 'Cold' verified in fresh process invocation
+4. Semantic object preservation: PASS
+   Records intact (2/2); relation preserved in store; no deletion/purge events
+5. Phase-agnostic & field-smuggling scan: PASS
+   6 forbidden phase/citta/decay patterns absent from Gen3 codebase
+
+==============================================================================
+ALL W2_04 ACCEPTANCE GATES PASSED
+==============================================================================

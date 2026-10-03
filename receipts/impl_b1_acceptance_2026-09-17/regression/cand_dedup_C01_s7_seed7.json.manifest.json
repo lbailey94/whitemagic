@@ -1,0 +1,90 @@
+{
+  "schema": "wm-evaluation-run-manifest-v1",
+  "protocols": {
+    "legacy": "wm-retrieval-legacy-v1",
+    "strict": "wm-evidence-strict-v1",
+    "grouped_source": "wm-source-groups-v1"
+  },
+  "command": [
+    "/usr/bin/python3",
+    "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/memorastrict_bench.py",
+    "--binary",
+    "target/release/wm-gen3",
+    "--data",
+    "/tmp/opencode/b1_work/regression/corpus_dedup",
+    "--seeds",
+    "7",
+    "--categories",
+    "T8",
+    "T1",
+    "T6",
+    "T2",
+    "--limit",
+    "10",
+    "--candidate-limit",
+    "100",
+    "--min-score",
+    "0",
+    "--min-coverage",
+    "0",
+    "--per-case",
+    "--output",
+    "/tmp/opencode/b1_work/regression/cand_dedup_C01_s7.json"
+  ],
+  "runner": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/memorastrict_bench.py",
+    "sha256": "df9d42c24a1005c102e8d99436e7cde37bccc3d8f2958ad4f6659d639c3dc597"
+  },
+  "protocol_helper": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9/scripts/eval_protocol.py",
+    "sha256": "bb3e70b55c38b24ad22e26b87e54d52a51c514c65d336e9194e96b05b9d3b6ff"
+  },
+  "binary": {
+    "path": "/home/lucas/Desktop/WMgen3/target/release/wm-gen3",
+    "sha256": "76083d050e94e707b480f431418ae155392ec126facfcd48c076fe25d9df5f82"
+  },
+  "dataset": {
+    "path": "/tmp/opencode/b1_work/regression/corpus_dedup/bench_seed7.json",
+    "sha256": "21efc89267d4fd90fb2bcc0b15c0ebd50f0d4d99ac79018f02cc6a58fc20659c"
+  },
+  "output": {
+    "path": "/tmp/opencode/b1_work/regression/cand_dedup_C01_s7_seed7.json",
+    "sha256": "1ddd3eb321eb2bfce3aec0b8a6350f1c274d34b499f54938b1bcefbb212e9dfb"
+  },
+  "repository": {
+    "path": "/home/lucas/Desktop/WHITEMAGIC/WMv9",
+    "branch": "main",
+    "head": "7fee8107c96857767c3c0623647ed40e52a7e9bb",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "configuration": {
+    "execution_path": "local-wm-serve-stdio",
+    "retrieval": {
+      "route": "memory.episodic_search",
+      "bm25_only_requested": false
+    },
+    "seed": 7,
+    "categories": [
+      "T8",
+      "T1",
+      "T6",
+      "T2"
+    ],
+    "limit": 10,
+    "candidate_limit": 100,
+    "min_score": 0.0,
+    "min_coverage": 0.0,
+    "grouped_source": {
+      "enabled": false,
+      "protocol": null,
+      "declared_retrieval_cutoff": 10
+    }
+  },
+  "environment": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+    "answer_generation_model": null
+  },
+  "valid_execution": true,
+  "failures": []
+}

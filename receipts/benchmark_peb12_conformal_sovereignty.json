@@ -1,0 +1,57 @@
+{
+  "benchmark": "PEB-12",
+  "milestone": "Milestone 6B",
+  "rounds": 100,
+  "total_test_predictions": 10000,
+  "elapsed_seconds": 0.86,
+  "results": {
+    "nominal_coverage_target": 0.95,
+    "observed_empirical_coverage": 0.953,
+    "hits": 9530,
+    "wilson_ci_95": {
+      "lower": 0.9487000000000001,
+      "upper": 0.9570000000000001
+    },
+    "finite_sample_quantile_exactness": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "remote_contamination_rejection": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "mean_drift_warrant_withdrawal": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "variance_drift_warrant_withdrawal": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "in_distribution_specificity": {
+      "successes": 99,
+      "rate": 0.99
+    },
+    "cold_reboot_persistence_intact": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "set_monotonicity_success": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "empty_calibration_honest_uncalibrated": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "adversarial_peer_exaggeration_blocked": {
+      "successes": 100,
+      "rate": 1.0
+    },
+    "split_conformal_boundary_exact": {
+      "successes": 100,
+      "rate": 1.0
+    }
+  },
+  "all_dimensions_passed": true
+}
