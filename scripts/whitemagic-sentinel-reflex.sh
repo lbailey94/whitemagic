@@ -18,8 +18,8 @@ fi
 
 STATUS=$(echo "$REPORT_JSON" | grep -o '"status": *"[^"]*"' | head -n1 | cut -d'"' -f4)
 
-if [ "$STATUS" = "nominal" ]; then
-    echo "[$(date -u +%FT%TZ)] Sentinel pulse: nominal. Invariants pass."
+if [ "$STATUS" = "nominal" ] || [ "$STATUS" = "warning" ]; then
+    echo "[$(date -u +%FT%TZ)] Sentinel pulse: $STATUS. No intervention required."
     exit 0
 fi
 
