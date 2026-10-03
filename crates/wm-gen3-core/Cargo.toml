@@ -45,6 +45,10 @@ required-features = ["operator"]
 name = "gate10_cyberbrain_provenance_and_transfer_battery"
 required-features = ["operator"]
 
+[[test]]
+name = "cyberbrain_baseline_benchmark"
+required-features = ["operator"]
+
 [dependencies]
 fastembed = "5.17.4"
 lmdb = "0.8"
@@ -57,8 +61,12 @@ ed25519-dalek = "3.0.0"
 getrandom = "0.3"
 uuid = { version = "1", features = ["serde", "v4", "v5"] }
 chrono = { version = "0.4", features = ["serde"] }
-landlock = "0.4"
+
+[target.'cfg(unix)'.dependencies]
 rlimit = "0.11.0"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = "0.4"
 
 [dev-dependencies]
 proptest = "1.11"

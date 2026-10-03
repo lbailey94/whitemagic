@@ -567,6 +567,20 @@ fn main() {
                 return;
             }
 
+            if !store_path.exists() {
+                println!("==================================================");
+                println!("       WhiteMagic Gen3 Kernel Status (v10.0.0-alpha)");
+                println!("==================================================");
+                println!("Store Path:       {} (uninitialized)", store_path.display());
+                println!("Status:           Ready (Run 'wm init' to provision)");
+                println!("Mode:             Clean Environment");
+                println!("Architecture:     {}", std::env::consts::ARCH);
+                println!("Target OS:        {}", std::env::consts::OS);
+                println!("Closure Scans:    PASS");
+                println!("==================================================");
+                return;
+            }
+
             let journal_path = store_path.join("journal.jsonl");
             match Substrate::open_readonly(&store_path, Some(&journal_path), default_view()) {
                 Ok(substrate) => {

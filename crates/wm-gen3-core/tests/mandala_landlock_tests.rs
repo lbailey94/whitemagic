@@ -140,6 +140,7 @@ fn test_continuity_receipt_spec_05_tamper_evidence() {
 /// Tests Landlock process restriction inside a spawned child process.
 /// Verifies filesystem confinement, resource limits, and network scoping.
 #[test]
+#[cfg(target_os = "linux")]
 fn test_landlock_subprocess_confinement() {
     let (ws_path, outside_path) = create_temp_subdirs("wm_test_confinement");
 

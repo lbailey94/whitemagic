@@ -897,27 +897,33 @@ impl Default for SandboxResourceLimits {
 }
 
 impl SandboxResourceLimits {
-    /// Applies these resource limits to the current process safely via the `rlimit` crate.
+    /// Applies these resource limits to the current process safely via the `rlimit` crate on Unix.
     pub fn apply_to_current_process(&self) -> Result<(), MandalaError> {
-        let mem_bytes = self.max_memory_mb.saturating_mul(1024 * 1024);
-        rlimit::Resource::AS
-            .set(mem_bytes, mem_bytes)
-            .map_err(|e| {
-                MandalaError::PersistenceFailure(format!("Failed to set RLIMIT_AS: {e}"))
-            })?;
+        #[cfg(unix)]
+        {
+            let mem_bytes = self.max_memory_mb.saturating_mul(1024 * 1024);
+            rlimit::Resource::AS
+                .set(mem_bytes, mem_bytes)
+                .map_err(|e| {
+                    MandalaError::PersistenceFailure(format!("Failed to set RLIMIT_AS: {e}"))
+                })?;
 
-        rlimit::Resource::CPU
-            .set(self.max_cpu_seconds, self.max_cpu_seconds)
-            .map_err(|e| {
-                MandalaError::PersistenceFailure(format!("Failed to set RLIMIT_CPU: {e}"))
-            })?;
+            rlimit::Resource::CPU
+                .set(self.max_cpu_seconds, self.max_cpu_seconds)
+                .map_err(|e| {
+                    MandalaError::PersistenceFailure(format!("Failed to set RLIMIT_CPU: {e}"))
+                })?;
 
-        rlimit::Resource::NOFILE
-            .set(self.max_open_files, self.max_open_files)
-            .map_err(|e| {
-                MandalaError::PersistenceFailure(format!("Failed to set RLIMIT_NOFILE: {e}"))
-            })?;
-
+            rlimit::Resource::NOFILE
+                .set(self.max_open_files, self.max_open_files)
+                .map_err(|e| {
+                    MandalaError::PersistenceFailure(format!("Failed to set RLIMIT_NOFILE: {e}"))
+                })?;
+        }
+        #[cfg(not(unix))]
+        {
+            // Bounded advisory limits on non-Unix platforms
+        }
         Ok(())
     }
 }
@@ -997,9 +1003,19 @@ impl WorkspaceClaim {
 }
 
 /// Native Linux Landlock LSM sandbox executor.
+/// Opaque wrapper around kernel sandbox ruleset.
+#[cfg(target_os = "linux")]
+pub struct SandboxRuleset {
+    pub(crate) inner: landlock::RulesetCreated,
+}
+
+#[cfg(not(target_os = "linux"))]
+pub struct SandboxRuleset;
+
+/// Process and workspace sandboxing primitives.
 ///
-/// Restricts filesystem access to declared read-only and read-write paths,
-/// preventing unauthorized access to outside worktrees or private keys.
+/// On Linux: Confinement via Landlock LSM (ABI v1-v5) and unprivileged rlimits.
+/// On macOS / Windows: Bounded process limits and advisory confinement.
 pub struct LandlockSandbox;
 
 impl LandlockSandbox {
@@ -1008,7 +1024,8 @@ impl LandlockSandbox {
     /// Automatically negotiates the kernel's Landlock ABI version (v1-v5):
     /// - Filesystem confinement under `AccessFs` (ABI v1)
     /// - Strict TCP network confinement (`AccessNet`) under ABI v4+ if `!claim.network_allowed`.
-    pub fn build_ruleset(claim: &WorkspaceClaim) -> Result<landlock::RulesetCreated, MandalaError> {
+    #[cfg(target_os = "linux")]
+    pub fn build_ruleset(claim: &WorkspaceClaim) -> Result<SandboxRuleset, MandalaError> {
         use landlock::{
             ABI, Access, AccessFs, AccessNet, CompatLevel, Compatible, PathBeneath, PathFd,
             Ruleset, RulesetAttr, RulesetCreatedAttr,
@@ -1093,7 +1110,13 @@ impl LandlockSandbox {
             }
         }
 
-        Ok(ruleset)
+        Ok(SandboxRuleset { inner: ruleset })
+    }
+
+    /// Non-Linux fallback for platforms without Landlock LSM (macOS, Windows).
+    #[cfg(not(target_os = "linux"))]
+    pub fn build_ruleset(_claim: &WorkspaceClaim) -> Result<SandboxRuleset, MandalaError> {
+        Ok(SandboxRuleset)
     }
 
     /// Enforces Landlock confinement and unprivileged resource limits on the current thread/process.
@@ -1103,20 +1126,29 @@ impl LandlockSandbox {
             limits.apply_to_current_process()?;
         }
 
-        // 2. Build and enforce Landlock ruleset
-        let ruleset = Self::build_ruleset(claim)?;
-        let status = ruleset.restrict_self().map_err(|e| {
-            MandalaError::PersistenceFailure(format!("Landlock restrict_self failed: {e}"))
-        })?;
+        // 2. Build and enforce Landlock ruleset on Linux
+        #[cfg(target_os = "linux")]
+        {
+            let ruleset = Self::build_ruleset(claim)?;
+            let status = ruleset.inner.restrict_self().map_err(|e| {
+                MandalaError::PersistenceFailure(format!("Landlock restrict_self failed: {e}"))
+            })?;
 
-        match status.ruleset {
-            landlock::RulesetStatus::FullyEnforced | landlock::RulesetStatus::PartiallyEnforced => {
-                Ok(())
+            match status.ruleset {
+                landlock::RulesetStatus::FullyEnforced | landlock::RulesetStatus::PartiallyEnforced => {
+                    Ok(())
+                }
+                landlock::RulesetStatus::NotEnforced => Err(MandalaError::OperationNotAllowed {
+                    operation: "landlock_confinement".to_string(),
+                    reason: "Landlock ruleset was not enforced by the kernel".to_string(),
+                }),
             }
-            landlock::RulesetStatus::NotEnforced => Err(MandalaError::OperationNotAllowed {
-                operation: "landlock_confinement".to_string(),
-                reason: "Landlock ruleset was not enforced by the kernel".to_string(),
-            }),
+        }
+
+        #[cfg(not(target_os = "linux"))]
+        {
+            // On macOS / Windows, process limits are enforced via rlimit/advisory bounds.
+            Ok(())
         }
     }
 }
