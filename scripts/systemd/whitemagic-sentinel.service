@@ -1,0 +1,23 @@
+[Unit]
+Description=WhiteMagic Gen3 Autonomic Sentinel
+After=network.target
+
+[Service]
+Type=oneshot
+User=wm
+Group=wm
+Environment="HOME=/home/wm"
+Environment="WM_NODE_ID=whitemagic-vps"
+Environment="WM_STORE=/srv/whitemagic/system-store"
+ExecStart=/usr/local/bin/whitemagic-sentinel-reflex.sh
+StandardOutput=journal
+StandardError=journal
+# Sandbox & Landlock constraints
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/srv/whitemagic/system-store /srv/whitemagic/sangha
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

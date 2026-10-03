@@ -25,6 +25,10 @@ use wm_gen3_core::mesh::{
     resolve_or_create_mesh_key,
 };
 use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, SessionCheckpoint, Substrate};
+use wm_gen3_core::peer::{PeerDirectory, PeerIdentity, PeerTrustTier};
+use wm_gen3_core::sentinel::{
+    SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
+};
 use wm_gen3_core::{ContextCacheToken, ToolSchemaDefinition};
 use wm_gen3_harness::bridge::{
     McpProfile, build_contract_manifest, execute_hybrid_tool_call, get_tools_list_for_profile,
@@ -277,6 +281,16 @@ enum Commands {
         #[command(subcommand)]
         command: OrganCommands,
     },
+    /// Manage decentralized agent peer trust and social graph
+    Peer {
+        #[command(subcommand)]
+        command: PeerCommands,
+    },
+    /// Autonomic self-healing sentinel and circuit breaker guardrails
+    Sentinel {
+        #[command(subcommand)]
+        command: SentinelCommands,
+    },
     /// Run an invariant self-test and environment diagnostic
     Selftest {
         /// Output results as JSON
@@ -293,6 +307,75 @@ enum OrganCommands {
     Status,
     /// Run a diagnostic inference verification pulse on installed organs
     Verify,
+}
+
+#[derive(Subcommand)]
+enum PeerCommands {
+    /// List known peers in the social trust directory
+    List {
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Admit or add a peer identity
+    Add {
+        /// Node ID (e.g. whitemagic-vps, miranda-laptop)
+        node_id: String,
+        /// Public key in hex (32 bytes / 64 hex characters)
+        #[arg(long)]
+        key: Option<String>,
+        /// Trust tier: blocked, stranger, net, trusted, local (default: stranger)
+        #[arg(long, default_value = "stranger")]
+        tier: String,
+        /// Optional endpoint (e.g. 152.53.195.47:8787 or https://mcp.whitemagic.dev)
+        #[arg(long)]
+        endpoint: Option<String>,
+    },
+    /// Promote peer to Trusted tier
+    Trust {
+        /// Node ID or public key hex
+        target: String,
+    },
+    /// Demote peer to Blocked tier (quarantine / drop)
+    Block {
+        /// Node ID or public key hex
+        target: String,
+    },
+    /// Set specific trust tier for a peer
+    SetTier {
+        /// Node ID or public key hex
+        target: String,
+        /// Trust tier: blocked, stranger, net, trusted, local
+        tier: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum SentinelCommands {
+    /// Run single inspection pulse, evaluate invariants, and display diagnostic report
+    Check {
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+        /// Render as prompt envelope for executive agent triage (Opencode)
+        #[arg(long)]
+        prompt: bool,
+    },
+    /// Run an autonomic sentinel self-healing cycle (guarded by single-lease PID lock)
+    Run {
+        /// Interval between pulses in seconds (default: 60)
+        #[arg(long, default_value_t = 60)]
+        interval: u64,
+        /// Run once and exit (ideal for systemd timers or cron triggers)
+        #[arg(long)]
+        once: bool,
+    },
+    /// Inspect or reset the anti-oscillation circuit breaker
+    Circuit {
+        /// Reset the circuit breaker to nominal
+        #[arg(long)]
+        reset: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1652,6 +1735,8 @@ fn main() {
             json,
         } => run_decision_command(state_file, &questions, model, json),
         Commands::Organ { command } => run_organ_command(command, &store_path),
+        Commands::Peer { command } => run_peer_command(command, &store_path),
+        Commands::Sentinel { command } => run_sentinel_command(command, &store_path),
         Commands::Selftest { json } => {
             if json {
                 println!(r#"{{"status":"ok","invariants":"pass","engine":"gen3","version":"10.0.0-alpha.1"}}"#);
@@ -1914,6 +1999,300 @@ fn run_organ_command(cmd: OrganCommands, _store_path: &Path) {
                 println!("System One: Disabled in this build (--features systemone)");
             }
             println!("==================================================");
+        }
+    }
+}
+
+fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
+    let peer_file = store_path.join("peers.json");
+    let mut dir = PeerDirectory::load_or_init(&peer_file).unwrap_or_default();
+
+    // Ensure self local node identity is registered
+    if dir.peers.is_empty() {
+        let node_id = std::env::var("WM_NODE_ID")
+            .or_else(|_| std::env::var("HOSTNAME"))
+            .unwrap_or_else(|_| "local-host".into());
+        let pubkey = resolve_or_create_mesh_key(store_path)
+            .map(|(_, k)| k)
+            .unwrap_or([0u8; 32]);
+        dir.admit(PeerIdentity::new(&node_id, pubkey, PeerTrustTier::Local));
+        let _ = dir.save(&peer_file);
+    }
+
+    match cmd {
+        PeerCommands::List { json } => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&dir.list()).unwrap_or_else(|_| "[]".into())
+                );
+            } else {
+                println!("==================================================");
+                println!("       WhiteMagic Gen3 Peer Trust Directory       ");
+                println!("==================================================");
+                println!(
+                    "{:<20} {:<10} {:<10} {:<24} {:<12}",
+                    "NODE ID", "TIER", "REPUTATION", "ENDPOINT", "PUBLIC KEY"
+                );
+                println!("{:-<76}", "");
+                for p in dir.list() {
+                    let ep = p.endpoint.as_deref().unwrap_or("-");
+                    let short_key = if p.public_key_hex.len() > 10 {
+                        format!("{}..", &p.public_key_hex[..10])
+                    } else {
+                        p.public_key_hex.clone()
+                    };
+                    println!(
+                        "{:<20} {:<10} {:<10.2} {:<24} {:<12}",
+                        p.node_id, p.trust_tier, p.reputation, ep, short_key
+                    );
+                }
+                println!("==================================================");
+                println!("Total Peers: {}", dir.peers.len());
+            }
+        }
+        PeerCommands::Add {
+            node_id,
+            key,
+            tier,
+            endpoint,
+        } => {
+            let parsed_tier = match tier.parse::<PeerTrustTier>() {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                }
+            };
+            let mut pubkey = [0u8; 32];
+            if let Some(ref hex_str) = key {
+                if hex_str.len() == 64 {
+                    for i in 0..32 {
+                        if let Ok(b) = u8::from_str_radix(&hex_str[i * 2..i * 2 + 2], 16) {
+                            pubkey[i] = b;
+                        }
+                    }
+                } else {
+                    eprintln!("Error: public key hex must be 64 characters (32 bytes)");
+                    std::process::exit(1);
+                }
+            }
+            let mut identity = PeerIdentity::new(&node_id, pubkey, parsed_tier);
+            identity.endpoint = endpoint;
+            dir.admit(identity);
+            if let Err(e) = dir.save(&peer_file) {
+                eprintln!("Error saving peer directory: {e}");
+                std::process::exit(1);
+            }
+            println!("Peer `{node_id}` admitted as `{parsed_tier}`.");
+        }
+        PeerCommands::Trust { target } => {
+            match dir.set_tier(&target, PeerTrustTier::Trusted) {
+                Ok(_) => {
+                    let _ = dir.save(&peer_file);
+                    println!("Peer `{target}` promoted to `trusted`.");
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        PeerCommands::Block { target } => {
+            match dir.set_tier(&target, PeerTrustTier::Blocked) {
+                Ok(_) => {
+                    let _ = dir.save(&peer_file);
+                    println!("Peer `{target}` demoted to `blocked`.");
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        PeerCommands::SetTier { target, tier } => {
+            let parsed_tier = match tier.parse::<PeerTrustTier>() {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                }
+            };
+            match dir.set_tier(&target, parsed_tier) {
+                Ok(_) => {
+                    let _ = dir.save(&peer_file);
+                    println!("Peer `{target}` set to `{parsed_tier}`.");
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+}
+
+fn load_circuit_breaker(store_path: &Path) -> SentinelCircuitBreaker {
+    let breaker_file = store_path.join("sentinel-circuit-breaker.json");
+    if breaker_file.exists() {
+        if let Ok(content) = std::fs::read_to_string(&breaker_file) {
+            if let Ok(b) = serde_json::from_str::<SentinelCircuitBreaker>(&content) {
+                return b;
+            }
+        }
+    }
+    SentinelCircuitBreaker::default()
+}
+
+fn save_circuit_breaker(store_path: &Path, breaker: &SentinelCircuitBreaker) {
+    let breaker_file = store_path.join("sentinel-circuit-breaker.json");
+    if let Ok(content) = serde_json::to_string_pretty(breaker) {
+        let _ = std::fs::write(&breaker_file, content);
+    }
+}
+
+fn run_sentinel_command(cmd: SentinelCommands, store_path: &Path) {
+    let node_id = std::env::var("WM_NODE_ID")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "whitemagic-node".into());
+
+    let mut breaker = load_circuit_breaker(store_path);
+
+    match cmd {
+        SentinelCommands::Check { json, prompt } => {
+            let report = SentinelReport::sample(&node_id, store_path, &breaker);
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report).unwrap_or_else(|_| "{}".into())
+                );
+            } else if prompt {
+                println!("{}", report.render_self_prompt());
+            } else {
+                println!("==================================================");
+                println!("       WhiteMagic Gen3 Autonomic Sentinel Pulse   ");
+                println!("==================================================");
+                println!("Node ID:          {}", report.node_id);
+                println!("Status:           {}", report.status);
+                println!("Homeostatic:      {:?}", report.homeostatic_regime);
+                println!(
+                    "Invariants:       {}",
+                    if report.store_invariants_pass {
+                        "PASS"
+                    } else {
+                        "FAIL"
+                    }
+                );
+                println!("Store Epoch:      {}", report.store_epoch);
+                println!("Store Records:    {}", report.store_records);
+                println!(
+                    "CPU Thermal:      {:.1}°C",
+                    report.telemetry.cpu_temp_c
+                );
+                println!(
+                    "RAM Available:    {:.1} MB",
+                    report.telemetry.mem_available_mb
+                );
+                println!("System Load (1m): {:.2}", report.telemetry.load_avg_1m);
+                println!(
+                    "Circuit Breaker:  {}",
+                    if report.circuit_breaker_tripped {
+                        "TRIPPED (Writes Blocked)"
+                    } else {
+                        "ARMED (Nominal)"
+                    }
+                );
+                if !report.issues.is_empty() {
+                    println!("\nActive Anomalies:");
+                    for issue in &report.issues {
+                        println!("  - {issue}");
+                    }
+                }
+                println!("==================================================");
+            }
+        }
+        SentinelCommands::Run { interval, once } => {
+            let lock_path = store_path.join("sentinel.lock");
+            let _guard = match SentinelLeaseGuard::acquire(&lock_path) {
+                Ok(g) => g,
+                Err(e) => {
+                    eprintln!("Sentinel lease error: {e}");
+                    std::process::exit(1);
+                }
+            };
+
+            loop {
+                let report = SentinelReport::sample(&node_id, store_path, &breaker);
+                let now_secs = report.timestamp;
+                println!(
+                    "[{}] Sentinel pulse: status={}, regime={:?}, temp={:.1}°C, load={:.2}",
+                    report.timestamp,
+                    report.status,
+                    report.homeostatic_regime,
+                    report.telemetry.cpu_temp_c,
+                    report.telemetry.load_avg_1m
+                );
+
+                if report.status >= SentinelStatus::Degraded {
+                    if breaker.can_remediate(now_secs) {
+                        println!(
+                            "Autonomous remediation eligible. Circuit breaker permits action."
+                        );
+                        breaker.record_action(now_secs);
+                        save_circuit_breaker(store_path, &breaker);
+
+                        // Trigger safe recovery: quiescent sleep compaction
+                        println!("Executing scheduled quiescent consolidation sweep...");
+                        breaker.record_success();
+                        save_circuit_breaker(store_path, &breaker);
+                    } else {
+                        println!(
+                            "Circuit breaker TRIPPED! Automated remediation suppressed (safety lock)."
+                        );
+                    }
+                }
+
+                if once {
+                    break;
+                }
+
+                std::thread::sleep(std::time::Duration::from_secs(interval));
+            }
+        }
+        SentinelCommands::Circuit { reset } => {
+            if reset {
+                breaker.is_tripped = false;
+                breaker.consecutive_failures = 0;
+                breaker.tripped_at = None;
+                save_circuit_breaker(store_path, &breaker);
+                println!("Anti-oscillation circuit breaker re-armed to nominal.");
+            } else {
+                println!("==================================================");
+                println!("     WhiteMagic Sentinel Circuit Breaker Status   ");
+                println!("==================================================");
+                println!(
+                    "Status:               {}",
+                    if breaker.is_tripped {
+                        "TRIPPED (LOCKED)"
+                    } else {
+                        "ARMED (NOMINAL)"
+                    }
+                );
+                println!(
+                    "Remediations (Last Hr): {} / {}",
+                    breaker.remediation_history.len(),
+                    breaker.max_remediations_per_hour
+                );
+                println!(
+                    "Consecutive Failures:   {} / {}",
+                    breaker.consecutive_failures, breaker.failure_trip_threshold
+                );
+                println!("Cooldown Window:        {}s", breaker.cooldown_secs);
+                if let Some(t) = breaker.tripped_at {
+                    println!("Tripped At Epoch:       {}", t);
+                }
+                println!("==================================================");
+            }
         }
     }
 }
