@@ -1711,6 +1711,13 @@ fn run() -> anyhow::Result<()> {
                         report.total_ms
                     );
                 }
+                if report.environment_ok {
+                    println!();
+                    println!(
+                        "If this helped, tell us what to improve: \
+                         https://www.whitemagic.dev/feedback?ref=grimoire"
+                    );
+                }
             }
             if !report.environment_ok {
                 std::process::exit(1);
