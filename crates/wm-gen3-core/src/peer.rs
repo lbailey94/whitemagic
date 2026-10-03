@@ -342,12 +342,30 @@ impl PeerDirectory {
 
     /// Update peer trust tier by node_id or hex public key.
     pub fn set_tier(&mut self, target: &str, tier: PeerTrustTier) -> Result<(), String> {
-        if let Some(peer) = self.peers.get_mut(target) {
+        let update_peer = |peer: &mut PeerIdentity| {
             peer.trust_tier = tier;
+            if tier >= PeerTrustTier::Trusted {
+                peer.reputation = 1.0;
+                if peer.capabilities.is_empty() {
+                    peer.capabilities = vec![
+                        "sync".into(),
+                        "dispatch".into(),
+                        "telemetry".into(),
+                        "triage".into(),
+                    ];
+                }
+            } else if tier == PeerTrustTier::Blocked {
+                peer.reputation = 0.0;
+                peer.capabilities.clear();
+            }
+        };
+
+        if let Some(peer) = self.peers.get_mut(target) {
+            update_peer(peer);
             return Ok(());
         }
         if let Some(peer) = self.peers.values_mut().find(|p| p.public_key_hex == target) {
-            peer.trust_tier = tier;
+            update_peer(peer);
             return Ok(());
         }
         Err(format!("peer `{target}` not found in directory"))
