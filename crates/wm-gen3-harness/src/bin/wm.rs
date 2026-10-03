@@ -25,7 +25,7 @@ use wm_gen3_core::mesh::{
     resolve_or_create_mesh_key,
 };
 use wm_gen3_core::ops::{ImportKind, RecallQuery, RememberItem, SessionCheckpoint, Substrate};
-use wm_gen3_core::peer::{PeerDirectory, PeerIdentity, PeerTrustTier};
+use wm_gen3_core::peer::{BanCertificate, PeerDirectory, PeerIdentity, PeerTrustTier};
 use wm_gen3_core::sentinel::{
     SentinelCircuitBreaker, SentinelLeaseGuard, SentinelReport, SentinelStatus,
 };
@@ -347,6 +347,39 @@ enum PeerCommands {
         target: String,
         /// Trust tier: blocked, stranger, net, trusted, local
         tier: String,
+    },
+    /// Issue and sign a formal BanCertificate against a malicious peer
+    Ban {
+        /// Target node ID or public key hex
+        target: String,
+        /// Reason for the ban (e.g. Byzantine stimulus, signature forgery, RoE breach)
+        #[arg(long, default_value = "malicious stimulus or protocol violation")]
+        reason: String,
+        /// SHA-256 hash of the offending evidence (or autocomputed if omitted)
+        #[arg(long)]
+        evidence: Option<String>,
+        /// Time-to-live in seconds (0 = permanent, default: 0)
+        #[arg(long, default_value_t = 0)]
+        ttl: u64,
+        /// Optional path to save the signed BanCertificate JSON
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Ingest and apply a gossiped BanCertificate from another monastic peer
+    ApplyBan {
+        /// Path to BanCertificate JSON file (or - for stdin)
+        cert_file: PathBuf,
+    },
+    /// Cryptographically verify a BanCertificate without applying it
+    VerifyBan {
+        /// Path to BanCertificate JSON file
+        cert_file: PathBuf,
+    },
+    /// List all active BanCertificates recorded in the directory
+    Bans {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -2127,6 +2160,217 @@ fn run_peer_command(cmd: PeerCommands, store_path: &Path) {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 }
+            }
+        }
+        PeerCommands::Ban {
+            target,
+            reason,
+            evidence,
+            ttl,
+            out,
+        } => {
+            let (signing_key, _pubkey) = match resolve_or_create_mesh_key(store_path) {
+                Ok(k) => k,
+                Err(e) => {
+                    eprintln!("Failed to resolve local signing key: {e}");
+                    std::process::exit(1);
+                }
+            };
+            let issuer_node_id = std::env::var("WM_NODE_ID")
+                .or_else(|_| std::env::var("HOSTNAME"))
+                .unwrap_or_else(|_| "local-host".into());
+
+            let target_pubkey_hex = if target.len() == 64 && target.chars().all(|c| c.is_ascii_hexdigit()) {
+                Some(target.clone())
+            } else if let Some(p) = dir.get_by_id(&target) {
+                Some(p.public_key_hex.clone())
+            } else {
+                None
+            };
+
+            let ev_hash = evidence.unwrap_or_else(|| {
+                use sha2::{Digest, Sha256};
+                let mut hasher = Sha256::new();
+                hasher.update(target.as_bytes());
+                hasher.update(reason.as_bytes());
+                format!("{:x}", hasher.finalize())
+            });
+
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+
+            let cert = BanCertificate::issue(
+                &signing_key,
+                &issuer_node_id,
+                &target,
+                target_pubkey_hex.as_deref(),
+                &reason,
+                &ev_hash,
+                now,
+                ttl,
+            );
+
+            match dir.apply_ban(&cert, now) {
+                Ok(msg) => {
+                    let _ = dir.save(&peer_file);
+                    println!("BanCertificate issued and applied:");
+                    println!("  Issuer:    {} ({})", cert.issuer_node_id, cert.issuer_public_key_hex);
+                    println!("  Target:    {}", cert.target_identity);
+                    println!("  Reason:    {}", cert.reason);
+                    println!("  Evidence:  {}", cert.evidence_hash);
+                    println!("  Signature: {}..", &cert.signature_hex[..16]);
+                    println!("  Outcome:   {}", msg);
+                }
+                Err(e) => {
+                    eprintln!("Error applying ban locally: {e}");
+                    std::process::exit(1);
+                }
+            }
+
+            if let Some(out_path) = out {
+                let json = serde_json::to_string_pretty(&cert).unwrap_or_default();
+                if let Err(e) = std::fs::write(&out_path, json) {
+                    eprintln!("Failed to write certificate to {}: {e}", out_path.display());
+                    std::process::exit(1);
+                }
+                println!("Saved BanCertificate to {}", out_path.display());
+            }
+        }
+        PeerCommands::ApplyBan { cert_file } => {
+            let content = if cert_file.as_os_str() == "-" {
+                let mut s = String::new();
+                std::io::Read::read_to_string(&mut std::io::stdin(), &mut s).unwrap_or_default();
+                s
+            } else {
+                match std::fs::read_to_string(&cert_file) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Failed to read certificate file {}: {e}", cert_file.display());
+                        std::process::exit(1);
+                    }
+                }
+            };
+
+            let cert: BanCertificate = match serde_json::from_str(&content) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Invalid BanCertificate JSON: {e}");
+                    std::process::exit(1);
+                }
+            };
+
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+
+            match dir.apply_ban(&cert, now) {
+                Ok(msg) => {
+                    let _ = dir.save(&peer_file);
+                    println!("BanCertificate successfully verified and applied to fleet directory:");
+                    println!("  Issuer:    {} ({})", cert.issuer_node_id, cert.issuer_public_key_hex);
+                    println!("  Target:    {}", cert.target_identity);
+                    println!("  Reason:    {}", cert.reason);
+                    println!("  Status:    BLOCKED");
+                    println!("  Outcome:   {}", msg);
+                }
+                Err(e) => {
+                    eprintln!("Governance rejection: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        PeerCommands::VerifyBan { cert_file } => {
+            let content = match std::fs::read_to_string(&cert_file) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Failed to read certificate file {}: {e}", cert_file.display());
+                    std::process::exit(1);
+                }
+            };
+            let cert: BanCertificate = match serde_json::from_str(&content) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Invalid BanCertificate JSON: {e}");
+                    std::process::exit(1);
+                }
+            };
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+
+            match cert.verify(now) {
+                Ok(_) => {
+                    let issuer_known = dir
+                        .peers
+                        .values()
+                        .find(|p| p.public_key_hex == cert.issuer_public_key_hex || p.node_id == cert.issuer_node_id);
+                    let (trusted, tier_str) = match issuer_known {
+                        Some(p) => (
+                            p.trust_tier >= PeerTrustTier::Trusted,
+                            p.trust_tier.to_string(),
+                        ),
+                        None => (false, "unknown".to_string()),
+                    };
+                    println!("==================================================");
+                    println!("      WhiteMagic Gen3 BanCertificate Audit        ");
+                    println!("==================================================");
+                    println!("Signature:     VALID (Ed25519 canonical)");
+                    println!("Issuer Node:   {}", cert.issuer_node_id);
+                    println!("Issuer Key:    {}", cert.issuer_public_key_hex);
+                    println!(
+                        "Issuer Tier:   {} (fleet authority: {})",
+                        tier_str,
+                        if trusted { "AUTHORIZED" } else { "DENIED" }
+                    );
+                    println!("Target:        {}", cert.target_identity);
+                    println!("Reason:        {}", cert.reason);
+                    println!("Evidence Hash: {}", cert.evidence_hash);
+                    println!("Issued At:     {} (epoch)", cert.issued_at);
+                    println!(
+                        "TTL (seconds): {}",
+                        if cert.ttl_secs == 0 {
+                            "permanent".into()
+                        } else {
+                            cert.ttl_secs.to_string()
+                        }
+                    );
+                    println!("==================================================");
+                }
+                Err(e) => {
+                    eprintln!("Verification FAILED: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        PeerCommands::Bans { json } => {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            let active = dir.active_bans(now);
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&active).unwrap_or_else(|_| "[]".into())
+                );
+            } else {
+                println!("==================================================");
+                println!("      WhiteMagic Gen3 Active Ban Certificates     ");
+                println!("==================================================");
+                println!("{:<20} {:<20} {:<30}", "TARGET", "ISSUER", "REASON");
+                println!("{:-<76}", "");
+                for b in &active {
+                    println!(
+                        "{:<20} {:<20} {:<30}",
+                        b.target_identity, b.issuer_node_id, b.reason
+                    );
+                }
+                println!("==================================================");
+                println!("Total Active Bans: {}", active.len());
             }
         }
     }
