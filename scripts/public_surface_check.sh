@@ -131,7 +131,11 @@ if command -v gitleaks >/dev/null 2>&1; then
     while read -r local_ref local_sha remote_ref remote_sha; do
         [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
         if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-            RANGE="$local_sha"
+            if git rev-parse --verify origin/main >/dev/null 2>&1; then
+                RANGE="origin/main..$local_sha"
+            else
+                RANGE="$local_sha -n 10"
+            fi
         else
             RANGE="$remote_sha..$local_sha"
         fi
